@@ -22,11 +22,19 @@ namespace plugin
 class compiled_plugin : public himan_plugin
 {
    public:
-	compiled_plugin() : itsCudaEnabledCalculation(false) {}
-	virtual ~compiled_plugin() {}
+	compiled_plugin() : itsCudaEnabledCalculation(false)
+	{
+	}
+	virtual ~compiled_plugin()
+	{
+	}
 	virtual void Process(std::shared_ptr<const plugin_configuration> configuration) = 0;
 
-	bool CudaEnabledCalculation() const { return itsCudaEnabledCalculation; }
+	bool CudaEnabledCalculation() const
+	{
+		return itsCudaEnabledCalculation;
+	}
+
    protected:
 	bool itsCudaEnabledCalculation;
 };

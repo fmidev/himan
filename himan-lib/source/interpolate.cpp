@@ -97,7 +97,8 @@ bool FromReducedGaussianCPU(info& base, info& source, matrix<double>& targetData
 		baseGrid = new latitude_longitude_grid(gg->ScanningMode(), bl, tr);
 
 		double xlen = tr.X() - bl.X();
-		if (xlen < 0) xlen += 360;
+		if (xlen < 0)
+			xlen += 360;
 
 		const int numEquatorLongitudes = gg->NumberOfPointsAlongParallels()[gg->N()];
 
@@ -232,10 +233,14 @@ bool FromReducedGaussianCPU(info& base, info& source, matrix<double>& targetData
 			if (offset != 0)
 			{
 				// wrap around for global grids
-				if (a_lon < -180) a_lon += 360;
-				if (b_lon < -180) b_lon += 360;
-				if (c_lon < -180) c_lon += 360;
-				if (d_lon < -180) d_lon += 360;
+				if (a_lon < -180)
+					a_lon += 360;
+				if (b_lon < -180)
+					b_lon += 360;
+				if (c_lon < -180)
+					c_lon += 360;
+				if (d_lon < -180)
+					d_lon += 360;
 			}
 
 			const double lat_upper =
@@ -500,7 +505,8 @@ bool ReorderPoints(info& base, std::vector<info_t> infos)
 		auto sourceData = (*it)->Grid()->Data();
 		auto newData = matrix<double>(targetStations.size(), 1, 1, MissingDouble());
 
-		if (targetStations.size() == 0 || sourceStations.size() == 0) return false;
+		if (targetStations.size() == 0 || sourceStations.size() == 0)
+			return false;
 
 		std::vector<station> newStations;
 

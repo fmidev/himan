@@ -27,7 +27,9 @@ struct options
 	info_simple* source;
 	info_simple* dest;
 
-	options() : N(0), missing(0), scale(1), base(0), source(0), dest(0) {}
+	options() : N(0), missing(0), scale(1), base(0), source(0), dest(0)
+	{
+	}
 };
 
 void Process(options& opts);

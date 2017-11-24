@@ -8,9 +8,9 @@
 #include "preform_pressure.h"
 #include "forecast_time.h"
 #include "level.h"
+#include "logger.h"
 #include <boost/lexical_cast.hpp>
 #include <limits>
-#include "logger.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -57,7 +57,10 @@ const double rhLim = 90.;
 // define missing int value
 const int missingInt = numeric_limits<int>::min();
 
-bool IsMissingInt(int val) { return val == missingInt; }
+bool IsMissingInt(int val)
+{
+	return val == missingInt;
+}
 preform_pressure::preform_pressure()
 {
 	itsLogger = logger("preform_pressure");
@@ -127,15 +130,14 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 	level P925(kPressure, 925);
 	level P1000(kPressure, 1000);
 
-	auto myThreadedLogger =
-	    logger("preformPressureThread #" + to_string(threadIndex));
+	auto myThreadedLogger = logger("preformPressureThread #" + to_string(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-						  static_cast<string>(forecastLevel));
+	                      static_cast<string>(forecastLevel));
 
 	// Source infos
 

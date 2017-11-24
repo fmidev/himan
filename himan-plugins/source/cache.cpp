@@ -17,7 +17,10 @@ typedef lock_guard<mutex> Lock;
 
 std::mutex itsCheckMutex;
 
-cache::cache() { itsLogger = logger("cache"); }
+cache::cache()
+{
+	itsLogger = logger("cache");
+}
 string cache::UniqueName(const info& info)
 {
 	string producer_id = boost::lexical_cast<string>(info.Producer().Id());
@@ -47,7 +50,10 @@ string cache::UniqueNameFromOptions(search_options& options)
 	       forecast_type + '_' + forecast_type_value;
 }
 
-void cache::Insert(info& anInfo, bool pin) { SplitToPool(anInfo, pin); }
+void cache::Insert(info& anInfo, bool pin)
+{
+	SplitToPool(anInfo, pin);
+}
 void cache::SplitToPool(info& anInfo, bool pin)
 {
 	auto localInfo = anInfo;
@@ -121,11 +127,20 @@ vector<shared_ptr<himan::info>> cache::GetInfo(search_options& options)
 	return info;
 }
 
-void cache::Clean() { cache_pool::Instance()->Clean(); }
-size_t cache::Size() const { return cache_pool::Instance()->Size(); }
+void cache::Clean()
+{
+	cache_pool::Instance()->Clean();
+}
+size_t cache::Size() const
+{
+	return cache_pool::Instance()->Size();
+}
 cache_pool* cache_pool::itsInstance = NULL;
 
-cache_pool::cache_pool() : itsCacheLimit(-1) { itsLogger = logger("cache_pool"); }
+cache_pool::cache_pool() : itsCacheLimit(-1)
+{
+	itsLogger = logger("cache_pool");
+}
 
 cache_pool* cache_pool::Instance()
 {
@@ -137,8 +152,14 @@ cache_pool* cache_pool::Instance()
 	return itsInstance;
 }
 
-void cache_pool::CacheLimit(int theCacheLimit) { itsCacheLimit = theCacheLimit; }
-bool cache_pool::Find(const string& uniqueName) { return itsCache.count(uniqueName) > 0; }
+void cache_pool::CacheLimit(int theCacheLimit)
+{
+	itsCacheLimit = theCacheLimit;
+}
+bool cache_pool::Find(const string& uniqueName)
+{
+	return itsCache.count(uniqueName) > 0;
+}
 void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info> anInfo, bool pin)
 {
 	Lock lock(itsInsertMutex);
@@ -157,7 +178,10 @@ void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info> anInfo
 	}
 }
 
-void cache_pool::UpdateTime(const std::string& uniqueName) { itsCache[uniqueName].access_time = time(nullptr); }
+void cache_pool::UpdateTime(const std::string& uniqueName)
+{
+	itsCache[uniqueName].access_time = time(nullptr);
+}
 void cache_pool::Clean()
 {
 	Lock lock(itsDeleteMutex);
@@ -183,8 +207,8 @@ void cache_pool::Clean()
 	ASSERT(!oldestName.empty());
 
 	itsCache.erase(oldestName);
-	itsLogger.Trace("Data cleared from cache: " + oldestName +
-	                " with time: " + boost::lexical_cast<string>(oldestTime));
+	itsLogger.Trace("Data cleared from cache: " + oldestName + " with time: " +
+	                boost::lexical_cast<string>(oldestTime));
 	itsLogger.Trace("Cache size: " + boost::lexical_cast<string>(itsCache.size()));
 }
 
@@ -195,4 +219,7 @@ shared_ptr<himan::info> cache_pool::GetInfo(const string& uniqueName)
 	return make_shared<info>(*itsCache[uniqueName].info);
 }
 
-size_t cache_pool::Size() const { return itsCache.size(); }
+size_t cache_pool::Size() const
+{
+	return itsCache.size();
+}

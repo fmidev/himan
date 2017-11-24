@@ -43,10 +43,14 @@ class raw_time
    public:
 	friend class forecast_time;
 
-	raw_time() : itsDateTime(boost::posix_time::not_a_date_time) {}
+	raw_time() : itsDateTime(boost::posix_time::not_a_date_time)
+	{
+	}
 	raw_time(const std::string& theTime, const std::string& theTimeMask = "%Y-%m-%d %H:%M:%S");
 
-	~raw_time() {}
+	~raw_time()
+	{
+	}
 	raw_time(const raw_time& other);
 	raw_time& operator=(const raw_time& other);
 	operator std::string() const;
@@ -55,7 +59,10 @@ class raw_time
 
 	std::ostream& Write(std::ostream& file) const;
 
-	std::string ClassName() const { return "himan::raw_time"; }
+	std::string ClassName() const
+	{
+		return "himan::raw_time";
+	}
 	bool operator==(const raw_time& other) const;
 	bool operator!=(const raw_time& other) const;
 
@@ -85,7 +92,10 @@ class raw_time
 #endif
 };
 
-inline std::ostream& operator<<(std::ostream& file, const raw_time& ob) { return ob.Write(file); }
+inline std::ostream& operator<<(std::ostream& file, const raw_time& ob)
+{
+	return ob.Write(file);
+}
 }  // namespace himan
 
 #endif /* RAW_TIME_H */

@@ -23,10 +23,12 @@ double min(const vector<double>& vec)
 
 	for (double val : vec)
 	{
-		if (val < ret) ret = val;
+		if (val < ret)
+			ret = val;
 	}
 
-	if (ret == 1e38) ret = MissingDouble();
+	if (ret == 1e38)
+		ret = MissingDouble();
 
 	return ret;
 }
@@ -37,12 +39,14 @@ double max(const vector<double>& vec)
 
 	for (double val : vec)
 	{
-		if (val > ret) ret = val;
+		if (val > ret)
+			ret = val;
 	}
 
-	if (ret == -1e38) ret = MissingDouble();
-        
-        return ret;
+	if (ret == -1e38)
+		ret = MissingDouble();
+
+	return ret;
 }
 
 pair<double, double> minmax(const vector<double>& vec)
@@ -53,8 +57,10 @@ pair<double, double> minmax(const vector<double>& vec)
 	{
 		if (IsValid(val))
 		{
-			if (val < min) min = val;
-			if (val > max) max = val;
+			if (val < min)
+				min = val;
+			if (val > max)
+				max = val;
 		}
 	}
 
@@ -67,7 +73,10 @@ pair<double, double> minmax(const vector<double>& vec)
 	return make_pair(min, max);
 }
 
-hitool::hitool() : itsTime(), itsForecastType(kDeterministic), itsHeightUnit(kM) { itsLogger = logger("hitool"); }
+hitool::hitool() : itsTime(), itsForecastType(kDeterministic), itsHeightUnit(kM)
+{
+	itsLogger = logger("hitool");
+}
 hitool::hitool(shared_ptr<plugin_configuration> conf) : itsTime(), itsForecastType(kDeterministic), itsHeightUnit(kM)
 {
 	itsLogger = logger("hitool");
@@ -376,11 +385,11 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 			double max_value = p.second;  // highest
 			double min_value = p.first;   // lowest
 
-                        if (IsMissing(max_value) || IsMissing(min_value))
-                        {
-                                itsLogger.Error("Min or max values of given heights are missing");
-                                throw kFileDataNotFound;
-                        }
+			if (IsMissing(max_value) || IsMissing(min_value))
+			{
+				itsLogger.Error("Min or max values of given heights are missing");
+				throw kFileDataNotFound;
+			}
 
 			if (itsHeightUnit == kHPa)
 			{
@@ -1243,8 +1252,14 @@ vector<double> hitool::PlusMinusArea(const param& wantedParam, const vector<doub
 	                            lastLevelValue);
 }
 
-void hitool::Time(const forecast_time& theTime) { itsTime = theTime; }
-void hitool::ForecastType(const forecast_type& theForecastType) { itsForecastType = theForecastType; }
+void hitool::Time(const forecast_time& theTime)
+{
+	itsTime = theTime;
+}
+void hitool::ForecastType(const forecast_type& theForecastType)
+{
+	itsForecastType = theForecastType;
+}
 void hitool::Configuration(shared_ptr<const plugin_configuration> conf)
 {
 	itsConfiguration = make_shared<plugin_configuration>(
@@ -1252,7 +1267,10 @@ void hitool::Configuration(shared_ptr<const plugin_configuration> conf)
 	itsConfiguration->Info()->First();
 }
 
-HPParameterUnit hitool::HeightUnit() const { return itsHeightUnit; }
+HPParameterUnit hitool::HeightUnit() const
+{
+	return itsHeightUnit;
+}
 void hitool::HeightUnit(HPParameterUnit theHeightUnit)
 {
 	if (theHeightUnit != kM && theHeightUnit != kHPa)

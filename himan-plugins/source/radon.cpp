@@ -48,8 +48,14 @@ void radon::Init()
 	}
 }
 
-radon::radon() : itsInit(false), itsRadonDB() { itsLogger = logger("radon"); }
-void radon::PoolMaxWorkers(int maxWorkers) { NFmiRadonDBPool::Instance()->MaxWorkers(maxWorkers); }
+radon::radon() : itsInit(false), itsRadonDB()
+{
+	itsLogger = logger("radon");
+}
+void radon::PoolMaxWorkers(int maxWorkers)
+{
+	NFmiRadonDBPool::Instance()->MaxWorkers(maxWorkers);
+}
 vector<std::string> radon::CSV(search_options& options)
 {
 	Init();

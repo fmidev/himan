@@ -4,6 +4,7 @@
  * Calculate the co-located velocity field for U and V
  *
  */
+#include "unstagger.cuh"
 #include "forecast_time.h"
 #include "latitude_longitude_grid.h"
 #include "level.h"
@@ -12,7 +13,6 @@
 #include "numerical_functions.h"
 #include "plugin_factory.h"
 #include "stereographic_grid.h"
-#include "unstagger.cuh"
 #include "unstagger.h"
 #include "util.h"
 

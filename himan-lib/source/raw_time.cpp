@@ -39,7 +39,9 @@ raw_time::raw_time(const std::string& theDateTime, const std::string& theTimeMas
 	}
 }
 
-raw_time::raw_time(const raw_time& other) : itsDateTime(other.itsDateTime) {}
+raw_time::raw_time(const raw_time& other) : itsDateTime(other.itsDateTime)
+{
+}
 raw_time& raw_time::operator=(const raw_time& other)
 {
 	itsDateTime = other.itsDateTime;
@@ -57,8 +59,14 @@ bool raw_time::operator==(const raw_time& other) const
 	return (itsDateTime == other.itsDateTime);
 }
 
-bool raw_time::operator!=(const raw_time& other) const { return !(*this == other); }
-raw_time::operator std::string() const { return ToNeonsTime(); }
+bool raw_time::operator!=(const raw_time& other) const
+{
+	return !(*this == other);
+}
+raw_time::operator std::string() const
+{
+	return ToNeonsTime();
+}
 std::string raw_time::String(const std::string& theTimeMask) const
 {
 	if (Empty())
@@ -140,7 +148,10 @@ bool raw_time::Adjust(HPTimeResolution timeResolution, int theValue)
 	return true;
 }
 
-bool raw_time::Empty() const { return (itsDateTime == boost::posix_time::not_a_date_time); }
+bool raw_time::Empty() const
+{
+	return (itsDateTime == boost::posix_time::not_a_date_time);
+}
 bool raw_time::IsLeapYear() const
 {
 	return boost::gregorian::gregorian_calendar::is_leap_year(itsDateTime.date().year());
@@ -192,4 +203,7 @@ std::string raw_time::ToSQLTime() const
 	return std::string(fmt);
 }
 
-void raw_time::FromSQLTime(const std::string& SQLTime) { itsDateTime = boost::posix_time::time_from_string(SQLTime); }
+void raw_time::FromSQLTime(const std::string& SQLTime)
+{
+	itsDateTime = boost::posix_time::time_from_string(SQLTime);
+}

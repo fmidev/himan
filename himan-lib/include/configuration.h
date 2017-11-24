@@ -23,7 +23,9 @@ class configuration
 	friend class json_parser;
 
 	configuration();
-	virtual ~configuration() {}
+	virtual ~configuration()
+	{
+	}
 	configuration(const configuration& other);
 	configuration& operator=(const configuration& other) = delete;
 
@@ -31,7 +33,10 @@ class configuration
 	 * @return Class name
 	 */
 
-	std::string ClassName() const { return "himan::configuration"; }
+	std::string ClassName() const
+	{
+		return "himan::configuration";
+	}
 	std::ostream& Write(std::ostream& file) const;
 
 	/**
@@ -293,7 +298,10 @@ class configuration
 	bool itsAsyncExecution;
 };
 
-inline std::ostream& operator<<(std::ostream& file, const configuration& ob) { return ob.Write(file); }
+inline std::ostream& operator<<(std::ostream& file, const configuration& ob)
+{
+	return ob.Write(file);
+}
 }  // namespace himan
 
 #endif /* CONFIGURATION_H */

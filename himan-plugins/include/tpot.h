@@ -19,15 +19,27 @@ class tpot : public compiled_plugin, private compiled_plugin_base
    public:
 	tpot();
 
-	inline virtual ~tpot() {}
+	inline virtual ~tpot()
+	{
+	}
 	tpot(const tpot& other) = delete;
 	tpot& operator=(const tpot& other) = delete;
 
 	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
 
-	virtual std::string ClassName() const { return "himan::plugin::tpot"; }
-	virtual HPPluginClass PluginClass() const { return kCompiled; }
-	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 1); }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::tpot";
+	}
+	virtual HPPluginClass PluginClass() const
+	{
+		return kCompiled;
+	}
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(1, 1);
+	}
+
    private:
 	/**
 	 * @brief Calculating pseudo-adiabatic theta (ie thetaw).
@@ -70,7 +82,10 @@ class tpot : public compiled_plugin, private compiled_plugin_base
 
 // the class factory
 
-extern "C" std::shared_ptr<himan_plugin> create() { return std::shared_ptr<tpot>(new tpot()); }
+extern "C" std::shared_ptr<himan_plugin> create()
+{
+	return std::shared_ptr<tpot>(new tpot());
+}
 }  // namespace plugin
 }  // namespace himan
 

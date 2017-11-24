@@ -21,7 +21,10 @@ typedef packing_coefficients simple_packed_coefficients;
 struct simple_packed : packed_data
 {
 	CUDA_HOST
-	simple_packed() : packed_data() { packingType = kSimplePacking; }
+	simple_packed() : packed_data()
+	{
+		packingType = kSimplePacking;
+	}
 	CUDA_HOST
 	simple_packed(int theBitsPerValue, double theBinaryScaleFactor, double theDecimaleScaleFactor,
 	              double theReferenceValue);
@@ -29,8 +32,13 @@ struct simple_packed : packed_data
 	CUDA_HOST
 	simple_packed(const simple_packed& other);
 
-	CUDA_HOST virtual ~simple_packed() {}
-	virtual std::string ClassName() const { return "simple_packed"; }
+	CUDA_HOST virtual ~simple_packed()
+	{
+	}
+	virtual std::string ClassName() const
+	{
+		return "simple_packed";
+	}
 	/**
 	 * @brief Function will unpack binary array (unsigned char) to double array.
 	 *

@@ -18,11 +18,16 @@ class reduced_gaussian_grid : public grid
 {
    public:
 	reduced_gaussian_grid();
-	virtual ~reduced_gaussian_grid() {}
+	virtual ~reduced_gaussian_grid()
+	{
+	}
 	reduced_gaussian_grid(const reduced_gaussian_grid& other);
 	reduced_gaussian_grid& operator=(const reduced_gaussian_grid& other) = delete;
 
-	std::string ClassName() const { return "himan::gaussian_grid"; }
+	std::string ClassName() const
+	{
+		return "himan::gaussian_grid";
+	}
 	point BottomLeft() const override;
 	point TopRight() const override;
 	point TopLeft() const;
@@ -97,7 +102,10 @@ class reduced_gaussian_grid : public grid
 #endif
 };
 
-inline std::ostream& operator<<(std::ostream& file, const reduced_gaussian_grid& ob) { return ob.Write(file); }
+inline std::ostream& operator<<(std::ostream& file, const reduced_gaussian_grid& ob)
+{
+	return ob.Write(file);
+}
 }  // namespace himan
 
 #ifdef SERIALIZATION

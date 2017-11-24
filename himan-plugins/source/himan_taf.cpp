@@ -14,7 +14,10 @@ using namespace std;
 using namespace himan;
 using namespace himan::plugin;
 
-himan_taf::himan_taf() : itsStrictMode(false) { itsLogger = logger("himan_taf"); }
+himan_taf::himan_taf() : itsStrictMode(false)
+{
+	itsLogger = logger("himan_taf");
+}
 void himan_taf::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
@@ -29,14 +32,13 @@ void himan_taf::Process(std::shared_ptr<const plugin_configuration> conf)
 	param CC3("CL3-PRCNT");
 	param CC4("CL4-PRCNT");
 
-	SetParams({CL1,CC1,CL2,CC2,CL3,CC3,CL4,CC4});
+	SetParams({CL1, CC1, CL2, CC2, CL3, CC3, CL4, CC4});
 
 	Start();
 }
 
 void himan_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 {
-
 	// Get producer meta information
 	producer prod = itsConfiguration->SourceProducer(0);
 
@@ -60,25 +62,23 @@ void himan_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	// search for lowest cloud layer
 	auto cl1b = h->VerticalHeight(param("N-0TO1"), 0.0, max_h, 0.05, 1);
 	auto cl1t = h->VerticalHeight(param("N-0TO1"), 0.0, max_h, 0.05, 2);
-	
+
 	// second lowest
-        auto cl2b = h->VerticalHeight(param("N-0TO1"), 0.0, max_h, 0.05, 3);
-        auto cl2t = h->VerticalHeight(param("N-0TO1"), 0.0, max_h, 0.05, 4);
+	auto cl2b = h->VerticalHeight(param("N-0TO1"), 0.0, max_h, 0.05, 3);
+	auto cl2t = h->VerticalHeight(param("N-0TO1"), 0.0, max_h, 0.05, 4);
 
 	// third lowest
-        auto cl3b = h->VerticalHeight(param("N-0TO1"), 0.0, max_h, 0.05, 5);
-        auto cl3t = h->VerticalHeight(param("N-0TO1"), 0.0, max_h, 0.05, 6);
+	auto cl3b = h->VerticalHeight(param("N-0TO1"), 0.0, max_h, 0.05, 5);
+	auto cl3t = h->VerticalHeight(param("N-0TO1"), 0.0, max_h, 0.05, 6);
 
 	// fourth lowest
 	auto cl4b = h->VerticalHeight(param("N-0TO1"), 0.0, max_h, 0.05, 7);
-        auto cl4t = h->VerticalHeight(param("N-0TO1"), 0.0, max_h, 0.05, 8);
+	auto cl4t = h->VerticalHeight(param("N-0TO1"), 0.0, max_h, 0.05, 8);
 
 	auto N1 = h->VerticalMaximum(param("N-0TO1"), cl1b, cl1t);
-        auto N2 = h->VerticalMaximum(param("N-0TO1"), cl2b, cl2t);
-        auto N3 = h->VerticalMaximum(param("N-0TO1"), cl3b, cl3t);
-        auto N4 = h->VerticalMaximum(param("N-0TO1"), cl4b, cl4t);
-
-	
+	auto N2 = h->VerticalMaximum(param("N-0TO1"), cl2b, cl2t);
+	auto N3 = h->VerticalMaximum(param("N-0TO1"), cl3b, cl3t);
+	auto N4 = h->VerticalMaximum(param("N-0TO1"), cl4b, cl4t);
 
 	// end find height of cb base
 
@@ -100,11 +100,11 @@ void himan_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	myTargetInfo->ParamIndex(5);
 	myTargetInfo->Grid()->Data().Set(move(N3));
 
-        myTargetInfo->ParamIndex(6);
-        myTargetInfo->Grid()->Data().Set(move(cl4b));
+	myTargetInfo->ParamIndex(6);
+	myTargetInfo->Grid()->Data().Set(move(cl4b));
 
-        myTargetInfo->ParamIndex(7);
-        myTargetInfo->Grid()->Data().Set(move(N4));
+	myTargetInfo->ParamIndex(7);
+	myTargetInfo->Grid()->Data().Set(move(N4));
 
 	string deviceType = "CPU";
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +

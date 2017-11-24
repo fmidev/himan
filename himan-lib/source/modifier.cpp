@@ -70,9 +70,18 @@ void modifier::Clear(double fillValue)
 	std::fill(itsOutOfBoundHeights.begin(), itsOutOfBoundHeights.end(), false);
 }
 
-std::vector<double> modifier::FindValue() const { return itsFindValue; }
-std::vector<double> modifier::LowerHeight() const { return itsLowerHeight; }
-std::vector<double> modifier::UpperHeight() const { return itsUpperHeight; }
+std::vector<double> modifier::FindValue() const
+{
+	return itsFindValue;
+}
+std::vector<double> modifier::LowerHeight() const
+{
+	return itsLowerHeight;
+}
+std::vector<double> modifier::UpperHeight() const
+{
+	return itsUpperHeight;
+}
 void modifier::FindValue(const std::vector<double>& theFindValue)
 {
 	itsFindValue = theFindValue;
@@ -133,8 +142,14 @@ void modifier::UpperHeight(const std::vector<double>& theUpperHeight)
 #endif
 }
 
-size_t modifier::FindNth() const { return itsFindNthValue; }
-void modifier::FindNth(size_t theNth) { itsFindNthValue = theNth; }
+size_t modifier::FindNth() const
+{
+	return itsFindNthValue;
+}
+void modifier::FindNth(size_t theNth)
+{
+	itsFindNthValue = theNth;
+}
 double modifier::Value() const
 {
 	ASSERT(itsIndex < itsResult.size());
@@ -270,9 +285,18 @@ size_t modifier::HeightsCrossed() const
 	return static_cast<size_t>(count(itsOutOfBoundHeights.begin(), itsOutOfBoundHeights.end(), true));
 }
 
-HPModifierType modifier::Type() const { return itsModifierType; }
-bool modifier::HeightInMeters() const { return itsHeightInMeters; }
-void modifier::HeightInMeters(bool theHeightInMeters) { itsHeightInMeters = theHeightInMeters; }
+HPModifierType modifier::Type() const
+{
+	return itsModifierType;
+}
+bool modifier::HeightInMeters() const
+{
+	return itsHeightInMeters;
+}
+void modifier::HeightInMeters(bool theHeightInMeters)
+{
+	itsHeightInMeters = theHeightInMeters;
+}
 void modifier::InitializeHeights()
 {
 	// Absurd default limits if user has not specified any limits

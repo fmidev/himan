@@ -28,9 +28,18 @@ class hitool : public auxiliary_plugin
 
 	virtual ~hitool(){};
 
-	virtual std::string ClassName() const { return "himan::plugin::hitool"; }
-	virtual HPPluginClass PluginClass() const { return kAuxiliary; }
-	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 0); }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::hitool";
+	}
+	virtual HPPluginClass PluginClass() const
+	{
+		return kAuxiliary;
+	}
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(1, 0);
+	}
 	/**
 	 * @brief Return maximum value in a given height range for the first parameter found.
 	 *
@@ -572,7 +581,10 @@ class hitool : public auxiliary_plugin
 
 #ifndef HIMAN_AUXILIARY_INCLUDE
 
-extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<hitool>(); }
+extern "C" std::shared_ptr<himan_plugin> create()
+{
+	return std::make_shared<hitool>();
+}
 #define HIMAN_AUXILIARY_INCLUDE
 #endif /* HIMAN_AUXILIARY_INCLUDE */
 

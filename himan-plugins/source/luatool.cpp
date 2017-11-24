@@ -50,7 +50,9 @@ luatool::luatool() : itsWriteOptions()
 	myL.reset();
 }
 
-luatool::~luatool() {}
+luatool::~luatool()
+{
+}
 void luatool::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
@@ -287,16 +289,46 @@ namespace info_wrapper
 {
 // These are convenience functions for accessing info class contents
 
-void SetValue(std::shared_ptr<info>& anInfo, int index, double value) { anInfo->Grid()->Value(--index, value); }
-double GetValue(std::shared_ptr<info>& anInfo, int index) { return anInfo->Grid()->Value(--index); }
-size_t GetLocationIndex(std::shared_ptr<info> anInfo) { return anInfo->LocationIndex() + 1; }
-size_t GetTimeIndex(std::shared_ptr<info> anInfo) { return anInfo->TimeIndex() + 1; }
-size_t GetParamIndex(std::shared_ptr<info> anInfo) { return anInfo->ParamIndex() + 1; }
-size_t GetLevelIndex(std::shared_ptr<info> anInfo) { return anInfo->LevelIndex() + 1; }
-void SetLocationIndex(std::shared_ptr<info> anInfo, size_t theIndex) { anInfo->LocationIndex(--theIndex); }
-void SetTimeIndex(std::shared_ptr<info> anInfo, size_t theIndex) { anInfo->TimeIndex(--theIndex); }
-void SetParamIndex(std::shared_ptr<info> anInfo, size_t theIndex) { anInfo->ParamIndex(--theIndex); }
-void SetLevelIndex(std::shared_ptr<info> anInfo, size_t theIndex) { anInfo->LevelIndex(--theIndex); }
+void SetValue(std::shared_ptr<info>& anInfo, int index, double value)
+{
+	anInfo->Grid()->Value(--index, value);
+}
+double GetValue(std::shared_ptr<info>& anInfo, int index)
+{
+	return anInfo->Grid()->Value(--index);
+}
+size_t GetLocationIndex(std::shared_ptr<info> anInfo)
+{
+	return anInfo->LocationIndex() + 1;
+}
+size_t GetTimeIndex(std::shared_ptr<info> anInfo)
+{
+	return anInfo->TimeIndex() + 1;
+}
+size_t GetParamIndex(std::shared_ptr<info> anInfo)
+{
+	return anInfo->ParamIndex() + 1;
+}
+size_t GetLevelIndex(std::shared_ptr<info> anInfo)
+{
+	return anInfo->LevelIndex() + 1;
+}
+void SetLocationIndex(std::shared_ptr<info> anInfo, size_t theIndex)
+{
+	anInfo->LocationIndex(--theIndex);
+}
+void SetTimeIndex(std::shared_ptr<info> anInfo, size_t theIndex)
+{
+	anInfo->TimeIndex(--theIndex);
+}
+void SetParamIndex(std::shared_ptr<info> anInfo, size_t theIndex)
+{
+	anInfo->ParamIndex(--theIndex);
+}
+void SetLevelIndex(std::shared_ptr<info> anInfo, size_t theIndex)
+{
+	anInfo->LevelIndex(--theIndex);
+}
 void SetValues(info_t& anInfo, const object& table)
 {
 	std::vector<double> vals = TableToVector(table);
@@ -317,11 +349,26 @@ void SetValues(info_t& anInfo, const object& table)
 	}
 }
 
-object GetValues(info_t& anInfo) { return VectorToTable(VEC(anInfo)); }
-point GetLatLon(info_t& anInfo, size_t theIndex) { return anInfo->Grid()->LatLon(--theIndex); }
-double GetMissingValue(info_t& anInfo) { return anInfo->Data().MissingValue(); }
-void SetMissingValue(info_t& anInfo, double missingValue) { anInfo->Data().MissingValue(missingValue); }
-matrix<double> GetData(info_t& anInfo) { return anInfo->Data(); }
+object GetValues(info_t& anInfo)
+{
+	return VectorToTable(VEC(anInfo));
+}
+point GetLatLon(info_t& anInfo, size_t theIndex)
+{
+	return anInfo->Grid()->LatLon(--theIndex);
+}
+double GetMissingValue(info_t& anInfo)
+{
+	return anInfo->Data().MissingValue();
+}
+void SetMissingValue(info_t& anInfo, double missingValue)
+{
+	anInfo->Data().MissingValue(missingValue);
+}
+matrix<double> GetData(info_t& anInfo)
+{
+	return anInfo->Data();
+}
 void SetParam(info_t& anInfo, const param& par)
 {
 	auto r = GET_PLUGIN(radon);
@@ -713,20 +760,50 @@ object VerticalPlusMinusArea(std::shared_ptr<hitool> h, const param& theParams, 
 	return object();
 }
 
-void Time(std::shared_ptr<hitool> h, const forecast_time& theTime) { h->Time(theTime); }
-void SetHeightUnit(std::shared_ptr<hitool> h, HPParameterUnit theHeightUnit) { h->HeightUnit(theHeightUnit); }
-HPParameterUnit GetHeightUnit(std::shared_ptr<hitool> h) { return h->HeightUnit(); }
+void Time(std::shared_ptr<hitool> h, const forecast_time& theTime)
+{
+	h->Time(theTime);
+}
+void SetHeightUnit(std::shared_ptr<hitool> h, HPParameterUnit theHeightUnit)
+{
+	h->HeightUnit(theHeightUnit);
+}
+HPParameterUnit GetHeightUnit(std::shared_ptr<hitool> h)
+{
+	return h->HeightUnit();
+}
 }  // namespace hitool_wrapper
 
 namespace modifier_wrapper
 {
-void SetLowerHeightGrid(modifier& mod, const object& lowerHeight) { mod.LowerHeight(TableToVector(lowerHeight)); }
-object GetLowerHeightGrid(modifier& mod) { return VectorToTable(mod.LowerHeight()); }
-void SetUpperHeightGrid(modifier& mod, const object& upperHeight) { mod.UpperHeight(TableToVector(upperHeight)); }
-object GetUpperHeightGrid(modifier& mod) { return VectorToTable(mod.UpperHeight()); }
-void SetFindValueGrid(modifier& mod, const object& findValue) { mod.FindValue(TableToVector(findValue)); }
-object GetFindValueGrid(modifier& mod) { return VectorToTable(mod.FindValue()); }
-object Result(modifier& mod) { return VectorToTable(mod.Result()); }
+void SetLowerHeightGrid(modifier& mod, const object& lowerHeight)
+{
+	mod.LowerHeight(TableToVector(lowerHeight));
+}
+object GetLowerHeightGrid(modifier& mod)
+{
+	return VectorToTable(mod.LowerHeight());
+}
+void SetUpperHeightGrid(modifier& mod, const object& upperHeight)
+{
+	mod.UpperHeight(TableToVector(upperHeight));
+}
+object GetUpperHeightGrid(modifier& mod)
+{
+	return VectorToTable(mod.UpperHeight());
+}
+void SetFindValueGrid(modifier& mod, const object& findValue)
+{
+	mod.FindValue(TableToVector(findValue));
+}
+object GetFindValueGrid(modifier& mod)
+{
+	return VectorToTable(mod.FindValue());
+}
+object Result(modifier& mod)
+{
+	return VectorToTable(mod.Result());
+}
 namespace findvalue
 {
 void Process(modifier_findvalue& mod, const object& data, const object& height)
@@ -793,7 +870,10 @@ void Process(modifier_count& mod, const object& data, const object& height)
 
 namespace mean
 {
-object Result(modifier_mean& mod) { return VectorToTable(mod.Result()); }
+object Result(modifier_mean& mod)
+{
+	return VectorToTable(mod.Result());
+}
 void Process(modifier_mean& mod, const object& data, const object& height)
 {
 	mod.Process(TableToVector(data), TableToVector(height));
@@ -813,14 +893,26 @@ std::string GetProducerMetaData(std::shared_ptr<radon> r, const producer& prod, 
 
 namespace ensemble_wrapper
 {
-object Values(const ensemble& ens) { return VectorToTable(ens.Values()); }
-object SortedValues(const ensemble& ens) { return VectorToTable(ens.SortedValues()); }
+object Values(const ensemble& ens)
+{
+	return VectorToTable(ens.Values());
+}
+object SortedValues(const ensemble& ens)
+{
+	return VectorToTable(ens.SortedValues());
+}
 }  // ensemble_wrapper
 
 namespace matrix_wrapper
 {
-void SetValues(matrix<double>& mat, const object& values) { mat.Set(TableToVector(values)); }
-object GetValues(matrix<double>& mat) { return VectorToTable(std::vector<double>(mat.Values())); }
+void SetValues(matrix<double>& mat, const object& values)
+{
+	mat.Set(TableToVector(values));
+}
+object GetValues(matrix<double>& mat)
+{
+	return VectorToTable(std::vector<double>(mat.Values()));
+}
 }  // matrix_wrapper
 
 // clang-format off
@@ -1296,5 +1388,8 @@ void luatool::WriteToFile(const info& targetInfo, write_options writeOptions)
 	// Do nothing, override is needed to prevent double write
 }
 
-void luatool::WriteToFile(const info_t& targetInfo) { compiled_plugin_base::WriteToFile(*targetInfo, itsWriteOptions); }
+void luatool::WriteToFile(const info_t& targetInfo)
+{
+	compiled_plugin_base::WriteToFile(*targetInfo, itsWriteOptions);
+}
 #endif  // __clang_analyzer__

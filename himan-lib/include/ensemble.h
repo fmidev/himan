@@ -115,11 +115,26 @@ class ensemble
 	int itsMaximumMissingForecasts;
 };
 
-inline double ensemble::Value(size_t forecastIndex) const { return itsForecasts[forecastIndex]->Value(); }
-inline std::string ensemble::ClassName() const { return "himan::ensemble"; }
-inline param ensemble::Param() const { return itsParam; }
-inline int ensemble::MaximumMissingForecasts() const { return itsMaximumMissingForecasts; }
-inline void ensemble::MaximumMissingForecasts(int maximumMissing) { itsMaximumMissingForecasts = maximumMissing; }
+inline double ensemble::Value(size_t forecastIndex) const
+{
+	return itsForecasts[forecastIndex]->Value();
+}
+inline std::string ensemble::ClassName() const
+{
+	return "himan::ensemble";
+}
+inline param ensemble::Param() const
+{
+	return itsParam;
+}
+inline int ensemble::MaximumMissingForecasts() const
+{
+	return itsMaximumMissingForecasts;
+}
+inline void ensemble::MaximumMissingForecasts(int maximumMissing)
+{
+	itsMaximumMissingForecasts = maximumMissing;
+}
 }  // namespace himan
 
 // ENSEMBLE_H

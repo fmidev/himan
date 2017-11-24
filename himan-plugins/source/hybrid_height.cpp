@@ -22,7 +22,9 @@ hybrid_height::hybrid_height() : itsBottomLevel(kHPMissingInt), itsUseGeopotenti
 	itsLogger = logger(itsName);
 }
 
-hybrid_height::~hybrid_height() {}
+hybrid_height::~hybrid_height()
+{
+}
 void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);

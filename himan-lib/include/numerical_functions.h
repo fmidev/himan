@@ -9,7 +9,6 @@ namespace himan
 {
 namespace numerical_functions
 {
-
 /**
  * @brief Compute convolution of matrix A by matrix B
  * @param A Data

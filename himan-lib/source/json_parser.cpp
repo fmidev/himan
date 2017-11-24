@@ -58,7 +58,10 @@ static logger itsLogger;
  *
  */
 
-json_parser::json_parser() { itsLogger = logger("json_parser"); }
+json_parser::json_parser()
+{
+	itsLogger = logger("json_parser");
+}
 vector<shared_ptr<plugin_configuration>> json_parser::Parse(shared_ptr<configuration> conf)
 {
 	if (conf->ConfigurationFile().empty())
@@ -1583,7 +1586,8 @@ vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt)
 			{
 				forecastType = kEpsPerturbation;
 				string list = "";
-				for (size_t i = 2; i < type.size(); i++) list += type[i];
+				for (size_t i = 2; i < type.size(); i++)
+					list += type[i];
 
 				vector<string> range = himan::util::Split(list, "-", false);
 

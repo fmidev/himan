@@ -75,7 +75,10 @@ double LowestLayer(const vector<cloud_layer>& c_l, double threshold, size_t& end
 	return MissingDouble();
 }
 
-auto_taf::auto_taf() { itsLogger = logger("auto_taf"); }
+auto_taf::auto_taf()
+{
+	itsLogger = logger("auto_taf");
+}
 void auto_taf::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
@@ -289,7 +292,8 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	// cut off odd cloud layers
 	for (size_t k = 0; k < grd_size; ++k)
 	{
-		if (base[k].size() == 0) continue;
+		if (base[k].size() == 0)
+			continue;
 
 		// is there a cload layer in height class
 		vector<bool> height_class(4, false);
@@ -425,27 +429,39 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 				cbN[k] = nearest_cl->amount * 100.0;  // cloud amount in %
 			}
 
-			if (IsMissing(cbN[k])) cbbase[k] = MissingDouble();
+			if (IsMissing(cbN[k]))
+				cbbase[k] = MissingDouble();
 		}
 
 		ovcbase[k] = LowestLayer(c_l[k], ovc, m);
-		if (cbbase[k] > ovcbase[k]) cbbase[k] = MissingDouble();
-		if (ovcbase[k] == cbbase[k]) ovcbase[k] = MissingDouble();
-		if (m == 0) continue;
+		if (cbbase[k] > ovcbase[k])
+			cbbase[k] = MissingDouble();
+		if (ovcbase[k] == cbbase[k])
+			ovcbase[k] = MissingDouble();
+		if (m == 0)
+			continue;
 
 		bknbase[k] = LowestLayer(c_l[k], bkn, m = min(m, size_t(3)));
-		if (bknbase[k] >= cbbase[k]) bknbase[k] = MissingDouble();
-		if (m == 0) continue;
+		if (bknbase[k] >= cbbase[k])
+			bknbase[k] = MissingDouble();
+		if (m == 0)
+			continue;
 
 		sctbase[k] = LowestLayer(c_l[k], sct, m = min(m, size_t(2)));
-		if (sctbase[k] >= cbbase[k]) sctbase[k] = MissingDouble();
-		if (m == 0) continue;
+		if (sctbase[k] >= cbbase[k])
+			sctbase[k] = MissingDouble();
+		if (m == 0)
+			continue;
 
 		fewbase[k] = LowestLayer(c_l[k], cloud_treshold, m = min(m, size_t(1)));
-		if (fewbase[k] >= cbbase[k]) fewbase[k] = MissingDouble();
-		if (fewbase[k] < sctbase[k] && few_lowest[k] > sctbase[k]) sctbase[k] = few_lowest[k];
-		if (fewbase[k] < bknbase[k] && sct_lowest[k] > bknbase[k]) bknbase[k] = sct_lowest[k];
-		if (fewbase[k] < ovcbase[k] && sct_lowest[k] > ovcbase[k]) ovcbase[k] = sct_lowest[k];
+		if (fewbase[k] >= cbbase[k])
+			fewbase[k] = MissingDouble();
+		if (fewbase[k] < sctbase[k] && few_lowest[k] > sctbase[k])
+			sctbase[k] = few_lowest[k];
+		if (fewbase[k] < bknbase[k] && sct_lowest[k] > bknbase[k])
+			bknbase[k] = sct_lowest[k];
+		if (fewbase[k] < ovcbase[k] && sct_lowest[k] > ovcbase[k])
+			ovcbase[k] = sct_lowest[k];
 	}
 
 #ifdef DEBUG

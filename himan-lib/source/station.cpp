@@ -11,14 +11,20 @@ std::ostream& station::Write(std::ostream& file) const
 	return file;
 }
 
-station::station() : point(), itsId(kHPMissingInt), itsName("Himan default station") {}
-station::station(int theId) : point(), itsId(theId), itsName("Himan default station") {}
+station::station() : point(), itsId(kHPMissingInt), itsName("Himan default station")
+{
+}
+station::station(int theId) : point(), itsId(theId), itsName("Himan default station")
+{
+}
 station::station(int theId, const std::string& theName, double lon, double lat)
     : point(lon, lat), itsId(theId), itsName(theName)
 {
 }
 
-station::station(int theId, double lon, double lat) : point(lon, lat), itsId(theId) {}
+station::station(int theId, double lon, double lat) : point(lon, lat), itsId(theId)
+{
+}
 bool station::operator==(const station& other) const
 {
 	bool yEquals = (fabs(itsY - other.Y()) < kCoordinateEpsilon);
@@ -27,8 +33,23 @@ bool station::operator==(const station& other) const
 	return (xEquals && yEquals && itsName == other.itsName && itsId == other.itsId);
 }
 
-bool station::operator!=(const station& other) const { return !(*this == other); }
-int station::Id() const { return itsId; }
-void station::Id(int theId) { itsId = theId; }
-std::string station::Name() const { return itsName; }
-void station::Name(const std::string& theName) { itsName = theName; }
+bool station::operator!=(const station& other) const
+{
+	return !(*this == other);
+}
+int station::Id() const
+{
+	return itsId;
+}
+void station::Id(int theId)
+{
+	itsId = theId;
+}
+std::string station::Name() const
+{
+	return itsName;
+}
+void station::Name(const std::string& theName)
+{
+	itsName = theName;
+}

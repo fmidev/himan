@@ -111,7 +111,10 @@ const param rhAvgUpperParam("RHAVG-UPPER-PRCNT");
 const param rhMeltParam("RHMELT-PRCNT");
 const param rhMeltUpperParam("RHMELT-UPPER-PRCNT");
 
-preform_hybrid::preform_hybrid() { itsLogger = logger("preform_hybrid"); }
+preform_hybrid::preform_hybrid()
+{
+	itsLogger = logger("preform_hybrid");
+}
 void preform_hybrid::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	// Initialize plugin
@@ -747,7 +750,8 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 vector<double> Add(vector<double> vec, double a)
 {
-	for (auto& v : vec) v += a;
+	for (auto& v : vec)
+		v += a;
 
 	return vec;
 }

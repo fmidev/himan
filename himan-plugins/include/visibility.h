@@ -25,15 +25,27 @@ class visibility : public compiled_plugin, private compiled_plugin_base
    public:
 	visibility();
 
-	inline virtual ~visibility() {}
+	inline virtual ~visibility()
+	{
+	}
 	visibility(const visibility& other) = delete;
 	visibility& operator=(const visibility& other) = delete;
 
 	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
 
-	virtual std::string ClassName() const { return "himan::plugin::visibility"; }
-	virtual HPPluginClass PluginClass() const { return kCompiled; }
-	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 0); }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::visibility";
+	}
+	virtual HPPluginClass PluginClass() const
+	{
+		return kCompiled;
+	}
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(1, 0);
+	}
+
    private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 	std::shared_ptr<info> FetchSourceRR(const forecast_time& wantedTime, const level& wantedLevel);
@@ -49,7 +61,10 @@ class visibility : public compiled_plugin, private compiled_plugin_base
 
 // the class factory
 
-extern "C" std::shared_ptr<himan_plugin> create() { return std::shared_ptr<visibility>(new visibility()); }
+extern "C" std::shared_ptr<himan_plugin> create()
+{
+	return std::shared_ptr<visibility>(new visibility());
+}
 }  // namespace plugin
 }  // namespace himan
 

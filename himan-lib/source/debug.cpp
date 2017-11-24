@@ -21,7 +21,8 @@ static bool DebuggerAttached()
 	int debugger_present = 0;
 
 	int status_fd = open("/proc/self/status", O_RDONLY);
-	if (status_fd == -1) return 0;
+	if (status_fd == -1)
+		return 0;
 
 	ssize_t num_read = read(status_fd, buf, sizeof(buf) - 1);
 
@@ -32,7 +33,8 @@ static bool DebuggerAttached()
 
 		buf[num_read] = '\0';
 		tracer_pid = strstr(buf, TracerPid);
-		if (tracer_pid) debugger_present = !!atoi(tracer_pid + sizeof(TracerPid) - 1);
+		if (tracer_pid)
+			debugger_present = !!atoi(tracer_pid + sizeof(TracerPid) - 1);
 	}
 
 	return debugger_present;

@@ -19,13 +19,24 @@ class grib : public io_plugin
    public:
 	grib();
 
-	virtual ~grib() {}
+	virtual ~grib()
+	{
+	}
 	grib(const grib& other) = delete;
 	grib& operator=(const grib& other) = delete;
 
-	virtual std::string ClassName() const { return "himan::plugin::grib"; };
-	virtual HPPluginClass PluginClass() const { return kAuxiliary; };
-	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 1); }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::grib";
+	};
+	virtual HPPluginClass PluginClass() const
+	{
+		return kAuxiliary;
+	};
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(1, 1);
+	}
 	std::shared_ptr<NFmiGrib> Reader();
 
 	/**
@@ -123,7 +134,10 @@ class grib : public io_plugin
 
 // the class factory
 
-extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<grib>(); }
+extern "C" std::shared_ptr<himan_plugin> create()
+{
+	return std::make_shared<grib>();
+}
 #define HIMAN_AUXILIARY_INCLUDE
 #endif /* HIMAN_AUXILIARY_INCLUDE */
 

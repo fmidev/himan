@@ -30,7 +30,10 @@ static std::mutex singleFileWriteMutex;
 static const std::string kClassName = "himan::plugin::probability";
 
 /// @brief Used for calculating wind vector magnitude
-static inline double Magnitude(double u, double v) { return sqrt(u * u + v * v); }
+static inline double Magnitude(double u, double v)
+{
+	return sqrt(u * u + v * v);
+}
 probability::probability()
 {
 	itsCudaEnabledCalculation = false;
@@ -44,7 +47,9 @@ probability::probability()
 	itsLaggedSteps = 0;
 }
 
-probability::~probability() {}
+probability::~probability()
+{
+}
 param GetParamFromDatabase(const std::string& paramName, const std::shared_ptr<const plugin_configuration> conf)
 {
 	param p;

@@ -197,12 +197,14 @@ vector<string> util::Split(const string& s, const std::string& delims, bool fill
 			if (first <= last)
 			{
 				// levels are 1-65
-				for (int i = first; i <= last; ++i) filled_elems.push_back(to_string(i));
+				for (int i = first; i <= last; ++i)
+					filled_elems.push_back(to_string(i));
 			}
 			else
 			{
 				// levels are 65-1
-				for (int i = first; i >= last; --i) filled_elems.push_back(to_string(i));
+				for (int i = first; i >= last; --i)
+					filled_elems.push_back(to_string(i));
 			}
 		}
 		else
@@ -495,7 +497,8 @@ string util::MakeSQLInterval(const himan::forecast_time& theTime)
 
 string util::Expand(const string& in)
 {
-	if (in.find("$") == string::npos) return in;
+	if (in.find("$") == string::npos)
+		return in;
 
 	wordexp_t p;
 
@@ -555,13 +558,15 @@ void util::DumpVector(const vector<double>& vec, const string& name)
 
 		for (int i = 1; i <= binn; i++)
 		{
-			if (i == binn) binmax += 0.001;
+			if (i == binn)
+				binmax += 0.001;
 
 			size_t count = 0;
 
 			for (const double& val : vec)
 			{
-				if (IsMissing(val)) continue;
+				if (IsMissing(val))
+					continue;
 
 				if (val >= binmin && val < binmax)
 				{
@@ -569,7 +574,8 @@ void util::DumpVector(const vector<double>& vec, const string& name)
 				}
 			}
 
-			if (i == binn) binmax -= 0.001;
+			if (i == binn)
+				binmax -= 0.001;
 
 			cout << binmin << ":" << binmax << " " << count << std::endl;
 
@@ -626,7 +632,8 @@ info_t util::CSVToInfo(const vector<string>& csv)
 		// 12 forecast_type_value
 		// 13 value
 
-		if (elems[0][0] == '#') continue;
+		if (elems[0][0] == '#')
+			continue;
 
 		// producer, only single producer per file is supported for now
 		prod.Id(stoi(elems[0]));
@@ -751,7 +758,8 @@ info_t util::CSVToInfo(const vector<string>& csv)
 		// 12 forecast_type_value
 		// 13 value
 
-		if (elems[0][0] == '#') continue;
+		if (elems[0][0] == '#')
+			continue;
 
 		// forecast_time
 		raw_time originTime(elems[1]), validTime(elems[1]);
@@ -785,10 +793,14 @@ info_t util::CSVToInfo(const vector<string>& csv)
 
 		const station s(stationId, elems[3], longitude, latitude);
 
-		if (!ret->Param(p)) continue;
-		if (!ret->Time(f)) continue;
-		if (!ret->Level(l)) continue;
-		if (!ret->ForecastType(ftype)) continue;
+		if (!ret->Param(p))
+			continue;
+		if (!ret->Time(f))
+			continue;
+		if (!ret->Level(l))
+			continue;
+		if (!ret->ForecastType(ftype))
+			continue;
 
 		for (size_t i = 0; i < stats.size(); i++)
 		{

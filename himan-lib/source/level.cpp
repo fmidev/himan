@@ -40,7 +40,10 @@ bool level::operator==(const level& other) const
 	return (itsType == other.itsType && itsValue == other.itsValue && itsValue2 == other.itsValue2);
 }
 
-bool level::operator!=(const level& other) const { return !(*this == other); }
+bool level::operator!=(const level& other) const
+{
+	return !(*this == other);
+}
 level::operator std::string() const
 {
 	std::string out = HPLevelTypeToString.at(itsType) + "/" + std::to_string(itsValue);
@@ -53,16 +56,46 @@ level::operator std::string() const
 	return out;
 }
 
-void level::Value(double theValue) { itsValue = theValue; }
-double level::Value() const { return itsValue; }
-void level::Value2(double theValue2) { itsValue2 = theValue2; }
-double level::Value2() const { return itsValue2; }
-int level::Index() const { return itsIndex; }
-void level::Index(int theIndex) { itsIndex = theIndex; }
-HPLevelType level::Type() const { return itsType; }
-void level::Type(HPLevelType theLevelType) { itsType = theLevelType; }
-std::string level::Name() const { return itsName; }
-void level::Name(const std::string& theName) { itsName = theName; }
+void level::Value(double theValue)
+{
+	itsValue = theValue;
+}
+double level::Value() const
+{
+	return itsValue;
+}
+void level::Value2(double theValue2)
+{
+	itsValue2 = theValue2;
+}
+double level::Value2() const
+{
+	return itsValue2;
+}
+int level::Index() const
+{
+	return itsIndex;
+}
+void level::Index(int theIndex)
+{
+	itsIndex = theIndex;
+}
+HPLevelType level::Type() const
+{
+	return itsType;
+}
+void level::Type(HPLevelType theLevelType)
+{
+	itsType = theLevelType;
+}
+std::string level::Name() const
+{
+	return itsName;
+}
+void level::Name(const std::string& theName)
+{
+	itsName = theName;
+}
 std::ostream& level::Write(std::ostream& file) const
 {
 	file << "<" << ClassName() << ">" << std::endl;

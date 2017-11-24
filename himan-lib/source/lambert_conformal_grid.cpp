@@ -360,19 +360,58 @@ bool lambert_conformal_grid::Swap(HPScanningMode newScanningMode)
 	return true;
 }
 
-void lambert_conformal_grid::SouthPole(const point& theSouthPole) { itsSouthPole = theSouthPole; }
-point lambert_conformal_grid::SouthPole() const { return itsSouthPole; }
-void lambert_conformal_grid::Ni(size_t theNi) { itsNi = theNi; }
-void lambert_conformal_grid::Nj(size_t theNj) { itsNj = theNj; }
-size_t lambert_conformal_grid::Ni() const { return itsNi; }
-size_t lambert_conformal_grid::Nj() const { return itsNj; }
-void lambert_conformal_grid::Di(double theDi) { itsDi = theDi; }
-void lambert_conformal_grid::Dj(double theDj) { itsDj = theDj; }
-void lambert_conformal_grid::Orientation(double theOrientation) { itsOrientation = theOrientation; }
-double lambert_conformal_grid::Orientation() const { return itsOrientation; }
-double lambert_conformal_grid::Di() const { return itsDi; }
-double lambert_conformal_grid::Dj() const { return itsDj; }
-bool lambert_conformal_grid::operator!=(const grid& other) const { return !(other == *this); }
+void lambert_conformal_grid::SouthPole(const point& theSouthPole)
+{
+	itsSouthPole = theSouthPole;
+}
+point lambert_conformal_grid::SouthPole() const
+{
+	return itsSouthPole;
+}
+void lambert_conformal_grid::Ni(size_t theNi)
+{
+	itsNi = theNi;
+}
+void lambert_conformal_grid::Nj(size_t theNj)
+{
+	itsNj = theNj;
+}
+size_t lambert_conformal_grid::Ni() const
+{
+	return itsNi;
+}
+size_t lambert_conformal_grid::Nj() const
+{
+	return itsNj;
+}
+void lambert_conformal_grid::Di(double theDi)
+{
+	itsDi = theDi;
+}
+void lambert_conformal_grid::Dj(double theDj)
+{
+	itsDj = theDj;
+}
+void lambert_conformal_grid::Orientation(double theOrientation)
+{
+	itsOrientation = theOrientation;
+}
+double lambert_conformal_grid::Orientation() const
+{
+	return itsOrientation;
+}
+double lambert_conformal_grid::Di() const
+{
+	return itsDi;
+}
+double lambert_conformal_grid::Dj() const
+{
+	return itsDj;
+}
+bool lambert_conformal_grid::operator!=(const grid& other) const
+{
+	return !(other == *this);
+}
 bool lambert_conformal_grid::operator==(const grid& other) const
 {
 	const lambert_conformal_grid* g = dynamic_cast<const lambert_conformal_grid*>(&other);
@@ -449,24 +488,27 @@ bool lambert_conformal_grid::EqualsTo(const lambert_conformal_grid& other) const
 
 	if (itsStandardParallel1 != other.itsStandardParallel1)
 	{
-		itsLogger.Trace(
-		    "Standard latitude 1 does not match: " + boost::lexical_cast<std::string>(itsStandardParallel1) + " vs " +
-		    boost::lexical_cast<std::string>(other.itsStandardParallel1));
+		itsLogger.Trace("Standard latitude 1 does not match: " +
+		                boost::lexical_cast<std::string>(itsStandardParallel1) + " vs " +
+		                boost::lexical_cast<std::string>(other.itsStandardParallel1));
 		return false;
 	}
 
 	if (itsStandardParallel2 != other.itsStandardParallel2)
 	{
-		itsLogger.Trace(
-		    "Standard latitude 2 does not match: " + boost::lexical_cast<std::string>(itsStandardParallel2) + " vs " +
-		    boost::lexical_cast<std::string>(other.itsStandardParallel2));
+		itsLogger.Trace("Standard latitude 2 does not match: " +
+		                boost::lexical_cast<std::string>(itsStandardParallel2) + " vs " +
+		                boost::lexical_cast<std::string>(other.itsStandardParallel2));
 		return false;
 	}
 
 	return true;
 }
 
-lambert_conformal_grid* lambert_conformal_grid::Clone() const { return new lambert_conformal_grid(*this); }
+lambert_conformal_grid* lambert_conformal_grid::Clone() const
+{
+	return new lambert_conformal_grid(*this);
+}
 ostream& lambert_conformal_grid::Write(std::ostream& file) const
 {
 	grid::Write(file);
@@ -487,13 +529,19 @@ void lambert_conformal_grid::StandardParallel1(double theStandardParallel1)
 	itsStandardParallel1 = theStandardParallel1;
 }
 
-double lambert_conformal_grid::StandardParallel1() const { return itsStandardParallel1; }
+double lambert_conformal_grid::StandardParallel1() const
+{
+	return itsStandardParallel1;
+}
 void lambert_conformal_grid::StandardParallel2(double theStandardParallel2)
 {
 	itsStandardParallel2 = theStandardParallel2;
 }
 
-double lambert_conformal_grid::StandardParallel2() const { return itsStandardParallel2; }
+double lambert_conformal_grid::StandardParallel2() const
+{
+	return itsStandardParallel2;
+}
 bool lambert_conformal_grid::SetCoordinates() const
 {
 	itsSpatialReference = unique_ptr<OGRSpatialReference>(new OGRSpatialReference);

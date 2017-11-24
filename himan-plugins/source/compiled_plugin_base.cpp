@@ -693,7 +693,10 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 	return ret;
 }
 
-HPDimensionType compiled_plugin_base::PrimaryDimension() const { return itsPrimaryDimension; }
+HPDimensionType compiled_plugin_base::PrimaryDimension() const
+{
+	return itsPrimaryDimension;
+}
 void compiled_plugin_base::PrimaryDimension(HPDimensionType thePrimaryDimension)
 {
 	if (itsInfo->SizeParams() > 0)

@@ -18,14 +18,19 @@ class aggregation
 	aggregation();
 	aggregation(HPAggregationType theAggregationType, HPTimeResolution theTimeResolution, int theFirstTimeValue,
 	            int theLastTimeValue);
-	~aggregation() {}
+	~aggregation()
+	{
+	}
 	aggregation(const aggregation& other);
 	aggregation& operator=(const aggregation& other);
 
 	bool operator==(const aggregation& other) const;
 	bool operator!=(const aggregation& other) const;
 
-	std::string ClassName() const { return "himan::aggregation"; }
+	std::string ClassName() const
+	{
+		return "himan::aggregation";
+	}
 	HPAggregationType Type() const;
 	void Type(HPAggregationType theType);
 
@@ -58,7 +63,10 @@ class aggregation
 #endif
 };
 
-inline std::ostream& operator<<(std::ostream& file, const aggregation& ob) { return ob.Write(file); }
+inline std::ostream& operator<<(std::ostream& file, const aggregation& ob)
+{
+	return ob.Write(file);
+}
 }  // namespace himan
 
 #endif /* AGGREGATION_H */

@@ -12,7 +12,6 @@
 
 namespace himan
 {
-
 class level
 {
    public:
@@ -24,7 +23,10 @@ class level
 	~level() = default;
 	operator std::string() const;
 
-	std::string ClassName() const { return "himan::level"; }
+	std::string ClassName() const
+	{
+		return "himan::level";
+	}
 	bool operator==(const level& other) const;
 	bool operator!=(const level& other) const;
 
@@ -87,7 +89,10 @@ class level
 #endif
 };
 
-inline std::ostream& operator<<(std::ostream& file, const level& ob) { return ob.Write(file); }
+inline std::ostream& operator<<(std::ostream& file, const level& ob)
+{
+	return ob.Write(file);
+}
 }  // namespace himan
 
 #endif /* LEVEL_H */

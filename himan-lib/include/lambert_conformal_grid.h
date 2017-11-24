@@ -29,7 +29,10 @@ class lambert_conformal_grid : public grid
 	lambert_conformal_grid(const lambert_conformal_grid& other);
 	lambert_conformal_grid& operator=(const lambert_conformal_grid& other) = delete;
 
-	virtual std::string ClassName() const { return "himan::lambert_conformal_grid"; }
+	virtual std::string ClassName() const
+	{
+		return "himan::lambert_conformal_grid";
+	}
 	virtual std::ostream& Write(std::ostream& file) const;
 
 	/**
@@ -142,7 +145,10 @@ class lambert_conformal_grid : public grid
 #endif
 };
 
-inline std::ostream& operator<<(std::ostream& file, const lambert_conformal_grid& ob) { return ob.Write(file); }
+inline std::ostream& operator<<(std::ostream& file, const lambert_conformal_grid& ob)
+{
+	return ob.Write(file);
+}
 }  // namespace himan
 
 #ifdef SERIALIZATION

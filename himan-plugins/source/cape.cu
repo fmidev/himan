@@ -713,7 +713,8 @@ cape_source cape_cuda::GetHighestThetaEValuesGPU(const std::shared_ptr<const plu
 
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
-		if (foundCount == N) break;
+		if (foundCount == N)
+			break;
 	}
 
 	CUDA_CHECK(cudaFree(h_prevP->values));
@@ -848,7 +849,8 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 			break;
 		}
 
-		for (auto& v : PVec) v -= 2.0;
+		for (auto& v : PVec)
+			v -= 2.0;
 	}
 
 	CUDA_CHECK(cudaHostUnregister(Tpot.data()));
@@ -1035,7 +1037,8 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
 
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
-		if (N == foundCount) break;
+		if (N == foundCount)
+			break;
 
 		CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, d_Tparcel, sizeof(double) * N, cudaMemcpyDeviceToDevice, stream));
 		curLevel.Value(curLevel.Value() - 1);
@@ -1158,7 +1161,8 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 
 	for (size_t i = 0; i < PLFC.size(); i++)
 	{
-		if (IsMissingDouble(PLFC[i])) found[i] = true;
+		if (IsMissingDouble(PLFC[i]))
+			found[i] = true;
 	}
 
 	CUDA_CHECK(cudaMemcpyAsync(d_found, &found[0], sizeof(unsigned char) * N, cudaMemcpyHostToDevice, stream));
@@ -1201,7 +1205,8 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
-		if (N == foundCount) break;
+		if (N == foundCount)
+			break;
 
 		// preserve starting position for those grid points that have value
 

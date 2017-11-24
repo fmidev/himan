@@ -26,9 +26,19 @@ class hybrid_height : public compiled_plugin, private compiled_plugin_base
 
 	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
 
-	virtual std::string ClassName() const { return "himan::plugin::hybrid_height"; }
-	virtual HPPluginClass PluginClass() const { return kCompiled; }
-	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 2); }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::hybrid_height";
+	}
+	virtual HPPluginClass PluginClass() const
+	{
+		return kCompiled;
+	}
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(1, 2);
+	}
+
    protected:
 	void RunTimeDimension(himan::info_t myTargetInfo, unsigned short threadIndex) override;
 
@@ -44,7 +54,10 @@ class hybrid_height : public compiled_plugin, private compiled_plugin_base
 
 // the class factory
 
-extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<hybrid_height>(); }
+extern "C" std::shared_ptr<himan_plugin> create()
+{
+	return std::make_shared<hybrid_height>();
+}
 }  // namespace plugin
 }  // namespace himan
 

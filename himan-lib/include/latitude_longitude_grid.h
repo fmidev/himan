@@ -36,7 +36,10 @@ class latitude_longitude_grid : public grid
 	latitude_longitude_grid(const latitude_longitude_grid& other);
 	latitude_longitude_grid& operator=(const latitude_longitude_grid& other) = delete;
 
-	virtual std::string ClassName() const { return "himan::latitude_longitude_grid"; }
+	virtual std::string ClassName() const
+	{
+		return "himan::latitude_longitude_grid";
+	}
 	virtual std::ostream& Write(std::ostream& file) const;
 
 	/**
@@ -136,7 +139,10 @@ class latitude_longitude_grid : public grid
 #endif
 };
 
-inline std::ostream& operator<<(std::ostream& file, const latitude_longitude_grid& ob) { return ob.Write(file); }
+inline std::ostream& operator<<(std::ostream& file, const latitude_longitude_grid& ob)
+{
+	return ob.Write(file);
+}
 class rotated_latitude_longitude_grid : public latitude_longitude_grid
 {
    public:
@@ -153,7 +159,10 @@ class rotated_latitude_longitude_grid : public latitude_longitude_grid
 
 	virtual std::ostream& Write(std::ostream& file) const;
 
-	virtual std::string ClassName() const { return "himan::rotated_latitude_longitude_grid"; }
+	virtual std::string ClassName() const
+	{
+		return "himan::rotated_latitude_longitude_grid";
+	}
 	rotated_latitude_longitude_grid* Clone() const override;
 
 	point SouthPole() const;

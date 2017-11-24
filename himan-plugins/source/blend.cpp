@@ -23,9 +23,14 @@ static mutex singleFileWriteMutex;
 
 static const string kClassName = "himan::plugin::blend";
 
-blend::blend() { itsLogger = logger("blend"); }
+blend::blend()
+{
+	itsLogger = logger("blend");
+}
 
-blend::~blend() {}
+blend::~blend()
+{
+}
 
 static info_t FetchWithProperties(shared_ptr<plugin_configuration> cnf, const forecast_time& forecastTime,
                                   HPTimeResolution stepResolution, const level& lvl, const param& parm,

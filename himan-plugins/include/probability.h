@@ -48,9 +48,19 @@ class probability : public compiled_plugin, private compiled_plugin_base
 
 	virtual void WriteToFile(const info& targetInfo, size_t targetInfoIndex, write_options opts = write_options());
 
-	virtual std::string ClassName() const { return "himan::plugin::probability"; }
-	virtual HPPluginClass PluginClass() const { return kCompiled; }
-	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::probability";
+	}
+	virtual HPPluginClass PluginClass() const
+	{
+		return kCompiled;
+	}
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(0, 1);
+	}
+
    private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 
@@ -63,7 +73,10 @@ class probability : public compiled_plugin, private compiled_plugin_base
 	std::vector<param_configuration> itsParamConfigurations;
 };
 
-extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<probability>(); }
+extern "C" std::shared_ptr<himan_plugin> create()
+{
+	return std::make_shared<probability>();
+}
 }  // plugin
 }  // himan
 

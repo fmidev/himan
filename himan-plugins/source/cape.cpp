@@ -49,10 +49,12 @@ double Max(const vector<double>& vec)
 
 	for (const double& val : vec)
 	{
-		if (val > ret) ret = val;
+		if (val > ret)
+			ret = val;
 	}
 
-	if (ret == -1e38) ret = himan::MissingDouble();
+	if (ret == -1e38)
+		ret = himan::MissingDouble();
 
 	return ret;
 }
@@ -139,7 +141,10 @@ void MoistLift(const double* Piter, const double* Titer, const double* Penv, dou
 	}
 }
 
-cape::cape() : itsBottomLevel(kHybrid, kHPMissingInt), itsUseVirtualTemperature(true) { itsLogger = logger("cape"); }
+cape::cape() : itsBottomLevel(kHybrid, kHPMissingInt), itsUseVirtualTemperature(true)
+{
+	itsLogger = logger("cape");
+}
 void cape::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	compiled_plugin_base::Init(conf);
@@ -277,7 +282,8 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	myTargetInfo->Level(sourceLevel);
 
-	if (get<0>(sourceValues).empty()) return;
+	if (get<0>(sourceValues).empty())
+		return;
 
 	auto h = GET_PLUGIN(hitool);
 	h->Configuration(itsConfiguration);
@@ -558,7 +564,8 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 		{
 			i++;
 
-			if (found[i]) continue;
+			if (found[i])
+				continue;
 
 			double& cin = tup.get<0>();
 
@@ -648,7 +655,8 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 				Piter[i] = PenvVec[i];
 			}
 
-			if (found[i]) Titer[i] = MissingDouble();  // by setting this we prevent MoistLift to integrate particle
+			if (found[i])
+				Titer[i] = MissingDouble();  // by setting this we prevent MoistLift to integrate particle
 		}
 	}
 
@@ -1087,7 +1095,8 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 		::MoistLift(&Piter[0], &Titer[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
 
 		double scale = 1;
-		if (prevPenvInfo->Param().Name() == "P-PA") scale = 0.01;
+		if (prevPenvInfo->Param().Name() == "P-PA")
+			scale = 0.01;
 
 		vector<double> TenvVec;
 
@@ -1106,7 +1115,8 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 		{
 			i++;
 
-			if (found[i]) continue;
+			if (found[i])
+				continue;
 
 			double Tenv = tup.get<0>();  // K
 			ASSERT(Tenv > 100.);
@@ -1213,7 +1223,8 @@ pair<vector<double>, vector<double>> cape::GetLFCCPU(shared_ptr<info> myTargetIn
 
 		for (size_t i = 0; i < Titer.size(); i++)
 		{
-			if (found[i]) Titer[i] = MissingDouble();  // by setting this we prevent MoistLift to integrate particle
+			if (found[i])
+				Titer[i] = MissingDouble();  // by setting this we prevent MoistLift to integrate particle
 		}
 	}
 
@@ -1338,7 +1349,8 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info> myTargetInfo)
 		size_t miss = 0;
 		for (auto& val : VEC(PInfo))
 		{
-			if (IsMissingDouble(val)) miss++;
+			if (IsMissingDouble(val))
+				miss++;
 		}
 
 		if (PInfo->Data().MissingCount() == PInfo->Data().Size())
@@ -1372,8 +1384,10 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info> myTargetInfo)
 
 		for (size_t i = 0; i < T.size(); i++)
 		{
-			if (found[i]) continue;
-			if (IsMissingDouble(T[i]) || IsMissingDouble(P[i]) || IsMissingDouble(RH[i])) continue;
+			if (found[i])
+				continue;
+			if (IsMissingDouble(T[i]) || IsMissingDouble(P[i]) || IsMissingDouble(RH[i]))
+				continue;
 
 			ASSERT(T[i] > 150 && T[i] < 350);
 			ASSERT(P[i] > 100 && P[i] < 1500);
@@ -1494,7 +1508,8 @@ cape_source cape::GetHighestThetaEValuesCPU(shared_ptr<info> myTargetInfo)
 		{
 			i++;
 
-			if (found[i]) continue;
+			if (found[i])
+				continue;
 
 			double T = tup.get<0>();
 			double RH = tup.get<1>();
