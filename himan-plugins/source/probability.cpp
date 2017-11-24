@@ -318,6 +318,7 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 	params calculatedParams;
 
 	const auto names = conf->GetParameterNames();
+
 	for (const std::string& name : names)
 	{
 		partial_param_configuration config;
