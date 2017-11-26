@@ -216,6 +216,7 @@ env.Append(NOCUDA = NOCUDA)
 
 if RELEASE:
 	env.Append(CPPDEFINES = ['NDEBUG'])
+	env.Append(CCFLAGS = ['-O2'])
 
 	env.Append(NVCCFLAGS = ['-O2'])
 	env.Append(NVCCDEFINES = ['NDEBUG'])
