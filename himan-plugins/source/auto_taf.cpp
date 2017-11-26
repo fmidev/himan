@@ -250,6 +250,13 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		vector<double>& _N_max = tup.get<1>();
 		vector<double>& _base = tup.get<2>();
 		vector<double>& _top = tup.get<3>();
+
+		if (_base.size() != _top.size() || _top.size() != _N_max.size())
+		{
+			myThreadedLogger.Warning("base, top and N have different sizes: " + to_string(_base.size()) + " " +
+			                         to_string(_top.size()) + " " + to_string(_N_max.size()));
+			continue;
+		}
 		for (size_t j = 0; j < _base.size(); ++j)
 		{
 			_c_l[j].base = _base[j];

@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.11.14
+Version: 17.11.26
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 17.11.9
+Requires: himan-lib >= 17.11.22
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 17.10.25
@@ -110,6 +110,15 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Sun Nov 26 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.24-1.fmi
+- Hotfixing auto_taf
+* Fri Nov 24 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.24-1.fmi
+- preform-hybrid bugfix
+* Wed Nov 22 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.22-1.fmi
+- Update to auto_taf
+- Remove double-packing from grib plugin
+* Fri Nov 17 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.17-1.fmi
+- Tweaking of radon and probability plugins
 * Tue Nov 14 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.14-1.fmi
 - Bugfix to cape
 - hybrid_height performance improvements
