@@ -56,7 +56,7 @@ long DetermineBitsPerValue(const vector<double>& values, double precision)
 
 	// define manual minmax search as std::minmax_element uses std::less
 	// for comparison which does not work well with nan
-	double min = 1e38, max = -1e38;
+	double min = himan::MissingDouble(), max = himan::MissingDouble();
 
 	for (const auto& v : values)
 	{
@@ -72,7 +72,7 @@ long DetermineBitsPerValue(const vector<double>& values, double precision)
 	// Range of scaled data, ie the largest value we must be able to write
 	const int range = static_cast<int>(ceil(D * max - D * min));
 
-	if (range == 0)
+	if (himan::IsMissingDouble(min) || himan::IsMissingDouble(max) || range == 0)
 	{
 		// static grid (max == min)
 		bitsPerValue = 0;
