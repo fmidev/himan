@@ -13,6 +13,8 @@
 #include "json_parser.h"
 #include "logger.h"
 #include "plugin_factory.h"
+#include "radon.h"
+#include "util.h"
 #include <boost/program_options.hpp>
 #include <future>
 #include <iostream>
@@ -49,6 +51,99 @@ int HighestOrderNumber(const vector<plugin_timing>& timingList, const std::strin
 	}
 
 	return highest;
+}
+
+void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
+{
+	auto r = GET_PLUGIN(radon);
+
+	const auto res = pc->Info();
+	const auto producerId = res->Producer().Id();
+	const auto analysisTime = res->PeekTime(0).OriginDateTime().String();
+
+	logger log("himan");
+	stringstream ss;
+
+	ss << "SELECT id FROM geom WHERE name = '" << pc->TargetGeomName() << "'";
+
+	r->RadonDB().Query(ss.str());
+
+	auto row = r->RadonDB().FetchRow();
+
+	if (row.empty())
+	{
+		log.Error("ss_state update failed: geometry id not found for name: " + pc->TargetGeomName());
+		return;
+	}
+
+	const auto geometryId = stoi(row[0]);
+
+	ss.str("");
+	ss << "SELECT partition_name FROM as_grid WHERE producer_id = " << producerId << " AND analysis_time = '"
+	   << analysisTime << "' AND geometry_id = " << geometryId;
+
+	r->RadonDB().Query(ss.str());
+
+	row = r->RadonDB().FetchRow();
+
+	if (row.empty())
+	{
+		log.Error("ss_state update failed: table not found from as_grid");
+		return;
+	}
+
+	const auto partitionName = row[0];
+	int inserts = 0, updates = 0;
+
+	for (res->ResetForecastType(); res->NextForecastType();)
+	{
+		int forecastTypeValue = -1;  // default, deterministic/analysis
+
+		if (res->ForecastType().Type() > 2)
+		{
+			forecastTypeValue = static_cast<int>(res->ForecastType().Value());
+		}
+
+		for (res->ResetTime(); res->NextTime();)
+		{
+			try
+			{
+				ss.str("");
+				ss << "INSERT INTO ss_state (producer_id, geometry_id, analysis_time, forecast_period, "
+				      "forecast_type_id, forecast_type_value, table_name) VALUES ("
+				   << producerId << ", " << geometryId << ", "
+				   << "'" << analysisTime << "', '" << util::MakeSQLInterval(res->Time()) << "', "
+				   << static_cast<int>(res->ForecastType().Type()) << ", " << forecastTypeValue << ", "
+				   << "'" << partitionName << "')";
+
+				r->RadonDB().Execute(ss.str());
+				inserts++;
+			}
+			catch (const pqxx::unique_violation& e)
+			{
+				ss.str("");
+				ss << "UPDATE ss_state SET last_updated = now() WHERE "
+				   << "producer_id = " << producerId << " AND "
+				   << "geometry_id = " << geometryId << " AND "
+				   << "analysis_time = '" << analysisTime << "' AND "
+				   << "forecast_period = '" << util::MakeSQLInterval(res->Time()) << "' AND "
+				   << "forecast_type_id = " << static_cast<int>(res->ForecastType().Type()) << " AND "
+				   << "forecast_type_value = " << forecastTypeValue;
+
+				r->RadonDB().Execute(ss.str());
+				updates++;
+			}
+			catch (const exception& e)
+			{
+				log.Error("Caught unexpected exception: " + string(e.what()));
+				return;
+			}
+
+			r->RadonDB().Commit();
+		}
+	}
+
+	log.Debug("Update of ss_state: " + to_string(inserts) + " inserts, " + to_string(updates) + " updates");
 }
 
 void ExecutePlugin(shared_ptr<plugin_configuration> pc)
@@ -98,6 +193,13 @@ void ExecutePlugin(shared_ptr<plugin_configuration> pc)
 		pluginTimes.push_back(t);
 	}
 
+	if (pc->DatabaseType() == kRadon && pc->FileWriteOption() == kDatabase && pc->UpdateSSStateTable())
+	{
+		UpdateSSState(pc);
+	}
+
+	// Remove all data from info and release memory
+	pc->Info()->Clear();
 #if defined DEBUG and defined HAVE_CUDA
 	// For 'cuda-memcheck --leak-check full'
 	CUDA_CHECK(cudaDeviceReset());
@@ -358,12 +460,12 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		("compression,c", po::value(&outfileCompression), "output file compression, one of: gz, bzip2")
 		("version,v", "display version number")
 		("configuration-file,f", po::value(&confFile), "configuration file")
-		("auxiliary-files,a", po::value<vector<string>>(&auxFiles), "auxiliary (helper) file(s)")
+		("auxiliary-files,a", po::value<vector<string>>(&auxFiles), "file(s) containing source data for calculation")
 		("threads,j", po::value(&threadCount), "number of started threads")
 		("list-plugins,l", "list all defined plugins")
 		("debug-level,d", po::value(&logLevel), "set log level: 0(fatal) 1(error) 2(warning) 3(info) 4(debug) 5(trace)")
 		("statistics,s", po::value(&statisticsLabel)->implicit_value("Himan"), "record statistics information")
-		("radon,R", "use only radon database")
+		("radon,R", "use only radon database (deprecated)")
 		("neons,N", "use only neons database (deprecated)")
 #ifdef HAVE_CUDA
 		("cuda-device-id", po::value(&cudaDeviceId), "use a specific cuda device (default: 0)")
@@ -376,6 +478,7 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		("no-database", "disable database access")
 		("param-file", po::value(&paramFile), "parameter definition file for no-database mode (syntax: shortName,paramName)")
 		("no-auxiliary-file-full-cache-read", "disable the initial reading of all auxiliary files to cache")
+		("no-ss_state-update,X", "do not update ss_state table information")
 	;
 
 	// clang-format on
@@ -465,6 +568,11 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		conf->UseCudaForPacking(false);
 		conf->UseCudaForUnpacking(false);
 		conf->UseCudaForInterpolation(false);
+	}
+
+	if (opt.count("no-ss_state-update"))
+	{
+		conf->UpdateSSStateTable(false);
 	}
 
 	// get cuda device count for this server
