@@ -19,55 +19,36 @@ using namespace himan::plugin;
 
 double min(const vector<double>& vec)
 {
-	double ret = 1e38;
+	double ret = himan::MissingDouble();
 
-	for (double val : vec)
+	for (const double& val : vec)
 	{
-		if (val < ret)
-			ret = val;
+		ret = fmin(ret, val);
 	}
-
-	if (ret == 1e38)
-		ret = MissingDouble();
 
 	return ret;
 }
 
 double max(const vector<double>& vec)
 {
-	double ret = -1e38;
+	double ret = himan::MissingDouble();
 
-	for (double val : vec)
+	for (const double& val : vec)
 	{
-		if (val > ret)
-			ret = val;
+		ret = fmax(ret, val);
 	}
-
-	if (ret == -1e38)
-		ret = MissingDouble();
 
 	return ret;
 }
 
 pair<double, double> minmax(const vector<double>& vec)
 {
-	double min = 1e38, max = -1e38;
+	double min = himan::MissingDouble(), max = himan::MissingDouble();
 
-	for (double val : vec)
+	for (const double& val : vec)
 	{
-		if (IsValid(val))
-		{
-			if (val < min)
-				min = val;
-			if (val > max)
-				max = val;
-		}
-	}
-
-	if (min == 1e38)
-	{
-		min = MissingDouble();
-		max = MissingDouble();
+		min = fmin(min, val);
+		max = fmax(max, val);
 	}
 
 	return make_pair(min, max);
