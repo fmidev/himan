@@ -260,6 +260,9 @@ class configuration
 	bool AsyncExecution() const;
 	void AsyncExecution(bool theAsyncExecution);
 
+	bool UpdateSSStateTable() const;
+	void UpdateSSStateTable(bool theUpdateSSStateTable);
+
    protected:
 	std::unique_ptr<producer_iter> itsSourceProducerIterator;
 
@@ -296,6 +299,7 @@ class configuration
 	int itsCacheLimit;
 	std::string itsParamFile;
 	bool itsAsyncExecution;
+	bool itsUpdateSSStateTable;
 };
 
 inline std::ostream& operator<<(std::ostream& file, const configuration& ob)
