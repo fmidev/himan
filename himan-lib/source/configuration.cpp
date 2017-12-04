@@ -35,7 +35,8 @@ configuration::configuration()
       itsForecastStep(kHPMissingInt),
       itsCacheLimit(-1),
       itsParamFile(),
-      itsAsyncExecution(false)
+      itsAsyncExecution(false),
+      itsUpdateSSStateTable(true)
 {
 }
 
@@ -66,8 +67,8 @@ configuration::configuration(const configuration& other)
       itsForecastStep(other.itsForecastStep),
       itsCacheLimit(other.itsCacheLimit),
       itsParamFile(other.itsParamFile),
-      itsAsyncExecution(other.itsAsyncExecution)
-
+      itsAsyncExecution(other.itsAsyncExecution),
+      itsUpdateSSStateTable(other.itsUpdateSSStateTable)
 {
 	ASSERT(itsSourceProducerIterator);
 	itsSourceProducerIterator->Set(other.itsSourceProducerIterator->Index());
@@ -116,6 +117,7 @@ std::ostream& configuration::Write(std::ostream& file) const
 
 	file << "__itsParamFile__ " << itsParamFile << std::endl;
 	file << "__itsAsyncExecution__ " << itsAsyncExecution << std::endl;
+	file << "__itsUpdateSSStateTable__" << itsUpdateSSStateTable << std::endl;
 
 	return file;
 }
@@ -363,4 +365,14 @@ bool configuration::AsyncExecution() const
 void configuration::AsyncExecution(bool theAsyncExecution)
 {
 	itsAsyncExecution = theAsyncExecution;
+}
+
+bool configuration::UpdateSSStateTable() const
+{
+	return itsUpdateSSStateTable;
+}
+
+void configuration::UpdateSSStateTable(bool theUpdateSSStateTable)
+{
+	itsUpdateSSStateTable = theUpdateSSStateTable;
 }

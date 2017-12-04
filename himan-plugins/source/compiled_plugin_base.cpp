@@ -340,11 +340,6 @@ void compiled_plugin_base::Finish()
 		itsTimer.Stop();
 		itsConfiguration->Statistics()->AddToProcessingTime(itsTimer.GetTime());
 	}
-
-	// If no other info is holding access to grids in this info,
-	// they are automatically destroyed and memory is released.
-
-	itsInfo->Clear();
 }
 
 void compiled_plugin_base::Calculate(info_t myTargetInfo, unsigned short threadIndex)
