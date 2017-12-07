@@ -69,9 +69,9 @@ local ch = nil
 local t = nil
 
 if currentProducerName == "ECG" or currentProducerName == "ECGMTA" then
-  cl  = CheckedFetch("NL-PRCNT", ground_level, current_time)
-  cm  = CheckedFetch("NM-PRCNT", ground_level, current_time)
-  ch  = CheckedFetch("NH-PRCNT", ground_level, current_time)
+  cl  = CheckedFetch("NL-0TO1", ground_level, current_time)
+  cm  = CheckedFetch("NM-0TO1", ground_level, current_time)
+  ch  = CheckedFetch("NH-0TO1", ground_level, current_time)
   t   = CheckedFetch("T-K", ground_level, current_time)
 elseif currentProducerName == "HL2" or currentProducerName == "HL2MTA" then
   cl  = CheckedFetch("NL-0TO1", height_level, current_time)
