@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 17.12.4
+Version: 17.12.7
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -60,6 +60,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Thu Dec  7 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.12.7-1.fmi
+- New level type: pressure_delta 
 * Mon Dec  4 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.12.4-1.fmi
 - Support for ss_state table updates
 * Fri Nov 24 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.24-1.fmi

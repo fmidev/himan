@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.12.4
+Version: 17.12.7
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -110,6 +110,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Dec  7 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.12.7-1.fmi
+- Parameter name updates to radon for cloud layer parameters
 * Mon Dec  4 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.12.4-1.fmi
 - Support for ss_state table updates
 * Wed Nov 29 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.29-1.fmi
