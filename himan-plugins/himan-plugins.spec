@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.11.26
+Version: 17.12.4
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 17.11.22
+Requires: himan-lib >= 17.12.4
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 17.10.25
@@ -110,6 +110,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Dec  4 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.12.4-1.fmi
+- Support for ss_state table updates
+* Wed Nov 29 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.29-1.fmi
+- probability refactoring
 * Sun Nov 26 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.24-1.fmi
 - Hotfixing auto_taf
 * Fri Nov 24 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.24-1.fmi

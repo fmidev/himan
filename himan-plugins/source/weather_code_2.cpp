@@ -39,9 +39,9 @@ void weather_code_2::Calculate(shared_ptr<info> myTargetInfo, unsigned short the
 	param PrecformParam("PRECFORM-N");
 	param TotalPrecParam("RRR-KGM2");
 	params TotalCloudCoverParam = {param("N-0TO1"), param("N-PRCNT")};
-	param LowCloudCoverParam("NL-PRCNT");
-	param MedCloudCoverParam("NM-PRCNT");
-	param HighCloudCoverParam("NH-PRCNT");
+	param LowCloudCoverParam("NL-0TO1");
+	param MedCloudCoverParam("NM-0TO1");
+	param HighCloudCoverParam("NH-0TO1");
 	param FogParam("FOGSYM-N");
 	param CloudParam("CLDSYM-N");
 
