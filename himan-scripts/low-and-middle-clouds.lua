@@ -44,7 +44,7 @@ for i=1,#N do
     end
   end  
 
-  NLM[i] = nlm
+  NLM[i] = nlm * 100 -- to percents
 end
 
 result:SetParam(param("NLM-PRCNT"))
