@@ -228,6 +228,13 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 				{
 					N_max[k].back() = _N;
 				}
+
+				// if highest model level has clouds put top on highest cloud layer
+				if (base[k].size() > top[k].size() && j == firstLevel + 1)
+				{
+					double newtop = _Height / 0.3048;
+					top[k].push_back(newtop);
+				}
 			}
 #ifdef DEBUG
 			if (k == pdebug)
@@ -251,6 +258,7 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		vector<double>& _base = tup.get<2>();
 		vector<double>& _top = tup.get<3>();
 
+		// this should not happen, maybe just use assert
 		if (_base.size() != _top.size() || _top.size() != _N_max.size())
 		{
 			myThreadedLogger.Warning("base, top and N have different sizes: " + to_string(_base.size()) + " " +
@@ -398,6 +406,11 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			    lower_bound(c_l[k].begin(), c_l[k].end(), cloud_layer(cbbase[k], MissingDouble(), MissingDouble()),
 			                [](const cloud_layer& a, const cloud_layer& b) { return a.base < b.base; });
 
+			// if height of nearest cloud to LCL500 is higher than 5000ft or lower than 1500ft, then height of
+			// convective cloud stays the height of LCL500
+			if (nearest_cl->base >= 5000.0 || nearest_cl->base < 1500.0)
+				continue;
+
 			// no cloud layers above initial cbbase, use highest cloud layer
 			if (nearest_cl == c_l[k].end())
 			{
@@ -426,11 +439,11 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 				}
 				else
 				{
-					cbN[k] = (nearest_cl)->amount * 100.0;
+					cbN[k] = nearest_cl->amount * 100.0;
 					m = 5;
 				}
 			}
-			else
+			else  // if (nearest_cl->base < 5000.0 && nearest_cl->base >= 1500.0)
 			{
 				cbbase[k] = nearest_cl->base;
 				cbN[k] = nearest_cl->amount * 100.0;  // cloud amount in %

@@ -650,7 +650,8 @@ HPInterpolationMethod InterpolationMethod(const std::string& paramName, HPInterp
 	        paramName == "SNACC-KGM2" ||
 	        // symbols
 	        paramName == "CLDSYM-N" || paramName == "PRECFORM-N" || paramName == "PRECFORM2-N" ||
-	        paramName == "FOGSYM-N" || paramName == "ICING-N"))
+	        paramName == "FOGSYM-N" || paramName == "ICING-N" || paramName == "POTPRECT-N" ||
+	        paramName == "POTPRECF-N" || paramName == "FOGINT-N" || paramName == "PRECTYPE-N"))
 	{
 #ifdef DEBUG
 		std::cout << "Debug::interpolation Switching interpolation method from bilinear to nearest point" << std::endl;

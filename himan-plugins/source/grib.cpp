@@ -1546,9 +1546,12 @@ void grib::ReadData(info_t newInfo, bool readPackedData) const
 #if defined GRIB_READ_PACKED_DATA && defined HAVE_CUDA
 
 	const auto paramName = newInfo->Param().Name();
+	long producerId = newInfo->Producer().Id();
+
 	bool decodePrecipitationForm = false;
 
-	if (itsGrib->Message().Edition() == 2 && (paramName == "PRECFORM-N" || paramName == "PRECFORM2-N"))
+	if (itsGrib->Message().Edition() == 2 && (paramName == "PRECFORM-N" || paramName == "PRECFORM2-N") &&
+	    (producerId == 230 || producerId == 240 || producerId == 243 || producerId == 250 || producerId == 260))
 	{
 		decodePrecipitationForm = true;
 	}
