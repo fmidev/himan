@@ -1436,6 +1436,10 @@ himan::level grib::ReadLevel(const search_options& options) const
 			levelType = himan::kHeightLayer;
 			break;
 
+		case 108:
+			levelType = himan::kPressureDelta;
+			break;
+
 		case 109:
 			levelType = himan::kHybrid;
 			break;
