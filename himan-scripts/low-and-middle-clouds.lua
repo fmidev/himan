@@ -7,10 +7,10 @@ logger:Info("Calculating low and middle clouds")
 
 local MISS = missing
 
-local N = luatool:Fetch(current_time, current_level, param("N-0TO1")) -- total cloudiness
-local NL = luatool:Fetch(current_time, current_level, param("NL-0TO1")) -- low clouds
-local NM = luatool:Fetch(current_time, current_level, param("NM-0TO1")) -- middle clouds
-local NH = luatool:Fetch(current_time, current_level, param("NH-0TO1")) -- high clouds
+local N = luatool:Fetch(current_time, current_level, param("N-PRCNT")) -- total cloudiness
+local NL = luatool:Fetch(current_time, current_level, param("NL-PRCNT")) -- low clouds
+local NM = luatool:Fetch(current_time, current_level, param("NM-PRCNT")) -- middle clouds
+local NH = luatool:Fetch(current_time, current_level, param("NH-PRCNT")) -- high clouds
 
 if not N or not NL or not NM or not NH then
   return
@@ -44,7 +44,7 @@ for i=1,#N do
     end
   end  
 
-  NLM[i] = nlm * 100 -- to percents
+  NLM[i] = nlm
 end
 
 result:SetParam(param("NLM-PRCNT"))
