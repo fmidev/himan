@@ -121,7 +121,7 @@ function MakeNumber(a, b, c, d, e, f, g)
          1000 * d +
          100 * e +
          10 * f +
-         0
+         g
 end
 
 function Generate(an, bn, cn, dn, en, fn, gn, s, h)
@@ -304,14 +304,14 @@ function WeatherNumber()
   logger:Debug("Calculating WeatherNumber")
 
   local POT  = Fetch(param("POT-PRCNT"))
-  local PREF = Fetch(param("POTPRECF-N"), param("PRECFORM2-N"), 1)
-  local PRET = Fetch(param("POTPRECT-N"), param("PRECTYPE-N"), 1)
+  local PREF = Fetch(param("POTPRECF-N"), param("PRECFORM2-N"))
+  local PRET = Fetch(param("POTPRECT-N"))
   local RR   = Fetch(param("RRR-KGM2"))
   local FOG  = Fetch(param("FOGINT-N"))
-  local N    = Fetch(param("N-0TO1"), param("N-PRCNT"), 0.01)
---  local CLDT = Fetch(param("CLDTYPE-N"))
+  local N    = Fetch(param("N-0TO1"), param("N-PRCNT"))
+  -- local CLDT = Fetch(param("CLDTYPE-N"))
 
-  if not POT or not PREF or not PRET or not RR or not FOG or not N then --or not CLDT then
+  if not POT or not PREF or not PRET or not RR or not FOG or not N then
     logger:Error("Aborting WeatherNumber calculation")
     return
   end
