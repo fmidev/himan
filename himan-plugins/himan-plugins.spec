@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.12.8
+Version: 17.12.12
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -16,7 +16,7 @@ Requires: libstdc++
 Requires: himan-lib >= 17.12.4
 Requires: lua >= 5.1.4
 Requires: unixODBC
-Requires: libfmigrib >= 17.10.25
+Requires: libfmigrib >= 17.12.11
 Requires: libfmidb >= 17.9.18
 Requires: smartmet-library-newbase >= 17.9.27
 Requires: libpqxx
@@ -35,7 +35,7 @@ Requires: jasper-libs
 Requires: eccodes
 %endif
 BuildRequires: libfmidb-devel >= 17.9.18
-BuildRequires: libfmigrib-devel >= 17.10.25
+BuildRequires: libfmigrib-devel >= 17.12.11
 BuildRequires: smartmet-library-newbase-devel >= 17.9.27
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
@@ -110,6 +110,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Dec 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.12.12-1.fmi
+- pressure delta level number change
 * Fri Dec  8 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.12.8-1.fmi
 - Update to auto_taf, grib
 * Thu Dec  7 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.12.7-1.fmi
@@ -146,7 +148,7 @@ rm -rf $RPM_BUILD_ROOT
 - Update to auto_taf
 * Wed Oct 25 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.25-1.fmi
 - New fmigrib
-* Thu Oct 20 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.20-1.fmi
+* Fri Oct 20 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.20-1.fmi
 - auto_taf fixes
 * Thu Oct 19 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.19-1.fmi
 - Add auto_taf plugin
@@ -278,7 +280,7 @@ rm -rf $RPM_BUILD_ROOT
 - gust Hirlam support
 - cape fix EL level search
 - fractile fix NaN issues
-* Thu Mar 29 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.3.30-1.fmi
+* Thu Mar 30 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.3.30-1.fmi
 - Hotfix for fetcher database access
 * Wed Mar 29 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.3.29-1.fmi
 - Hotfix for sticky param cache, code refactoring

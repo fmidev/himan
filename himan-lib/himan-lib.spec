@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 17.12.8
+Version: 17.12.12
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -14,7 +14,7 @@ Requires: glibc
 Requires: libgcc
 Requires: libstdc++
 Requires: libfmidb >= 17.9.18
-Requires: libfmigrib >= 17.9.27
+Requires: libfmigrib >= 17.12.11
 Requires: gdal
 
 %if %{defined suse_version}
@@ -29,7 +29,7 @@ BuildRequires: gcc-c++ >= 4.8.2
 Requires: eccodes
 %endif
 BuildRequires: libfmidb-devel >= 17.9.18
-BuildRequires: libfmigrib-devel >= 17.9.27
+BuildRequires: libfmigrib-devel >= 17.12.11
 BuildRequires: zlib-devel
 BuildRequires: boost-devel >= 1.65
 BuildRequires: smartmet-library-newbase-devel >= 17.9.27
@@ -60,6 +60,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Tue Dec 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.12.12-1.fmi
+- pressure delta level number change
 * Fri Dec  8 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.12.8-1.fmi
 - Modify interpolation settings
 * Thu Dec  7 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.12.7-1.fmi
