@@ -167,7 +167,7 @@ himan::HPFileType util::FileType(const string& theFile)
 
 // copied from http://stackoverflow.com/questions/236129/splitting-a-string-in-c and modified a bit
 
-vector<string> util::Split(const string& s, const std::string& delims, bool fill)
+vector<string> util::Split(const string& s, const string& delims, bool fill)
 {
 	vector<string> orig_elems;
 

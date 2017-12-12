@@ -192,11 +192,11 @@ enum HPLevelType
 	kTopOfAtmosphere = 8,
 	kLake = 21,
 	kPressure = 100,
+	kPressureDelta = 101,  // pressure deviation from ground to level
 	kMeanSea = 102,
 	kAltitude = 103,
 	kHeight = 105,
 	kHeightLayer = 106,  // layer between two metric heights from ground level
-    kPressureDelta = 108,  // pressure deviation from ground to level
 	kHybrid = 109,
 	kGroundDepth = 112,     // layer between two metric heights below ground level
 	kDepth = 160,
@@ -211,11 +211,11 @@ const boost::unordered_map<HPLevelType, std::string> HPLevelTypeToString =
 	(kUnknownLevel, "unknown")
 	(kGround, "ground")
 	(kPressure, "pressure")
+	(kPressureDelta, "pressure_delta")
 	(kMeanSea, "meansea")
 	(kAltitude, "altitude")
 	(kHeight, "height")
 	(kHeightLayer, "height_layer")
-    (kPressureDelta, "pressure_delta")
 	(kHybrid, "hybrid")
 	(kGroundDepth, "ground_depth")
 	(kDepth, "depth")
@@ -230,11 +230,11 @@ const boost::unordered_map<std::string, HPLevelType> HPStringToLevelType =
 	("unknown", kUnknownLevel)
 	("ground", kGround)
 	("pressure", kPressure)
+	("pressure_delta", kPressureDelta)
 	("meansea", kMeanSea)
 	("altitude", kAltitude)
 	("height", kHeight)
 	("height_layer", kHeightLayer)
-    ("pressure_delta", kPressureDelta)
 	("hybrid", kHybrid)
 	("ground_depth", kGroundDepth)
 	("depth", kDepth)
