@@ -1423,6 +1423,10 @@ himan::level grib::ReadLevel(const search_options& options) const
 			levelType = himan::kPressure;
 			break;
 
+		case 101:
+			levelType = himan::kPressureDelta;
+			break;
+
 		case 102:
 		case 103:
 			levelType = himan::kMeanSea;
@@ -1463,6 +1467,7 @@ himan::level grib::ReadLevel(const search_options& options) const
 			break;
 
 		case himan::kGroundDepth:
+		case himan::kPressureDelta:
 		{
 			if (IsKHPMissingValue(options.level.Value2()))
 			{

@@ -1532,13 +1532,11 @@ void ParseLevels(shared_ptr<info> anInfo, const boost::property_tree::ptree& pt)
 vector<level> LevelsFromString(const string& levelType, const string& levelValues)
 {
 	HPLevelType theLevelType = HPStringToLevelType.at(boost::to_lower_copy(levelType));
-
 	vector<level> levels;
-
-	const vector<string> levelsStr = himan::util::Split(levelValues, ",", true);
 
 	if (theLevelType == kHeightLayer || theLevelType == kGroundDepth || theLevelType == kPressureDelta)
 	{
+        const vector<string> levelsStr = himan::util::Split(levelValues, ",", false);
 		for (size_t i = 0; i < levelsStr.size(); i++)
 		{
 			const vector<string> levelIntervals = himan::util::Split(levelsStr[i], "_", false);
@@ -1557,6 +1555,7 @@ vector<level> LevelsFromString(const string& levelType, const string& levelValue
 	}
 	else
 	{
+        const vector<string> levelsStr = himan::util::Split(levelValues, ",", true);
 		for (size_t i = 0; i < levelsStr.size(); i++)
 		{
 			levels.push_back(level(theLevelType, boost::lexical_cast<float>(levelsStr[i]), levelType));
