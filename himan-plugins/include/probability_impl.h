@@ -102,14 +102,13 @@ struct BTWNCompare : public std::binary_function<double, std::vector<double>, bo
 };
 
 template <typename T>
-void Probability(std::shared_ptr<himan::info> targetInfo, const param_configuration<T>& paramConf, bool normalized,
+void Probability(std::shared_ptr<himan::info> targetInfo, const param_configuration<T>& paramConf,
                  std::unique_ptr<himan::ensemble>& ens, std::function<bool(double, T)> comp_op)
 {
 	targetInfo->Param(paramConf.output);
 	targetInfo->ResetLocation();
 	ens->ResetLocation();
 
-	const double scale = normalized ? 1. : 100.;
 	const bool isGrid = (targetInfo->Grid()->Type() != himan::kPointList);
 
 	while (targetInfo->NextLocation() && ens->NextLocation())
@@ -132,7 +131,7 @@ void Probability(std::shared_ptr<himan::info> targetInfo, const param_configurat
 		const T threshold = GetThreshold<T>(targetInfo, paramConf, isGrid);
 
 		const long int cnt = std::count_if(values.begin(), values.end(), std::bind2nd(comp_op, threshold));
-		const double probability = scale * static_cast<double>(cnt) / static_cast<double>(values.size());
+		const double probability = static_cast<double>(cnt) / static_cast<double>(values.size());
 
 		targetInfo->Value(probability);
 	}
