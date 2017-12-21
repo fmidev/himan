@@ -4,16 +4,28 @@ probability plugin is used for ensemble data to calculate the probability of any
 
 # Required source parameters
 
-Any single source parameter. For wind speed, plugin will automatically fetch U and V components.
+Any single source parameter.
 
 # Output parameters
 
-User defined output parameters, see per-plugin configuration options.
+User defined output parameters, see per-plugin configuration options. The probability values are written to range 0 .. 1.
 
 # Method of calculation
 
 Plugin will check how many ensemble members forecast values fulfill the given conditition (often being larger or smaller than some threshold). Plugin does not support multi-parameter probabilities.
 If ensemble contains missing values, they are removed before producing the probability value.
+
+For some parameters that follow the normal distribution, the probabilities are calculated using the distribution. This removes some of the ill effects of having too small sample size.
+
+The parameters are:
+
+* T-K
+* T-C
+* TD-K
+* TD-C
+* WATLEV-CM
+* P-PA
+* P-HPA
 
 # Per-plugin configuration options
 
@@ -55,10 +67,6 @@ Possible values for comparison operator are
     "[)": value belongs to a range bounded by [lower value, upper value), lower endpoint included. The set of values are defined with key "threshold" separated by commas, exactly two values must be given.
 
 Note that all comparison are made with floating point values.
-
-normalized_results: Define if plugin should scale the probability values to [0,1] (default: [0,100])
-
-    "normalized_results" : "true"
 
 lag: Define is plugins should use time-lagging for how many instances (default: 0)
 

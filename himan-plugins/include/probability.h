@@ -9,7 +9,6 @@ namespace himan
 {
 namespace plugin
 {
-
 class probability : public compiled_plugin, private compiled_plugin_base
 {
    public:
@@ -42,7 +41,6 @@ class probability : public compiled_plugin, private compiled_plugin_base
 
 	int itsEnsembleSize;
 	int itsMaximumMissingForecasts;
-	bool itsUseNormalizedResult;
 	bool itsUseLaggedEnsemble;
 	int itsLag;
 	int itsLaggedSteps;
