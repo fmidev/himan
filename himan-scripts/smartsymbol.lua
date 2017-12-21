@@ -40,12 +40,13 @@ local HessaaTable = {}
 function Fetch(...)
   local first = true
   for i,param in ipairs(arg) do
+
     ret = luatool:FetchWithType(current_time, current_level, param, current_forecast_type)
 
     if ret then
       if not first then
-        for i=1,#ret do
-          ret[i] = ret[i] * arg[#arg]
+        for j=1,#ret do
+          ret[j] = ret[j] * arg[#arg]
         end
       end
       return ret
@@ -304,11 +305,11 @@ function WeatherNumber()
   logger:Debug("Calculating WeatherNumber")
 
   local POT  = Fetch(param("POT-PRCNT"))
-  local PREF = Fetch(param("POTPRECF-N"), param("PRECFORM2-N"))
+  local PREF = Fetch(param("POTPRECF-N"))
   local PRET = Fetch(param("POTPRECT-N"))
   local RR   = Fetch(param("RRR-KGM2"))
   local FOG  = Fetch(param("FOGINT-N"))
-  local N    = Fetch(param("N-0TO1"), param("N-PRCNT"))
+  local N    = Fetch(param("N-0TO1"), param("N-PRCNT"), 0.01)
   -- local CLDT = Fetch(param("CLDTYPE-N"))
 
   if not POT or not PREF or not PRET or not RR or not FOG or not N then
@@ -390,5 +391,10 @@ number = WeatherNumber()
 
 if number then
   SmartSymbol(number)
-  Hessaa(number)
+
+  if not configuration:Exists("hessaa") or configuration:GetValue("hessaa") == "true" then
+    Hessaa(number)
+  else
+    logger:Info("Hessaa calculation disabled")
+  end
 end
