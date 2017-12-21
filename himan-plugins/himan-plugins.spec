@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.12.12
+Version: 17.12.21
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -110,6 +110,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Dec 21 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.12.21-1.fmi
+- Use gaussian spread for continuous parameter probabilities
+- Set probability data range to 0 .. 1
 * Tue Dec 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.12.12-1.fmi
 - pressure delta level number change
 * Fri Dec  8 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.12.8-1.fmi

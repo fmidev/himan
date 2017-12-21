@@ -25,7 +25,6 @@ probability::probability()
 
 	itsEnsembleSize = 0;
 	itsMaximumMissingForecasts = 0;
-	itsUseNormalizedResult = false;
 	itsUseLaggedEnsemble = false;
 	itsLag = 0;
 	itsLaggedSteps = 0;
@@ -128,11 +127,20 @@ static param GetConfigurationParameter(const std::string& name, const std::share
 		}
 	}
 
-	if (param.Name() == "XX-X")
+	if (name == "XX-X")
 	{
 		throw std::runtime_error("probability : configuration error:: input parameter not specified for '" + name +
 		                         "'");
 	}
+
+	const auto iname = param.Name();
+
+	bool spread =
+	    (iname == "T-K" || iname == "T-C" || iname == "WATLEV-CM" || iname == "TD-K" || iname == "P-PA" ||
+	     iname == "P-HPA") &&
+	    (outParamConfig->comparison == comparison_op::LTEQ || outParamConfig->comparison == comparison_op::GTEQ);
+
+	outParamConfig->useGaussianSpread = spread;
 	outParamConfig->parameter = param;
 
 	return himan::param(name);
@@ -241,21 +249,6 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 		itsEnsembleSize = std::stoi(ensSize);
 	}
 
-	// Find out whether we want probabilities in [0,1] range or [0,100] range
-	if (itsConfiguration->Exists("normalized_results"))
-	{
-		const std::string useNormalized = itsConfiguration->GetValue("normalized_results");
-
-		itsUseNormalizedResult = (useNormalized == "true") ? true : false;
-	}
-	else
-	{
-		// default to [0,100] for compatibility
-		itsUseNormalizedResult = false;
-		itsLogger.Info(
-		    "'normalized_results' not found from the configuration, results will be written in [0,100] range");
-	}
-
 	// Maximum number of missing forecasts for an ensemble
 	if (itsConfiguration->Exists("max_missing_forecasts"))
 	{
@@ -325,6 +318,7 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 
 		config.output.Name(name);
 		config.comparison = comparison_op::GTEQ;
+		config.useGaussianSpread = false;
 
 		param p = GetConfigurationParameter(name, conf, &config);
 
@@ -350,20 +344,17 @@ void probability::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	for (const auto& pc : itsParamConfigurations)
 	{
-		const int ensembleSize = itsEnsembleSize;
-		const bool normalized = itsUseNormalizedResult;
-
 		std::unique_ptr<ensemble> ens;
 
 		if (itsUseLaggedEnsemble)
 		{
 			threadedLogger.Info("Using lagged ensemble");
 			ens = std::unique_ptr<ensemble>(
-			    new lagged_ensemble(pc.parameter, ensembleSize, kHourResolution, itsLag, itsLaggedSteps + 1));
+			    new lagged_ensemble(pc.parameter, itsEnsembleSize, kHourResolution, itsLag, itsLaggedSteps + 1));
 		}
 		else
 		{
-			ens = std::unique_ptr<ensemble>(new ensemble(pc.parameter, ensembleSize));
+			ens = std::unique_ptr<ensemble>(new ensemble(pc.parameter, itsEnsembleSize));
 		}
 
 		ens->MaximumMissingForecasts(itsMaximumMissingForecasts);
@@ -390,35 +381,42 @@ void probability::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 		ASSERT(myTargetInfo->Data().Size() > 0);
 
-		switch (pc.comparison)
+		threadedLogger.Debug("Gaussian spread is " + std::string((pc.useGaussianSpread) ? "enabled" : "disabled"));
+
+		if (pc.useGaussianSpread)
 		{
-			case comparison_op::LTEQ:
-				Probability<double>(myTargetInfo, ToParamConfiguration<double>(pc), normalized, ens,
-				                    std::less_equal<double>());
-				break;
-			case comparison_op::GTEQ:
-				Probability<double>(myTargetInfo, ToParamConfiguration<double>(pc), normalized, ens,
-				                    std::greater_equal<double>());
-				break;
-			case comparison_op::EQ:
-				Probability<double>(myTargetInfo, ToParamConfiguration<double>(pc), normalized, ens,
-				                    std::equal_to<double>());
-				break;
-			case comparison_op::NEQ:
-				Probability<double>(myTargetInfo, ToParamConfiguration<double>(pc), normalized, ens,
-				                    std::not_equal_to<double>());
-				break;
-			case comparison_op::EQIN:
-				Probability<std::vector<double>>(myTargetInfo, ToParamConfiguration<std::vector<double>>(pc),
-				                                 normalized, ens, EQINCompare());
-				break;
-			case comparison_op::BTWN:
-				Probability<std::vector<double>>(myTargetInfo, ToParamConfiguration<std::vector<double>>(pc),
-				                                 normalized, ens, BTWNCompare());
-				break;
-			default:
-				threadedLogger.Error("Unsupported comparison operator");
-				break;
+			ProbabilityWithGaussianSpread<double>(myTargetInfo, ToParamConfiguration<double>(pc), ens);
+		}
+		else
+		{
+			switch (pc.comparison)
+			{
+				case comparison_op::LTEQ:
+					Probability<double>(myTargetInfo, ToParamConfiguration<double>(pc), ens, std::less_equal<double>());
+					break;
+				case comparison_op::GTEQ:
+					Probability<double>(myTargetInfo, ToParamConfiguration<double>(pc), ens,
+					                    std::greater_equal<double>());
+					break;
+				case comparison_op::EQ:
+					Probability<double>(myTargetInfo, ToParamConfiguration<double>(pc), ens, std::equal_to<double>());
+					break;
+				case comparison_op::NEQ:
+					Probability<double>(myTargetInfo, ToParamConfiguration<double>(pc), ens,
+					                    std::not_equal_to<double>());
+					break;
+				case comparison_op::EQIN:
+					Probability<std::vector<double>>(myTargetInfo, ToParamConfiguration<std::vector<double>>(pc), ens,
+					                                 EQINCompare());
+					break;
+				case comparison_op::BTWN:
+					Probability<std::vector<double>>(myTargetInfo, ToParamConfiguration<std::vector<double>>(pc), ens,
+					                                 BTWNCompare());
+					break;
+				default:
+					threadedLogger.Error("Unsupported comparison operator");
+					break;
+			}
 		}
 	}
 
