@@ -66,11 +66,11 @@ inline CUDA_HOST CUDA_DEVICE bool IsMissingFloat(const float& value)
         return (*_value == *_missingValue);
 }
 
-inline bool IsMissing(double value) {return IsMissingDouble(value);}
-inline bool IsMissing(float value) {return IsMissingFloat(value);}
+inline CUDA_HOST CUDA_DEVICE bool IsMissing(double value) {return IsMissingDouble(value);}
+inline CUDA_HOST CUDA_DEVICE bool IsMissing(float value) {return IsMissingFloat(value);}
 
-inline bool IsValid(double value) { return !IsMissingDouble(value);}
-inline bool IsValid(float value) {return !IsMissingFloat(value);}
+inline CUDA_HOST CUDA_DEVICE bool IsValid(double value) { return !IsMissingDouble(value);}
+inline CUDA_HOST CUDA_DEVICE bool IsValid(float value) {return !IsMissingFloat(value);}
 
 template <typename T>
 inline bool IsMissing(T value) = delete; 
