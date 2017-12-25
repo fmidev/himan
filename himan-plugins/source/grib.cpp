@@ -1002,8 +1002,6 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 
 			rg->LastPoint(point(X1, Y1));
 
-			rg->Data().Resize(ni, nj);
-
 			break;
 		}
 		case 3:
@@ -1030,8 +1028,6 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 			{
 				itsLogger.Warning("No support for ellipsoids in lambert projection (grib key: earthIsOblate)");
 			}
-
-			lccg->Data().Resize(lccg->Ni(), lccg->Nj());
 
 			break;
 		}
@@ -1091,7 +1087,6 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 			    util::CoordinatesFromFirstGridPoint(first, rg->Orientation(), ni, nj, rg->Di(), rg->Dj());
 
 			rg->TopRight(coordinates.second);
-			rg->Data().Resize(ni, nj);
 
 			break;
 		}
@@ -1121,8 +1116,6 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 			double Y1 = itsGrib->Message().Y1();
 
 			rg->LastPoint(point(X1, Y1));
-
-			rg->Data().Resize(ni, nj);
 
 			break;
 		}
@@ -1824,7 +1817,7 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 
 	newGrid->AB(ab);
 
-	newInfo->Create(newGrid.get());
+	newInfo->Create(newGrid.get(), true);
 
 	// Set descriptors
 
