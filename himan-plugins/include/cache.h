@@ -110,9 +110,7 @@ class cache_pool : public auxiliary_plugin
 
 	std::map<std::string, cache_item> itsCache;
 	static cache_pool* itsInstance;
-	std::mutex itsInsertMutex;
-	std::mutex itsGetMutex;
-	std::mutex itsDeleteMutex;
+	std::mutex itsAccessMutex;
 
 	// Cache limit specifies how many grids are held in the cache.
 	// When limit is reached, oldest grids are automatically pruned.
