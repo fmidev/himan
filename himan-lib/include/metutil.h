@@ -1383,9 +1383,8 @@ inline double himan::metutil::ThetaW_(double thetaE)
 CUDA_DEVICE
 inline double himan::metutil::VirtualTemperature_(double T, double P)
 {
-	ASSERT(T > 100);
-	ASSERT(T < 400);
-	ASSERT(P > 1000);
+	ASSERT(IsMissing(T) || T > 100 || T < 400);
+	ASSERT(IsMissing(P) || P > 1000);
 
 	double r = 0.001 * MixingRatio_(T, P);  // kg/kg
 	return (1 + 0.61 * r) * T;
