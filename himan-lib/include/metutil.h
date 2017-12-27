@@ -708,7 +708,7 @@ inline double himan::metutil::DewPointFromRH_(double T, double RH)
 		RH = 0.01;  // formula does not work if RH = 0; actually all small values give extreme Td values
 	ASSERT(RH > 0.);
 	// ASSERT(RH < 101.);
-	ASSERT(T > 0. && T < 500.);
+	ASSERT((T > 0. && T < 500.) || IsMissing(T));
 
 	return (T / (1 - (T * LOG(RH * 0.01) * constants::kRw_div_L)));
 }
@@ -718,7 +718,7 @@ inline double himan::metutil::MixingRatio_(double T, double P)
 {
 	// Sanity checks
 	ASSERT(P > 1000);
-	ASSERT(T > 0 && T < 500);
+	ASSERT((T > 0 && T < 500) || IsMissing(T));
 
 	double E = Es_(T);  // Pa
 
@@ -824,7 +824,7 @@ inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 	// Sanity checks
 
 	ASSERT(P > 2000);
-	ASSERT(T > 100 && T < 400);
+	ASSERT((T > 100 && T < 400) || IsMissing(T));
 	ASSERT(targetP > 2000);
 
 	double Pint = P;  // Pa
@@ -940,8 +940,8 @@ inline lcl_t himan::metutil::LCL_(double P, double T, double TD)
 	// Sanity checks
 
 	ASSERT(P > 10000);
-	ASSERT(T > 0);
-	ASSERT(T < 500);
+	ASSERT(T > 0 || IsMissing(T));
+	ASSERT(T < 500 || IsMissing(T));
 	ASSERT(TD > 0);
 	ASSERT(TD < 500);
 
@@ -1031,8 +1031,8 @@ inline lcl_t himan::metutil::LCLA_(double P, double T, double TD)
 	// Sanity checks
 
 	ASSERT(P > 10000);
-	ASSERT(T > 0);
-	ASSERT(T < 500);
+	ASSERT(T > 0 || IsMissing(T));
+	ASSERT(T < 500 || IsMissing(T));
 	ASSERT(TD > 0 && TD != 56);
 	ASSERT(TD < 500);
 
@@ -1049,7 +1049,7 @@ CUDA_DEVICE
 inline double himan::metutil::Es_(double T)
 {
 	// Sanity checks
-	ASSERT(T == T && T > 0 && T < 500);  // check also NaN
+	ASSERT((T == T && T > 0 && T < 500) || IsMissing(T));  // check also NaN
 
 	double Es;
 
@@ -1064,7 +1064,7 @@ inline double himan::metutil::Es_(double T)
 		Es = 6.107 * EXP10(9.5 * T / (265.5 + T));
 	}
 
-	ASSERT(Es == Es);  // check NaN
+	ASSERT(Es == Es || IsMissing(Es));  // check NaN
 
 	return 100 * Es;  // Pa
 }
@@ -1075,7 +1075,7 @@ inline double himan::metutil::Gammas_(double P, double T)
 	// Sanity checks
 
 	ASSERT(P > 10000);
-	ASSERT(T > 0 && T < 500);
+	ASSERT((T > 0 && T < 500) || IsMissing(T));
 
 	// http://glossary.ametsoc.org/wiki/Pseudoadiabatic_lapse_rate
 
@@ -1096,7 +1096,7 @@ inline double himan::metutil::Gammaw_(double P, double T)
 	// Sanity checks
 
 	ASSERT(P > 1000);
-	ASSERT(T > 0 && T < 500);
+	ASSERT((T > 0 && T < 500) || IsMissing(T));
 
 	namespace hc = himan::constants;
 
@@ -1220,7 +1220,7 @@ inline double himan::metutil::BulkShear_(double U, double V)
 CUDA_DEVICE
 inline double himan::metutil::Theta_(double T, double P)
 {
-	ASSERT(T > 0);
+	ASSERT(T > 0 || IsMissing(T));
 	ASSERT(P > 1000);
 
 	return T * pow((100000. / P), 0.28586);
@@ -1229,7 +1229,7 @@ inline double himan::metutil::Theta_(double T, double P)
 CUDA_DEVICE
 inline double himan::metutil::ThetaE_(double T, double TD, double P)
 {
-	ASSERT(T > 0);
+	ASSERT(T > 0 || IsMissing(T));
 	ASSERT(P > 1000);
 
 	// Get LCL temperature
@@ -1393,8 +1393,8 @@ inline double himan::metutil::VirtualTemperature_(double T, double P)
 CUDA_DEVICE
 inline double himan::metutil::smarttool::Es2_(double T)
 {
-	ASSERT(T > 100);
-	ASSERT(T < 350);
+	ASSERT(T > 100 || IsMissing(T));
+	ASSERT(T < 350 || IsMissing(T));
 
 	const double b = 17.2694;
 	const double e0 = 6.11;   // 6.11 <- 0.611 [kPa]
@@ -1420,8 +1420,8 @@ inline double himan::metutil::smarttool::ThetaE_(double T, double RH, double P)
 {
 	ASSERT(RH >= 0);
 	ASSERT(RH < 102);
-	ASSERT(T > 150);
-	ASSERT(T < 350);
+	ASSERT(T > 150 || IsMissing(T));
+	ASSERT(T < 350 || IsMissing(T));
 	ASSERT(P > 1500);
 
 	double tpot = himan::metutil::Theta_(T, P);
@@ -1445,8 +1445,8 @@ inline double himan::metutil::smarttool::MixingRatio_(double T, double RH, doubl
 {
 	ASSERT(RH >= 0);
 	ASSERT(RH < 102);
-	ASSERT(T > 150);
-	ASSERT(T < 350);
+	ASSERT(T > 150 || IsMissing(T));
+	ASSERT(T < 350 || IsMissing(T));
 	ASSERT(P > 1500);
 
 	double es = himan::metutil::smarttool::Es2_(T);
