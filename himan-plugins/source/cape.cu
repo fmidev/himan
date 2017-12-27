@@ -414,7 +414,10 @@ __global__ void CINKernel(info_simple d_Tenv, info_simple d_prevTenv, info_simpl
 
 					Penv = PLFC;
 
-					ASSERT(Zenv >= prevZenv);
+					if (Zenv < prevZenv)
+					{
+						prevZenv = Zenv;
+					}
 				}
 			}
 

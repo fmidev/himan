@@ -617,8 +617,13 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 				Tparcel = interpolation::Linear(PLFC[i], prevPenv, Penv, prevTparcel, Tparcel);
 
 				Penv = PLFC[i];
-				ASSERT(Zenv >= prevZenv);
+
+				if (Zenv < prevZenv)
+				{
+					prevZenv = Zenv;
+				}
 			}
+
 
 			if (IsMissingDouble(Tparcel))
 			{
