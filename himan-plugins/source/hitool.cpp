@@ -423,9 +423,8 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 #ifdef DEBUG
 		size_t heightsCrossed = mod->HeightsCrossed();
 
-		string msg = "Level " + boost::lexical_cast<string>(currentLevel.Value()) + ": height range crossed for " +
-		             boost::lexical_cast<string>(heightsCrossed) + "/" +
-		             boost::lexical_cast<string>(values->Data().Size()) + " grid points";
+		string msg = "Level " + to_string(currentLevel.Value()) + ": height range crossed for " +
+		             to_string(heightsCrossed) + "/" + to_string(values->Data().Size()) + " grid points";
 
 		itsLogger.Debug(msg);
 #endif
@@ -433,7 +432,12 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 
 	auto ret = mod->Result();
 
-	ASSERT(mod->HeightsCrossed() == ret.size());
+	if (mod->HeightsCrossed() != ret.size())
+	{
+		itsLogger.Warning(to_string(ret.size() - mod->HeightsCrossed()) +
+		                  " grid points did not reach upper height limit. Did I run out of vertical levels?");
+	}
+
 	return ret;
 }
 
