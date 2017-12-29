@@ -535,11 +535,11 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 		try
 		{
 			CalculateStaticIndices(itsConfiguration, myTargetInfo);
-			myThreadedLogger.Info("Static indice calculation finished");
+			myThreadedLogger.Info("Static index calculation finished");
 		}
 		catch (const HPExceptionType& e)
 		{
-			itsLogger.Warning("Static indice calculation failed");
+			itsLogger.Warning("Static index calculation failed");
 
 			if (e != kFileDataNotFound)
 			{
@@ -548,11 +548,11 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 		try
 		{
 			CalculateDynamicIndices(itsConfiguration, myTargetInfo, h);
-			myThreadedLogger.Info("Dynamic indice calculation finished");
+			myThreadedLogger.Info("Dynamic index calculation finished");
 		}
 		catch (const HPExceptionType& e)
 		{
-			itsLogger.Warning("Dynamic indice calculation failed");
+			itsLogger.Warning("Dynamic index calculation failed");
 
 			if (e != kFileDataNotFound)
 			{
@@ -561,11 +561,11 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 		try
 		{
 			CalculateThetaEIndices(itsConfiguration, myTargetInfo, h);
-			myThreadedLogger.Info("ThetaE indice calculation finished");
+			myThreadedLogger.Info("ThetaE index calculation finished");
 		}
 		catch (const HPExceptionType& e)
 		{
-			itsLogger.Warning("ThetaE indice calculation failed");
+			itsLogger.Warning("ThetaE index calculation failed");
 
 			if (e != kFileDataNotFound)
 			{
