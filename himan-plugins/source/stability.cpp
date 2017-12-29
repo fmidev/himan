@@ -295,8 +295,8 @@ void CalculateStaticIndices(shared_ptr<const plugin_configuration>& conf, info_t
 	for (size_t i = 0; i < TTI.size(); i++)
 	{
 		KI[i] = STABILITY::KI(t850[i], t700[i], t500[i], td850[i], td700[i]);
-		CTI[i] = STABILITY::CTI(td850[i], t500[i]);
-		VTI[i] = STABILITY::VTI(td850[i], t500[i]);
+		CTI[i] = STABILITY::CTI(t500[i], td850[i]);
+		VTI[i] = STABILITY::VTI(t850[i], t500[i]);
 		TTI[i] = STABILITY::TTI(t850[i], t500[i], td850[i]);
 	}
 }
