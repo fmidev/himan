@@ -373,18 +373,23 @@ void SetParam(info_t& anInfo, const param& par)
 {
 	auto r = GET_PLUGIN(radon);
 
+	param newpar(par);
+
 	const auto lvl = anInfo->PeekLevel(0);
 	auto paramInfo =
 	    r->RadonDB().GetParameterFromDatabaseName(anInfo->Producer().Id(), par.Name(), lvl.Type(), lvl.Value());
 
 	if (!paramInfo.empty())
 	{
-		anInfo->SetParam(param(paramInfo));
+		newpar = param(paramInfo);
+
+		if (par.Aggregation().Type() != kUnknownAggregationType)
+		{
+			newpar.Aggregation(par.Aggregation());
+		}
 	}
-	else
-	{
-		anInfo->SetParam(par);
-	}
+
+	anInfo->SetParam(newpar);
 }
 }  // namespace info_wrapper
 
