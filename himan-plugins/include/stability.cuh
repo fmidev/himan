@@ -78,7 +78,7 @@ inline double VTI(double T850, double T500)
 CUDA_DEVICE
 inline double TTI(double T850, double T500, double TD850)
 {
-	return CTI(TD850, T500) + VTI(T850, T500);
+	return CTI(T500, TD850) + VTI(T850, T500);
 }
 /**
  * @brief K-Index
