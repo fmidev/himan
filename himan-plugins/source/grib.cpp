@@ -403,7 +403,16 @@ void grib::WriteTime(info& anInfo)
 	{
 		itsGrib->Message().UnitOfTimeRange(unitOfTimeRange);
 
-		long p1 = static_cast<long>(static_cast<double>(anInfo.Time().Step() - period) / divisor);
+		long p1;
+
+		if (anInfo.Param().Aggregation().FirstTimeValue() != kHPMissingInt)
+		{
+			p1 = anInfo.Param().Aggregation().FirstTimeValue();
+		}
+		else
+		{
+			p1 = static_cast<long>(static_cast<double>(anInfo.Time().Step() - period) / divisor);
+		}
 
 		switch (anInfo.Param().Aggregation().Type())
 		{
