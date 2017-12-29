@@ -139,13 +139,13 @@ __global__ void BulkShearKernel(cdarr_t d_u, cdarr_t d_v, darr_t d_bs, himan::pl
 	}
 }
 
-__global__ void RHToTDKernel(darr_t d_td, cdarr_t d_t, size_t N)
+__global__ void RHToTDKernel(darr_t d_t, cdarr_t d_rh, size_t N)
 {
 	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < N)
 	{
-		d_td[idx] = himan::metutil::DewPointFromRH_(d_td[idx], d_t[idx]);
+		d_td[idx] = himan::metutil::DewPointFromRH_(d_t[idx], d_rh[idx]);
 	}
 }
 
@@ -749,7 +749,7 @@ void CalculateDynamicIndices(himan::plugin::stability_cuda::options& opts, cdarr
 				CUDA_CHECK(cudaMemcpyAsync((void*)d_td500m, (const void*)TD500m.data(), memsize, cudaMemcpyHostToDevice,
 				                           stream));
 
-				RHToTDKernel<<<gridSize, blockSize, 0, stream>>>(d_td500m, d_t500m, TD500m.size());
+				RHToTDKernel<<<gridSize, blockSize, 0, stream>>>(d_t500m, d_td500m, TD500m.size());
 			}
 			catch (const himan::HPExceptionType& e)
 			{
