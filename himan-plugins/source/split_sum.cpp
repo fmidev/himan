@@ -695,36 +695,9 @@ shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTarg
 	return SumInfo;
 }
 
-void split_sum::WriteToFile(const info& targetInfo, write_options writeOptions)
+void split_sum::WriteToFile(const info_t targetInfo, write_options writeOptions)
 {
-	auto aWriter = GET_PLUGIN(writer);
-
 	writeOptions.write_empty_grid = false;
 
-	aWriter->WriteOptions(writeOptions);
-
-	// writing might modify iterator positions --> create a copy
-
-	auto tempInfo = targetInfo;
-
-	tempInfo.ResetParam();
-
-	while (tempInfo.NextParam())
-	{
-		if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
-		{
-			aWriter->ToFile(tempInfo, itsConfiguration);
-		}
-		else
-		{
-			lock_guard<mutex> lock(mySingleFileWriteMutex);
-
-			aWriter->ToFile(tempInfo, itsConfiguration, itsConfiguration->ConfigurationFile());
-		}
-	}
-
-	if (itsConfiguration->UseDynamicMemoryAllocation())
-	{
-		DeallocateMemory(targetInfo);
-	}
+	compiled_plugin_base::WriteToFile(targetInfo, writeOptions);
 }

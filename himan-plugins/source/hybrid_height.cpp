@@ -336,11 +336,11 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 		if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
 		{
 			writers.push_back(
-			    async(launch::async, [this](info myTargetInfo) { WriteToFile(myTargetInfo); }, *myTargetInfo));
+			    async(launch::async, [this](info_t myTargetInfo) { WriteToFile(myTargetInfo); }, myTargetInfo));
 		}
 		else
 		{
-			WriteToFile(*myTargetInfo);
+			WriteToFile(myTargetInfo);
 		}
 
 		if (itsConfiguration->StatisticsEnabled())

@@ -151,7 +151,7 @@ bool compiled_plugin_base::SetAB(const info_t& myTargetInfo, const info_t& sourc
 	return true;
 }
 
-void compiled_plugin_base::WriteToFile(const info& targetInfo, write_options writeOptions)
+void compiled_plugin_base::WriteToFile(const info_t targetInfo, write_options writeOptions)
 {
 	auto aWriter = GET_PLUGIN(writer);
 
@@ -159,13 +159,13 @@ void compiled_plugin_base::WriteToFile(const info& targetInfo, write_options wri
 
 	// writing might modify iterator positions --> create a copy
 
-	auto tempInfo = targetInfo;
+	auto tempInfo = make_shared<info>(*targetInfo);
 
-	tempInfo.ResetParam();
+	tempInfo->ResetParam();
 
-	while (tempInfo.NextParam())
+	while (tempInfo->NextParam())
 	{
-		if (!tempInfo.IsValidGrid())
+		if (!tempInfo->IsValidGrid())
 		{
 			continue;
 		}
@@ -184,7 +184,7 @@ void compiled_plugin_base::WriteToFile(const info& targetInfo, write_options wri
 
 	if (itsConfiguration->UseDynamicMemoryAllocation())
 	{
-		DeallocateMemory(targetInfo);
+		DeallocateMemory(*targetInfo);
 	}
 }
 
@@ -276,7 +276,7 @@ void compiled_plugin_base::RunAll(info_t myTargetInfo, unsigned short threadInde
 			itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data().Size());
 		}
 
-		WriteToFile(*myTargetInfo);
+		WriteToFile(myTargetInfo);
 	}
 }
 
@@ -301,7 +301,7 @@ void compiled_plugin_base::RunTimeDimension(info_t myTargetInfo, unsigned short 
 				itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data().Size());
 			}
 
-			WriteToFile(*myTargetInfo);
+			WriteToFile(myTargetInfo);
 		}
 	}
 }
@@ -558,7 +558,7 @@ void compiled_plugin_base::Unpack(initializer_list<info_t> infos)
 
 		if (itsConfiguration->UseCache())
 		{
-			c->Insert(*tempInfo);
+			c->Insert(tempInfo);
 		}
 	}
 }
@@ -638,7 +638,7 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 
 			auto c = GET_PLUGIN(cache);
 
-			c->Insert(*ret);
+			c->Insert(ret);
 		}
 #endif
 	}
@@ -673,7 +673,7 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 
 			auto c = GET_PLUGIN(cache);
 
-			c->Insert(*ret);
+			c->Insert(ret);
 		}
 #endif
 	}

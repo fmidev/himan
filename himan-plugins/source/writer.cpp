@@ -106,7 +106,7 @@ bool writer::CreateFile(info& theInfo, std::shared_ptr<const plugin_configuratio
 	return false;
 }
 
-bool writer::ToFile(info& theInfo, std::shared_ptr<const plugin_configuration> conf,
+bool writer::ToFile(info_t theInfo, std::shared_ptr<const plugin_configuration> conf,
                     const std::string& theOriginalOutputFile)
 {
 	timer t;
@@ -124,10 +124,10 @@ bool writer::ToFile(info& theInfo, std::shared_ptr<const plugin_configuration> c
 		// When writing previ to database, no file is needed. In all other cases we have to create
 		// a file.
 
-		if (theInfo.Producer().Class() == kGridClass ||
-		    (theInfo.Producer().Class() == kPreviClass && conf->FileWriteOption() != kDatabase))
+		if (theInfo->Producer().Class() == kGridClass ||
+		    (theInfo->Producer().Class() == kPreviClass && conf->FileWriteOption() != kDatabase))
 		{
-			ret = CreateFile(theInfo, conf, theOutputFile);
+			ret = CreateFile(*theInfo, conf, theOutputFile);
 		}
 
 		if (ret && conf->FileWriteOption() == kDatabase)
@@ -141,7 +141,7 @@ bool writer::ToFile(info& theInfo, std::shared_ptr<const plugin_configuration> c
 				// Try to save file information to radon
 				try
 				{
-					ret = r->Save(theInfo, theOutputFile);
+					ret = r->Save(*theInfo, theOutputFile);
 
 					if (!ret)
 					{

@@ -48,18 +48,18 @@ string cache::UniqueNameFromOptions(search_options& options)
 	       forecast_type + '_' + forecast_type_value;
 }
 
-void cache::Insert(info& anInfo, bool pin)
+void cache::Insert(info_t anInfo, bool pin)
 {
 	SplitToPool(anInfo, pin);
 }
-void cache::SplitToPool(info& anInfo, bool pin)
+void cache::SplitToPool(info_t anInfo, bool pin)
 {
-	auto localInfo = anInfo;
+	auto localInfo = make_shared<info>(*anInfo);
 
 	// Cached data is never replaced by another data that has
 	// the same uniqueName
 
-	string uniqueName = UniqueName(localInfo);
+	const string uniqueName = UniqueName(*localInfo);
 
 	if (cache_pool::Instance()->Find(uniqueName))
 	{
@@ -71,36 +71,16 @@ void cache::SplitToPool(info& anInfo, bool pin)
 	}
 
 #ifdef HAVE_CUDA
-	if (localInfo.Grid()->IsPackedData())
+	if (localInfo->Grid()->IsPackedData())
 	{
 		itsLogger.Trace("Removing packed data from cached info");
-		localInfo.Grid()->PackedData().Clear();
+		localInfo->Grid()->PackedData().Clear();
 	}
 #endif
 
-	ASSERT(!localInfo.Grid()->IsPackedData());
+	ASSERT(!localInfo->Grid()->IsPackedData());
 
-	vector<param> params;
-	vector<level> levels;
-	vector<forecast_time> times;
-	vector<forecast_type> ftype;
-
-	params.push_back(localInfo.Param());
-	levels.push_back(localInfo.Level());
-	times.push_back(localInfo.Time());
-	ftype.push_back(localInfo.ForecastType());
-
-	auto newInfo = make_shared<info>(localInfo);
-
-	newInfo->Params(params);
-	newInfo->Levels(levels);
-	newInfo->Times(times);
-	newInfo->ForecastTypes(ftype);
-	newInfo->Create(localInfo.Grid());
-
-	ASSERT(uniqueName == UniqueName(*newInfo));
-
-	cache_pool::Instance()->Insert(uniqueName, newInfo, pin);
+	cache_pool::Instance()->Insert(uniqueName, localInfo, pin);
 }
 
 vector<shared_ptr<himan::info>> cache::GetInfo(search_options& options)
