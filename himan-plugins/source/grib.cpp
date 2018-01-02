@@ -1396,7 +1396,7 @@ himan::forecast_time grib::ReadTime() const
 	return t;
 }
 
-himan::level grib::ReadLevel(const search_options& options) const
+himan::level grib::ReadLevel() const
 {
 	long gribLevel = itsGrib->Message().NormalizedLevelType();
 
@@ -1462,20 +1462,15 @@ himan::level grib::ReadLevel(const search_options& options) const
 		case himan::kGroundDepth:
 		case himan::kPressureDelta:
 		{
-			if (IsKHPMissingValue(options.level.Value2()))
+			long gribLevelValue2 = itsGrib->Message().LevelValue2();
+			// Missing in grib is all bits set
+			if (gribLevelValue2 == 2147483647)
 			{
-				l = level(levelType, static_cast<float>(itsGrib->Message().LevelValue()));
+				gribLevelValue2 = -1;
 			}
-			else
-			{
-				long gribLevelValue2 = itsGrib->Message().LevelValue2();
-				// Missing in grib is all bits set
-				if (gribLevelValue2 == 2147483647)
-					gribLevelValue2 = -1;
 
-				l = level(levelType, static_cast<float>(itsGrib->Message().LevelValue()),
-				          static_cast<float>(gribLevelValue2));
-			}
+			l = level(levelType, static_cast<float>(itsGrib->Message().LevelValue()),
+			          static_cast<float>(gribLevelValue2));
 		}
 		break;
 
@@ -1708,7 +1703,7 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 		}
 	}
 
-	auto l = ReadLevel(options);
+	auto l = ReadLevel();
 
 	if (l != options.level)
 	{
