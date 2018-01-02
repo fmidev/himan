@@ -97,6 +97,11 @@ inline double KI(double T850, double T700, double T500, double TD850, double TD7
 	return (T850 - T500 + TD850 - (T700 - TD700)) - himan::constants::kKelvin;
 }
 
+/*
+ * See eq 1 from
+ * https://www.weather.gov/media/unr/soo/scm/BKZTW00.pdf
+*/
+
 CUDA_DEVICE
 inline void UVId(double u_shr, double v_shr, double u_avg, double v_avg, double& u_id, double& v_id)
 {
