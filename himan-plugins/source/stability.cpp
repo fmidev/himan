@@ -301,7 +301,7 @@ void CalculateStaticIndices(shared_ptr<const plugin_configuration>& conf, info_t
 	}
 }
 
-tuple<vec, vec, vec, info_t, info_t, info_t> GetDynamicIndiceSourceData(shared_ptr<const plugin_configuration>& conf,
+tuple<vec, vec, vec, info_t, info_t, info_t> GetDynamicIndicesSourceData(shared_ptr<const plugin_configuration>& conf,
                                                                         info_t& myTargetInfo, shared_ptr<hitool>& h)
 {
 	auto T500 = h->VerticalAverage(TParam, 0, 500.);
@@ -380,7 +380,7 @@ void CalculateThetaEIndices(shared_ptr<const plugin_configuration>& conf, info_t
 
 void CalculateDynamicIndices(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo, shared_ptr<hitool>& h)
 {
-	auto src = GetDynamicIndiceSourceData(conf, myTargetInfo, h);
+	auto src = GetDynamicIndicesSourceData(conf, myTargetInfo, h);
 
 	myTargetInfo->Param(LIParam);
 	auto& LI = VEC(myTargetInfo);
