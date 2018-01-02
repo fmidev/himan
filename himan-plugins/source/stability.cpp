@@ -26,13 +26,13 @@ void RunCuda(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo,
 
 namespace STABILITY
 {
-std::vector<double> Shear(std::shared_ptr<himan::plugin::hitool>& h, const himan::param& par,
-                          const std::vector<double>& lowerHeight, const std::vector<double>& upperHeight)
+vec Shear(std::shared_ptr<himan::plugin::hitool>& h, const himan::param& par, const vec& lowerHeight,
+          const vec& upperHeight)
 {
 	const auto lowerValues = h->VerticalValue(par, lowerHeight);
 	const auto upperValues = h->VerticalValue(par, upperHeight);
 
-	std::vector<double> ret(lowerValues.size(), himan::MissingDouble());
+	vec ret(lowerValues.size(), himan::MissingDouble());
 
 	for (size_t i = 0; i < lowerValues.size(); i++)
 	{
@@ -42,11 +42,11 @@ std::vector<double> Shear(std::shared_ptr<himan::plugin::hitool>& h, const himan
 	return ret;
 }
 
-std::vector<double> Shear(std::shared_ptr<himan::plugin::hitool>& h, const himan::param& par, double lowerHeight,
-                          double upperHeight, size_t N)
+vec Shear(std::shared_ptr<himan::plugin::hitool>& h, const himan::param& par, double lowerHeight, double upperHeight,
+          size_t N)
 {
-	const std::vector<double> lower(N, lowerHeight);
-	const std::vector<double> upper(N, upperHeight);
+	const vec lower(N, lowerHeight);
+	const vec upper(N, upperHeight);
 
 	return Shear(h, par, lower, upper);
 }
@@ -102,7 +102,7 @@ vec CalculateStormRelativeHelicity(shared_ptr<const plugin_configuration> conf, 
 	auto Uid = UVId.first;
 	auto Vid = UVId.second;
 
-	vector<double> SRH(Uid.size(), 0);
+	vec SRH(Uid.size(), 0);
 
 	auto prevUInfo = STABILITY::Fetch(conf, myTargetInfo, itsBottomLevel, UParam);
 	auto prevVInfo = STABILITY::Fetch(conf, myTargetInfo, itsBottomLevel, VParam);
@@ -307,7 +307,7 @@ tuple<vec, vec, vec, info_t, info_t, info_t> GetDynamicIndiceSourceData(shared_p
 	auto T500 = h->VerticalAverage(TParam, 0, 500.);
 	auto P500 = h->VerticalAverage(PParam, 0., 500.);
 
-	vector<double> TD500;
+	vec TD500;
 
 	try
 	{
@@ -506,7 +506,7 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 
 	try
 	{
-		vector<double> FF1500 = h->VerticalValue(param("FF-MS"), 1500);
+		vec FF1500 = h->VerticalValue(param("FF-MS"), 1500);
 
 		myTargetInfo->Param(FFParam);
 		myTargetInfo->Level(EuropeanMileLevel);
@@ -651,7 +651,7 @@ pair<vec, vec> GetSRHSourceData(const shared_ptr<info>& myTargetInfo, shared_ptr
 	auto Vshear = STABILITY::Shear(h, param("V-MS"), 10, 6000, Uavg.size());
 
 	// U & V id vectors
-	vector<double> Uid(Ushear.size(), MissingDouble());
+	vec Uid(Ushear.size(), MissingDouble());
 	auto Vid = Uid;
 
 	for (size_t i = 0; i < Ushear.size(); i++)
@@ -745,10 +745,10 @@ void stability::RunTimeDimension(info_t myTargetInfo, unsigned short threadIndex
 			itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data().Size());
 		}
 	}
-	WriteToFile(*myTargetInfo);
+	WriteToFile(myTargetInfo);
 }
 
-void stability::WriteToFile(const info& targetInfo, write_options writeOptions)
+void stability::WriteToFile(const info_t targetInfo, write_options writeOptions)
 {
 	auto aWriter = GET_PLUGIN(writer);
 
@@ -756,16 +756,18 @@ void stability::WriteToFile(const info& targetInfo, write_options writeOptions)
 
 	// writing might modify iterator positions --> create a copy
 
-	auto tempInfo = targetInfo;
+	auto tempInfo = make_shared<info>(*targetInfo);
 
-	tempInfo.ResetLevel();
+	tempInfo->ResetLevel();
 
-	while (tempInfo.NextLevel())
+	while (tempInfo->NextLevel())
 	{
-		for (tempInfo.ResetParam(); tempInfo.NextParam();)
+		for (tempInfo->ResetParam(); tempInfo->NextParam();)
 		{
-			if (!tempInfo.IsValidGrid())
+			if (!tempInfo->IsValidGrid())
+			{
 				continue;
+			}
 
 			if (itsConfiguration->FileWriteOption() == kDatabase ||
 			    itsConfiguration->FileWriteOption() == kMultipleFiles)
@@ -780,6 +782,6 @@ void stability::WriteToFile(const info& targetInfo, write_options writeOptions)
 	}
 	if (itsConfiguration->UseDynamicMemoryAllocation())
 	{
-		DeallocateMemory(targetInfo);
+		DeallocateMemory(*targetInfo);
 	}
 }

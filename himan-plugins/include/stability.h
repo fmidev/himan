@@ -48,7 +48,7 @@ class stability : public compiled_plugin, private compiled_plugin_base
 	}
   protected:
 	void RunTimeDimension(info_t myTargetInfo, unsigned short threadIndex) override;
-	void WriteToFile(const info& targetInfo, write_options writeOptions = write_options()) override;
+	void WriteToFile(const info_t targetInfo, write_options writeOptions = write_options()) override;
 
    private:
 	void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
