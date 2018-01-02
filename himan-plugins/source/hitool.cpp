@@ -19,55 +19,36 @@ using namespace himan::plugin;
 
 double min(const vector<double>& vec)
 {
-	double ret = 1e38;
+	double ret = himan::MissingDouble();
 
-	for (double val : vec)
+	for (const double& val : vec)
 	{
-		if (val < ret)
-			ret = val;
+		ret = fmin(ret, val);
 	}
-
-	if (ret == 1e38)
-		ret = MissingDouble();
 
 	return ret;
 }
 
 double max(const vector<double>& vec)
 {
-	double ret = -1e38;
+	double ret = himan::MissingDouble();
 
-	for (double val : vec)
+	for (const double& val : vec)
 	{
-		if (val > ret)
-			ret = val;
+		ret = fmax(ret, val);
 	}
-
-	if (ret == -1e38)
-		ret = MissingDouble();
 
 	return ret;
 }
 
 pair<double, double> minmax(const vector<double>& vec)
 {
-	double min = 1e38, max = -1e38;
+	double min = himan::MissingDouble(), max = himan::MissingDouble();
 
-	for (double val : vec)
+	for (const double& val : vec)
 	{
-		if (IsValid(val))
-		{
-			if (val < min)
-				min = val;
-			if (val > max)
-				max = val;
-		}
-	}
-
-	if (min == 1e38)
-	{
-		min = MissingDouble();
-		max = MissingDouble();
+		min = fmin(min, val);
+		max = fmax(max, val);
 	}
 
 	return make_pair(min, max);
@@ -442,9 +423,8 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 #ifdef DEBUG
 		size_t heightsCrossed = mod->HeightsCrossed();
 
-		string msg = "Level " + boost::lexical_cast<string>(currentLevel.Value()) + ": height range crossed for " +
-		             boost::lexical_cast<string>(heightsCrossed) + "/" +
-		             boost::lexical_cast<string>(values->Data().Size()) + " grid points";
+		string msg = "Level " + to_string(currentLevel.Value()) + ": height range crossed for " +
+		             to_string(heightsCrossed) + "/" + to_string(values->Data().Size()) + " grid points";
 
 		itsLogger.Debug(msg);
 #endif
@@ -452,7 +432,12 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 
 	auto ret = mod->Result();
 
-	ASSERT(mod->HeightsCrossed() == ret.size());
+	if (mod->HeightsCrossed() != ret.size())
+	{
+		itsLogger.Warning(to_string(ret.size() - mod->HeightsCrossed()) +
+		                  " grid points did not reach upper height limit. Did I run out of vertical levels?");
+	}
+
 	return ret;
 }
 

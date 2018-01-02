@@ -41,12 +41,12 @@ namespace himan
 {
 // Define some missing value utilities
 inline CUDA_HOST CUDA_DEVICE double GetKHPMissingValue() {return -999.;} // Doesn't work with nan because of comparsion operator definition in several classes.
-inline CUDA_HOST CUDA_DEVICE double MissingDouble() {return nan("32700");}
-inline CUDA_HOST CUDA_DEVICE float MissingFloat() {return nanf("32700");}
+inline CUDA_HOST CUDA_DEVICE double MissingDouble() {return nan("0x7fffffff");}
+inline CUDA_HOST CUDA_DEVICE float MissingFloat() {return nanf("0x7fffffff");} // Cuda version of nanf(char*) has a bug and does not respect the argument given.
+										// Bug is fixed in a later Cuda release (> 9.1)
 
 const int kHPMissingInt = 999999;
 const double kHPMissingValue = GetKHPMissingValue();
-//const double kFloatMissing = 32700.;
 
 inline CUDA_HOST CUDA_DEVICE bool IsMissingDouble(const double& value)
 {
@@ -59,7 +59,7 @@ inline CUDA_HOST CUDA_DEVICE bool IsMissingDouble(const double& value)
 
 inline CUDA_HOST CUDA_DEVICE bool IsMissingFloat(const float& value)
 {
-        double missingValue = MissingFloat();
+        float missingValue = MissingFloat();
         const uint32_t* _value = reinterpret_cast<const uint32_t*>(&value);
         const uint32_t* _missingValue = reinterpret_cast<const uint32_t*>(&missingValue);
 
