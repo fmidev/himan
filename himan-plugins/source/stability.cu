@@ -139,13 +139,13 @@ __global__ void BulkShearKernel(cdarr_t d_u, cdarr_t d_v, darr_t d_bs, himan::pl
 	}
 }
 
-__global__ void RHToTDKernel(darr_t d_t, cdarr_t d_rh, size_t N)
+__global__ void RHToTDKernel(cdarr_t d_t, darr_t d_rh, size_t N)
 {
 	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < N)
 	{
-		d_td[idx] = himan::metutil::DewPointFromRH_(d_t[idx], d_rh[idx]);
+		d_rh[idx] = himan::metutil::DewPointFromRH_(d_t[idx], d_rh[idx]);
 	}
 }
 
