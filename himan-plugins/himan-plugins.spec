@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.12.27
+Version: 18.1.2
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 17.12.4
+Requires: himan-lib >= 18.1.2
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 17.12.11
@@ -110,6 +110,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Jan  2 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.1.2-1.fmi
+- cape plugin float support for some operations
 * Wed Dec 27 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.12.27-1.fmi
 - grib read optimizations
 - cache mutex fixes
