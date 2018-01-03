@@ -45,7 +45,7 @@ class hybrid_pressure : public compiled_plugin, private compiled_plugin_base
 	{
 		return HPVersionNumber(0, 1);
 	}
-	virtual void WriteToFile(const info& targetInfo, write_options opts = write_options()) override;
+	virtual void WriteToFile(const info_t targetInfo, write_options opts = write_options()) override;
 
    private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);

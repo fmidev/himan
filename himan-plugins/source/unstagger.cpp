@@ -215,8 +215,8 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 	auto c = GET_PLUGIN(cache);
 
-	c->Insert(*UInfo);
-	c->Insert(*VInfo);
+	c->Insert(UInfo);
+	c->Insert(VInfo);
 
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " +
 	                      to_string(UInfo->Data().MissingCount() + VInfo->Data().MissingCount()) + "/" +

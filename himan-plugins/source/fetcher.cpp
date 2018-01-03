@@ -183,7 +183,7 @@ shared_ptr<himan::info> fetcher::FetchFromProducer(search_options& opts, bool re
 	    !theInfos[0]->Grid()->IsPackedData())
 	{
 		auto c = GET_PLUGIN(cache);
-		c->Insert(*theInfos[0]);
+		c->Insert(theInfos[0]);
 	}
 
 	baseInfo.reset();
@@ -607,7 +607,7 @@ pair<HPDataFoundFrom, vector<shared_ptr<himan::info>>> fetcher::FetchFromAuxilia
 					// has only one grid but in some cases this is not true.
 					for (anInfo->First(), anInfo->ResetParam(); anInfo->Next();)
 					{
-						c->Insert(*anInfo);
+						c->Insert(anInfo);
 					}
 				}
 				t.Stop();
@@ -915,7 +915,7 @@ void fetcher::RotateVectorComponents(vector<info_t>& components, info_t target,
 				if (itsUseCache && config->UseCache() && !other->Grid()->IsPackedData())
 				{
 					auto c = GET_PLUGIN(cache);
-					c->Insert(*other);
+					c->Insert(other);
 				}
 			}
 		}

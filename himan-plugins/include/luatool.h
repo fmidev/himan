@@ -64,8 +64,8 @@ class luatool : public compiled_plugin, public compiled_plugin_base
 	luabind::object Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam,
 	                      const forecast_type& theType) const;
 
-	void WriteToFile(const info& targetInfo, write_options opts = write_options()) override;
-	void WriteToFile(const info_t& targetInfo);
+	void WriteToFile(const info_t targetInfo, write_options opts = write_options()) override;
+	void WriteToFile(const info_t targetInfo);
 
    protected:
 	/* These functions exists because we need to stop himan

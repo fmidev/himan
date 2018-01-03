@@ -46,7 +46,7 @@ class blend : public compiled_plugin, private compiled_plugin_base
 
    protected:
 	virtual void Calculate(std::shared_ptr<info> targetInfo, unsigned short threadIndex);
-	virtual void WriteToFile(const info& targetInfo, write_options opts = write_options()) override;
+	virtual void WriteToFile(const info_t targetInfo, write_options opts = write_options()) override;
 
    private:
 	void SetupOutputForecastTypes(std::shared_ptr<info> Info);

@@ -37,7 +37,7 @@ class writer : public auxiliary_plugin
 	{
 		return HPVersionNumber(1, 2);
 	}
-	bool ToFile(info& theInfo, std::shared_ptr<const plugin_configuration> conf, const std::string& theFileName = "");
+	bool ToFile(info_t theInfo, std::shared_ptr<const plugin_configuration> conf, const std::string& theFileName = "");
 
 	write_options WriteOptions() const;
 	void WriteOptions(const write_options& theWriteOptions);

@@ -373,18 +373,23 @@ void SetParam(info_t& anInfo, const param& par)
 {
 	auto r = GET_PLUGIN(radon);
 
+	param newpar(par);
+
 	const auto lvl = anInfo->PeekLevel(0);
 	auto paramInfo =
 	    r->RadonDB().GetParameterFromDatabaseName(anInfo->Producer().Id(), par.Name(), lvl.Type(), lvl.Value());
 
 	if (!paramInfo.empty())
 	{
-		anInfo->SetParam(param(paramInfo));
+		newpar = param(paramInfo);
+
+		if (par.Aggregation().Type() != kUnknownAggregationType)
+		{
+			newpar.Aggregation(par.Aggregation());
+		}
 	}
-	else
-	{
-		anInfo->SetParam(par);
-	}
+
+	anInfo->SetParam(newpar);
 }
 }  // namespace info_wrapper
 
@@ -1237,7 +1242,7 @@ void BindPlugins(lua_State* L)
 {
 	module(L)[class_<compiled_plugin_base>("compiled_plugin_base")
 	              .def(constructor<>())
-	              .def("WriteToFile", LUA_MEMFN(void, luatool, WriteToFile, const info_t& targetInfo)),
+	              .def("WriteToFile", LUA_MEMFN(void, luatool, WriteToFile, const info_t targetInfo)),
 	          class_<luatool, compiled_plugin_base>("luatool")
 	              .def(constructor<>())
 	              .def("ClassName", &luatool::ClassName)
@@ -1383,13 +1388,13 @@ std::vector<double> TableToVector(const object& table)
 	return ret;
 }
 
-void luatool::WriteToFile(const info& targetInfo, write_options writeOptions)
+void luatool::WriteToFile(const info_t targetInfo, write_options writeOptions)
 {
 	// Do nothing, override is needed to prevent double write
 }
 
-void luatool::WriteToFile(const info_t& targetInfo)
+void luatool::WriteToFile(const info_t targetInfo)
 {
-	compiled_plugin_base::WriteToFile(*targetInfo, itsWriteOptions);
+	compiled_plugin_base::WriteToFile(targetInfo, itsWriteOptions);
 }
 #endif  // __clang_analyzer__

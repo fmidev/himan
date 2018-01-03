@@ -44,7 +44,7 @@ class cache : public auxiliary_plugin
 	 * to cache
 	 */
 
-	void Insert(info& anInfo, bool pin = false);
+	void Insert(info_t anInfo, bool pin = false);
 	std::vector<std::shared_ptr<himan::info>> GetInfo(search_options& options);
 	void Clean();
 
@@ -63,7 +63,7 @@ class cache : public auxiliary_plugin
 	size_t Size() const;
 
    private:
-	void SplitToPool(info& anInfo, bool pin);
+	void SplitToPool(info_t anInfo, bool pin);
 	std::string UniqueName(const info& anInfo);
 	std::string UniqueNameFromOptions(search_options& options);
 };

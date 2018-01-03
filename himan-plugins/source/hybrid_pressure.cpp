@@ -101,7 +101,7 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 				PInfo->SetParam(param("LNSP-PA"));
 
 				auto c = GET_PLUGIN(cache);
-				c->Insert(*PInfo, true);
+				c->Insert(PInfo, true);
 
 				lnspInfos[key] = PInfo;
 			}
@@ -167,36 +167,9 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 	                      to_string(myTargetInfo->Data().Size()));
 }
 
-void hybrid_pressure::WriteToFile(const info& targetInfo, write_options writeOptions)
+void hybrid_pressure::WriteToFile(const info_t targetInfo, write_options writeOptions)
 {
-	auto aWriter = GET_PLUGIN(writer);
-
 	writeOptions.write_empty_grid = false;
 
-	aWriter->WriteOptions(writeOptions);
-
-	// writing might modify iterator positions --> create a copy
-
-	auto tempInfo = targetInfo;
-
-	tempInfo.ResetParam();
-
-	while (tempInfo.NextParam())
-	{
-		if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
-		{
-			aWriter->ToFile(tempInfo, itsConfiguration);
-		}
-		else
-		{
-			lock_guard<mutex> lock(mySingleFileWriteMutex);
-
-			aWriter->ToFile(tempInfo, itsConfiguration, itsConfiguration->ConfigurationFile());
-		}
-	}
-
-	if (itsConfiguration->UseDynamicMemoryAllocation())
-	{
-		DeallocateMemory(targetInfo);
-	}
+	compiled_plugin_base::WriteToFile(targetInfo, writeOptions);
 }

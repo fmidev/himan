@@ -91,7 +91,7 @@ void FloatToDouble(const std::vector<float>& from, std::vector<double>& to)
 		}
 		else
 		{
-			to[i] = static_cast<double> (from[i]);
+			to[i] = static_cast<double>(from[i]);
 		}
 	}
 }
@@ -132,7 +132,7 @@ info_simple* PrepareInfo(std::shared_ptr<himan::info> fullInfo, cudaStream_t& st
 
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
-		c->Insert(*fullInfo);
+		c->Insert(fullInfo);
 
 		CUDA_CHECK(cudaHostUnregister(arr));
 
@@ -273,8 +273,8 @@ __global__ void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d
 		double prevTparcel = d_prevTparcel[idx];  // K
 		ASSERT(prevTparcel > 100. || IsMissingDouble(prevTparcel));
 
-		const double LFCP = static_cast<double> (d_LFCP[idx]);  // hPa
-		const double LFCT = static_cast<double> (d_LFCT[idx]);  // K
+		const double LFCP = static_cast<double>(d_LFCP[idx]);  // hPa
+		const double LFCT = static_cast<double>(d_LFCT[idx]);  // K
 
 		if (IsMissingDouble(Penv) || IsMissingDouble(Tenv) || IsMissingDouble(Zenv) || IsMissingDouble(prevZenv) ||
 		    IsMissingDouble(Tparcel) || Penv > LFCP)
@@ -342,12 +342,12 @@ __global__ void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d
 			{
 				if (IsMissing(d_ELT[idx]))
 				{
-					d_ELT[idx] = static_cast<float> (ELT);
-					d_ELP[idx] = static_cast<float> (ELP);
+					d_ELT[idx] = static_cast<float>(ELT);
+					d_ELP[idx] = static_cast<float>(ELP);
 				}
 
-				d_LastELT[idx] = static_cast<float> (ELT);
-				d_LastELP[idx] = static_cast<float> (ELP);
+				d_LastELT[idx] = static_cast<float>(ELT);
+				d_LastELP[idx] = static_cast<float>(ELP);
 			}
 		}
 	}
@@ -710,9 +710,9 @@ cape_source cape_cuda::GetHighestThetaEValuesGPU(const std::shared_ptr<const plu
 		ThetaEKernel<<<gridSize, blockSize, 0, stream>>>(*h_T, *h_RH, *h_P, *h_prevT, *h_prevRH, *h_prevP, d_maxThetaE,
 		                                                 d_Tresult, d_TDresult, d_Presult, d_found);
 
-		CUDA_CHECK(cudaStreamSynchronize(stream));
-
 		size_t foundCount = thrust::count(thrust::cuda::par.on(stream), dt_found, dt_found + N, 1);
+
+		CUDA_CHECK(cudaStreamSynchronize(stream));
 
 		if (release)
 		{
@@ -730,8 +730,6 @@ cape_source cape_cuda::GetHighestThetaEValuesGPU(const std::shared_ptr<const plu
 		h_prevT = h_T;
 
 		curLevel.Value(curLevel.Value() - 1);
-
-		CUDA_CHECK(cudaStreamSynchronize(stream));
 
 		if (foundCount == N)
 			break;

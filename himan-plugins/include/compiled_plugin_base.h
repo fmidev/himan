@@ -120,7 +120,7 @@ class compiled_plugin_base
 	 * @param targetInfo info-class instance holding the data
 	 */
 
-	virtual void WriteToFile(const info& targetInfo, write_options opts = write_options());
+	virtual void WriteToFile(const info_t targetInfo, write_options opts = write_options());
 
    protected:
 	virtual std::string ClassName() const

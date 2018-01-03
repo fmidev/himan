@@ -284,7 +284,7 @@ shared_ptr<himan::info> windvector::Fetch(const forecast_time& theTime, const le
 
 			auto c = GET_PLUGIN(cache);
 
-			c->Insert(*ret);
+			c->Insert(ret);
 		}
 #endif
 	}
