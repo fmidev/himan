@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.1.2
+Version: 18.1.3
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -110,6 +110,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Jan  3 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.1.3-1.fmi
+- Improved cache add performance
+- Fixed cache label to contain possible second level value
+- Fixed aggregation information passing to grib file
 * Tue Jan  2 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.1.2-1.fmi
 - cape plugin float support for some operations
 * Wed Dec 27 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.12.27-1.fmi
