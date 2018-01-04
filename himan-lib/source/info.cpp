@@ -29,6 +29,27 @@ info::info()
 {
 }
 
+info::info(const vector<forecast_type>& ftypes, const vector<forecast_time>& times, const vector<level>& levels,
+           const vector<param>& params)
+{
+	ForecastTypes(ftypes);
+	Times(times);
+	Levels(levels);
+	Params(params);
+
+	itsDimensions.resize(SizeForecastTypes() * SizeTimes() * SizeLevels() * SizeParams());
+
+	FirstParam();
+	FirstTime();
+	FirstLevel();
+	FirstForecastType();
+}
+
+info::info(const forecast_type& ftype, const forecast_time& time, const level& lvl, const param& par)
+    : info(vector<forecast_type>({ftype}), vector<forecast_time>({time}), vector<level>({lvl}), vector<param>({par}))
+{
+}
+
 info::~info()
 {
 }
@@ -131,8 +152,8 @@ void info::Create(const grid* baseGrid, const param& par, const level& lev, bool
 
 	if (itsDimensions.size() == 0)
 	{
-		itsDimensions = vector<shared_ptr<grid>>(itsForecastTypeIterator.Size() * itsTimeIterator.Size() *
-		                                         itsLevelIterator.Size() * itsParamIterator.Size());
+		itsDimensions.resize(itsForecastTypeIterator.Size() * itsTimeIterator.Size() * itsLevelIterator.Size() *
+		                     itsParamIterator.Size());
 	}
 
 	FirstForecastType();
@@ -647,6 +668,11 @@ size_t info::SizeLocations() const
 matrix<double>& info::Data()
 {
 	return Grid()->Data();
+}
+shared_ptr<grid> info::SharedGrid() const
+{
+	ASSERT(itsDimensions.size());
+	return itsDimensions[Index()];
 }
 void info::Grid(shared_ptr<grid> d)
 {

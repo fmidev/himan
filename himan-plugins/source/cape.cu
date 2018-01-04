@@ -151,12 +151,13 @@ info_simple* PrepareInfo(std::shared_ptr<himan::info> fullInfo, cudaStream_t& st
 
 std::shared_ptr<himan::info> Fetch(const std::shared_ptr<const plugin_configuration> conf,
                                    const himan::forecast_time& theTime, const himan::level& theLevel,
-                                   const himan::param& theParam, const himan::forecast_type& theType)
+                                   const himan::param& theParam, const himan::forecast_type& theType,
+                                   bool returnPacked = true)
 {
 	try
 	{
 		auto f = GET_PLUGIN(fetcher);
-		return f->Fetch(conf, theTime, theLevel, theParam, theType, true);
+		return f->Fetch(conf, theTime, theLevel, theParam, theType, returnPacked);
 	}
 	catch (HPExceptionType& e)
 	{
@@ -790,14 +791,9 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	tp.HeightInMeters(false);
 	mr.HeightInMeters(false);
 
-	info_t PInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
+	info_t PInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
 
-	if (!PInfo)
-	{
-		return std::make_tuple(std::vector<double>(), std::vector<double>(), std::vector<double>());
-	}
-
-	if (PInfo->Data().MissingCount() == PInfo->SizeLocations())
+	if (!PInfo || PInfo->Data().MissingCount() == PInfo->SizeLocations())
 	{
 		return std::make_tuple(std::vector<double>(), std::vector<double>(), std::vector<double>());
 	}

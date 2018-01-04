@@ -90,6 +90,17 @@ void cache::SplitToPool(info_t anInfo, bool pin)
 
 	ASSERT(!localInfo->Grid()->IsPackedData());
 
+	// localInfo might contain multiple grids. When adding data to cache, we need
+	// to make sure that single info contains only single grid.
+
+	if (localInfo->DimensionSize() > 1)
+	{
+		auto newInfo = make_shared<info>(localInfo->ForecastType(), localInfo->Time(), localInfo->Level(), localInfo->Param());
+		newInfo->Grid(localInfo->SharedGrid());
+		localInfo = newInfo;
+	}
+
+	ASSERT(localInfo->DimensionSize() == 1);
 	cache_pool::Instance()->Insert(uniqueName, localInfo, pin);
 }
 
