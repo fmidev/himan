@@ -366,6 +366,9 @@ class info
 	 */
 
 	info(const info& other);
+	info(const std::vector<forecast_type>& ftypes, const std::vector<forecast_time>& times,
+	     const std::vector<level>& levels, const std::vector<param>& params);
+	info(const forecast_type& ftype, const forecast_time& time, const level& level, const param& param);
 
 	info& operator=(const info& other) = delete;
 
@@ -651,10 +654,11 @@ class info
 	station Station() const;
 
 	/**
-	 * @return Current data matrix
+	 * @return Current grid
 	 */
 
 	grid* Grid() const;
+	std::shared_ptr<grid> SharedGrid() const;
 
 	/**
 	 * @brief Return data matrix from the given time/level/param indexes
