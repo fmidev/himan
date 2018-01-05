@@ -150,12 +150,19 @@ himan::info_t hybrid_height::GetSurfacePressure(himan::info_t& myTargetInfo)
 			if (ret)
 			{
 				// LNSP to regular pressure
-				auto& target = VEC(ret);
+
+				auto newInfo = make_shared<info>(*ret);
+				newInfo->SetParam(param("LNSP-HPA"));
+				newInfo->Create(ret->Grid());
+
+				auto& target = VEC(newInfo);
 				for (double& val : target)
 				{
 					val = 0.01 * exp(val);
 					ASSERT(isfinite(val));
 				}
+
+				ret = newInfo;
 			}
 		}
 	}
