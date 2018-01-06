@@ -1088,15 +1088,10 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
 void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo,
                           const std::vector<double>& Tsource, const std::vector<double>& Psource,
                           const std::vector<double>& TLCL, const std::vector<double>& PLCL,
-                          const std::vector<double>& PLFC)
+                          const std::vector<double>& ZLCL, const std::vector<double>& PLFC,
+                          const std::vector<double>& ZLFC)
 {
 	const params PParams({param("PGR-PA"), param("P-PA")});
-
-	auto h = GET_PLUGIN(hitool);
-	h->Configuration(conf);
-	h->Time(myTargetInfo->Time());
-	h->ForecastType(myTargetInfo->ForecastType());
-	h->HeightUnit(kHPa);
 
 	forecast_time ftime = myTargetInfo->Time();
 	forecast_type ftype = myTargetInfo->ForecastType();
@@ -1115,11 +1110,6 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 	 *
 	 * We stop integrating at first time CAPE area is found!
 	 */
-
-	// Get LCL and LFC heights in meters
-
-	auto ZLCL = h->VerticalValue(param("HL-M"), PLCL);
-	auto ZLFC = h->VerticalValue(param("HL-M"), PLFC);
 
 	level curLevel = itsBottomLevel;
 
@@ -1189,6 +1179,12 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 	CUDA_CHECK(cudaMemcpyAsync(d_found, &found[0], sizeof(unsigned char) * N, cudaMemcpyHostToDevice, stream));
 
 	curLevel.Value(curLevel.Value() - 1);
+
+	auto h = GET_PLUGIN(hitool);
+	h->Configuration(conf);
+	h->Time(myTargetInfo->Time());
+	h->ForecastType(myTargetInfo->ForecastType());
+	h->HeightUnit(kHPa);
 
 	auto hPa100 = h->LevelForHeight(myTargetInfo->Producer(), 100.);
 	thrust::device_ptr<unsigned char> dt_found = thrust::device_pointer_cast(d_found);
