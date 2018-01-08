@@ -69,10 +69,10 @@ class cape : public compiled_plugin, private compiled_plugin_base
 
 	void GetCIN(std::shared_ptr<info> myTargetInfo, const std::vector<double>& Tsource,
 	            const std::vector<double>& Psource, const std::vector<double>& TLCL, const std::vector<double>& PLCL,
-	            const std::vector<double>& PLFC);
+	            const std::vector<double>& ZLCL, const std::vector<double>& PLFC, const std::vector<double>& ZLFC);
 	void GetCINCPU(std::shared_ptr<info> myTargetInfo, const std::vector<double>& Tsource,
 	               const std::vector<double>& Psource, const std::vector<double>& TLCL, const std::vector<double>& PLCL,
-	               const std::vector<double>& PLFC);
+	               const std::vector<double>& ZLCL, const std::vector<double>& PLFC, const std::vector<double>& ZLFC);
 
 	level itsBottomLevel;
 	bool itsUseVirtualTemperature;

@@ -331,10 +331,10 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	myTargetInfo->Param(LCLPParam);
 	myTargetInfo->Data().Set(LCL.second);
 
-	auto height = h->VerticalValue(param("HL-M"), LCL.second);
+	auto LCLZ = h->VerticalValue(param("HL-M"), LCL.second);
 
 	myTargetInfo->Param(LCLZParam);
-	myTargetInfo->Data().Set(height);
+	myTargetInfo->Data().Set(LCLZ);
 
 	// 3.
 
@@ -360,10 +360,10 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	myTargetInfo->Param(LFCPParam);
 	myTargetInfo->Data().Set(LFC.second);
 
-	height = h->VerticalValue(param("HL-M"), LFC.second);
+	auto LFCZ = h->VerticalValue(param("HL-M"), LFC.second);
 
 	myTargetInfo->Param(LFCZParam);
-	myTargetInfo->Data().Set(height);
+	myTargetInfo->Data().Set(LFCZ);
 
 	// 4. & 5.
 
@@ -374,7 +374,7 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	auto cinInfo = make_shared<info>(*myTargetInfo);
 	boost::thread t2(&cape::GetCIN, this, boost::ref(cinInfo), get<0>(sourceValues), get<2>(sourceValues), LCL.first,
-	                 LCL.second, LFC.second);
+	                 LCL.second, LCLZ, LFC.second, LFCZ);
 
 	t1.join();
 	t2.join();
@@ -462,29 +462,25 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 }
 
 void cape::GetCIN(shared_ptr<info> myTargetInfo, const vector<double>& Tsource, const vector<double>& Psource,
-                  const vector<double>& TLCL, const vector<double>& PLCL, const vector<double>& PLFC)
+                  const vector<double>& TLCL, const vector<double>& PLCL, const vector<double>& ZLCL,
+                  const vector<double>& PLFC, const vector<double>& ZLFC)
 {
 #ifdef HAVE_CUDA
 	if (itsConfiguration->UseCuda())
 	{
-		cape_cuda::GetCINGPU(itsConfiguration, myTargetInfo, Tsource, Psource, TLCL, PLCL, PLFC);
+		cape_cuda::GetCINGPU(itsConfiguration, myTargetInfo, Tsource, Psource, TLCL, PLCL, ZLCL, PLFC, ZLFC);
 	}
 	else
 #endif
 	{
-		GetCINCPU(myTargetInfo, Tsource, Psource, TLCL, PLCL, PLFC);
+		GetCINCPU(myTargetInfo, Tsource, Psource, TLCL, PLCL, ZLCL, PLFC, ZLFC);
 	}
 }
 
 void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsource, const vector<double>& Psource,
-                     const vector<double>& TLCL, const vector<double>& PLCL, const vector<double>& PLFC)
+                     const vector<double>& TLCL, const vector<double>& PLCL, const vector<double>& ZLCL,
+                     const vector<double>& PLFC, const vector<double>& ZLFC)
 {
-	auto h = GET_PLUGIN(hitool);
-	h->Configuration(itsConfiguration);
-	h->Time(myTargetInfo->Time());
-	h->ForecastType(myTargetInfo->ForecastType());
-	h->HeightUnit(kHPa);
-
 	vector<bool> found(Tsource.size(), false);
 
 	for (size_t i = 0; i < found.size(); i++)
@@ -513,11 +509,6 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 	 * We stop integrating at first time CAPE area is found!
 	 */
 
-	// Get LCL and LFC heights in meters
-
-	auto ZLCL = h->VerticalValue(param("HL-M"), PLCL);
-	auto ZLFC = h->VerticalValue(param("HL-M"), PLFC);
-
 	level curLevel = itsBottomLevel;
 
 	auto prevZenvInfo = Fetch(ftime, curLevel, param("HL-M"), ftype, false);
@@ -538,6 +529,12 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 	auto prevTparcelVec = Tsource;
 
 	curLevel.Value(curLevel.Value() - 1);
+
+	auto h = GET_PLUGIN(hitool);
+	h->Configuration(itsConfiguration);
+	h->Time(myTargetInfo->Time());
+	h->ForecastType(myTargetInfo->ForecastType());
+	h->HeightUnit(kHPa);
 
 	auto hPa100 = h->LevelForHeight(myTargetInfo->Producer(), 100.);
 
@@ -623,7 +620,6 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 					prevZenv = Zenv;
 				}
 			}
-
 
 			if (IsMissingDouble(Tparcel))
 			{
