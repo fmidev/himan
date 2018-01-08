@@ -1,5 +1,11 @@
 #pragma once
 
+#ifdef __CUDACC__
+#define SQRT __dsqrt_rn
+#else
+#define SQRT sqrt
+#endif
+
 // Required source and target parameters and levels
 
 const himan::param TParam("T-K");
@@ -106,11 +112,6 @@ inline double KI(double T850, double T700, double T500, double TD850, double TD7
 CUDA_DEVICE
 inline void UVId(double u_shr, double v_shr, double u_avg, double v_avg, double& u_id, double& v_id)
 {
-#ifdef __CUDACC__
-#define SQRT __dsqrt_rn
-#else
-#define SQRT sqrt
-#endif
 	const double mag = SQRT(u_shr * u_shr + v_shr * v_shr);
 	const double u_unit = u_shr / mag;
 	const double v_unit = v_shr / mag;
@@ -118,7 +119,31 @@ inline void UVId(double u_shr, double v_shr, double u_avg, double v_avg, double&
 	u_id = fma(v_unit, 7.5, u_avg);  // x*y+z
 	v_id = fma(-u_unit, 7.5, v_avg);
 }
+
+/**
+ * @brief Bulk richardson number
+ *
+ * CAPE needs to be at least 500 J/ms and wind shear 10 m/s
+*/
+
+CUDA_DEVICE
+inline double BRN(double CAPE, double U6, double V6, double U05, double V05)
+{
+	const double Ud = U6 - U05;
+	const double Vd = V6 - V05;
+	const double m = SQRT(Ud * Ud + Vd * Vd);
+
+	double ret = himan::MissingDouble();
+
+	if (CAPE >= 500 && m >= 10)
+	{
+		ret = CAPE / (0.5 * m * m);
+	}
+
+	return ret;
 }
+
+}  // namespace STABILITY
 
 #ifdef HAVE_CUDA
 #include "info_simple.h"

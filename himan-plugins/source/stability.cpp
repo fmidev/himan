@@ -26,6 +26,10 @@ void RunCuda(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo,
 
 namespace STABILITY
 {
+himan::info_t Fetch(std::shared_ptr<const plugin_configuration>& conf, std::shared_ptr<himan::info>& myTargetInfo,
+                    const himan::level& lev, const himan::param& par, bool returnPacked = false);
+
+
 vec Shear(std::shared_ptr<himan::plugin::hitool>& h, const himan::param& par, const vec& lowerHeight,
           const vec& upperHeight)
 {
@@ -52,15 +56,14 @@ vec Shear(std::shared_ptr<himan::plugin::hitool>& h, const himan::param& par, do
 }
 
 himan::info_t Fetch(std::shared_ptr<const plugin_configuration>& conf, std::shared_ptr<himan::info>& myTargetInfo,
-                    const himan::level& lev, const himan::param& par)
+                    const himan::level& lev, const himan::param& par, bool useCuda)
 {
 	const forecast_time forecastTime = myTargetInfo->Time();
 	const forecast_type forecastType = myTargetInfo->ForecastType();
-	const bool useCuda = conf->UseCudaForPacking();
 
 	auto f = GET_PLUGIN(fetcher);
 
-	return f->Fetch(conf, forecastTime, lev, par, forecastType, useCuda);
+	return f->Fetch(conf, forecastTime, lev, par, forecastType, useCuda && conf->UseCudaForPacking());
 }
 }
 
@@ -112,7 +115,7 @@ vec CalculateStormRelativeHelicity(shared_ptr<const plugin_configuration> conf, 
 
 	level curLevel = itsBottomLevel;
 
-	while (curLevel.Value() > 34)
+	while (curLevel.Value() > 0)
 	{
 		curLevel.Value(curLevel.Value() - 1);
 
@@ -130,7 +133,9 @@ vec CalculateStormRelativeHelicity(shared_ptr<const plugin_configuration> conf, 
 		for (size_t i = 0; i < SRH.size(); i++)
 		{
 			if (found[i])
+			{
 				continue;
+			}
 			const double _Uid = Uid[i];
 			const double _Vid = Vid[i];
 
@@ -171,7 +176,9 @@ vec CalculateStormRelativeHelicity(shared_ptr<const plugin_configuration> conf, 
 	for (auto& v : SRH)
 	{
 		if (v == 0)
+		{
 			v = MissingDouble();
+		}
 	}
 
 	return SRH;
@@ -180,13 +187,7 @@ vec CalculateStormRelativeHelicity(shared_ptr<const plugin_configuration> conf, 
 vec CalculateBulkRichardsonNumber(shared_ptr<const plugin_configuration> conf, info_t& myTargetInfo,
                                   shared_ptr<hitool> h)
 {
-	const forecast_time forecastTime = myTargetInfo->Time();
-	const forecast_type forecastType = myTargetInfo->ForecastType();
-	const bool useCuda = conf->UseCudaForPacking();
-
-	auto f = GET_PLUGIN(fetcher);
-
-	auto CAPEInfo = f->Fetch(conf, forecastTime, level(kHeightLayer, 500, 0), param("CAPE-JKG"), forecastType, useCuda);
+	auto CAPEInfo = STABILITY::Fetch(conf, myTargetInfo, level(kHeightLayer, 500, 0), param("CAPE-JKG"));
 	const auto& CAPE = VEC(CAPEInfo);
 
 	auto U6 = h->VerticalAverage(UParam, 10, 6000);
@@ -199,20 +200,7 @@ vec CalculateBulkRichardsonNumber(shared_ptr<const plugin_configuration> conf, i
 
 	for (size_t i = 0; i < BRN.size(); i++)
 	{
-		if (CAPE[i] < 500)
-		{
-			continue;
-		}
-		const double Ud = (U6[i] - U05[i]);
-		const double Vd = (V6[i] - V05[i]);
-		const double m = sqrt(Ud * Ud + Vd * Vd);
-
-		if (m < 10)
-		{
-			continue;
-		}
-		BRN[i] = CAPE[i] / (0.5 * m * m);
-		ASSERT(BRN[i] < 1000);
+		BRN[i] = STABILITY::BRN(CAPE[i], U6[i], V6[i], U05[i], V05[i]);
 	}
 
 	return BRN;
@@ -220,13 +208,8 @@ vec CalculateBulkRichardsonNumber(shared_ptr<const plugin_configuration> conf, i
 
 vec CalculateEnergyHelicityIndex(shared_ptr<const plugin_configuration> conf, info_t& myTargetInfo)
 {
-	const forecast_time forecastTime = myTargetInfo->Time();
-	const forecast_type forecastType = myTargetInfo->ForecastType();
-	const bool useCuda = conf->UseCudaForPacking();
+	auto CAPEInfo = STABILITY::Fetch(conf, myTargetInfo, level(kHeightLayer, 500, 0), param("CAPE-JKG"));
 
-	auto f = GET_PLUGIN(fetcher);
-
-	auto CAPEInfo = f->Fetch(conf, forecastTime, level(kHeightLayer, 500, 0), param("CAPE-JKG"), forecastType, useCuda);
 	const auto& CAPE = VEC(CAPEInfo);
 	const auto& SRH = VEC(myTargetInfo);
 
@@ -294,30 +277,36 @@ void CalculateStaticIndices(shared_ptr<const plugin_configuration>& conf, info_t
 
 	for (size_t i = 0; i < TTI.size(); i++)
 	{
-		KI[i] = STABILITY::KI(t850[i], t700[i], t500[i], td850[i], td700[i]);
-		CTI[i] = STABILITY::CTI(t500[i], td850[i]);
-		VTI[i] = STABILITY::VTI(t850[i], t500[i]);
-		TTI[i] = STABILITY::TTI(t850[i], t500[i], td850[i]);
+		const double T850 = t850[i];
+		const double T700 = t700[i];
+		const double T500 = t500[i];
+		const double TD850 = td850[i];
+		const double TD700 = td700[i];
+
+		KI[i] = STABILITY::KI(T850, T700, T500, TD850, TD700);
+		CTI[i] = STABILITY::CTI(T500, TD850);
+		VTI[i] = STABILITY::VTI(T850, T500);
+		TTI[i] = STABILITY::TTI(T850, T500, TD850);
 	}
 }
 
 tuple<vec, vec, vec, info_t, info_t, info_t> GetDynamicIndicesSourceData(shared_ptr<const plugin_configuration>& conf,
-                                                                        info_t& myTargetInfo, shared_ptr<hitool>& h)
+                                                                         info_t& myTargetInfo, shared_ptr<hitool>& h)
 {
-	auto T500 = h->VerticalAverage(TParam, 0, 500.);
+	auto T500 = h->VerticalAverage(TParam, 0., 500.);
 	auto P500 = h->VerticalAverage(PParam, 0., 500.);
 
 	vec TD500;
 
 	try
 	{
-		TD500 = h->VerticalAverage(param("TD-K"), 0, 500.);
+		TD500 = h->VerticalAverage(param("TD-K"), 0., 500.);
 	}
 	catch (const HPExceptionType& e)
 	{
 		if (e == kFileDataNotFound)
 		{
-			TD500 = h->VerticalAverage(RHParam, 0, 500.);
+			TD500 = h->VerticalAverage(RHParam, 0., 500.);
 
 			for (auto&& tup : zip_range(TD500, T500))
 			{
@@ -334,14 +323,9 @@ tuple<vec, vec, vec, info_t, info_t, info_t> GetDynamicIndicesSourceData(shared_
 		transform(P500.begin(), P500.end(), P500.begin(), bind1st(multiplies<double>(), 100.));  // hPa to Pa
 	}
 
-	auto f = GET_PLUGIN(fetcher);
-
-	const forecast_type forecastType = myTargetInfo->ForecastType();
-	const forecast_time forecastTime = myTargetInfo->Time();
-
-	auto T850Info = f->Fetch(conf, forecastTime, P850Level, TParam, forecastType, conf->UseCudaForPacking());
-	auto TD850Info = f->Fetch(conf, forecastTime, P850Level, TDParam, forecastType, conf->UseCudaForPacking());
-	auto T500Info = f->Fetch(conf, forecastTime, P850Level, TParam, forecastType, conf->UseCudaForPacking());
+	auto T850Info = STABILITY::Fetch(conf, myTargetInfo, P850Level, TParam);
+	auto TD850Info = STABILITY::Fetch(conf, myTargetInfo, P850Level, TDParam);
+	auto T500Info = STABILITY::Fetch(conf, myTargetInfo, P500Level, TParam);
 
 	return make_tuple(T500, TD500, P500, T850Info, TD850Info, T500Info);
 }
@@ -391,29 +375,32 @@ void CalculateDynamicIndices(shared_ptr<const plugin_configuration>& conf, info_
 	const auto& t500m = get<0>(src);
 	const auto& td500m = get<1>(src);
 	const auto& p500m = get<2>(src);
-	const auto& t500 = VEC(get<3>(src));
-	const auto& t850 = VEC(get<4>(src));
-	const auto& td850 = VEC(get<5>(src));
+	const auto& t850 = VEC(get<3>(src));
+	const auto& td850 = VEC(get<4>(src));
+	const auto& t500 = VEC(get<5>(src));
 
-	vec t_li_lifted(t500.size(), MissingDouble());
-	vec t_si_lifted(t500.size(), MissingDouble());
+	vec t_li(t500.size(), MissingDouble());
+	vec t_si(t500.size(), MissingDouble());
+	vec p500(t500.size(), 50000.);
+	vec p850(t500.size(), 85000.);
 
-	vec p500(t500.size(), 50000), p850(t500.size(), 85000);
+	// Lift parcel from lowest 500m average pressure to 500hPa
+	metutil::Lift(p500m.data(), t500m.data(), td500m.data(), p500.data(), t_li.data(), p500.size());
 
-	metutil::Lift(p500m.data(), t500m.data(), td500m.data(), p500.data(), t_li_lifted.data(), p500.size());
-	metutil::Lift(p850.data(), t850.data(), td850.data(), p500.data(), t_si_lifted.data(), p500.size());
+	// Lift parcel from 850hPa to 500hPa
+	metutil::Lift(p850.data(), t850.data(), td850.data(), p500.data(), t_si.data(), p850.size());
 
 	for (size_t i = 0; i < t500.size(); i++)
 	{
-		LI[i] = t500[i] - t_li_lifted[i];
-		SI[i] = t500[i] - t_si_lifted[i];
+		LI[i] = t500[i] - t_li[i];
+		SI[i] = t500[i] - t_si[i];
 	}
 }
 
 vec CalculateBulkShear(info_t& myTargetInfo, shared_ptr<hitool>& h, double stopHeight)
 {
-	const auto U = STABILITY::Shear(h, param("U-MS"), 10, stopHeight, myTargetInfo->SizeLocations());
-	const auto V = STABILITY::Shear(h, param("V-MS"), 10, stopHeight, myTargetInfo->SizeLocations());
+	const auto U = STABILITY::Shear(h, UParam, 10, stopHeight, myTargetInfo->SizeLocations());
+	const auto V = STABILITY::Shear(h, VParam, 10, stopHeight, myTargetInfo->SizeLocations());
 
 	vec BS(U.size(), MissingDouble());
 
@@ -428,14 +415,8 @@ vec CalculateBulkShear(info_t& myTargetInfo, shared_ptr<hitool>& h, double stopH
 vec CalculateEffectiveBulkShear(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo,
                                 shared_ptr<hitool>& h)
 {
-	const forecast_time forecastTime = myTargetInfo->Time();
-	const forecast_type forecastType = myTargetInfo->ForecastType();
-	const bool useCuda = conf->UseCudaForPacking();
-
-	auto f = GET_PLUGIN(fetcher);
-
-	auto ELInfo = f->Fetch(conf, forecastTime, level(kMaximumThetaE, 0), param("EL-LAST-M"), forecastType, useCuda);
-	auto LPLInfo = f->Fetch(conf, forecastTime, level(kMaximumThetaE, 0), param("LPL-M"), forecastType, useCuda);
+	auto ELInfo = STABILITY::Fetch(conf, myTargetInfo, level(kMaximumThetaE, 0), param("EL-LAST-M"));
+	auto LPLInfo = STABILITY::Fetch(conf, myTargetInfo, level(kMaximumThetaE, 0), param("LPL-M"));
 
 	const auto& EL = VEC(ELInfo);
 	const auto& LPL = VEC(LPLInfo);
@@ -451,8 +432,8 @@ vec CalculateEffectiveBulkShear(shared_ptr<const plugin_configuration>& conf, in
 		mid = 0.5 * (el - lpl) + lpl;
 	}
 
-	const auto U = STABILITY::Shear(h, param("U-MS"), LPL, Midway);
-	const auto V = STABILITY::Shear(h, param("V-MS"), LPL, Midway);
+	const auto U = STABILITY::Shear(h, UParam, LPL, Midway);
+	const auto V = STABILITY::Shear(h, VParam, LPL, Midway);
 
 	vec BS(U.size(), MissingDouble());
 
@@ -506,7 +487,7 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 
 	try
 	{
-		vec FF1500 = h->VerticalValue(param("FF-MS"), 1500);
+		vec FF1500 = h->VerticalValue(FFParam, 1500);
 
 		myTargetInfo->Param(FFParam);
 		myTargetInfo->Level(EuropeanMileLevel);
@@ -643,12 +624,12 @@ pair<vec, vec> GetSRHSourceData(const shared_ptr<info>& myTargetInfo, shared_ptr
 	*/  // **********  SRH calculation help from Pieter Groenemeijer ******************
 
 	// average wind
-	auto Uavg = h->VerticalAverage(param("U-MS"), 10, 6000);
-	auto Vavg = h->VerticalAverage(param("V-MS"), 10, 6000);
+	auto Uavg = h->VerticalAverage(UParam, 10, 6000);
+	auto Vavg = h->VerticalAverage(VParam, 10, 6000);
 
 	// shear
-	auto Ushear = STABILITY::Shear(h, param("U-MS"), 10, 6000, Uavg.size());
-	auto Vshear = STABILITY::Shear(h, param("V-MS"), 10, 6000, Uavg.size());
+	auto Ushear = STABILITY::Shear(h, UParam, 10, 6000, Uavg.size());
+	auto Vshear = STABILITY::Shear(h, VParam, 10, 6000, Uavg.size());
 
 	// U & V id vectors
 	vec Uid(Ushear.size(), MissingDouble());
