@@ -49,6 +49,7 @@ inline double CTI(double T500, double TD850)
 {
 	return TD850 - T500;
 }
+
 /**
  * @brief Vertical Totals Index
  *
@@ -97,7 +98,7 @@ inline double KI(double T850, double T700, double T500, double TD850, double TD7
 	return (T850 - T500 + TD850 - (T700 - TD700)) - himan::constants::kKelvin;
 }
 
-/*
+/**
  * See eq 1 from
  * https://www.weather.gov/media/unr/soo/scm/BKZTW00.pdf
 */
