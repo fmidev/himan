@@ -12,10 +12,6 @@ const himan::param TParam("T-K");
 const himan::param TDParam("TD-K");
 const himan::param HParam("Z-M2S2");
 const himan::params PParam({himan::param("P-HPA"), himan::param("P-PA")});
-const himan::param KIParam("KINDEX-N");
-const himan::param VTIParam("VTI-N");
-const himan::param CTIParam("CTI-N");
-const himan::param TTIParam("TTI-N");
 const himan::param SIParam("SI-N");
 const himan::param LIParam("LI-N");
 const himan::param BSParam("WSH-MS");
@@ -40,70 +36,6 @@ const himan::level Height0Level(himan::kHeight, 0);
 
 namespace STABILITY
 {
-/**
- * @brief Cross Totals Index
- *
- * http://glossary.ametsoc.org/wiki/Stability_index
- *
- * @param T500 Temperature of 500 hPa isobar in Kelvins
- * @param TD850 Dewpoint temperature of 850 hPa isobar in Kelvins
- * @return Index value (TD850 - T500)
- */
-
-CUDA_DEVICE
-inline double CTI(double T500, double TD850)
-{
-	return TD850 - T500;
-}
-
-/**
- * @brief Vertical Totals Index
- *
- * http://glossary.ametsoc.org/wiki/Stability_index
- *
- * @param T850 Temperature of 850 hPa isobar in Kelvins
- * @param T500 Temperature of 500 hPa isobar in Kelvins
- * @return Index value (T850 - T500)
- */
-
-CUDA_DEVICE
-inline double VTI(double T850, double T500)
-{
-	return T850 - T500;
-}
-/**
- * @brief Total Totals Index
- *
- * http://glossary.ametsoc.org/wiki/Stability_index
- *
- * @param T850 Temperature of 850 hPa isobar in Kelvins
- * @param T500 Temperature of 500 hPa isobar in Kelvins
- * @param TD850 Dewpoint temperature of 850 hPa isobar in Kelvins
- * @return Index value ( T850 - T500 ) + ( TD850 - T500 )
- */
-
-CUDA_DEVICE
-inline double TTI(double T850, double T500, double TD850)
-{
-	return CTI(T500, TD850) + VTI(T850, T500);
-}
-/**
- * @brief K-Index
- *
- * @param T500 Temperature of 500 hPa isobar in Kelvins
- * @param T700 Temperature of 700 hPa isobar in Kelvins
- * @param T850 Temperature of 850 hPa isobar in Kelvins
- * @param TD700 Dewpoint temperature of 700 hPa isobar in Kelvins
- * @param TD850 Dewpoint temperature of 850 hPa isobar in Kelvins
- * @return Index value
- */
-
-CUDA_DEVICE
-inline double KI(double T850, double T700, double T500, double TD850, double TD700)
-{
-	return (T850 - T500 + TD850 - (T700 - TD700)) - himan::constants::kKelvin;
-}
-
 /**
  * See eq 1 from
  * https://www.weather.gov/media/unr/soo/scm/BKZTW00.pdf
@@ -160,12 +92,8 @@ extern level itsBottomLevel;
 
 struct options
 {
-	info_simple* ki;
 	info_simple* si;
 	info_simple* li;
-	info_simple* vti;
-	info_simple* cti;
-	info_simple* tti;
 	info_simple* bs01;
 	info_simple* bs03;
 	info_simple* bs06;
@@ -183,12 +111,8 @@ struct options
 	std::shared_ptr<himan::info> myTargetInfo;
 
 	options()
-	    : ki(0),
-	      si(0),
+	    : si(0),
 	      li(0),
-	      vti(0),
-	      cti(0),
-	      tti(0),
 	      bs01(0),
 	      bs03(0),
 	      bs06(0),

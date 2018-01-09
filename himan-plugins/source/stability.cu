@@ -70,27 +70,6 @@ static size_t memsize;
 static int gridSize;
 static int blockSize;
 
-__global__ void StaticIndicesKernel(cdarr_t d_t850, cdarr_t d_t700, cdarr_t d_t500, cdarr_t d_td850, cdarr_t d_td700,
-                                    darr_t d_ki, darr_t d_vti, darr_t d_cti, darr_t d_tti,
-                                    himan::plugin::stability_cuda::options opts)
-{
-	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-	if (idx < opts.N)
-	{
-		const double T850 = d_t850[idx];
-		const double T700 = d_t700[idx];
-		const double T500 = d_t500[idx];
-		const double TD850 = d_td850[idx];
-		const double TD700 = d_td700[idx];
-
-		d_ki[idx] = STABILITY::KI(T850, T700, T500, TD850, TD700);
-		d_cti[idx] = STABILITY::CTI(T500, TD850);
-		d_vti[idx] = STABILITY::VTI(T850, T500);
-		d_tti[idx] = STABILITY::TTI(T850, T500, TD850);
-	}
-}
-
 __global__ void ThetaEKernel(cdarr_t d_tstart, cdarr_t d_rhstart, cdarr_t d_pstart, cdarr_t d_tstop, cdarr_t d_rhstop,
                              cdarr_t d_pstop, darr_t d_thetaediff, himan::plugin::stability_cuda::options opts)
 {
@@ -113,9 +92,9 @@ __global__ void ThetaEKernel(cdarr_t d_tstart, cdarr_t d_rhstart, cdarr_t d_psta
 	}
 }
 
-__global__ void DynamicIndicesKernel(cdarr_t d_t850, cdarr_t d_t500, cdarr_t d_t500m, cdarr_t d_td850, cdarr_t d_td500m,
-                                     cdarr_t d_p500m, darr_t d_si, darr_t d_li,
-                                     himan::plugin::stability_cuda::options opts)
+__global__ void LiftedIndicesKernel(cdarr_t d_t850, cdarr_t d_t500, cdarr_t d_t500m, cdarr_t d_td850, cdarr_t d_td500m,
+                                    cdarr_t d_p500m, darr_t d_si, darr_t d_li,
+                                    himan::plugin::stability_cuda::options opts)
 {
 	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -676,85 +655,130 @@ void CalculateBulkRichardsonNumber(himan::plugin::stability_cuda::options& opts,
 	}
 }
 
-void CalculateDynamicIndices(himan::plugin::stability_cuda::options& opts, cdarr_t d_t850, cdarr_t d_t700,
-                             cdarr_t d_t500, cdarr_t d_td850, cdarr_t d_td500, cudaStream_t& stream)
+void CalculateLiftedIndices(himan::plugin::stability_cuda::options& opts, cudaStream_t& stream)
 {
 	double* d_si = 0;
 	double* d_li = 0;
 	double* d_t500m = 0;
 	double* d_td500m = 0;
 	double* d_p500m = 0;
-
-	CUDA_CHECK(cudaMalloc((void**)&d_si, memsize));
-	CUDA_CHECK(cudaMalloc((void**)&d_li, memsize));
-
-	PrepareInfo(opts.li);
-	PrepareInfo(opts.si);
-
-	CUDA_CHECK(cudaMalloc((void**)&d_t500m, memsize));
-	CUDA_CHECK(cudaMalloc((void**)&d_td500m, memsize));
-	CUDA_CHECK(cudaMalloc((void**)&d_p500m, memsize));
-
-	auto T500m = opts.h->VerticalAverage(TParam, 0, 500.);
-	CUDA_CHECK(cudaMemcpyAsync((void*)d_t500m, (const void*)T500m.data(), memsize, cudaMemcpyHostToDevice, stream));
-
-	auto P500m = opts.h->VerticalAverage(PParam, 0., 500.);
-	CUDA_CHECK(cudaMemcpyAsync((void*)d_p500m, (const void*)P500m.data(), memsize, cudaMemcpyHostToDevice, stream));
-
-	std::vector<double> TD500m;
+	double* d_t500 = 0;
+	double* d_t850 = 0;
+	double* d_td850 = 0;
 
 	try
 	{
-		TD500m = opts.h->VerticalAverage(himan::param("TD-K"), 0, 500.);
-		CUDA_CHECK(
-		    cudaMemcpyAsync((void*)d_td500m, (const void*)TD500m.data(), memsize, cudaMemcpyHostToDevice, stream));
-	}
-	catch (const himan::HPExceptionType& e)
-	{
-		if (e == himan::kFileDataNotFound)
+		auto T850Info = STABILITY::Fetch(opts.conf, opts.myTargetInfo, P850Level, TParam);
+		auto T500Info = STABILITY::Fetch(opts.conf, opts.myTargetInfo, P500Level, TParam);
+		auto TD850Info = STABILITY::Fetch(opts.conf, opts.myTargetInfo, P850Level, TDParam);
+
+		CUDA_CHECK(cudaMalloc((void**)&d_t500, memsize));
+		CUDA_CHECK(cudaMalloc((void**)&d_t850, memsize));
+		CUDA_CHECK(cudaMalloc((void**)&d_td850, memsize));
+		CUDA_CHECK(cudaMalloc((void**)&d_si, memsize));
+		CUDA_CHECK(cudaMalloc((void**)&d_li, memsize));
+		CUDA_CHECK(cudaMalloc((void**)&d_t500m, memsize));
+		CUDA_CHECK(cudaMalloc((void**)&d_td500m, memsize));
+		CUDA_CHECK(cudaMalloc((void**)&d_p500m, memsize));
+
+		auto h_t850 = T850Info->ToSimple();
+		auto h_t500 = T500Info->ToSimple();
+		auto h_td850 = TD850Info->ToSimple();
+
+		PrepareInfo(h_t500, d_t500, stream);
+		PrepareInfo(h_t850, d_t850, stream);
+		PrepareInfo(h_td850, d_td850, stream);
+
+		CUDA_CHECK(cudaStreamSynchronize(stream));
+
+		himan::ReleaseInfo(h_t500);
+		himan::ReleaseInfo(h_t850);
+		himan::ReleaseInfo(h_td850);
+
+		delete h_t500;
+		delete h_t850;
+		delete h_td850;
+
+		auto T500m = opts.h->VerticalAverage(TParam, 0, 500.);
+		CUDA_CHECK(cudaMemcpyAsync((void*)d_t500m, (const void*)T500m.data(), memsize, cudaMemcpyHostToDevice, stream));
+
+		auto P500m = opts.h->VerticalAverage(PParam, 0., 500.);
+		CUDA_CHECK(cudaMemcpyAsync((void*)d_p500m, (const void*)P500m.data(), memsize, cudaMemcpyHostToDevice, stream));
+
+		std::vector<double> TD500m;
+
+		try
 		{
-			try
+			TD500m = opts.h->VerticalAverage(himan::param("TD-K"), 0, 500.);
+			CUDA_CHECK(
+			    cudaMemcpyAsync((void*)d_td500m, (const void*)TD500m.data(), memsize, cudaMemcpyHostToDevice, stream));
+		}
+		catch (const himan::HPExceptionType& e)
+		{
+			if (e == himan::kFileDataNotFound)
 			{
-				TD500m = opts.h->VerticalAverage(RHParam, 0, 500.);
-				CUDA_CHECK(cudaMemcpyAsync((void*)d_td500m, (const void*)TD500m.data(), memsize, cudaMemcpyHostToDevice,
-				                           stream));
-
-				RHToTDKernel<<<gridSize, blockSize, 0, stream>>>(d_t500m, d_td500m, TD500m.size());
-			}
-			catch (const himan::HPExceptionType& e)
-			{
-				if (e == himan::kFileDataNotFound)
+				try
 				{
-					CUDA_CHECK(cudaFree(d_li));
-					CUDA_CHECK(cudaFree(d_si));
-					CUDA_CHECK(cudaFree(d_t500m));
-					CUDA_CHECK(cudaFree(d_td500m));
-					CUDA_CHECK(cudaFree(d_p500m));
+					TD500m = opts.h->VerticalAverage(RHParam, 0, 500.);
+					CUDA_CHECK(cudaMemcpyAsync((void*)d_td500m, (const void*)TD500m.data(), memsize,
+					                           cudaMemcpyHostToDevice, stream));
 
-					return;
+					RHToTDKernel<<<gridSize, blockSize, 0, stream>>>(d_t500m, d_td500m, TD500m.size());
+				}
+				catch (const himan::HPExceptionType& e)
+				{
+					if (e == himan::kFileDataNotFound)
+					{
+						return;
+					}
 				}
 			}
 		}
-	}
 
-	if (P500m[0] < 1500)
+		if (P500m[0] < 1500)
+		{
+			MultiplyWith<double>(d_p500m, 100, opts.N, stream);
+		}
+
+		PrepareInfo(opts.li);
+		PrepareInfo(opts.si);
+
+		LiftedIndicesKernel<<<gridSize, blockSize, 0, stream>>>(d_t850, d_t500, d_t500m, d_td850, d_td500m, d_p500m,
+		                                                        d_si, d_li, opts);
+
+		himan::ReleaseInfo(opts.li, d_li, stream);
+		himan::ReleaseInfo(opts.si, d_si, stream);
+
+		CUDA_CHECK(cudaStreamSynchronize(stream));
+
+		CUDA_CHECK(cudaFree(d_t850));
+		CUDA_CHECK(cudaFree(d_t500));
+		CUDA_CHECK(cudaFree(d_td850));
+		CUDA_CHECK(cudaFree(d_li));
+		CUDA_CHECK(cudaFree(d_si));
+		CUDA_CHECK(cudaFree(d_t500m));
+		CUDA_CHECK(cudaFree(d_td500m));
+		CUDA_CHECK(cudaFree(d_p500m));
+	}
+	catch (const himan::HPExceptionType& e)
 	{
-		MultiplyWith<double>(d_p500m, 100, opts.N, stream);
+		if (d_li)
+			CUDA_CHECK(cudaFree(d_li));
+		if (d_si)
+			CUDA_CHECK(cudaFree(d_si));
+		if (d_t500m)
+			CUDA_CHECK(cudaFree(d_t500m));
+		if (d_td500m)
+			CUDA_CHECK(cudaFree(d_td500m));
+		if (d_p500m)
+			CUDA_CHECK(cudaFree(d_p500m));
+		if (d_t850)
+			CUDA_CHECK(cudaFree(d_t850));
+		if (d_t500)
+			CUDA_CHECK(cudaFree(d_t500));
+		if (d_td850)
+			CUDA_CHECK(cudaFree(d_td850));
 	}
-
-	DynamicIndicesKernel<<<gridSize, blockSize, 0, stream>>>(d_t850, d_t500, d_t500m, d_td850, d_td500m, d_p500m, d_si,
-	                                                         d_li, opts);
-
-	himan::ReleaseInfo(opts.li, d_li, stream);
-	himan::ReleaseInfo(opts.si, d_si, stream);
-
-	CUDA_CHECK(cudaStreamSynchronize(stream));
-
-	CUDA_CHECK(cudaFree(d_li));
-	CUDA_CHECK(cudaFree(d_si));
-	CUDA_CHECK(cudaFree(d_t500m));
-	CUDA_CHECK(cudaFree(d_td500m));
-	CUDA_CHECK(cudaFree(d_p500m));
 }
 
 void CalculateThetaEIndices(himan::plugin::stability_cuda::options& opts, cudaStream_t& stream)
@@ -825,113 +849,6 @@ void CalculateThetaEIndices(himan::plugin::stability_cuda::options& opts, cudaSt
 	}
 }
 
-void CalculateBasicIndices(himan::plugin::stability_cuda::options& opts, cudaStream_t& stream)
-{
-	double* d_t500 = 0;
-	double* d_t700 = 0;
-	double* d_t850 = 0;
-	double* d_td700 = 0;
-	double* d_td850 = 0;
-	double* d_ki = 0;
-	double* d_vti = 0;
-	double* d_cti = 0;
-	double* d_tti = 0;
-
-	try
-	{
-		auto T850Info = STABILITY::Fetch(opts.conf, opts.myTargetInfo, P850Level, TParam);
-		auto T700Info = STABILITY::Fetch(opts.conf, opts.myTargetInfo, P700Level, TParam);
-		auto T500Info = STABILITY::Fetch(opts.conf, opts.myTargetInfo, P500Level, TParam);
-		auto TD850Info = STABILITY::Fetch(opts.conf, opts.myTargetInfo, P850Level, TDParam);
-		auto TD700Info = STABILITY::Fetch(opts.conf, opts.myTargetInfo, P700Level, TDParam);
-
-		CUDA_CHECK(cudaMalloc((void**)&d_ki, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_vti, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_cti, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_tti, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_t500, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_t700, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_t850, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_td700, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_td850, memsize));
-
-		auto h_t850 = T850Info->ToSimple();
-		auto h_t700 = T700Info->ToSimple();
-		auto h_t500 = T500Info->ToSimple();
-		auto h_td850 = TD850Info->ToSimple();
-		auto h_td700 = TD700Info->ToSimple();
-
-		PrepareInfo(h_t500, d_t500, stream);
-		PrepareInfo(h_t700, d_t700, stream);
-		PrepareInfo(h_t850, d_t850, stream);
-		PrepareInfo(h_td700, d_td700, stream);
-		PrepareInfo(h_td850, d_td850, stream);
-
-		PrepareInfo(opts.ki);
-		PrepareInfo(opts.tti);
-		PrepareInfo(opts.cti);
-		PrepareInfo(opts.vti);
-
-		StaticIndicesKernel<<<gridSize, blockSize, 0, stream>>>(d_t850, d_t700, d_t500, d_td850, d_td700, d_ki, d_vti,
-		                                                        d_cti, d_tti, opts);
-
-		himan::ReleaseInfo(opts.ki, d_ki, stream);
-		himan::ReleaseInfo(opts.cti, d_cti, stream);
-		himan::ReleaseInfo(opts.tti, d_tti, stream);
-		himan::ReleaseInfo(opts.vti, d_vti, stream);
-		CUDA_CHECK(cudaStreamSynchronize(stream));
-
-		CUDA_CHECK(cudaFree(d_ki));
-		CUDA_CHECK(cudaFree(d_vti));
-		CUDA_CHECK(cudaFree(d_cti));
-		CUDA_CHECK(cudaFree(d_tti));
-
-		himan::ReleaseInfo(h_t500);
-		himan::ReleaseInfo(h_t700);
-		himan::ReleaseInfo(h_t850);
-		himan::ReleaseInfo(h_td700);
-		himan::ReleaseInfo(h_td850);
-
-		delete h_t500;
-		delete h_t700;
-		delete h_t850;
-		delete h_td700;
-		delete h_td850;
-
-		/* =====================================
-		 * |                                   |
-		 * |       DYNAMIC INDICES             |
-		 * |                                   |
-		 * =====================================
-		*/
-
-		CalculateDynamicIndices(opts, d_t850, d_t700, d_t500, d_td850, d_td700, stream);
-
-		CUDA_CHECK(cudaStreamSynchronize(stream));
-
-		CUDA_CHECK(cudaFree(d_t850));
-		CUDA_CHECK(cudaFree(d_t700));
-		CUDA_CHECK(cudaFree(d_t500));
-		CUDA_CHECK(cudaFree(d_td850));
-		CUDA_CHECK(cudaFree(d_td700));
-	}
-	catch (const himan::HPExceptionType& e)
-	{
-		if (e == himan::kFileDataNotFound)
-		{
-			if (d_t850)
-			{
-				CUDA_CHECK(cudaFree(d_t850));
-				CUDA_CHECK(cudaFree(d_t700));
-				CUDA_CHECK(cudaFree(d_t500));
-				CUDA_CHECK(cudaFree(d_td850));
-				CUDA_CHECK(cudaFree(d_td700));
-			}
-			return;
-		}
-	}
-}
-
 void himan::plugin::stability_cuda::Process(options& opts)
 {
 	cudaStream_t stream;
@@ -944,12 +861,12 @@ void himan::plugin::stability_cuda::Process(options& opts)
 
 	/* =====================================
 	 * |                                   |
-	 * |         BASIC INDICES             |
+	 * |        LIFTED INDICES             |
 	 * |                                   |
 	 * =====================================
 	*/
 
-	CalculateBasicIndices(opts, stream);
+	CalculateLiftedIndices(opts, stream);
 
 	/* =====================================
 	 * |                                   |

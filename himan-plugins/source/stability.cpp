@@ -29,7 +29,6 @@ namespace STABILITY
 himan::info_t Fetch(std::shared_ptr<const plugin_configuration>& conf, std::shared_ptr<himan::info>& myTargetInfo,
                     const himan::level& lev, const himan::param& par, bool returnPacked = false);
 
-
 vec Shear(std::shared_ptr<himan::plugin::hitool>& h, const himan::param& par, const vec& lowerHeight,
           const vec& upperHeight)
 {
@@ -88,7 +87,7 @@ void stability::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	itsInfo->LevelIterator().Clear();
 
-	SetParams({EBSParam, KIParam, CTIParam, VTIParam, TTIParam, LIParam, SIParam}, {Height0Level});
+	SetParams({EBSParam, LIParam, SIParam}, {Height0Level});
 	SetParams({BSParam}, {OneKMLevel, ThreeKMLevel, SixKMLevel});
 	SetParams({SRHParam}, {OneKMLevel, ThreeKMLevel});
 	SetParams({TPEParam}, {ThreeKMLevel});
@@ -247,51 +246,8 @@ void CalculateHelicityIndices(shared_ptr<const plugin_configuration> conf, info_
 	myTargetInfo->Data().Set(BRN);
 }
 
-void CalculateStaticIndices(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo)
-{
-	auto T850Info = STABILITY::Fetch(conf, myTargetInfo, P850Level, TParam);
-	auto T700Info = STABILITY::Fetch(conf, myTargetInfo, P700Level, TParam);
-	auto T500Info = STABILITY::Fetch(conf, myTargetInfo, P500Level, TParam);
-	auto TD850Info = STABILITY::Fetch(conf, myTargetInfo, P850Level, TDParam);
-	auto TD700Info = STABILITY::Fetch(conf, myTargetInfo, P700Level, TDParam);
-
-	myTargetInfo->Level(Height0Level);
-
-	myTargetInfo->Param(KIParam);
-	auto& KI = VEC(myTargetInfo);
-
-	myTargetInfo->Param(CTIParam);
-	auto& CTI = VEC(myTargetInfo);
-
-	myTargetInfo->Param(VTIParam);
-	auto& VTI = VEC(myTargetInfo);
-
-	myTargetInfo->Param(TTIParam);
-	auto& TTI = VEC(myTargetInfo);
-
-	const auto& t850 = VEC(T850Info);
-	const auto& td850 = VEC(TD850Info);
-	const auto& t700 = VEC(T700Info);
-	const auto& td700 = VEC(TD700Info);
-	const auto& t500 = VEC(T500Info);
-
-	for (size_t i = 0; i < TTI.size(); i++)
-	{
-		const double T850 = t850[i];
-		const double T700 = t700[i];
-		const double T500 = t500[i];
-		const double TD850 = td850[i];
-		const double TD700 = td700[i];
-
-		KI[i] = STABILITY::KI(T850, T700, T500, TD850, TD700);
-		CTI[i] = STABILITY::CTI(T500, TD850);
-		VTI[i] = STABILITY::VTI(T850, T500);
-		TTI[i] = STABILITY::TTI(T850, T500, TD850);
-	}
-}
-
-tuple<vec, vec, vec, info_t, info_t, info_t> GetDynamicIndicesSourceData(shared_ptr<const plugin_configuration>& conf,
-                                                                         info_t& myTargetInfo, shared_ptr<hitool>& h)
+tuple<vec, vec, vec, info_t, info_t, info_t> GetLiftedIndicesSourceData(shared_ptr<const plugin_configuration>& conf,
+                                                                        info_t& myTargetInfo, shared_ptr<hitool>& h)
 {
 	auto T500 = h->VerticalAverage(TParam, 0., 500.);
 	auto P500 = h->VerticalAverage(PParam, 0., 500.);
@@ -362,9 +318,11 @@ void CalculateThetaEIndices(shared_ptr<const plugin_configuration>& conf, info_t
 	myTargetInfo->Data().Set(thetae);
 }
 
-void CalculateDynamicIndices(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo, shared_ptr<hitool>& h)
+void CalculateLiftedIndices(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo, shared_ptr<hitool>& h)
 {
-	auto src = GetDynamicIndicesSourceData(conf, myTargetInfo, h);
+	auto src = GetLiftedIndicesSourceData(conf, myTargetInfo, h);
+
+	myTargetInfo->Level(Height0Level);
 
 	myTargetInfo->Param(LIParam);
 	auto& LI = VEC(myTargetInfo);
@@ -515,25 +473,12 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 	{
 		try
 		{
-			CalculateStaticIndices(itsConfiguration, myTargetInfo);
-			myThreadedLogger.Info("Static index calculation finished");
+			CalculateLiftedIndices(itsConfiguration, myTargetInfo, h);
+			myThreadedLogger.Info("Lifted index calculation finished");
 		}
 		catch (const HPExceptionType& e)
 		{
-			itsLogger.Warning("Static index calculation failed");
-
-			if (e != kFileDataNotFound)
-			{
-			}
-		}
-		try
-		{
-			CalculateDynamicIndices(itsConfiguration, myTargetInfo, h);
-			myThreadedLogger.Info("Dynamic index calculation finished");
-		}
-		catch (const HPExceptionType& e)
-		{
-			itsLogger.Warning("Dynamic index calculation failed");
+			itsLogger.Warning("Lifted index calculation failed");
 
 			if (e != kFileDataNotFound)
 			{
@@ -648,17 +593,6 @@ void RunCuda(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo,
 	unique_ptr<stability_cuda::options> opts(new stability_cuda::options);
 
 	myTargetInfo->Level(Height0Level);
-	myTargetInfo->Param(KIParam);
-	opts->ki = myTargetInfo->ToSimple();
-
-	myTargetInfo->Param(VTIParam);
-	opts->vti = myTargetInfo->ToSimple();
-
-	myTargetInfo->Param(CTIParam);
-	opts->cti = myTargetInfo->ToSimple();
-
-	myTargetInfo->Param(TTIParam);
-	opts->tti = myTargetInfo->ToSimple();
 
 	myTargetInfo->Param(LIParam);
 	opts->li = myTargetInfo->ToSimple();
