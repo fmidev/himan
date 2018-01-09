@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.1.8
+Version: 18.1.9
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 18.1.4
+Requires: himan-lib >= 18.1.9
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 17.12.11
@@ -110,6 +110,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Jan  9 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.1.9-1.fmi
+- Stability changes
 * Mon Jan  8 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.1.8-1.fmi
 - Cape performance optimization
 * Fri Jan  5 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.1.5-1.fmi
