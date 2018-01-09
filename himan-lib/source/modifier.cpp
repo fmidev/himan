@@ -561,6 +561,7 @@ void modifier_mean::Calculate(double theValue, double theHeight, double thePrevi
 
 		Value((upperValue + thePreviousValue) / 2 * (upperLimit - thePreviousHeight) + val);
 		itsRange[itsIndex] += upperLimit - thePreviousHeight;
+		itsOutOfBoundHeights[itsIndex] = true;
 	}
 	else if (!IsMissing(thePreviousHeight) && !IsMissing(thePreviousValue))
 	{
