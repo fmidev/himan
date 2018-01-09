@@ -19,8 +19,8 @@ std::vector<double> Shear(std::shared_ptr<himan::plugin::hitool>& h, const himan
                           const std::vector<double>& lowerHeight, const std::vector<double>& upperHeight);
 
 extern himan::info_t Fetch(std::shared_ptr<const himan::plugin_configuration>& conf,
-                           std::shared_ptr<himan::info>& myTargetInfo, const himan::level& lev,
-                           const himan::param& par, bool returnPacked = true);
+                           std::shared_ptr<himan::info>& myTargetInfo, const himan::level& lev, const himan::param& par,
+                           bool returnPacked = true);
 }
 
 template <typename T>
@@ -290,7 +290,8 @@ void CalculateBulkShear(himan::plugin::stability_cuda::options& opts, cudaStream
 
 		himan::ReleaseInfo(opts.bs06, d_bs06, stream);
 
-		auto ELInfo = STABILITY::Fetch(opts.conf, opts.myTargetInfo, level(kMaximumThetaE, 0), param("EL-LAST-M"), false);
+		auto ELInfo =
+		    STABILITY::Fetch(opts.conf, opts.myTargetInfo, level(kMaximumThetaE, 0), param("EL-LAST-M"), false);
 		auto LPLInfo = STABILITY::Fetch(opts.conf, opts.myTargetInfo, level(kMaximumThetaE, 0), param("LPL-M"), false);
 
 		const auto& el = VEC(ELInfo);
@@ -564,6 +565,7 @@ void EnergyHelicityIndex(himan::plugin::stability_cuda::options& opts, double* d
 
 		himan::ReleaseInfo(opts.ehi, d_ehi, stream);
 		himan::ReleaseInfo(h_cape);
+		delete h_cape;
 
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 		CUDA_CHECK(cudaFree(d_ehi));
@@ -646,6 +648,7 @@ void CalculateBulkRichardsonNumber(himan::plugin::stability_cuda::options& opts,
 
 		himan::ReleaseInfo(opts.brn, d_brn, stream);
 		himan::ReleaseInfo(h_cape);
+		delete h_cape;
 
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 		CUDA_CHECK(cudaFree(d_brn));
@@ -883,6 +886,18 @@ void CalculateBasicIndices(himan::plugin::stability_cuda::options& opts, cudaStr
 		CUDA_CHECK(cudaFree(d_cti));
 		CUDA_CHECK(cudaFree(d_tti));
 
+		himan::ReleaseInfo(h_t500);
+		himan::ReleaseInfo(h_t700);
+		himan::ReleaseInfo(h_t850);
+		himan::ReleaseInfo(h_td700);
+		himan::ReleaseInfo(h_td850);
+
+		delete h_t500;
+		delete h_t700;
+		delete h_t850;
+		delete h_td700;
+		delete h_td850;
+
 		/* =====================================
 		 * |                                   |
 		 * |       DYNAMIC INDICES             |
@@ -892,11 +907,6 @@ void CalculateBasicIndices(himan::plugin::stability_cuda::options& opts, cudaStr
 
 		CalculateDynamicIndices(opts, d_t850, d_t700, d_t500, d_td850, d_td700, stream);
 
-		himan::ReleaseInfo(h_t500);
-		himan::ReleaseInfo(h_t700);
-		himan::ReleaseInfo(h_t850);
-		himan::ReleaseInfo(h_td700);
-		himan::ReleaseInfo(h_td850);
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
 		CUDA_CHECK(cudaFree(d_t850));
@@ -909,6 +919,14 @@ void CalculateBasicIndices(himan::plugin::stability_cuda::options& opts, cudaStr
 	{
 		if (e == himan::kFileDataNotFound)
 		{
+			if (d_t850)
+			{
+				CUDA_CHECK(cudaFree(d_t850));
+				CUDA_CHECK(cudaFree(d_t700));
+				CUDA_CHECK(cudaFree(d_t500));
+				CUDA_CHECK(cudaFree(d_td850));
+				CUDA_CHECK(cudaFree(d_td700));
+			}
 			return;
 		}
 	}
