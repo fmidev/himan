@@ -28,9 +28,9 @@ const himan::param RHParam("RH-PRCNT");
 const himan::level P850Level(himan::kPressure, 850);
 const himan::level P700Level(himan::kPressure, 700);
 const himan::level P500Level(himan::kPressure, 500);
-const himan::level SixKMLevel(himan::kHeightLayer, 0, 6000);
-const himan::level OneKMLevel(himan::kHeightLayer, 0, 1000);
-const himan::level ThreeKMLevel(himan::kHeightLayer, 0, 3000);
+const himan::level SixKMLevel(himan::kHeightLayer, 6000, 0);
+const himan::level OneKMLevel(himan::kHeightLayer, 1000, 0);
+const himan::level ThreeKMLevel(himan::kHeightLayer, 3000, 0);
 const himan::level EuropeanMileLevel(himan::kHeight, 1500);
 const himan::level Height0Level(himan::kHeight, 0);
 
