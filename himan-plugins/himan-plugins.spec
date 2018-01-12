@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.1.9
+Version: 18.1.12
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -96,6 +96,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libseaicing.so
 %{_libdir}/himan-plugins/libsplit_sum.so
 %{_libdir}/himan-plugins/libstability.so
+%{_libdir}/himan-plugins/libstability_simple.so
 %{_libdir}/himan-plugins/libtke.so
 %{_libdir}/himan-plugins/libtpot.so
 %{_libdir}/himan-plugins/libtransformer.so
@@ -110,6 +111,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Fri Jan 12 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.1.12-1.fmi
+- Fix stability level value order
+* Tue Jan  9 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.1.9-2.fmi
+- Due to existing dependencies stability is split to two plugins
 * Tue Jan  9 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.1.9-1.fmi
 - Stability changes
 * Mon Jan  8 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.1.8-1.fmi
