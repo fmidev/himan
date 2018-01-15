@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.1.12
+Version: 18.1.15
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -111,6 +111,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Jan 15 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.1.15-1.fmi
+- luatool bugfix
 * Fri Jan 12 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.1.12-1.fmi
 - Fix stability level value order
 * Tue Jan  9 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.1.9-2.fmi
