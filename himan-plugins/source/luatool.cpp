@@ -906,7 +906,19 @@ object SortedValues(const ensemble& ens)
 {
 	return VectorToTable(ens.SortedValues());
 }
-}  // ensemble_wrapper
+} // ensemble_wrapper
+
+namespace lagged_ensemble_wrapper
+{
+object Values(const lagged_ensemble& ens)
+{
+	return VectorToTable(ens.Values());
+}
+object SortedValues(const lagged_ensemble& ens)
+{
+	return VectorToTable(ens.SortedValues());
+}
+}  // lagged_ensemble_wrapper
 
 namespace matrix_wrapper
 {
@@ -1163,8 +1175,8 @@ void BindLib(lua_State* L)
 		      .def("ClassName", &lagged_ensemble::ClassName)
 		      .def("Fetch", &lagged_ensemble::Fetch)
 		      .def("Value", &lagged_ensemble::Value)
-		      .def("Values", &ensemble_wrapper::Values)
-		      .def("SortedValues", &ensemble_wrapper::SortedValues)
+		      .def("Values", &lagged_ensemble_wrapper::Values)
+		      .def("SortedValues", &lagged_ensemble_wrapper::SortedValues)
 		      .def("ResetLocation", &lagged_ensemble::ResetLocation)
 		      .def("FirstLocation", &lagged_ensemble::FirstLocation)
 		      .def("NextLocation", &lagged_ensemble::NextLocation)
