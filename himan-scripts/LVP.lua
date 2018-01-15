@@ -12,13 +12,14 @@ if not ensSize then
   return
 end
 
-local ens1 = ensemble(param("VV2-M"), ensSize)
-local ens2 = ensemble(param("CL-2-FT"), ensSize)
+local ens1 = lagged_ensemble(param("VV2-M"), ensSize, HPTimeResolution.kHourResolution, -6, 2)
+local ens2 = lagged_ensemble(param("CL-2-FT"), ensSize, HPTimeResolution.kHourResolution, -6, 2)
 
 ens1:Fetch(configuration, current_time, current_level)
 ens2:Fetch(configuration, current_time, current_level)
 
-local ensSize = ens1:Size()
+local lagEnsSize = ens1:Size()
+
 
 ens1:ResetLocation()
 ens2:ResetLocation()
@@ -45,7 +46,7 @@ while ens1:NextLocation() and ens2:NextLocation() do
              
   end
 
-  probLVP[i] = numLVP / ensSize
+  probLVP[i] = numLVP / lagEnsSize
   
 end
 
