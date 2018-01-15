@@ -54,4 +54,3 @@ local probParam = param("PROB-LVP-1")
 result:SetParam(probParam)
 result:SetValues(probLVP)
 luatool:WriteToFile(result)
-
