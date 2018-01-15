@@ -165,6 +165,67 @@ CUDA_DEVICE CUDA_INLINE void CudaMatrixSet(darr_t C, size_t x, size_t y, size_t 
 // HAVE_CUDA
 #endif
 
+/**
+ * Arange
+ *
+ * Mimics numpy's arange function:
+ *
+ * https://docs.scipy.org/doc/numpy-1.13.0/reference/generated/numpy.arange.html
+ */
+
+template <typename T>
+std::vector<std::vector<T>> Arange(const std::vector<T>& start, const std::vector<T>& stop, T step)
+{
+	std::vector<std::vector<T>> ret(start.size());
+
+	for (size_t i = 0; i < start.size(); i++)
+	{
+		const T length = (stop[i] - start[i]) / step;
+
+		if (length <= 0 || IsMissing(length))
+		{
+			continue;
+		}
+
+		ret[i].resize(static_cast<size_t>(ceil(length)));
+		ret[i][0] = start[i];
+		std::generate(ret[i].begin() + 1, ret[i].end(), [ v = ret[i][0], &step ]() mutable { return v += step; });
+	}
+
+	return ret;
+}
+
+/**
+ * Linspace
+ *
+ * Mimics numpy's linspace function:
+ *
+ * https://docs.scipy.org/doc/numpy-1.12.0/reference/generated/numpy.linspace.html
+ */
+
+template <typename T>
+std::vector<std::vector<T>> Linspace(const std::vector<T>& start, const std::vector<T>& stop, unsigned int length,
+                                     bool endpoint = true)
+{
+	std::vector<std::vector<T>> ret(start.size());
+
+	for (size_t i = 0; i < start.size(); i++)
+	{
+		const T step = (stop[i] - start[i]) / (length - static_cast<int>(endpoint));
+
+		if (IsMissing(step))
+		{
+			continue;
+		}
+
+		ret[i].resize(static_cast<size_t>(length));
+		ret[i][0] = start[i];
+		std::generate(ret[i].begin() + 1, ret[i].end(), [ v = ret[i][0], &step ]() mutable { return v += step; });
+	}
+
+	return ret;
+}
+
 namespace interpolation
 {
 /*
