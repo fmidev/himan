@@ -103,10 +103,9 @@ local atime = current_time:GetOriginDateTime()
 local vtime = raw_time(current_time:GetValidDateTime():String("%Y-%m-%d %H:%M:%S"))
 
 local step = current_time:GetStep()
-local hour = tonumber(vtime:String("%H"))
 
-if step == 0 or hour ~= 0 then
-  logger:Info(string.format("Analysis hour %d leadtime %d -- not calculating frost sum", tonumber(atime:String("%H")), hour))
+if step % 24 ~= 0 then
+  logger:Info(string.format("Step is not a multiple of 24 (%d) -- skipping", step))
   return
 end
 
@@ -116,7 +115,7 @@ while true do
 
   local curtime = raw_time(vtime:String("%Y-%m-%d %H:%M:%S"))
  
-  logger:Info(string.format("Fetching mean temperature for day ending at %s", curtime:String("%Y%m%d%H")))
+  logger:Info(string.format("Fetching mean temperature for a 24h period ending at %s", curtime:String("%Y%m%d%H")))
 
   local mean = DailyMeanTemperature(atime, curtime)
 
