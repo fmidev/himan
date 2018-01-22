@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.1.15
+Version: 18.1.22
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -18,7 +18,7 @@ Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 17.12.11
 Requires: libfmidb >= 17.9.18
-Requires: smartmet-library-newbase >= 17.9.27
+Requires: smartmet-library-newbase >= 17.12.1
 Requires: libpqxx
 
 %if %{defined suse_version}
@@ -36,7 +36,7 @@ Requires: eccodes
 %endif
 BuildRequires: libfmidb-devel >= 17.9.18
 BuildRequires: libfmigrib-devel >= 17.12.11
-BuildRequires: smartmet-library-newbase-devel >= 17.9.27
+BuildRequires: smartmet-library-newbase-devel >= 17.12.1
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: boost-devel >= 1.65
@@ -111,6 +111,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Jan 22 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.1.22-1.fmi
+- luatool bugfix
 * Mon Jan 15 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.1.15-1.fmi
 - luatool bugfix
 * Fri Jan 12 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.1.12-1.fmi
