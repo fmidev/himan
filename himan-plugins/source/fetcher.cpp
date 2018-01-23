@@ -479,57 +479,27 @@ bool fetcher::UseCache() const
 }
 void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vector<info_t>& infos)
 {
-	vector<future<void>> futures;
-
-	const unsigned int maxFutureSize = 8;  // arbitrary number of parallel interpolation threads
-
 	for (const auto& anInfo : infos)
 	{
 		vector<info_t> vec(1);
 		vec[0] = anInfo;
 
-		futures.push_back(async(
-		    launch::async,
-		    [&](vector<info_t> vec) {
-			    auto baseInfo =
-			        make_shared<info>(*dynamic_cast<const plugin_configuration*>(opts.configuration.get())->Info());
-			    ASSERT(baseInfo->Dimensions().size());
+		auto baseInfo =
+			make_shared<info>(*dynamic_cast<const plugin_configuration*>(opts.configuration.get())->Info());
+		ASSERT(baseInfo->Dimensions().size());
 
-			    baseInfo->First();
+		baseInfo->First();
 
-			    if (itsDoInterpolation)
-			    {
-				    if (!interpolate::Interpolate(*baseInfo, vec, opts.configuration->UseCudaForInterpolation()))
-				    {
-					    throw runtime_error("Interpolation failed");
-				    }
-			    }
-
-			    baseInfo.reset();
-
-			},
-		    vec));
-
-		if (futures.size() == maxFutureSize)
+		if (itsDoInterpolation)
 		{
-			for (auto& fut : futures)
+			if (!interpolate::Interpolate(*baseInfo, vec, opts.configuration->UseCudaForInterpolation()))
 			{
-				fut.get();
+				throw runtime_error("Interpolation failed");
 			}
-
-			futures.clear();
-
-			itsLogger.Trace("Processed " + to_string(maxFutureSize) + " infos");
 		}
-	}
 
-	// remainder of the loop
-	for (auto& fut : futures)
-	{
-		fut.get();
+		baseInfo.reset();
 	}
-
-	futures.clear();
 }
 
 vector<shared_ptr<himan::info>> fetcher::FetchFromCache(search_options& opts)
