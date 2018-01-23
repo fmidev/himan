@@ -117,12 +117,8 @@ void luatool::ResetVariables(info_t myTargetInfo)
 
 	const auto L = myL.get();
 
-	// Create new data vector after successive calls to ResetVariables()
-	auto localInfo = std::make_shared<info> (*myTargetInfo);
-	localInfo->Create(localInfo->Grid());
-
 	globals(L)["luatool"] = boost::ref(*this);
-	globals(L)["result"] = localInfo;
+	globals(L)["result"] = myTargetInfo;
 	globals(L)["configuration"] = itsConfiguration;
 	globals(L)["write_options"] = boost::ref(itsWriteOptions);
 
