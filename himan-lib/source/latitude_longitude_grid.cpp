@@ -65,10 +65,22 @@ size_t latitude_longitude_grid::Size() const
 	return itsNi * itsNj;
 }
 
-point latitude_longitude_grid::TopRight() const { return itsTopRight; }
-point latitude_longitude_grid::BottomLeft() const { return itsBottomLeft; }
-point latitude_longitude_grid::TopLeft() const { return itsTopLeft; }
-point latitude_longitude_grid::BottomRight() const { return itsBottomRight; }
+point latitude_longitude_grid::TopRight() const
+{
+	return itsTopRight;
+}
+point latitude_longitude_grid::BottomLeft() const
+{
+	return itsBottomLeft;
+}
+point latitude_longitude_grid::TopLeft() const
+{
+	return itsTopLeft;
+}
+point latitude_longitude_grid::BottomRight() const
+{
+	return itsBottomRight;
+}
 void latitude_longitude_grid::TopRight(const point& theTopRight)
 {
 	itsTopRight = theTopRight;
@@ -226,12 +238,30 @@ bool latitude_longitude_grid::Swap(HPScanningMode newScanningMode)
 	return true;
 }
 
-void latitude_longitude_grid::Ni(size_t theNi) { itsNi = theNi; }
-void latitude_longitude_grid::Nj(size_t theNj) { itsNj = theNj; }
-size_t latitude_longitude_grid::Ni() const { return itsNi; }
-size_t latitude_longitude_grid::Nj() const { return itsNj; }
-void latitude_longitude_grid::Di(double theDi) { itsDi = theDi; }
-void latitude_longitude_grid::Dj(double theDj) { itsDj = theDj; }
+void latitude_longitude_grid::Ni(size_t theNi)
+{
+	itsNi = theNi;
+}
+void latitude_longitude_grid::Nj(size_t theNj)
+{
+	itsNj = theNj;
+}
+size_t latitude_longitude_grid::Ni() const
+{
+	return itsNi;
+}
+size_t latitude_longitude_grid::Nj() const
+{
+	return itsNj;
+}
+void latitude_longitude_grid::Di(double theDi)
+{
+	itsDi = theDi;
+}
+void latitude_longitude_grid::Dj(double theDj)
+{
+	itsDj = theDj;
+}
 double latitude_longitude_grid::Di() const
 {
 	if (IsKHPMissingValue(itsDi) && itsNi != static_cast<size_t>(kHPMissingInt) &&
@@ -240,7 +270,8 @@ double latitude_longitude_grid::Di() const
 		double fx = FirstPoint().X();
 		double lx = LastPoint().X();
 
-		if (fx == 0. && lx < 0) lx += 360;
+		if (fx == 0. && lx < 0)
+			lx += 360;
 		itsDi = fabs((fx - lx) / (static_cast<double>(itsNi) - 1.));
 	}
 
@@ -326,7 +357,10 @@ void latitude_longitude_grid::UpdateCoordinates() const
 	}
 }
 
-bool latitude_longitude_grid::operator!=(const grid& other) const { return !(other == *this); }
+bool latitude_longitude_grid::operator!=(const grid& other) const
+{
+	return !(other == *this);
+}
 bool latitude_longitude_grid::operator==(const grid& other) const
 {
 	const latitude_longitude_grid* g = dynamic_cast<const latitude_longitude_grid*>(&other);
@@ -397,7 +431,10 @@ bool latitude_longitude_grid::EqualsTo(const latitude_longitude_grid& other) con
 	return true;
 }
 
-latitude_longitude_grid* latitude_longitude_grid::Clone() const { return new latitude_longitude_grid(*this); }
+latitude_longitude_grid* latitude_longitude_grid::Clone() const
+{
+	return new latitude_longitude_grid(*this);
+}
 ostream& latitude_longitude_grid::Write(std::ostream& file) const
 {
 	grid::Write(file);
@@ -437,7 +474,10 @@ rotated_latitude_longitude_grid::rotated_latitude_longitude_grid(const rotated_l
 
 rotated_latitude_longitude_grid::~rotated_latitude_longitude_grid() = default;
 
-bool rotated_latitude_longitude_grid::operator!=(const grid& other) const { return !(other == *this); }
+bool rotated_latitude_longitude_grid::operator!=(const grid& other) const
+{
+	return !(other == *this);
+}
 bool rotated_latitude_longitude_grid::operator==(const grid& other) const
 {
 	const rotated_latitude_longitude_grid* g = dynamic_cast<const rotated_latitude_longitude_grid*>(&other);
@@ -482,8 +522,14 @@ rotated_latitude_longitude_grid* rotated_latitude_longitude_grid::Clone() const
 	return new rotated_latitude_longitude_grid(*this);
 }
 
-point rotated_latitude_longitude_grid::SouthPole() const { return itsSouthPole; }
-void rotated_latitude_longitude_grid::SouthPole(const point& theSouthPole) { itsSouthPole = theSouthPole; }
+point rotated_latitude_longitude_grid::SouthPole() const
+{
+	return itsSouthPole;
+}
+void rotated_latitude_longitude_grid::SouthPole(const point& theSouthPole)
+{
+	itsSouthPole = theSouthPole;
+}
 point rotated_latitude_longitude_grid::XY(const point& latlon) const
 {
 	if (!itsRotLatLonArea)

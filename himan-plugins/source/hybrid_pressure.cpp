@@ -18,7 +18,6 @@ using namespace std;
 using namespace himan::plugin;
 
 mutex lnspMutex, mySingleFileWriteMutex;
-map<string, himan::info_t> lnspInfos;
 
 hybrid_pressure::hybrid_pressure()
 {
@@ -58,9 +57,11 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-						  static_cast<string>(forecastLevel));
+	                      static_cast<string>(forecastLevel));
 
 	info_t PInfo;
+
+	double PScale = 1;
 
 	if (isECMWF)
 	{
@@ -70,45 +71,47 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 		PParam = {param("LNSP-N")};
 
 		// To make calculation more efficient we calculate surface
-		// pressure once from LNSP and store it to cache as LNSP-PA
+		// pressure once from LNSP and store it to cache as LNSP-HPA
 
 		// Double-check pattern
 
-		const auto key = static_cast<string>(forecastType) + "_" + to_string(forecastTime.Step());
+		PInfo = Fetch(forecastTime, PLevel, param("LNSP-HPA"), forecastType, false);
 
-		if (lnspInfos.find(key) == lnspInfos.end())
+		if (!PInfo)
 		{
 			lock_guard<mutex> lock(lnspMutex);
 
-			if (lnspInfos.find(key) == lnspInfos.end())
-			{
-				PInfo = Fetch(forecastTime, PLevel, PParam, forecastType, false);
+			PInfo = Fetch(forecastTime, PLevel, param("LNSP-HPA"), forecastType, false);
 
-				if (!PInfo)
+			if (!PInfo)
+			{
+				auto lnspn = Fetch(forecastTime, PLevel, PParam, forecastType, false);
+
+				if (!lnspn)
 				{
 					myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
 					                         static_cast<string>(forecastLevel));
 					return;
 				}
 
-				myThreadedLogger.Info("Transforming LNSP to Pa");
+				myThreadedLogger.Info("Transforming LNSP to HPa for step " + to_string(forecastTime.Step()));
 
-				for (auto& val : VEC(PInfo))
+				auto newInfo = make_shared<info>(*lnspn);
+				newInfo->SetParam(param("LNSP-HPA"));
+				newInfo->Create(lnspn->Grid());
+
+				for (auto& val : VEC(newInfo))
 				{
-					val = exp(val);
+					val = 0.01 * exp(val);
 				}
 
-				PInfo->SetParam(param("LNSP-PA"));
-
 				auto c = GET_PLUGIN(cache);
-				c->Insert(*PInfo, true);
-
-				lnspInfos[key] = PInfo;
+				c->Insert(newInfo, true);
 			}
 		}
 
-		PParam = {param("LNSP-PA")};
-		PInfo = Fetch(forecastTime, PLevel, PParam, forecastType, false);
+		PInfo = Fetch(forecastTime, PLevel, param("LNSP-HPA"), forecastType, false);
+		PScale = 100;
 	}
 	else
 	{
@@ -132,7 +135,7 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 	 * For Harmonie and ECMWF interpolation is done, when reading data from the grib-file. (NFmiGribMessage::PV)
 	 */
 
-	std::vector<double> ab = TInfo->Grid()->AB();
+	vector<double> ab = TInfo->Grid()->AB();
 
 	double A = MissingDouble(), B = MissingDouble();
 
@@ -160,43 +163,16 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 		double& result = tup.get<0>();
 		double P = tup.get<1>();
 
-		result = 0.01 * (A + P * B);
+		result = 0.01 * (A + P * PScale * B);
 	}
 
 	myThreadedLogger.Info("[CPU] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) + "/" +
 	                      to_string(myTargetInfo->Data().Size()));
 }
 
-void hybrid_pressure::WriteToFile(const info& targetInfo, write_options writeOptions)
+void hybrid_pressure::WriteToFile(const info_t targetInfo, write_options writeOptions)
 {
-	auto aWriter = GET_PLUGIN(writer);
-
 	writeOptions.write_empty_grid = false;
 
-	aWriter->WriteOptions(writeOptions);
-
-	// writing might modify iterator positions --> create a copy
-
-	auto tempInfo = targetInfo;
-
-	tempInfo.ResetParam();
-
-	while (tempInfo.NextParam())
-	{
-		if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
-		{
-			aWriter->ToFile(tempInfo, itsConfiguration);
-		}
-		else
-		{
-			lock_guard<mutex> lock(mySingleFileWriteMutex);
-
-			aWriter->ToFile(tempInfo, itsConfiguration, itsConfiguration->ConfigurationFile());
-		}
-	}
-
-	if (itsConfiguration->UseDynamicMemoryAllocation())
-	{
-		DeallocateMemory(targetInfo);
-	}
+	compiled_plugin_base::WriteToFile(targetInfo, writeOptions);
 }

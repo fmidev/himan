@@ -1,11 +1,11 @@
 /**
  * @file turbulence.cpp
  */
+#include "turbulence.h"
 #include "forecast_time.h"
 #include "level.h"
 #include "logger.h"
 #include "plugin_factory.h"
-#include "turbulence.h"
 #include "util.h"
 
 using namespace std;
@@ -122,16 +122,16 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	vector<double> dx, dy;
 
-	switch(UInfo->Grid()->Type())
+	switch (UInfo->Grid()->Type())
 	{
-		case kLambertConformalConic :
+		case kLambertConformalConic:
 		{
 			dx = vector<double>(Nj, Di);
 			dy = vector<double>(Ni, Dj);
 			break;
 		};
-		case kLatitudeLongitude :
-		case kRotatedLatitudeLongitude :
+		case kLatitudeLongitude:
+		case kRotatedLatitudeLongitude:
 		{
 			dx = vector<double>(Nj, MissingDouble());
 			dy = vector<double>(Ni, MissingDouble());
@@ -147,7 +147,7 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			}
 			break;
 		}
-		default :
+		default:
 		{
 			myThreadedLogger.Error("Grid not supported for CAT calculation.");
 			exit(1);

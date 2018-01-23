@@ -18,7 +18,9 @@ struct write_options
 	HPPackingType packing_type;  // for grib, ie simple_packing, jpeg_packing
 	bool write_empty_grid;       // write file even if all data is missing
 
-	write_options() : use_bitmap(true), packing_type(kSimplePacking), write_empty_grid(true) {}
+	write_options() : use_bitmap(true), packing_type(kSimplePacking), write_empty_grid(true)
+	{
+	}
 };
 }
 }

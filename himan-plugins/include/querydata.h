@@ -25,13 +25,24 @@ class querydata : public io_plugin
    public:
 	querydata();
 
-	virtual ~querydata() {}
+	virtual ~querydata()
+	{
+	}
 	querydata(const querydata& other) = delete;
 	querydata& operator=(const querydata& other) = delete;
 
-	virtual std::string ClassName() const { return "himan::plugin::querydata"; }
-	virtual HPPluginClass PluginClass() const { return kAuxiliary; }
-	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 1); }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::querydata";
+	}
+	virtual HPPluginClass PluginClass() const
+	{
+		return kAuxiliary;
+	}
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(1, 1);
+	}
 	/**
 	 * @brief Return all data from a querydata file.
 	 *
@@ -112,7 +123,10 @@ class querydata : public io_plugin
 
 // the class factory
 
-extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<querydata>(); }
+extern "C" std::shared_ptr<himan_plugin> create()
+{
+	return std::make_shared<querydata>();
+}
 #define HIMAN_AUXILIARY_INCLUDE
 #endif /* HIMAN_AUXILIARY_INCLUDE */
 

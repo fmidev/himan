@@ -262,7 +262,8 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		// Ukkoset
 		T850 = T850 - himan::constants::kKelvin;
 
-		if (cloudType == 2 && T850 < -9) cloudType = 5;  // lumisade
+		if (cloudType == 2 && T850 < -9)
+			cloudType = 5;  // lumisade
 
 		if (cloudType == 4)
 		{

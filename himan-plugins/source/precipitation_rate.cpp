@@ -59,7 +59,7 @@ void precipitation_rate::Calculate(shared_ptr<info> myTargetInfo, unsigned short
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-						  static_cast<string>(forecastLevel));
+	                      static_cast<string>(forecastLevel));
 
 	info_t RhoInfo = Fetch(forecastTime, forecastLevel, RhoParam, forecastType, false);
 	info_t RainInfo = Fetch(forecastTime, forecastLevel, RainParam, forecastType, false);

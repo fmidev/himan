@@ -26,7 +26,8 @@ long get_binary_scale_fact(double max, double min, long bpval)
 
 	ASSERT(bpval >= 1);
 
-	if (range == 0) return 0;
+	if (range == 0)
+		return 0;
 
 	/* range -= 1e-10; */
 	while ((range * zs) <= dmaxint)
@@ -514,7 +515,8 @@ __device__ void simple_packed_util::UnpackUnevenBytes(unsigned char* __restrict_
 
 			GetBitValue(d_p, bitp, &val);
 
-			if (val) lvalue += 1;
+			if (val)
+				lvalue += 1;
 
 			bitp += 1;
 		}

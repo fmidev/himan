@@ -21,15 +21,27 @@ class cape : public compiled_plugin, private compiled_plugin_base
    public:
 	cape();
 
-	inline virtual ~cape() {}
+	inline virtual ~cape()
+	{
+	}
 	cape(const cape& other) = delete;
 	cape& operator=(const cape& other) = delete;
 
 	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
 
-	virtual std::string ClassName() const { return "himan::plugin::cape"; }
-	virtual HPPluginClass PluginClass() const { return kCompiled; }
-	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::cape";
+	}
+	virtual HPPluginClass PluginClass() const
+	{
+		return kCompiled;
+	}
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(0, 1);
+	}
+
    private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short threadIndex);
 
@@ -57,10 +69,10 @@ class cape : public compiled_plugin, private compiled_plugin_base
 
 	void GetCIN(std::shared_ptr<info> myTargetInfo, const std::vector<double>& Tsource,
 	            const std::vector<double>& Psource, const std::vector<double>& TLCL, const std::vector<double>& PLCL,
-	            const std::vector<double>& PLFC);
+	            const std::vector<double>& ZLCL, const std::vector<double>& PLFC, const std::vector<double>& ZLFC);
 	void GetCINCPU(std::shared_ptr<info> myTargetInfo, const std::vector<double>& Tsource,
 	               const std::vector<double>& Psource, const std::vector<double>& TLCL, const std::vector<double>& PLCL,
-	               const std::vector<double>& PLFC);
+	               const std::vector<double>& ZLCL, const std::vector<double>& PLFC, const std::vector<double>& ZLFC);
 
 	level itsBottomLevel;
 	bool itsUseVirtualTemperature;
@@ -70,7 +82,10 @@ class cape : public compiled_plugin, private compiled_plugin_base
 
 // the class factory
 
-extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<cape>(); }
+extern "C" std::shared_ptr<himan_plugin> create()
+{
+	return std::make_shared<cape>();
+}
 }  // namespace plugin
 }  // namespace himan
 

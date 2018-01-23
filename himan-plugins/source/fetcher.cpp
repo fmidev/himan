@@ -183,7 +183,7 @@ shared_ptr<himan::info> fetcher::FetchFromProducer(search_options& opts, bool re
 	    !theInfos[0]->Grid()->IsPackedData())
 	{
 		auto c = GET_PLUGIN(cache);
-		c->Insert(*theInfos[0]);
+		c->Insert(theInfos[0]);
 	}
 
 	baseInfo.reset();
@@ -230,7 +230,8 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 			                    requestedType, config);
 
 			ret = FetchFromProducer(opts, readPackedData, suppressLogging);
-			if (ret) break;
+			if (ret)
+				break;
 
 			itsLogger.Warning("Sticky cache failed, trying all producers just to be sure");
 		}
@@ -452,12 +453,30 @@ himan::level fetcher::LevelTransform(const shared_ptr<const configuration>& conf
 	return ret;
 }
 
-void fetcher::DoLevelTransform(bool theDoLevelTransform) { itsDoLevelTransform = theDoLevelTransform; }
-bool fetcher::DoLevelTransform() const { return itsDoLevelTransform; }
-void fetcher::DoInterpolation(bool theDoInterpolation) { itsDoInterpolation = theDoInterpolation; }
-bool fetcher::DoInterpolation() const { return itsDoInterpolation; }
-void fetcher::UseCache(bool theUseCache) { itsUseCache = theUseCache; }
-bool fetcher::UseCache() const { return itsUseCache; }
+void fetcher::DoLevelTransform(bool theDoLevelTransform)
+{
+	itsDoLevelTransform = theDoLevelTransform;
+}
+bool fetcher::DoLevelTransform() const
+{
+	return itsDoLevelTransform;
+}
+void fetcher::DoInterpolation(bool theDoInterpolation)
+{
+	itsDoInterpolation = theDoInterpolation;
+}
+bool fetcher::DoInterpolation() const
+{
+	return itsDoInterpolation;
+}
+void fetcher::UseCache(bool theUseCache)
+{
+	itsUseCache = theUseCache;
+}
+bool fetcher::UseCache() const
+{
+	return itsUseCache;
+}
 void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vector<info_t>& infos)
 {
 	vector<future<void>> futures;
@@ -588,12 +607,12 @@ pair<HPDataFoundFrom, vector<shared_ptr<himan::info>>> fetcher::FetchFromAuxilia
 					// has only one grid but in some cases this is not true.
 					for (anInfo->First(), anInfo->ResetParam(); anInfo->Next();)
 					{
-						c->Insert(*anInfo);
+						c->Insert(anInfo);
 					}
 				}
 				t.Stop();
-				itsLogger.Debug("Auxiliary files read finished in " + to_string(t.GetTime())
-				                + "ms, cache size is now " + to_string(c->Size()));
+				itsLogger.Debug("Auxiliary files read finished in " + to_string(t.GetTime()) +
+				                "ms, cache size is now " + to_string(c->Size()));
 			});
 
 			auxiliaryFilesRead = true;
@@ -773,9 +792,18 @@ bool fetcher::ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> confi
 	return true;
 }
 
-bool fetcher::ApplyLandSeaMask() const { return itsApplyLandSeaMask; }
-void fetcher::ApplyLandSeaMask(bool theApplyLandSeaMask) { itsApplyLandSeaMask = theApplyLandSeaMask; }
-double fetcher::LandSeaMaskThreshold() const { return itsLandSeaMaskThreshold; }
+bool fetcher::ApplyLandSeaMask() const
+{
+	return itsApplyLandSeaMask;
+}
+void fetcher::ApplyLandSeaMask(bool theApplyLandSeaMask)
+{
+	itsApplyLandSeaMask = theApplyLandSeaMask;
+}
+double fetcher::LandSeaMaskThreshold() const
+{
+	return itsLandSeaMaskThreshold;
+}
 void fetcher::LandSeaMaskThreshold(double theLandSeaMaskThreshold)
 {
 	if (theLandSeaMaskThreshold < -1 || theLandSeaMaskThreshold > 1)
@@ -787,7 +815,10 @@ void fetcher::LandSeaMaskThreshold(double theLandSeaMaskThreshold)
 	itsLandSeaMaskThreshold = theLandSeaMaskThreshold;
 }
 
-bool fetcher::DoVectorComponentRotation() const { return itsDoVectorComponentRotation; }
+bool fetcher::DoVectorComponentRotation() const
+{
+	return itsDoVectorComponentRotation;
+}
 void fetcher::DoVectorComponentRotation(bool theDoVectorComponentRotation)
 {
 	itsDoVectorComponentRotation = theDoVectorComponentRotation;
@@ -884,7 +915,7 @@ void fetcher::RotateVectorComponents(vector<info_t>& components, info_t target,
 				if (itsUseCache && config->UseCache() && !other->Grid()->IsPackedData())
 				{
 					auto c = GET_PLUGIN(cache);
-					c->Insert(*other);
+					c->Insert(other);
 				}
 			}
 		}

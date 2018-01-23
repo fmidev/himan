@@ -22,7 +22,9 @@ hybrid_height::hybrid_height() : itsBottomLevel(kHPMissingInt), itsUseGeopotenti
 	itsLogger = logger(itsName);
 }
 
-hybrid_height::~hybrid_height() {}
+hybrid_height::~hybrid_height()
+{
+}
 void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
@@ -148,12 +150,19 @@ himan::info_t hybrid_height::GetSurfacePressure(himan::info_t& myTargetInfo)
 			if (ret)
 			{
 				// LNSP to regular pressure
-				auto& target = VEC(ret);
+
+				auto newInfo = make_shared<info>(*ret);
+				newInfo->SetParam(param("LNSP-HPA"));
+				newInfo->Create(ret->Grid());
+
+				auto& target = VEC(newInfo);
 				for (double& val : target)
 				{
 					val = 0.01 * exp(val);
 					ASSERT(isfinite(val));
 				}
+
+				ret = newInfo;
 			}
 		}
 	}
@@ -333,12 +342,12 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 
 		if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
 		{
-			writers.push_back(
-			    async(launch::async, [this](info myTargetInfo) { WriteToFile(myTargetInfo); }, *myTargetInfo));
+			writers.push_back(async(launch::async, [this](info_t myTargetInfo) { WriteToFile(myTargetInfo); },
+			                        make_shared<info>(*myTargetInfo)));
 		}
 		else
 		{
-			WriteToFile(*myTargetInfo);
+			WriteToFile(myTargetInfo);
 		}
 
 		if (itsConfiguration->StatisticsEnabled())

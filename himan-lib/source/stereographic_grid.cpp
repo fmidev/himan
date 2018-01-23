@@ -58,17 +58,50 @@ size_t stereographic_grid::Size() const
 	return itsNi * itsNj;
 }
 
-void stereographic_grid::Ni(size_t theNi) { itsNi = theNi; }
-void stereographic_grid::Nj(size_t theNj) { itsNj = theNj; }
-size_t stereographic_grid::Ni() const { return itsNi; }
-size_t stereographic_grid::Nj() const { return itsNj; }
-void stereographic_grid::Di(double theDi) { itsDi = theDi; }
-void stereographic_grid::Dj(double theDj) { itsDj = theDj; }
-double stereographic_grid::Di() const { return itsDi; }
-double stereographic_grid::Dj() const { return itsDj; }
-void stereographic_grid::Orientation(double theOrientation) { itsOrientation = theOrientation; }
-double stereographic_grid::Orientation() const { return itsOrientation; }
-HPScanningMode stereographic_grid::ScanningMode() const { return itsScanningMode; }
+void stereographic_grid::Ni(size_t theNi)
+{
+	itsNi = theNi;
+}
+void stereographic_grid::Nj(size_t theNj)
+{
+	itsNj = theNj;
+}
+size_t stereographic_grid::Ni() const
+{
+	return itsNi;
+}
+size_t stereographic_grid::Nj() const
+{
+	return itsNj;
+}
+void stereographic_grid::Di(double theDi)
+{
+	itsDi = theDi;
+}
+void stereographic_grid::Dj(double theDj)
+{
+	itsDj = theDj;
+}
+double stereographic_grid::Di() const
+{
+	return itsDi;
+}
+double stereographic_grid::Dj() const
+{
+	return itsDj;
+}
+void stereographic_grid::Orientation(double theOrientation)
+{
+	itsOrientation = theOrientation;
+}
+double stereographic_grid::Orientation() const
+{
+	return itsOrientation;
+}
+HPScanningMode stereographic_grid::ScanningMode() const
+{
+	return itsScanningMode;
+}
 void stereographic_grid::ScanningMode(HPScanningMode theScanningMode)
 {
 	if (theScanningMode != kBottomLeft)
@@ -115,10 +148,22 @@ point stereographic_grid::LatLon(size_t locationIndex) const
 	return point(ll.X(), ll.Y());
 }
 
-void stereographic_grid::BottomLeft(const point& theBottomLeft) { itsBottomLeft = theBottomLeft; }
-void stereographic_grid::TopRight(const point& theTopRight) { itsTopRight = theTopRight; }
-point stereographic_grid::BottomLeft() const { return itsBottomLeft; }
-point stereographic_grid::TopRight() const { return itsTopRight; }
+void stereographic_grid::BottomLeft(const point& theBottomLeft)
+{
+	itsBottomLeft = theBottomLeft;
+}
+void stereographic_grid::TopRight(const point& theTopRight)
+{
+	itsTopRight = theTopRight;
+}
+point stereographic_grid::BottomLeft() const
+{
+	return itsBottomLeft;
+}
+point stereographic_grid::TopRight() const
+{
+	return itsTopRight;
+}
 point stereographic_grid::FirstPoint() const
 {
 	switch (itsScanningMode)
@@ -185,7 +230,10 @@ bool stereographic_grid::Swap(HPScanningMode newScanningMode)
 	return true;
 }
 
-stereographic_grid* stereographic_grid::Clone() const { return new stereographic_grid(*this); }
+stereographic_grid* stereographic_grid::Clone() const
+{
+	return new stereographic_grid(*this);
+}
 ostream& stereographic_grid::Write(std::ostream& file) const
 {
 	grid::Write(file);
@@ -202,7 +250,10 @@ ostream& stereographic_grid::Write(std::ostream& file) const
 	return file;
 }
 
-bool stereographic_grid::operator!=(const grid& other) const { return !(other == *this); }
+bool stereographic_grid::operator!=(const grid& other) const
+{
+	return !(other == *this);
+}
 bool stereographic_grid::operator==(const grid& other) const
 {
 	const stereographic_grid* g = dynamic_cast<const stereographic_grid*>(&other);

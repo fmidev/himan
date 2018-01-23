@@ -1,8 +1,8 @@
 #ifndef CUDA_HELPER_H
 #define CUDA_HELPER_H
 
-#include <iostream>
 #include "debug.h"
+#include <iostream>
 
 #ifdef __CUDACC__
 #define CUDA_HOST __host__

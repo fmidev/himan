@@ -282,7 +282,8 @@ bool ncl::CountValues(const shared_ptr<himan::info> values)
 #ifdef DEBUG
 	itsLogger.Debug("Found value for " + to_string(foundVals) + "/" + to_string(s) + " gridpoints");
 
-	if (foundVals != s) return false;
+	if (foundVals != s)
+		return false;
 #endif
 
 	return true;

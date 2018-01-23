@@ -56,7 +56,7 @@ long DetermineBitsPerValue(const vector<double>& values, double precision)
 
 	// define manual minmax search as std::minmax_element uses std::less
 	// for comparison which does not work well with nan
-	double min = 1e38, max = -1e38;
+	double min = himan::MissingDouble(), max = himan::MissingDouble();
 
 	for (const auto& v : values)
 	{
@@ -72,7 +72,7 @@ long DetermineBitsPerValue(const vector<double>& values, double precision)
 	// Range of scaled data, ie the largest value we must be able to write
 	const int range = static_cast<int>(ceil(D * max - D * min));
 
-	if (range == 0)
+	if (himan::IsMissingDouble(min) || himan::IsMissingDouble(max) || range == 0)
 	{
 		// static grid (max == min)
 		bitsPerValue = 0;
@@ -106,7 +106,10 @@ grib::grib()
 	itsGrib = make_shared<NFmiGrib>();
 }
 
-shared_ptr<NFmiGrib> grib::Reader() { return itsGrib; }
+shared_ptr<NFmiGrib> grib::Reader()
+{
+	return itsGrib;
+}
 void grib::WriteAreaAndGrid(info& anInfo)
 {
 	long edition = itsGrib->Message().Edition();
@@ -400,7 +403,16 @@ void grib::WriteTime(info& anInfo)
 	{
 		itsGrib->Message().UnitOfTimeRange(unitOfTimeRange);
 
-		long p1 = static_cast<long>(static_cast<double>(anInfo.Time().Step() - period) / divisor);
+		long p1;
+
+		if (anInfo.Param().Aggregation().FirstTimeValue() != kHPMissingInt)
+		{
+			p1 = anInfo.Param().Aggregation().FirstTimeValue();
+		}
+		else
+		{
+			p1 = static_cast<long>(static_cast<double>(anInfo.Time().Step() - period) / divisor);
+		}
 
 		switch (anInfo.Param().Aggregation().Type())
 		{
@@ -948,7 +960,8 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 	if (itsGrib->Message().Edition() == 2 && (centre == 98 || centre == 86) && X0 != 0)
 	{
 		X0 -= 360;
-		if (X0 < -180) X0 += 360;
+		if (X0 < -180)
+			X0 += 360;
 	}
 
 	himan::point firstPoint(X0, Y0);
@@ -998,8 +1011,6 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 
 			rg->LastPoint(point(X1, Y1));
 
-			rg->Data().Resize(ni, nj);
-
 			break;
 		}
 		case 3:
@@ -1026,8 +1037,6 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 			{
 				itsLogger.Warning("No support for ellipsoids in lambert projection (grib key: earthIsOblate)");
 			}
-
-			lccg->Data().Resize(lccg->Ni(), lccg->Nj());
 
 			break;
 		}
@@ -1087,7 +1096,6 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 			    util::CoordinatesFromFirstGridPoint(first, rg->Orientation(), ni, nj, rg->Di(), rg->Dj());
 
 			rg->TopRight(coordinates.second);
-			rg->Data().Resize(ni, nj);
 
 			break;
 		}
@@ -1117,8 +1125,6 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 			double Y1 = itsGrib->Message().Y1();
 
 			rg->LastPoint(point(X1, Y1));
-
-			rg->Data().Resize(ni, nj);
 
 			break;
 		}
@@ -1399,7 +1405,7 @@ himan::forecast_time grib::ReadTime() const
 	return t;
 }
 
-himan::level grib::ReadLevel(const search_options& options) const
+himan::level grib::ReadLevel() const
 {
 	long gribLevel = itsGrib->Message().NormalizedLevelType();
 
@@ -1417,6 +1423,10 @@ himan::level grib::ReadLevel(const search_options& options) const
 
 		case 100:
 			levelType = himan::kPressure;
+			break;
+
+		case 101:
+			levelType = himan::kPressureDelta;
 			break;
 
 		case 102:
@@ -1459,20 +1469,17 @@ himan::level grib::ReadLevel(const search_options& options) const
 			break;
 
 		case himan::kGroundDepth:
+		case himan::kPressureDelta:
 		{
-			if (IsKHPMissingValue(options.level.Value2()))
+			long gribLevelValue2 = itsGrib->Message().LevelValue2();
+			// Missing in grib is all bits set
+			if (gribLevelValue2 == 2147483647)
 			{
-				l = level(levelType, static_cast<float>(itsGrib->Message().LevelValue()));
+				gribLevelValue2 = -1;
 			}
-			else
-			{
-				long gribLevelValue2 = itsGrib->Message().LevelValue2();
-				// Missing in grib is all bits set
-				if (gribLevelValue2 == 2147483647) gribLevelValue2 = -1;
 
-				l = level(levelType, static_cast<float>(itsGrib->Message().LevelValue()),
-				          static_cast<float>(gribLevelValue2));
-			}
+			l = level(levelType, static_cast<float>(itsGrib->Message().LevelValue()),
+			          static_cast<float>(gribLevelValue2));
 		}
 		break;
 
@@ -1541,9 +1548,12 @@ void grib::ReadData(info_t newInfo, bool readPackedData) const
 #if defined GRIB_READ_PACKED_DATA && defined HAVE_CUDA
 
 	const auto paramName = newInfo->Param().Name();
+	long producerId = newInfo->Producer().Id();
+
 	bool decodePrecipitationForm = false;
 
-	if (itsGrib->Message().Edition() == 2 && (paramName == "PRECFORM-N" || paramName == "PRECFORM2-N"))
+	if (itsGrib->Message().Edition() == 2 && (paramName == "PRECFORM-N" || paramName == "PRECFORM2-N") &&
+	    (producerId == 230 || producerId == 240 || producerId == 243 || producerId == 250 || producerId == 260))
 	{
 		decodePrecipitationForm = true;
 	}
@@ -1702,7 +1712,7 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 		}
 	}
 
-	auto l = ReadLevel(options);
+	auto l = ReadLevel();
 
 	if (l != options.level)
 	{
@@ -1811,7 +1821,7 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 
 	newGrid->AB(ab);
 
-	newInfo->Create(newGrid.get());
+	newInfo->Create(newGrid.get(), true);
 
 	// Set descriptors
 
@@ -1870,7 +1880,8 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 			aTimer.Stop();
 
-			if (!readIfNotMatching) break;  // We found what we were looking for
+			if (!readIfNotMatching)
+				break;  // We found what we were looking for
 		}
 	}
 
@@ -2045,7 +2056,8 @@ void EncodePrecipitationFormToGrib2(vector<double>& arr)
 {
 	for (auto& val : arr)
 	{
-		if (himan::IsMissing(val)) continue;
+		if (himan::IsMissing(val))
+			continue;
 
 		switch (static_cast<int>(val))
 		{
@@ -2082,7 +2094,8 @@ void DecodePrecipitationFormFromGrib2(vector<double>& arr)
 {
 	for (auto& val : arr)
 	{
-		if (himan::IsMissing(val)) continue;
+		if (himan::IsMissing(val))
+			continue;
 
 		switch (static_cast<int>(val))
 		{

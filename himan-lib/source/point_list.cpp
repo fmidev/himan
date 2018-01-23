@@ -33,7 +33,10 @@ point_list::point_list(const point_list& other) : grid(other), itsStations(other
 	itsLogger = logger("point_list");
 }
 
-size_t point_list::Size() const { return itsData.Size(); }
+size_t point_list::Size() const
+{
+	return itsData.Size();
+}
 bool point_list::EqualsTo(const point_list& other) const
 {
 	if (grid::EqualsTo(other))
@@ -41,14 +44,14 @@ bool point_list::EqualsTo(const point_list& other) const
 		if (itsGridType != other.itsGridType)
 		{
 			itsLogger.Trace("Projections do not match: " + string(HPGridTypeToString.at(itsGridType)) + " vs " +
-			                 string(HPGridTypeToString.at(other.itsGridType)));
+			                string(HPGridTypeToString.at(other.itsGridType)));
 			return false;
 		}
 
 		if (itsStations.size() != other.itsStations.size())
 		{
-			itsLogger.Trace("Station counts do not match: " + to_string(itsStations.size()) +
-			                 " vs " + to_string(other.itsStations.size()));
+			itsLogger.Trace("Station counts do not match: " + to_string(itsStations.size()) + " vs " +
+			                to_string(other.itsStations.size()));
 			return false;
 		}
 
@@ -77,14 +80,23 @@ ostream& point_list::Write(std::ostream& file) const
 	return file;
 }
 
-station point_list::Station(size_t theLocationIndex) const { return itsStations[theLocationIndex]; }
-point point_list::LatLon(size_t theLocationIndex) const { return itsStations[theLocationIndex]; }
+station point_list::Station(size_t theLocationIndex) const
+{
+	return itsStations[theLocationIndex];
+}
+point point_list::LatLon(size_t theLocationIndex) const
+{
+	return itsStations[theLocationIndex];
+}
 void point_list::Station(size_t theLocationIndex, const station& theStation)
 {
 	itsStations[theLocationIndex] = theStation;
 }
 
-const vector<station>& point_list::Stations() const { return itsStations; }
+const vector<station>& point_list::Stations() const
+{
+	return itsStations;
+}
 void point_list::Stations(const vector<station>& theStations)
 {
 	itsStations = theStations;
@@ -150,18 +162,36 @@ point point_list::TopRight() const
 	return ret;
 }
 
-HPScanningMode point_list::ScanningMode() const { return kUnknownScanningMode; }
+HPScanningMode point_list::ScanningMode() const
+{
+	return kUnknownScanningMode;
+}
 bool point_list::Swap(HPScanningMode newScanningMode)
 {
 	// can't be done here
 	return false;
 }
 
-double point_list::Di() const { return kHPMissingValue; }
-double point_list::Dj() const { return kHPMissingValue; }
-size_t point_list::Ni() const { return itsData.Size(); }
-size_t point_list::Nj() const { return 1; }
-bool point_list::operator!=(const point_list& other) const { return !(other == *this); }
+double point_list::Di() const
+{
+	return kHPMissingValue;
+}
+double point_list::Dj() const
+{
+	return kHPMissingValue;
+}
+size_t point_list::Ni() const
+{
+	return itsData.Size();
+}
+size_t point_list::Nj() const
+{
+	return 1;
+}
+bool point_list::operator!=(const point_list& other) const
+{
+	return !(other == *this);
+}
 bool point_list::operator==(const point_list& other) const
 {
 	const point_list* g = dynamic_cast<const point_list*>(&other);
@@ -174,7 +204,10 @@ bool point_list::operator==(const point_list& other) const
 	return false;
 }
 
-point_list* point_list::Clone() const { return new point_list(*this); }
+point_list* point_list::Clone() const
+{
+	return new point_list(*this);
+}
 point point_list::XY(const point& latlon) const
 {
 	// Linear search

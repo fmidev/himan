@@ -15,14 +15,25 @@ namespace himan
 class timer
 {
    public:
-	timer() {}
+	timer()
+	{
+	}
 	timer(bool start)
 	{
-		if (start) Start();
+		if (start)
+			Start();
 	}
-	~timer() {}
-	inline void Start() { clock_gettime(CLOCK_REALTIME, &start_ts); }
-	inline void Stop() { clock_gettime(CLOCK_REALTIME, &stop_ts); }
+	~timer()
+	{
+	}
+	inline void Start()
+	{
+		clock_gettime(CLOCK_REALTIME, &start_ts);
+	}
+	inline void Stop()
+	{
+		clock_gettime(CLOCK_REALTIME, &stop_ts);
+	}
 	/**
 	 * @return Elapsed time in milliseconds
 	 */

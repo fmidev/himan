@@ -40,13 +40,24 @@ class fetcher : public auxiliary_plugin
    public:
 	fetcher();
 
-	virtual ~fetcher() {}
+	virtual ~fetcher()
+	{
+	}
 	fetcher(const fetcher& other) = delete;
 	fetcher& operator=(const fetcher& other) = delete;
 
-	virtual std::string ClassName() const { return "himan::plugin::fetcher"; }
-	virtual HPPluginClass PluginClass() const { return kAuxiliary; }
-	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 1); }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::fetcher";
+	}
+	virtual HPPluginClass PluginClass() const
+	{
+		return kAuxiliary;
+	}
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(1, 1);
+	}
 	/**
 	 * @brief Multi-param overcoat for the other Fetch() function
 	 *
@@ -268,7 +279,10 @@ class fetcher : public auxiliary_plugin
 
 #ifndef HIMAN_AUXILIARY_INCLUDE
 
-extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<fetcher>(); }
+extern "C" std::shared_ptr<himan_plugin> create()
+{
+	return std::make_shared<fetcher>();
+}
 #define HIMAN_AUXILIARY_INCLUDE
 #endif /* HIMAN_AUXILIARY_INCLUDE */
 

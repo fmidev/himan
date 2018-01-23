@@ -23,7 +23,9 @@ class configuration
 	friend class json_parser;
 
 	configuration();
-	virtual ~configuration() {}
+	virtual ~configuration()
+	{
+	}
 	configuration(const configuration& other);
 	configuration& operator=(const configuration& other) = delete;
 
@@ -31,7 +33,10 @@ class configuration
 	 * @return Class name
 	 */
 
-	std::string ClassName() const { return "himan::configuration"; }
+	std::string ClassName() const
+	{
+		return "himan::configuration";
+	}
 	std::ostream& Write(std::ostream& file) const;
 
 	/**
@@ -197,7 +202,7 @@ class configuration
 	bool UseCache() const;
 	void UseCache(bool theUseCache);
 
-	void SourceGeomNames(std::vector<std::string> theNames);
+	void SourceGeomNames(const std::vector<std::string>& theNames);
 	std::vector<std::string> SourceGeomNames() const;
 
 	/**
@@ -255,6 +260,9 @@ class configuration
 	bool AsyncExecution() const;
 	void AsyncExecution(bool theAsyncExecution);
 
+	bool UpdateSSStateTable() const;
+	void UpdateSSStateTable(bool theUpdateSSStateTable);
+
    protected:
 	std::unique_ptr<producer_iter> itsSourceProducerIterator;
 
@@ -291,9 +299,13 @@ class configuration
 	int itsCacheLimit;
 	std::string itsParamFile;
 	bool itsAsyncExecution;
+	bool itsUpdateSSStateTable;
 };
 
-inline std::ostream& operator<<(std::ostream& file, const configuration& ob) { return ob.Write(file); }
+inline std::ostream& operator<<(std::ostream& file, const configuration& ob)
+{
+	return ob.Write(file);
+}
 }  // namespace himan
 
 #endif /* CONFIGURATION_H */

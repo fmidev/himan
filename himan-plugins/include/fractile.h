@@ -27,9 +27,19 @@ class fractile : public compiled_plugin, private compiled_plugin_base
 
 	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
 
-	virtual std::string ClassName() const { return "himan::plugin::fractile"; }
-	virtual HPPluginClass PluginClass() const { return kCompiled; }
-	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::fractile";
+	}
+	virtual HPPluginClass PluginClass() const
+	{
+		return kCompiled;
+	}
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(0, 1);
+	}
+
    private:
 	virtual void Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadIndex);
 	std::string itsParamName;
@@ -41,7 +51,10 @@ class fractile : public compiled_plugin, private compiled_plugin_base
 	int itsMaximumMissingForecasts;
 };
 
-extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<fractile>(); }
+extern "C" std::shared_ptr<himan_plugin> create()
+{
+	return std::make_shared<fractile>();
+}
 }  // plugin
 }  // himan
 

@@ -28,7 +28,10 @@ class statistics
 	statistics(const statistics& other);
 	statistics& operator=(const statistics& other) = delete;
 
-	std::string ClassName() const { return "himan::statistics"; }
+	std::string ClassName() const
+	{
+		return "himan::statistics";
+	}
 	bool Start();
 	bool Store();
 

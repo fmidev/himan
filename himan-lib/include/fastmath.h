@@ -209,7 +209,10 @@ static inline float fastpow2(float p)
 	return v.f;
 }
 
-static inline float fastexp(float p) { return fastpow2(1.442695040f * p); }
+static inline float fastexp(float p)
+{
+	return fastpow2(1.442695040f * p);
+}
 static inline float fasterpow2(float p)
 {
 	float clipp = (p < -126) ? -126.0f : p;
@@ -220,7 +223,10 @@ static inline float fasterpow2(float p)
 	return v.f;
 }
 
-static inline float fasterexp(float p) { return fasterpow2(1.442695040f * p); }
+static inline float fasterexp(float p)
+{
+	return fasterpow2(1.442695040f * p);
+}
 #ifdef __SSE2__
 
 static inline v4sf vfastpow2(const v4sf p)
@@ -335,7 +341,10 @@ static inline float fastlog2(float x)
 	return y - 124.22551499f - 1.498030302f * mx.f - 1.72587999f / (0.3520887068f + mx.f);
 }
 
-static inline float fastlog(float x) { return 0.69314718f * fastlog2(x); }
+static inline float fastlog(float x)
+{
+	return 0.69314718f * fastlog2(x);
+}
 static inline float fasterlog2(float x)
 {
 	union {
@@ -506,8 +515,14 @@ static inline float fastererfc(float x)
 // ... although vectorized version is interesting
 //     and fastererf is very fast
 
-static inline float fasterf(float x) { return 1.0f - fasterfc(x); }
-static inline float fastererf(float x) { return 1.0f - fastererfc(x); }
+static inline float fasterf(float x)
+{
+	return 1.0f - fasterfc(x);
+}
+static inline float fastererf(float x)
+{
+	return 1.0f - fastererfc(x);
+}
 static inline float fastinverseerf(float x)
 {
 	static const float invk = 0.30004578719350504f;
@@ -557,8 +572,14 @@ static inline v4sf vfastererfc(const v4sf x)
 	return v4sfl(2.0f) / (v4sfl(1.0f) + vfasterpow2(k * x));
 }
 
-static inline v4sf vfasterf(v4sf x) { return v4sfl(1.0f) - vfasterfc(x); }
-static inline v4sf vfastererf(const v4sf x) { return v4sfl(1.0f) - vfastererfc(x); }
+static inline v4sf vfasterf(v4sf x)
+{
+	return v4sfl(1.0f) - vfasterfc(x);
+}
+static inline v4sf vfastererf(const v4sf x)
+{
+	return v4sfl(1.0f) - vfastererfc(x);
+}
 static inline v4sf vfastinverseerf(v4sf x)
 {
 	const v4sf invk = v4sfl(0.30004578719350504f);
@@ -750,12 +771,30 @@ static inline v4sf vfasterdigamma(v4sf x)
 
 #include <stdint.h>
 
-static inline float fastsinh(float p) { return 0.5f * (fastexp(p) - fastexp(-p)); }
-static inline float fastersinh(float p) { return 0.5f * (fasterexp(p) - fasterexp(-p)); }
-static inline float fastcosh(float p) { return 0.5f * (fastexp(p) + fastexp(-p)); }
-static inline float fastercosh(float p) { return 0.5f * (fasterexp(p) + fasterexp(-p)); }
-static inline float fasttanh(float p) { return -1.0f + 2.0f / (1.0f + fastexp(-2.0f * p)); }
-static inline float fastertanh(float p) { return -1.0f + 2.0f / (1.0f + fasterexp(-2.0f * p)); }
+static inline float fastsinh(float p)
+{
+	return 0.5f * (fastexp(p) - fastexp(-p));
+}
+static inline float fastersinh(float p)
+{
+	return 0.5f * (fasterexp(p) - fasterexp(-p));
+}
+static inline float fastcosh(float p)
+{
+	return 0.5f * (fastexp(p) + fastexp(-p));
+}
+static inline float fastercosh(float p)
+{
+	return 0.5f * (fasterexp(p) + fasterexp(-p));
+}
+static inline float fasttanh(float p)
+{
+	return -1.0f + 2.0f / (1.0f + fastexp(-2.0f * p));
+}
+static inline float fastertanh(float p)
+{
+	return -1.0f + 2.0f / (1.0f + fasterexp(-2.0f * p));
+}
 #ifdef __SSE2__
 
 static inline v4sf vfastsinh(const v4sf p)
@@ -1052,12 +1091,24 @@ static inline v4sf vfasterlambertwexpx(v4sf x)
 
 #include <stdint.h>
 
-static inline float fastpow(float x, float p) { return fastpow2(p * fastlog2(x)); }
-static inline float fasterpow(float x, float p) { return fasterpow2(p * fasterlog2(x)); }
+static inline float fastpow(float x, float p)
+{
+	return fastpow2(p * fastlog2(x));
+}
+static inline float fasterpow(float x, float p)
+{
+	return fasterpow2(p * fasterlog2(x));
+}
 #ifdef __SSE2__
 
-static inline v4sf vfastpow(const v4sf x, const v4sf p) { return vfastpow2(p * vfastlog2(x)); }
-static inline v4sf vfasterpow(const v4sf x, const v4sf p) { return vfasterpow2(p * vfasterlog2(x)); }
+static inline v4sf vfastpow(const v4sf x, const v4sf p)
+{
+	return vfastpow2(p * vfastlog2(x));
+}
+static inline v4sf vfasterpow(const v4sf x, const v4sf p)
+{
+	return vfasterpow2(p * vfasterlog2(x));
+}
 #endif  //__SSE2__
 
 #endif  // __FAST_POW_H_
@@ -1106,8 +1157,14 @@ static inline v4sf vfasterpow(const v4sf x, const v4sf p) { return vfasterpow2(p
 
 #include <stdint.h>
 
-static inline float fastsigmoid(float x) { return 1.0f / (1.0f + fastexp(-x)); }
-static inline float fastersigmoid(float x) { return 1.0f / (1.0f + fasterexp(-x)); }
+static inline float fastsigmoid(float x)
+{
+	return 1.0f / (1.0f + fastexp(-x));
+}
+static inline float fastersigmoid(float x)
+{
+	return 1.0f / (1.0f + fasterexp(-x));
+}
 #ifdef __SSE2__
 
 static inline v4sf vfastsigmoid(const v4sf x)
@@ -1307,7 +1364,10 @@ static inline float fasttan(float x)
 	return fastsin(x) / fastsin(x + halfpi);
 }
 
-static inline float fastertan(float x) { return fastersin(x) / fastercos(x); }
+static inline float fastertan(float x)
+{
+	return fastersin(x) / fastercos(x);
+}
 static inline float fasttanfull(float x)
 {
 	static const float twopi = 6.2831853071795865f;
@@ -1451,7 +1511,10 @@ static inline v4sf vfasttan(const v4sf x)
 	return vfastsin(x) / vfastsin(x + halfpi);
 }
 
-static inline v4sf vfastertan(const v4sf x) { return vfastersin(x) / vfastercos(x); }
+static inline v4sf vfastertan(const v4sf x)
+{
+	return vfastersin(x) / vfastercos(x);
+}
 static inline v4sf vfasttanfull(const v4sf x)
 {
 	const v4sf twopi = v4sfl(6.2831853071795865f);

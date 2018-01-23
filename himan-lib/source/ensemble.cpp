@@ -83,7 +83,9 @@ ensemble::ensemble()
 {
 }
 
-ensemble::~ensemble() {}
+ensemble::~ensemble()
+{
+}
 ensemble::ensemble(const ensemble& other)
     : itsParam(other.itsParam),
       itsExpectedEnsembleSize(other.itsExpectedEnsembleSize),
@@ -209,7 +211,8 @@ std::vector<double> ensemble::Values() const
 	std::vector<double> ret;
 	ret.reserve(Size());
 
-	std::for_each(itsForecasts.begin(), itsForecasts.end(), [&](const info_t& Info) { ret.emplace_back(Info->Value()); });
+	std::for_each(itsForecasts.begin(), itsForecasts.end(),
+	              [&](const info_t& Info) { ret.emplace_back(Info->Value()); });
 
 	return ret;
 }
@@ -260,9 +263,18 @@ double ensemble::CentralMoment(int N) const
 	return std::accumulate(v.begin(), v.end(), 0.0) / static_cast<double>(v.size());
 }
 
-HPEnsembleType ensemble::EnsembleType() const { return itsEnsembleType; }
-size_t ensemble::Size() const { return itsForecasts.size(); }
-size_t ensemble::ExpectedSize() const { return itsExpectedEnsembleSize; }
+HPEnsembleType ensemble::EnsembleType() const
+{
+	return itsEnsembleType;
+}
+size_t ensemble::Size() const
+{
+	return itsForecasts.size();
+}
+size_t ensemble::ExpectedSize() const
+{
+	return itsExpectedEnsembleSize;
+}
 info_t ensemble::Forecast(size_t i)
 {
 	if (itsForecasts.size() <= i)

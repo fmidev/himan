@@ -42,9 +42,16 @@ template <class T>
 class iterator
 {
    public:
-	iterator<T>() : itsIndex(kIteratorResetValue) {}
-	explicit iterator<T>(const std::vector<T>& theElements) : itsElements(theElements) { Reset(); }
-	explicit iterator(const iterator& other) : itsElements(other.itsElements), itsIndex(other.itsIndex) {}
+	iterator<T>() : itsIndex(kIteratorResetValue)
+	{
+	}
+	explicit iterator<T>(const std::vector<T>& theElements) : itsElements(theElements)
+	{
+		Reset();
+	}
+	explicit iterator(const iterator& other) : itsElements(other.itsElements), itsIndex(other.itsIndex)
+	{
+	}
 	iterator& operator=(const iterator& other)
 	{
 		itsElements = other.itsElements;
@@ -52,7 +59,10 @@ class iterator
 		return *this;
 	}
 
-	std::string ClassName() const { return "himan::iterator"; }
+	std::string ClassName() const
+	{
+		return "himan::iterator";
+	}
 	/**
 	 * @brief Reset iterator
 	 *
@@ -62,7 +72,10 @@ class iterator
 	 *
 	 */
 
-	void Reset() { itsIndex = kIteratorResetValue; }
+	void Reset()
+	{
+		itsIndex = kIteratorResetValue;
+	}
 	/**
 	 * @brief Set iterator to first element
 	 *
@@ -217,24 +230,39 @@ class iterator
 	 * @todo Should return bool like Set(const T theElement) ?
 	 */
 
-	void Set(size_t theIndex) { itsIndex = theIndex; }
+	void Set(size_t theIndex)
+	{
+		itsIndex = theIndex;
+	}
 	/**
 	 * @brief Replace the value at current iterator position with a new value
 	 *
 	 */
 
-	void Replace(const T& theNewValue) { itsElements[itsIndex] = theNewValue; }
+	void Replace(const T& theNewValue)
+	{
+		itsElements[itsIndex] = theNewValue;
+	}
 	/**
 	 * @return Current index value
 	 */
 
-	size_t Index() const { return itsIndex; }
+	size_t Index() const
+	{
+		return itsIndex;
+	}
 	/**
 	 * @return Iterator size
 	 */
 
-	size_t Size() const { return itsElements.size(); }
-	friend std::ostream& operator<<(std::ostream& file, const iterator<T>& ob) { return ob.Write(file); }
+	size_t Size() const
+	{
+		return itsElements.size();
+	}
+	friend std::ostream& operator<<(std::ostream& file, const iterator<T>& ob)
+	{
+		return ob.Write(file);
+	}
 	/**
 	 * @brief Add element to iterator
 	 *
@@ -270,7 +298,10 @@ class iterator
 	 * @brief Remove all elements (iterator size = 0)
 	 */
 
-	void Clear() { itsElements.clear(); }
+	void Clear()
+	{
+		itsElements.clear();
+	}
 	/**
 	 * @brief Write object to stream
 	 */
@@ -335,10 +366,16 @@ class info
 	 */
 
 	info(const info& other);
+	info(const std::vector<forecast_type>& ftypes, const std::vector<forecast_time>& times,
+	     const std::vector<level>& levels, const std::vector<param>& params);
+	info(const forecast_type& ftype, const forecast_time& time, const level& level, const param& param);
 
 	info& operator=(const info& other) = delete;
 
-	std::string ClassName() const { return "himan::info"; }
+	std::string ClassName() const
+	{
+		return "himan::info";
+	}
 	std::ostream& Write(std::ostream& file) const;
 
 	/**
@@ -617,10 +654,11 @@ class info
 	station Station() const;
 
 	/**
-	 * @return Current data matrix
+	 * @return Current grid
 	 */
 
 	grid* Grid() const;
+	std::shared_ptr<grid> SharedGrid() const;
 
 	/**
 	 * @brief Return data matrix from the given time/level/param indexes
@@ -778,7 +816,10 @@ class info
 #endif
 };
 
-inline std::ostream& operator<<(std::ostream& file, const info& ob) { return ob.Write(file); }
+inline std::ostream& operator<<(std::ostream& file, const info& ob)
+{
+	return ob.Write(file);
+}
 inline size_t himan::info::Index(size_t forecastTypeIndex, size_t timeIndex, size_t levelIndex, size_t paramIndex) const
 {
 	ASSERT(forecastTypeIndex != kIteratorResetValue);
@@ -791,7 +832,10 @@ inline size_t himan::info::Index(size_t forecastTypeIndex, size_t timeIndex, siz
 	        timeIndex * itsForecastTypeIterator.Size() + forecastTypeIndex);
 }
 
-inline size_t himan::info::Index() const { return Index(ForecastTypeIndex(), TimeIndex(), LevelIndex(), ParamIndex()); }
+inline size_t himan::info::Index() const
+{
+	return Index(ForecastTypeIndex(), TimeIndex(), LevelIndex(), ParamIndex());
+}
 inline grid* info::Grid() const
 {
 	ASSERT(itsDimensions.size());
@@ -804,9 +848,15 @@ inline grid* info::Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) 
 	return itsDimensions[Index(ForecastTypeIndex(), timeIndex, levelIndex, paramIndex)].get();
 }
 
-inline void info::Value(double theValue) { Grid()->Data().Set(itsLocationIndex, theValue); }
+inline void info::Value(double theValue)
+{
+	Grid()->Data().Set(itsLocationIndex, theValue);
+}
 
-inline double info::Value() const { return Grid()->Data().At(itsLocationIndex); }
+inline double info::Value() const
+{
+	return Grid()->Data().At(itsLocationIndex);
+}
 typedef std::shared_ptr<info> info_t;
 
 }  // namespace himan

@@ -26,15 +26,27 @@ class vvms : public compiled_plugin, private compiled_plugin_base
    public:
 	vvms();
 
-	inline virtual ~vvms() {}
+	inline virtual ~vvms()
+	{
+	}
 	vvms(const vvms& other) = delete;
 	vvms& operator=(const vvms& other) = delete;
 
 	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
 
-	virtual std::string ClassName() const { return "himan::plugin::vvms"; }
-	virtual HPPluginClass PluginClass() const { return kCompiled; }
-	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 1); }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::vvms";
+	}
+	virtual HPPluginClass PluginClass() const
+	{
+		return kCompiled;
+	}
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(1, 1);
+	}
+
    private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 #ifdef HAVE_CUDA
@@ -46,7 +58,10 @@ class vvms : public compiled_plugin, private compiled_plugin_base
 
 // the class factory
 
-extern "C" std::shared_ptr<himan_plugin> create() { return std::shared_ptr<vvms>(new vvms()); }
+extern "C" std::shared_ptr<himan_plugin> create()
+{
+	return std::shared_ptr<vvms>(new vvms());
+}
 }  // namespace plugin
 }  // namespace himan
 

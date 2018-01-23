@@ -27,15 +27,27 @@ class dewpoint : public compiled_plugin, private compiled_plugin_base
    public:
 	dewpoint();
 
-	inline virtual ~dewpoint() {}
+	inline virtual ~dewpoint()
+	{
+	}
 	dewpoint(const dewpoint& other) = delete;
 	dewpoint& operator=(const dewpoint& other) = delete;
 
 	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
 
-	virtual std::string ClassName() const { return "himan::plugin::dewpoint"; }
-	virtual HPPluginClass PluginClass() const { return kCompiled; }
-	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 0); }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::dewpoint";
+	}
+	virtual HPPluginClass PluginClass() const
+	{
+		return kCompiled;
+	}
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(1, 0);
+	}
+
    private:
 	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
 #ifdef HAVE_CUDA
@@ -46,7 +58,10 @@ class dewpoint : public compiled_plugin, private compiled_plugin_base
 
 // the class factory
 
-extern "C" std::shared_ptr<himan_plugin> create() { return std::shared_ptr<dewpoint>(new dewpoint()); }
+extern "C" std::shared_ptr<himan_plugin> create()
+{
+	return std::shared_ptr<dewpoint>(new dewpoint());
+}
 }  // namespace plugin
 }  // namespace himan
 

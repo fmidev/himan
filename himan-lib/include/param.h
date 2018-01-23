@@ -42,7 +42,10 @@ class param
 	param(const param& other);
 	param& operator=(const param& other);
 
-	std::string ClassName() const { return "himan::param"; }
+	std::string ClassName() const
+	{
+		return "himan::param";
+	}
 	bool operator==(const param& other) const;
 	bool operator!=(const param& other) const;
 
@@ -163,7 +166,10 @@ class param
 #endif
 };
 
-inline std::ostream& operator<<(std::ostream& file, const param& ob) { return ob.Write(file); }
+inline std::ostream& operator<<(std::ostream& file, const param& ob)
+{
+	return ob.Write(file);
+}
 typedef std::vector<himan::param> params;
 
 }  // namespace himan

@@ -60,7 +60,8 @@ void lagged_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, 
 	{
 		forecast_time ftime(time);
 
-		if (currentStep != 0) ftime.OriginDateTime().Adjust(itsLagResolution, lag * currentStep);
+		if (currentStep != 0)
+			ftime.OriginDateTime().Adjust(itsLagResolution, lag * currentStep);
 
 		// Missing forecasts are only checked for the current origin time, not for lagged
 		for (const auto& desired : itsDesiredForecasts)
@@ -70,7 +71,8 @@ void lagged_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, 
 				auto Info = f->Fetch(config, ftime, forecastLevel, itsParam, desired, false);
 				itsForecasts.push_back(Info);
 
-				if (currentStep == 0) loaded++;
+				if (currentStep == 0)
+					loaded++;
 			}
 			catch (HPExceptionType& e)
 			{
@@ -81,7 +83,8 @@ void lagged_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, 
 				}
 				else
 				{
-					if (currentStep == 0) missing++;
+					if (currentStep == 0)
+						missing++;
 				}
 			}
 		}
@@ -113,7 +116,16 @@ void lagged_ensemble::VerifyValidForecastCount(int numLoadedForecasts, int numMi
 	               std::to_string(itsDesiredForecasts.size()) + " fields");
 }
 
-HPTimeResolution lagged_ensemble::LagResolution() const { return itsLagResolution; }
-int lagged_ensemble::Lag() const { return itsLag; }
-size_t lagged_ensemble::NumberOfSteps() const { return itsNumberOfSteps; }
+HPTimeResolution lagged_ensemble::LagResolution() const
+{
+	return itsLagResolution;
+}
+int lagged_ensemble::Lag() const
+{
+	return itsLag;
+}
+size_t lagged_ensemble::NumberOfSteps() const
+{
+	return itsNumberOfSteps;
+}
 }  // namespace himan

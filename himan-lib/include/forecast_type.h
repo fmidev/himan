@@ -24,7 +24,9 @@ namespace himan
 class forecast_type
 {
    public:
-	forecast_type() {}
+	forecast_type()
+	{
+	}
 	explicit forecast_type(HPForecastType theType);
 	forecast_type(HPForecastType theType, double theValue);
 
@@ -32,7 +34,10 @@ class forecast_type
 	bool operator!=(const forecast_type& theType) const;
 	operator std::string() const;
 
-	std::string ClassName() const { return "himan::forecast_type"; }
+	std::string ClassName() const
+	{
+		return "himan::forecast_type";
+	}
 	HPForecastType Type() const;
 	void Type(HPForecastType theType);
 
@@ -56,7 +61,10 @@ class forecast_type
 #endif
 };
 
-inline std::ostream& operator<<(std::ostream& file, const forecast_type& ob) { return ob.Write(file); }
+inline std::ostream& operator<<(std::ostream& file, const forecast_type& ob)
+{
+	return ob.Write(file);
+}
 }  // namespace himan
 
 #endif /* FORECAST_TYPE_H */

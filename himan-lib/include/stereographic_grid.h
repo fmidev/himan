@@ -38,7 +38,10 @@ class stereographic_grid : public grid
 	stereographic_grid(const stereographic_grid& other);
 	stereographic_grid& operator=(const stereographic_grid& other) = delete;
 
-	std::string ClassName() const override { return "himan::stereographic_grid"; }
+	std::string ClassName() const override
+	{
+		return "himan::stereographic_grid";
+	}
 	std::ostream& Write(std::ostream& file) const override;
 
 	size_t Ni() const override;
@@ -113,7 +116,10 @@ class stereographic_grid : public grid
 #endif
 };
 
-inline std::ostream& operator<<(std::ostream& file, const stereographic_grid& ob) { return ob.Write(file); }
+inline std::ostream& operator<<(std::ostream& file, const stereographic_grid& ob)
+{
+	return ob.Write(file);
+}
 }  // namespace himan
 
 #ifdef SERIALIZATION

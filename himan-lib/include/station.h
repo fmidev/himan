@@ -36,5 +36,8 @@ class station : public point
 #endif
 };
 
-inline std::ostream& operator<<(std::ostream& file, const station& ob) { return ob.Write(file); }
+inline std::ostream& operator<<(std::ostream& file, const station& ob)
+{
+	return ob.Write(file);
+}
 }  // namespace himan

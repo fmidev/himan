@@ -26,38 +26,40 @@ class stability : public compiled_plugin, private compiled_plugin_base
    public:
 	stability();
 
-	inline virtual ~stability() {}
+	inline virtual ~stability()
+	{
+	}
 	stability(const stability& other) = delete;
 	stability& operator=(const stability& other) = delete;
 
 	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
 
-	virtual std::string ClassName() const { return "himan::plugin::stability"; }
-	virtual HPPluginClass PluginClass() const { return kCompiled; }
-	virtual HPVersionNumber Version() const { return HPVersionNumber(2, 0); }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::stability";
+	}
+	virtual HPPluginClass PluginClass() const
+	{
+		return kCompiled;
+	}
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(2, 0);
+	}
+  protected:
+	void RunTimeDimension(info_t myTargetInfo, unsigned short threadIndex) override;
+	void WriteToFile(const info_t targetInfo, write_options writeOptions = write_options()) override;
+
    private:
 	void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
-
-	bool GetSourceData(std::shared_ptr<info>& T850Info, std::shared_ptr<info>& T700Info,
-	                   std::shared_ptr<info>& T500Info, std::shared_ptr<info>& TD850Info,
-	                   std::shared_ptr<info>& TD700Info, const std::shared_ptr<info>& myTargetInfo,
-	                   bool useCudaInThisThread);
-	bool GetLISourceData(const std::shared_ptr<info>& myTargetInfo, std::vector<double>& T500mVector,
-	                     std::vector<double>& TD500mVector, std::vector<double>& P500mVector);
-	bool GetWindShearSourceData(const std::shared_ptr<info>& myTargetInfo, std::vector<double>& U01Vector,
-	                            std::vector<double>& V01Vector, std::vector<double>& U06Vector,
-	                            std::vector<double>& V06Vector);
-	bool GetSRHSourceData(const std::shared_ptr<info>& myTargetInfo, std::vector<double>& Uid,
-	                      std::vector<double>& Vid);
-
-	bool itsLICalculation;
-	bool itsBSCalculation;
-	bool itsSRHCalculation;
 };
 
 // the class factory
 
-extern "C" std::shared_ptr<himan_plugin> create() { return std::shared_ptr<stability>(new stability()); }
+extern "C" std::shared_ptr<himan_plugin> create()
+{
+	return std::shared_ptr<stability>(new stability());
+}
 }  // namespace plugin
 }  // namespace himan
 

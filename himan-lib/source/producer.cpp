@@ -49,18 +49,54 @@ producer::producer(long theFmiProducerId, long theCentre, long theProcess, const
 {
 }
 
-void producer::Centre(long theCentre) { itsCentre = theCentre; }
-long producer::Centre() const { return itsCentre; }
-void producer::Process(long theProcess) { itsProcess = theProcess; }
-long producer::Process() const { return itsProcess; }
-void producer::Id(long theId) { itsFmiProducerId = theId; }
-long producer::Id() const { return itsFmiProducerId; }
-void producer::Name(const std::string& theName) { itsNeonsName = theName; }
-std::string producer::Name() const { return itsNeonsName; }
-long producer::TableVersion() const { return itsTableVersion; }
-void producer::TableVersion(long theTableVersion) { itsTableVersion = theTableVersion; }
-HPProducerClass producer::Class() const { return itsClass; }
-void producer::Class(HPProducerClass theClass) { itsClass = theClass; }
+void producer::Centre(long theCentre)
+{
+	itsCentre = theCentre;
+}
+long producer::Centre() const
+{
+	return itsCentre;
+}
+void producer::Process(long theProcess)
+{
+	itsProcess = theProcess;
+}
+long producer::Process() const
+{
+	return itsProcess;
+}
+void producer::Id(long theId)
+{
+	itsFmiProducerId = theId;
+}
+long producer::Id() const
+{
+	return itsFmiProducerId;
+}
+void producer::Name(const std::string& theName)
+{
+	itsNeonsName = theName;
+}
+std::string producer::Name() const
+{
+	return itsNeonsName;
+}
+long producer::TableVersion() const
+{
+	return itsTableVersion;
+}
+void producer::TableVersion(long theTableVersion)
+{
+	itsTableVersion = theTableVersion;
+}
+HPProducerClass producer::Class() const
+{
+	return itsClass;
+}
+void producer::Class(HPProducerClass theClass)
+{
+	itsClass = theClass;
+}
 std::ostream& producer::Write(std::ostream& file) const
 {
 	file << "<" << ClassName() << ">" << std::endl;
@@ -110,4 +146,7 @@ bool producer::operator==(const producer& other) const
 	return true;
 }
 
-bool producer::operator!=(const producer& other) const { return !(*this == other); }
+bool producer::operator!=(const producer& other) const
+{
+	return !(*this == other);
+}

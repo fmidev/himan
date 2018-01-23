@@ -9,7 +9,10 @@
 using namespace std;
 using namespace himan::plugin;
 
-csv::csv() { itsLogger = logger("csv"); }
+csv::csv()
+{
+	itsLogger = logger("csv");
+}
 bool csv::ToFile(info& theInfo, string& theOutputFile)
 {
 	if (theInfo.Grid()->Class() != kIrregularGrid)
@@ -140,9 +143,9 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, const search_opti
 		{
 			itsLogger.Debug("Time does not match");
 			itsLogger.Debug("Origin time " + static_cast<string>(optsTime.OriginDateTime()) + " vs " +
-							static_cast<string>(all->Time().OriginDateTime()));
+			                static_cast<string>(all->Time().OriginDateTime()));
 			itsLogger.Debug("Forecast time: " + static_cast<string>(optsTime.ValidDateTime()) + " vs " +
-							static_cast<string>(all->Time().ValidDateTime()));
+			                static_cast<string>(all->Time().ValidDateTime()));
 		}
 		else if (find(times.begin(), times.end(), all->Time()) == times.end())
 		{
@@ -204,10 +207,14 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, const search_opti
 
 	while (requested->Next())
 	{
-		if (!all->Param(requested->Param())) throw runtime_error("Impossible error occurred");
-		if (!all->Level(requested->Level())) throw runtime_error("Impossible error occurred");
-		if (!all->Time(requested->Time())) throw runtime_error("Impossible error occurred");
-		if (!all->ForecastType(requested->ForecastType())) throw runtime_error("Impossible error occurred");
+		if (!all->Param(requested->Param()))
+			throw runtime_error("Impossible error occurred");
+		if (!all->Level(requested->Level()))
+			throw runtime_error("Impossible error occurred");
+		if (!all->Time(requested->Time()))
+			throw runtime_error("Impossible error occurred");
+		if (!all->ForecastType(requested->ForecastType()))
+			throw runtime_error("Impossible error occurred");
 
 		for (requested->ResetLocation(); requested->NextLocation();)
 		{

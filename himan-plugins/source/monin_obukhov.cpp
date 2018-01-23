@@ -5,11 +5,11 @@
  *
  */
 
+#include "monin_obukhov.h"
 #include "forecast_time.h"
 #include "level.h"
 #include "logger.h"
 #include "metutil.h"
-#include "monin_obukhov.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -58,7 +58,7 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 
 	level forecastLevel = level(himan::kHeight, 0, "Height");
 	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-						  static_cast<string>(forecastLevel));
+	                      static_cast<string>(forecastLevel));
 
 	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, false);
 	info_t SHFInfo = Fetch(forecastTime, forecastLevel, SHFParam, forecastType, false);
@@ -83,7 +83,7 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 	if (!TInfo || !SHFInfo || !U_SInfo || !PInfo || !PrevSHFInfo || !LHFInfo || !PrevLHFInfo)
 	{
 		myThreadedLogger.Info("Skipping step " + std::to_string(forecastTime.Step()) + ", level " +
-							  static_cast<string>(forecastLevel));
+		                      static_cast<string>(forecastLevel));
 		return;
 	}
 
@@ -122,6 +122,6 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 	}
 
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " +
-						  std::to_string(myTargetInfo->Data().MissingCount()) + "/" +
-						  std::to_string(myTargetInfo->Data().Size()));
+	                      std::to_string(myTargetInfo->Data().MissingCount()) + "/" +
+	                      std::to_string(myTargetInfo->Data().Size()));
 }

@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 17.11.14
+Version: 17.12.21
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -13,10 +13,10 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 17.11.9
+Requires: himan-lib >= 17.12.4
 Requires: lua >= 5.1.4
 Requires: unixODBC
-Requires: libfmigrib >= 17.10.25
+Requires: libfmigrib >= 17.12.11
 Requires: libfmidb >= 17.9.18
 Requires: smartmet-library-newbase >= 17.9.27
 Requires: libpqxx
@@ -35,7 +35,7 @@ Requires: jasper-libs
 Requires: eccodes
 %endif
 BuildRequires: libfmidb-devel >= 17.9.18
-BuildRequires: libfmigrib-devel >= 17.10.25
+BuildRequires: libfmigrib-devel >= 17.12.11
 BuildRequires: smartmet-library-newbase-devel >= 17.9.27
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
@@ -110,6 +110,28 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Dec 21 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.12.21-1.fmi
+- Use gaussian spread for continuous parameter probabilities
+- Set probability data range to 0 .. 1
+* Tue Dec 12 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.12.12-1.fmi
+- pressure delta level number change
+* Fri Dec  8 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.12.8-1.fmi
+- Update to auto_taf, grib
+* Thu Dec  7 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.12.7-1.fmi
+- Parameter name updates to radon for cloud layer parameters
+* Mon Dec  4 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.12.4-1.fmi
+- Support for ss_state table updates
+* Wed Nov 29 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.29-1.fmi
+- probability refactoring
+* Sun Nov 26 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.24-1.fmi
+- Hotfixing auto_taf
+* Fri Nov 24 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.24-1.fmi
+- preform-hybrid bugfix
+* Wed Nov 22 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.22-1.fmi
+- Update to auto_taf
+- Remove double-packing from grib plugin
+* Fri Nov 17 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.17-1.fmi
+- Tweaking of radon and probability plugins
 * Tue Nov 14 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.11.14-1.fmi
 - Bugfix to cape
 - hybrid_height performance improvements
@@ -129,7 +151,7 @@ rm -rf $RPM_BUILD_ROOT
 - Update to auto_taf
 * Wed Oct 25 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.25-1.fmi
 - New fmigrib
-* Thu Oct 20 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.20-1.fmi
+* Fri Oct 20 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.20-1.fmi
 - auto_taf fixes
 * Thu Oct 19 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.10.19-1.fmi
 - Add auto_taf plugin
@@ -261,7 +283,7 @@ rm -rf $RPM_BUILD_ROOT
 - gust Hirlam support
 - cape fix EL level search
 - fractile fix NaN issues
-* Thu Mar 29 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.3.30-1.fmi
+* Thu Mar 30 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.3.30-1.fmi
 - Hotfix for fetcher database access
 * Wed Mar 29 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.3.29-1.fmi
 - Hotfix for sticky param cache, code refactoring

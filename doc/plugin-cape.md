@@ -1,6 +1,6 @@
 # Summary
 
-Cape plugin calculates three different CAPE (convective available potential energy) parameter variants with three different starting values. While doing this it also finds out the state parameters of LCL (Lifting Condensation Level), LFC (Level of Free Convectivity) and EL (Equilibrium Level) levels as well as CIN (Convective Inhibition) value.
+Cape plugin calculates three different CAPE (convective available potential energy) parameter variants with three different starting values. While doing this it also finds out the state parameters of LCL (Lifting Condensation Level), LFC (Level of Free Convectivity), EL (Equilibrium Level) and LPL (Lifted Parcel Level) as well as CIN (Convective Inhibition) value.
 
 The possible source data variations are:
 
@@ -17,17 +17,20 @@ The parameters produced for each of these are:
 * _lcl temperature_: temperature of lifting condensation level (~cloud base), Kelvins
 * _lcl pressure_: pressure of lifting condensation level, hPa
 * _lcl height_: height of lifting condensation level, m
-* _lfc temperature_: temperature of level of free convection, Kelvins
+* _lfc temperature_: temperature of level of free convection, K
 * _lfc pressure_: pressure of level of free convection, hPa
 * _lfc height_: height of level of free convection, m
-* _el temperature (first)_: temperature of first equilibrium level found, Kelvins
+* _el temperature (first)_: temperature of first equilibrium level found, K
 * _el pressure (first)_: pressure of first equilibrium level found, hPa
 * _el height (first)_: height of first equilibrium level found, m
-* _el temperature (last)_: temperature of last equilibrium level found, Kelvins
+* _el temperature (last)_: temperature of last equilibrium level found, K
 * _el pressure (last)_: pressure of last equilibrium level found, hPa
 * _el height (last)_: last of first equilibrium level found, m
+* _lpl temperature_: temperature of lifted parcel level temperature (mu only), K
+* _lpl pressure_: pressure of lifted parcel level temperature (mu only), hPa
+* _lpl height_: height of lifted parcel level temperature (mu only), m
 
-This results then in altogether 3 * 16 = 48 separate output parameters.
+This results then in altogether 3 * 16 + 3 = 51 separate output parameters.
 
 Plugin is optimized for GPU use.
 
@@ -58,6 +61,9 @@ EL-M
 EL-LAST-K
 EL-LAST-HPA
 EL-LAST-M
+LPL-K
+LPL-HPA
+LPL-M
 
 The results are written to a level corresponding the source value type, possible values are:
 

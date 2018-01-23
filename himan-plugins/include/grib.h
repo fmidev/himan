@@ -19,13 +19,24 @@ class grib : public io_plugin
    public:
 	grib();
 
-	virtual ~grib() {}
+	virtual ~grib()
+	{
+	}
 	grib(const grib& other) = delete;
 	grib& operator=(const grib& other) = delete;
 
-	virtual std::string ClassName() const { return "himan::plugin::grib"; };
-	virtual HPPluginClass PluginClass() const { return kAuxiliary; };
-	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 1); }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::grib";
+	};
+	virtual HPPluginClass PluginClass() const
+	{
+		return kAuxiliary;
+	};
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(1, 1);
+	}
 	std::shared_ptr<NFmiGrib> Reader();
 
 	/**
@@ -93,7 +104,7 @@ class grib : public io_plugin
 	std::unique_ptr<grid> ReadAreaAndGrid() const;
 	himan::param ReadParam(const search_options& options, const producer& prod) const;
 	himan::forecast_time ReadTime() const;
-	himan::level ReadLevel(const search_options& options) const;
+	himan::level ReadLevel() const;
 	himan::producer ReadProducer(const search_options& options) const;
 	void ReadData(info_t newInfo, bool readPackedData) const;
 
@@ -123,7 +134,10 @@ class grib : public io_plugin
 
 // the class factory
 
-extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<grib>(); }
+extern "C" std::shared_ptr<himan_plugin> create()
+{
+	return std::make_shared<grib>();
+}
 #define HIMAN_AUXILIARY_INCLUDE
 #endif /* HIMAN_AUXILIARY_INCLUDE */
 

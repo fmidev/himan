@@ -41,12 +41,12 @@ namespace himan
 {
 // Define some missing value utilities
 inline CUDA_HOST CUDA_DEVICE double GetKHPMissingValue() {return -999.;} // Doesn't work with nan because of comparsion operator definition in several classes.
-inline CUDA_HOST CUDA_DEVICE double MissingDouble() {return nan("32700");}
-inline CUDA_HOST CUDA_DEVICE float MissingFloat() {return nanf("32700");}
+inline CUDA_HOST CUDA_DEVICE double MissingDouble() {return nan("0x7fffffff");}
+inline CUDA_HOST CUDA_DEVICE float MissingFloat() {return nanf("0x7fffffff");} // Cuda version of nanf(char*) has a bug and does not respect the argument given.
+										// Bug is fixed in a later Cuda release (> 9.1)
 
 const int kHPMissingInt = 999999;
 const double kHPMissingValue = GetKHPMissingValue();
-//const double kFloatMissing = 32700.;
 
 inline CUDA_HOST CUDA_DEVICE bool IsMissingDouble(const double& value)
 {
@@ -59,18 +59,18 @@ inline CUDA_HOST CUDA_DEVICE bool IsMissingDouble(const double& value)
 
 inline CUDA_HOST CUDA_DEVICE bool IsMissingFloat(const float& value)
 {
-        double missingValue = MissingFloat();
+        float missingValue = MissingFloat();
         const uint32_t* _value = reinterpret_cast<const uint32_t*>(&value);
         const uint32_t* _missingValue = reinterpret_cast<const uint32_t*>(&missingValue);
 
         return (*_value == *_missingValue);
 }
 
-inline bool IsMissing(double value) {return IsMissingDouble(value);}
-inline bool IsMissing(float value) {return IsMissingFloat(value);}
+inline CUDA_HOST CUDA_DEVICE bool IsMissing(double value) {return IsMissingDouble(value);}
+inline CUDA_HOST CUDA_DEVICE bool IsMissing(float value) {return IsMissingFloat(value);}
 
-inline bool IsValid(double value) { return !IsMissingDouble(value);}
-inline bool IsValid(float value) {return !IsMissingFloat(value);}
+inline CUDA_HOST CUDA_DEVICE bool IsValid(double value) { return !IsMissingDouble(value);}
+inline CUDA_HOST CUDA_DEVICE bool IsValid(float value) {return !IsMissingFloat(value);}
 
 template <typename T>
 inline bool IsMissing(T value) = delete; 
@@ -192,6 +192,7 @@ enum HPLevelType
 	kTopOfAtmosphere = 8,
 	kLake = 21,
 	kPressure = 100,
+	kPressureDelta = 101,  // pressure deviation from ground to level
 	kMeanSea = 102,
 	kAltitude = 103,
 	kHeight = 105,
@@ -210,6 +211,7 @@ const boost::unordered_map<HPLevelType, std::string> HPLevelTypeToString =
 	(kUnknownLevel, "unknown")
 	(kGround, "ground")
 	(kPressure, "pressure")
+	(kPressureDelta, "pressure_delta")
 	(kMeanSea, "meansea")
 	(kAltitude, "altitude")
 	(kHeight, "height")
@@ -228,6 +230,7 @@ const boost::unordered_map<std::string, HPLevelType> HPStringToLevelType =
 	("unknown", kUnknownLevel)
 	("ground", kGround)
 	("pressure", kPressure)
+	("pressure_delta", kPressureDelta)
 	("meansea", kMeanSea)
 	("altitude", kAltitude)
 	("height", kHeight)

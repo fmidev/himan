@@ -19,11 +19,18 @@ struct point
 	double x;
 	double y;
 
-	__host__ __device__ point() : x(himan::MissingDouble()), y(himan::MissingDouble()) {}
-	__host__ __device__ point(double _x, double _y) : x(_x), y(_y) {}
+	__host__ __device__ point() : x(himan::MissingDouble()), y(himan::MissingDouble())
+	{
+	}
+	__host__ __device__ point(double _x, double _y) : x(_x), y(_y)
+	{
+	}
 };
 
-__host__ __device__ unsigned int Index(unsigned int x, unsigned int y, unsigned int sx) { return y * sx + x; }
+__host__ __device__ unsigned int Index(unsigned int x, unsigned int y, unsigned int sx)
+{
+	return y * sx + x;
+}
 __host__ __device__ unsigned int Index(point p, unsigned int sx)
 {
 	return Index(static_cast<unsigned int>(p.x), static_cast<unsigned int>(p.y), sx);
@@ -69,7 +76,6 @@ struct cached_grid
 	__host__ cached_grid& operator=(const cached_grid& other) = default;
 
 	__host__ cached_grid& operator=(cached_grid&& other) noexcept = delete;
-
 };
 
 typedef std::lock_guard<std::mutex> lock_guard;
@@ -99,9 +105,8 @@ void CreateGrid(himan::info& sourceInfo, himan::info& targetInfo, std::vector<po
 	{
 		lock_guard lock(s_cachedGridMutex);
 		end = s_cachedGrids.end();
-		entry = std::find_if(s_cachedGrids.begin(), s_cachedGrids.end(), [&](const cached_grid& g) {
-			return sourceName == g.source && targetName == g.target;
-		});
+		entry = std::find_if(s_cachedGrids.begin(), s_cachedGrids.end(),
+		                     [&](const cached_grid& g) { return sourceName == g.source && targetName == g.target; });
 	}
 
 	if (entry != end)

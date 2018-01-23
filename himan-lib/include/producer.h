@@ -22,8 +22,13 @@ class producer
 	producer(long theCentre, long theProcess);
 	producer(long theFmiProducerId, long theCentre, long theProcess, const std::string& theNeonsName);
 
-	~producer() {}
-	std::string ClassName() const { return "himan::producer"; }
+	~producer()
+	{
+	}
+	std::string ClassName() const
+	{
+		return "himan::producer";
+	}
 	std::ostream& Write(std::ostream& file) const;
 
 	void Centre(long theCentre);
@@ -68,7 +73,10 @@ class producer
 #endif
 };
 
-inline std::ostream& operator<<(std::ostream& file, const producer& ob) { return ob.Write(file); }
+inline std::ostream& operator<<(std::ostream& file, const producer& ob)
+{
+	return ob.Write(file);
+}
 }  // namespace himan
 
 #endif /* PRODUCER_H */

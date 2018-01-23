@@ -64,9 +64,13 @@ struct lcl_t
 	double Q;
 
 	CUDA_DEVICE
-	lcl_t() : T(himan::MissingDouble()), P(himan::MissingDouble()), Q(himan::MissingDouble()) {}
+	lcl_t() : T(himan::MissingDouble()), P(himan::MissingDouble()), Q(himan::MissingDouble())
+	{
+	}
 	CUDA_DEVICE
-	lcl_t(double T, double P, double Q) : T(T), P(P), Q(Q) {}
+	lcl_t(double T, double P, double Q) : T(T), P(P), Q(Q)
+	{
+	}
 };
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
@@ -391,103 +395,6 @@ double RelativeTopography_(int level1, int level2, double z1, double z2);
 int LowConvection_(double T0m, double T850);
 
 /**
- * @brief Showalter Index
- *
- * Will lift a parcel of air from 850 hPa to 500 hPa either dry or wet
- * adiabatically.
- *
- * http://forecast.weather.gov/glossary.php?word=SHOWALTER+INDEX
- *
- * @param T850 Temperature of 850 hPa isobar in Kelvins
- * @param T500 Temperature of 500 hPa isobar in Kelvins
- * @param TD850 Dewpoint temperature of 850 hPa isobar in Kelvins
- * @return Index value
- */
-
-CUDA_DEVICE
-double SI_(double T850, double T500, double TD850);
-
-/**
- * @brief Cross Totals Index
- *
- * http://glossary.ametsoc.org/wiki/Stability_index
- *
- * @param T500 Temperature of 500 hPa isobar in Kelvins
- * @param TD850 Dewpoint temperature of 850 hPa isobar in Kelvins
- * @return Index value (TD850 - T500)
- */
-
-CUDA_DEVICE
-double CTI_(double T500, double TD850);
-
-/**
- * @brief Vertical Totals Index
- *
- * http://glossary.ametsoc.org/wiki/Stability_index
- *
- * @param T850 Temperature of 850 hPa isobar in Kelvins
- * @param T500 Temperature of 500 hPa isobar in Kelvins
- * @return Index value (T850 - T500)
- */
-
-CUDA_DEVICE
-double VTI_(double T850, double T500);
-
-/**
- * @brief Total Totals Index
- *
- * http://glossary.ametsoc.org/wiki/Stability_index
- *
- * @param T850 Temperature of 850 hPa isobar in Kelvins
- * @param T500 Temperature of 500 hPa isobar in Kelvins
- * @param TD850 Dewpoint temperature of 850 hPa isobar in Kelvins
- * @return Index value ( T850 - T500 ) + ( TD850 - T500 )
- */
-
-CUDA_DEVICE
-double TTI_(double T850, double T500, double TD850);
-
-/**
- * @brief Lifted index
- *
- * http://en.wikipedia.org/wiki/Lifted_index
- *
- * @param T500 Temperature of 500 hPa isobar in Kelvins
- * @param T500m Temperature at 500m above ground in Kelvins
- * @param TD500m Dewpoint temperature at 500m above ground in Kelvins
- * @param P500m Pressure at 500m above ground in Pascals
- * @return Index value
- */
-
-CUDA_DEVICE
-double LI_(double T500, double T500m, double TD500m, double P500m);
-
-/**
- * @brief K-Index
- *
- * @param T500 Temperature of 500 hPa isobar in Kelvins
- * @param T700 Temperature of 700 hPa isobar in Kelvins
- * @param T850 Temperature of 850 hPa isobar in Kelvins
- * @param TD700 Dewpoint temperature of 700 hPa isobar in Kelvins
- * @param TD850 Dewpoint temperature of 850 hPa isobar in Kelvins
- * @return Index value
- */
-
-CUDA_DEVICE
-double KI_(double T850, double T700, double T500, double TD850, double TD700);
-
-/**
- * @brief Calculate bulk wind shear between two layers in the atmosphere
- *
- * @param U U(upper) - U(lower)
- * @param V V(upper) - V(lower)
- * @return Bulk wind shear in knots
- */
-
-CUDA_DEVICE
-double BulkShear_(double U, double V);
-
-/**
  * @brief Calculate adiabatic saturation temperature at given pressure.
  *
  * Function approximates the temperature at given pressure when equivalent
@@ -693,14 +600,18 @@ double E_(double RH, double es);
 }  // namespace himan
 
 CUDA_DEVICE
-inline double himan::metutil::DewPointFromRHSimple_(double T, double RH) { return (T - ((100 - RH) * 0.2)); }
+inline double himan::metutil::DewPointFromRHSimple_(double T, double RH)
+{
+	return (T - ((100 - RH) * 0.2));
+}
 CUDA_DEVICE
 inline double himan::metutil::DewPointFromRH_(double T, double RH)
 {
-	if (RH == 0.) RH = 0.01;  // formula does not work if RH = 0; actually all small values give extreme Td values
+	if (RH == 0.)
+		RH = 0.01;  // formula does not work if RH = 0; actually all small values give extreme Td values
 	ASSERT(RH > 0.);
 	// ASSERT(RH < 101.);
-	ASSERT(T > 0. && T < 500.);
+	ASSERT((T > 0. && T < 500.) || IsMissing(T));
 
 	return (T / (1 - (T * LOG(RH * 0.01) * constants::kRw_div_L)));
 }
@@ -710,7 +621,7 @@ inline double himan::metutil::MixingRatio_(double T, double P)
 {
 	// Sanity checks
 	ASSERT(P > 1000);
-	ASSERT(T > 0 && T < 500);
+	ASSERT((T > 0 && T < 500) || IsMissing(T));
 
 	double E = Es_(T);  // Pa
 
@@ -816,7 +727,7 @@ inline double himan::metutil::MoistLift_(double P, double T, double targetP)
 	// Sanity checks
 
 	ASSERT(P > 2000);
-	ASSERT(T > 100 && T < 400);
+	ASSERT((T > 100 && T < 400) || IsMissing(T));
 	ASSERT(targetP > 2000);
 
 	double Pint = P;  // Pa
@@ -932,8 +843,8 @@ inline lcl_t himan::metutil::LCL_(double P, double T, double TD)
 	// Sanity checks
 
 	ASSERT(P > 10000);
-	ASSERT(T > 0);
-	ASSERT(T < 500);
+	ASSERT(T > 0 || IsMissing(T));
+	ASSERT(T < 500 || IsMissing(T));
 	ASSERT(TD > 0);
 	ASSERT(TD < 500);
 
@@ -1023,8 +934,8 @@ inline lcl_t himan::metutil::LCLA_(double P, double T, double TD)
 	// Sanity checks
 
 	ASSERT(P > 10000);
-	ASSERT(T > 0);
-	ASSERT(T < 500);
+	ASSERT(T > 0 || IsMissing(T));
+	ASSERT(T < 500 || IsMissing(T));
 	ASSERT(TD > 0 && TD != 56);
 	ASSERT(TD < 500);
 
@@ -1041,7 +952,7 @@ CUDA_DEVICE
 inline double himan::metutil::Es_(double T)
 {
 	// Sanity checks
-	ASSERT(T == T && T > 0 && T < 500);  // check also NaN
+	ASSERT((T == T && T > 0 && T < 500) || IsMissing(T));  // check also NaN
 
 	double Es;
 
@@ -1056,7 +967,7 @@ inline double himan::metutil::Es_(double T)
 		Es = 6.107 * EXP10(9.5 * T / (265.5 + T));
 	}
 
-	ASSERT(Es == Es);  // check NaN
+	ASSERT(Es == Es || IsMissing(Es));  // check NaN
 
 	return 100 * Es;  // Pa
 }
@@ -1067,7 +978,7 @@ inline double himan::metutil::Gammas_(double P, double T)
 	// Sanity checks
 
 	ASSERT(P > 10000);
-	ASSERT(T > 0 && T < 500);
+	ASSERT((T > 0 && T < 500) || IsMissing(T));
 
 	// http://glossary.ametsoc.org/wiki/Pseudoadiabatic_lapse_rate
 
@@ -1088,7 +999,7 @@ inline double himan::metutil::Gammaw_(double P, double T)
 	// Sanity checks
 
 	ASSERT(P > 1000);
-	ASSERT(T > 0 && T < 500);
+	ASSERT((T > 0 && T < 500) || IsMissing(T));
 
 	namespace hc = himan::constants;
 
@@ -1112,101 +1023,9 @@ inline double himan::metutil::Gammaw_(double P, double T)
 }
 
 CUDA_DEVICE
-inline double himan::metutil::CTI_(double T500, double TD850) { return TD850 - T500; }
-CUDA_DEVICE
-inline double himan::metutil::VTI_(double T850, double T500) { return T850 - T500; }
-CUDA_DEVICE
-inline double himan::metutil::TTI_(double T850, double T500, double TD850)
-{
-	return CTI_(T500, TD850) + VTI_(T850, T500);
-}
-
-CUDA_DEVICE
-inline double himan::metutil::KI_(double T850, double T700, double T500, double TD850, double TD700)
-{
-	return (T850 - T500 + TD850 - (T700 - TD700)) - constants::kKelvin;
-}
-
-CUDA_DEVICE
-inline double himan::metutil::LI_(double T500, double T500m, double TD500m, double P500m)
-{
-	lcl_t LCL = LCL_(50000, T500m, TD500m);
-
-	double li = MissingDouble();
-
-	const double TARGET_PRESSURE = 50000;
-
-	/*	if (IsMissingDouble(LCL.P))
-	    {
-	        return li;
-	    }
-	*/
-	if (LCL.P <= 85000)
-	{
-		// LCL pressure is below wanted pressure, no need to do wet-adiabatic
-		// lifting
-
-		double dryT = DryLift_(P500m, T500m, TARGET_PRESSURE);
-
-		li = T500 - dryT;
-	}
-	else if (LCL.P > 85000)
-	{
-		// Grid point is inside or above cloud
-
-		double wetT = Lift_(P500m, T500m, TD500m, TARGET_PRESSURE);
-
-		li = T500 - wetT;
-	}
-
-	return li;
-}
-
-CUDA_DEVICE
-inline double himan::metutil::SI_(double T850, double T500, double TD850)
-{
-	lcl_t LCL = metutil::LCL_(85000, T850, TD850);
-
-	double si = MissingDouble();
-
-	const double TARGET_PRESSURE = 50000;
-
-	/*	if (IsMissingDouble(LCL.P))
-	    {
-	        return si;
-	    }
-	*/
-	if (LCL.P <= 85000)
-	{
-		// LCL pressure is below wanted pressure, no need to do wet-adiabatic
-		// lifting
-
-		double dryT = DryLift_(85000, T850, TARGET_PRESSURE);
-
-		si = T500 - dryT;
-	}
-	else if (LCL.P > 85000)
-	{
-		// Grid point is inside or above cloud
-
-		double wetT = Lift_(85000, T850, TD850, TARGET_PRESSURE);
-
-		si = T500 - wetT;
-	}
-
-	return si;
-}
-
-CUDA_DEVICE
-inline double himan::metutil::BulkShear_(double U, double V)
-{
-	return sqrt(U * U + V * V) * 1.943844492;  // converting to knots
-}
-
-CUDA_DEVICE
 inline double himan::metutil::Theta_(double T, double P)
 {
-	ASSERT(T > 0);
+	ASSERT(T > 0 || IsMissing(T));
 	ASSERT(P > 1000);
 
 	return T * pow((100000. / P), 0.28586);
@@ -1215,7 +1034,7 @@ inline double himan::metutil::Theta_(double T, double P)
 CUDA_DEVICE
 inline double himan::metutil::ThetaE_(double T, double TD, double P)
 {
-	ASSERT(T > 0);
+	ASSERT(T > 0 || IsMissing(T));
 	ASSERT(P > 1000);
 
 	// Get LCL temperature
@@ -1240,7 +1059,8 @@ inline double himan::metutil::Tw_(double thetaE, double P)
 	ASSERT(thetaE > 0);
 	ASSERT(P > 1000);
 
-	if (IsMissingDouble(thetaE) || IsMissingDouble(P)) return MissingDouble();
+	if (IsMissingDouble(thetaE) || IsMissingDouble(P))
+		return MissingDouble();
 
 	using namespace himan::constants;
 
@@ -1368,9 +1188,8 @@ inline double himan::metutil::ThetaW_(double thetaE)
 CUDA_DEVICE
 inline double himan::metutil::VirtualTemperature_(double T, double P)
 {
-	ASSERT(T > 100);
-	ASSERT(T < 400);
-	ASSERT(P > 1000);
+	ASSERT(IsMissing(T) || T > 100 || T < 400);
+	ASSERT(IsMissing(P) || P > 1000);
 
 	double r = 0.001 * MixingRatio_(T, P);  // kg/kg
 	return (1 + 0.61 * r) * T;
@@ -1379,8 +1198,8 @@ inline double himan::metutil::VirtualTemperature_(double T, double P)
 CUDA_DEVICE
 inline double himan::metutil::smarttool::Es2_(double T)
 {
-	ASSERT(T > 100);
-	ASSERT(T < 350);
+	ASSERT(T > 100 || IsMissing(T));
+	ASSERT(T < 350 || IsMissing(T));
 
 	const double b = 17.2694;
 	const double e0 = 6.11;   // 6.11 <- 0.611 [kPa]
@@ -1406,8 +1225,8 @@ inline double himan::metutil::smarttool::ThetaE_(double T, double RH, double P)
 {
 	ASSERT(RH >= 0);
 	ASSERT(RH < 102);
-	ASSERT(T > 150);
-	ASSERT(T < 350);
+	ASSERT(T > 150 || IsMissing(T));
+	ASSERT(T < 350 || IsMissing(T));
 	ASSERT(P > 1500);
 
 	double tpot = himan::metutil::Theta_(T, P);
@@ -1431,8 +1250,8 @@ inline double himan::metutil::smarttool::MixingRatio_(double T, double RH, doubl
 {
 	ASSERT(RH >= 0);
 	ASSERT(RH < 102);
-	ASSERT(T > 150);
-	ASSERT(T < 350);
+	ASSERT(T > 150 || IsMissing(T));
+	ASSERT(T < 350 || IsMissing(T));
 	ASSERT(P > 1500);
 
 	double es = himan::metutil::smarttool::Es2_(T);

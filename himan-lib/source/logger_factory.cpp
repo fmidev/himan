@@ -9,7 +9,9 @@ using namespace himan;
 
 std::unique_ptr<logger_factory> logger_factory::itsInstance;
 
-logger_factory::logger_factory() : itsDebugStateMain(kInfoMsg) {}
+logger_factory::logger_factory() : itsDebugStateMain(kInfoMsg)
+{
+}
 logger_factory* logger_factory::Instance()
 {
 	if (!itsInstance)
@@ -25,5 +27,11 @@ std::unique_ptr<logger> logger_factory::GetLog(const std::string& theUserName)
 	return std::unique_ptr<logger>(new logger(theUserName, itsDebugStateMain));  // no make_unique in C++11 :(
 }
 
-void logger_factory::DebugState(HPDebugState theDebugState) { itsDebugStateMain = theDebugState; }
-HPDebugState logger_factory::DebugState() { return itsDebugStateMain; }
+void logger_factory::DebugState(HPDebugState theDebugState)
+{
+	itsDebugStateMain = theDebugState;
+}
+HPDebugState logger_factory::DebugState()
+{
+	return itsDebugStateMain;
+}

@@ -31,7 +31,10 @@ class forecast_time
 	forecast_time(const forecast_time& other);
 	forecast_time& operator=(const forecast_time& other);
 
-	std::string ClassName() const { return "himan::forecast_time"; };
+	std::string ClassName() const
+	{
+		return "himan::forecast_time";
+	};
 	std::ostream& Write(std::ostream& file) const;
 
 	bool operator==(const forecast_time& other) const;
@@ -74,7 +77,10 @@ class forecast_time
 #endif
 };
 
-inline std::ostream& operator<<(std::ostream& file, const forecast_time& ob) { return ob.Write(file); }
+inline std::ostream& operator<<(std::ostream& file, const forecast_time& ob)
+{
+	return ob.Write(file);
+}
 }  // namespace himan
 
 #endif /* FORECAST_TIME_H */

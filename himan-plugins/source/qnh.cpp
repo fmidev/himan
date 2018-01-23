@@ -5,10 +5,10 @@
  *
  */
 
+#include "qnh.h"
 #include "forecast_time.h"
 #include "level.h"
 #include "logger.h"
-#include "qnh.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -108,7 +108,7 @@ void qnh::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	myThreadedLogger.Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-						   static_cast<string>(forecastLevel));
+	                       static_cast<string>(forecastLevel));
 
 	// Current time and level
 

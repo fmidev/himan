@@ -22,18 +22,39 @@ void radon::Init()
 {
 	if (!itsInit)
 	{
+		string radonHost = "vorlon";
+
+		try
+		{
+			radonHost = util::GetEnv("RADON_HOSTNAME");
+		}
+		catch (...)
+		{
+		}
+
+		string radonName = "radon";
+
+		try
+		{
+			radonName = util::GetEnv("RADON_DATABASENAME");
+		}
+		catch (...)
+		{
+		}
+
 		try
 		{
 			call_once(oflag, [&]() {
 				NFmiRadonDBPool::Instance()->Username("wetodb");
 				NFmiRadonDBPool::Instance()->Password(util::GetEnv("RADON_WETODB_PASSWORD"));
-				NFmiRadonDBPool::Instance()->Database("radon");
-				NFmiRadonDBPool::Instance()->Hostname("vorlon");
+				NFmiRadonDBPool::Instance()->Database(radonName);
+				NFmiRadonDBPool::Instance()->Hostname(radonHost);
 
 				if (NFmiRadonDBPool::Instance()->MaxWorkers() < MAX_WORKERS)
 				{
 					NFmiRadonDBPool::Instance()->MaxWorkers(MAX_WORKERS);
 				}
+				itsLogger.Info("Connected to radon (db=" + radonName + ", host=" + radonHost + ")");
 			});
 
 			itsRadonDB = std::unique_ptr<NFmiRadonDB>(NFmiRadonDBPool::Instance()->GetConnection());
@@ -48,8 +69,14 @@ void radon::Init()
 	}
 }
 
-radon::radon() : itsInit(false), itsRadonDB() { itsLogger = logger("radon"); }
-void radon::PoolMaxWorkers(int maxWorkers) { NFmiRadonDBPool::Instance()->MaxWorkers(maxWorkers); }
+radon::radon() : itsInit(false), itsRadonDB()
+{
+	itsLogger = logger("radon");
+}
+void radon::PoolMaxWorkers(int maxWorkers)
+{
+	NFmiRadonDBPool::Instance()->MaxWorkers(maxWorkers);
+}
 vector<std::string> radon::CSV(search_options& options)
 {
 	Init();

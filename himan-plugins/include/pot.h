@@ -29,12 +29,25 @@ class time_series
 	           const HPTimeResolution& timeRes, int stepSize, int numSteps, const level& forecastLevel,
 	           const forecast_type& requestedType, bool readPackedData);
 
-	param Param() const { return itsParam; };
+	param Param() const
+	{
+		return itsParam;
+	};
 	void Param(param theParam);
 
-	size_t Size() const { return itsInfos.size(); };
-	std::vector<info_t>::iterator begin() { return itsInfos.begin(); };
-	std::vector<info_t>::iterator end() { return itsInfos.end(); };
+	size_t Size() const
+	{
+		return itsInfos.size();
+	};
+	std::vector<info_t>::iterator begin()
+	{
+		return itsInfos.begin();
+	};
+	std::vector<info_t>::iterator end()
+	{
+		return itsInfos.end();
+	};
+
    private:
 	param itsParam;
 	std::vector<info_t> itsInfos;
@@ -52,15 +65,27 @@ class pot : public compiled_plugin, private compiled_plugin_base
    public:
 	pot();
 
-	inline virtual ~pot() {}
+	inline virtual ~pot()
+	{
+	}
 	pot(const pot& other) = delete;
 	pot& operator=(const pot& other) = delete;
 
 	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
 
-	virtual std::string ClassName() const { return "himan::plugin::pot"; }
-	virtual HPPluginClass PluginClass() const { return kCompiled; }
-	virtual HPVersionNumber Version() const { return HPVersionNumber(0, 1); }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::pot";
+	}
+	virtual HPPluginClass PluginClass() const
+	{
+		return kCompiled;
+	}
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(0, 1);
+	}
+
    private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
 	bool itsStrictMode;
@@ -68,7 +93,10 @@ class pot : public compiled_plugin, private compiled_plugin_base
 
 // the class factory
 
-extern "C" std::shared_ptr<himan_plugin> create() { return std::make_shared<pot>(); }
+extern "C" std::shared_ptr<himan_plugin> create()
+{
+	return std::make_shared<pot>();
+}
 }  // namespace plugin
 }  // namespace himan
 

@@ -28,16 +28,25 @@ class blend : public compiled_plugin, private compiled_plugin_base
 
 	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
 
-	virtual std::string ClassName() const { return "himan::plugin::blend"; }
-	virtual HPPluginClass PluginClass() const { return kCompiled; }
-	virtual HPVersionNumber Version() const { return HPVersionNumber(1, 1); }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::blend";
+	}
+	virtual HPPluginClass PluginClass() const
+	{
+		return kCompiled;
+	}
+	virtual HPVersionNumber Version() const
+	{
+		return HPVersionNumber(1, 1);
+	}
 
 	virtual void Start();
 	void Run(unsigned short threadIndex);
 
    protected:
 	virtual void Calculate(std::shared_ptr<info> targetInfo, unsigned short threadIndex);
-	virtual void WriteToFile(const info& targetInfo, write_options opts = write_options()) override;
+	virtual void WriteToFile(const info_t targetInfo, write_options opts = write_options()) override;
 
    private:
 	void SetupOutputForecastTypes(std::shared_ptr<info> Info);
@@ -46,7 +55,10 @@ class blend : public compiled_plugin, private compiled_plugin_base
 	std::vector<double> itsWeights;
 };
 
-extern "C" std::shared_ptr<himan_plugin> create() { return std::shared_ptr<himan_plugin>(new blend()); }
+extern "C" std::shared_ptr<himan_plugin> create()
+{
+	return std::shared_ptr<himan_plugin>(new blend());
+}
 
 }  // namespace plugin
 }  // namespace himan

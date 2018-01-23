@@ -23,9 +23,14 @@ static mutex singleFileWriteMutex;
 
 static const string kClassName = "himan::plugin::blend";
 
-blend::blend() { itsLogger = logger("blend"); }
+blend::blend()
+{
+	itsLogger = logger("blend");
+}
 
-blend::~blend() {}
+blend::~blend()
+{
+}
 
 static info_t FetchWithProperties(shared_ptr<plugin_configuration> cnf, const forecast_time& forecastTime,
                                   HPTimeResolution stepResolution, const level& lvl, const param& parm,
@@ -94,7 +99,7 @@ void blend::Run(unsigned short threadIndex)
 			itsConfiguration->Statistics()->AddToMissingCount(targetInfo->Data().MissingCount());
 			itsConfiguration->Statistics()->AddToValueCount(targetInfo->Data().Size());
 		}
-		WriteToFile(*targetInfo);
+		WriteToFile(targetInfo);
 	}
 }
 
@@ -312,16 +317,16 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 	         to_string(targetInfo->Data().Size()));
 }
 
-void blend::WriteToFile(const info& targetInfo, write_options writeOptions)
+void blend::WriteToFile(const info_t targetInfo, write_options writeOptions)
 {
 	auto aWriter = GET_PLUGIN(writer);
 
 	aWriter->WriteOptions(writeOptions);
-	auto tempInfo = targetInfo;
+	auto tempInfo = make_shared<info>(*targetInfo);
 
-	tempInfo.ResetForecastType();
+	tempInfo->ResetForecastType();
 
-	while (tempInfo.NextForecastType())
+	while (tempInfo->NextForecastType())
 	{
 		if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
 		{
@@ -337,7 +342,7 @@ void blend::WriteToFile(const info& targetInfo, write_options writeOptions)
 
 	if (itsConfiguration->UseDynamicMemoryAllocation())
 	{
-		DeallocateMemory(targetInfo);
+		DeallocateMemory(*tempInfo);
 	}
 }
 

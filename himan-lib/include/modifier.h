@@ -25,10 +25,15 @@ class modifier
 {
    public:
 	modifier();
-	virtual ~modifier() {}
+	virtual ~modifier()
+	{
+	}
 	// Compiler will create cctor and =, nothing but PODs here
 
-	virtual std::string ClassName() const { return "himan::modifier"; }
+	virtual std::string ClassName() const
+	{
+		return "himan::modifier";
+	}
 	virtual void Calculate(double theValue, double theHeight, double thePreviousValue, double thePreviousHeight) = 0;
 	virtual void Clear(double fillValue = MissingDouble());
 
@@ -107,7 +112,10 @@ class modifier
 	size_t itsGridsProcessed;
 };
 
-inline std::ostream& operator<<(std::ostream& file, const modifier& ob) { return ob.Write(file); }
+inline std::ostream& operator<<(std::ostream& file, const modifier& ob)
+{
+	return ob.Write(file);
+}
 inline bool modifier::IsMissingValue(double theValue) const
 {
 	if (IsMissing(theValue))
@@ -125,9 +133,16 @@ inline bool modifier::IsMissingValue(double theValue) const
 class modifier_max : public modifier
 {
    public:
-	modifier_max() : modifier(kMaximumModifier) {}
-	virtual ~modifier_max() {}
-	virtual std::string ClassName() const override { return "himan::modifier_max"; }
+	modifier_max() : modifier(kMaximumModifier)
+	{
+	}
+	virtual ~modifier_max()
+	{
+	}
+	virtual std::string ClassName() const override
+	{
+		return "himan::modifier_max";
+	}
 	virtual void Calculate(double theValue, double theHeight, double thePreviousValue,
 	                       double thePreviousHeight) override;
 };
@@ -139,9 +154,16 @@ class modifier_max : public modifier
 class modifier_min : public modifier
 {
    public:
-	modifier_min() : modifier(kMinimumModifier) {}
-	virtual ~modifier_min() {}
-	virtual std::string ClassName() const override { return "himan::modifier_min"; }
+	modifier_min() : modifier(kMinimumModifier)
+	{
+	}
+	virtual ~modifier_min()
+	{
+	}
+	virtual std::string ClassName() const override
+	{
+		return "himan::modifier_min";
+	}
 	virtual void Calculate(double theValue, double theHeight, double thePreviousValue,
 	                       double thePreviousHeight) override;
 };
@@ -153,9 +175,16 @@ class modifier_min : public modifier
 class modifier_maxmin : public modifier
 {
    public:
-	modifier_maxmin() : modifier(kMaximumMinimumModifier) {}
-	virtual ~modifier_maxmin() {}
-	virtual std::string ClassName() const override { return "himan::modifier_maxmin"; }
+	modifier_maxmin() : modifier(kMaximumMinimumModifier)
+	{
+	}
+	virtual ~modifier_maxmin()
+	{
+	}
+	virtual std::string ClassName() const override
+	{
+		return "himan::modifier_maxmin";
+	}
 	virtual void Calculate(double theValue, double theHeight, double thePreviousValue,
 	                       double thePreviousHeight) override;
 	virtual const std::vector<double>& Result() const override;
@@ -174,9 +203,16 @@ class modifier_maxmin : public modifier
 class modifier_sum : public modifier
 {
    public:
-	modifier_sum() : modifier(kAccumulationModifier) {}
-	virtual ~modifier_sum() {}
-	virtual std::string ClassName() const override { return "himan::modifier_sum"; }
+	modifier_sum() : modifier(kAccumulationModifier)
+	{
+	}
+	virtual ~modifier_sum()
+	{
+	}
+	virtual std::string ClassName() const override
+	{
+		return "himan::modifier_sum";
+	}
 	virtual void Calculate(double theValue, double theHeight, double thePreviousValue,
 	                       double thePreviousHeight) override;
 };
@@ -189,14 +225,23 @@ class modifier_sum : public modifier
 class modifier_integral : public modifier
 {
    public:
-	modifier_integral() : modifier(kIntegralModifier) {}
-	virtual ~modifier_integral() {}
-	virtual std::string ClassName() const override { return "himan::::modifier_integral"; }
+	modifier_integral() : modifier(kIntegralModifier)
+	{
+	}
+	virtual ~modifier_integral()
+	{
+	}
+	virtual std::string ClassName() const override
+	{
+		return "himan::::modifier_integral";
+	}
 	virtual void Calculate(double theValue, double theHeight, double thePreviousValue,
 	                       double thePreviousHeight) override;
 
    protected:
-	explicit modifier_integral(HPModifierType theModifierType) : modifier(theModifierType) {}
+	explicit modifier_integral(HPModifierType theModifierType) : modifier(theModifierType)
+	{
+	}
 };
 
 /**
@@ -206,9 +251,16 @@ class modifier_integral : public modifier
 class modifier_mean : public modifier_integral
 {
    public:
-	modifier_mean() : modifier_integral(kAverageModifier) {}
-	virtual ~modifier_mean() {}
-	virtual std::string ClassName() const override { return "himan::modifier_mean"; }
+	modifier_mean() : modifier_integral(kAverageModifier)
+	{
+	}
+	virtual ~modifier_mean()
+	{
+	}
+	virtual std::string ClassName() const override
+	{
+		return "himan::modifier_mean";
+	}
 	virtual void Calculate(double theValue, double theHeight, double thePreviousValue,
 	                       double thePreviousHeight) override;
 
@@ -227,9 +279,16 @@ class modifier_mean : public modifier_integral
 class modifier_count : public modifier
 {
    public:
-	modifier_count() : modifier(kCountModifier) {}
-	virtual ~modifier_count() {}
-	virtual std::string ClassName() const override { return "himan::modifier_count"; }
+	modifier_count() : modifier(kCountModifier)
+	{
+	}
+	virtual ~modifier_count()
+	{
+	}
+	virtual std::string ClassName() const override
+	{
+		return "himan::modifier_count";
+	}
 	virtual void Calculate(double theValue, double theHeight, double thePreviousValue,
 	                       double thePreviousHeight) override;
 
@@ -251,9 +310,16 @@ class modifier_count : public modifier
 class modifier_findheight : public modifier
 {
    public:
-	modifier_findheight() : modifier(kFindHeightModifier), itsValuesFound(0) {}
-	virtual ~modifier_findheight() {}
-	virtual std::string ClassName() const override { return "himan::modifier_findheight"; }
+	modifier_findheight() : modifier(kFindHeightModifier), itsValuesFound(0)
+	{
+	}
+	virtual ~modifier_findheight()
+	{
+	}
+	virtual std::string ClassName() const override
+	{
+		return "himan::modifier_findheight";
+	}
 	virtual void Calculate(double theValue, double theHeight, double thePreviousValue,
 	                       double thePreviousHeight) override;
 
@@ -262,7 +328,9 @@ class modifier_findheight : public modifier
 	virtual void Clear(double fillValue = MissingDouble()) override;
 
    protected:
-	modifier_findheight(HPModifierType theModifierType) : modifier(theModifierType), itsValuesFound(0) {}
+	modifier_findheight(HPModifierType theModifierType) : modifier(theModifierType), itsValuesFound(0)
+	{
+	}
 	virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights) override;
 
 	std::vector<size_t> itsFoundNValues;
@@ -277,9 +345,16 @@ class modifier_findheight : public modifier
 class modifier_findheight_gt : public modifier_findheight
 {
    public:
-	modifier_findheight_gt() : modifier_findheight(kFindHeightLessThanModifier) {}
-	virtual ~modifier_findheight_gt() {}
-	virtual std::string ClassName() const override { return "himan::modifier_findheight_gt"; }
+	modifier_findheight_gt() : modifier_findheight(kFindHeightLessThanModifier)
+	{
+	}
+	virtual ~modifier_findheight_gt()
+	{
+	}
+	virtual std::string ClassName() const override
+	{
+		return "himan::modifier_findheight_gt";
+	}
 	virtual void Calculate(double theValue, double theHeight, double thePreviousValue,
 	                       double thePreviousHeight) override;
 	virtual void FindNth(size_t theNth) override;
@@ -292,9 +367,16 @@ class modifier_findheight_gt : public modifier_findheight
 class modifier_findheight_lt : public modifier_findheight
 {
    public:
-	modifier_findheight_lt() : modifier_findheight(kFindHeightGreaterThanModifier) {}
-	virtual ~modifier_findheight_lt() {}
-	virtual std::string ClassName() const override { return "himan::modifier_findheight_lt"; }
+	modifier_findheight_lt() : modifier_findheight(kFindHeightGreaterThanModifier)
+	{
+	}
+	virtual ~modifier_findheight_lt()
+	{
+	}
+	virtual std::string ClassName() const override
+	{
+		return "himan::modifier_findheight_lt";
+	}
 	virtual void Calculate(double theValue, double theHeight, double thePreviousValue,
 	                       double thePreviousHeight) override;
 	virtual void FindNth(size_t theNth) override;
@@ -307,9 +389,16 @@ class modifier_findheight_lt : public modifier_findheight
 class modifier_findvalue : public modifier
 {
    public:
-	modifier_findvalue() : modifier(kFindValueModifier), itsValuesFound(0) {}
-	virtual ~modifier_findvalue() {}
-	virtual std::string ClassName() const override { return "himan::modifier_findvalue"; }
+	modifier_findvalue() : modifier(kFindValueModifier), itsValuesFound(0)
+	{
+	}
+	virtual ~modifier_findvalue()
+	{
+	}
+	virtual std::string ClassName() const override
+	{
+		return "himan::modifier_findvalue";
+	}
 	virtual void Calculate(double theValue, double theHeight, double thePreviousValue,
 	                       double thePreviousHeight) override;
 
@@ -328,9 +417,16 @@ class modifier_findvalue : public modifier
 class modifier_plusminusarea : public modifier
 {
    public:
-	modifier_plusminusarea() : modifier(kPlusMinusAreaModifier), itsValuesFound(0) {}
-	virtual ~modifier_plusminusarea() {}
-	virtual std::string ClassName() const override { return "himan::modifier_plusminusarea"; }
+	modifier_plusminusarea() : modifier(kPlusMinusAreaModifier), itsValuesFound(0)
+	{
+	}
+	virtual ~modifier_plusminusarea()
+	{
+	}
+	virtual std::string ClassName() const override
+	{
+		return "himan::modifier_plusminusarea";
+	}
 	virtual void Calculate(double theValue, double theHeight, double thePreviousValue,
 	                       double thePreviousHeight) override;
 

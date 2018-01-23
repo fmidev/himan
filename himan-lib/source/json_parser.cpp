@@ -58,7 +58,10 @@ static logger itsLogger;
  *
  */
 
-json_parser::json_parser() { itsLogger = logger("json_parser"); }
+json_parser::json_parser()
+{
+	itsLogger = logger("json_parser");
+}
 vector<shared_ptr<plugin_configuration>> json_parser::Parse(shared_ptr<configuration> conf)
 {
 	if (conf->ConfigurationFile().empty())
@@ -624,8 +627,6 @@ raw_time GetLatestOriginDateTime(const shared_ptr<configuration> conf, const str
 
 	HPDatabaseType dbtype = conf->DatabaseType();
 	producer sourceProducer = conf->SourceProducer();
-
-	map<string, string> prod;
 
 	raw_time latestOriginDateTime;
 
@@ -1531,13 +1532,11 @@ void ParseLevels(shared_ptr<info> anInfo, const boost::property_tree::ptree& pt)
 vector<level> LevelsFromString(const string& levelType, const string& levelValues)
 {
 	HPLevelType theLevelType = HPStringToLevelType.at(boost::to_lower_copy(levelType));
-
 	vector<level> levels;
 
-	const vector<string> levelsStr = himan::util::Split(levelValues, ",", true);
-
-	if (theLevelType == kHeightLayer || theLevelType == kGroundDepth)
+	if (theLevelType == kHeightLayer || theLevelType == kGroundDepth || theLevelType == kPressureDelta)
 	{
+        const vector<string> levelsStr = himan::util::Split(levelValues, ",", false);
 		for (size_t i = 0; i < levelsStr.size(); i++)
 		{
 			const vector<string> levelIntervals = himan::util::Split(levelsStr[i], "_", false);
@@ -1545,7 +1544,8 @@ vector<level> LevelsFromString(const string& levelType, const string& levelValue
 			if (levelIntervals.size() != 2)
 			{
 				throw runtime_error(
-				    "height_layer and ground_depth requires two level values per definition (lx1_ly1, lx2_ly2, ..., "
+				    "height_layer, ground_depth and pressure delta requires two level values per definition (lx1_ly1, "
+				    "lx2_ly2, ..., "
 				    "lxN_lyN)");
 			}
 
@@ -1555,6 +1555,7 @@ vector<level> LevelsFromString(const string& levelType, const string& levelValue
 	}
 	else
 	{
+        const vector<string> levelsStr = himan::util::Split(levelValues, ",", true);
 		for (size_t i = 0; i < levelsStr.size(); i++)
 		{
 			levels.push_back(level(theLevelType, boost::lexical_cast<float>(levelsStr[i]), levelType));
@@ -1583,7 +1584,8 @@ vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt)
 			{
 				forecastType = kEpsPerturbation;
 				string list = "";
-				for (size_t i = 2; i < type.size(); i++) list += type[i];
+				for (size_t i = 2; i < type.size(); i++)
+					list += type[i];
 
 				vector<string> range = himan::util::Split(list, "-", false);
 

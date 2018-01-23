@@ -30,7 +30,10 @@ class plugin_configuration : public configuration
 	 * @return Class name
 	 */
 
-	std::string ClassName() const { return "himan::plugin_configuration"; }
+	std::string ClassName() const
+	{
+		return "himan::plugin_configuration";
+	}
 	std::ostream& Write(std::ostream& file) const;
 
 	/**
@@ -99,7 +102,6 @@ class plugin_configuration : public configuration
 
 	const std::vector<std::pair<std::string, std::string>>& GetParameterOptions(const std::string& paramName) const;
 
-
 	void Info(std::shared_ptr<info> theInfo);
 	std::shared_ptr<info> Info() const;
 
@@ -117,7 +119,10 @@ class plugin_configuration : public configuration
 	std::shared_ptr<statistics> itsStatistics;
 };
 
-inline std::ostream& operator<<(std::ostream& file, const plugin_configuration& ob) { return ob.Write(file); }
+inline std::ostream& operator<<(std::ostream& file, const plugin_configuration& ob)
+{
+	return ob.Write(file);
+}
 }  // namespace himan
 
 #endif /* PLUGIN_CONFIGURATION_H */

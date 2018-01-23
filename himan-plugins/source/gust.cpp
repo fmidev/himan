@@ -31,7 +31,9 @@ struct deltaT
 	vector<double> deltaT_600;
 	vector<double> deltaT_700;
 
-	deltaT() {}
+	deltaT()
+	{
+	}
 };
 
 struct deltaTot
@@ -44,7 +46,9 @@ struct deltaTot
 	vector<double> deltaTot_600;
 	vector<double> deltaTot_700;
 
-	deltaTot() {}
+	deltaTot()
+	{
+	}
 };
 
 struct intT
@@ -57,7 +61,9 @@ struct intT
 	vector<double> intT_600;
 	vector<double> intT_700;
 
-	intT() {}
+	intT()
+	{
+	}
 };
 
 struct intTot
@@ -70,7 +76,9 @@ struct intTot
 	vector<double> intTot_600;
 	vector<double> intTot_700;
 
-	intTot() {}
+	intTot()
+	{
+	}
 };
 
 void DeltaT(shared_ptr<const plugin_configuration> conf, info_t T_lowestLevel, const forecast_time& ftime,
@@ -81,7 +89,10 @@ void IntTot(intTot& iTot, const deltaTot& dTot, size_t gridSize);
 void LowAndMiddleClouds(vector<double>& lowAndMiddleClouds, info_t lowClouds, info_t middleClouds, info_t highClouds,
                         info_t totalClouds);
 
-gust::gust() { itsLogger = logger("gust"); }
+gust::gust()
+{
+	itsLogger = logger("gust");
+}
 void gust::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
@@ -122,9 +133,9 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	const param GustParam("FFG-MS");                                      // wind gust
 	const param TParam("T-K");                                            // temperature
 	const param TopoParam("Z-M2S2");                                      // geopotential height
-	const params LowCloudParam = {param("NL-PRCNT"), param("NL-0TO1")};   // low cloud cover
-	const params MidCloudParam = {param("NM-PRCNT"), param("NM-0TO1")};   // middle cloud cover
-	const params HighCloudParam = {param("NH-PRCNT"), param("NH-0TO1")};  // high cloud cover
+	const params LowCloudParam = {param("NL-0TO1"), param("NL-PRCNT")};   // low cloud cover
+	const params MidCloudParam = {param("NL-0TO1"), param("NM-PRCNT")};   // middle cloud cover
+	const params HighCloudParam = {param("NL-0TO1"), param("NH-PRCNT")};  // high cloud cover
 	const params TotalCloudParam = {param("N-PRCNT"), param("N-0TO1")};   // total cloud cover
 
 	level H0, H10;

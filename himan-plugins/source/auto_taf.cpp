@@ -75,7 +75,10 @@ double LowestLayer(const vector<cloud_layer>& c_l, double threshold, size_t& end
 	return MissingDouble();
 }
 
-auto_taf::auto_taf() { itsLogger = logger("auto_taf"); }
+auto_taf::auto_taf()
+{
+	itsLogger = logger("auto_taf");
+}
 void auto_taf::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
@@ -124,7 +127,7 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	myThreadedLogger.Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()));
 
-	// find height of cb base and convert to feet
+	// 1. find height of cb base and convert to feet
 	level HL500 = level(kHeightLayer, 500, 0);
 
 	info_t LCL500 = Fetch(forecastTime, HL500, LCL, forecastType, false);
@@ -152,18 +155,18 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	info_t TC = Fetch(forecastTime, level(kHeight, 0.0), TCU_CB, forecastType, false);
 	info_t Ceiling2 = Fetch(forecastTime, level(kHeight, 0.0), C2, forecastType, false);
 
-	// search for lowest cloud layer
-	auto few_lowest = h->VerticalHeight(param("N-0TO1"), 0.0, 10000.0, few, 1);
-	auto sct_lowest = h->VerticalHeight(param("N-0TO1"), 0.0, 10000.0, sct, 1);
-
-	for_each(few_lowest.begin(), few_lowest.end(), [](double& val) { val /= 0.3048; });
-	for_each(sct_lowest.begin(), sct_lowest.end(), [](double& val) { val /= 0.3048; });
-
 	if (!TC || !Ceiling2)
 	{
 		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()));
 		return;
 	}
+
+	// 2. search for lowest cloud layer
+	auto few_lowest = h->VerticalHeight(param("N-0TO1"), 0.0, 10000.0, few, 1);
+	auto sct_lowest = h->VerticalHeight(param("N-0TO1"), 0.0, 10000.0, sct, 1);
+
+	for_each(few_lowest.begin(), few_lowest.end(), [](double& val) { val /= 0.3048; });
+	for_each(sct_lowest.begin(), sct_lowest.end(), [](double& val) { val /= 0.3048; });
 
 	for (auto&& tup : zip_range(cbbase, VEC(TC)))
 	{
@@ -180,7 +183,7 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	}
 	// end find height of cb base
 
-	// mark cloud layers
+	// 3. mark cloud layers
 	size_t grd_size = VEC(TC).size();
 
 	vector<vector<double>> top = vector<vector<double>>(grd_size, vector<double>());
@@ -225,6 +228,13 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 				{
 					N_max[k].back() = _N;
 				}
+
+				// if highest model level has clouds put top on highest cloud layer
+				if (base[k].size() > top[k].size() && j == firstLevel + 1)
+				{
+					double newtop = _Height / 0.3048;
+					top[k].push_back(newtop);
+				}
 			}
 #ifdef DEBUG
 			if (k == pdebug)
@@ -247,6 +257,14 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		vector<double>& _N_max = tup.get<1>();
 		vector<double>& _base = tup.get<2>();
 		vector<double>& _top = tup.get<3>();
+
+		// this should not happen, maybe just use assert
+		if (_base.size() != _top.size() || _top.size() != _N_max.size())
+		{
+			myThreadedLogger.Warning("base, top and N have different sizes: " + to_string(_base.size()) + " " +
+			                         to_string(_top.size()) + " " + to_string(_N_max.size()));
+			continue;
+		}
 		for (size_t j = 0; j < _base.size(); ++j)
 		{
 			_c_l[j].base = _base[j];
@@ -286,12 +304,13 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		}
 	}
 
-	// cut off odd cloud layers
+	// 4. cut off odd cloud layers
 	for (size_t k = 0; k < grd_size; ++k)
 	{
-		if (base[k].size() == 0) continue;
+		if (base[k].size() == 0)
+			continue;
 
-		// is there a cload layer in height class
+		// is there a cloud layer in height class
 		vector<bool> height_class(4, false);
 		vector<double> height_bounds = {200.0, 500.0, 1000.0, 1400.0};
 		vector<size_t> layers_to_remove;
@@ -359,7 +378,7 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		}
 	}
 
-	// write cloud data to output parameters
+	// 6. write cloud data to output parameters
 	vector<double> ovcbase(grd_size, MissingDouble());
 	vector<double> bknbase(grd_size, MissingDouble());
 	vector<double> sctbase(grd_size, MissingDouble());
@@ -379,13 +398,18 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		}
 
 		--n;
-
+		// 5. if there is convective cloud, its cloud fraction and base height are defined
 		if (abs(TC->Data().At(k)) > 50.0)
 		{
 			// find nearest cloud layer above or equal cbbase
 			auto nearest_cl =
 			    lower_bound(c_l[k].begin(), c_l[k].end(), cloud_layer(cbbase[k], MissingDouble(), MissingDouble()),
 			                [](const cloud_layer& a, const cloud_layer& b) { return a.base < b.base; });
+
+			// if height of nearest cloud to LCL500 is higher than 5000ft or lower than 1500ft, then height of
+			// convective cloud stays the height of LCL500
+			if (nearest_cl->base >= 5000.0 || nearest_cl->base < 1500.0)
+				continue;
 
 			// no cloud layers above initial cbbase, use highest cloud layer
 			if (nearest_cl == c_l[k].end())
@@ -415,37 +439,49 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 				}
 				else
 				{
-					cbN[k] = (nearest_cl)->amount * 100.0;
+					cbN[k] = nearest_cl->amount * 100.0;
 					m = 5;
 				}
 			}
-			else
+			else  // if (nearest_cl->base < 5000.0 && nearest_cl->base >= 1500.0)
 			{
 				cbbase[k] = nearest_cl->base;
 				cbN[k] = nearest_cl->amount * 100.0;  // cloud amount in %
 			}
 
-			if (IsMissing(cbN[k])) cbbase[k] = MissingDouble();
+			if (IsMissing(cbN[k]))
+				cbbase[k] = MissingDouble();
 		}
 
 		ovcbase[k] = LowestLayer(c_l[k], ovc, m);
-		if (cbbase[k] > ovcbase[k]) cbbase[k] = MissingDouble();
-		if (ovcbase[k] == cbbase[k]) ovcbase[k] = MissingDouble();
-		if (m == 0) continue;
+		if (cbbase[k] > ovcbase[k])
+			cbbase[k] = MissingDouble();
+		if (ovcbase[k] == cbbase[k])
+			ovcbase[k] = MissingDouble();
+		if (m == 0)
+			continue;
 
 		bknbase[k] = LowestLayer(c_l[k], bkn, m = min(m, size_t(3)));
-		if (bknbase[k] >= cbbase[k]) bknbase[k] = MissingDouble();
-		if (m == 0) continue;
+		if (bknbase[k] >= cbbase[k])
+			bknbase[k] = MissingDouble();
+		if (m == 0)
+			continue;
 
 		sctbase[k] = LowestLayer(c_l[k], sct, m = min(m, size_t(2)));
-		if (sctbase[k] >= cbbase[k]) sctbase[k] = MissingDouble();
-		if (m == 0) continue;
+		if (sctbase[k] >= cbbase[k])
+			sctbase[k] = MissingDouble();
+		if (m == 0)
+			continue;
 
 		fewbase[k] = LowestLayer(c_l[k], cloud_treshold, m = min(m, size_t(1)));
-		if (fewbase[k] >= cbbase[k]) fewbase[k] = MissingDouble();
-		if (fewbase[k] < sctbase[k] && few_lowest[k] > sctbase[k]) sctbase[k] = few_lowest[k];
-		if (fewbase[k] < bknbase[k] && sct_lowest[k] > bknbase[k]) bknbase[k] = sct_lowest[k];
-		if (fewbase[k] < ovcbase[k] && sct_lowest[k] > ovcbase[k]) ovcbase[k] = sct_lowest[k];
+		if (fewbase[k] >= cbbase[k])
+			fewbase[k] = MissingDouble();
+		if (fewbase[k] < sctbase[k] && few_lowest[k] > sctbase[k])
+			sctbase[k] = few_lowest[k];
+		if (fewbase[k] < bknbase[k] && sct_lowest[k] > bknbase[k])
+			bknbase[k] = sct_lowest[k];
+		if (fewbase[k] < ovcbase[k] && sct_lowest[k] > ovcbase[k])
+			ovcbase[k] = sct_lowest[k];
 	}
 
 #ifdef DEBUG

@@ -21,7 +21,11 @@ namespace himan
 {
 struct packed_data
 {
-	bool HasData() const { return false; }
+	bool HasData() const
+	{
+		return false;
+	}
+
    private:
 #ifdef SERIALIZATION
 	friend class cereal::access;
@@ -50,7 +54,9 @@ struct packing_coefficients
 	double referenceValue;
 
 	CUDA_HOST
-	packing_coefficients() : bitsPerValue(0), binaryScaleFactor(0), decimalScaleFactor(0), referenceValue(0) {}
+	packing_coefficients() : bitsPerValue(0), binaryScaleFactor(0), decimalScaleFactor(0), referenceValue(0)
+	{
+	}
 };
 
 struct packed_data
@@ -74,7 +80,10 @@ struct packed_data
 	CUDA_HOST
 	packed_data(const packed_data& other);
 
-	virtual std::string ClassName() const { return "packed_data"; }
+	virtual std::string ClassName() const
+	{
+		return "packed_data";
+	}
 	void Resize(size_t newPackedLength, size_t newUnpackedLength);
 	void Set(unsigned char* packedData, size_t packedDataLength, size_t unpackedDataLength);
 	void Bitmap(int* newBitmap, size_t newBitmapLength);
@@ -124,9 +133,18 @@ inline CUDA_HOST CUDA_DEVICE double himan::packed_data_util::GetGribPower(long s
 	return divisor;
 }
 
-inline CUDA_HOST packed_data::~packed_data() { Clear(); }
-inline CUDA_HOST bool packed_data::HasData() const { return (unpackedLength > 0); }
-inline CUDA_HOST CUDA_DEVICE bool packed_data::HasBitmap() const { return (bitmapLength > 0); }
+inline CUDA_HOST packed_data::~packed_data()
+{
+	Clear();
+}
+inline CUDA_HOST bool packed_data::HasData() const
+{
+	return (unpackedLength > 0);
+}
+inline CUDA_HOST CUDA_DEVICE bool packed_data::HasBitmap() const
+{
+	return (bitmapLength > 0);
+}
 }  // namespace himan
 
 #endif /* HAVE_CUDA */

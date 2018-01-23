@@ -10,7 +10,6 @@
 #include "ogr_spatialref.h"
 #include "point_list.h"
 #include "stereographic_grid.h"
-#include "ogr_spatialref.h"
 #include <fstream>
 
 #include "plugin_factory.h"
@@ -32,7 +31,6 @@
 #include <NFmiRotatedLatLonArea.h>
 #include <NFmiStereographicArea.h>
 #include <NFmiTimeList.h>
-#include "NFmiFastQueryInfo.h"
 
 #ifdef __clang__
 
@@ -43,7 +41,10 @@
 using namespace std;
 using namespace himan::plugin;
 
-querydata::querydata() { itsLogger = logger("querydata"); }
+querydata::querydata()
+{
+	itsLogger = logger("querydata");
+}
 bool querydata::ToFile(info& theInfo, string& theOutputFile)
 {
 	ofstream out(theOutputFile.c_str());

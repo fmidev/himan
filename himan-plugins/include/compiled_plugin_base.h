@@ -105,7 +105,9 @@ class compiled_plugin_base
 {
    public:
 	compiled_plugin_base();
-	inline virtual ~compiled_plugin_base() {}
+	inline virtual ~compiled_plugin_base()
+	{
+	}
 	compiled_plugin_base(const compiled_plugin_base& other) = delete;
 	compiled_plugin_base& operator=(const compiled_plugin_base& other) = delete;
 
@@ -118,10 +120,13 @@ class compiled_plugin_base
 	 * @param targetInfo info-class instance holding the data
 	 */
 
-	virtual void WriteToFile(const info& targetInfo, write_options opts = write_options());
+	virtual void WriteToFile(const info_t targetInfo, write_options opts = write_options());
 
    protected:
-	virtual std::string ClassName() const { return "himan::plugin::compiled_plugin_base"; }
+	virtual std::string ClassName() const
+	{
+		return "himan::plugin::compiled_plugin_base";
+	}
 	/**
 	 * @brief Set primary dimension
 	 *
@@ -227,31 +232,6 @@ class compiled_plugin_base
 	 */
 
 	void Unpack(std::initializer_list<info_t> infos);
-
-	/**
-	 * @brief Copy data from info_simple to actual info, clear memory and
-	 * put the result to cache (optionally).
-	 *
-	 * Function has two slightly different calling types:
-	 * 1) A parameter has been calculated on GPU and the results have been stored
-	 *	to info_simple. This function will copy data to info and release the
-	 *	page-locked memory of info_simple. In this calling type the resulting
-	 *	data is not written to cache at this point, because it will be written
-	 *	to cache when it is written to disk.
-	 *
-	 * 2) A source parameter for a calculation has been read in packed format from
-	 *	grib and has been unpacked at GPU. This function will copy the unpacked
-	 *	source data from info_simple to info, release page-locked memory of
-	 *	info_simple and clear the packed data array from info. Then it will also
-	 *	write the source data to cache since it might be needed by some other
-	 *	plugin.
-	 *
-	 * @param anInfo Target info
-	 * @param aSimpleInfo Source info_simple
-	 * @param writeToCache If true info will be written to cache
-	 */
-
-	void CopyDataFromSimpleInfo(const info_t& anInfo, info_simple* aSimpleInfo, bool writeToCache);
 
 #endif
 

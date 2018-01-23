@@ -20,7 +20,10 @@ using namespace himan::plugin;
  *
  * */
 
-time_series::time_series(param theParam, size_t expectedSize) : itsParam(theParam) { itsInfos.reserve(expectedSize); }
+time_series::time_series(param theParam, size_t expectedSize) : itsParam(theParam)
+{
+	itsInfos.reserve(expectedSize);
+}
 void time_series::Fetch(std::shared_ptr<const plugin_configuration> config, forecast_time startTime,
                         const HPTimeResolution& timeSpan, int stepSize, int numSteps, const level& forecastLevel,
                         const forecast_type& requestedType = forecast_type(kDeterministic), bool readPackedData = false)
@@ -53,7 +56,10 @@ void time_series::Fetch(std::shared_ptr<const plugin_configuration> config, fore
 	}
 }
 
-void time_series::Param(param theParam) { itsParam = theParam; }
+void time_series::Param(param theParam)
+{
+	itsParam = theParam;
+}
 /*
  *
  * function definitions for "modifier" functions
@@ -69,13 +75,15 @@ template <class InputIt>
 himan::info_t Max(InputIt begin, InputIt end)
 {
 	// Empty series
-	if (begin == end) return nullptr;
+	if (begin == end)
+		return nullptr;
 
 	// Find first field that contains data
 	while (*begin == nullptr)
 	{
 		++begin;
-		if (begin == end) return nullptr;
+		if (begin == end)
+			return nullptr;
 	}
 
 	// Set first field as first set of maximum values
@@ -85,7 +93,8 @@ himan::info_t Max(InputIt begin, InputIt end)
 	for (; begin != end; ++begin)
 	{
 		// Empty info instance, skip
-		if (*begin == nullptr) continue;
+		if (*begin == nullptr)
+			continue;
 
 		// An explicit way to write the zip_range, avoiding the tuples
 		auto input = VEC((*begin)).begin();
@@ -106,13 +115,15 @@ himan::info_t Max(InputIt begin, InputIt end)
 template <class InputIt>
 himan::info_t Mean(InputIt begin, InputIt end)
 {
-	if (begin == end) return nullptr;
+	if (begin == end)
+		return nullptr;
 
 	// Find first field that contains data
 	while (*begin == nullptr)
 	{
 		++begin;
-		if (begin == end) return nullptr;
+		if (begin == end)
+			return nullptr;
 	}
 
 	// Set first field as first set of mean values
@@ -124,7 +135,8 @@ himan::info_t Mean(InputIt begin, InputIt end)
 	for (; begin != end; ++begin)
 	{
 		// Empty info instance, skip
-		if (*begin == nullptr) continue;
+		if (*begin == nullptr)
+			continue;
 
 		// An explicit way to write the zip_range, avoiding the tuples
 		auto input = VEC((*begin)).begin();
@@ -156,7 +168,10 @@ himan::info_t Mean(InputIt begin, InputIt end)
 *
 * */
 
-pot::pot() : itsStrictMode(false) { itsLogger = logger("pot"); }
+pot::pot() : itsStrictMode(false)
+{
+	itsLogger = logger("pot");
+}
 void pot::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
