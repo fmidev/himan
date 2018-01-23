@@ -25,8 +25,6 @@ extern "C" {
 #include <luabind/luabind.hpp>
 #include <luabind/operator.hpp>
 
-// void ScherlokHoms(info_t& myTargetInfo){std::cout<<myTargetInfo->Data().MissingValue() <<'\n';}
-
 using namespace himan;
 using namespace himan::plugin;
 using namespace luabind;
@@ -906,7 +904,7 @@ object SortedValues(const ensemble& ens)
 {
 	return VectorToTable(ens.SortedValues());
 }
-} // ensemble_wrapper
+}  // ensemble_wrapper
 
 namespace lagged_ensemble_wrapper
 {
@@ -1353,17 +1351,8 @@ object VectorToTable(const std::vector<double>& vec)
 	{
 		ret[++i] = val;
 
-		/*		"Lua tables make no distinction between a table value being nil and the corresponding key not existing
-		   in
-		   the table"
-		        if (val == MissingDouble())
-		        {
-		            ret[++i] = nil;
-		        }
-		        else
-		        {
-		            ret[++i] = val;
-		        }*/
+		// "Lua tables make no distinction between a table value being nil and
+		// the corresponding key not existing in the table"
 	}
 
 	return ret;
@@ -1407,6 +1396,16 @@ void luatool::WriteToFile(const info_t targetInfo, write_options writeOptions)
 
 void luatool::WriteToFile(const info_t targetInfo)
 {
-	compiled_plugin_base::WriteToFile(targetInfo, itsWriteOptions);
+	// luatool is recycling info when data is written, this causes problems with
+	// cache as the data in the cache might be overwritten by another script.
+	// Therefore re-create the info here which means a memory copy.
+	auto newInfo = std::make_shared<info>(*targetInfo);
+	newInfo->Create(targetInfo->Grid());
+	newInfo->ForecastTypeIterator().Set(targetInfo->ForecastTypeIndex());
+	newInfo->TimeIterator().Set(targetInfo->TimeIndex());
+	newInfo->LevelIterator().Set(targetInfo->LevelIndex());
+	newInfo->ParamIterator().Set(targetInfo->ParamIndex());
+
+	compiled_plugin_base::WriteToFile(newInfo, itsWriteOptions);
 }
 #endif  // __clang_analyzer__
