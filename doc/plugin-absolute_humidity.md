@@ -4,7 +4,7 @@ absolute_humidity -plugin calculates the absolute humidity of air.
 
 # Required source parameters
 
-* a = air density (kg/m^3)
+* a = absolute humidity (kg/m^3)
 * r = rain water mixing ratio (kg/kg)
 * s = snow mixing ratio (kg/kg)
 * g = graupel mixing ration (kg/kg)

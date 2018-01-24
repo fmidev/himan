@@ -8,7 +8,7 @@ Hitool has bindings for Himan lua functionality (luatool).
 
 # Methods
 
-The functions exposed by hitool are listed below. Return value of all functions is a std::vector<double>. Then multiple params are given (ie. vector<param>), hitool will scan all and return the first one that is found.
+The functions exposed by hitool are listed below. Return value of all functions is a std::vector<double>. When multiple params are given (i.e. vector<param>), hitool will return the first one that is found.
 
 ## Maximum value
 
@@ -44,7 +44,7 @@ Example: Find minimum total cloudiness between 0 and 500 meters.
 
 ## Mean value
 
-Return mean value of some parameter in the given height range. Mean value is integrated so that it is weighted with distance (as generally the distance between hybrid levels is gradually increasing towards the top to atmosphere).
+Return mean value of some parameter in the given height range. Mean value calculated using the First mean value theorem for definite integrals so that it is weighted with distance, as generally the distance between hybrid levels is gradually increasing towards the top to atmosphere.
 
     VerticalAverage(param, double lowerHeight, double upperHeight)
     VerticalAverage(vector<param>, double lowerHeight, double upperHeight)
@@ -101,7 +101,7 @@ Example: Find the wind speed at boundary layer height.
 
 ## Height
 
-Return the height where some parameters' value crosses the user given threshold was found. By default the last occurence will be returned, but that can adjusted with argument Nth.
+Return the height where some parameters' value crosses the user given threshold. By default the last occurence will be returned, but that can adjusted with argument Nth.
 
     VerticalHeight(vector<param>, double lowerHeight, double upperHeight, vector<double> searchValue, int Nth)
     VerticalHeight(vector<param>, vector<double> lowerHeight, vector<double> upperHeight, vector<double> searchValue, int Nth)
@@ -119,7 +119,7 @@ Example: Find the height of first and second 0 degree isotherms.
 
 ## Height greater than
 
-Return the height where some parameter value was higher than given limit value. This function will also consider the case where the value as found very close to the starting height, or where the value is consistently higher than limit value. For example when searching for the height where total cloudiness > 80%, in the case where a stratus cloud is found the regular height-search does not find the value (because the the cloudiness value did not cross 80% threshold). Argument Nth can have values 0 (= search for the last height where parameter value was encountered) or 1 (= search for the last height where parameter value was encountered).
+Return the height where some parameter value was higher than given limit value. This function will also consider the case where the value was found very close to the starting height, or where the value is consistently higher than limit value. For example when searching for the height where total cloudiness > 80%, in the case where a stratus cloud is found the regular height-search does not find the value (because the the cloudiness value did not cross 80% threshold). Argument Nth can have values 0 (= search for the last height where parameter value was encountered) or 1 (= search for the last height where parameter value was encountered).
 
     VerticalHeightGreaterThan(vector<param>, double lowerHeight, double upperHeight, vector<double> searchValue, int Nth)
     VerticalHeightGreaterThan(vector<param>, vector<double> lowerHeight, vector<double> upperHeight, vector<double> searchValue, int Nth)

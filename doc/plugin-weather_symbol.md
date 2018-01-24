@@ -1,6 +1,6 @@
 # Summary
 
-weather_symbol plugin is used to calculate a weather code, a single number to describes the current weather. This is a legacy parameter and is used only as input to oother parameters. For a better weather symbol algorithm, one should check plugin weather_code_2.
+weather_symbol plugin is used to calculate a weather code, a single number to describe the current weather. This is a legacy parameter and is used only as input to other parameters. For a better weather symbol algorithm, one should check plugin weather_code_2.
 
 # Required source parameters
 

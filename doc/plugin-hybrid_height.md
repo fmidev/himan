@@ -10,7 +10,7 @@ Plugin is optimized for GPU use.
 
 or 
 
-* t = temperature in K
+* T = temperature in K
 * p = pressure in hPa
 
 # Output parameters
@@ -25,18 +25,18 @@ If using geopotential, metric height is
 
     h = gp / g
 
-When using iterative approach the hypsometric equation is used (https://en.wikipedia.org/wiki/Hypsometric_equation)
+When geopotential is not available hybrid height is found through vertical integration of the hypsometric equation (https://en.wikipedia.org/wiki/Hypsometric_equation)
 
-    h = (R / g) * ((prevt - t) / 2) * log(prevp / p) + prevh
+    h = (R / g) * ((prevT - T) / 2) * log(prevp / p) + prevh
 
 Where
 
 * R is the specific gas constant for dry air
-* g is gravitational constant
+* g is acceleration of gravity
 
 Note: virtual temperature is not used.
 
-In the iterative approach, the calculation is started from the lowest level in a single threaded fashion.
+When solving the hypsometric equation, the calculation is started from the lowest level in a single threaded fashion.
 
 # Per-plugin configuration options
 

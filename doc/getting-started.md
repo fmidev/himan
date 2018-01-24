@@ -2,7 +2,7 @@
 
 Himan can be either built from source, or installed using pre-built rpm packages (https://download.fmi.fi/himan). Latter is recommended for a quick start. See also [using Docker images](#Using_Docker_images).
 
-In operative environments Himan relies heavily on a database that's providing all data and metadata. This database schema will be open sourced later this year. In the meanwhile, Himan can be tested using a "no database" mode.
+In operative environments Himan relies heavily on a database that is providing all data and metadata. This database schema will be open sourced later this year. In the meanwhile, Himan can be tested using a "no-database" mode.
 
 Example: running seaicing plugin for Hirlam data. Seaicing plugin calculates an index that describes the amount of ice that is built up on a ship's superstructure. Files for this example are located at example/seaicing.
 
@@ -47,14 +47,14 @@ The target area for the calculation has lower-left longitude 5 degrees and latit
         "target_producer" : "999999",
 ```
 
-Both source and target producer id's are 99999. This is corresponds to missing value: because the example is run using no-database mode, Himan is not able to fetch the real producer ids.
+Both source and target producer id are 999999. This corresponds to missing value: because the example is run using no-database mode, Himan is not able to fetch the real producer ids.
 
 ```
         "hours" : "3",
         "origintime" : "2017-04-05 00:00:00",
 ```
 
-The analysis time (or origin time) for the forecast is 5th of April, 2017 00z. The calculation is done for forecast hour (leadtime) 3, ie. valid time is 2017-04-05 03:00:00.
+The analysis time (or origin time) for the forecast is 5th of April, 2017 00z. The calculation is done for forecast hour (leadtime) 3, i.e. valid time is 2017-04-05 03:00:00.
 
 ```
         "file_write" : "multiple",

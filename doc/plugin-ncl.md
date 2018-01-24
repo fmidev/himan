@@ -4,7 +4,7 @@ ncl plugin is used to calculate the height of zero degree or -20 degree level.
 
 # Required source parameters
 
-* t = air temperature (K)
+* T = air temperature (K)
 * h = height (m)
 
 # Output parameters
@@ -15,7 +15,7 @@ Unit of resulting parameter is m.
 
 # Method of calculation
 
-Search the atmosphere vertically starting from ground for the first height where temperature crosses zero or -20 degree boundary. Plugin takes account the effects of inversion in the lower atmosphere.
+Search the atmosphere vertically starting from ground for the first height where temperature crosses zero or -20 degree boundary. The plugin takes into account the effects of inversion in the lower atmosphere.
 
 Note that similar functionality can be achieved with hitool function VerticalHeight(), although hitool does not consider the effects of inversion.
 

@@ -4,7 +4,7 @@ Configuring himan is done through json-files, and all the common rules of writin
 * Key and value are separated with colons
 * Elements are separated by commas
 
-The json file can be divided into two parts: the global part, configuration apply for all himan operations, ant the local part (processqueue) where some of the global options can be overwritten and extra options given.
+The json file can be divided into two parts: the global part, configuration apply for all himan operations, and the local part (processqueue) where some of the global options can be overwritten and extra options given.
 
 ##### Table of Contents  
 * [Target area](#Target_area)  
@@ -87,7 +87,7 @@ Area corners area bottom left and top right latitude longitude values.
     "top_right_latitude" : "<degrees>",
     "top_right_longitude" : "<degrees>",
 
-In stereographic projectio, the orientation of the area is given with key orientation
+In stereographic projection, the orientation of the area is given with key `orientation`
 
     "orientation" = "<degrees>"
 
@@ -121,13 +121,13 @@ List of points isn't exactly an area, but Himan treats it as one. It can be defi
 * with key `points`, point coordinates are given in the configuration file, or 
 * with key `stations`, point coordinates are fetched from database.
 
-`points` key can be used in two different way, either specifying just the coordinates or by defining coordinates and and id and name for a point. Different points are separated with commas, different values for a point are separated with a whitespace. Order of in-point elements is: id name longitude latitude.
+`points` key can be specified in two different ways, either by just the coordinates or by defining id, name and coordinates for a point. Different points are separated by a comma, different parameters for a point are separated with a whitespace. Order of in-point elements is: id name longitude latitude.
 
     "points" : "25 60,27 61",
 
     "points" : "1 Helsinki 25 60, 2 Kotka 27 61",
 
-With key stations Himan fetches point (station) information from a database based on the given id.
+With key `stations` Himan fetches point (station) information from a database using on the given station-id.
 
     "stations" : "100971,101030",
 
@@ -143,7 +143,7 @@ Target grid size is defined with keys `ni`and `nj`.
     "nj" : "<number of grid points in y-axis direction>"
 
 Grid scanning mode (direction of reading) is given with key `scanning_mode`. Possible values are
-* `+x+y`, reading starts at bottom left corner, and 
+* `+x+y`, reading starts at bottom left corner
 * `+x-y`, reading starts at top left corner
 
 `"scanning_mode" : "+x+y" | "+x-y"`
@@ -158,9 +158,9 @@ Example:
 
 # Source area and grid
 
-If source data is read from database (as is the case in FMI operations), key `source_geom_name` can be used to define one or more source areas. By default (if key is not set) Himan will read any geometry it founds from the database that matches the producer. Key `source_geom_name` can contain multiple values separated with a comma, and the order of the geometries is preserved. 
+If source data is read from database (as is the case in FMI operations), key `source_geom_name` can be used to define one or more source areas. By default (if key is not set) Himan will read any geometry it finds from the database that matches the producer. Key `source_geom_name` can contain multiple values separated with a comma, and the order of the geometries is preserved. 
 
-Note that if multiple geometries exist for a producer, and the first read does not cover the target area completely, Himan will not try amend the data using other geometries. Therefore the order of the geometries does matter! 
+**Note! that if multiple geometries exist for a producer, and the first read does not cover the target area completely, Himan will not try amend the data using other geometries. Therefore the order of the geometries does matter!**
 
     "source_geom_name" : "GEOM1,GEOM2"
 
@@ -183,7 +183,7 @@ Target producer is a single value.
     "source_producer" : "<source producer id(s)>"
     "target_producer" : "<target producer id>"
 
-Note! The more producers are defined, the longer the fetching process will last, especially if the producer that the data is found from is the last in the list.
+**Note! The more producers are defined, the longer the fetching process will last, especially if the producer that the data is found from is the last in the list.**
 
 Example:
 
@@ -202,7 +202,7 @@ Time information contains forecast analysis time and the forecast lead times (st
 
 Lead times can be listed in two ways:
 * listing all hours that should be calculated, or
-* listing start time and stop time and a step
+* listing start time, stop time and a step
 
 Time must be a top level element, but it can also be specified in processqueue level.
 
@@ -222,7 +222,7 @@ Multiple origin times can also be specified with key `origintimes`.
 
 ## Lead time method 1: Listing hours
 
-With key `hours` the hours (lead times) that should be calculated are listed. Values are separated with a comma, if a dash ('-') is used, Himan will interpolate values to fill the gap.
+With key `hours` the hours (lead times) that should be calculated are listed. Values are separated with a comma, if a hyphen ('-') is used, Himan will interpolate values to fill the gap.
 
     hours : <list of hours>
 
@@ -271,11 +271,11 @@ Target level for calculation is defined with key `leveltype`.
 
     "leveltype" : "height" | "pressure" | "hybrid" | "ground"
 
-The level value is given with key `levels`, values are separated with a comma, and if a dash is given Himan will try to fill the gap.
+The level value is given with key `levels`, values are separated with a comma, and if a hyphen is given Himan will try to fill the gap.
 
     "levels" : "<list of levels>",
 
-Most (but not all) plugins respect the level definition and will use it when processing data. Notable exceptions are ate least cape-plugin.
+Most (but not all) plugins respect the level definition and will use it when processing data. Notable exceptions are at least cape-plugin.
 
 Example:
 
@@ -288,7 +288,7 @@ Example:
 
 Started plugins are listed as json dictionary in a json table. The order of plugins is preserved.
 
-Plugin name can be given by using the full path (`himan::plugin::pluginin_name` or just the shorter name `plugin_name`. The only mandatory key for the dictionary is `name`; all other possible keys are read and passed on the called plugin. It is the responsibility of the plugin the to handle the extra parameters.
+Plugin name can be given by using the full path (`himan::plugin::pluginin_name` or just the shorter name `plugin_name`. The only mandatory key for the dictionary is `name`; all other possible keys are read and passed on the called plugin. It is the responsibility of the plugin to handle the extra parameters.
 
 Plugins are defined with key `plugins`
 
@@ -397,7 +397,7 @@ Example:
 
 ## Forecast types
 
-With key `forecast_type` the source forecast type is set. Using this, Himan can be used to calculate parameters to for example for all ensemble members. Default value for key is `deterministic`, meaning that Himan will read data from deterministic forecasts only.
+With key `forecast_type` the source forecast type is set. Using this, Himan can be used to calculate parameters for all ensemble members for example. Default value for key is `deterministic`, meaning that Himan will read data from deterministic forecasts only.
 
     "forecast_type" : "deterministic" | "cf" | "pf1-2"
 
@@ -429,7 +429,7 @@ Memory cache size can be controlled with key `cache_limit`. The value of the key
 
     "cache_limit" : "<integer value larger than 0>",
 
-Default value for key is -1, ie. no upper limit for cache size.
+Default value for key is -1, i.e. no upper limit for cache size.
 
 Example:
 
@@ -445,7 +445,7 @@ Default value is `false`.
 
 ## Asynchronous execution
 
-By default Himan plugins are executed in a serialized fashion, mostly because many of the plugins are dependent on the output of others. Some plugins, however, lie necessary at the end of the execution line, and when those plugins are in the critical chain of execution they will (unnecessarily) slow down the the total execution of Himan. 
+By default Himan plugins are executed in a serialized fashion, mostly because many of the plugins are dependent on the output of others. Some plugins, however, lie necessarily at the end of the execution line, and when those plugins are in the critical chain of execution they will (unnecessarily) slow down the the total execution of Himan. 
 
 This can be avoided by using the configuration file key 'async'. By default the value is false, confirming to the serialized execution. It can be set to true for any individual plugin or processqueue element scope.
 
@@ -457,7 +457,7 @@ This can be avoided by using the configuration file key 'async'. By default the 
                         "plugins" : [ { "name" : "...", "async" : false } ]
                 }
 
-Asynchronous execution should only be enabled for those plugins that have no other plugins as dependants!
+**Note! Asynchronous execution should only be enabled for those plugins that have no other plugins as dependants!**
 
 <a name="Full_examples"/>
 
@@ -465,7 +465,7 @@ Asynchronous execution should only be enabled for those plugins that have no oth
 
 The examples are using FMI defined geometry names and producers ids.
 
-Calculating weather code -parameter from ECMWF forecast, using two source geometries and two source producers.
+Calculating weather-code parameter from ECMWF forecast, using two source geometries and two source producers.
 
     {
         "source_geom_name" : "ECEDIT125,MTEDIT125",

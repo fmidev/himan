@@ -1,6 +1,6 @@
 # Summary
 
-Fractile plugin is used for ensemble data and it calculates a set of fractiles for a given paramerer. The ensemble can be a a traditional ensemble with multiple perturbed forecasts, or a time ensemble consisting of consecutive times.
+Fractile plugin is used for ensemble data and it calculates a set of fractiles for a given paramerer. The ensemble can be a traditional ensemble with multiple perturbed forecasts, or a time ensemble consisting of consecutive times.
 
 The default fractiles are:
 
@@ -14,7 +14,7 @@ The default fractiles are:
 
 The exact fractile value is interpolated linearly, as recommended by NIST (http://www.itl.nist.gov/div898/handbook/prc/section2/prc262.htm).
 
-Plugin will also calculate mean value and spread.
+Plugin will also calculate mean value and spread/standard deviation.
 
 # Required source parameters
 
@@ -26,7 +26,7 @@ Any wanted fractile, the naming of parameters is F<fractile>-<paramname> (eg. F1
 
 # Method of calculation
 
-Plugin will sort the the input values and calculate the required fractiles. Missing values are excluded.
+Plugin will sort the input values and calculate the required fractiles. Missing values are excluded.
 
 # Per-plugin configuration options
 
@@ -46,7 +46,7 @@ max_missing_forecasts: define how many forecasts are allowed to be missing from 
 
 fractiles: which set of fractiles to calculate.
 
-    "fractiles" : "100,90,75,50,25,20,0"
+    "fractiles" : "100,90,75,50,25,20,10,0"
 
 ensemble_type: define the type of ensemble. Currently supported is the traditional ensemble with multiple perturbed forecasts, and a time_ensemble where multiple different times produce an ensemble. Default value is the traditional ensemble.
 

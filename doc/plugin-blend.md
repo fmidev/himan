@@ -15,11 +15,12 @@ The plugin outputs an ensemble consisting of the source forecasts as perturbed m
 
 # Method of calculation
 
-```CF_Output = f[0] * w[1] + f[1] * w[1] + ... + f[n] * w[n]```
+```CF_Output = f[0] * w[0] + f[1] * w[1] + ... + f[n] * w[n]```
 
 # Per-plugin configuration options
 
 param: Specifies the parameter to be blended
+
 options: Specifies a list of producer specifications of the form: 
 ```{ "producer" : PROD, "geom" : GEOM, "forecast_type" : FTYPE }```
 
