@@ -1450,6 +1450,10 @@ himan::level grib::ReadLevel() const
 			levelType = himan::kGroundDepth;
 			break;
 
+		case 200:
+			levelType = himan::kEntireAtmosphere;
+			break;
+
 		case 246:
 			levelType = himan::kMaximumThetaE;
 			break;
