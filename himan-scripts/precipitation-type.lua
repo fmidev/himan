@@ -9,11 +9,9 @@ local function CheckedFetch(parm_name, lvl, time)
   end
 end
 
+local MISS = missing
 local currentProducer = configuration:GetSourceProducer(1)
 local currentProducerName = currentProducer.GetName(currentProducer)
-
-msg = string.format("%s", currentProducer.GetName(currentProducer))
-logger:Info(msg)
 
 msg = string.format("Calculating potential precipitation type for producer: %s", currentProducerName)
 logger:Info(msg)
@@ -32,12 +30,8 @@ else
   rh700 = CheckedFetch("RH-PRCNT", level(HPLevelType.kPressure, 700), current_time)
 end
 
-local pref  = nil
-if currentProducerName == "MEPS" or currentProducerName == "MEPSMTA" then
-  pref = CheckedFetch("PRECFORM2-N", level(HPLevelType.kHeight, 0), current_time)
-else
-  pref = CheckedFetch("PRECFORM-N", level(HPLevelType.kHeight, 0), current_time)
-end
+local pref = CheckedFetch("POTPRECF-N", level(HPLevelType.kHeight, 0), current_time)
+local rrr = CheckedFetch("RRR-KGM2", level(HPLevelType.kHeight, 0), current_time)
 
 -- Limit for relative humidity
 -- HARMONIE and HIRLAM seem to have PRCNT in the range [0,1] but EC
@@ -52,26 +46,37 @@ elseif currentProducerName == "AROME" or currentProducerName == "AROMTA" or
 end
 
 local pret = {}
+local potpret = {}
 
 for i=1, #rh700 do
   local _rh925 = rh925[i]
   local _rh850 = rh850[i]
   local _rh700 = rh700[i]
   local _pref = pref[i]
+  local _rrr = rrr[i]
 
-  pret[i] = 2 -- initially 2
+  potpret[i] = 2 -- initially 2
+  pret[i] = MISS
 
   if _rh700 > Limit and _rh850 > Limit and _rh925 > Limit then
-    pret[i] = 1
+    potpret[i] = 1
   end
 
   if _pref == 0 or _pref == 4 or _pref == 5 then
-    pret[i] = 1
+    potpret[i] = 1
   end
+
+  if _rrr > 0 then
+    pret[i] = potpret[i]
+  end
+
 end
 
-result:SetParam(param("POTPRECT-N"))
+result:SetParam(param("PRECTYPE-N"))
 result:SetValues(pret)
+
+result:SetParam(param("POTPRECT-N"))
+result:SetValues(potpret)
 
 logger:Info("Writing source data to file")
 luatool:WriteToFile(result)
