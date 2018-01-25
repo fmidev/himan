@@ -104,7 +104,7 @@ class grib : public io_plugin
 	std::unique_ptr<grid> ReadAreaAndGrid() const;
 	himan::param ReadParam(const search_options& options, const producer& prod) const;
 	himan::forecast_time ReadTime() const;
-	himan::level ReadLevel() const;
+	himan::level ReadLevel(const search_options& options, const producer& prod) const;
 	himan::producer ReadProducer(const search_options& options) const;
 	void ReadData(info_t newInfo, bool readPackedData) const;
 
