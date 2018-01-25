@@ -1405,62 +1405,69 @@ himan::forecast_time grib::ReadTime() const
 	return t;
 }
 
-himan::level grib::ReadLevel() const
+himan::level grib::ReadLevel(const search_options& opts, const producer& prod) const
 {
-	long gribLevel = itsGrib->Message().NormalizedLevelType();
+	himan::HPLevelType levelType = kUnknownLevel;
 
-	himan::HPLevelType levelType;
-
-	switch (gribLevel)
+	if (opts.configuration->DatabaseType() == kNoDatabase)
 	{
-		case 1:
-			levelType = himan::kGround;
-			break;
+		// Minimal set of levels for those who might try to run himan
+		// without a database connection
+		const long gribLevel = itsGrib->Message().NormalizedLevelType();
 
-		case 8:
-			levelType = himan::kTopOfAtmosphere;
-			break;
+		switch (gribLevel)
+		{
+			case 1:
+				levelType = himan::kGround;
+				break;
+			case 100:
+				levelType = himan::kPressure;
+				break;
+			case 105:
+				levelType = himan::kHeight;
+				break;
+			case 109:
+				levelType = himan::kHybrid;
+				break;
+			default:
+				itsLogger.Fatal("Unsupported level type for no database mode: " +
+				                boost::lexical_cast<string>(gribLevel));
+				himan::Abort();
+		}
+	}
+	else
+	{
+		const long gribLevel = itsGrib->Message().LevelType();
 
-		case 100:
-			levelType = himan::kPressure;
-			break;
+		auto r = GET_PLUGIN(radon);
 
-		case 101:
-			levelType = himan::kPressureDelta;
-			break;
+		auto levelInfo = r->RadonDB().GetLevelFromGrib(prod.Id(), gribLevel, itsGrib->Message().Edition());
 
-		case 102:
-		case 103:
-			levelType = himan::kMeanSea;
-			break;
-
-		case 105:
-			levelType = himan::kHeight;
-			break;
-
-		case 106:
-			levelType = himan::kHeightLayer;
-			break;
-
-		case 109:
-			levelType = himan::kHybrid;
-			break;
-
-		case 112:
-			levelType = himan::kGroundDepth;
-			break;
-
-		case 200:
-			levelType = himan::kEntireAtmosphere;
-			break;
-
-		case 246:
-			levelType = himan::kMaximumThetaE;
-			break;
-
-		default:
-			itsLogger.Fatal("Unsupported level type: " + boost::lexical_cast<string>(gribLevel));
+		if (levelInfo.empty())
+		{
+			itsLogger.Fatal("Unsupported level type: " + to_string(gribLevel));
 			himan::Abort();
+		}
+
+		string levelName = levelInfo["name"];
+		boost::algorithm::to_lower(levelName);
+
+		// Special cases:
+
+		// 1. Check if we have a height_layer, which in grib2 is first and second leveltype 103
+
+		if (levelName == "height" && itsGrib->Message().Edition() == 2)
+		{
+			const long levelType2 = itsGrib->Message().GetLongKey("typeOfSecondFixedSurface");
+			const long levelValue2 = itsGrib->Message().LevelValue2();
+
+			if (levelType2 == 103 && levelValue2 != -999 && levelValue2 != 214748364700)
+			{
+				levelName = "height_layer";
+			}
+		}
+
+		levelType = HPStringToLevelType.at(levelName);
 	}
 
 	himan::level l;
@@ -1716,7 +1723,7 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 		}
 	}
 
-	auto l = ReadLevel();
+	auto l = ReadLevel(options, prod);
 
 	if (l != options.level)
 	{
