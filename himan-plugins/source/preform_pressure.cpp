@@ -70,28 +70,15 @@ void preform_pressure::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 
-	/*
-	 * !!! HUOM !!!
-	 *
-	 * GRIB2 precipitation type <> FMI precipitation form
-	 *
-	 * FMI:
-	 * 0 = tihku, 1 = vesi, 2 = räntä, 3 = lumi, 4 = jäätävä tihku, 5 = jäätävä sade
-	 *
-	 * GRIB2:
-	 * 0 = Reserved, 1 = Rain, 2 = Thunderstorm, 3 = Freezing Rain, 4 = Mixed/Ice, 5 = Snow
-	 *
-	 */
+	vector<param> params({param("PRECFORM-N")});
 
-	if (itsConfiguration->OutputFileType() == kGRIB2)
+	if (itsConfiguration->Exists("potential_precipitation_form") &&
+	    itsConfiguration->GetValue("potential_precipitation_form") == "true")
 	{
-		itsLogger.Error(
-		    "GRIB2 output requested, conversion between FMI precipitation form and GRIB2 precipitation type is not "
-		    "lossless");
-		return;
+		params.push_back(param("POTPRECF-N"));
 	}
 
-	SetParams({param("PRECFORM-N", 57)});
+	SetParams(params);
 
 	Start();
 }
@@ -190,12 +177,15 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 		RHScale = 1;
 	}
 
-	int DRIZZLE = 0;
-	int RAIN = 1;
-	int SLEET = 2;
-	int SNOW = 3;
-	int FREEZING_DRIZZLE = 4;
-	int FREEZING_RAIN = 5;
+	const bool noPotentialPrecipitationForm = (myTargetInfo->SizeParams() == 1);
+
+	const int DRIZZLE = 0;
+	const int RAIN = 1;
+	const int SLEET = 2;
+	const int SNOW = 3;
+	const int FREEZING_DRIZZLE = 4;
+	const int FREEZING_RAIN = 5;
+
 	LOCKSTEP(myTargetInfo, TInfo, T700Info, T850Info, T925Info, RHInfo, RH700Info, RH850Info, RH925Info, W925Info,
 	         W850Info, RRInfo, PInfo, SNRInfo)
 	{
@@ -203,7 +193,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 		// No rain --> no rain type
 
-		if (RR == 0 || IsMissing(RR))
+		if (noPotentialPrecipitationForm && (RR == 0 || IsMissing(RR)))
 		{
 			continue;
 		}
@@ -378,9 +368,27 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 				PreForm = RAIN;
 			}
 		}
-		if (!IsMissingInt(PreForm))
+
+		// FINISHED
+
+		if (RR == 0)
 		{
+			// If RR is zero, we can only have potential prec form
+			myTargetInfo->ParamIndex(1);
 			myTargetInfo->Value(PreForm);
+		}
+		else
+		{
+			// If there is precipitation, we have at least regular prec form
+			myTargetInfo->ParamIndex(0);
+			myTargetInfo->Value(PreForm);
+
+			if (!noPotentialPrecipitationForm)
+			{
+				// Also potential prec form
+				myTargetInfo->ParamIndex(1);
+				myTargetInfo->Value(PreForm);
+			}
 		}
 	}
 
