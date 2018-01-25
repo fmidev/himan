@@ -11,7 +11,7 @@
 --
 -- x (first digit): version number, currently 1
 -- a: thunder probability (number of possible values: 3)
--- b: potential precipitation form (7)
+-- b: potential precipitation form (9)
 -- c: potential precipitation type (3)
 -- d: one hour precipitation sum (8)
 -- e: fog (4)
@@ -19,13 +19,13 @@
 -- g: cloud type (8)
 --
 -- The theoretical number of possible permutations of the parameter is:
--- 3 * 7 * 3 * 8 * 4 * 9 * 8 = 145152
+-- 3 * 7 * 3 * 8 * 4 * 9 * 8 = 186624
 --
 -- SmartSymbol:
--- For a client application a weather parameter with 145152 possible values is just 
+-- For a client application a weather parameter with this many possible values is just
 -- unusable. Therefore we 'dumb down' the WeatherNumber to SmartSymbol. This procedure
 -- takes all permutations of one weather state (for example 'Clear skies') and assigns just
--- one number for it. This reduces the number of different values to 46.
+-- one number for it. This reduces the number of different values to 47.
 --
 -- We still leave WeatherNumber as it is, because it can be used when for example 
 -- doing interpolation for the data.
@@ -154,7 +154,7 @@ function CreateLookupTable()
 
   -- Variables used are: 
   -- a: pot  0-2
-  -- b: pref 0-6
+  -- b: pref 0-8
   -- c: pret 0-2
   -- d: rr   0-7
   -- e: fog  0-3
@@ -164,31 +164,31 @@ function CreateLookupTable()
   -- second to last argument is SmartSymbol, last argument is Hessaa
 
   -- Clear
-  Generate({0,0},{0,6},{0,2},{0,0},{0,0},{0,1},{0,7},10000000,1)
+  Generate({0,0},{0,8},{0,2},{0,0},{0,0},{0,1},{0,7},10000000,1)
 
   -- Mostly Clear
-  Generate({0,0},{0,6},{0,2},{0,0},{0,0},{2,2},{0,7},10000020,1)
+  Generate({0,0},{0,8},{0,2},{0,0},{0,0},{2,2},{0,7},10000020,1)
 
   -- Partly cloudy
-  Generate({0,0},{0,6},{0,2},{0,0},{0,0},{3,5},{0,7},10000030,2)
+  Generate({0,0},{0,8},{0,2},{0,0},{0,0},{3,5},{0,7},10000030,2)
 
   -- Mostly cloudy
-  Generate({0,0},{0,6},{0,2},{0,0},{0,0},{6,7},{0,7},10000060,3)
+  Generate({0,0},{0,8},{0,2},{0,0},{0,0},{6,7},{0,7},10000060,3)
 
   -- Overcast
-  Generate({0,0},{0,6},{0,2},{0,0},{0,0},{8,8},{0,7},10000080,3)
+  Generate({0,0},{0,8},{0,2},{0,0},{0,0},{8,8},{0,7},10000080,3)
 
   -- Fog
-  Generate({0,0},{0,6},{0,2},{0,0},{1,2},{0,8},{0,7},10000100,3)
+  Generate({0,0},{0,8},{0,2},{0,0},{1,2},{0,8},{0,7},10000100,3)
 
   -- Isolated thundershowers
-  Generate({1,2},{0,6},{0,2},{0,7},{0,3},{0,5},{0,7},11000000,61)
+  Generate({1,2},{0,8},{0,2},{0,7},{0,3},{0,5},{0,7},11000000,61)
 
   -- Scattered thundershowers
-  Generate({1,2},{0,6},{0,2},{0,7},{0,3},{6,7},{0,7},11000060,63)
+  Generate({1,2},{0,8},{0,2},{0,7},{0,3},{6,7},{0,7},11000060,63)
 
   -- Thundershowers
-  Generate({1,2},{0,6},{0,2},{0,7},{0,3},{8,8},{0,7},11000080,63)
+  Generate({1,2},{0,8},{0,2},{0,7},{0,3},{8,8},{0,7},11000080,63)
 
   -- Isolated showers
   Generate({0,0},{1,1},{2,2},{1,7},{0,3},{0,5},{0,7},10121000,21)
@@ -297,6 +297,9 @@ function CreateLookupTable()
 
   -- Hail showers
   Generate({0,0},{6,6},{0,2},{1,7},{0,3},{8,8},{0,7},10601080,31)
+
+  -- Snow or ice grains
+  Generate({0,0},{7,8},{0,2},{1,7},{0,3},{0,8},{0,7},10301080,51)
 
   -- for k,v in pairs(HessaaTable) do print(k,v) end
 end
