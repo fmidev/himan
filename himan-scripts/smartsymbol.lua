@@ -293,10 +293,10 @@ function CreateLookupTable()
   Generate({0,0},{6,6},{0,2},{1,7},{0,3},{0,5},{0,7},10601000,41)
 
   -- Scattered hail showers
-  Generate({0,0},{6,6},{0,2},{1,7},{0,3},{6,7},{0,7},10601060,51)
+  Generate({0,0},{6,6},{0,2},{1,7},{0,3},{6,7},{0,7},10601060,31)
 
   -- Hail showers
-  Generate({0,0},{6,6},{0,2},{1,7},{0,3},{8,8},{0,7},10601080,51)
+  Generate({0,0},{6,6},{0,2},{1,7},{0,3},{8,8},{0,7},10601080,31)
 
   -- for k,v in pairs(HessaaTable) do print(k,v) end
 end
