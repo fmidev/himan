@@ -171,9 +171,8 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 	// In Hirlam parameter name is RH-PRCNT but data is still 0 .. 1
 	double RHScale = 100;
 
-	if (RHInfo->Producer().Process() == 240 || RHInfo->Producer().Process() == 243)
+	if (RHInfo->Producer().Process() == 240 || RHInfo->Producer().Process() == 243 || RHInfo->Producer().Id() == 53)
 	{
-		// himan-calculated RH has values 0 .. 100
 		RHScale = 1;
 	}
 
@@ -240,6 +239,10 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 		W850 *= WScale;
 		W925 *= WScale;
+
+		ASSERT(RH >= 0 && RH <= 101);
+		ASSERT(RH700 >= 0 && RH700 <= 101);
+
 		/*
 		        cout	<< "T\t\t" << T << endl
 		                << "T700\t\t" << T700 << endl
@@ -260,8 +263,6 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 		                << "wMax\t\t" << wMax << endl
 		                << "stTlimit\t" << stTlimit << endl
 		                << "SNR\t\t" << SNR << endl;
-
-		        abort();
 		*/
 		// (0=tihku, 1=vesi, 2=räntä, 3=lumi, 4=jäätävä tihku, 5=jäätävä sade)
 
@@ -319,7 +320,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 		double SNR_RR = 0;  // oletuksena kaikki sade vetta
 
-		if (!IsMissing(SNR))
+		if (!IsMissing(SNR) && RR != 0)
 		{
 			// lasketaan oikea suhde vain jos lumidataa on (kesalla ei ole)
 			SNR_RR = SNR / RR;
@@ -371,23 +372,30 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 		// FINISHED
 
+		double dForm = PreForm;
+
+		if (IsMissingInt(PreForm))
+		{
+			dForm = MissingDouble();
+		}
+
 		if (RR == 0)
 		{
 			// If RR is zero, we can only have potential prec form
 			myTargetInfo->ParamIndex(1);
-			myTargetInfo->Value(PreForm);
+			myTargetInfo->Value(dForm);
 		}
 		else
 		{
 			// If there is precipitation, we have at least regular prec form
 			myTargetInfo->ParamIndex(0);
-			myTargetInfo->Value(PreForm);
+			myTargetInfo->Value(dForm);
 
 			if (!noPotentialPrecipitationForm)
 			{
 				// Also potential prec form
 				myTargetInfo->ParamIndex(1);
-				myTargetInfo->Value(PreForm);
+				myTargetInfo->Value(dForm);
 			}
 		}
 	}
