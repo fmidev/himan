@@ -54,13 +54,6 @@ const double stH = 15.;
 // Suht. kosteuden raja-arvo alapilvelle (925/850/700hPa) [%]
 const double rhLim = 90.;
 
-// define missing int value
-const int missingInt = numeric_limits<int>::min();
-
-bool IsMissingInt(int val)
-{
-	return val == missingInt;
-}
 preform_pressure::preform_pressure()
 {
 	itsLogger = logger("preform_pressure");
@@ -219,7 +212,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 			continue;
 		}
 
-		int PreForm = missingInt;
+		double PreForm = MissingDouble();
 
 		// Unit conversions
 
@@ -291,7 +284,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 		// jäätävää vesisadetta: "pinnassa pakkasta ja sulamiskerros pinnan lähellä"
 
-		if (IsMissingInt(PreForm) AND(T <= 0) AND((T925 > 0)OR(T850 > 0) OR(T700 > 0)))
+		if (IsMissing(PreForm) AND(T <= 0) AND((T925 > 0)OR(T850 > 0) OR(T700 > 0)))
 		{
 			// ollaanko korkeintaan ~750m merenpinnasta (pintapaine>925), tai kun Psfc ei löydy?
 			// (riittävän paksu) sulamiskerros ja pilveä 925/850hPa:ssa?
@@ -328,19 +321,19 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 		// lumisadetta: snowfall >=80% kokonaissateesta
 
-		if (IsMissingInt(PreForm) AND(SNR_RR >= snowLim OR T <= 0))
+		if (IsMissing(PreForm) AND(SNR_RR >= snowLim OR T <= 0))
 		{
 			PreForm = SNOW;
 		}
 
 		// räntää: snowfall 15...80% kokonaissateesta
-		if (IsMissingInt(PreForm) AND(SNR_RR > waterLim) AND(SNR_RR < snowLim))
+		if (IsMissing(PreForm) AND(SNR_RR > waterLim) AND(SNR_RR < snowLim))
 		{
 			PreForm = SLEET;
 		}
 
 		// tihkua tai vesisadetta: Rain>=85% kokonaissateesta
-		if (IsMissingInt(PreForm) AND(SNR_RR) <= waterLim)
+		if (IsMissing(PreForm) AND(SNR_RR) <= waterLim)
 		{
 			// tihkua: "ei (satavaa) keskipilveä, pinnan lähellä kosteaa (stratus), sade heikkoa"
 			if ((RH700 < 80)AND(RH > 90) AND(RR <= dzLim))
@@ -364,7 +357,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 			}
 
 			// muuten vesisadetta:
-			if (IsMissingInt(PreForm))
+			if (IsMissing(PreForm))
 			{
 				PreForm = RAIN;
 			}
@@ -372,30 +365,23 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 		// FINISHED
 
-		double dForm = PreForm;
-
-		if (IsMissingInt(PreForm))
-		{
-			dForm = MissingDouble();
-		}
-
 		if (RR == 0)
 		{
 			// If RR is zero, we can only have potential prec form
 			myTargetInfo->ParamIndex(1);
-			myTargetInfo->Value(dForm);
+			myTargetInfo->Value(PreForm);
 		}
 		else
 		{
 			// If there is precipitation, we have at least regular prec form
 			myTargetInfo->ParamIndex(0);
-			myTargetInfo->Value(dForm);
+			myTargetInfo->Value(PreForm);
 
 			if (!noPotentialPrecipitationForm)
 			{
 				// Also potential prec form
 				myTargetInfo->ParamIndex(1);
-				myTargetInfo->Value(dForm);
+				myTargetInfo->Value(PreForm);
 			}
 		}
 	}
