@@ -806,7 +806,12 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 			bitsPerValue = DetermineBitsPerValue(values, precision);
 
 			// Change missing value 'nan' to a real fp value
-			replace_if(values.begin(), values.end(), [](const double& v) { return IsMissingDouble(v); }, gribMissing);
+			replace_if(values.begin(), values.end(),
+			           [](const double& v)
+			           {
+				           return IsMissingDouble(v);
+				       },
+			           gribMissing);
 
 			itsGrib->Message().BitsPerValue(bitsPerValue);
 			itsGrib->Message().Values(values.data(), static_cast<long>(values.size()));
@@ -1445,7 +1450,8 @@ himan::level grib::ReadLevel(const search_options& opts, const producer& prod) c
 
 		if (levelInfo.empty())
 		{
-			itsLogger.Fatal("Unsupported level type: " + to_string(gribLevel));
+			itsLogger.Fatal("Unsupported level type for producer " + to_string(prod.Id()) + ": " +
+			                to_string(gribLevel) + ", grib edition " + to_string(itsGrib->Message().Edition()));
 			himan::Abort();
 		}
 
