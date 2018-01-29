@@ -71,7 +71,7 @@ void cache::SplitToPool(info_t anInfo, bool pin)
 
 	const string uniqueName = UniqueName(*localInfo);
 
-	if (cache_pool::Instance()->Find(uniqueName))
+	if (cache_pool::Instance()->Exists(uniqueName))
 	{
 		itsLogger.Trace("Data with key " + uniqueName + " already exists at cache");
 
@@ -110,9 +110,10 @@ vector<shared_ptr<himan::info>> cache::GetInfo(search_options& options)
 
 	vector<shared_ptr<himan::info>> info;
 
-	if (cache_pool::Instance()->Find(uniqueName))
+	auto foundInfo = cache_pool::Instance()->GetInfo(uniqueName);
+	if (foundInfo)
 	{
-		info.push_back(cache_pool::Instance()->GetInfo(uniqueName));
+		info.push_back(foundInfo);
 		itsLogger.Trace("Found matching data for " + uniqueName);
 	}
 
@@ -148,7 +149,7 @@ void cache_pool::CacheLimit(int theCacheLimit)
 {
 	itsCacheLimit = theCacheLimit;
 }
-bool cache_pool::Find(const string& uniqueName)
+bool cache_pool::Exists(const string& uniqueName)
 {
 	Lock lock(itsAccessMutex);
 	return itsCache.count(uniqueName) > 0;
@@ -215,7 +216,12 @@ shared_ptr<himan::info> cache_pool::GetInfo(const string& uniqueName)
 {
 	Lock lock(itsAccessMutex);
 
-	return make_shared<info>(*itsCache[uniqueName].info);
+	auto it = itsCache.find(uniqueName);
+	if (it != itsCache.end())
+	{
+		return make_shared<info>(*it->second.info);
+	}
+	return nullptr;
 }
 
 size_t cache_pool::Size() const

@@ -54,13 +54,6 @@ const double stH = 15.;
 // Suht. kosteuden raja-arvo alapilvelle (925/850/700hPa) [%]
 const double rhLim = 90.;
 
-// define missing int value
-const int missingInt = numeric_limits<int>::min();
-
-bool IsMissingInt(int val)
-{
-	return val == missingInt;
-}
 preform_pressure::preform_pressure()
 {
 	itsLogger = logger("preform_pressure");
@@ -70,28 +63,15 @@ void preform_pressure::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 
-	/*
-	 * !!! HUOM !!!
-	 *
-	 * GRIB2 precipitation type <> FMI precipitation form
-	 *
-	 * FMI:
-	 * 0 = tihku, 1 = vesi, 2 = räntä, 3 = lumi, 4 = jäätävä tihku, 5 = jäätävä sade
-	 *
-	 * GRIB2:
-	 * 0 = Reserved, 1 = Rain, 2 = Thunderstorm, 3 = Freezing Rain, 4 = Mixed/Ice, 5 = Snow
-	 *
-	 */
+	vector<param> params({param("PRECFORM-N")});
 
-	if (itsConfiguration->OutputFileType() == kGRIB2)
+	if (itsConfiguration->Exists("potential_precipitation_form") &&
+	    itsConfiguration->GetValue("potential_precipitation_form") == "true")
 	{
-		itsLogger.Error(
-		    "GRIB2 output requested, conversion between FMI precipitation form and GRIB2 precipitation type is not "
-		    "lossless");
-		return;
+		params.push_back(param("POTPRECF-N"));
 	}
 
-	SetParams({param("PRECFORM-N", 57)});
+	SetParams(params);
 
 	Start();
 }
@@ -184,18 +164,20 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 	// In Hirlam parameter name is RH-PRCNT but data is still 0 .. 1
 	double RHScale = 100;
 
-	if (RHInfo->Producer().Process() == 240 || RHInfo->Producer().Process() == 243)
+	if (RHInfo->Producer().Process() == 240 || RHInfo->Producer().Process() == 243 || RHInfo->Producer().Id() == 53)
 	{
-		// himan-calculated RH has values 0 .. 100
 		RHScale = 1;
 	}
 
-	int DRIZZLE = 0;
-	int RAIN = 1;
-	int SLEET = 2;
-	int SNOW = 3;
-	int FREEZING_DRIZZLE = 4;
-	int FREEZING_RAIN = 5;
+	const bool noPotentialPrecipitationForm = (myTargetInfo->SizeParams() == 1);
+
+	const int DRIZZLE = 0;
+	const int RAIN = 1;
+	const int SLEET = 2;
+	const int SNOW = 3;
+	const int FREEZING_DRIZZLE = 4;
+	const int FREEZING_RAIN = 5;
+
 	LOCKSTEP(myTargetInfo, TInfo, T700Info, T850Info, T925Info, RHInfo, RH700Info, RH850Info, RH925Info, W925Info,
 	         W850Info, RRInfo, PInfo, SNRInfo)
 	{
@@ -203,7 +185,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 		// No rain --> no rain type
 
-		if (RR == 0 || IsMissing(RR))
+		if (noPotentialPrecipitationForm && (RR == 0 || IsMissing(RR)))
 		{
 			continue;
 		}
@@ -230,7 +212,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 			continue;
 		}
 
-		int PreForm = missingInt;
+		double PreForm = MissingDouble();
 
 		// Unit conversions
 
@@ -250,6 +232,10 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 		W850 *= WScale;
 		W925 *= WScale;
+
+		ASSERT(RH >= 0 && RH <= 101);
+		ASSERT(RH700 >= 0 && RH700 <= 101);
+
 		/*
 		        cout	<< "T\t\t" << T << endl
 		                << "T700\t\t" << T700 << endl
@@ -270,8 +256,6 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 		                << "wMax\t\t" << wMax << endl
 		                << "stTlimit\t" << stTlimit << endl
 		                << "SNR\t\t" << SNR << endl;
-
-		        abort();
 		*/
 		// (0=tihku, 1=vesi, 2=räntä, 3=lumi, 4=jäätävä tihku, 5=jäätävä sade)
 
@@ -300,7 +284,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 		// jäätävää vesisadetta: "pinnassa pakkasta ja sulamiskerros pinnan lähellä"
 
-		if (IsMissingInt(PreForm) AND(T <= 0) AND((T925 > 0)OR(T850 > 0) OR(T700 > 0)))
+		if (IsMissing(PreForm) AND(T <= 0) AND((T925 > 0)OR(T850 > 0) OR(T700 > 0)))
 		{
 			// ollaanko korkeintaan ~750m merenpinnasta (pintapaine>925), tai kun Psfc ei löydy?
 			// (riittävän paksu) sulamiskerros ja pilveä 925/850hPa:ssa?
@@ -329,7 +313,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 		double SNR_RR = 0;  // oletuksena kaikki sade vetta
 
-		if (!IsMissing(SNR))
+		if (!IsMissing(SNR) && RR != 0)
 		{
 			// lasketaan oikea suhde vain jos lumidataa on (kesalla ei ole)
 			SNR_RR = SNR / RR;
@@ -337,19 +321,19 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 		// lumisadetta: snowfall >=80% kokonaissateesta
 
-		if (IsMissingInt(PreForm) AND(SNR_RR >= snowLim OR T <= 0))
+		if (IsMissing(PreForm) AND(SNR_RR >= snowLim OR T <= 0))
 		{
 			PreForm = SNOW;
 		}
 
 		// räntää: snowfall 15...80% kokonaissateesta
-		if (IsMissingInt(PreForm) AND(SNR_RR > waterLim) AND(SNR_RR < snowLim))
+		if (IsMissing(PreForm) AND(SNR_RR > waterLim) AND(SNR_RR < snowLim))
 		{
 			PreForm = SLEET;
 		}
 
 		// tihkua tai vesisadetta: Rain>=85% kokonaissateesta
-		if (IsMissingInt(PreForm) AND(SNR_RR) <= waterLim)
+		if (IsMissing(PreForm) AND(SNR_RR) <= waterLim)
 		{
 			// tihkua: "ei (satavaa) keskipilveä, pinnan lähellä kosteaa (stratus), sade heikkoa"
 			if ((RH700 < 80)AND(RH > 90) AND(RR <= dzLim))
@@ -373,14 +357,32 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 			}
 
 			// muuten vesisadetta:
-			if (IsMissingInt(PreForm))
+			if (IsMissing(PreForm))
 			{
 				PreForm = RAIN;
 			}
 		}
-		if (!IsMissingInt(PreForm))
+
+		// FINISHED
+
+		if (RR == 0)
 		{
+			// If RR is zero, we can only have potential prec form
+			myTargetInfo->ParamIndex(1);
 			myTargetInfo->Value(PreForm);
+		}
+		else
+		{
+			// If there is precipitation, we have at least regular prec form
+			myTargetInfo->ParamIndex(0);
+			myTargetInfo->Value(PreForm);
+
+			if (!noPotentialPrecipitationForm)
+			{
+				// Also potential prec form
+				myTargetInfo->ParamIndex(1);
+				myTargetInfo->Value(PreForm);
+			}
 		}
 	}
 

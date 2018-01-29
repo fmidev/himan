@@ -79,7 +79,7 @@ class cache_pool : public auxiliary_plugin
 	cache_pool& operator=(const cache_pool& other) = delete;
 
 	static cache_pool* Instance();
-	bool Find(const std::string& uniqueName);
+	bool Exists(const std::string& uniqueName);
 	void Insert(const std::string& uniqueName, std::shared_ptr<himan::info> info, bool pin);
 	std::shared_ptr<himan::info> GetInfo(const std::string& uniqueName);
 	void Clean();
