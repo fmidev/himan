@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.1.24
+Version: 18.1.29
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -16,7 +16,7 @@ Requires: libstdc++
 Requires: himan-lib >= 18.1.9
 Requires: lua >= 5.1.4
 Requires: unixODBC
-Requires: libfmigrib >= 17.12.11
+Requires: libfmigrib >= 18.1.24
 Requires: libfmidb >= 17.9.18
 Requires: smartmet-library-newbase >= 17.12.1
 Requires: libpqxx
@@ -35,7 +35,7 @@ Requires: jasper-libs
 Requires: eccodes
 %endif
 BuildRequires: libfmidb-devel >= 17.9.18
-BuildRequires: libfmigrib-devel >= 17.12.11
+BuildRequires: libfmigrib-devel >= 18.1.24
 BuildRequires: smartmet-library-newbase-devel >= 17.12.1
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
@@ -111,6 +111,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Jan 29 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.1.29-1.fmi
+- cache optimization
+- Potential precipitation form from preform_pressure
+- grib level --> himan level mapping from database
+* Wed Jan 24 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.1.24-2.fmi
+- fmigrib api change
 * Wed Jan 24 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.1.24-1.fmi
 - luatool bugfix
 * Mon Jan 15 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.1.15-1.fmi
