@@ -233,7 +233,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 			if (ret)
 				break;
 
-			itsLogger.Warning("Sticky cache failed, trying all producers just to be sure");
+			itsLogger.Trace("Sticky cache failed, trying all producers just to be sure");
 		}
 	}
 

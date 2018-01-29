@@ -381,14 +381,14 @@ void probability::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 		ASSERT(myTargetInfo->Data().Size() > 0);
 
-		threadedLogger.Debug("Gaussian spread is " + std::string((pc.useGaussianSpread) ? "enabled" : "disabled"));
-
 		if (pc.useGaussianSpread)
 		{
+			threadedLogger.Debug("Gaussian spread is enabled");
 			ProbabilityWithGaussianSpread<double>(myTargetInfo, ToParamConfiguration<double>(pc), ens);
 		}
 		else
 		{
+			threadedLogger.Trace("Gaussian spread is disabled");
 			switch (pc.comparison)
 			{
 				case comparison_op::LTEQ:
