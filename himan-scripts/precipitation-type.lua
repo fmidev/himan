@@ -37,7 +37,7 @@ local rrr = CheckedFetch("RRR-KGM2", level(HPLevelType.kHeight, 0), current_time
 -- HARMONIE and HIRLAM seem to have PRCNT in the range [0,1] but EC
 -- seems to have it in [0,100]
 local Limit
-if currentProducerName == "ECG" or currentProducerName == "ECGMTA" then
+if currentProducerName == "ECG" or currentProducerName == "ECGMTA" or currentProducerName == "GFSMTA" then
   Limit = 80
 elseif currentProducerName == "AROME" or currentProducerName == "AROMTA" or
   currentProducerName == "HL2" or currentProducerName == "HL2MTA" or
@@ -75,8 +75,9 @@ end
 result:SetParam(param("PRECTYPE-N"))
 result:SetValues(pret)
 
+luatool:WriteToFile(result)
+
 result:SetParam(param("POTPRECT-N"))
 result:SetValues(potpret)
 
-logger:Info("Writing source data to file")
 luatool:WriteToFile(result)
