@@ -155,7 +155,7 @@ void ensemble::VerifyValidForecastCount(int numMissingForecasts)
 		{
 			itsLogger.Fatal("maximum number of missing fields (" + std::to_string(itsMaximumMissingForecasts) +
 			                ") reached, aborting");
-			himan::Abort();
+			throw kFileDataNotFound;
 		}
 	}
 	// Normally, we don't except any of the fields to be missing, but at this point

@@ -100,7 +100,7 @@ void lagged_ensemble::VerifyValidForecastCount(int numLoadedForecasts, int numMi
 		{
 			itsLogger.Fatal("maximum number of missing fields " + std::to_string(numMissingForecasts) + "/" +
 			                std::to_string(itsMaximumMissingForecasts) + " reached, aborting");
-			himan::Abort();
+			throw kFileDataNotFound;
 		}
 	}
 	else
@@ -109,7 +109,7 @@ void lagged_ensemble::VerifyValidForecastCount(int numLoadedForecasts, int numMi
 		{
 			itsLogger.Fatal("missing " + std::to_string(numMissingForecasts) + " of " +
 			                std::to_string(itsMaximumMissingForecasts) + " allowed missing fields of data");
-			himan::Abort();
+			throw kFileDataNotFound;
 		}
 	}
 	itsLogger.Info("succesfully loaded " + std::to_string(numLoadedForecasts) + "/" +
