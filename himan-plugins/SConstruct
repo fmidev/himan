@@ -202,6 +202,8 @@ env.Append(NVCCFLAGS = ['-gencode=arch=compute_35,code=sm_35'])
 env.Append(NVCCFLAGS = ['-gencode=arch=compute_52,code=sm_52'])
 env.Append(NVCCFLAGS = ['-gencode=arch=compute_60,code=sm_60'])
 env.Append(NVCCFLAGS = ['-std=c++11'])
+env.Append(NVCCFLAGS = ['--expt-extended-lambda'])
+env.Append(NVCCFLAGS = ['--expt-relaxed-constexpr'])
 
 env.Append(NVCCPATH = ['./include'])
 env.Append(NVCCPATH = [workspace + '/himan-lib/include']) # timer
