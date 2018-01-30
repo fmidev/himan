@@ -4,7 +4,7 @@
  */
 
 #ifndef HIMAN_DEBUG_H_
-#define HIMAN_DEBUG_H
+#define HIMAN_DEBUG_H_
 
 #define HIMAN_DEBUG_BREAK __asm__ __volatile__("int $3")
 
