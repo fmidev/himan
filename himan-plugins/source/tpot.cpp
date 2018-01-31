@@ -15,7 +15,7 @@ using namespace std;
 using namespace himan::plugin;
 
 #include "cuda_helper.h"
-#include "metutil.h"
+#include "moisture.h"
 #include "tpot.cuh"
 
 tpot::tpot() : itsThetaCalculation(false), itsThetaWCalculation(false), itsThetaECalculation(false)
@@ -210,7 +210,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 			if (itsThetaCalculation)
 			{
-				theta = metutil::Theta_(T, P);
+				theta = metutil::Theta_<double>(T, P);
 
 				myTargetInfo->Param(param("TP-K"));
 
@@ -219,7 +219,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 			if (itsThetaWCalculation)
 			{
-				double value = ThetaW(P, T, TD);
+				double value = metutil::ThetaW_<double>(metutil::ThetaE_<double>(T, TD, P));
 
 				myTargetInfo->Param(param("TPW-K"));
 
@@ -228,7 +228,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 			if (itsThetaECalculation)
 			{
-				double value = metutil::ThetaE_(T, TD, P);
+				double value = metutil::ThetaE_<double>(T, TD, P);
 
 				myTargetInfo->Param(param("TPE-K"));
 
@@ -239,13 +239,6 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
 	                      "/" + to_string(myTargetInfo->Data().Size()));
-}
-
-double tpot::ThetaW(double P, double T, double TD)
-{
-	double thetae = metutil::ThetaE_(T, TD, P);
-
-	return metutil::ThetaW_(thetae);
 }
 
 #ifdef HAVE_CUDA

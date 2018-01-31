@@ -1,8 +1,9 @@
 #include "stability.h"
 #include "forecast_time.h"
 #include "level.h"
+#include "lift.h"
 #include "logger.h"
-#include "metutil.h"
+#include "numerical_functions.h"
 #include "plugin_factory.h"
 #include "stability.cuh"
 #include "util.h"
@@ -269,7 +270,7 @@ tuple<vec, vec, vec, info_t, info_t, info_t> GetLiftedIndicesSourceData(shared_p
 				double& res = tup.get<0>();
 				double t = tup.get<1>();
 
-				res = metutil::DewPointFromRH_(t, res);
+				res = metutil::DewPointFromRH_<double>(t, res);
 			}
 		}
 	}
@@ -300,8 +301,8 @@ vec CalculateThetaE(shared_ptr<hitool>& h, double startHeight, double stopHeight
 
 	for (size_t i = 0; i < Tstart.size(); i++)
 	{
-		const double ThetaEstart = metutil::smarttool::ThetaE_(Tstart[i], RHstart[i], Pstart[i] * 100);
-		const double ThetaEstop = metutil::smarttool::ThetaE_(Tstop[i], RHstop[i], Pstop[i] * 100);
+		const double ThetaEstart = metutil::smarttool::ThetaE_<double>(Tstart[i], RHstart[i], Pstart[i] * 100);
+		const double ThetaEstop = metutil::smarttool::ThetaE_<double>(Tstop[i], RHstop[i], Pstop[i] * 100);
 
 		ret[i] = ThetaEstart - ThetaEstop;
 	}
@@ -337,21 +338,19 @@ void CalculateLiftedIndices(shared_ptr<const plugin_configuration>& conf, info_t
 	const auto& td850 = VEC(get<4>(src));
 	const auto& t500 = VEC(get<5>(src));
 
-	vec t_li(t500.size(), MissingDouble());
-	vec t_si(t500.size(), MissingDouble());
 	vec p500(t500.size(), 50000.);
 	vec p850(t500.size(), 85000.);
 
-	// Lift parcel from lowest 500m average pressure to 500hPa
-	metutil::Lift(p500m.data(), t500m.data(), td500m.data(), p500.data(), t_li.data(), p500.size());
-
-	// Lift parcel from 850hPa to 500hPa
-	metutil::Lift(p850.data(), t850.data(), td850.data(), p500.data(), t_si.data(), p850.size());
-
 	for (size_t i = 0; i < t500.size(); i++)
 	{
-		LI[i] = t500[i] - t_li[i];
-		SI[i] = t500[i] - t_si[i];
+		// Lift parcel from lowest 500m average pressure to 500hPa
+		const double t_li = metutil::Lift_<double>(p500m[i], t500m[i], td500m[i], p500[i]);
+
+		// Lift parcel from 850hPa to 500hPa
+		const double t_si = metutil::Lift_<double>(p850[i], t850[i], td850[i], p500[i]);
+
+		LI[i] = t500[i] - t_li;
+		SI[i] = t500[i] - t_si;
 	}
 }
 

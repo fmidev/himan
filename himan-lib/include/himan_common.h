@@ -72,6 +72,20 @@ inline CUDA_HOST CUDA_DEVICE bool IsMissing(float value) {return IsMissingFloat(
 inline CUDA_HOST CUDA_DEVICE bool IsValid(double value) { return !IsMissingDouble(value);}
 inline CUDA_HOST CUDA_DEVICE bool IsValid(float value) {return !IsMissingFloat(value);}
 
+// templatized MissingValue() for double & float is useful in template functions
+// where "typename" is float or double
+
+template <typename T>
+CUDA_HOST CUDA_DEVICE T MissingValue();
+
+template <>
+CUDA_HOST CUDA_DEVICE
+inline double MissingValue() { return MissingDouble(); }
+
+template <>
+CUDA_HOST CUDA_DEVICE
+inline float MissingValue() { return MissingFloat(); }
+
 template <typename T>
 inline bool IsMissing(T value) = delete; 
 template <typename T>

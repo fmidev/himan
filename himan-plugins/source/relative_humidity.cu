@@ -3,7 +3,7 @@
 #include <string>
 
 #include "cuda_plugin_helper.h"
-#include "metutil.h"
+#include "moisture.h"
 #include "relative_humidity.cuh"
 
 // CUDA-kernel that computes RH from T and TD
@@ -44,7 +44,7 @@ __global__ void himan::plugin::relative_humidity_cuda::CalculateTQP(cdarr_t d_T,
 		if (!IsMissingDouble(d_T[idx]) && !IsMissingDouble(d_Q[idx]) && !IsMissingDouble(d_P[idx]))
 		{
 			double p = d_P[idx] * opts.PScale;
-			double ES = himan::metutil::Es_(d_T[idx]) * 0.01;
+			double ES = himan::metutil::Es_<double>(d_T[idx]) * 0.01;
 
 			d_RH[idx] = (p * d_Q[idx] / constants::kEp / ES) * (p - ES) / (p - d_Q[idx] * p / constants::kEp);
 			d_RH[idx] = fmax(fmin(1.0, d_RH[idx]), 0.0) * 100.0;
@@ -63,7 +63,7 @@ __global__ void himan::plugin::relative_humidity_cuda::CalculateTQ(cdarr_t d_T, 
 
 		if (!IsMissingDouble(d_T[idx]) && !IsMissingDouble(d_Q[idx]))
 		{
-			double ES = himan::metutil::Es_(d_T[idx]) * 0.01;
+			double ES = himan::metutil::Es_<double>(d_T[idx]) * 0.01;
 
 			d_RH[idx] = (opts.P_level * d_Q[idx] / constants::kEp / ES) * (opts.P_level - ES) /
 			            (opts.P_level - d_Q[idx] * opts.P_level / constants::kEp);

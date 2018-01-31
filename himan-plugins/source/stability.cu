@@ -1,5 +1,5 @@
 #include "cuda_plugin_helper.h"
-#include "metutil.h"
+#include "lift.h"
 #include "stability.cuh"
 #include <thrust/count.h>
 #include <thrust/device_vector.h>

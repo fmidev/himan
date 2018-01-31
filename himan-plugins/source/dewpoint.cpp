@@ -7,7 +7,7 @@
 #include "forecast_time.h"
 #include "level.h"
 #include "logger.h"
-#include "metutil.h"
+#include "moisture.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -112,7 +112,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 			T += TBase;
 			RH *= RHScale;
 
-			double TD = metutil::DewPointFromRH_(T, RH);
+			double TD = metutil::DewPointFromRH_<double>(T, RH);
 
 			myTargetInfo->Value(TD);
 		}

@@ -1,6 +1,6 @@
 #include "cuda_plugin_helper.h"
 
-#include "metutil.h"
+#include "lift.h"
 #include "tpot.cuh"
 
 __global__ void himan::plugin::tpot_cuda::Calculate(const double* __restrict__ d_t, const double* __restrict__ d_p,
@@ -30,18 +30,18 @@ __global__ void himan::plugin::tpot_cuda::Calculate(const double* __restrict__ d
 }
 __device__ double himan::plugin::tpot_cuda::Theta(double T, double P, options opts)
 {
-	return metutil::Theta_(T, P);
+	return metutil::Theta_<double>(T, P);
 }
 __device__ double himan::plugin::tpot_cuda::ThetaW(double T, double P, double TD, options opts)
 {
 	double thetaE = ThetaE(T, P, TD, opts);
 
-	return metutil::ThetaW_(thetaE);
+	return metutil::ThetaW_<double>(thetaE);
 }
 
 __device__ double himan::plugin::tpot_cuda::ThetaE(double T, double P, double TD, options opts)
 {
-	return metutil::ThetaE_(T, TD, P);
+	return metutil::ThetaE_<double>(T, TD, P);
 }
 
 void himan::plugin::tpot_cuda::Process(options& opts)

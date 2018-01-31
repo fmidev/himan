@@ -11,7 +11,7 @@
 
 #include "cape.cuh"
 #include "cuda_helper.h"
-#include "metutil.h"
+#include "lift.h"
 #include "util.h"
 
 #include <NFmiGribPacking.h>
@@ -209,7 +209,7 @@ __global__ void LiftLCLKernel(const double* __restrict__ d_P, const double* __re
 
 		ASSERT((d_T[idx] > 100 && d_T[idx] < 350) || IsMissingDouble(d_T[idx]));
 
-		double T = metutil::LiftLCLA_(d_P[idx] * 100, d_T[idx], d_PLCL[idx] * 100, d_Ptarget.values[idx] * 100);
+		double T = metutil::LiftLCLA_<double>(d_P[idx] * 100, d_T[idx], d_PLCL[idx] * 100, d_Ptarget.values[idx] * 100);
 
 		ASSERT((T > 100 && T < 350) || IsMissingDouble(T));
 
@@ -232,7 +232,7 @@ __global__ void MoistLiftKernel(const double* __restrict__ d_T, const double* __
 
 		ASSERT((d_T[idx] > 100 && d_T[idx] < 350) || IsMissingDouble(d_T[idx]));
 
-		double T = metutil::MoistLiftA_(d_P[idx] * 100, d_T[idx], d_Ptarget.values[idx] * 100);
+		double T = metutil::MoistLiftA_<double>(d_P[idx] * 100, d_T[idx], d_Ptarget.values[idx] * 100);
 
 		ASSERT((T > 100 && T < 350) || IsMissingDouble(T));
 
@@ -566,7 +566,7 @@ __global__ void ThetaEKernel(info_simple d_T, info_simple d_RH, info_simple d_P,
 		double TD = metutil::DewPointFromRH_(T, RH);
 
 		double& refThetaE = d_maxThetaE[idx];
-		double ThetaE = metutil::smarttool::ThetaE_(T, RH, P * 100);
+		double ThetaE = metutil::smarttool::ThetaE_<double>(T, RH, P * 100);
 
 		if (ThetaE >= refThetaE)
 		{

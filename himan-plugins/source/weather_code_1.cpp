@@ -28,6 +28,25 @@ const himan::level Z850Level(himan::kPressure, 850, "PRESSURE");
 const himan::level T2Level(himan::kHeight, 2, "HEIGHT");
 const himan::level NLevel(himan::kHeight, 0, "HEIGHT");
 
+double RelativeTopography_(int level1, int level2, double z1, double z2)
+{
+	int coefficient = 1;
+	double topography;
+	double height1, height2;
+
+	if (level1 > level2)
+	{
+		coefficient = -1;
+	}
+
+	height1 = z1 * himan::constants::kIg;  // convert to metres z/9.81
+	height2 = z2 * himan::constants::kIg;
+
+	topography = coefficient * (height1 - height2);
+
+	return topography;
+}
+
 weather_code_1::weather_code_1()
 {
 	itsLogger = logger(itsName);
@@ -214,7 +233,7 @@ void weather_code_1::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 			continue;
 		}
 
-		double reltopo = metutil::RelativeTopography_(1000, 850, Z1000, Z850);
+		double reltopo = RelativeTopography_(1000, 850, Z1000, Z850);
 
 		double rain = 0;       // default, no rain
 		double cloudType = 1;  // default

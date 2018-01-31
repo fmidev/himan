@@ -1,0 +1,521 @@
+#pragma once
+
+#include "moisture.h"
+#include "numerical_functions.h"
+
+namespace himan
+{
+namespace metutil
+{
+// struct to store LCL level parameters
+template <typename A>
+struct lcl_t
+{
+	A T;
+	A P;
+	A Q;
+
+	CUDA_DEVICE
+	lcl_t() : T(MissingValue<A>()), P(MissingValue<A>()), Q(MissingValue<A>())
+	{
+	}
+
+	CUDA_DEVICE
+	lcl_t(A T, A P, A Q) : T(T), P(P), Q(Q)
+	{
+	}
+};
+
+template <typename A>
+CUDA_DEVICE A Wobf(A T)
+{
+	// "Wobus function" is a polynomial approximation of moist lift
+	// process. It is called from MoistLiftA_().
+
+	A ret;
+
+	T -= 20;
+
+	if (T <= 0)
+	{
+		ret = 1 +
+		      T * (-8.841660499999999e-3 +
+		           T * (1.4714143e-4 + T * (-9.671989000000001e-7 + T * (-3.2607217e-8 + T * (-3.8598073e-10)))));
+		ret = 15.130 / (ret * ret * ret * ret);
+	}
+	else
+	{
+		ret = 1 +
+		      T * (3.6182989e-03 +
+		           T * (-1.3603273e-05 +
+		                T * (4.9618922e-07 +
+		                     T * (-6.1059365e-09 + T * (3.9401551e-11 + T * (-1.2588129e-13 + T * (1.6688280e-16)))))));
+		ret = (29.930 / (ret * ret * ret * ret)) + (0.96 * T) - 14.8;
+	}
+
+	return ret;
+}
+
+/**
+ * @brief Calculates pseudo-adiabatic lapse rate
+ *
+ * Original author AK Sarkanen May 1985.
+ *
+ * @param P Pressure in Pa
+ * @param T Temperature in K
+ * @return Lapse rate in K/km
+ */
+
+template <typename A>
+CUDA_DEVICE A Gammas_(A P, A T)
+{
+	ASSERT(P > 10000);
+	ASSERT((T > 0 && T < 500) || IsMissing(T));
+
+	// http://glossary.ametsoc.org/wiki/Pseudoadiabatic_lapse_rate
+	// specific humidity: http://glossary.ametsoc.org/wiki/Specific_humidity
+
+	namespace hc = constants;
+
+	A Q = hc::kEp * (::himan::metutil::Es_<A>(T) * 0.01) / (P * 0.01);
+
+	A B = hc::kRd * T / hc::kCp / P * (1 + hc::kL * Q / hc::kRd / T);
+
+	return B / (1 + hc::kEp / hc::kCp * (hc::kL * hc::kL) / hc::kRd * Q / (T * T));
+}
+/**
+ * @brief Calculate moist-adiabatic lapse rate (MALR).
+ *
+ * Also known as saturated adiabatic lapse rate (SALR)
+ *
+ * Formula used is (3.16) from
+ *
+ * Rogers&Yun: A short course in cloud physics 3rd edition
+ *
+ * combined with gamma (g/Cp) and transformed from m to Pa
+ * with inverse of hydropstatic equation.
+ *
+ * @param P Pressure in Pa
+ * @param T Temperature in K
+ * @return Lapse rate in K/Pa
+ */
+
+template <typename A>
+CUDA_DEVICE A Gammaw_(A P, A T)
+{
+	// Sanity checks
+
+	ASSERT(P > 1000);
+	ASSERT((T > 0 && T < 500) || IsMissing(T));
+
+	namespace hc = constants;
+
+	A esat = ::himan::metutil::Es_<A>(T);
+	A wsat = hc::kEp * esat / (P - esat);  // Rogers&Yun 2.18
+	A numerator = (2. / 7.) * T + (2. / 7. * hc::kL / hc::kRd) * wsat;
+	A denominator = P * (1 + (hc::kEp * hc::kL * hc::kL / (hc::kRd * hc::kCp)) * wsat / (T * T));
+
+	ASSERT(numerator != 0);
+	ASSERT(denominator != 0);
+
+	return numerator / denominator;  // Rogers&Yun 3.16
+}
+
+/**
+ * @brief Calculates the temperature, pressure and specific humidity (Q) of
+ * a parcel of air in LCL by vertically iterating from starting height
+ *
+ * Original author AK Sarkanen/Kalle Eerola
+ *
+ * @param P Pressure in Pa
+ * @param T Temperature in K
+ * @param TD Dew point temperature in K
+ * @return Pressure (Pa), temperature (K) and specific humidity (g/kg) for LCL .
+ */
+
+template <typename A>
+CUDA_DEVICE lcl_t<A> LCL_(A P, A T, A TD)
+{
+	ASSERT(P > 10000);
+	ASSERT(T > 0 || IsMissing(T));
+	ASSERT(T < 500 || IsMissing(T));
+	ASSERT(TD > 0);
+	ASSERT(TD < 500);
+
+	// starting T step
+
+	A Tstep = 0.05;
+
+	P *= 0.01;  // HPa
+
+	// saturated vapor pressure
+
+	const A E0 = himan::metutil::Es_<A>(TD) * 0.01;  // HPa
+
+	const A Q = constants::kEp * E0 / P;
+	const A C = T / pow(E0, constants::kRd_div_Cp);
+
+	A TLCL, PLCL;
+
+	A Torig = T;
+	A Porig = P;
+
+	short nq = 0;
+
+	lcl_t<A> ret;
+
+	while (++nq < 100)
+	{
+		const A TEs = C * pow(himan::metutil::Es_<A>(T) * 0.01, constants::kRd_div_Cp);
+
+		if (fabs(TEs - T) < 0.05)
+		{
+			TLCL = T;
+			PLCL = pow((TLCL / Torig), (1 / constants::kRd_div_Cp)) * P;
+
+			ret.P = PLCL * 100;  // Pa
+
+			ret.T = TLCL;  // K
+
+			ret.Q = Q;
+		}
+		else
+		{
+			Tstep = fmin((TEs - T) / (2 * (nq + 1)), 15.);
+			T -= Tstep;
+		}
+	}
+
+	// Fallback to slower method
+
+	if (IsMissing(ret.P))
+	{
+		T = Torig;
+		Tstep = 0.1;
+
+		nq = 0;
+
+		while (++nq <= 500)
+		{
+			if ((C * pow(himan::metutil::Es_<A>(T) * 0.01, constants::kRd_div_Cp) - T) > 0)
+			{
+				T -= Tstep;
+			}
+			else
+			{
+				TLCL = T;
+				PLCL = pow(TLCL / Torig, (1 / constants::kRd_div_Cp)) * Porig;
+
+				ret.P = PLCL * 100;  // Pa
+
+				ret.T = TLCL;  // K
+
+				ret.Q = Q;
+
+				break;
+			}
+		}
+	}
+
+	return ret;
+}
+/**
+ * @brief LCL level temperature and pressure approximation.
+ *
+ * For temperature, the used formula is (15) of
+ *
+ * Bolton: The Computation of Equivalent Potential Temperature (1980)
+ *
+ * LCL pressure is calculated using starting T and P and T_LCL with
+ * Poissons formula assuming dry-adiabatic conditions.
+ *
+ * @param P Ground pressure in Pa
+ * @param T Ground temperature in Kelvin
+ * @param TD Ground dewpoint temperature in TD
+ * @param Pressure (Pa) and temperature (K) for LCL.
+ */
+
+template <typename A>
+CUDA_DEVICE lcl_t<A> LCLA_(A P, A T, A TD)
+{
+	lcl_t<A> ret;
+
+	// Sanity checks
+
+	ASSERT(P > 10000);
+	ASSERT(T > 0 || IsMissing(T));
+	ASSERT(T < 500 || IsMissing(T));
+	ASSERT(TD > 0 && TD != 56);
+	ASSERT(TD < 500);
+
+	A B = 1 / (TD - 56);
+	A C = log(T / TD) / 800.;
+
+	ret.T = 1 / (B + C) + 56;
+	ret.P = P * pow((ret.T / T), 3.5011);
+
+	return ret;
+}
+
+/**
+ * @brief Lift a parcel of air dry adiabatically to wanted pressure
+ *
+ * Poissons equation is used
+ *
+ * @param P Initial pressure in Pascals
+ * @param T Initial temperature in Kelvins
+ * @param targetP Target pressure (where parcel is lifted) in Pascals
+ * @return Parcel temperature in wanted pressure in Kelvins
+ */
+
+template <typename A>
+CUDA_DEVICE A DryLift_(A P, A T, A targetP)
+{
+	if (targetP >= P)
+	{
+		return MissingValue<A>();
+	}
+
+	// Sanity checks
+	ASSERT(IsMissing(P) || P > 10000);
+	ASSERT(IsMissing(T) || (T > 100 && T < 400));
+	ASSERT(targetP > 10000);
+
+	return T * pow((targetP / P), 0.286);
+}
+
+/**
+ * @brief Lift a parcel of air moist-adiabatically to wanted pressure
+ *
+ * Initial temperature is assumed to be saturated ie. LCL level temperature.
+ *
+ * @param P Pressure of LCL in Pascals
+ * @param T Temperature of LCL in K
+ * @param targetP Target pressure (where parcel is lifted) in Pascals
+ * @return Parcel temperature in wanted pressure in Kelvins
+ */
+
+template <typename A>
+CUDA_DEVICE A MoistLift_(A P, A T, A targetP)
+{
+	if (IsMissing(T) || IsMissing(P) || targetP >= P)
+	{
+		return MissingValue<A>();
+	}
+
+	// Sanity checks
+
+	ASSERT(P > 2000);
+	ASSERT((T > 100 && T < 400) || IsMissing(T));
+	ASSERT(targetP > 2000);
+
+	A Pint = P;  // Pa
+	A Tint = T;  // K
+
+	/*
+	 * Units: Temperature in Kelvins, Pressure in Pascals
+	 */
+
+	A T0 = Tint;
+
+	int i = 0;
+	const A Pstep = 100;  // Pa; do not increase this as quality of results is weakened
+	const int maxIter = static_cast<int>(100000 / Pstep + 10);  // varadutuaan iteroimaan 1000hPa --> 0 hPa + marginaali
+
+	A value = MissingValue<A>();
+
+	while (++i < maxIter)
+	{
+		Tint = T0 - metutil::Gammaw_(Pint, Tint) * Pstep;
+
+		ASSERT(Tint == Tint);
+
+		Pint -= Pstep;
+
+		if (Pint <= targetP)
+		{
+			value = ::himan::numerical_functions::interpolation::Linear(targetP, Pint, Pint + Pstep, T0, Tint);
+			break;
+		}
+
+		T0 = Tint;
+	}
+
+	return value;
+}
+
+/**
+ * @brief Approximate the moist adiabatic lift of an parcel to wanted pressure.
+ *
+ * Initial temperature is assumed to be saturated.
+ * Method used is the (in)famous Wobus function.
+ *
+ * More information about it can be googled with term 'Wobus function', for example:
+ * http://www.caps.ou.edu/ARPS/arpsbrowser/arps5.2.4browser/html_code/adas/mthermo.f90.html
+ *
+ * Method is faster than the iterative approach but slightly inaccurate
+ * (errors up to ~1K, see docs for cape-plugin for more information).
+ *
+ * @param P Pressure of LCL in Pascals
+ * @param T Temperature of LCL in K
+ * @param targetP Target pressure (where parcel is lifted) in Pascals
+ * @return Parcel temperature in wanted pressure in Kelvins
+ */
+
+template <typename A>
+CUDA_DEVICE A MoistLiftA_(A P, A T, A targetP)
+{
+	if (IsMissing(T) || IsMissing(P) || targetP >= P)
+	{
+		return MissingValue<A>();
+	}
+
+	using namespace constants;
+
+	const A theta = Theta_(T, P) - kKelvin;  // pot temp, C
+	T -= kKelvin;
+
+	const A thetaw = theta - Wobf<A>(theta) + Wobf<A>(T);  // moist pot temp, C
+
+	A remains = 9999;  // try to minimize this
+	A ratio = 1;
+
+	const A pwrp = pow(targetP / 100000, kRd_div_Cp);  // exner
+
+	A t1 = (thetaw + kKelvin) * pwrp - kKelvin;
+	A e1 = Wobf<A>(t1) - Wobf<A>(thetaw);
+	A t2 = t1 - (e1 * ratio);                 // improved estimate of return value (saturated lifted temperature)
+	A pot = (t2 + kKelvin) / pwrp - kKelvin;  // pot temperature of t2 at pressure p
+	A e2 = pot + Wobf<A>(t2) - Wobf<A>(pot) - thetaw;
+
+	while (fabs(remains) - 0.1 > 0)
+	{
+		ratio = (t2 - t1) / (e2 - e1);
+
+		t1 = t2;
+		e1 = e2;
+		t2 = t1 - e1 * ratio;
+		pot = (t2 + kKelvin) / pwrp - kKelvin;
+		e2 = pot + Wobf<A>(t2) - Wobf<A>(pot) - thetaw;
+
+		remains = e2 * ratio;
+	}
+
+	return t2 - remains + kKelvin;
+}
+
+/**
+ * @brief Lift a parcel of air to wanted pressure
+ *
+ * Overcoat for DryLift/MoistLift, with user-given LCL level pressure
+ *
+ * A-version used LCL approximation functions.
+ *
+ * @param P Initial pressure in Pascals
+ * @param T Initial temperature in Kelvins
+ * @param PLCL LCL level pressure in Pascals
+ * @param targetP Target pressure (where parcel is lifted) in Pascals
+ * @return Parcel temperature in wanted pressure in Kelvins
+ */
+
+template <typename A>
+CUDA_DEVICE A LiftLCL_(A P, A T, A LCLP, A targetP)
+{
+	if (LCLP < targetP)
+	{
+		// LCL level is higher than requested pressure, only dry lift is needed
+		return DryLift_(P, T, targetP);
+	}
+
+	// Wanted height is above LCL
+	if (P < LCLP)
+	{
+		// Current level is above LCL, only moist lift is required
+		return MoistLift_(P, T, targetP);
+	}
+
+	// First lift dry adiabatically to LCL height
+	const A LCLT = DryLift_<A>(P, T, LCLP);
+
+	// Lift from LCL to wanted pressure
+	return MoistLift_<A>(LCLP, LCLT, targetP);
+}
+
+template <typename A>
+CUDA_DEVICE double LiftLCLA_(A P, A T, A LCLP, A targetP)
+{
+	if (LCLP < targetP)
+	{
+		// LCL level is higher than requested pressure, only dry lift is needed
+		return DryLift_<A>(P, T, targetP);
+	}
+
+	// Wanted height is above LCL
+	if (P < LCLP)
+	{
+		// Current level is above LCL, only moist lift is required
+		return MoistLiftA_<A>(P, T, targetP);
+	}
+
+	// First lift dry adiabatically to LCL height
+	const A LCLT = DryLift_<A>(P, T, LCLP);
+
+	// Lift from LCL to wanted pressure
+	return MoistLiftA_<A>(LCLP, LCLT, targetP);
+}
+
+/**
+ * @brief Lift a parcel of air to wanted pressure
+ *
+ * Overcoat for DryLift/MoistLift
+ *
+ * @param P Initial pressure in Pascals
+ * @param T Initial temperature in Kelvins
+ * @param TD Initial dewpoint temperature in Kelvins
+ * @param targetP Target pressure (where parcel is lifted) in Pascals
+ * @return Parcel temperature in wanted pressure in Kelvins
+ */
+
+template <typename A>
+CUDA_DEVICE double Lift_(A P, A T, A TD, A targetP)
+{
+	lcl_t<A> LCL = metutil::LCLA_<A>(P, T, TD);
+
+	if (LCL.P < targetP)
+	{
+		// LCL level is higher than requested pressure, only dry lift is needed
+		return DryLift_<A>(P, T, targetP);
+	}
+
+	return MoistLift_<A>(P, T, targetP);
+}
+
+namespace smarttool
+{
+/**
+ * @brief Calculate equivalent potential temperature.
+ *
+ * Original:
+ * double NFmiSoundingFunctions::CalcThetaE(double T, double Td, double P)
+ *
+ * Function has been modified so that it takes humidity as an argument;
+ * the original function took dewpoint and calculated humidity from that.
+ */
+
+template <typename A>
+CUDA_DEVICE A ThetaE_(A T, A RH, A P)
+{
+	ASSERT(RH >= 0);
+	ASSERT(RH < 102);
+	ASSERT(T > 150 || IsMissing(T));
+	ASSERT(T < 350 || IsMissing(T));
+	ASSERT(P > 1500);
+
+	const A tpot = himan::metutil::Theta_<A>(T, P);
+	const A w = himan::metutil::smarttool::MixingRatio_<A>(T, RH, P);
+	return tpot + 3 * w;
+}
+
+}  // namespace smarttool
+}  // namespace metutil
+}  // namespace himan

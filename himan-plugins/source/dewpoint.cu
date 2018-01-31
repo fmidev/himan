@@ -1,6 +1,6 @@
 #include "cuda_plugin_helper.h"
 #include "dewpoint.cuh"
-#include "metutil.h"
+#include "moisture.h"
 
 __global__ void himan::plugin::dewpoint_cuda::Calculate(cdarr_t d_t, cdarr_t d_rh, darr_t d_td, options opts)
 {
@@ -9,7 +9,7 @@ __global__ void himan::plugin::dewpoint_cuda::Calculate(cdarr_t d_t, cdarr_t d_r
 	if (idx < opts.N)
 	{
 		double RH = d_rh[idx] * opts.rh_scale;
-		d_td[idx] = metutil::DewPointFromRH_(d_t[idx] + opts.t_base, RH);
+		d_td[idx] = metutil::DewPointFromRH_<double>(d_t[idx] + opts.t_base, RH);
 	}
 }
 

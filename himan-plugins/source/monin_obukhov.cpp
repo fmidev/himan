@@ -9,7 +9,7 @@
 #include "forecast_time.h"
 #include "level.h"
 #include "logger.h"
-#include "metutil.h"
+#include "moisture.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -116,7 +116,7 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 			           0.06 * pow(T_C, 3);  // Calculate specific latent heat of condensation of water
 
 			mol = -constants::kG * constants::kK * (SHF + 0.61 * cp * T / L * LHF) /
-			      (rho * cp * U_S * U_S * U_S * himan::metutil::VirtualTemperature_(T, P));
+			      (rho * cp * U_S * U_S * U_S * himan::metutil::VirtualTemperature_<double>(T, P));
 		}
 		myTargetInfo->Value(mol);
 	}

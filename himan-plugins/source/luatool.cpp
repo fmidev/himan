@@ -4,6 +4,7 @@
 #include "hitool.h"
 #include "lagged_ensemble.h"
 #include "latitude_longitude_grid.h"
+#include "lift.h"
 #include "logger.h"
 #include "metutil.h"
 #include "numerical_functions.h"
@@ -1143,11 +1144,11 @@ void BindLib(lua_State* L)
 	              .def("GetValue", &plugin_configuration::GetValue)
 	              .def("GetValueList", &plugin_configuration::GetValueList)
 	              .def("Exists", &plugin_configuration::Exists),
-	          class_<lcl_t>("lcl_t")
+	          class_<himan::metutil::lcl_t<double>>("lcl_t")
 	              .def(constructor<>())
-	              .def_readwrite("T", &lcl_t::T)
-	              .def_readwrite("P", &lcl_t::P)
-	              .def_readwrite("Q", &lcl_t::Q),
+	              .def_readwrite("T", &himan::metutil::lcl_t<double>::T)
+	              .def_readwrite("P", &himan::metutil::lcl_t<double>::P)
+	              .def_readwrite("Q", &himan::metutil::lcl_t<double>::Q),
 	          class_<write_options>("write_options")
 	              .def(constructor<>())
 	              .def_readwrite("use_bitmap", &write_options::use_bitmap),
@@ -1239,9 +1240,13 @@ void BindLib(lua_State* L)
 	          def("Max2D", &numerical_functions::Max2D),
 	          def("Min2D", &numerical_functions::Min2D),
 	          // metutil namespace
-	          def("LCL_", &metutil::LCL_), def("Es_", &metutil::Es_), def("Gammas_", &metutil::Gammas_),
-	          def("Gammaw_", &metutil::Gammaw_), def("MixingRatio_", &metutil::MixingRatio_),
-	          def("MoistLift_", &metutil::MoistLift_), def("DryLift_", &metutil::DryLift_),
+	          def("LCL_", &metutil::LCL_<double>), 
+	          def("Es_", &metutil::Es_<double>), 
+	          def("Gammas_", &metutil::Gammas_<double>),
+	          def("Gammaw_", &metutil::Gammaw_<double>), 
+	          def("MixingRatio_", &metutil::MixingRatio_<double>),
+	          def("MoistLift_", &metutil::MoistLift_<double>), 
+	          def("DryLift_", &metutil::DryLift_<double>),
 		  def("FlightLevel_", &metutil::FlightLevel_),
 		  // himan namespace
 		  def("IsMissing", static_cast<bool(*)(double)>(&::IsMissing)),

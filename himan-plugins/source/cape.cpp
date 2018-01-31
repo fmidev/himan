@@ -18,6 +18,7 @@
 #include "writer.h"
 
 #include "cape.cuh"
+#include "lift.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -36,7 +37,7 @@ vector<double> VirtualTemperature(vector<double> T, const std::vector<double>& P
 {
 	for (size_t i = 0; i < T.size(); i++)
 	{
-		T[i] = himan::metutil::VirtualTemperature_(T[i], P[i]);
+		T[i] = himan::metutil::VirtualTemperature_<double>(T[i], P[i]);
 		ASSERT(T[i] > 100 && T[i] < 400);
 	}
 
@@ -129,8 +130,14 @@ void MoistLift(const double* Piter, const double* Titer, const double* Penv, dou
 		const size_t start = num * splitSize;
 		futures.push_back(async(launch::async,
 		                        [&](size_t start) {
-			                        himan::metutil::MoistLiftA(&Piter[start], &Titer[start], &Penv[start],
-			                                                   &Tparcel[start], splitSize);
+			                        for (size_t i = start; i < start + splitSize; i++)
+			                        {
+				                        Tparcel[i] = himan::metutil::MoistLiftA_<float>(Piter[i], Titer[i], Penv[i]);
+			                        }
+			                        //			                        himan::metutil::MoistLiftA(&Piter[start],
+			                        //&Titer[start], &Penv[start],
+			                        //			                                                   &Tparcel[start],
+			                        //splitSize);
 			                    },
 		                        start));
 	}
@@ -550,7 +557,10 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<double>& Tsourc
 		auto PenvVec = PenvInfo->Data().Values();
 		::MultiplyWith(PenvVec, 100);
 
-		metutil::LiftLCLA(&Piter[0], &Titer[0], &PLCLPa[0], &PenvVec[0], &TparcelVec[0], TparcelVec.size());
+		for (size_t i = 0; i < TparcelVec.size(); i++)
+		{
+			TparcelVec[i] = metutil::LiftLCLA_<double>(Piter[i], Titer[i], PLCLPa[i], PenvVec[i]);
+		}
 
 		int i = -1;
 
@@ -1249,7 +1259,7 @@ pair<vector<double>, vector<double>> cape::GetLCL(shared_ptr<info> myTargetInfo,
 		double& Tresult = tup.get<3>();
 		double& Presult = tup.get<4>();
 
-		auto lcl = metutil::LCLA_(P, T, TD);
+		auto lcl = metutil::LCLA_<double>(P, T, TD);
 
 		Tresult = lcl.T;  // K
 
@@ -1394,8 +1404,8 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info> myTargetInfo)
 			ASSERT(P[i] > 100 && P[i] < 1500);
 			ASSERT(RH[i] > 0 && RH[i] < 102);
 
-			Tpot[i] = metutil::Theta_(T[i], 100 * P[i]);
-			MR[i] = metutil::smarttool::MixingRatio_(T[i], RH[i], 100 * P[i]);
+			Tpot[i] = metutil::Theta_<double>(T[i], 100 * P[i]);
+			MR[i] = metutil::smarttool::MixingRatio_<double>(T[i], RH[i], 100 * P[i]);
 		}
 
 		tp.Process(Tpot, P);

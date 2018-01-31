@@ -7,7 +7,7 @@
 #include "forecast_time.h"
 #include "level.h"
 #include "logger.h"
-#include "metutil.h"
+#include "moisture.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -188,7 +188,7 @@ void WithQ(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t QInfo,
 		double T = tup.get<1>() + TBase;
 		double Q = tup.get<2>();
 
-		double es = himan::metutil::Es_(T) * 0.01;
+		double es = himan::metutil::Es_<double>(T) * 0.01;
 
 		result = (P * Q / himan::constants::kEp / es) * (P - es) / (P - Q * P / himan::constants::kEp);
 
@@ -208,7 +208,7 @@ void WithQ(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t QInfo,
 		double Q = tup.get<2>();
 		double P = tup.get<3>() * PScale;
 
-		double es = himan::metutil::Es_(T) * 0.01;
+		double es = himan::metutil::Es_<double>(T) * 0.01;
 
 		result = (P * Q / himan::constants::kEp / es) * (P - es) / (P - Q * P / himan::constants::kEp);
 

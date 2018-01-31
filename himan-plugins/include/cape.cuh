@@ -3,6 +3,7 @@
 #include "himan_common.h"
 #include "info.h"
 #include "metutil.h"
+#include "moisture.h"
 #include "numerical_functions.h"
 
 /*
