@@ -8,31 +8,31 @@ namespace himan
 namespace metutil
 {
 // struct to store LCL level parameters
-template <typename A>
+template <typename Type>
 struct lcl_t
 {
-	A T;
-	A P;
-	A Q;
+	Type T;
+	Type P;
+	Type Q;
 
 	CUDA_DEVICE
-	lcl_t() : T(MissingValue<A>()), P(MissingValue<A>()), Q(MissingValue<A>())
+	lcl_t() : T(MissingValue<Type>()), P(MissingValue<Type>()), Q(MissingValue<Type>())
 	{
 	}
 
 	CUDA_DEVICE
-	lcl_t(A T, A P, A Q) : T(T), P(P), Q(Q)
+	lcl_t(Type T, Type P, Type Q) : T(T), P(P), Q(Q)
 	{
 	}
 };
 
-template <typename A>
-CUDA_DEVICE A Wobf(A T)
+template <typename Type>
+CUDA_DEVICE Type Wobf(Type T)
 {
 	// "Wobus function" is a polynomial approximation of moist lift
 	// process. It is called from MoistLiftA_().
 
-	A ret;
+	Type ret;
 
 	T -= 20;
 
@@ -66,8 +66,8 @@ CUDA_DEVICE A Wobf(A T)
  * @return Lapse rate in K/km
  */
 
-template <typename A>
-CUDA_DEVICE A Gammas_(A P, A T)
+template <typename Type>
+CUDA_DEVICE Type Gammas_(Type P, Type T)
 {
 	ASSERT(P > 10000);
 	ASSERT((T > 0 && T < 500) || IsMissing(T));
@@ -77,9 +77,9 @@ CUDA_DEVICE A Gammas_(A P, A T)
 
 	namespace hc = constants;
 
-	A Q = hc::kEp * (::himan::metutil::Es_<A>(T) * 0.01) / (P * 0.01);
+	Type Q = hc::kEp * (::himan::metutil::Es_<Type>(T) * 0.01) / (P * 0.01);
 
-	A B = hc::kRd * T / hc::kCp / P * (1 + hc::kL * Q / hc::kRd / T);
+	Type B = hc::kRd * T / hc::kCp / P * (1 + hc::kL * Q / hc::kRd / T);
 
 	return B / (1 + hc::kEp / hc::kCp * (hc::kL * hc::kL) / hc::kRd * Q / (T * T));
 }
@@ -100,8 +100,8 @@ CUDA_DEVICE A Gammas_(A P, A T)
  * @return Lapse rate in K/Pa
  */
 
-template <typename A>
-CUDA_DEVICE A Gammaw_(A P, A T)
+template <typename Type>
+CUDA_DEVICE Type Gammaw_(Type P, Type T)
 {
 	// Sanity checks
 
@@ -110,10 +110,10 @@ CUDA_DEVICE A Gammaw_(A P, A T)
 
 	namespace hc = constants;
 
-	A esat = ::himan::metutil::Es_<A>(T);
-	A wsat = hc::kEp * esat / (P - esat);  // Rogers&Yun 2.18
-	A numerator = (2. / 7.) * T + (2. / 7. * hc::kL / hc::kRd) * wsat;
-	A denominator = P * (1 + (hc::kEp * hc::kL * hc::kL / (hc::kRd * hc::kCp)) * wsat / (T * T));
+	Type esat = ::himan::metutil::Es_<Type>(T);
+	Type wsat = hc::kEp * esat / (P - esat);  // Rogers&Yun 2.18
+	Type numerator = (2. / 7.) * T + (2. / 7. * hc::kL / hc::kRd) * wsat;
+	Type denominator = P * (1 + (hc::kEp * hc::kL * hc::kL / (hc::kRd * hc::kCp)) * wsat / (T * T));
 
 	ASSERT(numerator != 0);
 	ASSERT(denominator != 0);
@@ -133,8 +133,8 @@ CUDA_DEVICE A Gammaw_(A P, A T)
  * @return Pressure (Pa), temperature (K) and specific humidity (g/kg) for LCL .
  */
 
-template <typename A>
-CUDA_DEVICE lcl_t<A> LCL_(A P, A T, A TD)
+template <typename Type>
+CUDA_DEVICE lcl_t<Type> LCL_(Type P, Type T, Type TD)
 {
 	ASSERT(P > 10000);
 	ASSERT(T > 0 || IsMissing(T));
@@ -144,29 +144,29 @@ CUDA_DEVICE lcl_t<A> LCL_(A P, A T, A TD)
 
 	// starting T step
 
-	A Tstep = 0.05;
+	Type Tstep = 0.05;
 
 	P *= 0.01;  // HPa
 
 	// saturated vapor pressure
 
-	const A E0 = himan::metutil::Es_<A>(TD) * 0.01;  // HPa
+	const Type E0 = himan::metutil::Es_<Type>(TD) * 0.01;  // HPa
 
-	const A Q = constants::kEp * E0 / P;
-	const A C = T / pow(E0, constants::kRd_div_Cp);
+	const Type Q = constants::kEp * E0 / P;
+	const Type C = T / pow(E0, constants::kRd_div_Cp);
 
-	A TLCL, PLCL;
+	Type TLCL, PLCL;
 
-	A Torig = T;
-	A Porig = P;
+	Type Torig = T;
+	Type Porig = P;
 
 	short nq = 0;
 
-	lcl_t<A> ret;
+	lcl_t<Type> ret;
 
 	while (++nq < 100)
 	{
-		const A TEs = C * pow(himan::metutil::Es_<A>(T) * 0.01, constants::kRd_div_Cp);
+		const Type TEs = C * pow(himan::metutil::Es_<Type>(T) * 0.01, constants::kRd_div_Cp);
 
 		if (fabs(TEs - T) < 0.05)
 		{
@@ -197,7 +197,7 @@ CUDA_DEVICE lcl_t<A> LCL_(A P, A T, A TD)
 
 		while (++nq <= 500)
 		{
-			if ((C * pow(himan::metutil::Es_<A>(T) * 0.01, constants::kRd_div_Cp) - T) > 0)
+			if ((C * pow(himan::metutil::Es_<Type>(T) * 0.01, constants::kRd_div_Cp) - T) > 0)
 			{
 				T -= Tstep;
 			}
@@ -235,10 +235,10 @@ CUDA_DEVICE lcl_t<A> LCL_(A P, A T, A TD)
  * @param Pressure (Pa) and temperature (K) for LCL.
  */
 
-template <typename A>
-CUDA_DEVICE lcl_t<A> LCLA_(A P, A T, A TD)
+template <typename Type>
+CUDA_DEVICE lcl_t<Type> LCLA_(Type P, Type T, Type TD)
 {
-	lcl_t<A> ret;
+	lcl_t<Type> ret;
 
 	// Sanity checks
 
@@ -248,8 +248,8 @@ CUDA_DEVICE lcl_t<A> LCLA_(A P, A T, A TD)
 	ASSERT(TD > 0 && TD != 56);
 	ASSERT(TD < 500);
 
-	A B = 1 / (TD - 56);
-	A C = log(T / TD) / 800.;
+	Type B = 1 / (TD - 56);
+	Type C = log(T / TD) / 800.;
 
 	ret.T = 1 / (B + C) + 56;
 	ret.P = P * pow((ret.T / T), 3.5011);
@@ -268,12 +268,12 @@ CUDA_DEVICE lcl_t<A> LCLA_(A P, A T, A TD)
  * @return Parcel temperature in wanted pressure in Kelvins
  */
 
-template <typename A>
-CUDA_DEVICE A DryLift_(A P, A T, A targetP)
+template <typename Type>
+CUDA_DEVICE Type DryLift_(Type P, Type T, Type targetP)
 {
 	if (targetP >= P)
 	{
-		return MissingValue<A>();
+		return MissingValue<Type>();
 	}
 
 	// Sanity checks
@@ -295,12 +295,12 @@ CUDA_DEVICE A DryLift_(A P, A T, A targetP)
  * @return Parcel temperature in wanted pressure in Kelvins
  */
 
-template <typename A>
-CUDA_DEVICE A MoistLift_(A P, A T, A targetP)
+template <typename Type>
+CUDA_DEVICE Type MoistLift_(Type P, Type T, Type targetP)
 {
 	if (IsMissing(T) || IsMissing(P) || targetP >= P)
 	{
-		return MissingValue<A>();
+		return MissingValue<Type>();
 	}
 
 	// Sanity checks
@@ -309,20 +309,20 @@ CUDA_DEVICE A MoistLift_(A P, A T, A targetP)
 	ASSERT((T > 100 && T < 400) || IsMissing(T));
 	ASSERT(targetP > 2000);
 
-	A Pint = P;  // Pa
-	A Tint = T;  // K
+	Type Pint = P;  // Pa
+	Type Tint = T;  // K
 
 	/*
 	 * Units: Temperature in Kelvins, Pressure in Pascals
 	 */
 
-	A T0 = Tint;
+	Type T0 = Tint;
 
 	int i = 0;
-	const A Pstep = 100;  // Pa; do not increase this as quality of results is weakened
+	const Type Pstep = 100;  // Pa; do not increase this as quality of results is weakened
 	const int maxIter = static_cast<int>(100000 / Pstep + 10);  // varadutuaan iteroimaan 1000hPa --> 0 hPa + marginaali
 
-	A value = MissingValue<A>();
+	Type value = MissingValue<Type>();
 
 	while (++i < maxIter)
 	{
@@ -362,31 +362,31 @@ CUDA_DEVICE A MoistLift_(A P, A T, A targetP)
  * @return Parcel temperature in wanted pressure in Kelvins
  */
 
-template <typename A>
-CUDA_DEVICE A MoistLiftA_(A P, A T, A targetP)
+template <typename Type>
+CUDA_DEVICE Type MoistLiftA_(Type P, Type T, Type targetP)
 {
 	if (IsMissing(T) || IsMissing(P) || targetP >= P)
 	{
-		return MissingValue<A>();
+		return MissingValue<Type>();
 	}
 
 	using namespace constants;
 
-	const A theta = Theta_(T, P) - kKelvin;  // pot temp, C
+	const Type theta = Theta_(T, P) - kKelvin;  // pot temp, C
 	T -= kKelvin;
 
-	const A thetaw = theta - Wobf<A>(theta) + Wobf<A>(T);  // moist pot temp, C
+	const Type thetaw = theta - Wobf<Type>(theta) + Wobf<Type>(T);  // moist pot temp, C
 
-	A remains = 9999;  // try to minimize this
-	A ratio = 1;
+	Type remains = 9999;  // try to minimize this
+	Type ratio = 1;
 
-	const A pwrp = pow(targetP / 100000, kRd_div_Cp);  // exner
+	const Type pwrp = pow(targetP / 100000, kRd_div_Cp);  // exner
 
-	A t1 = (thetaw + kKelvin) * pwrp - kKelvin;
-	A e1 = Wobf<A>(t1) - Wobf<A>(thetaw);
-	A t2 = t1 - (e1 * ratio);                 // improved estimate of return value (saturated lifted temperature)
-	A pot = (t2 + kKelvin) / pwrp - kKelvin;  // pot temperature of t2 at pressure p
-	A e2 = pot + Wobf<A>(t2) - Wobf<A>(pot) - thetaw;
+	Type t1 = (thetaw + kKelvin) * pwrp - kKelvin;
+	Type e1 = Wobf<Type>(t1) - Wobf<Type>(thetaw);
+	Type t2 = t1 - (e1 * ratio);                 // improved estimate of return value (saturated lifted temperature)
+	Type pot = (t2 + kKelvin) / pwrp - kKelvin;  // pot temperature of t2 at pressure p
+	Type e2 = pot + Wobf<Type>(t2) - Wobf<Type>(pot) - thetaw;
 
 	while (fabs(remains) - 0.1 > 0)
 	{
@@ -396,7 +396,7 @@ CUDA_DEVICE A MoistLiftA_(A P, A T, A targetP)
 		e1 = e2;
 		t2 = t1 - e1 * ratio;
 		pot = (t2 + kKelvin) / pwrp - kKelvin;
-		e2 = pot + Wobf<A>(t2) - Wobf<A>(pot) - thetaw;
+		e2 = pot + Wobf<Type>(t2) - Wobf<Type>(pot) - thetaw;
 
 		remains = e2 * ratio;
 	}
@@ -418,8 +418,8 @@ CUDA_DEVICE A MoistLiftA_(A P, A T, A targetP)
  * @return Parcel temperature in wanted pressure in Kelvins
  */
 
-template <typename A>
-CUDA_DEVICE A LiftLCL_(A P, A T, A LCLP, A targetP)
+template <typename Type>
+CUDA_DEVICE Type LiftLCL_(Type P, Type T, Type LCLP, Type targetP)
 {
 	if (LCLP < targetP)
 	{
@@ -435,33 +435,33 @@ CUDA_DEVICE A LiftLCL_(A P, A T, A LCLP, A targetP)
 	}
 
 	// First lift dry adiabatically to LCL height
-	const A LCLT = DryLift_<A>(P, T, LCLP);
+	const Type LCLT = DryLift_<Type>(P, T, LCLP);
 
 	// Lift from LCL to wanted pressure
-	return MoistLift_<A>(LCLP, LCLT, targetP);
+	return MoistLift_<Type>(LCLP, LCLT, targetP);
 }
 
-template <typename A>
-CUDA_DEVICE double LiftLCLA_(A P, A T, A LCLP, A targetP)
+template <typename Type>
+CUDA_DEVICE double LiftLCLA_(Type P, Type T, Type LCLP, Type targetP)
 {
 	if (LCLP < targetP)
 	{
 		// LCL level is higher than requested pressure, only dry lift is needed
-		return DryLift_<A>(P, T, targetP);
+		return DryLift_<Type>(P, T, targetP);
 	}
 
 	// Wanted height is above LCL
 	if (P < LCLP)
 	{
 		// Current level is above LCL, only moist lift is required
-		return MoistLiftA_<A>(P, T, targetP);
+		return MoistLiftA_<Type>(P, T, targetP);
 	}
 
 	// First lift dry adiabatically to LCL height
-	const A LCLT = DryLift_<A>(P, T, LCLP);
+	const Type LCLT = DryLift_<Type>(P, T, LCLP);
 
 	// Lift from LCL to wanted pressure
-	return MoistLiftA_<A>(LCLP, LCLT, targetP);
+	return MoistLiftA_<Type>(LCLP, LCLT, targetP);
 }
 
 /**
@@ -476,18 +476,18 @@ CUDA_DEVICE double LiftLCLA_(A P, A T, A LCLP, A targetP)
  * @return Parcel temperature in wanted pressure in Kelvins
  */
 
-template <typename A>
-CUDA_DEVICE double Lift_(A P, A T, A TD, A targetP)
+template <typename Type>
+CUDA_DEVICE double Lift_(Type P, Type T, Type TD, Type targetP)
 {
-	lcl_t<A> LCL = metutil::LCLA_<A>(P, T, TD);
+	lcl_t<Type> LCL = metutil::LCLA_<Type>(P, T, TD);
 
 	if (LCL.P < targetP)
 	{
 		// LCL level is higher than requested pressure, only dry lift is needed
-		return DryLift_<A>(P, T, targetP);
+		return DryLift_<Type>(P, T, targetP);
 	}
 
-	return MoistLift_<A>(P, T, targetP);
+	return MoistLift_<Type>(P, T, targetP);
 }
 
 namespace smarttool
@@ -502,8 +502,8 @@ namespace smarttool
  * the original function took dewpoint and calculated humidity from that.
  */
 
-template <typename A>
-CUDA_DEVICE A ThetaE_(A T, A RH, A P)
+template <typename Type>
+CUDA_DEVICE Type ThetaE_(Type T, Type RH, Type P)
 {
 	ASSERT(RH >= 0);
 	ASSERT(RH < 102);
@@ -511,8 +511,8 @@ CUDA_DEVICE A ThetaE_(A T, A RH, A P)
 	ASSERT(T < 350 || IsMissing(T));
 	ASSERT(P > 1500);
 
-	const A tpot = himan::metutil::Theta_<A>(T, P);
-	const A w = himan::metutil::smarttool::MixingRatio_<A>(T, RH, P);
+	const Type tpot = himan::metutil::Theta_<Type>(T, P);
+	const Type w = himan::metutil::smarttool::MixingRatio_<Type>(T, RH, P);
 	return tpot + 3 * w;
 }
 
