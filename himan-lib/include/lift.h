@@ -38,19 +38,28 @@ CUDA_DEVICE Type Wobf(Type T)
 
 	if (T <= 0)
 	{
-		ret = 1 +
-		      T * (-8.841660499999999e-3 +
-		           T * (1.4714143e-4 + T * (-9.671989000000001e-7 + T * (-3.2607217e-8 + T * (-3.8598073e-10)))));
-		ret = 15.130 / (ret * ret * ret * ret);
+		const Type A = static_cast<Type>(-8.841660499999999e-3);
+		const Type B = static_cast<Type>(1.4714143e-4);
+		const Type C = static_cast<Type>(-9.671989000000001e-7);
+		const Type D = static_cast<Type>(-3.2607217e-8);
+		const Type E = static_cast<Type>(-3.8598073e-10);
+
+		ret = 1 + T * (A + T * (B + T * (C + T * (D + T * E))));
+		ret = static_cast<Type>(15.13) / (ret * ret * ret * ret);
 	}
 	else
 	{
-		ret = 1 +
-		      T * (3.6182989e-03 +
-		           T * (-1.3603273e-05 +
-		                T * (4.9618922e-07 +
-		                     T * (-6.1059365e-09 + T * (3.9401551e-11 + T * (-1.2588129e-13 + T * (1.6688280e-16)))))));
-		ret = (29.930 / (ret * ret * ret * ret)) + (0.96 * T) - 14.8;
+		const Type A = static_cast<Type>(3.6182989e-03);
+		const Type B = static_cast<Type>(-1.3603273e-05);
+		const Type C = static_cast<Type>(4.9618922e-07);
+		const Type D = static_cast<Type>(-6.1059365e-09);
+		const Type E = static_cast<Type>(3.9401551e-11);
+		const Type F = static_cast<Type>(-1.2588129e-13);
+		const Type G = static_cast<Type>(1.6688280e-16);
+
+		ret = 1 + T * (A + T * (B + T * (C + T * (D + T * (E + T * (F + T * G))))));
+		ret = (static_cast<Type>(29.93) / (ret * ret * ret * ret)) + (static_cast<Type>(0.96) * T) -
+		      static_cast<Type>(14.8);
 	}
 
 	return ret;
@@ -153,7 +162,7 @@ CUDA_DEVICE lcl_t<Type> LCL_(Type P, Type T, Type TD)
 	const Type E0 = himan::metutil::Es_<Type>(TD) * 0.01;  // HPa
 
 	const Type Q = constants::kEp * E0 / P;
-	const Type C = T / pow(E0, constants::kRd_div_Cp);
+	const Type C = T / std::pow(E0, constants::kRd_div_Cp);
 
 	Type TLCL, PLCL;
 
@@ -166,12 +175,12 @@ CUDA_DEVICE lcl_t<Type> LCL_(Type P, Type T, Type TD)
 
 	while (++nq < 100)
 	{
-		const Type TEs = C * pow(himan::metutil::Es_<Type>(T) * 0.01, constants::kRd_div_Cp);
+		const Type TEs = C * std::pow(himan::metutil::Es_<Type>(T) * 0.01, constants::kRd_div_Cp);
 
 		if (fabs(TEs - T) < 0.05)
 		{
 			TLCL = T;
-			PLCL = pow((TLCL / Torig), (1 / constants::kRd_div_Cp)) * P;
+			PLCL = std::pow((TLCL / Torig), (1 / constants::kRd_div_Cp)) * P;
 
 			ret.P = PLCL * 100;  // Pa
 
@@ -197,14 +206,14 @@ CUDA_DEVICE lcl_t<Type> LCL_(Type P, Type T, Type TD)
 
 		while (++nq <= 500)
 		{
-			if ((C * pow(himan::metutil::Es_<Type>(T) * 0.01, constants::kRd_div_Cp) - T) > 0)
+			if ((C * std::pow(himan::metutil::Es_<Type>(T) * 0.01, constants::kRd_div_Cp) - T) > 0)
 			{
 				T -= Tstep;
 			}
 			else
 			{
 				TLCL = T;
-				PLCL = pow(TLCL / Torig, (1 / constants::kRd_div_Cp)) * Porig;
+				PLCL = std::pow(TLCL / Torig, (1 / constants::kRd_div_Cp)) * Porig;
 
 				ret.P = PLCL * 100;  // Pa
 
@@ -252,7 +261,7 @@ CUDA_DEVICE lcl_t<Type> LCLA_(Type P, Type T, Type TD)
 	Type C = log(T / TD) / 800.;
 
 	ret.T = 1 / (B + C) + 56;
-	ret.P = P * pow((ret.T / T), 3.5011);
+	ret.P = P * std::pow((ret.T / T), 3.5011);
 
 	return ret;
 }
@@ -281,7 +290,7 @@ CUDA_DEVICE Type DryLift_(Type P, Type T, Type targetP)
 	ASSERT(IsMissing(T) || (T > 100 && T < 400));
 	ASSERT(targetP > 10000);
 
-	return T * pow((targetP / P), 0.286);
+	return T * std::pow((targetP / P), 0.286);
 }
 
 /**
@@ -371,21 +380,22 @@ CUDA_DEVICE Type MoistLiftA_(Type P, Type T, Type targetP)
 	}
 
 	using namespace constants;
+	const Type kelvin = static_cast<Type>(kKelvin);
 
-	const Type theta = Theta_(T, P) - kKelvin;  // pot temp, C
-	T -= kKelvin;
+	const Type theta = Theta_(T, P) - kelvin;  // pot temp, C
+	T -= kelvin;
 
 	const Type thetaw = theta - Wobf<Type>(theta) + Wobf<Type>(T);  // moist pot temp, C
 
 	Type remains = 9999;  // try to minimize this
 	Type ratio = 1;
 
-	const Type pwrp = pow(targetP / 100000, kRd_div_Cp);  // exner
+	const Type pwrp = std::pow(targetP / 100000, static_cast<Type>(kRd_div_Cp));  // exner
 
-	Type t1 = (thetaw + kKelvin) * pwrp - kKelvin;
+	Type t1 = (thetaw + kelvin) * pwrp - kelvin;
 	Type e1 = Wobf<Type>(t1) - Wobf<Type>(thetaw);
-	Type t2 = t1 - (e1 * ratio);                 // improved estimate of return value (saturated lifted temperature)
-	Type pot = (t2 + kKelvin) / pwrp - kKelvin;  // pot temperature of t2 at pressure p
+	Type t2 = t1 - (e1 * ratio);               // improved estimate of return value (saturated lifted temperature)
+	Type pot = (t2 + kelvin) / pwrp - kelvin;  // pot temperature of t2 at pressure p
 	Type e2 = pot + Wobf<Type>(t2) - Wobf<Type>(pot) - thetaw;
 
 	while (fabs(remains) - 0.1 > 0)
@@ -395,13 +405,13 @@ CUDA_DEVICE Type MoistLiftA_(Type P, Type T, Type targetP)
 		t1 = t2;
 		e1 = e2;
 		t2 = t1 - e1 * ratio;
-		pot = (t2 + kKelvin) / pwrp - kKelvin;
+		pot = (t2 + kelvin) / pwrp - kelvin;
 		e2 = pot + Wobf<Type>(t2) - Wobf<Type>(pot) - thetaw;
 
 		remains = e2 * ratio;
 	}
 
-	return t2 - remains + kKelvin;
+	return t2 - remains + kelvin;
 }
 
 /**

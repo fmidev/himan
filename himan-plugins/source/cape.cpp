@@ -132,12 +132,8 @@ void MoistLift(const double* Piter, const double* Titer, const double* Penv, dou
 		                        [&](size_t start) {
 			                        for (size_t i = start; i < start + splitSize; i++)
 			                        {
-				                        Tparcel[i] = himan::metutil::MoistLiftA_<float>(Piter[i], Titer[i], Penv[i]);
+				                        Tparcel[i] = himan::metutil::MoistLiftA_<double>(Piter[i], Titer[i], Penv[i]);
 			                        }
-			                        //			                        himan::metutil::MoistLiftA(&Piter[start],
-			                        //&Titer[start], &Penv[start],
-			                        //			                                                   &Tparcel[start],
-			                        //splitSize);
 			                    },
 		                        start));
 	}

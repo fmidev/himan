@@ -157,10 +157,10 @@ CUDA_DEVICE Type Tw_(Type thetaE, Type P)
 	const Type P0 = 100000;
 	const Type lambda = 1 / kRd_div_Cp;
 	const Type C = kKelvin;
-	const Type pi = pow(P / P0, kRd_div_Cp);  // Nondimensional pressure, exner function
+	const Type pi = std::pow(P / P0, kRd_div_Cp);  // Nondimensional pressure, exner function
 
 	const Type Te = thetaE * pi;  // Equivalent temperature
-	const Type ratio = pow((C / Te), lambda);
+	const Type ratio = std::pow((C / Te), lambda);
 
 	// Quadratic regression curves for thetaW
 
@@ -182,10 +182,10 @@ CUDA_DEVICE Type Tw_(Type thetaE, Type P)
 
 		// e & r as Davies-Jones implemented them
 		const Type e = 6.112 * exp((a * (Te - C)) / (Te - C + b));
-		const Type r = kEp * e / (p0 * pow(pi, lambda) - e);
+		const Type r = kEp * e / (p0 * std::pow(pi, lambda) - e);
 
 		const Type nomin = A_ * r;
-		const Type denom = 1 + A_ * r * ((a * b) / pow((Te - C + b), 2));
+		const Type denom = 1 + A_ * r * ((a * b) / std::pow((Te - C + b), 2));
 
 		Tw = Te - C - nomin / denom;
 	}
@@ -208,23 +208,23 @@ CUDA_DEVICE Type Tw_(Type thetaE, Type P)
 
 	while (remains > 0.01 && iter < maxiter)
 	{
-		const Type newRatio = pow((C / Tw), lambda);
+		const Type newRatio = std::pow((C / Tw), lambda);
 
 		const Type e = 6.112 * exp((a * (Tw - C)) / (Tw - C + b));
-		const Type r = kEp * e / (p0 * pow(pi, lambda) - e);
+		const Type r = kEp * e / (p0 * std::pow(pi, lambda) - e);
 
 		// Evaluate f(x)
 
-		const Type A_ = 1 - e / (p0 * pow(pi, lambda));
+		const Type A_ = 1 - e / (p0 * std::pow(pi, lambda));
 		const Type B = (3036 / Tw - 1.78) * (r + 0.448 * r * r);
 
-		const Type fTw = newRatio * pow(A_, kRd_div_Cp * lambda) * exp(-lambda * B);
+		const Type fTw = newRatio * std::pow(A_, kRd_div_Cp * lambda) * exp(-lambda * B);
 
 		// Partial derivative de/dTw
-		const Type deTw = e * (a * b) / pow((Tw - C + b), 2);
+		const Type deTw = e * (a * b) / std::pow((Tw - C + b), 2);
 
 		// Partial derivative dr/dTw
-		const Type drTw = ((kEp * p) / pow((p - e), 2)) * deTw;
+		const Type drTw = ((kEp * p) / std::pow((p - e), 2)) * deTw;
 
 		// Evaluate f'(x)
 
@@ -261,7 +261,7 @@ CUDA_DEVICE Type Theta_(Type T, Type P)
 	ASSERT(T > 0 || IsMissing(T));
 	ASSERT(P > 1000);
 
-	return T * pow((100000. / P), 0.28586);
+	return T * std::pow((static_cast<Type>(100000) / P), static_cast<Type>(0.28586));
 }
 
 /**
@@ -292,7 +292,7 @@ CUDA_DEVICE Type ThetaE_(Type T, Type TD, Type P)
 	const Type r = himan::metutil::MixingRatio_<Type>(T, P);
 
 	// 100000 = reference pressure 1000hPa
-	const Type C = T * pow(100000. / P, 0.2854 * (1 - 0.00028 * r));
+	const Type C = T * std::pow(100000. / P, 0.2854 * (1 - 0.00028 * r));
 	const Type D = 3.376 / TLCL - 0.00254;
 	const Type F = r * (1 + 0.00081 * r);
 
@@ -330,8 +330,8 @@ CUDA_DEVICE Type ThetaW_(Type thetaE)
 		const Type b3 = -0.6899655;
 		const Type b4 = -0.5929340;
 
-		const Type A_ = a0 + a1 * X + a2 * X * X + a3 * pow(X, 3.) + a4 * pow(X, 4.);
-		const Type B_ = 1 + b1 * X + b2 * X * X + b3 * pow(X, 3.) + b4 * pow(X, 4.);
+		const Type A_ = a0 + a1 * X + a2 * X * X + a3 * std::pow(X, 3.) + a4 * std::pow(X, 4.);
+		const Type B_ = 1 + b1 * X + b2 * X * X + b3 * std::pow(X, 3.) + b4 * std::pow(X, 4.);
 
 		thetaW = thetaW - exp(A_ / B_);
 	}
@@ -372,7 +372,7 @@ CUDA_DEVICE Type Es2_(Type T)
 	const Type e0 = 6.11;   // 6.11 <- 0.611 [kPa]
 	const Type T2 = 35.86;  // [K]
 
-	const Type nume = b * (T - himan::constants::kKelvin);
+	const Type nume = b * (T - static_cast<Type>(himan::constants::kKelvin));
 	const Type deno = (T - T2);
 
 	return e0 * ::exp(nume / deno);
@@ -388,7 +388,7 @@ CUDA_DEVICE double W_(Type e, Type P)
 {
 	ASSERT(P > 1500);
 
-	const Type w = 0.622 * e / P * 100000.;
+	const Type w = static_cast<Type>(0.622) * e / P * 100000;
 	ASSERT(w < 60);
 
 	return w;
@@ -400,7 +400,7 @@ CUDA_DEVICE Type E_(Type RH, Type es)
 	ASSERT(RH >= 0);
 	ASSERT(RH < 102);
 
-	return RH * es / 100.;
+	return RH * es / static_cast<Type>(100);
 }
 
 /**
