@@ -35,8 +35,8 @@ namespace metutil
  * @return convection value.
  */
 
-template <typename A>
-int LowConvection_(A T0m, A T850)
+template <typename Type>
+int LowConvection_(Type T0m, Type T850)
 {
 	ASSERT(T0m > 0);
 	ASSERT(T850 > 0);
