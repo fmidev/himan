@@ -6,7 +6,6 @@
  */
 
 #include "metutil.h"
-#include "lift.h"
 
 using namespace himan;
 
