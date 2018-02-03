@@ -637,10 +637,8 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 			double ta1 = Tavg01[i] - constants::kKelvin;
 			double ta2 = Tavg12[i] - constants::kKelvin;
 
-			double paloft = MissingDouble();
-
 			ma = zl1 * ta1;
-			paloft = (zl2 - zl1) * ta2;
+			double paloft = (zl2 - zl1) * ta2;
 
 			// Keskimääräinen rhMelt pakkaskerroksen yläpuolisessa plussakerroksessa
 			rhMeltUpper[i] = 9.5 * exp((-17.27 * ta2) / (ta2 + 238.3)) * (10.5 - ta2);
@@ -668,7 +666,6 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 		else if (numZeroLevel % 2 == 1)
 		{
 			double zl1 = zeroLevel1[i], ta1 = Tavg01[i] - constants::kKelvin;
-			double paloft = MissingDouble();
 
 			pasfc = zl1 * ta1;
 			pa = pasfc;
@@ -694,7 +691,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 				double zl2 = zeroLevel2[i], zl3 = zeroLevel3[i];
 				double ta2 = Tavg23[i] - constants::kKelvin;
 
-				paloft = (zl3 - zl2) * ta2;
+				double paloft = (zl3 - zl2) * ta2;
 
 				// Keskimääräinen rhMelt ylemmässä plussakerroksessa
 				rhMeltUpper[i] = 9.5 * exp((-17.27 * ta2) / (ta2 + 238.3)) * (10.5 - ta2);

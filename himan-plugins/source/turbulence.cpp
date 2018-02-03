@@ -183,7 +183,7 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		double CVG = -get<0>(gradU).At(index) - get<1>(gradV).At(index);
 
 		// Calculate scaling factor
-		double S = MissingDouble();
+		double S;
 		double ScaleMax = 40;
 		double ScaleMin = 10;
 		if (WS >= ScaleMax)

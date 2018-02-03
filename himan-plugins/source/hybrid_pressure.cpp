@@ -137,7 +137,7 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 
 	vector<double> ab = TInfo->Grid()->AB();
 
-	double A = MissingDouble(), B = MissingDouble();
+	double A, B;
 
 	if (ab.size() == 2)
 	{

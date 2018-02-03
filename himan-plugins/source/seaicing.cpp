@@ -93,17 +93,13 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThread
 		double Tg = TgInfo->Value();
 		double Ff = FfInfo->Value();
 
-		double seaIcing = MissingDouble();
+		double seaIcing = 0;
 		double TBase = 273.15;
 
 		T = T - TBase;
 		Tg = Tg - TBase;
 
-		if (Tg < -2)
-		{
-			seaIcing = 0;
-		}
-		else
+		if (Tg >= -2)
 		{
 			seaIcing = Ff * (-saltinessIndex - T) / (1 + 0.3 * (Tg + saltinessIndex));
 

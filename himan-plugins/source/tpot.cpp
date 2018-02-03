@@ -188,7 +188,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		{
 			double T = TInfo->Value() + TBase;  // to Kelvin
 
-			double P = MissingDouble(), TD = MissingDouble();
+			double P, TD = MissingDouble();
 
 			if (isPressureLevel)
 			{
@@ -206,15 +206,13 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				TD = TDInfo->Value() + TDBase;  // to Kelvin
 			}
 
-			double theta = MissingDouble();
-
 			if (itsThetaCalculation)
 			{
-				theta = metutil::Theta_<double>(T, P);
+				double value = metutil::Theta_<double>(T, P);
 
 				myTargetInfo->Param(param("TP-K"));
 
-				myTargetInfo->Value(theta);
+				myTargetInfo->Value(value);
 			}
 
 			if (itsThetaWCalculation)
