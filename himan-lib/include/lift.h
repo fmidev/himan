@@ -155,11 +155,11 @@ CUDA_DEVICE lcl_t<Type> LCL_(Type P, Type T, Type TD)
 
 	Type Tstep = 0.05;
 
-	P *= 0.01;  // HPa
+	P *= 0.01f;  // HPa
 
 	// saturated vapor pressure
 
-	const Type E0 = himan::metutil::Es_<Type>(TD) * 0.01;  // HPa
+	const Type E0 = himan::metutil::Es_<Type>(TD) * 0.01f;  // HPa
 
 	const Type Q = constants::kEp * E0 / P;
 	const Type C = T / std::pow(E0, constants::kRd_div_Cp);
@@ -172,15 +172,16 @@ CUDA_DEVICE lcl_t<Type> LCL_(Type P, Type T, Type TD)
 	short nq = 0;
 
 	lcl_t<Type> ret;
+	const Type div = static_cast<Type>(constants::kRd_div_Cp);
 
 	while (++nq < 100)
 	{
-		const Type TEs = C * std::pow(himan::metutil::Es_<Type>(T) * 0.01, constants::kRd_div_Cp);
+		const Type TEs = C * std::pow(himan::metutil::Es_<Type>(T) * 0.01f, div);
 
-		if (fabs(TEs - T) < 0.05)
+		if (fabs(TEs - T) < 0.05f)
 		{
 			TLCL = T;
-			PLCL = std::pow((TLCL / Torig), (1 / constants::kRd_div_Cp)) * P;
+			PLCL = std::pow((TLCL / Torig), (1 / div)) * P;
 
 			ret.P = PLCL * 100;  // Pa
 
@@ -190,7 +191,7 @@ CUDA_DEVICE lcl_t<Type> LCL_(Type P, Type T, Type TD)
 		}
 		else
 		{
-			Tstep = fmin((TEs - T) / (2 * (nq + 1)), 15.);
+			Tstep = std::min((TEs - T) / (2 * (nq + 1)), static_cast<Type>(15));
 			T -= Tstep;
 		}
 	}
@@ -206,14 +207,14 @@ CUDA_DEVICE lcl_t<Type> LCL_(Type P, Type T, Type TD)
 
 		while (++nq <= 500)
 		{
-			if ((C * std::pow(himan::metutil::Es_<Type>(T) * 0.01, constants::kRd_div_Cp) - T) > 0)
+			if ((C * std::pow(himan::metutil::Es_<Type>(T) * 0.01, div) - T) > 0)
 			{
 				T -= Tstep;
 			}
 			else
 			{
 				TLCL = T;
-				PLCL = std::pow(TLCL / Torig, (1 / constants::kRd_div_Cp)) * Porig;
+				PLCL = std::pow(TLCL / Torig, (1 / div)) * Porig;
 
 				ret.P = PLCL * 100;  // Pa
 
@@ -258,10 +259,10 @@ CUDA_DEVICE lcl_t<Type> LCLA_(Type P, Type T, Type TD)
 	ASSERT(TD < 500);
 
 	Type B = 1 / (TD - 56);
-	Type C = log(T / TD) / 800.;
+	Type C = std::log(T / TD) / 800.f;
 
 	ret.T = 1 / (B + C) + 56;
-	ret.P = P * std::pow((ret.T / T), 3.5011);
+	ret.P = P * std::pow((ret.T / T), 3.5011f);
 
 	return ret;
 }
@@ -290,7 +291,7 @@ CUDA_DEVICE Type DryLift_(Type P, Type T, Type targetP)
 	ASSERT(IsMissing(T) || (T > 100 && T < 400));
 	ASSERT(targetP > 10000);
 
-	return T * std::pow((targetP / P), 0.286);
+	return T * std::pow((targetP / P), 0.286f);
 }
 
 /**
@@ -452,7 +453,7 @@ CUDA_DEVICE Type LiftLCL_(Type P, Type T, Type LCLP, Type targetP)
 }
 
 template <typename Type>
-CUDA_DEVICE double LiftLCLA_(Type P, Type T, Type LCLP, Type targetP)
+CUDA_DEVICE Type LiftLCLA_(Type P, Type T, Type LCLP, Type targetP)
 {
 	if (LCLP < targetP)
 	{
@@ -487,7 +488,7 @@ CUDA_DEVICE double LiftLCLA_(Type P, Type T, Type LCLP, Type targetP)
  */
 
 template <typename Type>
-CUDA_DEVICE double Lift_(Type P, Type T, Type TD, Type targetP)
+CUDA_DEVICE Type Lift_(Type P, Type T, Type TD, Type targetP)
 {
 	lcl_t<Type> LCL = metutil::LCLA_<Type>(P, T, TD);
 
