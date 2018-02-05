@@ -25,6 +25,8 @@ using namespace std;
 
 static once_flag oflag;
 
+string GetOtherVectorComponentName(const string& name);
+
 // If multiple plugins are executed using auxiliary files, prevent
 // each plugin execution from re-reading the aux files to memory.
 
@@ -146,7 +148,6 @@ shared_ptr<himan::info> fetcher::FetchFromProducer(search_options& opts, bool re
 	if (itsDoInterpolation)
 	{
 		if (!interpolate::Interpolate(*baseInfo, theInfos, opts.configuration->UseCudaForInterpolation()))
-
 		{
 			// interpolation failed
 			throw kFileDataNotFound;
@@ -479,26 +480,88 @@ bool fetcher::UseCache() const
 }
 void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vector<info_t>& infos)
 {
-	for (const auto& anInfo : infos)
+	// Step 1. Rotate if needed
+
+	auto baseInfo = make_shared<info>(*dynamic_cast<const plugin_configuration*>(opts.configuration.get())->Info());
+	ASSERT(baseInfo->Dimensions().size());
+
+	baseInfo->First();
+
+	auto eq = [](const info_t& a, const info_t& b) {
+		return a->Param() == b->Param() && a->Level() == b->Level() && a->Time() == b->Time() &&
+		       a->ForecastType() == b->ForecastType();
+	};
+
+	vector<info_t> skip;
+
+	for (const auto& component : infos)
 	{
-		vector<info_t> vec(1);
-		vec[0] = anInfo;
+		HPGridType from = component->Grid()->Type();
+		HPGridType to = baseInfo->Grid()->Type();
+		const auto name = component->Param().Name();
 
-		auto baseInfo =
-			make_shared<info>(*dynamic_cast<const plugin_configuration*>(opts.configuration.get())->Info());
-		ASSERT(baseInfo->Dimensions().size());
-
-		baseInfo->First();
-
-		if (itsDoInterpolation)
+		if (interpolate::IsVectorComponent(name) &&
+		    count_if(skip.begin(), skip.end(), [&](const info_t& info) { return eq(info, component); }) == 0 &&
+		    to != from && interpolate::IsSupportedGridForRotation(from))
 		{
-			if (!interpolate::Interpolate(*baseInfo, vec, opts.configuration->UseCudaForInterpolation()))
+			if (to == kRotatedLatitudeLongitude || to == kStereographic || to == kLambertConformalConic)
 			{
-				throw runtime_error("Interpolation failed");
+				throw runtime_error("Rotating vector components to projected area is not supported (yet)");
 			}
-		}
 
-		baseInfo.reset();
+			auto otherName = GetOtherVectorComponentName(name);
+
+			info_t u, v, other;
+
+			for (const auto temp : infos)
+			{
+				if (temp->Param().Name() == otherName && temp->Level() == component->Level() &&
+				    temp->Time() == component->Time() && temp->ForecastType() == component->ForecastType())
+				{
+					other = temp;
+					break;
+				}
+			}
+
+			if (!other)
+			{
+				// Other component not found
+				continue;
+			}
+
+			if (name.find("U-MS") != std::string::npos)
+			{
+				u = component;
+				v = other;
+			}
+			else if (name.find("V-MS") != std::string::npos)
+			{
+				u = other;
+				v = component;
+			}
+			else
+			{
+				itsLogger.Fatal("Unrecognized vector component parameter: " + name);
+				himan::Abort();
+			}
+
+			interpolate::RotateVectorComponents(*u, *v, opts.configuration->UseCudaForInterpolation());
+
+			// RotateVectorComponent modifies both components, so make sure we don't re-rotate the other
+			// component.
+			skip.push_back(other);
+		}
+	}
+
+	// Step 2. Interpolate if needed
+
+	if (itsDoInterpolation)
+	{
+		if (!interpolate::Interpolate(*baseInfo, infos, opts.configuration->UseCudaForInterpolation()))
+		{
+			itsLogger.Fatal("Interpolation failed");
+			himan::Abort();
+		}
 	}
 }
 
@@ -829,13 +892,10 @@ void fetcher::RotateVectorComponents(vector<info_t>& components, info_t target,
 		HPGridType to = target->Grid()->Type();
 		const auto name = component->Param().Name();
 
-		if (interpolate::IsVectorComponent(name) &&
-		    ((itsDoVectorComponentRotation) ||
-		     ((from == kRotatedLatitudeLongitude || from == kStereographic || from == kLambertConformalConic) &&
-		      to != from)))
+		if (interpolate::IsVectorComponent(name) && itsDoVectorComponentRotation && to != from &&
+		    interpolate::IsSupportedGridForRotation(from))
 		{
-			if (!itsDoVectorComponentRotation &&
-			    (to == kRotatedLatitudeLongitude || to == kStereographic || to == kLambertConformalConic))
+			if (to == kRotatedLatitudeLongitude || to == kStereographic || to == kLambertConformalConic)
 			{
 				throw runtime_error("Rotating vector components to projected area is not supported (yet)");
 			}
@@ -880,7 +940,7 @@ void fetcher::RotateVectorComponents(vector<info_t>& components, info_t target,
 			// and put it to cache.
 
 			std::vector<info_t> list({other});
-			if (interpolate::Interpolate(*target, list, config->UseCudaForInterpolation()))
+			if (itsDoInterpolation && interpolate::Interpolate(*target, list, config->UseCudaForInterpolation()))
 			{
 				if (itsUseCache && config->UseCache() && !other->Grid()->IsPackedData())
 				{
