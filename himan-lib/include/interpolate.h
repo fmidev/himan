@@ -25,6 +25,8 @@ HPInterpolationMethod InterpolationMethod(const std::string& paramName, HPInterp
 void RotateVectorComponents(info& UInfo, info& VInfo, bool useCuda);
 
 void RotateVectorComponentsCPU(info& UInfo, info& VInfo);
+
+bool IsSupportedGridForRotation(HPGridType type);
 }
 }
 

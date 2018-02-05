@@ -28,6 +28,19 @@ namespace himan
 {
 namespace interpolate
 {
+bool IsSupportedGridForRotation(HPGridType type)
+{
+	switch (type)
+	{
+		case kRotatedLatitudeLongitude:
+		case kStereographic:
+		case kLambertConformalConic:
+			return true;
+		default:
+			return false;
+	}
+}
+
 bool ToReducedGaussianCPU(info& base, info& source, matrix<double>& targetData)
 {
 	// switch to old MissingDouble() for compatibility with QD stuff
@@ -545,80 +558,83 @@ bool ReorderPoints(info& base, std::vector<info_t> infos)
 
 bool Interpolate(info& base, std::vector<info_t>& infos, bool useCudaForInterpolation)
 {
-	bool needInterpolation = false;
-	bool needPointReordering = false;
-
-	/*
-	 * Possible scenarios:
-	 * 1. from regular to regular (basic area&grid interpolation)
-	 * 2. from regular to irregular (area to point)
-	 * 3. from irregular to irregular (limited functionality, basically just point reordering)
-	 * 4. from irregular to regular, not supported, except if source is gaussian
-	 */
-
-	// 1.
-
-	if (base.Grid()->Class() == kRegularGrid && infos[0]->Grid()->Class() == kRegularGrid)
+	for (const auto& info : infos)
 	{
-		if (*(base).Grid() != *(infos[0])->Grid())
-		{
-			needInterpolation = true;
-		}
+		bool needInterpolation = false;
+		bool needPointReordering = false;
 
-		// == operator does not test scanning mode !
+		/*
+		 * Possible scenarios:
+		 * 1. from regular to regular (basic area&grid interpolation)
+		 * 2. from regular to irregular (area to point)
+		 * 3. from irregular to irregular (limited functionality, basically just point reordering)
+		 * 4. from irregular to regular, not supported, except if source is gaussian
+		 */
 
-		else if (base.Grid()->ScanningMode() != infos[0]->Grid()->ScanningMode())
+		// 1.
+
+		if (base.Grid()->Class() == kRegularGrid && info->Grid()->Class() == kRegularGrid)
 		{
-#ifdef HAVE_CUDA
-			if (infos[0]->Grid()->IsPackedData())
+			if (*(base).Grid() != *info->Grid())
 			{
-				// must unpack before swapping
-				// itsLogger->Trace("Unpacking before swapping");
-				util::Unpack({infos[0]->Grid()});
+				needInterpolation = true;
 			}
+
+			// == operator does not test scanning mode !
+
+			else if (base.Grid()->ScanningMode() != info->Grid()->ScanningMode())
+			{
+#ifdef HAVE_CUDA
+				if (info->Grid()->IsPackedData())
+				{
+					// must unpack before swapping
+					// itsLogger->Trace("Unpacking before swapping");
+					util::Unpack({info->Grid()});
+				}
 #endif
-			infos[0]->Grid()->Swap(base.Grid()->ScanningMode());
+				info->Grid()->Swap(base.Grid()->ScanningMode());
+			}
 		}
-	}
 
-	// 2.
+		// 2.
 
-	else if (base.Grid()->Class() == kIrregularGrid && infos[0]->Grid()->Class() == kRegularGrid)
-	{
-		needInterpolation = true;
-	}
-
-	// 3.
-
-	else if (base.Grid()->Class() == kIrregularGrid && infos[0]->Grid()->Class() == kIrregularGrid)
-	{
-		if (*base.Grid() != *infos[0]->Grid())
-		{
-			needPointReordering = true;
-		}
-	}
-
-	// 4.
-
-	else if (base.Grid()->Class() == kRegularGrid && infos[0]->Grid()->Class() == kIrregularGrid)
-	{
-		if (infos[0]->Grid()->Type() == kReducedGaussian)
+		else if (base.Grid()->Class() == kIrregularGrid && info->Grid()->Class() == kRegularGrid)
 		{
 			needInterpolation = true;
 		}
-		else
-		{
-			throw std::runtime_error("Unable to extrapolate from points to grid");
-		}
-	}
 
-	if (needInterpolation)
-	{
-		return InterpolateArea(base, infos, useCudaForInterpolation);
-	}
-	else if (needPointReordering)
-	{
-		return ReorderPoints(base, infos);
+		// 3.
+
+		else if (base.Grid()->Class() == kIrregularGrid && info->Grid()->Class() == kIrregularGrid)
+		{
+			if (*base.Grid() != *info->Grid())
+			{
+				needPointReordering = true;
+			}
+		}
+
+		// 4.
+
+		else if (base.Grid()->Class() == kRegularGrid && info->Grid()->Class() == kIrregularGrid)
+		{
+			if (info->Grid()->Type() == kReducedGaussian)
+			{
+				needInterpolation = true;
+			}
+			else
+			{
+				throw std::runtime_error("Unable to extrapolate from points to grid");
+			}
+		}
+
+		if (needInterpolation && InterpolateArea(base, infos, useCudaForInterpolation) == false)
+		{
+			return false;
+		}
+		else if (needPointReordering && ReorderPoints(base, infos))
+		{
+			return false;
+		}
 	}
 
 	return true;
