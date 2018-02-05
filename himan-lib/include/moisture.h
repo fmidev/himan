@@ -112,7 +112,7 @@ CUDA_DEVICE Type DewPointFromRH_(Type T, Type RH)
 		RH = 0.01;  // formula does not work if RH = 0; actually all small values give extreme Td values
 	}
 
-	ASSERT((RH > 0. && RH < 101.) || IsMissing(RH));
+	ASSERT((RH > 0. && RH < 102.) || IsMissing(RH));
 	ASSERT((T > 0. && T < 500.) || IsMissing(T));
 
 	return (T / (1 - (T * log(RH * 0.01) * himan::constants::kRw_div_L)));
