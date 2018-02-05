@@ -28,6 +28,19 @@ namespace himan
 {
 namespace interpolate
 {
+bool IsSupportedGridForRotation(HPGridType type)
+{
+	switch (type)
+	{
+		case kRotatedLatitudeLongitude:
+		case kStereographic:
+		case kLambertConformalConic:
+			return true;
+		default:
+			return false;
+	}
+}
+
 bool ToReducedGaussianCPU(info& base, info& source, matrix<double>& targetData)
 {
 	// switch to old MissingDouble() for compatibility with QD stuff
@@ -403,222 +416,209 @@ bool InterpolateAreaCPU(info& base, info& source, matrix<double>& targetData)
 	return true;
 }
 
-bool InterpolateArea(info& target, std::vector<info_t> sources, bool useCudaForInterpolation)
+bool InterpolateArea(info& target, info_t source, bool useCudaForInterpolation)
 {
-	if (sources.size() == 0)
+	if (!source)
 	{
 		return false;
 	}
 
-	for (info_t& source : sources)
+	HPGridType targetType = target.Grid()->Type();
+	HPGridType sourceType = source->Grid()->Type();
+
+	matrix<double> targetData(target.Data().SizeX(), target.Data().SizeY(), target.Data().SizeZ(),
+	                          target.Data().MissingValue(), target.Data().MissingValue());
+
+	switch (sourceType)
 	{
-		if (!source)
+		case kLatitudeLongitude:
+		case kRotatedLatitudeLongitude:
+		case kStereographic:
+		case kLambertConformalConic:
 		{
-			continue;
-		}
-
-		HPGridType targetType = target.Grid()->Type();
-		HPGridType sourceType = source->Grid()->Type();
-
-		matrix<double> targetData(target.Data().SizeX(), target.Data().SizeY(), target.Data().SizeZ(),
-		                          target.Data().MissingValue(), target.Data().MissingValue());
-
-		switch (sourceType)
-		{
-			case kLatitudeLongitude:
-			case kRotatedLatitudeLongitude:
-			case kStereographic:
-			case kLambertConformalConic:
+			switch (targetType)
 			{
-				switch (targetType)
-				{
-					case kLatitudeLongitude:
-					case kRotatedLatitudeLongitude:
-					case kStereographic:
-					case kLambertConformalConic:
-					case kPointList:
+				case kLatitudeLongitude:
+				case kRotatedLatitudeLongitude:
+				case kStereographic:
+				case kLambertConformalConic:
+				case kPointList:
 #ifdef HAVE_CUDA
-						useCudaForInterpolation ? InterpolateAreaGPU(target, *source, targetData) :
+					useCudaForInterpolation ? InterpolateAreaGPU(target, *source, targetData) :
 #endif
-						                        InterpolateAreaCPU(target, *source, targetData);
-						break;
+					                        InterpolateAreaCPU(target, *source, targetData);
+					break;
 
-					case kReducedGaussian:
-						ToReducedGaussianCPU(target, *source, targetData);
-						break;
+				case kReducedGaussian:
+					ToReducedGaussianCPU(target, *source, targetData);
+					break;
 
-					default:
-						throw std::runtime_error("Unsupported source grid type: " + HPGridTypeToString.at(targetType));
-				}
-
-				break;
+				default:
+					throw std::runtime_error("Unsupported source grid type: " + HPGridTypeToString.at(targetType));
 			}
 
-			case kReducedGaussian:
-				switch (targetType)
-				{
-					case kLatitudeLongitude:
-					case kRotatedLatitudeLongitude:
-					case kStereographic:
-						FromReducedGaussianCPU(target, *source, targetData);
-						break;
-
-					default:
-						throw std::runtime_error("Unsupported target grid type for reduced gaussian: " +
-						                         HPGridTypeToString.at(targetType));
-				}
-				break;
-			default:
-				throw std::runtime_error("Unsupported target grid type: " + HPGridTypeToString.at(sourceType));
+			break;
 		}
 
-		auto interpGrid = std::shared_ptr<grid>(target.Grid()->Clone());
-		interpGrid->AB(source->Grid()->AB());
-		interpGrid->UVRelativeToGrid(source->Grid()->UVRelativeToGrid());
+		case kReducedGaussian:
+			switch (targetType)
+			{
+				case kLatitudeLongitude:
+				case kRotatedLatitudeLongitude:
+				case kStereographic:
+					FromReducedGaussianCPU(target, *source, targetData);
+					break;
 
-		interpGrid->Data(targetData);
-
-		source->Grid(interpGrid);
+				default:
+					throw std::runtime_error("Unsupported target grid type for reduced gaussian: " +
+					                         HPGridTypeToString.at(targetType));
+			}
+			break;
+		default:
+			throw std::runtime_error("Unsupported target grid type: " + HPGridTypeToString.at(sourceType));
 	}
+
+	auto interpGrid = std::shared_ptr<grid>(target.Grid()->Clone());
+	interpGrid->AB(source->Grid()->AB());
+	interpGrid->UVRelativeToGrid(source->Grid()->UVRelativeToGrid());
+
+	interpGrid->Data(targetData);
+
+	source->Grid(interpGrid);
 
 	return true;
 }
 
-bool ReorderPoints(info& base, std::vector<info_t> infos)
+bool ReorderPoints(info& base, info_t info)
 {
-	if (infos.size() == 0)
+	if (!info)
 	{
 		return false;
 	}
 
-	for (auto it = infos.begin(); it != infos.end(); ++it)
+	// Worst case: cartesian product ie O(mn) ~ O(n^2)
+
+	auto targetStations = dynamic_cast<point_list*>(base.Grid())->Stations();
+	auto sourceStations = dynamic_cast<point_list*>(info->Grid())->Stations();
+	auto sourceData = info->Grid()->Data();
+	auto newData = matrix<double>(targetStations.size(), 1, 1, MissingDouble());
+
+	if (targetStations.size() == 0 || sourceStations.size() == 0)
+		return false;
+
+	std::vector<station> newStations;
+
+	for (size_t i = 0; i < targetStations.size(); i++)
 	{
-		if (!(*it))
+		station s1 = targetStations[i];
+
+		bool found = false;
+
+		for (size_t j = 0; j < sourceStations.size() && !found; j++)
 		{
-			continue;
+			station s2 = sourceStations[j];
+
+			if (s1 == s2)
+			{
+				newStations.push_back(s1);
+				newData.Set(i, sourceData.At(j));
+
+				found = true;
+			}
 		}
 
-		// Worst case: cartesian product ie O(mn) ~ O(n^2)
-
-		auto targetStations = dynamic_cast<point_list*>(base.Grid())->Stations();
-		auto sourceStations = dynamic_cast<point_list*>((*it)->Grid())->Stations();
-		auto sourceData = (*it)->Grid()->Data();
-		auto newData = matrix<double>(targetStations.size(), 1, 1, MissingDouble());
-
-		if (targetStations.size() == 0 || sourceStations.size() == 0)
+		if (!found)
+		{
+			// itsLogger->Trace("Failed, source data does not contain all the same points as target");
 			return false;
-
-		std::vector<station> newStations;
-
-		for (size_t i = 0; i < targetStations.size(); i++)
-		{
-			station s1 = targetStations[i];
-
-			bool found = false;
-
-			for (size_t j = 0; j < sourceStations.size() && !found; j++)
-			{
-				station s2 = sourceStations[j];
-
-				if (s1 == s2)
-				{
-					newStations.push_back(s1);
-					newData.Set(i, sourceData.At(j));
-
-					found = true;
-				}
-			}
-
-			if (!found)
-			{
-				// itsLogger->Trace("Failed, source data does not contain all the same points as target");
-				return false;
-			}
 		}
-
-		dynamic_cast<point_list*>((*it)->Grid())->Stations(newStations);
-		(*it)->Grid()->Data(newData);
 	}
+
+	dynamic_cast<point_list*>(info->Grid())->Stations(newStations);
+	info->Grid()->Data(newData);
 
 	return true;
 }
 
 bool Interpolate(info& base, std::vector<info_t>& infos, bool useCudaForInterpolation)
 {
-	bool needInterpolation = false;
-	bool needPointReordering = false;
-
-	/*
-	 * Possible scenarios:
-	 * 1. from regular to regular (basic area&grid interpolation)
-	 * 2. from regular to irregular (area to point)
-	 * 3. from irregular to irregular (limited functionality, basically just point reordering)
-	 * 4. from irregular to regular, not supported, except if source is gaussian
-	 */
-
-	// 1.
-
-	if (base.Grid()->Class() == kRegularGrid && infos[0]->Grid()->Class() == kRegularGrid)
+	for (const auto& info : infos)
 	{
-		if (*(base).Grid() != *(infos[0])->Grid())
-		{
-			needInterpolation = true;
-		}
+		bool needInterpolation = false;
+		bool needPointReordering = false;
 
-		// == operator does not test scanning mode !
+		/*
+		 * Possible scenarios:
+		 * 1. from regular to regular (basic area&grid interpolation)
+		 * 2. from regular to irregular (area to point)
+		 * 3. from irregular to irregular (limited functionality, basically just point reordering)
+		 * 4. from irregular to regular, not supported, except if source is gaussian
+		 */
 
-		else if (base.Grid()->ScanningMode() != infos[0]->Grid()->ScanningMode())
+		// 1.
+
+		if (base.Grid()->Class() == kRegularGrid && info->Grid()->Class() == kRegularGrid)
 		{
-#ifdef HAVE_CUDA
-			if (infos[0]->Grid()->IsPackedData())
+			if (*(base).Grid() != *info->Grid())
 			{
-				// must unpack before swapping
-				// itsLogger->Trace("Unpacking before swapping");
-				util::Unpack({infos[0]->Grid()});
+				needInterpolation = true;
 			}
+
+			// == operator does not test scanning mode !
+
+			else if (base.Grid()->ScanningMode() != info->Grid()->ScanningMode())
+			{
+#ifdef HAVE_CUDA
+				if (info->Grid()->IsPackedData())
+				{
+					// must unpack before swapping
+					// itsLogger->Trace("Unpacking before swapping");
+					util::Unpack({info->Grid()});
+				}
 #endif
-			infos[0]->Grid()->Swap(base.Grid()->ScanningMode());
+				info->Grid()->Swap(base.Grid()->ScanningMode());
+			}
 		}
-	}
 
-	// 2.
+		// 2.
 
-	else if (base.Grid()->Class() == kIrregularGrid && infos[0]->Grid()->Class() == kRegularGrid)
-	{
-		needInterpolation = true;
-	}
-
-	// 3.
-
-	else if (base.Grid()->Class() == kIrregularGrid && infos[0]->Grid()->Class() == kIrregularGrid)
-	{
-		if (*base.Grid() != *infos[0]->Grid())
-		{
-			needPointReordering = true;
-		}
-	}
-
-	// 4.
-
-	else if (base.Grid()->Class() == kRegularGrid && infos[0]->Grid()->Class() == kIrregularGrid)
-	{
-		if (infos[0]->Grid()->Type() == kReducedGaussian)
+		else if (base.Grid()->Class() == kIrregularGrid && info->Grid()->Class() == kRegularGrid)
 		{
 			needInterpolation = true;
 		}
-		else
-		{
-			throw std::runtime_error("Unable to extrapolate from points to grid");
-		}
-	}
 
-	if (needInterpolation)
-	{
-		return InterpolateArea(base, infos, useCudaForInterpolation);
-	}
-	else if (needPointReordering)
-	{
-		return ReorderPoints(base, infos);
+		// 3.
+
+		else if (base.Grid()->Class() == kIrregularGrid && info->Grid()->Class() == kIrregularGrid)
+		{
+			if (*base.Grid() != *info->Grid())
+			{
+				needPointReordering = true;
+			}
+		}
+
+		// 4.
+
+		else if (base.Grid()->Class() == kRegularGrid && info->Grid()->Class() == kIrregularGrid)
+		{
+			if (info->Grid()->Type() == kReducedGaussian)
+			{
+				needInterpolation = true;
+			}
+			else
+			{
+				throw std::runtime_error("Unable to extrapolate from points to grid");
+			}
+		}
+
+		if (needInterpolation && InterpolateArea(base, info, useCudaForInterpolation) == false)
+		{
+			return false;
+		}
+		else if (needPointReordering && ReorderPoints(base, info))
+		{
+			return false;
+		}
 	}
 
 	return true;
