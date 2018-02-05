@@ -30,6 +30,7 @@
 #undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace himan;
+using namespace himan::numerical_functions;
 using namespace himan::plugin;
 
 himan::level cape_cuda::itsBottomLevel;
@@ -281,8 +282,8 @@ __global__ void CAPEKernel(const float* __restrict__ d_Tenv, const float* __rest
 			// When rising above LFC, get accurate value of Tenv at that level so that even small amounts of CAPE
 			// (and EL!) values can be determined.
 
-			prevTenv = himan::numerical_functions::interpolation::Linear(LFCP, prevPenv, Penv, prevTenv, Tenv);
-			prevZenv = himan::numerical_functions::interpolation::Linear(LFCP, prevPenv, Penv, prevZenv, Zenv);
+			prevTenv = interpolation::Linear<float>(LFCP, prevPenv, Penv, prevTenv, Tenv);
+			prevZenv = interpolation::Linear<float>(LFCP, prevPenv, Penv, prevZenv, Zenv);
 			prevPenv = LFCP;     // LFC pressure
 			prevTparcel = LFCT;  // LFC temperature
 
@@ -399,13 +400,13 @@ __global__ void CINKernel(const float* __restrict__ d_Tenv, const float* __restr
 				else
 				{
 					// First get LFC height in meters
-					Zenv = numerical_functions::interpolation::Linear(PLFC, prevPenv, Penv, prevZenv, Zenv);
+					Zenv = interpolation::Linear<float>(PLFC, prevPenv, Penv, prevZenv, Zenv);
 
 					// LFC environment temperature value
-					Tenv = numerical_functions::interpolation::Linear(PLFC, prevPenv, Penv, prevTenv, Tenv);
+					Tenv = interpolation::Linear<float>(PLFC, prevPenv, Penv, prevTenv, Tenv);
 
 					// LFC T parcel value
-					Tparcel = numerical_functions::interpolation::Linear(PLFC, prevPenv, Penv, prevTparcel, Tparcel);
+					Tparcel = interpolation::Linear<float>(PLFC, prevPenv, Penv, prevTparcel, Tparcel);
 
 					Penv = PLFC;
 
@@ -546,8 +547,8 @@ __global__ void ThetaEKernel(const float* __restrict__ d_T, const float* __restr
 			// Linearly interpolate temperature and humidity values to 600hPa, to check
 			// if highest theta e is found there
 
-			T = numerical_functions::interpolation::Linear(600.f, P, d_prevP[idx], T, d_prevT[idx]);
-			RH = numerical_functions::interpolation::Linear(600.f, P, d_prevP[idx], RH, d_prevRH[idx]);
+			T = interpolation::Linear<float>(600.f, P, d_prevP[idx], T, d_prevT[idx]);
+			RH = interpolation::Linear<float>(600.f, P, d_prevP[idx], RH, d_prevRH[idx]);
 
 			d_found[idx] = 1;  // Make sure this is the last time we access this grid point
 			P = 600.;

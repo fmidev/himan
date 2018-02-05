@@ -232,23 +232,26 @@ namespace interpolation
  * Basic interpolation functions.
  */
 
-CUDA_HOST CUDA_DEVICE inline double Linear(double factor, double Y1, double Y2)
+template <typename Type>
+CUDA_HOST CUDA_DEVICE inline Type Linear(Type factor, Type Y1, Type Y2)
 {
-	return fma(factor, Y2, fma(-factor, Y1, Y1));
+	return std::fma(factor, Y2, std::fma(-factor, Y1, Y1));
 }
 
-CUDA_HOST CUDA_DEVICE inline double Linear(double X, double X1, double X2, double Y1, double Y2)
+template <typename Type>
+CUDA_HOST CUDA_DEVICE inline Type Linear(Type X, Type X1, Type X2, Type Y1, Type Y2)
 {
 	if (X1 == X2)
 	{
 		return Y1;
 	}
 
-	const double factor = (X - X1) / (X2 - X1);
-	return Linear(factor, Y1, Y2);
+	const Type factor = (X - X1) / (X2 - X1);
+	return Linear<Type>(factor, Y1, Y2);
 }
 
-CUDA_HOST CUDA_DEVICE inline double BiLinear(double dx, double dy, double a, double b, double c, double d)
+template <typename Type>
+CUDA_HOST CUDA_DEVICE inline Type BiLinear(Type dx, Type dy, Type a, Type b, Type c, Type d)
 {
 	// Method below is faster but gives visible interpolation artifacts
 

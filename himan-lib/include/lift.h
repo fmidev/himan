@@ -343,7 +343,7 @@ CUDA_DEVICE Type MoistLift_(Type P, Type T, Type targetP)
 
 		if (Pint <= targetP)
 		{
-			value = ::himan::numerical_functions::interpolation::Linear(targetP, Pint, Pint + Pstep, T0, Tint);
+			value = ::himan::numerical_functions::interpolation::Linear<Type>(targetP, Pint, Pint + Pstep, T0, Tint);
 			break;
 		}
 
