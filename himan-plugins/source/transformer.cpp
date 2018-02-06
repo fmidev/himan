@@ -25,7 +25,8 @@ transformer::transformer()
       itsTargetUnivID(9999),
       itsApplyLandSeaMask(false),
       itsLandSeaMaskThreshold(0.5),
-      itsInterpolationMethod(kUnknownInterpolationMethod)
+      itsInterpolationMethod(kUnknownInterpolationMethod),
+	  itsTargetForecastType(kUnknownType)
 {
 	itsCudaEnabledCalculation = true;
 
@@ -52,6 +53,7 @@ void transformer::SetAdditionalParameters()
 {
 	std::string itsSourceLevelType;
 	std::string SourceLevels;
+	std::string targetForecastType;
 
 	if (!itsConfiguration->GetValue("base").empty())
 	{
@@ -117,6 +119,15 @@ void transformer::SetAdditionalParameters()
 		itsLogger.Warning("Source_levels not specified, source_levels set to target levels");
 	}
 
+	if (!itsConfiguration->GetValue("target_forecast_type").empty())
+	{
+		targetForecastType = itsConfiguration->GetValue("target_forecast_type");
+	}
+	else
+	{
+		itsLogger.Warning("Target_forecast_type not specified, target_forecast_type set to source forecast type");
+	}
+
 	// Check apply land sea mask parameter
 
 	if (itsConfiguration->Exists("apply_landsea_mask") && itsConfiguration->GetValue("apply_landsea_mask") == "true")
@@ -148,6 +159,45 @@ void transformer::SetAdditionalParameters()
 		for (x->ResetLevel(); x->NextLevel();)
 		{
 			itsSourceLevels.push_back(x->Level());
+		}
+	}
+
+	if (!targetForecastType.empty())
+	{
+		if (targetForecastType == "cf")
+		{
+			itsTargetForecastType = forecast_type(kEpsControl);
+		}
+		else if (targetForecastType == "deterministic")
+		{
+			itsTargetForecastType = forecast_type(kDeterministic);
+		}
+		else if (targetForecastType == "analysis")
+		{
+			itsTargetForecastType = forecast_type(kAnalysis);
+		}
+		else
+		{
+			// should be 'pfNN'
+			auto pos = targetForecastType.find("pf");
+			int value = 0;
+			if (pos != std::string::npos)
+			{
+				const string snum = targetForecastType.substr(pos + 2);
+				try
+				{
+					value = std::stoi(snum);
+				}
+				catch (std::invalid_argument& e)
+				{
+					throw runtime_error("Transformer_plugin: failed to convert perturbation forecast number");
+				}
+			}
+			else
+			{
+				throw runtime_error("Transformer_plugin: invalid forecast type specified");
+			}
+			itsTargetForecastType = forecast_type(kEpsPerturbation, value);
 		}
 	}
 }
@@ -251,6 +301,11 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 			lock_guard<mutex> lock(aggregationMutex);
 			myTargetInfo->ParamIterator().Replace(p);
 		}
+	}
+
+	if (itsTargetForecastType.Type() != kUnknownType)
+	{
+		myTargetInfo->ForecastTypeIterator().Replace(itsTargetForecastType);
 	}
 
 	SetAB(myTargetInfo, sourceInfo);
