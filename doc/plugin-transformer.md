@@ -8,6 +8,7 @@ Possible transformations are:
 * area interpolation
 * land-sea mask apply
 * level change
+* forecast type change
 
 Plugin is optimized for GPU use.
 
@@ -60,3 +61,7 @@ landsea_mask_threshold: define threshold used in mask apply (default: 0.5)
 interpolation: define interpolation method (default: whatever is defined in database)
 
     "interpolation" : "bilinear|nearest point"
+
+target_forecast_type: define the target forecast type, if it differs from source type
+
+	"target_forecast_type" : "cf|deterministic|analysis|pfNN"
