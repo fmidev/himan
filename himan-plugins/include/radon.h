@@ -76,7 +76,7 @@ class radon : public auxiliary_plugin
 	 * @brief Save either file metadata or previ information to database.
 	 */
 
-	bool Save(const info& resultInfo, const std::string& theFileName);
+	bool Save(const info& resultInfo, const std::string& theFileName,  const std::string& targetGeomName);
 
 	/**
 	 * @brief Function to expose the NFmiRadonDB interface
@@ -97,7 +97,7 @@ class radon : public auxiliary_plugin
 	 */
 
 	void Init();
-	bool SaveGrid(const info& resultInfo, const std::string& theFileName);
+	bool SaveGrid(const info& resultInfo, const std::string& theFileName, const std::string& targetGeomName);
 	bool SavePrevi(const info& resultInfo);
 
 	bool itsInit;                             //!< Holds the initialization status of the database connection
