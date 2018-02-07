@@ -7,6 +7,9 @@
 #include "forecast_time.h"
 #include "level.h"
 #include "logger.h"
+#include "plugin_factory.h"
+
+#include "hitool.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -38,6 +41,12 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 	const param TParam("T-K");
 	const params VvParam = {param("VV-MS"), param("VV-MMS")};
 	const param ClParam("CLDWAT-KGKG");
+	const param PrecFormParam("PRECFORM-N");
+        const param PrecParam("RR-1-MM");
+        const param ZeroLevelParam("H0C-M");
+        const param HeightParam("HL-M"); // Height of the current hybrid level
+
+	const level surface(himan::kHeight, 0, "HEIGHT");
 
 	auto myThreadedLogger = logger("icingThread #" + to_string(theThreadIndex));
 
@@ -51,6 +60,11 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, false);
 	info_t VvInfo = Fetch(forecastTime, forecastLevel, VvParam, forecastType, false);
 	info_t ClInfo = Fetch(forecastTime, forecastLevel, ClParam, forecastType, false);
+	info_t PrecFormInfo = Fetch(forecastTime, surface, PrecFormParam, forecastType, false);  // fetch from surface
+        info_t PrecInfo = Fetch(forecastTime, surface, PrecParam, forecastType, false);
+        info_t ZeroLevelInfo = Fetch(forecastTime, surface, ZeroLevelParam, forecastType, false);
+        info_t HeightInfo = Fetch(forecastTime, forecastLevel, HeightParam, forecastType, false);
+
 
 	if (!TInfo || !VvInfo || !ClInfo)
 	{
@@ -71,17 +85,29 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 
 	SetAB(myTargetInfo, TInfo);
 
+	auto h = dynamic_pointer_cast<hitool>(plugin_factory::Instance()->Plugin("hitool"));
+        h->Configuration(itsConfiguration);
+        h->Time(myTargetInfo->Time());
+        // Stratus cloud base [m] (0-300m=0-985ft, N>50% 
+	auto base = h->VerticalHeightGreaterThan(NParam, 0, 300, 50);         
+
 	string deviceType = "CPU";
 
 	auto& target = VEC(myTargetInfo);
 
 	// LOCKSTEP(myTargetInfo, TInfo, VvInfo, ClInfo)
-	for (auto&& tup : zip_range(target, VEC(TInfo), VEC(VvInfo), VEC(ClInfo)))
+	for (auto&& tup : zip_range(target, VEC(TInfo), VEC(VvInfo), VEC(ClInfo), VEC(PrecFormInfo), VEC(PrecInfo),
+					VEC(ZeroLevelInfo), VEC(HeightInfo), base))
 	{
 		double& result = tup.get<0>();
 		double T = tup.get<1>();
 		double Vv = tup.get<2>();
 		double Cl = tup.get<3>();
+		double Pf = tup.get<4>();
+                double Rr = tup.get<5>();
+                double Zl = tup.get<6>();
+                double Hl = tup.get<7>();
+                double StrBase = tup.get<8>();
 
 		if (IsMissingValue({T, Vv, Cl}))
 		{
