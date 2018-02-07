@@ -198,6 +198,24 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 			Icing = round(log(Cl) + 6) + vCor + tCor;
 		}
 
+		// freezing drizzle, values applied to all model levels starting from ~base of the stratus cloud
+		if (Pf == 4)
+                {
+                        if (StrBase >= Hl)
+                        {
+                                Icing = 6 + Rr * 10;
+                        }
+                }
+
+		// freezing rain, values applied to all model levels in the surface sub-zero layer
+		if (Pf == 5)
+                {
+                        if (Zl >= Hl)
+                        {
+                                Icing = 7 + Rr * 1.5;
+                        }
+                }
+
 		// Maximum and minimum values for index
 
 		if (Icing > 15)
