@@ -559,7 +559,7 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<float>& Tsource
 	h->ForecastType(myTargetInfo->ForecastType());
 	h->HeightUnit(kHPa);
 
-	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 200.);
+	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 100.);
 
 	while (curLevel.Value() > stopLevel.first.Value() && foundCount != found.size())
 	{
@@ -818,6 +818,8 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<float>& T, con
 			TenvVec = Convert(VEC(TenvInfo));
 		}
 
+		::MultiplyWith(PenvVec, 0.01f);
+
 		const auto ZenvVec = Convert(VEC(ZenvInfo));
 
 		int i = -1;
@@ -922,9 +924,9 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<float>& T, con
 		foundCount = count(found.begin(), found.end(), true);
 
 		itsLogger.Trace("CAPE read for " + to_string(foundCount) + "/" + to_string(found.size()) + " gridpoints");
-		prevZenvInfo = ZenvInfo;
+		prevZenvVec = ZenvVec;
 		prevTenvVec = TenvVec;
-		prevPenvInfo = PenvInfo;
+		prevPenvVec = PenvVec;
 		prevTparcelVec = TparcelVec;
 	}
 
@@ -1105,7 +1107,7 @@ pair<vector<float>, vector<float>> cape::GetLFCCPU(shared_ptr<info> myTargetInfo
 
 	curLevel.Value(curLevel.Value() - 1);
 
-	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 150.);
+	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 50.);
 	auto hPa450 = h->LevelForHeight(myTargetInfo->Producer(), 450.);
 	vector<float> prevTparcelVec(P.size(), MissingFloat());
 
@@ -1293,7 +1295,7 @@ pair<vector<float>, vector<float>> cape::GetLCL(shared_ptr<info> myTargetInfo, c
 
 	for (auto& val : PLCL)
 	{
-		val = fmaxf(val, 250.f);
+		val = fmaxf(val, 100.f);
 	}
 
 	return make_pair(TLCL, PLCL);
