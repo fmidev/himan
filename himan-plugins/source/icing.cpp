@@ -40,6 +40,7 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 
 	const param TParam("T-K");
 	const params VvParam = {param("VV-MS"), param("VV-MMS")};
+	const params NParam({himan::param("N-PRCNT"), himan::param("N-0TO1")});
 	const param ClParam("CLDWAT-KGKG");
 	const param PrecFormParam("PRECFORM-N");
         const param PrecParam("RR-1-MM");
