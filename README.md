@@ -72,6 +72,7 @@ Himan is able to produce the following parameters, given required source data:
 * storm relative helicity
 * energy-helicity index
 * bulk richardson number
+* frozen soil depths (bottom and top)
 
 # Architecture
 
