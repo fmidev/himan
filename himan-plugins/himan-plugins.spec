@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.1.29
-Release: 2.el7.fmi
+Version: 18.2.8
+Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -17,7 +17,7 @@ Requires: himan-lib >= 18.1.9
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 18.1.24
-Requires: libfmidb >= 17.9.18
+Requires: libfmidb >= 18.2.8
 Requires: smartmet-library-newbase >= 17.12.1
 Requires: libpqxx
 
@@ -111,6 +111,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Feb  6 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.2.8-1.fmi
+- radon, transformer changes
 * Mon Jan 29 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.1.29-2.fmi
 - Reduced logging for some classes
 * Mon Jan 29 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.1.29-1.fmi
