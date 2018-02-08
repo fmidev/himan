@@ -1,7 +1,7 @@
 --[[
 
 Frosty
-
+Frozen soil depth
 Supported producers: ECSEASONAL, EC
 
 ]]
@@ -11,7 +11,7 @@ local currentTime = current_time
 local currentProducer = configuration:GetSourceProducer(0)
 local currentProducerName = currentProducer.GetName(currentProducer)
 
-msg = string.format("Calculating frost soil bottom for producer: %s", currentProducerName)
+msg = string.format("Calculating frozen soil bottom and top depth for producer: %s", currentProducerName)
 logger:Info(msg)
 
 local function CheckedFetch(paramName, lvl, time)
