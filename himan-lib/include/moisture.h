@@ -112,7 +112,7 @@ CUDA_DEVICE Type DewPointFromRH_(Type T, Type RH)
 		RH = 0.01;  // formula does not work if RH = 0; actually all small values give extreme Td values
 	}
 
-	ASSERT((RH > 0. && RH < 102.) || IsMissing(RH));
+	ASSERT((RH > 0. && RH < 103.) || IsMissing(RH));
 	ASSERT((T > 0. && T < 500.) || IsMissing(T));
 
 	return (T / (1 - (T * log(RH * 0.01) * himan::constants::kRw_div_L)));
@@ -398,7 +398,7 @@ template <typename Type>
 CUDA_DEVICE Type E_(Type RH, Type es)
 {
 	ASSERT(RH >= 0);
-	ASSERT(RH < 102);
+	ASSERT(RH < 103);
 
 	return RH * es / static_cast<Type>(100);
 }
@@ -417,7 +417,7 @@ template <typename Type>
 CUDA_DEVICE Type MixingRatio_(Type T, Type RH, Type P)
 {
 	ASSERT(RH >= 0);
-	ASSERT(RH < 102);
+	ASSERT(RH < 103);
 	ASSERT(T > 150 || IsMissing(T));
 	ASSERT(T < 350 || IsMissing(T));
 	ASSERT(P > 1500);
