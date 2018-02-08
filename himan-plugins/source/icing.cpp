@@ -1,8 +1,3 @@
-/**
- * @file icing.cpp
- *
- */
-
 #include "icing.h"
 #include "forecast_time.h"
 #include "level.h"
@@ -28,12 +23,6 @@ void icing::Process(std::shared_ptr<const plugin_configuration> conf)
 	Start();
 }
 
-/*
- * Calculate()
- *
- * This function does the actual calculation.
- */
-
 void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadIndex)
 {
 	// Required source parameters
@@ -42,10 +31,10 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 	const params VvParam = {param("VV-MS"), param("VV-MMS")};
 	const params NParam({himan::param("N-PRCNT"), himan::param("N-0TO1")});
 	const param ClParam("CLDWAT-KGKG");
-	const param PrecFormParam("PRECFORM-N");
-        const param PrecParam("RR-1-MM");
-        const param ZeroLevelParam("H0C-M");
-        const param HeightParam("HL-M"); // Height of the current hybrid level
+	const params PrecFormParam({himan::param("PRECFORM2-N"), himan::param("PRECFORM-N")});
+	const param PrecParam("RRR-KGM2");
+	const param ZeroLevelParam("H0C-M");
+	const param HeightParam("HL-M");  // Height of the current hybrid level
 
 	const level surface(himan::kHeight, 0, "HEIGHT");
 
@@ -62,12 +51,29 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 	info_t VvInfo = Fetch(forecastTime, forecastLevel, VvParam, forecastType, false);
 	info_t ClInfo = Fetch(forecastTime, forecastLevel, ClParam, forecastType, false);
 	info_t PrecFormInfo = Fetch(forecastTime, surface, PrecFormParam, forecastType, false);  // fetch from surface
-        info_t PrecInfo = Fetch(forecastTime, surface, PrecParam, forecastType, false);
-        info_t ZeroLevelInfo = Fetch(forecastTime, surface, ZeroLevelParam, forecastType, false);
-        info_t HeightInfo = Fetch(forecastTime, forecastLevel, HeightParam, forecastType, false);
+	info_t PrecInfo = Fetch(forecastTime, surface, PrecParam, forecastType, false);
+	info_t ZeroLevelInfo = Fetch(forecastTime, surface, ZeroLevelParam, forecastType, false);
+	info_t HeightInfo = Fetch(forecastTime, forecastLevel, HeightParam, forecastType, false);
 
+	level newLevel = forecastLevel;
+	newLevel.Value(newLevel.Value() + 2);
 
-	if (!TInfo || !VvInfo || !ClInfo)
+	info_t HeightInfo2down = Fetch(forecastTime, newLevel, HeightParam, forecastType, false);
+
+	if (!HeightInfo2down)
+	{
+		// Hybrid level two below not found, perhaps calculation is done for the first level?
+		// First try one level below, and if that's not found then pick the current level
+
+		newLevel.Value(newLevel.Value() - 1);
+		HeightInfo2down = Fetch(forecastTime, newLevel, HeightParam, forecastType, false);
+
+		if (!HeightInfo2down)
+		{
+			HeightInfo2down = HeightInfo;
+		}
+	}
+	if (!TInfo || !VvInfo || !ClInfo || !PrecFormInfo || !PrecInfo || !ZeroLevelInfo || !HeightInfo)
 	{
 		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
 		                         static_cast<string>(forecastLevel));
@@ -87,10 +93,11 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 	SetAB(myTargetInfo, TInfo);
 
 	auto h = dynamic_pointer_cast<hitool>(plugin_factory::Instance()->Plugin("hitool"));
-        h->Configuration(itsConfiguration);
-        h->Time(myTargetInfo->Time());
-        // Stratus cloud base [m] (0-300m=0-985ft, N>50% 
-	auto base = h->VerticalHeightGreaterThan(NParam, 0, 300, 50);         
+	h->Configuration(itsConfiguration);
+	h->Time(myTargetInfo->Time());
+
+	// Stratus cloud base [m] (0-300m=0-985ft, N>50%
+	auto base = h->VerticalHeightGreaterThan(NParam, 0, 300, 0.5);
 
 	string deviceType = "CPU";
 
@@ -98,17 +105,18 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 
 	// LOCKSTEP(myTargetInfo, TInfo, VvInfo, ClInfo)
 	for (auto&& tup : zip_range(target, VEC(TInfo), VEC(VvInfo), VEC(ClInfo), VEC(PrecFormInfo), VEC(PrecInfo),
-					VEC(ZeroLevelInfo), VEC(HeightInfo), base))
+	                            VEC(ZeroLevelInfo), VEC(HeightInfo), base, VEC(HeightInfo2down)))
 	{
 		double& result = tup.get<0>();
 		double T = tup.get<1>();
 		double Vv = tup.get<2>();
 		double Cl = tup.get<3>();
 		double Pf = tup.get<4>();
-                double Rr = tup.get<5>();
-                double Zl = tup.get<6>();
-                double Hl = tup.get<7>();
-                double StrBase = tup.get<8>();
+		double Rr = tup.get<5>();
+		double Zl = tup.get<6>();
+		double Hl = tup.get<7>();
+		double StrBase = tup.get<8>();
+		double Hl2down = tup.get<9>();
 
 		if (IsMissingValue({T, Vv, Cl}))
 		{
@@ -199,23 +207,35 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 			Icing = round(log(Cl) + 6) + vCor + tCor;
 		}
 
-		// freezing drizzle, values applied to all model levels starting from ~base of the stratus cloud
-		if (Pf == 4)
-                {
-                        if (StrBase >= Hl)
-                        {
-                                Icing = 6 + Rr * 10;
-                        }
-                }
+		// freezing drizzle, values applied to all model levels below two hybrid level above
+		// base of the stratus cloud,
+		if (Pf == 4 && !IsMissing(StrBase))
+		{
+			const double IzingFZDZ = 6 + Rr * 10;
+
+			if (Hl <= StrBase)
+			{
+				// Below stratus base
+				Icing = IzingFZDZ;
+			}
+			else
+			{
+				// Above stratus base
+				// Correction should be applied *only* to two first hybrid levels above
+				// stratus base.
+
+				if (Hl2down <= StrBase)
+				{
+					Icing = (Icing + IzingFZDZ) / 2;
+				}
+			}
+		}
 
 		// freezing rain, values applied to all model levels in the surface sub-zero layer
-		if (Pf == 5)
-                {
-                        if (Zl >= Hl)
-                        {
-                                Icing = 7 + Rr * 1.5;
-                        }
-                }
+		else if (Pf == 5 && Hl < Zl)
+		{
+			Icing = 7 + Rr * 1.5;
+		}
 
 		// Maximum and minimum values for index
 
