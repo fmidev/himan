@@ -875,7 +875,7 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 			throw runtime_error("Fatal::json_parser Unknown geometry '" + geom + "' found");
 		}
 
-		if (geominfo["prjn_id"] == "1")
+		if (geominfo["grid_type_id"] == "1")
 		{
 			g = unique_ptr<latitude_longitude_grid>(new latitude_longitude_grid);
 			latitude_longitude_grid* const llg = dynamic_cast<latitude_longitude_grid*>(g.get());
@@ -923,7 +923,7 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 			llg->FirstPoint(point(X0, Y0));
 			llg->LastPoint(point(X1, Y1));
 		}
-		else if (geominfo["prjn_id"] == "4")
+		else if (geominfo["grid_type_id"] == "4")
 		{
 			g = unique_ptr<rotated_latitude_longitude_grid>(new rotated_latitude_longitude_grid);
 			rotated_latitude_longitude_grid* const rllg = dynamic_cast<rotated_latitude_longitude_grid*>(g.get());
@@ -974,7 +974,7 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 			rllg->FirstPoint(point(X0, Y0));
 			rllg->LastPoint(point(X1, Y1));
 		}
-		else if (geominfo["prjn_id"] == "2")
+		else if (geominfo["grid_type_id"] == "2")
 		{
 			g = unique_ptr<stereographic_grid>(new stereographic_grid);
 			stereographic_grid* const sg = dynamic_cast<stereographic_grid*>(g.get());
@@ -1008,7 +1008,7 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 			sg->BottomLeft(coordinates.first);
 			sg->TopRight(coordinates.second);
 		}
-		else if (geominfo["prjn_id"] == "6")
+		else if (geominfo["grid_type_id"] == "6")
 		{
 			g = unique_ptr<reduced_gaussian_grid>(new reduced_gaussian_grid);
 			reduced_gaussian_grid* const gg = dynamic_cast<reduced_gaussian_grid*>(g.get());
@@ -1054,7 +1054,7 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 				throw runtime_error("Fatal::json_parser scanning mode " + geominfo["stor_desc"] + " not supported yet");
 			}
 		}
-		else if (geominfo["prjn_id"] == "5")
+		else if (geominfo["grid_type_id"] == "5")
 		{
 			g = unique_ptr<lambert_conformal_grid>(new lambert_conformal_grid);
 			lambert_conformal_grid* const lcg = dynamic_cast<lambert_conformal_grid*>(g.get());
@@ -1102,7 +1102,7 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 		}
 		else
 		{
-			throw runtime_error("Fatal::json_parser Unknown projection: " + geominfo["prjn_name"]);
+			throw runtime_error("Fatal::json_parser Unknown projection: " + geominfo["name"]);
 		}
 	}
 	catch (boost::property_tree::ptree_bad_path& e)

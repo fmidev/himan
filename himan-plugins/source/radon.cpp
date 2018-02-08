@@ -388,13 +388,13 @@ vector<string> radon::Files(search_options& options)
 	return files;
 }
 
-bool radon::Save(const info& resultInfo, const string& theFileName)
+bool radon::Save(const info& resultInfo, const string& theFileName, const string& targetGeomName)
 {
 	Init();
 
 	if (resultInfo.Producer().Class() == kGridClass)
 	{
-		return SaveGrid(resultInfo, theFileName);
+		return SaveGrid(resultInfo, theFileName, targetGeomName);
 	}
 	else if (resultInfo.Producer().Class() == kPreviClass)
 	{
@@ -503,7 +503,7 @@ bool radon::SavePrevi(const info& resultInfo)
 	return true;
 }
 
-bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
+bool radon::SaveGrid(const info& resultInfo, const string& theFileName, const string& targetGeomName)
 {
 	stringstream query;
 
@@ -553,9 +553,21 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName)
 			                    HPGridTypeToString.at(resultInfo.Grid()->Type()));
 	}
 
-	map<string, string> geominfo = itsRadonDB->GetGeometryDefinition(
-	    resultInfo.Grid()->Ni(), resultInfo.Grid()->Nj(), firstGridPoint.Y(), firstGridPoint.X(),
-	    resultInfo.Grid()->Di(), resultInfo.Grid()->Dj(), gribVersion, gridType);
+	// Start by trying to search with the geometry name. If there are duplicates, the 'wrong' geometry maybe returned if
+	// we search with the geometry definition first.
+	map<string, string> geominfo;
+
+	if (!targetGeomName.empty())
+	{
+		geominfo = itsRadonDB->GetGeometryDefinition(targetGeomName);
+	}
+
+	if (geominfo.empty())
+	{
+		geominfo = itsRadonDB->GetGeometryDefinition(
+			resultInfo.Grid()->Ni(), resultInfo.Grid()->Nj(), firstGridPoint.Y(), firstGridPoint.X(),
+			resultInfo.Grid()->Di(), resultInfo.Grid()->Dj(), gribVersion, gridType);
+	}
 
 	if (geominfo.empty())
 	{

@@ -516,7 +516,7 @@ template <typename Type>
 CUDA_DEVICE Type ThetaE_(Type T, Type RH, Type P)
 {
 	ASSERT(RH >= 0);
-	ASSERT(RH < 102);
+	ASSERT(RH < 103);
 	ASSERT(T > 150 || IsMissing(T));
 	ASSERT(T < 350 || IsMissing(T));
 	ASSERT(P > 1500);

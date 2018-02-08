@@ -141,7 +141,7 @@ bool writer::ToFile(info_t theInfo, std::shared_ptr<const plugin_configuration> 
 				// Try to save file information to radon
 				try
 				{
-					ret = r->Save(*theInfo, theOutputFile);
+					ret = r->Save(*theInfo, theOutputFile, conf->TargetGeomName());
 
 					if (!ret)
 					{
