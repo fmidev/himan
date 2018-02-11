@@ -5,7 +5,6 @@
 #include "statistics.h"
 #include "util.h"
 #include <boost/filesystem/operations.hpp>
-#include <boost/thread/locks.hpp>
 #include <boost/thread/shared_mutex.hpp>
 #include <fstream>
 #include <future>
@@ -370,7 +369,7 @@ vector<shared_ptr<info<T>>> fetcher::FromFile(const vector<file_information>& fi
 
 	for (const auto& inputFile : files)
 	{
-		if (inputFile.storage_type == HPFileStorageType::kFileSystem &&
+		if (inputFile.storage_type == HPFileStorageType::kLocalFileSystem &&
 		    !boost::filesystem::exists(inputFile.file_location))
 		{
 			itsLogger.Error("Input file '" + inputFile.file_location + "' does not exist");
@@ -598,7 +597,7 @@ vector<shared_ptr<info<T>>> fetcher::FetchFromDatabase(search_options& opts, boo
 		}
 		else
 		{
-			ret = FromFile<T>(files, opts, readPackedData, true);
+			ret = FromFile<T>(files, opts, readPackedData, false);
 
 			if (dynamic_pointer_cast<const plugin_configuration>(opts.configuration)->StatisticsEnabled())
 			{
@@ -656,7 +655,7 @@ pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAuxili
 			f.file_type = util::FileType(file);
 			f.offset = boost::none;
 			f.length = boost::none;
-			f.storage_type = HPFileStorageType::kFileSystem;
+			f.storage_type = HPFileStorageType::kLocalFileSystem;
 
 			files.push_back(f);
 		}

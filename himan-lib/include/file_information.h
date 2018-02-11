@@ -6,12 +6,6 @@
 
 namespace himan
 {
-enum class HPFileStorageType
-{
-	kFileSystem = 0,
-	kS3
-};
-
 struct file_information
 {
 	std::string file_location;              // /path/to/file

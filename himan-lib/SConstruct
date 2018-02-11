@@ -31,6 +31,9 @@ libraries.append('boost_filesystem')
 libraries.append('eccodes')
 libraries.append('gdal')
 
+if env['HAVE_S3']:
+	libraries.append('s3')
+
 env.Append(LIBS = libraries)
 env.Append(LINKFLAGS = ['-rdynamic','-Wl,--as-needed'])
 env.Append(NVCCFLAGS = ['--expt-extended-lambda', '--expt-relaxed-constexpr'])
