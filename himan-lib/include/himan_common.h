@@ -565,6 +565,20 @@ const boost::unordered_map<std::string, HPProducerClass> HPStringToProducerClass
 	("previ", kPreviClass)
 	;
 
+enum HPFileStorageType
+{
+	kUnknownStorageType = 0,
+	kLocalFileSystem,
+	kS3ObjectStorageSystem
+};
+
+const boost::unordered_map<HPFileStorageType, std::string> HPFileStorageTypeToString =
+    ba::map_list_of
+	(kUnknownStorageType, "unknown")
+	(kLocalFileSystem, "local file system")
+	(kS3ObjectStorageSystem, "s3 object storage system")
+	;
+
 // clang-format on
 
 namespace constants
