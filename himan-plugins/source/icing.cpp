@@ -97,7 +97,7 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 	h->Time(myTargetInfo->Time());
 
 	// Stratus cloud base [m] (0-300m=0-985ft, N>50%
-	auto base = h->VerticalHeightGreaterThan(NParam, 0, 300, 0.5);
+	auto base = h->VerticalHeightGreaterThan(NParam, 0, 305, 0.5);
 
 	string deviceType = "CPU";
 
