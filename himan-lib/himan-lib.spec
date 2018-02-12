@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 18.1.29
+Version: 18.2.8
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -60,6 +60,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Thu Feb  8 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.2.8-1.fmi
+- Isothermal level added
+- metutil refactoring
 * Mon Jan 29 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.1.29-1.fmi
 - Hotfixing ensemble fetching issue
 * Tue Jan  9 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.1.9-1.fmi
