@@ -59,11 +59,11 @@ CUDA_DEVICE Type Es_(Type T)
 
 	if (T > -5)
 	{
-		Es = scale * std::pow(base, static_cast<Type>(7.5f * T / (237.0f + T)));
+		Es = scale * std::pow(base, static_cast<Type>(7.5 * T / (237.0 + T)));
 	}
 	else
 	{
-		Es = scale * std::pow(base, static_cast<Type>(9.5f * T / (265.5f + T)));
+		Es = scale * std::pow(base, static_cast<Type>(9.5 * T / (265.5 + T)));
 	}
 
 	return 100 * Es;  // Pa
@@ -90,7 +90,7 @@ CUDA_DEVICE Type MixingRatio_(Type T, Type P)
 
 	const Type E = Es_<Type>(T);  // Pa
 
-	return 621.97f * E / (P - E);
+	return static_cast<Type> (621.97) * E / (P - E);
 }
 
 /**
@@ -260,7 +260,7 @@ CUDA_DEVICE Type Theta_(Type T, Type P)
 	ASSERT(T > 0 || IsMissing(T));
 	ASSERT(P > 1000);
 
-	return T * std::pow((static_cast<Type>(100000) / P), static_cast<Type>(0.28586f));
+	return T * std::pow((static_cast<Type>(100000) / P), static_cast<Type>(0.28586));
 }
 
 /**
@@ -284,16 +284,18 @@ CUDA_DEVICE Type ThetaE_(Type T, Type TD, Type P)
 
 	// Get LCL temperature
 	const Type A_ = 1 / (TD - 56);
-	const Type B_ = log(T / TD) / 800.f;
+	const Type B_ = std::log(T / TD) / 800;
 	const Type TLCL = 1 / (A_ + B_) + 56;
 
 	// Mixing ratio at initial level
 	const Type r = himan::metutil::MixingRatio_<Type>(T, P);
 
 	// 100000 = reference pressure 1000hPa
-	const Type C = T * std::pow(100000.f / P, 0.2854f * (1 - 0.00028f * r));
-	const Type D = 3.376 / TLCL - 0.00254f;
-	const Type F = r * (1 + 0.00081f * r);
+	const Type base = static_cast<Type> (100000 / P);
+	const Type expo = static_cast<Type> (0.2854 * (1 - 0.00028 * r));
+	const Type C = T * std::pow(base, expo);
+	const Type D = static_cast<Type> (3.376) / TLCL - static_cast<Type> (0.00254);
+	const Type F = r * (1 + static_cast<Type> (0.00081) * r);
 
 	return C * exp(D * F);
 }
@@ -317,7 +319,7 @@ CUDA_DEVICE Type ThetaW_(Type thetaE)
 
 	if (thetaE >= 173.15f)
 	{
-		const Type X = thetaE / constants::kKelvin;
+		const Type X = thetaE / static_cast<Type> (constants::kKelvin);
 
 		const Type a0 = static_cast<Type>(7.101574);
 		const Type a1 = static_cast<Type>(-20.68208);
@@ -344,8 +346,8 @@ CUDA_DEVICE Type VirtualTemperature_(Type T, Type P)
 	ASSERT(IsMissing(T) || T > 100 || T < 400);
 	ASSERT(IsMissing(P) || P > 1000);
 
-	Type r = 0.001f * MixingRatio_<Type>(T, P);  // kg/kg
-	return (1 + 0.61f * r) * T;
+	Type r = static_cast<Type> (0.001) * MixingRatio_<Type>(T, P);  // kg/kg
+	return (1 + static_cast<Type> (0.61) * r) * T;
 }
 
 // smarttool namespace contains functions copied from smarttools with just the most necessary modifications
@@ -387,7 +389,7 @@ CUDA_DEVICE Type W_(Type e, Type P)
 {
 	ASSERT(P > 1500);
 
-	const Type w = 0.622f * e / P * 100000;
+	const Type w = static_cast<Type> (0.622) * e / P * 100000;
 	ASSERT(w < 60);
 
 	return w;

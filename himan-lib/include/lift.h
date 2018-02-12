@@ -291,7 +291,7 @@ CUDA_DEVICE Type DryLift_(Type P, Type T, Type targetP)
 	ASSERT(IsMissing(T) || (T > 100 && T < 400));
 	ASSERT(targetP > 10000);
 
-	return T * std::pow((targetP / P), 0.286f);
+	return T * std::pow((targetP / P), static_cast<Type> (0.286));
 }
 
 /**
