@@ -293,29 +293,29 @@ __device__ double BiLinearInterpolation(const double* __restrict__ d_source, him
 
 	else if (!IsMissingDouble(av) && !IsMissingDouble(bv) && !IsMissingDouble(cv) && !IsMissingDouble(dv))
 	{
-		ret = BiLinear(dist.x, dist.y, av, bv, cv, dv);
+		ret = BiLinear<double>(dist.x, dist.y, av, bv, cv, dv);
 	}
 
 	// x or y is at grid edge
 
 	else if (fabs(dist.y) < kEpsilon && !IsMissingDouble(cv) && !IsMissingDouble(dv))
 	{
-		ret = Linear(dist.x, cv, dv);
+		ret = Linear<double>(dist.x, cv, dv);
 	}
 
 	else if (fabs(dist.y - 1) < kEpsilon && !IsMissingDouble(av) && !IsMissingDouble(bv))
 	{
-		ret = Linear(dist.x, av, bv);
+		ret = Linear<double>(dist.x, av, bv);
 	}
 
 	else if (fabs(dist.x) < kEpsilon && !IsMissingDouble(cv) && !IsMissingDouble(av))
 	{
-		ret = Linear(dist.y, cv, av);
+		ret = Linear<double>(dist.y, cv, av);
 	}
 
 	else if (fabs(dist.x - 1) < kEpsilon && !IsMissingDouble(av) && !IsMissingDouble(bv))
 	{
-		ret = Linear(dist.y, dv, bv);
+		ret = Linear<double>(dist.y, dv, bv);
 	}
 
 	// One point missing; these "triangulation" methods have been copied from NFmiInterpolation.cpp

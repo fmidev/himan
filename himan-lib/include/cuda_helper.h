@@ -18,6 +18,8 @@
 
 typedef const double* __restrict__ cdarr_t;
 typedef double* __restrict__ darr_t;
+typedef const float* __restrict__ cfarr_t;
+typedef float* __restrict__ farr_t;
 
 #ifdef HAVE_CUDA
 

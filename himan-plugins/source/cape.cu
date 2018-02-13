@@ -30,12 +30,15 @@
 #undef HIMAN_AUXILIARY_INCLUDE
 
 using namespace himan;
+using namespace himan::numerical_functions;
 using namespace himan::plugin;
 
 himan::level cape_cuda::itsBottomLevel;
 bool cape_cuda::itsUseVirtualTemperature;
 
-extern double Max(const std::vector<double>& vec);
+extern float Max(const std::vector<float>& vec);
+extern std::vector<float> Convert(const std::vector<double>& arr);
+extern std::vector<double> Convert(const std::vector<float>& arr);
 
 template <typename T>
 __global__ void InitializeArrayKernel(T* d_arr, T val, size_t N)
@@ -79,29 +82,12 @@ void MultiplyWith(T* d_arr, T val, size_t N, cudaStream_t& stream)
 	MultiplyWith<T><<<gridSize, blockSize, 0, stream>>>(d_arr, val, N);
 }
 
-void FloatToDouble(const std::vector<float>& from, std::vector<double>& to)
+void PrepareInfo(std::shared_ptr<himan::info> fullInfo, cudaStream_t& stream, float* d_farr)
 {
-	ASSERT(from.size() == to.size());
-
-	for (size_t i = 0; i < from.size(); i++)
-	{
-		if (IsMissing(from[i]))
-		{
-			to[i] = MissingDouble();
-		}
-		else
-		{
-			to[i] = static_cast<double>(from[i]);
-		}
-	}
-}
-
-info_simple* PrepareInfo(std::shared_ptr<himan::info> fullInfo, cudaStream_t& stream)
-{
-	auto h_info = fullInfo->ToSimple();
-	size_t N = h_info->size_x * h_info->size_y;
+	const size_t N = fullInfo->SizeLocations();
 
 	ASSERT(N > 0);
+	ASSERT(d_farr);
 
 	// 1. Reserve memory at device for unpacked data
 	double* d_arr = 0;
@@ -135,8 +121,6 @@ info_simple* PrepareInfo(std::shared_ptr<himan::info> fullInfo, cudaStream_t& st
 		c->Insert(fullInfo);
 
 		CUDA_CHECK(cudaHostUnregister(arr));
-
-		h_info->packed_values = 0;
 	}
 	else
 	{
@@ -144,9 +128,15 @@ info_simple* PrepareInfo(std::shared_ptr<himan::info> fullInfo, cudaStream_t& st
 		    cudaMemcpyAsync(d_arr, fullInfo->Data().ValuesAsPOD(), sizeof(double) * N, cudaMemcpyHostToDevice, stream));
 	}
 
-	h_info->values = d_arr;
+	thrust::device_ptr<double> dt_arr = thrust::device_pointer_cast(d_arr);
+	thrust::device_ptr<float> dt_farr = thrust::device_pointer_cast(d_farr);
 
-	return h_info;
+	thrust::copy(thrust::cuda::par.on(stream), dt_arr, dt_arr + N, dt_farr);
+	thrust::replace_if(thrust::cuda::par.on(stream), dt_farr, dt_farr + N,
+	                   [] __device__(const float& val) { return ::isnan(val); }, himan::MissingFloat());
+
+	CUDA_CHECK(cudaStreamSynchronize(stream));
+	CUDA_CHECK(cudaFree(d_arr));
 }
 
 std::shared_ptr<himan::info> Fetch(const std::shared_ptr<const plugin_configuration> conf,
@@ -170,115 +160,115 @@ std::shared_ptr<himan::info> Fetch(const std::shared_ptr<const plugin_configurat
 	}
 }
 
-__global__ void VirtualTemperatureKernel(double* __restrict__ d_T, const double* __restrict__ d_P, size_t N)
+__global__ void VirtualTemperatureKernel(float* __restrict__ d_T, const float* __restrict__ d_P, size_t N)
 {
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < N)
 	{
-		d_T[idx] = himan::metutil::VirtualTemperature_(d_T[idx], d_P[idx] * 100);
+		d_T[idx] = himan::metutil::VirtualTemperature_<float>(d_T[idx], d_P[idx] * 100);
 	}
 }
 
-__global__ void CopyLFCIteratorValuesKernel(double* __restrict__ d_Titer, const double* __restrict__ d_Tparcel,
-                                            double* __restrict__ d_Piter, info_simple d_Penv)
+__global__ void CopyLFCIteratorValuesKernel(float* __restrict__ d_Titer, const float* __restrict__ d_Tparcel,
+                                            float* __restrict__ d_Piter, const float* __restrict__ d_Penv, size_t N)
 {
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	if (idx < d_Penv.size_x * d_Penv.size_y)
+	if (idx < N)
 	{
-		if (!IsMissingDouble(d_Tparcel[idx]) && !IsMissingDouble(d_Penv.values[idx]))
+		if (!IsMissing(d_Tparcel[idx]) && !IsMissing(d_Penv[idx]))
 		{
 			d_Titer[idx] = d_Tparcel[idx];
-			d_Piter[idx] = d_Penv.values[idx];
+			d_Piter[idx] = d_Penv[idx];
 		}
 	}
 }
 
-__global__ void LiftLCLKernel(const double* __restrict__ d_P, const double* __restrict__ d_T,
-                              const float* __restrict__ d_PLCL, info_simple d_Ptarget, double* __restrict__ d_Tparcel)
+__global__ void LiftLCLKernel(const float* __restrict__ d_P, const float* __restrict__ d_T,
+                              const float* __restrict__ d_PLCL, const float* __restrict__ d_Ptarget,
+                              float* __restrict__ d_Tparcel, size_t N)
 {
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	if (idx < d_Ptarget.size_x * d_Ptarget.size_y)
+	if (idx < N)
 	{
-		ASSERT((d_P[idx] > 10 && d_P[idx] < 1500) || IsMissingDouble(d_P[idx]));
+		ASSERT((d_P[idx] > 10 && d_P[idx] < 1500) || IsMissing(d_P[idx]));
+		ASSERT((d_Ptarget[idx] > 10 && d_Ptarget[idx] < 1500) || IsMissing(d_Ptarget[idx]));
+		ASSERT((d_T[idx] > 100 && d_T[idx] < 350) || IsMissing(d_T[idx]));
 
-		ASSERT(d_Ptarget.values[idx] > 10);
-		ASSERT((d_Ptarget.values[idx] > 10 && d_Ptarget.values[idx] < 1500) || IsMissingDouble(d_Ptarget.values[idx]));
+		const float T = metutil::LiftLCLA_<float>(d_P[idx] * 100, d_T[idx], d_PLCL[idx] * 100, d_Ptarget[idx] * 100);
 
-		ASSERT((d_T[idx] > 100 && d_T[idx] < 350) || IsMissingDouble(d_T[idx]));
-
-		double T = metutil::LiftLCLA_<double>(d_P[idx] * 100, d_T[idx], d_PLCL[idx] * 100, d_Ptarget.values[idx] * 100);
-
-		ASSERT((T > 100 && T < 350) || IsMissingDouble(T));
+		ASSERT((T > 100 && T < 350) || IsMissing(T));
 
 		d_Tparcel[idx] = T;
 	}
 }
 
-__global__ void MoistLiftKernel(const double* __restrict__ d_T, const double* __restrict__ d_P, info_simple d_Ptarget,
-                                double* __restrict__ d_Tparcel)
+__global__ void MoistLiftKernel(const float* __restrict__ d_T, const float* __restrict__ d_P,
+                                const float* __restrict__ d_Ptarget, float* __restrict__ d_Tparcel, size_t N)
 {
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	ASSERT(d_T);
 	ASSERT(d_P);
 
-	if (idx < d_Ptarget.size_x * d_Ptarget.size_y)
+	if (idx < N)
 	{
-		ASSERT((d_P[idx] > 10 && d_P[idx] < 1500) || IsMissingDouble(d_P[idx]));
-		ASSERT((d_Ptarget.values[idx] > 10 && d_Ptarget.values[idx] < 1500) || IsMissingDouble(d_Ptarget.values[idx]));
+		ASSERT((d_P[idx] > 10 && d_P[idx] < 1500) || IsMissing(d_P[idx]));
+		ASSERT((d_Ptarget[idx] > 10 && d_Ptarget[idx] < 1500) || IsMissing(d_Ptarget[idx]));
 
-		ASSERT((d_T[idx] > 100 && d_T[idx] < 350) || IsMissingDouble(d_T[idx]));
+		ASSERT((d_T[idx] > 100 && d_T[idx] < 350) || IsMissing(d_T[idx]));
 
-		double T = metutil::MoistLiftA_<double>(d_P[idx] * 100, d_T[idx], d_Ptarget.values[idx] * 100);
+		float T = metutil::MoistLiftA_<float>(d_P[idx] * 100, d_T[idx], d_Ptarget[idx] * 100);
 
-		ASSERT((T > 100 && T < 350) || IsMissingDouble(T));
+		ASSERT((T > 100 && T < 350) || IsMissing(T));
 
 		d_Tparcel[idx] = T;
 	}
 }
 
-__global__ void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d_Zenv, info_simple d_prevTenv,
-                           info_simple d_prevPenv, info_simple d_prevZenv, const double* __restrict d_Tparcel,
-                           const double* __restrict d_prevTparcel, const float* __restrict__ d_LFCT,
-                           const float* __restrict__ d_LFCP, double* __restrict__ d_CAPE,
-                           double* __restrict__ d_CAPE1040, double* __restrict__ d_CAPE3km, float* __restrict__ d_ELT,
-                           float* __restrict__ d_ELP, float* __restrict__ d_LastELT, float* __restrict__ d_LastELP,
-                           unsigned char* __restrict__ d_found, int d_curLevel, int d_breakLevel)
+__global__ void CAPEKernel(const float* __restrict__ d_Tenv, const float* __restrict__ d_Penv,
+                           const float* __restrict__ d_Zenv, const float* __restrict__ d_prevTenv,
+                           const float* __restrict__ d_prevPenv, const float* __restrict__ d_prevZenv,
+                           const float* __restrict__ d_Tparcel, const float* __restrict__ d_prevTparcel,
+                           const float* __restrict__ d_LFCT, const float* __restrict__ d_LFCP,
+                           float* __restrict__ d_CAPE, float* __restrict__ d_CAPE1040, float* __restrict__ d_CAPE3km,
+                           float* __restrict__ d_ELT, float* __restrict__ d_ELP, float* __restrict__ d_ELZ,
+                           float* __restrict__ d_LastELT, float* __restrict__ d_LastELP, float* __restrict__ d_LastELZ,
+                           unsigned char* __restrict__ d_found, int d_curLevel, int d_breakLevel, size_t N)
 {
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	if (idx < d_Tenv.size_x * d_Tenv.size_y && d_found[idx] == 0)
+	if (idx < N && d_found[idx] == 0)
 	{
-		double Tenv = d_Tenv.values[idx];
+		float Tenv = d_Tenv[idx];
 		ASSERT(Tenv > 100.);
 
-		double Penv = d_Penv.values[idx];  // hPa
+		float Penv = d_Penv[idx];  // hPa
 		ASSERT(Penv < 1200.);
 
-		double Zenv = d_Zenv.values[idx];  // m
+		float Zenv = d_Zenv[idx];  // m
 
-		double prevTenv = d_prevTenv.values[idx];  // K
+		float prevTenv = d_prevTenv[idx];  // K
 		ASSERT(prevTenv > 100.);
 
-		double prevPenv = d_prevPenv.values[idx];  // hPa
+		float prevPenv = d_prevPenv[idx];  // hPa
 		ASSERT(prevPenv < 1200.);
 
-		double prevZenv = d_prevZenv.values[idx];  // m
+		float prevZenv = d_prevZenv[idx];  // m
 
-		double Tparcel = d_Tparcel[idx];  // K
-		ASSERT(Tparcel > 100. || IsMissingDouble(Tparcel));
+		float Tparcel = d_Tparcel[idx];  // K
+		ASSERT(Tparcel > 100. || IsMissing(Tparcel));
 
-		double prevTparcel = d_prevTparcel[idx];  // K
-		ASSERT(prevTparcel > 100. || IsMissingDouble(prevTparcel));
+		float prevTparcel = d_prevTparcel[idx];  // K
+		ASSERT(prevTparcel > 100. || IsMissing(prevTparcel));
 
-		const double LFCP = static_cast<double>(d_LFCP[idx]);  // hPa
-		const double LFCT = static_cast<double>(d_LFCT[idx]);  // K
+		const float LFCP = d_LFCP[idx];  // hPa
+		const float LFCT = d_LFCT[idx];  // K
 
-		if (IsMissingDouble(Penv) || IsMissingDouble(Tenv) || IsMissingDouble(Zenv) || IsMissingDouble(prevZenv) ||
-		    IsMissingDouble(Tparcel) || Penv > LFCP)
+		if (IsMissing(Penv) || IsMissing(Tenv) || IsMissing(Zenv) || IsMissing(prevZenv) || IsMissing(Tparcel) ||
+		    Penv > LFCP)
 		{
 			// Missing data or current grid point is below LFC
 			return;
@@ -287,13 +277,13 @@ __global__ void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d
 		ASSERT(LFCP < 1200.);
 		ASSERT(LFCT > 100.);
 
-		if (IsMissingDouble(prevTparcel) && !IsMissingDouble(Tparcel))
+		if (IsMissing(prevTparcel) && !IsMissing(Tparcel))
 		{
 			// When rising above LFC, get accurate value of Tenv at that level so that even small amounts of CAPE
 			// (and EL!) values can be determined.
 
-			prevTenv = himan::numerical_functions::interpolation::Linear(LFCP, prevPenv, Penv, prevTenv, Tenv);
-			prevZenv = himan::numerical_functions::interpolation::Linear(LFCP, prevPenv, Penv, prevZenv, Zenv);
+			prevTenv = interpolation::Linear<float>(LFCP, prevPenv, Penv, prevTenv, Tenv);
+			prevZenv = interpolation::Linear<float>(LFCP, prevPenv, Penv, prevZenv, Zenv);
 			prevPenv = LFCP;     // LFC pressure
 			prevTparcel = LFCT;  // LFC temperature
 
@@ -319,21 +309,21 @@ __global__ void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d
 		{
 			if (prevZenv < 3000.)
 			{
-				double C = CAPE::CalcCAPE3km(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv);
+				float C = CAPE::CalcCAPE3km(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv);
 
 				d_CAPE3km[idx] += C;
 
 				ASSERT(d_CAPE3km[idx] >= 0);
 			}
 
-			double C = CAPE::CalcCAPE1040(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv);
+			float C = CAPE::CalcCAPE1040(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv);
 
 			d_CAPE1040[idx] += C;
 
 			ASSERT(d_CAPE1040[idx] >= 0);
 
-			double CAPE, ELT, ELP;
-			CAPE::CalcCAPE(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv, CAPE, ELT, ELP);
+			float CAPE, ELT, ELP, ELZ;
+			CAPE::CalcCAPE(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv, CAPE, ELT, ELP, ELZ);
 
 			d_CAPE[idx] += CAPE;
 
@@ -344,49 +334,54 @@ __global__ void CAPEKernel(info_simple d_Tenv, info_simple d_Penv, info_simple d
 				if (IsMissing(d_ELT[idx]))
 				{
 					d_ELT[idx] = static_cast<float>(ELT);
-					d_ELP[idx] = static_cast<float>(ELP);
 				}
 
-				d_LastELT[idx] = static_cast<float>(ELT);
-				d_LastELP[idx] = static_cast<float>(ELP);
+				d_ELP[idx] = fmaxf(ELP, d_ELP[idx]);
+				d_ELZ[idx] = fminf(ELZ, d_ELZ[idx]);
+
+				d_LastELT[idx] = ELT;
+				d_LastELP[idx] = ELP;
+				d_LastELZ[idx] = ELZ;
 			}
 		}
 	}
 }
 
-__global__ void CINKernel(info_simple d_Tenv, info_simple d_prevTenv, info_simple d_Penv, info_simple d_prevPenv,
-                          info_simple d_Zenv, info_simple d_prevZenv, const double* __restrict__ d_Tparcel,
-                          const double* __restrict__ d_prevTparcel, const float* __restrict__ d_PLCL,
-                          const float* __restrict__ d_PLFC, const double* __restrict__ d_Psource,
-                          double* __restrict__ d_cinh, unsigned char* __restrict__ d_found, bool useVirtualTemperature)
+__global__ void CINKernel(const float* __restrict__ d_Tenv, const float* __restrict__ d_prevTenv,
+                          const float* __restrict__ d_Penv, const float* __restrict__ d_prevPenv,
+                          const float* __restrict__ d_Zenv, const float* __restrict__ d_prevZenv,
+                          const float* __restrict__ d_Tparcel, const float* __restrict__ d_prevTparcel,
+                          const float* __restrict__ d_PLCL, const float* __restrict__ d_PLFC,
+                          const float* __restrict__ d_Psource, float* __restrict__ d_cinh,
+                          unsigned char* __restrict__ d_found, bool useVirtualTemperature, size_t N)
 {
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	if (idx < d_Tenv.size_x * d_Tenv.size_y && d_found[idx] == 0)
+	if (idx < N && d_found[idx] == 0)
 	{
-		double Tenv = d_Tenv.values[idx];  // K
+		float Tenv = d_Tenv[idx];  // K
 		ASSERT(Tenv >= 150.);
 
-		const double prevTenv = d_prevTenv.values[idx];
+		const float prevTenv = d_prevTenv[idx];
 
-		double Penv = d_Penv.values[idx];  // hPa
-		ASSERT(Penv < 1200. || IsMissingDouble(Penv));
+		float Penv = d_Penv[idx];  // hPa
+		ASSERT(Penv < 1200. || IsMissing(Penv));
 
-		const double prevPenv = d_prevPenv.values[idx];
+		const float prevPenv = d_prevPenv[idx];
 
-		double Tparcel = d_Tparcel[idx];  // K
-		ASSERT(Tparcel >= 150. || IsMissingDouble(Tparcel));
+		float Tparcel = d_Tparcel[idx];  // K
+		ASSERT(Tparcel >= 150. || IsMissing(Tparcel));
 
-		const double prevTparcel = d_prevTparcel[idx];
+		const float prevTparcel = d_prevTparcel[idx];
 
 		const float PLFC = d_PLFC[idx];  // hPa
-		ASSERT(PLFC < 1200. || IsMissingDouble(PLFC));
+		ASSERT(PLFC < 1200. || IsMissing(PLFC));
 
 		const float PLCL = d_PLCL[idx];  // hPa
-		ASSERT(PLCL < 1200. || IsMissingDouble(PLCL));
+		ASSERT(PLCL < 1200. || IsMissing(PLCL));
 
-		double Zenv = d_Zenv.values[idx];          // m
-		double prevZenv = d_prevZenv.values[idx];  // m
+		float Zenv = d_Zenv[idx];          // m
+		float prevZenv = d_prevZenv[idx];  // m
 
 		// Make sure we have passed the starting level
 		if (Penv <= d_Psource[idx])
@@ -398,20 +393,20 @@ __global__ void CINKernel(info_simple d_Tenv, info_simple d_prevTenv, info_simpl
 
 				// Integrate the final piece from previous level to LFC level
 
-				if (IsMissingDouble(prevTparcel) || IsMissingDouble(prevPenv) || IsMissingDouble(prevTenv))
+				if (IsMissing(prevTparcel) || IsMissing(prevPenv) || IsMissing(prevTenv))
 				{
-					Tparcel = MissingDouble();  // unable to proceed with CIN integration
+					Tparcel = MissingFloat();  // unable to proceed with CIN integration
 				}
 				else
 				{
 					// First get LFC height in meters
-					Zenv = numerical_functions::interpolation::Linear(PLFC, prevPenv, Penv, prevZenv, Zenv);
+					Zenv = interpolation::Linear<float>(PLFC, prevPenv, Penv, prevZenv, Zenv);
 
 					// LFC environment temperature value
-					Tenv = numerical_functions::interpolation::Linear(PLFC, prevPenv, Penv, prevTenv, Tenv);
+					Tenv = interpolation::Linear<float>(PLFC, prevPenv, Penv, prevTenv, Tenv);
 
 					// LFC T parcel value
-					Tparcel = numerical_functions::interpolation::Linear(PLFC, prevPenv, Penv, prevTparcel, Tparcel);
+					Tparcel = interpolation::Linear<float>(PLFC, prevPenv, Penv, prevTparcel, Tparcel);
 
 					Penv = PLFC;
 
@@ -426,11 +421,11 @@ __global__ void CINKernel(info_simple d_Tenv, info_simple d_prevTenv, info_simpl
 			{
 				// Above LCL, switch to virtual temperature
 
-				Tparcel = metutil::VirtualTemperature_(Tparcel, Penv * 100);
-				Tenv = metutil::VirtualTemperature_(Tenv, Penv * 100);
+				Tparcel = metutil::VirtualTemperature_<float>(Tparcel, Penv * 100);
+				Tenv = metutil::VirtualTemperature_<float>(Tenv, Penv * 100);
 			}
 
-			if (!IsMissingDouble(Tparcel))
+			if (!IsMissing(Tparcel))
 			{
 				d_cinh[idx] += CAPE::CalcCIN(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv);
 				ASSERT(d_cinh[idx] <= 0);
@@ -439,36 +434,34 @@ __global__ void CINKernel(info_simple d_Tenv, info_simple d_prevTenv, info_simpl
 	}
 }
 
-__global__ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT, info_simple d_prevP,
-                          double* __restrict__ d_Tparcel, const double* __restrict__ d_prevTparcel,
-                          const double* __restrict__ d_LCLT, const double* __restrict__ d_LCLP,
-                          double* __restrict__ d_LFCT, double* __restrict__ d_LFCP, unsigned char* __restrict__ d_found,
-                          int d_curLevel, int d_breakLevel)
+__global__ void LFCKernel(const float* __restrict__ d_T, const float* __restrict__ d_P,
+                          const float* __restrict__ d_prevT, const float* __restrict__ d_prevP,
+                          float* __restrict__ d_Tparcel, const float* __restrict__ d_prevTparcel,
+                          const float* __restrict__ d_LCLT, const float* __restrict__ d_LCLP,
+                          float* __restrict__ d_LFCT, float* __restrict__ d_LFCP, unsigned char* __restrict__ d_found,
+                          int d_curLevel, int d_breakLevel, size_t N)
 {
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	ASSERT(d_T.values);
-	ASSERT(d_P.values);
-
-	if (idx < d_T.size_x * d_T.size_y && d_found[idx] == 0)
+	if (idx < N && d_found[idx] == 0)
 	{
-		double Tparcel = d_Tparcel[idx];
-		double prevTparcel = d_prevTparcel[idx];
-		double Tenv = d_T.values[idx];
+		float Tparcel = d_Tparcel[idx];
+		float prevTparcel = d_prevTparcel[idx];
+		float Tenv = d_T[idx];
 
 		ASSERT(Tenv < 350.);
 		ASSERT(Tenv > 100.);
 
-		double prevTenv = d_prevT.values[idx];
+		float prevTenv = d_prevT[idx];
 		ASSERT(prevTenv < 350.);
 		ASSERT(prevTenv > 100.);
 
-		double Penv = d_P.values[idx];
-		double prevPenv = d_prevP.values[idx];
+		float Penv = d_P[idx];
+		float prevPenv = d_prevP[idx];
 
 		ASSERT(Penv > 50.);
 		ASSERT(Penv < 1200.);
-		double LCLP = d_LCLP[idx];
+		float LCLP = d_LCLP[idx];
 		ASSERT(prevPenv > 50.);
 		ASSERT(prevPenv < 1200.);
 
@@ -480,16 +473,16 @@ __global__ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT,
 			d_found[idx] = 1;
 		}
 
-		const double diff = Tparcel - Tenv;
+		const float diff = Tparcel - Tenv;
 
 		if (Penv < LCLP && diff > 0)
 		{
 			d_found[idx] = 1;
 
-			if (IsMissingDouble(prevTparcel))
+			if (IsMissing(prevTparcel))
 			{
 				prevTparcel = d_LCLT[idx];  // previous is LCL
-				ASSERT(!IsMissingDouble(d_LCLT[idx]));
+				ASSERT(!IsMissing(d_LCLT[idx]));
 			}
 
 			if (diff < 0.1)
@@ -518,7 +511,7 @@ __global__ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT,
 					d_LFCT[idx] = Tparcel;
 					d_LFCP[idx] = Penv;
 				}
-				else if (IsMissingDouble(d_LFCT[idx]))
+				else if (IsMissing(d_LFCT[idx]))
 				{
 					// Intersection not found, use exact level value
 					d_LFCT[idx] = Tparcel;
@@ -532,22 +525,20 @@ __global__ void LFCKernel(info_simple d_T, info_simple d_P, info_simple d_prevT,
 	}
 }
 
-__global__ void ThetaEKernel(info_simple d_T, info_simple d_RH, info_simple d_P, info_simple d_prevT,
-                             info_simple d_prevRH, info_simple d_prevP, double* __restrict__ d_maxThetaE,
-                             double* __restrict__ d_Tresult, double* __restrict__ d_TDresult,
-                             double* __restrict__ d_Presult, unsigned char* __restrict__ d_found)
+__global__ void ThetaEKernel(const float* __restrict__ d_T, const float* __restrict__ d_RH,
+                             const float* __restrict__ d_P, const float* __restrict__ d_prevT,
+                             const float* __restrict__ d_prevRH, const float* __restrict__ d_prevP,
+                             float* __restrict__ d_maxThetaE, float* __restrict__ d_Tresult,
+                             float* __restrict__ d_TDresult, float* __restrict__ d_Presult,
+                             unsigned char* __restrict__ d_found, size_t N)
 {
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	ASSERT(d_T.values);
-	ASSERT(d_RH.values);
-	ASSERT(d_P.values);
-
-	if (idx < d_T.size_x * d_T.size_y && d_found[idx] == 0)
+	if (idx < N && d_found[idx] == 0)
 	{
-		double T = d_T.values[idx];
-		double P = d_P.values[idx];
-		double RH = d_RH.values[idx];
+		float T = d_T[idx];
+		float P = d_P[idx];
+		float RH = d_RH[idx];
 
 		if (P < 600.)
 		{
@@ -556,19 +547,19 @@ __global__ void ThetaEKernel(info_simple d_T, info_simple d_RH, info_simple d_P,
 			// Linearly interpolate temperature and humidity values to 600hPa, to check
 			// if highest theta e is found there
 
-			T = numerical_functions::interpolation::Linear(600., P, d_prevP.values[idx], T, d_prevT.values[idx]);
-			RH = numerical_functions::interpolation::Linear(600., P, d_prevP.values[idx], RH, d_prevRH.values[idx]);
+			T = interpolation::Linear<float>(600.f, P, d_prevP[idx], T, d_prevT[idx]);
+			RH = interpolation::Linear<float>(600.f, P, d_prevP[idx], RH, d_prevRH[idx]);
 
 			d_found[idx] = 1;  // Make sure this is the last time we access this grid point
 			P = 600.;
 		}
 
-		double TD = metutil::DewPointFromRH_(T, RH);
+		float TD = metutil::DewPointFromRH_<float>(T, RH);
 
-		double& refThetaE = d_maxThetaE[idx];
-		double ThetaE = metutil::smarttool::ThetaE_<double>(T, RH, P * 100);
+		float& refThetaE = d_maxThetaE[idx];
+		float ThetaE = metutil::smarttool::ThetaE_<float>(T, RH, P * 100);
 
-		if (ThetaE >= refThetaE)
+		if ((ThetaE - refThetaE) > 0.0001)  // epsilon added for numerical stability
 		{
 			refThetaE = ThetaE;
 			d_Tresult[idx] = T;
@@ -578,9 +569,9 @@ __global__ void ThetaEKernel(info_simple d_T, info_simple d_RH, info_simple d_P,
 	}
 }
 
-__global__ void MixingRatioKernel(const double* __restrict__ d_T, double* __restrict__ d_P,
-                                  const double* __restrict__ d_RH, double* __restrict__ d_Tpot,
-                                  double* __restrict__ d_MR, size_t N)
+__global__ void MixingRatioKernel(const float* __restrict__ d_T, float* __restrict__ d_P,
+                                  const float* __restrict__ d_RH, float* __restrict__ d_Tpot, float* __restrict__ d_MR,
+                                  size_t N)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -590,53 +581,42 @@ __global__ void MixingRatioKernel(const double* __restrict__ d_T, double* __rest
 
 	if (idx < N)
 	{
-		const double T = d_T[idx];
-		const double P = d_P[idx];
-		const double RH = d_RH[idx];
+		const float T = d_T[idx];
+		const float P = d_P[idx];
+		const float RH = d_RH[idx];
 
-		ASSERT((T > 150 && T < 350) || IsMissingDouble(T));
-		ASSERT((P > 100 && P < 1500) || IsMissingDouble(P));
-		ASSERT((RH >= 0 && RH < 102) || IsMissingDouble(RH));
+		ASSERT((T > 150 && T < 350) || IsMissing(T));
+		ASSERT((P > 100 && P < 1500) || IsMissing(P));
+		ASSERT((RH >= 0 && RH < 102) || IsMissing(RH));
 
-		d_Tpot[idx] = metutil::Theta_(T, 100 * P);
-		d_MR[idx] = metutil::smarttool::MixingRatio_(T, RH, 100 * P);
+		d_Tpot[idx] = metutil::Theta_<float>(T, 100 * P);
+		d_MR[idx] = metutil::smarttool::MixingRatio_<float>(T, RH, 100 * P);
 
 		d_P[idx] = P - 2.0;
 	}
 }
 
-__global__ void MixingRatioFinalizeKernel(double* __restrict__ d_T, double* __restrict__ d_TD, info_simple d_P,
-                                          const double* __restrict__ d_Tpot, const double* __restrict__ d_MR, size_t N)
+__global__ void MixingRatioFinalizeKernel(float* __restrict__ d_T, float* __restrict__ d_TD,
+                                          const float* __restrict__ d_P, const float* __restrict__ d_Tpot,
+                                          const float* __restrict__ d_MR, size_t N)
 {
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-	ASSERT(d_T);
-	ASSERT(d_P.values);
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < N)
 	{
-		double P = d_P.values[idx];
+		const float P = d_P[idx];
+		const float MR = d_MR[idx];
+		const float Tpot = d_Tpot[idx];
 
-		double MR = d_MR[idx];
-		double Tpot = d_Tpot[idx];
+		ASSERT((P > 100 && P < 1500) || IsMissing(P));
 
-		ASSERT((P > 100 && P < 1500) || IsMissingDouble(P));
+		const float T = Tpot * pow((P / 1000.), 0.2854);
+		const float Es = metutil::Es_<float>(T);  // Saturated water vapor pressure
+		const float E = metutil::E_<float>(MR, 100 * P);
+		const float RH = E / Es * 100;
 
-		if (!IsMissingDouble(Tpot) && !IsMissingDouble(P))
-		{
-			d_T[idx] = Tpot * pow((P / 1000.), 0.2854);
-		}
-
-		double T = d_T[idx];
-
-		if (!IsMissingDouble(T) && !IsMissingDouble(MR) && !IsMissingDouble(P))
-		{
-			double Es = metutil::Es_(T);  // Saturated water vapor pressure
-			double E = metutil::E_(MR, 100 * P);
-
-			double RH = E / Es * 100;
-			d_TD[idx] = metutil::DewPointFromRH_(T, RH);
-		}
+		d_TD[idx] = metutil::DewPointFromRH_<float>(T, RH);
+		d_T[idx] = T;
 	}
 }
 
@@ -653,27 +633,40 @@ cape_source cape_cuda::GetHighestThetaEValuesGPU(const std::shared_ptr<const plu
 
 	CUDA_CHECK(cudaStreamCreate(&stream));
 
-	double* d_maxThetaE = 0;
-	double* d_Tresult = 0;
-	double* d_TDresult = 0;
-	double* d_Presult = 0;
+	float* d_maxThetaE = 0;
+	float* d_Tresult = 0;
+	float* d_TDresult = 0;
+	float* d_Presult = 0;
+	float* d_T = 0;
+	float* d_P = 0;
+	float* d_RH = 0;
+	float* d_prevT = 0;
+	float* d_prevP = 0;
+	float* d_prevRH = 0;
+
 	unsigned char* d_found = 0;
 
-	CUDA_CHECK(cudaMalloc((double**)&d_maxThetaE, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**)&d_Tresult, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**)&d_TDresult, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**)&d_Presult, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**)&d_found, sizeof(unsigned char) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_maxThetaE, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_Tresult, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_TDresult, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_Presult, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_found, sizeof(unsigned char) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_T, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_P, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_RH, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_prevT, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_prevP, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_prevRH, sizeof(float) * N));
 
-	InitializeArray<double>(d_maxThetaE, -1, N, stream);
-	InitializeArray<double>(d_Tresult, himan::MissingDouble(), N, stream);
-	InitializeArray<double>(d_TDresult, himan::MissingDouble(), N, stream);
-	InitializeArray<double>(d_Presult, himan::MissingDouble(), N, stream);
+	InitializeArray<float>(d_maxThetaE, -1, N, stream);
+	InitializeArray<float>(d_Tresult, himan::MissingFloat(), N, stream);
+	InitializeArray<float>(d_TDresult, himan::MissingFloat(), N, stream);
+	InitializeArray<float>(d_Presult, himan::MissingFloat(), N, stream);
+	InitializeArray<float>(d_prevT, himan::MissingFloat(), N, stream);
+	InitializeArray<float>(d_prevP, himan::MissingFloat(), N, stream);
+	InitializeArray<float>(d_prevRH, himan::MissingFloat(), N, stream);
+
 	InitializeArray<unsigned char>(d_found, 0, N, stream);
-
-	info_simple* h_prevT = 0;
-	info_simple* h_prevP = 0;
-	info_simple* h_prevRH = 0;
 
 	thrust::device_ptr<unsigned char> dt_found = thrust::device_pointer_cast(d_found);
 
@@ -685,75 +678,48 @@ cape_source cape_cuda::GetHighestThetaEValuesGPU(const std::shared_ptr<const plu
 
 		if (!TInfo || !RHInfo || !PInfo)
 		{
-			return std::make_tuple(std::vector<double>(), std::vector<double>(), std::vector<double>());
+			return std::make_tuple(std::vector<float>(), std::vector<float>(), std::vector<float>());
 		}
 
-		auto h_T = PrepareInfo(TInfo, stream);
-		auto h_P = PrepareInfo(PInfo, stream);
-		auto h_RH = PrepareInfo(RHInfo, stream);
+		PrepareInfo(TInfo, stream, d_T);
+		PrepareInfo(PInfo, stream, d_P);
+		PrepareInfo(RHInfo, stream, d_RH);
 
-		ASSERT(h_T->values);
-		ASSERT(h_RH->values);
-		ASSERT(h_P->values);
-
-		bool release = true;
-
-		if (!h_prevT)
-		{
-			// first time
-			h_prevT = new info_simple(*h_T);
-			h_prevP = new info_simple(*h_P);
-			h_prevRH = new info_simple(*h_RH);
-
-			release = false;
-		}
-
-		ThetaEKernel<<<gridSize, blockSize, 0, stream>>>(*h_T, *h_RH, *h_P, *h_prevT, *h_prevRH, *h_prevP, d_maxThetaE,
-		                                                 d_Tresult, d_TDresult, d_Presult, d_found);
+		ThetaEKernel<<<gridSize, blockSize, 0, stream>>>(d_T, d_RH, d_P, d_prevT, d_prevRH, d_prevP, d_maxThetaE,
+		                                                 d_Tresult, d_TDresult, d_Presult, d_found, N);
 
 		size_t foundCount = thrust::count(thrust::cuda::par.on(stream), dt_found, dt_found + N, 1);
 
+		CUDA_CHECK(cudaMemcpyAsync(d_prevT, d_T, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync(d_prevP, d_P, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync(d_prevRH, d_RH, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
+
 		CUDA_CHECK(cudaStreamSynchronize(stream));
-
-		if (release)
-		{
-			CUDA_CHECK(cudaFree(h_prevP->values));
-			CUDA_CHECK(cudaFree(h_prevRH->values));
-			CUDA_CHECK(cudaFree(h_prevT->values));
-		}
-
-		delete h_prevP;
-		delete h_prevT;
-		delete h_prevRH;
-
-		h_prevP = h_P;
-		h_prevRH = h_RH;
-		h_prevT = h_T;
 
 		curLevel.Value(curLevel.Value() - 1);
 
 		if (foundCount == N)
+		{
 			break;
+		}
 	}
 
-	CUDA_CHECK(cudaFree(h_prevP->values));
-	CUDA_CHECK(cudaFree(h_prevRH->values));
-	CUDA_CHECK(cudaFree(h_prevT->values));
+	std::vector<float> Tthetae(myTargetInfo->Data().Size());
+	std::vector<float> TDthetae(myTargetInfo->Data().Size());
+	std::vector<float> Pthetae(myTargetInfo->Data().Size());
 
-	delete h_prevP;
-	delete h_prevT;
-	delete h_prevRH;
-
-	std::vector<double> Tthetae(myTargetInfo->Data().Size());
-	std::vector<double> TDthetae(myTargetInfo->Data().Size());
-	std::vector<double> Pthetae(myTargetInfo->Data().Size());
-
-	CUDA_CHECK(cudaMemcpyAsync(&Tthetae[0], d_Tresult, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaMemcpyAsync(&TDthetae[0], d_TDresult, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaMemcpyAsync(&Pthetae[0], d_Presult, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(&Tthetae[0], d_Tresult, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(&TDthetae[0], d_TDresult, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(&Pthetae[0], d_Presult, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
+	CUDA_CHECK(cudaFree(d_T));
+	CUDA_CHECK(cudaFree(d_P));
+	CUDA_CHECK(cudaFree(d_RH));
+	CUDA_CHECK(cudaFree(d_prevT));
+	CUDA_CHECK(cudaFree(d_prevP));
+	CUDA_CHECK(cudaFree(d_prevRH));
 	CUDA_CHECK(cudaFree(d_maxThetaE));
 	CUDA_CHECK(cudaFree(d_Tresult));
 	CUDA_CHECK(cudaFree(d_TDresult));
@@ -795,64 +761,66 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 
 	if (!PInfo || PInfo->Data().MissingCount() == PInfo->SizeLocations())
 	{
-		return std::make_tuple(std::vector<double>(), std::vector<double>(), std::vector<double>());
+		return std::make_tuple(std::vector<float>(), std::vector<float>(), std::vector<float>());
 	}
 
-	auto PVec = VEC(PInfo);
+	auto dPVec = VEC(PInfo);
 
 	auto P500m = h->VerticalValue(param("P-HPA"), 500.);
 
 	h->HeightUnit(kHPa);
 
-	tp.LowerHeight(PVec);
-	mr.LowerHeight(PVec);
+	tp.LowerHeight(dPVec);
+	mr.LowerHeight(dPVec);
 
 	tp.UpperHeight(P500m);
 	mr.UpperHeight(P500m);
 
-	double* d_Tpot = 0;
-	double* d_MR = 0;
-	double* d_T = 0;
-	double* d_RH = 0;
-	double* d_P = 0;
-	double* d_TD = 0;
+	auto PVec = Convert(dPVec);
 
-	CUDA_CHECK(cudaMalloc((double**)&d_Tpot, N * sizeof(double)));
-	CUDA_CHECK(cudaMalloc((double**)&d_MR, N * sizeof(double)));
-	CUDA_CHECK(cudaMalloc((double**)&d_T, N * sizeof(double)));
-	CUDA_CHECK(cudaMalloc((double**)&d_RH, N * sizeof(double)));
-	CUDA_CHECK(cudaMalloc((double**)&d_P, N * sizeof(double)));
-	CUDA_CHECK(cudaMalloc((double**)&d_TD, N * sizeof(double)));
+	float* d_Tpot = 0;
+	float* d_MR = 0;
+	float* d_T = 0;
+	float* d_RH = 0;
+	float* d_P = 0;
+	float* d_TD = 0;
 
-	InitializeArray<double>(d_Tpot, himan::MissingDouble(), N, stream);
-	InitializeArray<double>(d_MR, himan::MissingDouble(), N, stream);
+	CUDA_CHECK(cudaMalloc((float**)&d_Tpot, N * sizeof(float)));
+	CUDA_CHECK(cudaMalloc((float**)&d_MR, N * sizeof(float)));
+	CUDA_CHECK(cudaMalloc((float**)&d_T, N * sizeof(float)));
+	CUDA_CHECK(cudaMalloc((float**)&d_RH, N * sizeof(float)));
+	CUDA_CHECK(cudaMalloc((float**)&d_P, N * sizeof(float)));
+	CUDA_CHECK(cudaMalloc((float**)&d_TD, N * sizeof(float)));
 
-	std::vector<double> Tpot(N, himan::MissingDouble());
-	std::vector<double> MR(N, himan::MissingDouble());
+	InitializeArray<float>(d_Tpot, himan::MissingFloat(), N, stream);
+	InitializeArray<float>(d_MR, himan::MissingFloat(), N, stream);
 
-	CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(Tpot.data()), sizeof(double) * N, 0));
-	CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(MR.data()), sizeof(double) * N, 0));
-	CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(PVec.data()), sizeof(double) * N, 0));
+	std::vector<float> Tpot(N, himan::MissingFloat());
+	std::vector<float> MR(N, himan::MissingFloat());
 
-	CUDA_CHECK(cudaMemcpyAsync(d_P, PVec.data(), sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(Tpot.data()), sizeof(float) * N, 0));
+	CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(MR.data()), sizeof(float) * N, 0));
+	CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(PVec.data()), sizeof(float) * N, 0));
+
+	CUDA_CHECK(cudaMemcpyAsync(d_P, PVec.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
 
 	while (true)
 	{
-		auto TVec = h->VerticalValue(param("T-K"), PVec);
-		CUDA_CHECK(cudaMemcpyAsync(d_T, &TVec[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+		auto TVec = Convert(h->VerticalValue(param("T-K"), Convert(PVec)));
+		CUDA_CHECK(cudaMemcpyAsync(d_T, &TVec[0], sizeof(float) * N, cudaMemcpyHostToDevice, stream));
 
-		auto RHVec = h->VerticalValue(param("RH-PRCNT"), PVec);
-		CUDA_CHECK(cudaMemcpyAsync(d_RH, &RHVec[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+		auto RHVec = Convert(h->VerticalValue(param("RH-PRCNT"), Convert(PVec)));
+		CUDA_CHECK(cudaMemcpyAsync(d_RH, &RHVec[0], sizeof(float) * N, cudaMemcpyHostToDevice, stream));
 
 		MixingRatioKernel<<<gridSize, blockSize, 0, stream>>>(d_T, d_P, d_RH, d_Tpot, d_MR, N);
 
-		CUDA_CHECK(cudaMemcpyAsync(Tpot.data(), d_Tpot, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
-		CUDA_CHECK(cudaMemcpyAsync(MR.data(), d_MR, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
+		CUDA_CHECK(cudaMemcpyAsync(Tpot.data(), d_Tpot, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
+		CUDA_CHECK(cudaMemcpyAsync(MR.data(), d_MR, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
 
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
-		tp.Process(Tpot, PVec);
-		mr.Process(MR, PVec);
+		tp.Process(Convert(Tpot), Convert(PVec));
+		mr.Process(Convert(MR), Convert(PVec));
 
 		size_t foundCount = tp.HeightsCrossed();
 
@@ -864,7 +832,9 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 		}
 
 		for (auto& v : PVec)
+		{
 			v -= 2.0;
+		}
 	}
 
 	CUDA_CHECK(cudaHostUnregister(Tpot.data()));
@@ -875,26 +845,29 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 
 	// Calculate averages
 
-	Tpot = tp.Result();
-	MR = mr.Result();
+	Tpot = Convert(tp.Result());
+	MR = Convert(mr.Result());
 
 	// Copy averages to GPU for final calculation
-	CUDA_CHECK(cudaMemcpyAsync(d_Tpot, Tpot.data(), sizeof(double) * N, cudaMemcpyHostToDevice, stream));
-	CUDA_CHECK(cudaMemcpyAsync(d_MR, MR.data(), sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_Tpot, Tpot.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_MR, MR.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
+
+	float* d_Psurf = 0;
+	CUDA_CHECK(cudaMalloc((float**)&d_Psurf, N * sizeof(float)));
 
 	auto Psurf = Fetch(conf, myTargetInfo->Time(), itsBottomLevel, param("P-HPA"), myTargetInfo->ForecastType());
-	auto h_P = PrepareInfo(Psurf, stream);
+	PrepareInfo(Psurf, stream, d_Psurf);
 
-	InitializeArray<double>(d_T, himan::MissingDouble(), N, stream);
-	InitializeArray<double>(d_TD, himan::MissingDouble(), N, stream);
+	InitializeArray<float>(d_T, himan::MissingFloat(), N, stream);
+	InitializeArray<float>(d_TD, himan::MissingFloat(), N, stream);
 
-	std::vector<double> T(Tpot.size(), himan::MissingDouble());
-	std::vector<double> TD(T.size(), himan::MissingDouble());
+	std::vector<float> T(Tpot.size(), himan::MissingFloat());
+	std::vector<float> TD(T.size(), himan::MissingFloat());
 
-	MixingRatioFinalizeKernel<<<gridSize, blockSize, 0, stream>>>(d_T, d_TD, *h_P, d_Tpot, d_MR, N);
+	MixingRatioFinalizeKernel<<<gridSize, blockSize, 0, stream>>>(d_T, d_TD, d_Psurf, d_Tpot, d_MR, N);
 
-	CUDA_CHECK(cudaMemcpyAsync(T.data(), d_T, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaMemcpyAsync(TD.data(), d_TD, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(T.data(), d_T, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(TD.data(), d_TD, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
 	CUDA_CHECK(cudaFree(d_Tpot));
@@ -903,18 +876,16 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	CUDA_CHECK(cudaFree(d_P));
 	CUDA_CHECK(cudaFree(d_T));
 	CUDA_CHECK(cudaFree(d_TD));
-	CUDA_CHECK(cudaFree(h_P->values));
-
-	delete h_P;
+	CUDA_CHECK(cudaFree(d_Psurf));
 
 	CUDA_CHECK(cudaStreamDestroy(stream));
 
-	return std::make_tuple(T, TD, VEC(Psurf));
+	return std::make_tuple(T, TD, Convert(VEC(Psurf)));
 }
 
-std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
-    const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo, std::vector<double>& T,
-    std::vector<double>& P, std::vector<double>& TenvLCL)
+std::pair<std::vector<float>, std::vector<float>> cape_cuda::GetLFCGPU(
+    const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo, std::vector<float>& T,
+    std::vector<float>& P, std::vector<float>& TenvLCL)
 {
 	auto h = GET_PLUGIN(hitool);
 	h->Configuration(conf);
@@ -930,39 +901,47 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
 
 	CUDA_CHECK(cudaStreamCreate(&stream));
 
-	double* d_TenvLCL = 0;
-	double* d_Titer = 0;
-	double* d_Piter = 0;
-	double* d_LCLP = 0;
-	double* d_LCLT = 0;
-	double* d_LFCT = 0;
-	double* d_LFCP = 0;
-	double* d_Tparcel = 0;
-	double* d_prevTparcel = 0;
+	float* d_TenvLCL = 0;
+	float* d_Titer = 0;
+	float* d_Piter = 0;
+	float* d_LCLP = 0;
+	float* d_LCLT = 0;
+	float* d_LFCT = 0;
+	float* d_LFCP = 0;
+	float* d_Tparcel = 0;
+	float* d_prevTparcel = 0;
+	float* d_Tenv = 0;
+	float* d_Penv = 0;
+	float* d_prevTenv = 0;
+	float* d_prevPenv = 0;
 
 	unsigned char* d_found = 0;
 
-	CUDA_CHECK(cudaMalloc((double**)&d_TenvLCL, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**)&d_Piter, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**)&d_Titer, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**)&d_LCLT, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**)&d_LCLP, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**)&d_LFCT, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**)&d_LFCP, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**)&d_found, sizeof(unsigned char) * N));
-	CUDA_CHECK(cudaMalloc((double**)&d_Tparcel, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**)&d_prevTparcel, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_TenvLCL, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_Piter, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_Titer, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_LCLT, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_LCLP, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_LFCT, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_LFCP, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_found, sizeof(unsigned char) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_Tparcel, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_prevTparcel, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_Tenv, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_Penv, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_prevTenv, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_prevPenv, sizeof(float) * N));
 
-	CUDA_CHECK(cudaMemcpyAsync(d_TenvLCL, &TenvLCL[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
-	CUDA_CHECK(cudaMemcpyAsync(d_Titer, &T[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
-	CUDA_CHECK(cudaMemcpyAsync(d_Piter, &P[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_TenvLCL, &TenvLCL[0], sizeof(float) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_Titer, &T[0], sizeof(float) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_Piter, &P[0], sizeof(float) * N, cudaMemcpyHostToDevice, stream));
 
-	CUDA_CHECK(cudaMemcpyAsync(d_LCLT, d_Titer, sizeof(double) * N, cudaMemcpyDeviceToDevice, stream));
-	CUDA_CHECK(cudaMemcpyAsync(d_LCLP, d_Piter, sizeof(double) * N, cudaMemcpyDeviceToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_LCLT, d_Titer, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_LCLP, d_Piter, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
 
-	InitializeArray<double>(d_LFCT, himan::MissingDouble(), N, stream);
-	InitializeArray<double>(d_LFCP, himan::MissingDouble(), N, stream);
-	InitializeArray<double>(d_prevTparcel, himan::MissingDouble(), N, stream);
+	InitializeArray<float>(d_LFCT, himan::MissingFloat(), N, stream);
+	InitializeArray<float>(d_LFCP, himan::MissingFloat(), N, stream);
+	InitializeArray<float>(d_prevTparcel, himan::MissingFloat(), N, stream);
 	InitializeArray<unsigned char>(d_found, 0, N, stream);
 
 	// For each grid point find the hybrid level that's below LCL and then pick the lowest level
@@ -975,22 +954,19 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
 	auto prevPenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
 	auto prevTenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
 
-	auto h_prevTenv = PrepareInfo(prevTenvInfo, stream);
-	auto h_prevPenv = PrepareInfo(prevPenvInfo, stream);
+	PrepareInfo(prevTenvInfo, stream, d_prevTenv);
+	PrepareInfo(prevPenvInfo, stream, d_prevPenv);
 
 	if (cape_cuda::itsUseVirtualTemperature)
 	{
-		VirtualTemperatureKernel<<<gridSize, blockSize, 0, stream>>>(h_prevTenv->values, h_prevPenv->values, N);
+		VirtualTemperatureKernel<<<gridSize, blockSize, 0, stream>>>(d_prevTenv, d_prevPenv, N);
 	}
-
-	ASSERT(h_prevTenv->values);
-	ASSERT(h_prevPenv->values);
 
 	curLevel.Value(curLevel.Value() - 1);
 
 	std::vector<unsigned char> found(N, 0);
-	std::vector<double> LFCT(N, himan::MissingDouble());
-	std::vector<double> LFCP(N, himan::MissingDouble());
+	std::vector<float> LFCT(N, himan::MissingFloat());
+	std::vector<float> LFCP(N, himan::MissingFloat());
 
 	thrust::device_ptr<unsigned char> dt_found = thrust::device_pointer_cast(d_found);
 
@@ -1005,8 +981,8 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
 	}
 
 	CUDA_CHECK(cudaMemcpyAsync(d_found, &found[0], sizeof(unsigned char) * N, cudaMemcpyHostToDevice, stream));
-	CUDA_CHECK(cudaMemcpyAsync(d_LFCT, &LFCT[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
-	CUDA_CHECK(cudaMemcpyAsync(d_LFCP, &LFCP[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_LFCT, &LFCT[0], sizeof(float) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_LFCP, &LFCP[0], sizeof(float) * N, cudaMemcpyHostToDevice, stream));
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
 	auto hPa450 = h->LevelForHeight(myTargetInfo->Producer(), 450.);
@@ -1018,59 +994,45 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
 		auto TenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
 		auto PenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
 
-		auto h_Penv = PrepareInfo(PenvInfo, stream);
-		auto h_Tenv = PrepareInfo(TenvInfo, stream);
+		PrepareInfo(PenvInfo, stream, d_Penv);
+		PrepareInfo(TenvInfo, stream, d_Tenv);
 
 		if (cape_cuda::itsUseVirtualTemperature)
 		{
-			VirtualTemperatureKernel<<<gridSize, blockSize, 0, stream>>>(h_Tenv->values, h_Penv->values, N);
+			VirtualTemperatureKernel<<<gridSize, blockSize, 0, stream>>>(d_Tenv, d_Penv, N);
 		}
 
 		// Lift the particle from previous level to this level. In the first revolution
 		// of this loop the starting level is LCL. If target level level is below current level
 		// (ie. we would be lowering the particle) missing value is returned.
 
-		MoistLiftKernel<<<gridSize, blockSize, 0, stream>>>(d_Titer, d_Piter, *h_Penv, d_Tparcel);
+		MoistLiftKernel<<<gridSize, blockSize, 0, stream>>>(d_Titer, d_Piter, d_Penv, d_Tparcel, N);
 
-		LFCKernel<<<gridSize, blockSize, 0, stream>>>(*h_Tenv, *h_Penv, *h_prevTenv, *h_prevPenv, d_Tparcel,
-		                                              d_prevTparcel, d_LCLT, d_LCLP, d_LFCT, d_LFCP, d_found,
-		                                              curLevel.Value(), hPa450.first.Value());
+		LFCKernel<<<gridSize, blockSize, 0, stream>>>(d_Tenv, d_Penv, d_prevTenv, d_prevPenv, d_Tparcel, d_prevTparcel,
+		                                              d_LCLT, d_LCLP, d_LFCT, d_LFCP, d_found, curLevel.Value(),
+		                                              hPa450.first.Value(), N);
 
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
 		size_t foundCount = thrust::count(thrust::cuda::par.on(stream), dt_found, dt_found + N, 1);
 
-		CUDA_CHECK(cudaFree(h_prevPenv->values));
-		CUDA_CHECK(cudaFree(h_prevTenv->values));
-
-		delete h_prevPenv;
-		delete h_prevTenv;
-
-		h_prevPenv = h_Penv;
-		h_prevTenv = h_Tenv;
-
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
 		if (N == foundCount)
+		{
 			break;
+		}
 
-		CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, d_Tparcel, sizeof(double) * N, cudaMemcpyDeviceToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, d_Tparcel, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync(d_prevTenv, d_Tenv, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync(d_prevPenv, d_Penv, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
+
 		curLevel.Value(curLevel.Value() - 1);
 	}
 
-	CUDA_CHECK(cudaFree(h_prevPenv->values));
-	CUDA_CHECK(cudaFree(h_prevTenv->values));
+	CUDA_CHECK(cudaMemcpyAsync(LFCT.data(), d_LFCT, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(LFCP.data(), d_LFCP, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
 
-	delete h_prevPenv;
-	delete h_prevTenv;
-
-	CUDA_CHECK(cudaMemcpyAsync(&LFCT[0], d_LFCT, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaMemcpyAsync(&LFCP[0], d_LFCP, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
-
-	CUDA_CHECK(cudaStreamSynchronize(stream));
-
-	CUDA_CHECK(cudaFree(d_LFCT));
-	CUDA_CHECK(cudaFree(d_LFCP));
 	CUDA_CHECK(cudaFree(d_LCLT));
 	CUDA_CHECK(cudaFree(d_LCLP));
 	CUDA_CHECK(cudaFree(d_Tparcel));
@@ -1079,6 +1041,15 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
 	CUDA_CHECK(cudaFree(d_Titer));
 	CUDA_CHECK(cudaFree(d_Piter));
 	CUDA_CHECK(cudaFree(d_TenvLCL));
+	CUDA_CHECK(cudaFree(d_Penv));
+	CUDA_CHECK(cudaFree(d_Tenv));
+	CUDA_CHECK(cudaFree(d_prevPenv));
+	CUDA_CHECK(cudaFree(d_prevTenv));
+
+	CUDA_CHECK(cudaStreamSynchronize(stream));
+
+	CUDA_CHECK(cudaFree(d_LFCT));
+	CUDA_CHECK(cudaFree(d_LFCP));
 
 	CUDA_CHECK(cudaStreamDestroy(stream));
 
@@ -1086,10 +1057,10 @@ std::pair<std::vector<double>, std::vector<double>> cape_cuda::GetLFCGPU(
 }
 
 void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo,
-                          const std::vector<double>& Tsource, const std::vector<double>& Psource,
-                          const std::vector<double>& TLCL, const std::vector<double>& PLCL,
-                          const std::vector<double>& ZLCL, const std::vector<double>& PLFC,
-                          const std::vector<double>& ZLFC)
+                          const std::vector<float>& Tsource, const std::vector<float>& Psource,
+                          const std::vector<float>& TLCL, const std::vector<float>& PLCL,
+                          const std::vector<float>& ZLCL, const std::vector<float>& PLFC,
+                          const std::vector<float>& ZLFC)
 {
 	const params PParams({param("PGR-PA"), param("P-PA")});
 
@@ -1125,55 +1096,64 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 
 	CUDA_CHECK(cudaStreamCreate(&stream));
 
-	auto h_prevZenv = PrepareInfo(prevZenvInfo, stream);
-	auto h_prevTenv = PrepareInfo(prevTenvInfo, stream);
-	auto h_prevPenv = PrepareInfo(prevPenvInfo, stream);
-
-	double* d_Psource = 0;
-	double* d_Tparcel = 0;
-	double* d_prevTparcel = 0;
-	double* d_Piter = 0;
-	double* d_prevPiter = 0;
-	double* d_Titer = 0;
-	double* d_prevTiter = 0;
+	float* d_Psource = 0;
+	float* d_Tparcel = 0;
+	float* d_prevTparcel = 0;
+	float* d_Piter = 0;
+	float* d_prevPiter = 0;
+	float* d_Titer = 0;
+	float* d_prevTiter = 0;
 	float* d_PLCL = 0;
 	float* d_PLFC = 0;
-	double* d_cinh = 0;
+	float* d_cinh = 0;
+	float* d_prevZenv = 0;
+	float* d_prevTenv = 0;
+	float* d_prevPenv = 0;
+	float* d_Zenv = 0;
+	float* d_Tenv = 0;
+	float* d_Penv = 0;
+
 	unsigned char* d_found = 0;
 
-	CUDA_CHECK(cudaMalloc((double**)&d_Psource, N * sizeof(double)));
-	CUDA_CHECK(cudaMalloc((double**)&d_Tparcel, N * sizeof(double)));
-	CUDA_CHECK(cudaMalloc((double**)&d_prevTparcel, N * sizeof(double)));
-	CUDA_CHECK(cudaMalloc((double**)&d_Piter, N * sizeof(double)));
-	CUDA_CHECK(cudaMalloc((double**)&d_Titer, N * sizeof(double)));
+	CUDA_CHECK(cudaMalloc((float**)&d_Psource, N * sizeof(float)));
+	CUDA_CHECK(cudaMalloc((float**)&d_Tparcel, N * sizeof(float)));
+	CUDA_CHECK(cudaMalloc((float**)&d_prevTparcel, N * sizeof(float)));
+	CUDA_CHECK(cudaMalloc((float**)&d_Piter, N * sizeof(float)));
+	CUDA_CHECK(cudaMalloc((float**)&d_Titer, N * sizeof(float)));
 	CUDA_CHECK(cudaMalloc((float**)&d_PLCL, N * sizeof(float)));
 	CUDA_CHECK(cudaMalloc((float**)&d_PLFC, N * sizeof(float)));
-	CUDA_CHECK(cudaMalloc((double**)&d_cinh, N * sizeof(double)));
+	CUDA_CHECK(cudaMalloc((float**)&d_cinh, N * sizeof(float)));
+	CUDA_CHECK(cudaMalloc((float**)&d_prevZenv, N * sizeof(float)));
+	CUDA_CHECK(cudaMalloc((float**)&d_prevTenv, N * sizeof(float)));
+	CUDA_CHECK(cudaMalloc((float**)&d_prevPenv, N * sizeof(float)));
+	CUDA_CHECK(cudaMalloc((float**)&d_Zenv, N * sizeof(float)));
+	CUDA_CHECK(cudaMalloc((float**)&d_Tenv, N * sizeof(float)));
+	CUDA_CHECK(cudaMalloc((float**)&d_Penv, N * sizeof(float)));
+
 	CUDA_CHECK(cudaMalloc((unsigned char**)&d_found, N * sizeof(unsigned char)));
 
-	InitializeArray<double>(d_cinh, 0., N, stream);
-	InitializeArray<double>(d_Tparcel, himan::MissingDouble(), N, stream);
+	PrepareInfo(prevZenvInfo, stream, d_prevZenv);
+	PrepareInfo(prevTenvInfo, stream, d_prevTenv);
+	PrepareInfo(prevPenvInfo, stream, d_prevPenv);
 
-	CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, &Tsource[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
-	CUDA_CHECK(cudaMemcpyAsync(d_Psource, &Psource[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
-	CUDA_CHECK(cudaMemcpyAsync(d_Titer, &Tsource[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
-	CUDA_CHECK(cudaMemcpyAsync(d_Piter, &Psource[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
+	InitializeArray<float>(d_cinh, 0., N, stream);
+	InitializeArray<float>(d_Tparcel, himan::MissingFloat(), N, stream);
 
-	float* PLCLf = new float[N];
-	float* PLFCf = new float[N];
-
-	std::copy(PLCL.begin(), PLCL.end(), PLCLf);
-	std::copy(PLFC.begin(), PLFC.end(), PLFCf);
-
-	CUDA_CHECK(cudaMemcpyAsync(d_PLCL, PLCLf, sizeof(float) * N, cudaMemcpyHostToDevice, stream));
-	CUDA_CHECK(cudaMemcpyAsync(d_PLFC, PLFCf, sizeof(float) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, Tsource.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_Psource, Psource.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_Titer, Tsource.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_Piter, Psource.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_PLCL, PLCL.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_PLFC, PLFC.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
 
 	std::vector<unsigned char> found(N, 0);
 
 	for (size_t i = 0; i < PLFC.size(); i++)
 	{
-		if (IsMissingDouble(PLFC[i]))
+		if (IsMissing(PLFC[i]))
+		{
 			found[i] = true;
+		}
 	}
 
 	CUDA_CHECK(cudaMemcpyAsync(d_found, &found[0], sizeof(unsigned char) * N, cudaMemcpyHostToDevice, stream));
@@ -1195,57 +1175,41 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 		auto TenvInfo = Fetch(conf, ftime, curLevel, param("T-K"), ftype);
 		auto PenvInfo = Fetch(conf, ftime, curLevel, param("P-HPA"), ftype);
 
-		auto h_Zenv = PrepareInfo(ZenvInfo, stream);
-		auto h_Penv = PrepareInfo(PenvInfo, stream);
-		auto h_Tenv = PrepareInfo(TenvInfo, stream);
+		PrepareInfo(ZenvInfo, stream, d_Zenv);
+		PrepareInfo(PenvInfo, stream, d_Penv);
+		PrepareInfo(TenvInfo, stream, d_Tenv);
 
-		LiftLCLKernel<<<gridSize, blockSize, 0, stream>>>(d_Piter, d_Titer, d_PLCL, *h_Penv, d_Tparcel);
+		LiftLCLKernel<<<gridSize, blockSize, 0, stream>>>(d_Piter, d_Titer, d_PLCL, d_Penv, d_Tparcel, N);
 
-		CINKernel<<<gridSize, blockSize, 0, stream>>>(*h_Tenv, *h_prevTenv, *h_Penv, *h_prevPenv, *h_Zenv, *h_prevZenv,
+		CINKernel<<<gridSize, blockSize, 0, stream>>>(d_Tenv, d_prevTenv, d_Penv, d_prevPenv, d_Zenv, d_prevZenv,
 		                                              d_Tparcel, d_prevTparcel, d_PLCL, d_PLFC, d_Psource, d_cinh,
-		                                              d_found, cape_cuda::itsUseVirtualTemperature);
+		                                              d_found, cape_cuda::itsUseVirtualTemperature, N);
 
 		size_t foundCount = thrust::count(thrust::cuda::par.on(stream), dt_found, dt_found + N, 1);
-		CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, d_Tparcel, sizeof(double) * N, cudaMemcpyDeviceToDevice, stream));
-
-		CUDA_CHECK(cudaFree(h_prevPenv->values));
-		CUDA_CHECK(cudaFree(h_prevTenv->values));
-		CUDA_CHECK(cudaFree(h_prevZenv->values));
-
-		delete h_prevPenv;
-		delete h_prevTenv;
-		delete h_prevZenv;
-
-		h_prevPenv = h_Penv;
-		h_prevTenv = h_Tenv;
-		h_prevZenv = h_Zenv;
+		CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, d_Tparcel, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
 
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
 		if (N == foundCount)
+		{
 			break;
+		}
+
+		CUDA_CHECK(cudaMemcpyAsync(d_prevZenv, d_Zenv, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync(d_prevTenv, d_Tenv, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync(d_prevPenv, d_Penv, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
 
 		// preserve starting position for those grid points that have value
 
-		CopyLFCIteratorValuesKernel<<<gridSize, blockSize, 0, stream>>>(d_Titer, d_Tparcel, d_Piter, *h_Penv);
+		CopyLFCIteratorValuesKernel<<<gridSize, blockSize, 0, stream>>>(d_Titer, d_Tparcel, d_Piter, d_Penv, N);
 
 		curLevel.Value(curLevel.Value() - 1);
 	}
 
-	CUDA_CHECK(cudaFree(h_prevPenv->values));
-	CUDA_CHECK(cudaFree(h_prevTenv->values));
-	CUDA_CHECK(cudaFree(h_prevZenv->values));
+	std::vector<float> cinh(N, 0);
 
-	delete h_prevPenv;
-	delete h_prevTenv;
-	delete h_prevZenv;
+	CUDA_CHECK(cudaMemcpyAsync(&cinh[0], d_cinh, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
 
-	std::vector<double> cinh(N, 0);
-
-	CUDA_CHECK(cudaMemcpyAsync(&cinh[0], d_cinh, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
-
-	CUDA_CHECK(cudaStreamSynchronize(stream));
-	CUDA_CHECK(cudaFree(d_cinh));
 	CUDA_CHECK(cudaFree(d_Psource));
 	CUDA_CHECK(cudaFree(d_Tparcel));
 	CUDA_CHECK(cudaFree(d_prevTparcel));
@@ -1255,19 +1219,25 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 	CUDA_CHECK(cudaFree(d_prevTiter));
 	CUDA_CHECK(cudaFree(d_PLCL));
 	CUDA_CHECK(cudaFree(d_PLFC));
+	CUDA_CHECK(cudaFree(d_prevZenv));
+	CUDA_CHECK(cudaFree(d_prevPenv));
+	CUDA_CHECK(cudaFree(d_prevTenv));
+	CUDA_CHECK(cudaFree(d_Zenv));
+	CUDA_CHECK(cudaFree(d_Penv));
+	CUDA_CHECK(cudaFree(d_Tenv));
 	CUDA_CHECK(cudaFree(d_found));
 
-	delete[] PLCLf;
-	delete[] PLFCf;
+	CUDA_CHECK(cudaStreamSynchronize(stream));
+	CUDA_CHECK(cudaFree(d_cinh));
 
 	CUDA_CHECK(cudaStreamDestroy(stream));
 
 	myTargetInfo->Param(CINParam);
-	myTargetInfo->Data().Set(cinh);
+	myTargetInfo->Data().Set(Convert(cinh));
 }
 
 void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo,
-                           const std::vector<double>& T, const std::vector<double>& P)
+                           const std::vector<float>& T, const std::vector<float>& P)
 {
 	ASSERT(T.size() == P.size());
 
@@ -1285,7 +1255,7 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 
 	for (size_t i = 0; i < P.size(); i++)
 	{
-		if (IsMissingDouble(P[i]))
+		if (IsMissing(P[i]))
 		{
 			found[i] = 1;
 		}
@@ -1299,58 +1269,64 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 
 	CUDA_CHECK(cudaStreamCreate(&stream));
 
-	double* d_CAPE = 0;
-	double* d_CAPE1040 = 0;
-	double* d_CAPE3km = 0;
+	float* d_CAPE = 0;
+	float* d_CAPE1040 = 0;
+	float* d_CAPE3km = 0;
 	float* d_ELT = 0;
 	float* d_ELP = 0;
+	float* d_ELZ = 0;
 	float* d_LastELT = 0;
 	float* d_LastELP = 0;
-	double* d_Titer = 0;
-	double* d_Piter = 0;
-	double* d_prevTparcel = 0;
-	double* d_Tparcel = 0;
+	float* d_LastELZ = 0;
+	float* d_Titer = 0;
+	float* d_Piter = 0;
+	float* d_prevTparcel = 0;
+	float* d_Tparcel = 0;
 	float* d_LFCT = 0;
 	float* d_LFCP = 0;
+	float* d_prevZenv = 0;
+	float* d_prevPenv = 0;
+	float* d_prevTenv = 0;
+	float* d_Zenv = 0;
+	float* d_Penv = 0;
+	float* d_Tenv = 0;
 
 	unsigned char* d_found = 0;
 
-	CUDA_CHECK(cudaMalloc((double**)&d_CAPE, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**)&d_CAPE1040, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**)&d_CAPE3km, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_CAPE, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_CAPE1040, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_CAPE3km, sizeof(float) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_ELP, sizeof(float) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_ELT, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_ELZ, sizeof(float) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_LastELP, sizeof(float) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_LastELT, sizeof(float) * N));
-	CUDA_CHECK(cudaMalloc((double**)&d_Piter, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**)&d_Titer, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**)&d_Tparcel, sizeof(double) * N));
-	CUDA_CHECK(cudaMalloc((double**)&d_prevTparcel, sizeof(double) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_LastELZ, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_Piter, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_Titer, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_Tparcel, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_prevTparcel, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_prevZenv, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_prevTenv, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_prevPenv, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_Zenv, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_Tenv, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_Penv, sizeof(float) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_LFCT, sizeof(float) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_LFCP, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_found, sizeof(unsigned char) * N));
 
-	CUDA_CHECK(cudaMalloc((double**)&d_found, sizeof(unsigned char) * N));
+	CUDA_CHECK(cudaMemcpyAsync(d_Titer, T.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, d_Titer, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_Piter, P.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_LFCT, T.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_LFCP, P.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
 
-	InitializeArray<unsigned char>(d_found, 0, N, stream);
+	CUDA_CHECK(cudaMemcpyAsync(d_found, found.data(), sizeof(unsigned char) * N, cudaMemcpyHostToDevice, stream));
 
-	CUDA_CHECK(cudaMemcpyAsync(d_Titer, &T[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
-	CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, d_Titer, sizeof(double) * N, cudaMemcpyDeviceToDevice, stream));
-	CUDA_CHECK(cudaMemcpyAsync(d_Piter, &P[0], sizeof(double) * N, cudaMemcpyHostToDevice, stream));
-
-	float* Tf = new float[N];
-	float* Pf = new float[N];
-
-	std::copy(T.begin(), T.end(), Tf);
-	CUDA_CHECK(cudaMemcpyAsync(d_LFCT, Tf, sizeof(float) * N, cudaMemcpyHostToDevice, stream));
-
-	std::copy(P.begin(), P.end(), Pf);
-	CUDA_CHECK(cudaMemcpyAsync(d_LFCP, Pf, sizeof(float) * N, cudaMemcpyHostToDevice, stream));
-
-	CUDA_CHECK(cudaMemcpyAsync(d_found, &found[0], sizeof(unsigned char) * N, cudaMemcpyHostToDevice, stream));
-
-	InitializeArray<double>(d_CAPE, 0., N, stream);
-	InitializeArray<double>(d_CAPE1040, 0., N, stream);
-	InitializeArray<double>(d_CAPE3km, 0., N, stream);
+	InitializeArray<float>(d_CAPE, 0., N, stream);
+	InitializeArray<float>(d_CAPE1040, 0., N, stream);
+	InitializeArray<float>(d_CAPE3km, 0., N, stream);
 
 	InitializeArray<float>(d_ELP, himan::MissingFloat(), N, stream);
 	InitializeArray<float>(d_ELT, himan::MissingFloat(), N, stream);
@@ -1368,13 +1344,13 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 	auto prevTenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
 	auto prevPenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
 
-	auto h_prevZenv = PrepareInfo(prevZenvInfo, stream);
-	auto h_prevPenv = PrepareInfo(prevPenvInfo, stream);
-	auto h_prevTenv = PrepareInfo(prevTenvInfo, stream);
+	PrepareInfo(prevZenvInfo, stream, d_prevZenv);
+	PrepareInfo(prevPenvInfo, stream, d_prevPenv);
+	PrepareInfo(prevTenvInfo, stream, d_prevTenv);
 
 	if (cape_cuda::itsUseVirtualTemperature)
 	{
-		VirtualTemperatureKernel<<<gridSize, blockSize, 0, stream>>>(h_prevTenv->values, h_prevPenv->values, N);
+		VirtualTemperatureKernel<<<gridSize, blockSize, 0, stream>>>(d_prevTenv, d_prevPenv, N);
 	}
 
 	curLevel.Value(curLevel.Value());
@@ -1397,35 +1373,23 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 			break;
 		}
 
-		auto h_Zenv = PrepareInfo(ZenvInfo, stream);
-		auto h_Penv = PrepareInfo(PenvInfo, stream);
-		auto h_Tenv = PrepareInfo(TenvInfo, stream);
+		PrepareInfo(ZenvInfo, stream, d_Zenv);
+		PrepareInfo(PenvInfo, stream, d_Penv);
+		PrepareInfo(TenvInfo, stream, d_Tenv);
 
 		if (cape_cuda::itsUseVirtualTemperature)
 		{
-			VirtualTemperatureKernel<<<gridSize, blockSize, 0, stream>>>(h_Tenv->values, h_Penv->values, N);
+			VirtualTemperatureKernel<<<gridSize, blockSize, 0, stream>>>(d_Tenv, d_Penv, N);
 		}
 
-		MoistLiftKernel<<<gridSize, blockSize, 0, stream>>>(d_Titer, d_Piter, *h_Penv, d_Tparcel);
+		MoistLiftKernel<<<gridSize, blockSize, 0, stream>>>(d_Titer, d_Piter, d_Penv, d_Tparcel, N);
 
-		CAPEKernel<<<gridSize, blockSize, 0, stream>>>(*h_Tenv, *h_Penv, *h_Zenv, *h_prevTenv, *h_prevPenv, *h_prevZenv,
+		CAPEKernel<<<gridSize, blockSize, 0, stream>>>(d_Tenv, d_Penv, d_Zenv, d_prevTenv, d_prevPenv, d_prevZenv,
 		                                               d_Tparcel, d_prevTparcel, d_LFCT, d_LFCP, d_CAPE, d_CAPE1040,
-		                                               d_CAPE3km, d_ELT, d_ELP, d_LastELT, d_LastELP, d_found,
-		                                               curLevel.Value(), hPa450.first.Value());
+		                                               d_CAPE3km, d_ELT, d_ELP, d_ELZ, d_LastELT, d_LastELP, d_LastELZ,
+		                                               d_found, curLevel.Value(), hPa450.first.Value(), N);
 
 		size_t foundCount = thrust::count(thrust::cuda::par.on(stream), dt_found, dt_found + N, 1);
-
-		CUDA_CHECK(cudaFree(h_prevZenv->values));
-		CUDA_CHECK(cudaFree(h_prevTenv->values));
-		CUDA_CHECK(cudaFree(h_prevPenv->values));
-
-		delete h_prevZenv;
-		delete h_prevPenv;
-		delete h_prevTenv;
-
-		h_prevZenv = h_Zenv;
-		h_prevTenv = h_Tenv;
-		h_prevPenv = h_Penv;
 
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
@@ -1434,35 +1398,13 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 			break;
 		}
 
-		CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, d_Tparcel, sizeof(double) * N, cudaMemcpyDeviceToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, d_Tparcel, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync(d_prevZenv, d_Zenv, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync(d_prevTenv, d_Tenv, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync(d_prevPenv, d_Penv, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
+
 		curLevel.Value(curLevel.Value() - 1);
 	}
-
-	CUDA_CHECK(cudaFree(h_prevZenv->values));
-	CUDA_CHECK(cudaFree(h_prevTenv->values));
-	CUDA_CHECK(cudaFree(h_prevPenv->values));
-
-	delete h_prevZenv;
-	delete h_prevPenv;
-	delete h_prevTenv;
-
-	std::vector<double> CAPE(T.size(), 0);
-	std::vector<double> CAPE1040(T.size(), 0);
-	std::vector<double> CAPE3km(T.size(), 0);
-	std::vector<float> ELT(T.size(), himan::MissingFloat());
-	std::vector<float> ELP(T.size(), himan::MissingFloat());
-	std::vector<float> LastELT(T.size(), himan::MissingFloat());
-	std::vector<float> LastELP(T.size(), himan::MissingFloat());
-
-	CUDA_CHECK(cudaStreamSynchronize(stream));
-
-	CUDA_CHECK(cudaMemcpyAsync(&CAPE[0], d_CAPE, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaMemcpyAsync(&CAPE1040[0], d_CAPE1040, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaMemcpyAsync(&CAPE3km[0], d_CAPE3km, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaMemcpyAsync(&ELT[0], d_ELT, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaMemcpyAsync(&ELP[0], d_ELP, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaMemcpyAsync(&LastELT[0], d_LastELT, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaMemcpyAsync(&LastELP[0], d_LastELP, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
 
 	CUDA_CHECK(cudaFree(d_Tparcel));
 	CUDA_CHECK(cudaFree(d_prevTparcel));
@@ -1471,6 +1413,32 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 	CUDA_CHECK(cudaFree(d_Piter));
 	CUDA_CHECK(cudaFree(d_Titer));
 	CUDA_CHECK(cudaFree(d_found));
+	CUDA_CHECK(cudaFree(d_Tenv));
+	CUDA_CHECK(cudaFree(d_Penv));
+	CUDA_CHECK(cudaFree(d_Zenv));
+	CUDA_CHECK(cudaFree(d_prevTenv));
+	CUDA_CHECK(cudaFree(d_prevPenv));
+	CUDA_CHECK(cudaFree(d_prevZenv));
+
+	std::vector<float> CAPE(T.size());
+	std::vector<float> CAPE1040(T.size());
+	std::vector<float> CAPE3km(T.size());
+	std::vector<float> ELT(T.size());
+	std::vector<float> ELP(T.size());
+	std::vector<float> ELZ(T.size());
+	std::vector<float> LastELT(T.size());
+	std::vector<float> LastELP(T.size());
+	std::vector<float> LastELZ(T.size());
+
+	CUDA_CHECK(cudaMemcpyAsync(CAPE.data(), d_CAPE, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(CAPE1040.data(), d_CAPE1040, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(CAPE3km.data(), d_CAPE3km, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(ELT.data(), d_ELT, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(ELP.data(), d_ELP, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(ELZ.data(), d_ELZ, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(LastELT.data(), d_LastELT, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(LastELP.data(), d_LastELP, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(LastELZ.data(), d_LastELZ, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
@@ -1480,16 +1448,18 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 
 	for (size_t i = 0; i < CAPE.size(); i++)
 	{
-		if (CAPE[i] > 0 && IsMissingFloat(ELT[i]))
+		if (CAPE[i] > 0 && IsMissing(ELT[i]))
 		{
 			TenvInfo->LocationIndex(i);
 			PenvInfo->LocationIndex(i);
 
 			ELT[i] = TenvInfo->Value();
 			ELP[i] = PenvInfo->Value();
+			ELZ[i] = ZenvInfo->Value();
 
 			LastELT[i] = TenvInfo->Value();
 			LastELP[i] = PenvInfo->Value();
+			LastELZ[i] = ZenvInfo->Value();
 		}
 	}
 
@@ -1498,38 +1468,35 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 	CUDA_CHECK(cudaFree(d_CAPE3km));
 	CUDA_CHECK(cudaFree(d_ELT));
 	CUDA_CHECK(cudaFree(d_ELP));
+	CUDA_CHECK(cudaFree(d_ELZ));
 	CUDA_CHECK(cudaFree(d_LastELT));
 	CUDA_CHECK(cudaFree(d_LastELP));
+	CUDA_CHECK(cudaFree(d_LastELZ));
 
-	delete[] Tf;
-	delete[] Pf;
-
-	std::vector<double> darr(N);
-
-	// We can't just copy float to double because the missing values
-	// do not match afterwards
-	FloatToDouble(ELT, darr);
 	myTargetInfo->Param(ELTParam);
-	myTargetInfo->Data().Set(darr);
+	myTargetInfo->Data().Set(Convert(ELT));
 
-	FloatToDouble(ELP, darr);
 	myTargetInfo->Param(ELPParam);
-	myTargetInfo->Data().Set(darr);
+	myTargetInfo->Data().Set(Convert(ELP));
 
-	FloatToDouble(LastELT, darr);
+	myTargetInfo->Param(ELZParam);
+	myTargetInfo->Data().Set(Convert(ELZ));
+
 	myTargetInfo->Param(LastELTParam);
-	myTargetInfo->Data().Set(darr);
+	myTargetInfo->Data().Set(Convert(LastELT));
 
-	FloatToDouble(LastELP, darr);
 	myTargetInfo->Param(LastELPParam);
-	myTargetInfo->Data().Set(darr);
+	myTargetInfo->Data().Set(Convert(LastELP));
+
+	myTargetInfo->Param(LastELZParam);
+	myTargetInfo->Data().Set(Convert(LastELZ));
 
 	myTargetInfo->Param(CAPEParam);
-	myTargetInfo->Data().Set(CAPE);
+	myTargetInfo->Data().Set(Convert(CAPE));
 
 	myTargetInfo->Param(CAPE1040Param);
-	myTargetInfo->Data().Set(CAPE1040);
+	myTargetInfo->Data().Set(Convert(CAPE1040));
 
 	myTargetInfo->Param(CAPE3kmParam);
-	myTargetInfo->Data().Set(CAPE3km);
+	myTargetInfo->Data().Set(Convert(CAPE3km));
 }

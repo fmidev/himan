@@ -150,8 +150,8 @@ __global__ void StormRelativeHelicityKernel(darr_t d_srh, cdarr_t d_u, cdarr_t d
 
 		if (z > stopHeight)
 		{
-			u = himan::numerical_functions::interpolation::Linear(stopHeight, pz, z, pu, u);
-			v = himan::numerical_functions::interpolation::Linear(stopHeight, pz, z, pv, v);
+			u = himan::numerical_functions::interpolation::Linear<double>(stopHeight, pz, z, pu, u);
+			v = himan::numerical_functions::interpolation::Linear<double>(stopHeight, pz, z, pv, v);
 
 			d_found[idx] = 1;
 		}

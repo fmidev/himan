@@ -26,7 +26,7 @@ CUDA_DEVICE Type E_(Type R, Type P)
 
 	// R is g/kg, converting it to g/g gives multiplier 1000
 
-	return (R * P / (himan::constants::kEp * 1000));
+	return (R * P / (static_cast<Type>(himan::constants::kEp) * 1000));
 }
 
 /**
@@ -53,15 +53,17 @@ CUDA_DEVICE Type Es_(Type T)
 
 	Type Es;
 
-	T -= himan::constants::kKelvin;
+	T -= static_cast<Type>(himan::constants::kKelvin);
+	const Type base = static_cast<Type>(10);
+	const Type scale = static_cast<Type>(6.107);
 
 	if (T > -5)
 	{
-		Es = 6.107 * exp10(7.5 * T / (237.0 + T));
+		Es = scale * std::pow(base, static_cast<Type>(7.5 * T / (237.0 + T)));
 	}
 	else
 	{
-		Es = 6.107 * exp10(9.5 * T / (265.5 + T));
+		Es = scale * std::pow(base, static_cast<Type>(9.5 * T / (265.5 + T)));
 	}
 
 	return 100 * Es;  // Pa
@@ -88,14 +90,11 @@ CUDA_DEVICE Type MixingRatio_(Type T, Type P)
 
 	const Type E = Es_<Type>(T);  // Pa
 
-	return 621.97 * E / (P - E);
+	return static_cast<Type> (621.97) * E / (P - E);
 }
 
 /**
  * @brief Calculate dew point temperature from air temperature and relative humidity.
- *
- * The formula used is a more complex one than in DewPointSimple_, but gives more accurate
- * results when humidity is low.
  *
  * Source: http://journals.ametsoc.org/doi/pdf/10.1175/BAMS-86-2-225
  *
@@ -109,13 +108,13 @@ CUDA_DEVICE Type DewPointFromRH_(Type T, Type RH)
 {
 	if (RH == 0.)
 	{
-		RH = 0.01;  // formula does not work if RH = 0; actually all small values give extreme Td values
+		RH = 0.01f;  // formula does not work if RH = 0; actually all small values give extreme Td values
 	}
 
-	ASSERT((RH > 0. && RH < 103.) || IsMissing(RH));
-	ASSERT((T > 0. && T < 500.) || IsMissing(T));
+	ASSERT((RH > 0.f && RH < 103.f) || IsMissing(RH));
+	ASSERT((T > 0.f && T < 500.f) || IsMissing(T));
 
-	return (T / (1 - (T * log(RH * 0.01) * himan::constants::kRw_div_L)));
+	return (T / (1 - (T * std::log(RH * static_cast<Type>(0.01)) * static_cast<Type>(himan::constants::kRw_div_L))));
 }
 
 /**
@@ -152,8 +151,8 @@ CUDA_DEVICE Type Tw_(Type thetaE, Type P)
 
 	using namespace himan::constants;
 
-	const Type a = 17.67;
-	const Type b = 243.5;  // K
+	const Type a = 17.67f;
+	const Type b = 243.5f;  // K
 	const Type P0 = 100000;
 	const Type lambda = 1 / kRd_div_Cp;
 	const Type C = kKelvin;
@@ -164,15 +163,15 @@ CUDA_DEVICE Type Tw_(Type thetaE, Type P)
 
 	// Quadratic regression curves for thetaW
 
-	const Type k1 = -38.5 * pi * pi + 137.81 * pi - 53.737;
-	const Type k2 = -4.392 * pi * pi + 56.831 * pi - 0.384;
+	const Type k1 = -38.5f * pi * pi + 137.81f * pi - 53.737f;
+	const Type k2 = -4.392f * pi * pi + 56.831f * pi - 0.384f;
 
-	const Type p0 = P0 * 0.01;
-	const Type p = P * 0.01;
+	const Type p0 = P0 * 0.01f;
+	const Type p = P * 0.01f;
 
 	// Regression line for transition points of different Tw formulas
 
-	const Type Dp = 1 / (0.1859 * p / p0 + 0.6512);
+	const Type Dp = 1 / (0.1859f * p / p0 + 0.6512f);
 
 	Type Tw;
 
@@ -181,7 +180,7 @@ CUDA_DEVICE Type Tw_(Type thetaE, Type P)
 		const Type A_ = 2675;  // K
 
 		// e & r as Davies-Jones implemented them
-		const Type e = 6.112 * exp((a * (Te - C)) / (Te - C + b));
+		const Type e = 6.112f * exp((a * (Te - C)) / (Te - C + b));
 		const Type r = kEp * e / (p0 * std::pow(pi, lambda) - e);
 
 		const Type nomin = A_ * r;
@@ -191,10 +190,10 @@ CUDA_DEVICE Type Tw_(Type thetaE, Type P)
 	}
 	else
 	{
-		const Type hot = (Te > 355.15) ? 1 : 0;
+		const Type hot = (Te > 355.15f) ? 1 : 0;
 		const Type cold = (ratio >= 1 && ratio <= Dp) ? 0 : 1;
 
-		Tw = k1 - 1.21 * cold - 1.45 * hot - (k2 - 1.21 * cold) * ratio + (0.58 / ratio) * hot;
+		Tw = k1 - 1.21f * cold - 1.45f * hot - (k2 - 1.21f * cold) * ratio + (0.58f / ratio) * hot;
 	}
 
 	Tw += C;
@@ -210,13 +209,13 @@ CUDA_DEVICE Type Tw_(Type thetaE, Type P)
 	{
 		const Type newRatio = std::pow((C / Tw), lambda);
 
-		const Type e = 6.112 * exp((a * (Tw - C)) / (Tw - C + b));
+		const Type e = 6.112f * exp((a * (Tw - C)) / (Tw - C + b));
 		const Type r = kEp * e / (p0 * std::pow(pi, lambda) - e);
 
 		// Evaluate f(x)
 
 		const Type A_ = 1 - e / (p0 * std::pow(pi, lambda));
-		const Type B = (3036 / Tw - 1.78) * (r + 0.448 * r * r);
+		const Type B = (3036 / Tw - 1.78f) * (r + 0.448f * r * r);
 
 		const Type fTw = newRatio * std::pow(A_, kRd_div_Cp * lambda) * exp(-lambda * B);
 
@@ -230,8 +229,8 @@ CUDA_DEVICE Type Tw_(Type thetaE, Type P)
 
 		const Type A__ = (1 / Tw) + (kRd_div_Cp / (p - e)) * deTw;
 
-		const Type B_ = -3036 * (r + 0.448 * r * r) / (Tw * Tw);
-		const Type C_ = (3036 / Tw - 1.78) * (1 + 2 * (0.448 * r)) * drTw;
+		const Type B_ = -3036 * (r + 0.448f * r * r) / (Tw * Tw);
+		const Type C_ = (3036 / Tw - 1.78f) * (1 + 2 * (0.448f * r)) * drTw;
 
 		const Type dTw = -lambda * (A__ + B_ + C_);
 
@@ -285,16 +284,18 @@ CUDA_DEVICE Type ThetaE_(Type T, Type TD, Type P)
 
 	// Get LCL temperature
 	const Type A_ = 1 / (TD - 56);
-	const Type B_ = log(T / TD) / 800.;
+	const Type B_ = std::log(T / TD) / 800;
 	const Type TLCL = 1 / (A_ + B_) + 56;
 
 	// Mixing ratio at initial level
 	const Type r = himan::metutil::MixingRatio_<Type>(T, P);
 
 	// 100000 = reference pressure 1000hPa
-	const Type C = T * std::pow(100000. / P, 0.2854 * (1 - 0.00028 * r));
-	const Type D = 3.376 / TLCL - 0.00254;
-	const Type F = r * (1 + 0.00081 * r);
+	const Type base = static_cast<Type> (100000 / P);
+	const Type expo = static_cast<Type> (0.2854 * (1 - 0.00028 * r));
+	const Type C = T * std::pow(base, expo);
+	const Type D = static_cast<Type> (3.376) / TLCL - static_cast<Type> (0.00254);
+	const Type F = r * (1 + static_cast<Type> (0.00081) * r);
 
 	return C * exp(D * F);
 }
@@ -316,19 +317,19 @@ CUDA_DEVICE Type ThetaW_(Type thetaE)
 {
 	Type thetaW = thetaE;
 
-	if (thetaE >= 173.15)
+	if (thetaE >= 173.15f)
 	{
-		const Type X = thetaE / constants::kKelvin;
+		const Type X = thetaE / static_cast<Type> (constants::kKelvin);
 
-		const Type a0 = 7.101574;
-		const Type a1 = -20.68208;
-		const Type a2 = 16.11182;
-		const Type a3 = 2.574631;
-		const Type a4 = -5.205688;
-		const Type b1 = -3.552497;
-		const Type b2 = 3.781782;
-		const Type b3 = -0.6899655;
-		const Type b4 = -0.5929340;
+		const Type a0 = static_cast<Type>(7.101574);
+		const Type a1 = static_cast<Type>(-20.68208);
+		const Type a2 = static_cast<Type>(16.11182);
+		const Type a3 = static_cast<Type>(2.574631);
+		const Type a4 = static_cast<Type>(-5.205688);
+		const Type b1 = static_cast<Type>(-3.552497);
+		const Type b2 = static_cast<Type>(3.781782);
+		const Type b3 = static_cast<Type>(-0.6899655);
+		const Type b4 = static_cast<Type>(-0.5929340);
 
 		const Type A_ = a0 + a1 * X + a2 * X * X + a3 * std::pow(X, 3.) + a4 * std::pow(X, 4.);
 		const Type B_ = 1 + b1 * X + b2 * X * X + b3 * std::pow(X, 3.) + b4 * std::pow(X, 4.);
@@ -345,8 +346,8 @@ CUDA_DEVICE Type VirtualTemperature_(Type T, Type P)
 	ASSERT(IsMissing(T) || T > 100 || T < 400);
 	ASSERT(IsMissing(P) || P > 1000);
 
-	Type r = 0.001 * MixingRatio_<Type>(T, P);  // kg/kg
-	return (1 + 0.61 * r) * T;
+	Type r = static_cast<Type> (0.001) * MixingRatio_<Type>(T, P);  // kg/kg
+	return (1 + static_cast<Type> (0.61) * r) * T;
 }
 
 // smarttool namespace contains functions copied from smarttools with just the most necessary modifications
@@ -368,14 +369,14 @@ CUDA_DEVICE Type Es2_(Type T)
 	ASSERT(T > 100 || IsMissing(T));
 	ASSERT(T < 350 || IsMissing(T));
 
-	const Type b = 17.2694;
-	const Type e0 = 6.11;   // 6.11 <- 0.611 [kPa]
-	const Type T2 = 35.86;  // [K]
+	const Type b = static_cast<Type>(17.2694);
+	const Type e0 = static_cast<Type>(6.11);   // 6.11 <- 0.611 [kPa]
+	const Type T2 = static_cast<Type>(35.86);  // [K]
 
 	const Type nume = b * (T - static_cast<Type>(himan::constants::kKelvin));
 	const Type deno = (T - T2);
 
-	return e0 * ::exp(nume / deno);
+	return e0 * std::exp(nume / deno);
 }
 
 /**
@@ -384,11 +385,11 @@ CUDA_DEVICE Type Es2_(Type T)
  */
 
 template <typename Type>
-CUDA_DEVICE double W_(Type e, Type P)
+CUDA_DEVICE Type W_(Type e, Type P)
 {
 	ASSERT(P > 1500);
 
-	const Type w = static_cast<Type>(0.622) * e / P * 100000;
+	const Type w = static_cast<Type> (0.622) * e / P * 100000;
 	ASSERT(w < 60);
 
 	return w;
@@ -422,9 +423,9 @@ CUDA_DEVICE Type MixingRatio_(Type T, Type RH, Type P)
 	ASSERT(T < 350 || IsMissing(T));
 	ASSERT(P > 1500);
 
-	const Type es = himan::metutil::smarttool::Es2_(T);
-	const Type e = himan::metutil::smarttool::E_(RH, es);
-	const Type w = himan::metutil::smarttool::W_(e, P);
+	const Type es = himan::metutil::smarttool::Es2_<Type>(T);
+	const Type e = himan::metutil::smarttool::E_<Type>(RH, es);
+	const Type w = himan::metutil::smarttool::W_<Type>(e, P);
 
 	return w;
 }
