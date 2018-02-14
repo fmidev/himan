@@ -333,7 +333,7 @@ __global__ void CAPEKernel(const float* __restrict__ d_Tenv, const float* __rest
 			{
 				if (IsMissing(d_ELT[idx]))
 				{
-					d_ELT[idx] = static_cast<float>(ELT);
+					d_ELT[idx] = ELT;
 				}
 
 				d_ELP[idx] = fmaxf(ELP, d_ELP[idx]);
@@ -1330,8 +1330,10 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 
 	InitializeArray<float>(d_ELP, himan::MissingFloat(), N, stream);
 	InitializeArray<float>(d_ELT, himan::MissingFloat(), N, stream);
+	InitializeArray<float>(d_ELZ, himan::MissingFloat(), N, stream);
 	InitializeArray<float>(d_LastELP, himan::MissingFloat(), N, stream);
 	InitializeArray<float>(d_LastELT, himan::MissingFloat(), N, stream);
+	InitializeArray<float>(d_LastELZ, himan::MissingFloat(), N, stream);
 
 	// For each grid point find the hybrid level that's below LFC and then pick the lowest level
 	// among all grid points
