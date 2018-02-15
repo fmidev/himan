@@ -12,8 +12,19 @@ local NL = luatool:Fetch(current_time, current_level, param("NL-PRCNT")) -- low 
 local NM = luatool:Fetch(current_time, current_level, param("NM-PRCNT")) -- middle clouds
 local NH = luatool:Fetch(current_time, current_level, param("NH-PRCNT")) -- high clouds
 
+local scale = 1
+
 if not N or not NL or not NM or not NH then
-  return
+  N = luatool:Fetch(current_time, current_level, param("N-0TO1")) -- total cloudiness
+  NL = luatool:Fetch(current_time, current_level, param("NL-0TO1")) -- low clouds
+  NM = luatool:Fetch(current_time, current_level, param("NM-0TO1")) -- middle clouds
+  NH = luatool:Fetch(current_time, current_level, param("NH-0TO1")) -- high clouds
+
+  if not N or not NL or not NM or not NH then
+    return
+  end
+
+  scale = 100
 end
 
 local NLM = {} -- low and middle clouds
@@ -44,7 +55,7 @@ for i=1,#N do
     end
   end  
 
-  NLM[i] = nlm
+  NLM[i] = nlm * scale
 end
 
 result:SetParam(param("NLM-PRCNT"))

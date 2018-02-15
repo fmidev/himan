@@ -52,8 +52,14 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 	info_t ClInfo = Fetch(forecastTime, forecastLevel, ClParam, forecastType, false);
 	info_t PrecFormInfo = Fetch(forecastTime, surface, PrecFormParam, forecastType, false);  // fetch from surface
 	info_t PrecInfo = Fetch(forecastTime, surface, PrecParam, forecastType, false);
-	info_t ZeroLevelInfo = Fetch(forecastTime, surface, ZeroLevelParam, forecastType, false);
 	info_t HeightInfo = Fetch(forecastTime, forecastLevel, HeightParam, forecastType, false);
+
+	info_t ZeroLevelInfo = Fetch(forecastTime, surface, ZeroLevelParam, forecastType, false);
+
+	if (!ZeroLevelInfo)
+	{
+		ZeroLevelInfo = Fetch(forecastTime, level(kIsothermal, 27315), param("HL-M"), forecastType, false);
+	}
 
 	level newLevel = forecastLevel;
 	newLevel.Value(newLevel.Value() + 2);
@@ -95,6 +101,7 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 	auto h = dynamic_pointer_cast<hitool>(plugin_factory::Instance()->Plugin("hitool"));
 	h->Configuration(itsConfiguration);
 	h->Time(myTargetInfo->Time());
+	h->ForecastType(myTargetInfo->ForecastType());
 
 	// Stratus cloud base [m] (0-300m=0-985ft, N>50%
 	auto base = h->VerticalHeightGreaterThan(NParam, 0, 305, 0.5);
