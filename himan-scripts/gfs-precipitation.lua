@@ -120,11 +120,11 @@ function Form()
   local snowdata = luatool:Fetch(current_time, groundlevel, param("CSNOW-0OR1"))
   local raindata = luatool:Fetch(current_time, groundlevel, param("CRAIN-0OR1"))
   local frzrdata = luatool:Fetch(current_time, groundlevel, param("CFRZR-0OR1"))
-  -- no equivalent code for ice pellets in fmi precipitation form
+  local icepdata = luatool:Fetch(current_time, groundlevel, param("CICEP-0OR1"))
 
   local preformdata = {}
 
-  if not snowdata or not raindata or not frzrdata then --or not icepdata then
+  if not snowdata or not raindata or not frzrdata or not icepdata then
     return
   end
 
@@ -137,26 +137,23 @@ function Form()
     local snow = snowdata[i]
     local rain = raindata[i]
     local frzr = frzrdata[i]
+    local icep = icepdata[i]
 
-    -- FMI precipitation form is:
-    -- 0 = tihku, 1 = vesi, 2 = räntä, 3 = lumi, 4 = jäätävä tihku, 5 = jäätävä sade
+    -- FMI precipitation form for grib2 is:
+    -- 0 = drizzle, 1 = water, 2 = sleet, 3 = snow, 4 = freezing drizzle, 5 = freezing rain
+    -- 6 = snow or ice grain, 7 = snow pellet, 8 = ice pellet
     if snow == 1 then
       preform = 3
     elseif rain == 1 then
       preform = 1
     elseif frzr == 1 then
       preform = 5
+    elseif icep == 1 then
+      preform = 8
     end
 
     preformdata[i] = preform
   end
-
-  -- NB! All himan postprocessing for GFS is done for GFS producer itself, and that producer
-  -- in Neons uses GRIB1 code table 2 and PRECFORM-N is not defined (and I don't want to add it).
-
-  -- So we write the data in GRIB2 and therefore break the rules since GRIB2 precipitation type
-  -- parameter does not map 1:1 with FMI precipitation type. This means that if this data is
-  -- distributed outside FMI in grib format, the data values make absolutely no sense to anybody!
 
   p = param("PRECFORM3-N")
 
