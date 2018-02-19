@@ -806,12 +806,7 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 			bitsPerValue = DetermineBitsPerValue(values, precision);
 
 			// Change missing value 'nan' to a real fp value
-			replace_if(values.begin(), values.end(),
-			           [](const double& v)
-			           {
-				           return IsMissingDouble(v);
-				       },
-			           gribMissing);
+			replace_if(values.begin(), values.end(), [](const double& v) { return IsMissingDouble(v); }, gribMissing);
 
 			itsGrib->Message().BitsPerValue(bitsPerValue);
 			itsGrib->Message().Values(values.data(), static_cast<long>(values.size()));
@@ -1078,18 +1073,6 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 			rg->Orientation(itsGrib->Message().GridOrientation());
 			rg->Di(itsGrib->Message().XLengthInMeters());
 			rg->Dj(itsGrib->Message().YLengthInMeters());
-
-			/*
-			 * Do not support stereographic projections but in bottom left scanning mode.
-			 *
-			 * The calculation of grid extremes could be done with f.ex. NFmiAzimuthalArea
-			 * but lets not do that unless it's absolutely necessary.
-			 */
-
-			if (m != kBottomLeft)
-			{
-				throw runtime_error("Stereographic projection only supported when scanning mode is bottom left");
-			}
 
 			rg->ScanningMode(m);
 
