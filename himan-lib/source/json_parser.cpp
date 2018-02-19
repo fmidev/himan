@@ -1536,7 +1536,7 @@ vector<level> LevelsFromString(const string& levelType, const string& levelValue
 
 	if (theLevelType == kHeightLayer || theLevelType == kGroundDepth || theLevelType == kPressureDelta)
 	{
-        const vector<string> levelsStr = himan::util::Split(levelValues, ",", false);
+		const vector<string> levelsStr = himan::util::Split(levelValues, ",", false);
 		for (size_t i = 0; i < levelsStr.size(); i++)
 		{
 			const vector<string> levelIntervals = himan::util::Split(levelsStr[i], "_", false);
@@ -1555,7 +1555,7 @@ vector<level> LevelsFromString(const string& levelType, const string& levelValue
 	}
 	else
 	{
-        const vector<string> levelsStr = himan::util::Split(levelValues, ",", true);
+		const vector<string> levelsStr = himan::util::Split(levelValues, ",", true);
 		for (size_t i = 0; i < levelsStr.size(); i++)
 		{
 			levels.push_back(level(theLevelType, boost::lexical_cast<float>(levelsStr[i]), levelType));
@@ -1613,9 +1613,13 @@ vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt)
 				{
 					forecastTypes.push_back(forecast_type(kEpsControl, 0));
 				}
-				else if (type == "deterministic")
+				else if (type == "det" || type == "deterministic")
 				{
 					forecastTypes.push_back(forecast_type(kDeterministic));
+				}
+				else if (type == "an" || type == "analysis")
+				{
+					forecastTypes.push_back(forecast_type(kAnalysis));
 				}
 				else
 				{
