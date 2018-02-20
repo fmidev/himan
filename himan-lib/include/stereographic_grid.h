@@ -61,6 +61,8 @@ class stereographic_grid : public grid
 
 	point BottomLeft() const override;
 	point TopRight() const override;
+	point TopLeft() const;
+	point BottomRight() const;
 
 	void BottomLeft(const point& theBottomLeft);
 	void TopRight(const point& theTopRight);

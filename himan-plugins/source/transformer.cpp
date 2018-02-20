@@ -26,7 +26,7 @@ transformer::transformer()
       itsApplyLandSeaMask(false),
       itsLandSeaMaskThreshold(0.5),
       itsInterpolationMethod(kUnknownInterpolationMethod),
-	  itsTargetForecastType(kUnknownType)
+      itsTargetForecastType(kUnknownType)
 {
 	itsCudaEnabledCalculation = true;
 
@@ -207,6 +207,13 @@ void transformer::Process(std::shared_ptr<const plugin_configuration> conf)
 	Init(conf);
 	SetAdditionalParameters();
 
+	if (itsTargetForecastType.Type() != kUnknownType)
+	{
+		ASSERT(itsInfo->ForecastTypeIterator().Size() == 1);
+		itsInfo->ForecastTypeIterator().First();
+		itsInfo->ForecastTypeIterator().Replace(itsTargetForecastType);
+	}
+
 	/*
 	 * Set target parameter to T
 	 * - name T-C
@@ -301,11 +308,6 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 			lock_guard<mutex> lock(aggregationMutex);
 			myTargetInfo->ParamIterator().Replace(p);
 		}
-	}
-
-	if (itsTargetForecastType.Type() != kUnknownType)
-	{
-		myTargetInfo->ForecastTypeIterator().Replace(itsTargetForecastType);
 	}
 
 	SetAB(myTargetInfo, sourceInfo);
