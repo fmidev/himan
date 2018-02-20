@@ -2084,6 +2084,16 @@ void EncodePrecipitationFormToGrib2(vector<double>& arr)
 			case 5:
 				val = 3;
 				break;
+			// graupel
+			case 6:
+				val = 9;
+				break;
+			// snow pellet
+			case 7:
+				val = 13;
+			// ice pellet
+			case 8:
+				break;
 			default:
 				throw runtime_error("Unknown precipitation form: " + to_string(val));
 		}
@@ -2121,6 +2131,17 @@ void DecodePrecipitationFormFromGrib2(vector<double>& arr)
 			// freezing rain
 			case 3:
 				val = 5.;
+				break;
+			// graupel
+			case 9:
+				val = 6;
+				break;
+			// snow pellet
+			case 13:
+				val = 7;
+				break;
+			// ice pellet
+			case 8:
 				break;
 			default:
 				throw runtime_error("Unknown precipitation form: " + to_string(val));
