@@ -26,7 +26,7 @@ transformer::transformer()
       itsApplyLandSeaMask(false),
       itsLandSeaMaskThreshold(0.5),
       itsInterpolationMethod(kUnknownInterpolationMethod),
-	  itsTargetForecastType(kUnknownType)
+      itsTargetForecastType(kUnknownType)
 {
 	itsCudaEnabledCalculation = true;
 
@@ -61,7 +61,7 @@ void transformer::SetAdditionalParameters()
 	}
 	else
 	{
-		itsLogger.Warning("Base not specified, using default value 0.0");
+		itsLogger.Trace("Base not specified, using default value 0.0");
 	}
 
 	if (!itsConfiguration->GetValue("scale").empty())
@@ -70,7 +70,7 @@ void transformer::SetAdditionalParameters()
 	}
 	else
 	{
-		itsLogger.Warning("Scale not specified, using default value 1.0");
+		itsLogger.Trace("Scale not specified, using default value 1.0");
 	}
 
 	if (!itsConfiguration->GetValue("target_univ_id").empty())
@@ -79,7 +79,7 @@ void transformer::SetAdditionalParameters()
 	}
 	else
 	{
-		itsLogger.Warning("Target_univ_id not specified, using default value 9999");
+		itsLogger.Trace("Target_univ_id not specified, using default value 9999");
 	}
 
 	if (!itsConfiguration->GetValue("target_param").empty())
@@ -98,7 +98,7 @@ void transformer::SetAdditionalParameters()
 	else
 	{
 		itsSourceParam = itsTargetParam;
-		itsLogger.Warning("Source_param not specified, source_param set to target_param");
+		itsLogger.Trace("Source_param not specified, source_param set to target_param");
 	}
 
 	if (!itsConfiguration->GetValue("source_level_type").empty())
@@ -107,7 +107,7 @@ void transformer::SetAdditionalParameters()
 	}
 	else
 	{
-		itsLogger.Warning("Source_level not specified, source_level set to target level");
+		itsLogger.Trace("Source_level not specified, source_level set to target level");
 	}
 
 	if (!itsConfiguration->GetValue("source_levels").empty())
@@ -116,7 +116,7 @@ void transformer::SetAdditionalParameters()
 	}
 	else
 	{
-		itsLogger.Warning("Source_levels not specified, source_levels set to target levels");
+		itsLogger.Trace("Source_levels not specified, source_levels set to target levels");
 	}
 
 	if (!itsConfiguration->GetValue("target_forecast_type").empty())
@@ -125,7 +125,7 @@ void transformer::SetAdditionalParameters()
 	}
 	else
 	{
-		itsLogger.Warning("Target_forecast_type not specified, target_forecast_type set to source forecast type");
+		itsLogger.Trace("Target_forecast_type not specified, target_forecast_type set to source forecast type");
 	}
 
 	// Check apply land sea mask parameter
@@ -206,6 +206,13 @@ void transformer::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 	SetAdditionalParameters();
+
+	if (itsTargetForecastType.Type() != kUnknownType)
+	{
+		ASSERT(itsInfo->ForecastTypeIterator().Size() == 1);
+		itsInfo->ForecastTypeIterator().First();
+		itsInfo->ForecastTypeIterator().Replace(itsTargetForecastType);
+	}
 
 	/*
 	 * Set target parameter to T
@@ -301,11 +308,6 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 			lock_guard<mutex> lock(aggregationMutex);
 			myTargetInfo->ParamIterator().Replace(p);
 		}
-	}
-
-	if (itsTargetForecastType.Type() != kUnknownType)
-	{
-		myTargetInfo->ForecastTypeIterator().Replace(itsTargetForecastType);
 	}
 
 	SetAB(myTargetInfo, sourceInfo);

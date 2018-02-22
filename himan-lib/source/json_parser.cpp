@@ -858,6 +858,8 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 
 	unique_ptr<grid> g;
 
+	logger log("json_parser");
+
 	try
 	{
 		string geom = pt.get<string>("target_geom_name");
@@ -872,8 +874,11 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 
 		if (geominfo.empty())
 		{
-			throw runtime_error("Fatal::json_parser Unknown geometry '" + geom + "' found");
+			log.Fatal("Unknown geometry '" + geom + "' found");
+			himan::Abort();
 		}
+
+		const auto scmode = HPScanningModeFromString.at(geominfo["scanning_mode"]);
 
 		if (geominfo["grid_type_id"] == "1")
 		{
@@ -887,19 +892,7 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 			llg->Nj(boost::lexical_cast<size_t>(geominfo["row_cnt"]));
 			llg->Di(di);
 			llg->Dj(dj);
-
-			if (geominfo["stor_desc"] == "+x-y")
-			{
-				llg->ScanningMode(kTopLeft);
-			}
-			else if (geominfo["stor_desc"] == "+x+y")
-			{
-				llg->ScanningMode(kBottomLeft);
-			}
-			else
-			{
-				throw runtime_error("Fatal::json_parser scanning mode " + geominfo["stor_desc"] + " not supported yet");
-			}
+			llg->ScanningMode(scmode);
 
 			const double X0 = boost::lexical_cast<double>(geominfo["long_orig"]) * scale;
 			const double Y0 = boost::lexical_cast<double>(geominfo["lat_orig"]) * scale;
@@ -935,19 +928,7 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 			rllg->Nj(boost::lexical_cast<size_t>(geominfo["row_cnt"]));
 			rllg->Di(di);
 			rllg->Dj(dj);
-
-			if (geominfo["stor_desc"] == "+x-y")
-			{
-				rllg->ScanningMode(kTopLeft);
-			}
-			else if (geominfo["stor_desc"] == "+x+y")
-			{
-				rllg->ScanningMode(kBottomLeft);
-			}
-			else
-			{
-				throw runtime_error("Fatal::json_parser scanning mode " + geominfo["stor_desc"] + " not supported yet");
-			}
+			rllg->ScanningMode(scmode);
 
 			rllg->SouthPole(point(boost::lexical_cast<double>(geominfo["geom_parm_2"]) * scale,
 			                      boost::lexical_cast<double>(geominfo["geom_parm_1"]) * scale));
@@ -988,16 +969,7 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 
 			sg->Ni(boost::lexical_cast<size_t>(geominfo["col_cnt"]));
 			sg->Nj(boost::lexical_cast<size_t>(geominfo["row_cnt"]));
-
-			if (geominfo["stor_desc"] == "+x+y")
-			{
-				sg->ScanningMode(kBottomLeft);
-			}
-			else
-			{
-				throw runtime_error("Fatal::json_parser scanning mode " + geominfo["stor_desc"] +
-				                    " not supported yet for stereographic grid");
-			}
+			sg->ScanningMode(scmode);
 
 			const double X0 = boost::lexical_cast<double>(geominfo["long_orig"]) * scale;
 			const double Y0 = boost::lexical_cast<double>(geominfo["lat_orig"]) * scale;
@@ -1033,9 +1005,10 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 			const point last(boost::lexical_cast<double>(geominfo["last_point_lon"]),
 			                 boost::lexical_cast<double>(geominfo["last_point_lat"]));
 
+			gg->ScanningMode(scmode);
+
 			if (geominfo["scanning_mode"] == "+x-y")
 			{
-				gg->ScanningMode(kTopLeft);
 				gg->BottomLeft(point(first.X(), last.Y()));
 				gg->TopRight(point(last.X(), first.Y()));
 				gg->TopLeft(first);
@@ -1043,7 +1016,6 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 			}
 			else if (geominfo["scanning_mode"] == "+x+y")
 			{
-				gg->ScanningMode(kBottomLeft);
 				gg->BottomLeft(first);
 				gg->TopRight(last);
 				gg->TopLeft(point(first.X(), last.Y()));
@@ -1051,7 +1023,8 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 			}
 			else
 			{
-				throw runtime_error("Fatal::json_parser scanning mode " + geominfo["stor_desc"] + " not supported yet");
+				log.Fatal("Scanning mode " + geominfo["scanning_mode"] + " not supported yet");
+				himan::Abort();
 			}
 		}
 		else if (geominfo["grid_type_id"] == "5")
@@ -1085,24 +1058,26 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 			const point first(boost::lexical_cast<double>(geominfo["first_point_lon"]),
 			                  boost::lexical_cast<double>(geominfo["first_point_lat"]));
 
+			lcg->ScanningMode(scmode);
+
 			if (geominfo["scanning_mode"] == "+x-y")
 			{
-				lcg->ScanningMode(kTopLeft);
 				lcg->TopLeft(first);
 			}
 			else if (geominfo["scanning_mode"] == "+x+y")
 			{
-				lcg->ScanningMode(kBottomLeft);
 				lcg->BottomLeft(first);
 			}
 			else
 			{
-				throw runtime_error("Fatal::json_parser scanning mode " + geominfo["stor_desc"] + " not supported yet");
+				log.Fatal("Scanning mode " + geominfo["scanning_mode"] + " not supported yet");
+				himan::Abort();
 			}
 		}
 		else
 		{
-			throw runtime_error("Fatal::json_parser Unknown projection: " + geominfo["name"]);
+			log.Fatal("Unknown projection: " + geominfo["name"]);
+			himan::Abort();
 		}
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
@@ -1111,7 +1086,8 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 	}
 	catch (exception& e)
 	{
-		throw runtime_error(string("Fatal::json_parser Error parsing area information: ") + e.what());
+		log.Fatal(string("Error parsing area information: ") + e.what());
+		himan::Abort();
 	}
 
 	return g;
@@ -1536,7 +1512,7 @@ vector<level> LevelsFromString(const string& levelType, const string& levelValue
 
 	if (theLevelType == kHeightLayer || theLevelType == kGroundDepth || theLevelType == kPressureDelta)
 	{
-        const vector<string> levelsStr = himan::util::Split(levelValues, ",", false);
+		const vector<string> levelsStr = himan::util::Split(levelValues, ",", false);
 		for (size_t i = 0; i < levelsStr.size(); i++)
 		{
 			const vector<string> levelIntervals = himan::util::Split(levelsStr[i], "_", false);
@@ -1555,7 +1531,7 @@ vector<level> LevelsFromString(const string& levelType, const string& levelValue
 	}
 	else
 	{
-        const vector<string> levelsStr = himan::util::Split(levelValues, ",", true);
+		const vector<string> levelsStr = himan::util::Split(levelValues, ",", true);
 		for (size_t i = 0; i < levelsStr.size(); i++)
 		{
 			levels.push_back(level(theLevelType, boost::lexical_cast<float>(levelsStr[i]), levelType));
@@ -1613,9 +1589,13 @@ vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt)
 				{
 					forecastTypes.push_back(forecast_type(kEpsControl, 0));
 				}
-				else if (type == "deterministic")
+				else if (type == "det" || type == "deterministic")
 				{
 					forecastTypes.push_back(forecast_type(kDeterministic));
+				}
+				else if (type == "an" || type == "analysis")
+				{
+					forecastTypes.push_back(forecast_type(kAnalysis));
 				}
 				else
 				{

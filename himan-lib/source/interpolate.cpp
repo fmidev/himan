@@ -295,7 +295,8 @@ bool FromReducedGaussianCPU(info& base, info& source, matrix<double>& targetData
 				// the equator: upper and lower parallels are symmetrical.
 				// Do linear interpolation between latitude values.
 
-				const double interpValue = numerical_functions::interpolation::Linear(gg_y, a.Y(), c.Y(), av, cv);
+				const double interpValue =
+				    numerical_functions::interpolation::Linear<double>(gg_y, a.Y(), c.Y(), av, cv);
 				result[i] = interpValue;
 				continue;
 			}

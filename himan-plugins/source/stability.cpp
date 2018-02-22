@@ -149,8 +149,8 @@ vec CalculateStormRelativeHelicity(shared_ptr<const plugin_configuration> conf, 
 			{
 				ASSERT(prevZ[i] < stopHeight);
 
-				_U = numerical_functions::interpolation::Linear(stopHeight, prevZ[i], Z[i], _pU, _U);
-				_V = numerical_functions::interpolation::Linear(stopHeight, prevZ[i], Z[i], _pV, _V);
+				_U = numerical_functions::interpolation::Linear<double>(stopHeight, prevZ[i], Z[i], _pU, _U);
+				_V = numerical_functions::interpolation::Linear<double>(stopHeight, prevZ[i], Z[i], _pV, _V);
 
 				found[i] = true;
 			}

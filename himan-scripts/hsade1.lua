@@ -31,27 +31,7 @@
 -- 95 = Thunderstorm, slight or moderate, without hail, but with rain and/or snow at time of observation
 -- 97 = Thunderstorm, heavy, without hail, but with rain and/or snow at time of observation 
 
-local MISS = missing
-
-logger:Debug("Calculating Hsade1")
-
-local WN = luatool:FetchWithType(current_time, current_level, param("WEATHERNUMBER-N"), current_forecast_type)
-
-if not WN then
-  return
-end
-
-local HSADE1 = {}
-
-for i=1,#WN do
-  local wn = WN[i]
-
-  local version = math.floor((wn / 10000000) % 10)
-
-  if (version ~= 1) then
-    logger:Error(string.format("WeatherNumber version %d found, not supported", version))
-    return
-  end
+function GetHSade(wn)
 
   -- decoding weather number
   --
@@ -148,10 +128,40 @@ for i=1,#WN do
   -- jääjyvänen
   elseif (pref == 8 and pot == 0 and rr >= 1 and rr <= 7) then
     hsade = 79
-
   end
 
-  HSADE1[i] = hsade    
+  return hsade
+
+end
+
+local MISS = missing
+
+logger:Debug("Calculating Hsade1")
+
+local WN = luatool:FetchWithType(current_time, current_level, param("WEATHERNUMBER-N"), current_forecast_type)
+
+if not WN then
+  return
+end
+
+local HSADE1 = {}
+
+for i=1,#WN do
+  local wn = WN[i]
+  local hsade = MISS
+
+  if (IsValid(wn)) then
+    local version = math.floor((wn / 10000000) % 10)
+
+    if (version ~= 1) then
+      logger:Error(string.format("WeatherNumber version %d found, not supported", version))
+      return
+    end
+
+    hsade = GetHSade(wn)
+  end
+
+  HSADE1[i] = hsade
 end
 
 result:SetParam(param("HSADE1-N"))

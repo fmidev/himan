@@ -25,11 +25,6 @@ stereographic_grid::stereographic_grid(HPScanningMode theScanningMode, point the
       itsTopRight(theTopRight),
       itsOrientation(theOrientation)
 {
-	if (itsScanningMode != kBottomLeft)
-	{
-		throw runtime_error("Only bottom left is supported for stereographic grids");
-	}
-
 	itsLogger = logger("stereographic_grid");
 }
 
@@ -104,11 +99,6 @@ HPScanningMode stereographic_grid::ScanningMode() const
 }
 void stereographic_grid::ScanningMode(HPScanningMode theScanningMode)
 {
-	if (theScanningMode != kBottomLeft)
-	{
-		throw runtime_error("Only bottom left is supported for stereographic grids");
-	}
-
 	itsScanningMode = theScanningMode;
 }
 
@@ -123,8 +113,6 @@ void stereographic_grid::CreateAreaAndGrid() const
 
 point stereographic_grid::XY(const point& latlon) const
 {
-	ASSERT(itsScanningMode == kBottomLeft);
-
 	if (!itsStereGrid)
 	{
 		CreateAreaAndGrid();
@@ -136,8 +124,6 @@ point stereographic_grid::XY(const point& latlon) const
 
 point stereographic_grid::LatLon(size_t locationIndex) const
 {
-	ASSERT(itsScanningMode == kBottomLeft);
-
 	if (!itsStereGrid)
 	{
 		CreateAreaAndGrid();
@@ -164,13 +150,37 @@ point stereographic_grid::TopRight() const
 {
 	return itsTopRight;
 }
+point stereographic_grid::TopLeft() const
+{
+	if (!itsStereGrid)
+	{
+		CreateAreaAndGrid();
+	}
+
+	const auto ll = itsStereGrid->Area()->TopLeft();
+
+	return point(ll.X(), ll.Y());
+}
+point stereographic_grid::BottomRight() const
+{
+	if (!itsStereGrid)
+	{
+		CreateAreaAndGrid();
+	}
+
+	const auto ll = itsStereGrid->Area()->BottomRight();
+
+	return point(ll.X(), ll.Y());
+}
+
 point stereographic_grid::FirstPoint() const
 {
 	switch (itsScanningMode)
 	{
 		case kBottomLeft:
 			return itsBottomLeft;
-			break;
+		case kTopLeft:
+			return TopLeft();
 		case kUnknownScanningMode:
 			throw runtime_error("Scanning mode not set");
 		default:
@@ -184,7 +194,8 @@ point stereographic_grid::LastPoint() const
 	{
 		case kBottomLeft:
 			return itsTopRight;
-			break;
+		case kTopLeft:
+			return BottomRight();
 		case kUnknownScanningMode:
 			throw runtime_error("Scanning mode not set");
 		default:

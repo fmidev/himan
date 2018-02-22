@@ -11,7 +11,7 @@
  * that are called from CPU and GPU code.
  */
 
-#define LINEAR himan::numerical_functions::interpolation::Linear
+#define LINEAR himan::numerical_functions::interpolation::Linear<float>
 
 const himan::param LCLTParam("LCL-K");
 const himan::param LCLPParam("LCL-HPA");
@@ -73,8 +73,8 @@ inline himan::point GetPointOfIntersection(const himan::point& a1, const himan::
 }
 
 CUDA_DEVICE
-inline double IntegrateEnteringParcel(double Tenv, double prevTenv, double Tparcel, double prevTparcel, double Zenv,
-                                      double prevZenv)
+inline float IntegrateEnteringParcel(float Tenv, float prevTenv, float Tparcel, float prevTparcel, float Zenv,
+                                     float prevZenv)
 {
 	/*
 	 *  We just entered CAPE or CIN zone.
@@ -106,12 +106,14 @@ inline double IntegrateEnteringParcel(double Tenv, double prevTenv, double Tparc
 	                                                 point(prevTparcel, prevZenv));
 
 	if (!(intersection.Y() == intersection.Y()))
+	{
 		return 0;
+	}
 
-	prevZenv = intersection.Y();
+	prevZenv = static_cast<float>(intersection.Y());
 
-	double value = himan::constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
-	value = fmin(150, fmax(-150., value));
+	float value = static_cast<float>(himan::constants::kG) * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
+	value = fminf(150.f, fmaxf(-150.f, value));
 
 	ASSERT(!isnan(value) && !isinf(value));
 
@@ -119,9 +121,9 @@ inline double IntegrateEnteringParcel(double Tenv, double prevTenv, double Tparc
 }
 
 CUDA_DEVICE
-inline void IntegrateLeavingParcel(double Tenv, double prevTenv, double Tparcel, double prevTparcel, double Penv,
-                                   double prevPenv, double Zenv, double prevZenv, double& out_value, double& out_ELT,
-                                   double& out_ELP)
+inline void IntegrateLeavingParcel(float Tenv, float prevTenv, float Tparcel, float prevTparcel, float Penv,
+                                   float prevPenv, float Zenv, float prevZenv, float& out_value, float& out_ELT,
+                                   float& out_ELP, float& out_ELZ)
 {
 	/*
 	 *  We just left CAPE or CIN zone.
@@ -148,9 +150,6 @@ inline void IntegrateLeavingParcel(double Tenv, double prevTenv, double Tparcel,
 
 	out_value = 0;
 
-	out_ELT = himan::MissingDouble();
-	out_ELP = himan::MissingDouble();
-
 	using himan::point;
 
 	auto intersectionZ = CAPE::GetPointOfIntersection(point(Tenv, Zenv), point(prevTenv, prevZenv),
@@ -169,21 +168,22 @@ inline void IntegrateLeavingParcel(double Tenv, double prevTenv, double Tparcel,
 		return;
 	}
 
-	Zenv = intersectionZ.Y();
+	Zenv = static_cast<float>(intersectionZ.Y());
 	ASSERT(fabs(intersectionZ.X() - intersectionP.X()) < 1.);
-	double value = himan::constants::kG * (Zenv - prevZenv) * ((prevTparcel - prevTenv) / prevTenv);
-	value = fmin(150, fmax(-150., value));
+	float value = static_cast<float>(himan::constants::kG) * (Zenv - prevZenv) * ((prevTparcel - prevTenv) / prevTenv);
+	value = fminf(150.f, fmaxf(-150.f, value));
 
 	ASSERT(!isnan(value) && !isinf(value));
 
 	out_value = value;
-	out_ELT = intersectionP.X();
-	out_ELP = intersectionP.Y();
+	out_ELT = static_cast<float>(intersectionP.X());
+	out_ELP = static_cast<float>(intersectionP.Y());
+	out_ELZ = static_cast<float>(intersectionZ.Y());
 }
 
 CUDA_DEVICE
-inline double IntegrateHeightAreaLeavingParcel(double Tenv, double prevTenv, double Tparcel, double prevTparcel,
-                                               double Zenv, double prevZenv, double areaUpperLimit)
+inline float IntegrateHeightAreaLeavingParcel(float Tenv, float prevTenv, float Tparcel, float prevTparcel, float Zenv,
+                                              float prevZenv, float areaUpperLimit)
 {
 	/*
 	 * Just left valid CAPE zone to a non-valid area.
@@ -204,8 +204,8 @@ inline double IntegrateHeightAreaLeavingParcel(double Tenv, double prevTenv, dou
 	 *  We want to calculate only the '#' area!
 	 */
 
-	double newTenv = LINEAR(areaUpperLimit, Zenv, prevZenv, Tenv, prevTenv);
-	double newTparcel = LINEAR(areaUpperLimit, Zenv, prevZenv, Tparcel, prevTparcel);
+	float newTenv = LINEAR(areaUpperLimit, Zenv, prevZenv, Tenv, prevTenv);
+	float newTparcel = LINEAR(areaUpperLimit, Zenv, prevZenv, Tparcel, prevTparcel);
 
 	if (newTparcel <= newTenv)
 	{
@@ -240,9 +240,10 @@ inline double IntegrateHeightAreaLeavingParcel(double Tenv, double prevTenv, dou
 	ASSERT(newTparcel >= newTenv);
 	ASSERT(areaUpperLimit > prevZenv);
 
-	double CAPE = himan::constants::kG * (areaUpperLimit - prevZenv) * ((prevTparcel - prevTenv) / prevTenv);
+	float CAPE =
+	    static_cast<float>(himan::constants::kG) * (areaUpperLimit - prevZenv) * ((prevTparcel - prevTenv) / prevTenv);
 
-	CAPE = fmin(CAPE, 150.);
+	CAPE = fminf(CAPE, 150.);
 
 	ASSERT(CAPE >= 0.);
 	ASSERT(CAPE <= 150);
@@ -251,9 +252,9 @@ inline double IntegrateHeightAreaLeavingParcel(double Tenv, double prevTenv, dou
 }
 
 CUDA_DEVICE
-inline double IntegrateTemperatureAreaEnteringParcel(double Tenv, double prevTenv, double Tparcel, double prevTparcel,
-                                                     double Zenv, double prevZenv, double areaColderLimit,
-                                                     double areaWarmerLimit)
+inline float IntegrateTemperatureAreaEnteringParcel(float Tenv, float prevTenv, float Tparcel, float prevTparcel,
+                                                    float Zenv, float prevZenv, float areaColderLimit,
+                                                    float areaWarmerLimit)
 {
 	/*
 	 * Just entered valid CAPE zone from a non-valid area.
@@ -283,7 +284,7 @@ inline double IntegrateTemperatureAreaEnteringParcel(double Tenv, double prevTen
 	 *  3. Calculate integral using dz = Zenv - prevZenv, for temperatures use the values from Hybrid level n.
 	 */
 
-	double areaLimit;
+	float areaLimit;
 	bool fromWarmerToCold = true;
 
 	if (prevTenv > Tenv)
@@ -298,8 +299,8 @@ inline double IntegrateTemperatureAreaEnteringParcel(double Tenv, double prevTen
 		fromWarmerToCold = false;
 	}
 
-	double newPrevZenv = LINEAR(areaLimit, Tenv, prevTenv, Zenv, prevZenv);
-	double newTparcel = LINEAR(newPrevZenv, Zenv, prevZenv, Tparcel, prevTparcel);
+	float newPrevZenv = LINEAR(areaLimit, Tenv, prevTenv, Zenv, prevZenv);
+	float newTparcel = LINEAR(newPrevZenv, Zenv, prevZenv, Tparcel, prevTparcel);
 
 	if (newTparcel < areaLimit)
 	{
@@ -307,7 +308,7 @@ inline double IntegrateTemperatureAreaEnteringParcel(double Tenv, double prevTen
 
 		for (int i = 0; i < 20; i++)
 		{
-			areaLimit += (fromWarmerToCold) ? -0.1 : 0.1;
+			areaLimit += (fromWarmerToCold) ? -0.1f : 0.1f;
 
 			newPrevZenv = LINEAR(areaLimit, Tenv, prevTenv, Zenv, prevZenv);
 			newTparcel = LINEAR(newPrevZenv, Zenv, prevZenv, Tparcel, prevTparcel);
@@ -334,8 +335,8 @@ inline double IntegrateTemperatureAreaEnteringParcel(double Tenv, double prevTen
 	ASSERT(Tparcel >= Tenv);
 	ASSERT(Zenv >= newPrevZenv);
 
-	double CAPE = himan::constants::kG * (Zenv - newPrevZenv) * ((Tparcel - Tenv) / Tenv);
-	CAPE = fmin(CAPE, 150.);
+	float CAPE = static_cast<float>(himan::constants::kG) * (Zenv - newPrevZenv) * ((Tparcel - Tenv) / Tenv);
+	CAPE = fminf(CAPE, 150.);
 
 	ASSERT(Zenv >= prevZenv);
 	ASSERT(CAPE >= 0.);
@@ -345,9 +346,9 @@ inline double IntegrateTemperatureAreaEnteringParcel(double Tenv, double prevTen
 }
 
 CUDA_DEVICE
-inline double IntegrateTemperatureAreaLeavingParcel(double Tenv, double prevTenv, double Tparcel, double prevTparcel,
-                                                    double Zenv, double prevZenv, double areaColderLimit,
-                                                    double areaWarmerLimit)
+inline float IntegrateTemperatureAreaLeavingParcel(float Tenv, float prevTenv, float Tparcel, float prevTparcel,
+                                                   float Zenv, float prevZenv, float areaColderLimit,
+                                                   float areaWarmerLimit)
 {
 	/*
 	 * Just left valid CAPE zone to a non-valid area.
@@ -366,7 +367,7 @@ inline double IntegrateTemperatureAreaLeavingParcel(double Tenv, double prevTenv
 	 *  We want to calculate only the '-' area!
 	 */
 
-	double areaLimit;
+	float areaLimit;
 	bool fromColdToWarmer = true;
 
 	if (prevTenv < Tenv)
@@ -381,8 +382,8 @@ inline double IntegrateTemperatureAreaLeavingParcel(double Tenv, double prevTenv
 		fromColdToWarmer = false;
 	}
 
-	double newZenv = LINEAR(areaLimit, Tenv, prevTenv, Zenv, prevZenv);
-	double newTparcel = LINEAR(newZenv, Zenv, prevZenv, Tparcel, prevTparcel);
+	float newZenv = LINEAR(areaLimit, Tenv, prevTenv, Zenv, prevZenv);
+	float newTparcel = LINEAR(newZenv, Zenv, prevZenv, Tparcel, prevTparcel);
 
 	if (newTparcel <= areaLimit)
 	{
@@ -390,7 +391,7 @@ inline double IntegrateTemperatureAreaLeavingParcel(double Tenv, double prevTenv
 
 		for (int i = 0; i < 20; i++)
 		{
-			areaLimit += (fromColdToWarmer) ? -0.1 : 0.1;
+			areaLimit += (fromColdToWarmer) ? -0.1f : 0.1f;
 
 			newZenv = LINEAR(areaLimit, Tenv, prevTenv, Zenv, prevZenv);
 			newTparcel = LINEAR(newZenv, Zenv, prevZenv, Tparcel, prevTparcel);
@@ -418,10 +419,10 @@ inline double IntegrateTemperatureAreaLeavingParcel(double Tenv, double prevTenv
 	ASSERT(newZenv <= Zenv);
 	ASSERT(newZenv >= prevZenv);
 
-	double CAPE = himan::constants::kG * (Zenv - prevZenv) * ((newTparcel - areaLimit) / areaLimit);
+	float CAPE = static_cast<float>(himan::constants::kG) * (Zenv - prevZenv) * ((newTparcel - areaLimit) / areaLimit);
 	ASSERT(CAPE >= 0.);
 
-	CAPE = fmin(CAPE, 150.);
+	CAPE = fminf(CAPE, 150.);
 
 	ASSERT(CAPE <= 150.);
 
@@ -429,10 +430,10 @@ inline double IntegrateTemperatureAreaLeavingParcel(double Tenv, double prevTenv
 }
 
 CUDA_DEVICE
-inline double CalcCAPE1040(double Tenv, double prevTenv, double Tparcel, double prevTparcel, double Penv,
-                           double prevPenv, double Zenv, double prevZenv)
+inline float CalcCAPE1040(float Tenv, float prevTenv, float Tparcel, float prevTparcel, float Penv, float prevPenv,
+                          float Zenv, float prevZenv)
 {
-	double C = 0;
+	float C = 0;
 
 	ASSERT((Tenv == Tenv) && (Penv == Penv) && (Tparcel == Tparcel));
 
@@ -442,8 +443,8 @@ inline double CalcCAPE1040(double Tenv, double prevTenv, double Tparcel, double 
 		return C;
 	}
 
-	double coldColderLimit = 233.15;
-	double coldWarmerLimit = 263.15;
+	float coldColderLimit = 233.15f;
+	float coldWarmerLimit = 263.15f;
 
 	if (Tparcel > Tenv)
 	{
@@ -462,7 +463,7 @@ inline double CalcCAPE1040(double Tenv, double prevTenv, double Tparcel, double 
 			else
 			{
 				// Firmly in the cold zone
-				C = himan::constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
+				C = static_cast<float>(himan::constants::kG) * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
 				ASSERT(C >= 0.);
 			}
 		}
@@ -484,9 +485,9 @@ inline double CalcCAPE1040(double Tenv, double prevTenv, double Tparcel, double 
 		if (prevTenv >= coldColderLimit && prevTenv <= coldWarmerLimit)
 		{
 			/* Just left cold CAPE zone for an warmer or colder area */
-			double CAPE, x1, x2;
+			float CAPE, x1, x2, x3;
 			CAPE::IntegrateLeavingParcel(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv, CAPE, x1,
-			                             x2);
+			                             x2, x3);
 			C = CAPE;
 		}
 	}
@@ -495,10 +496,10 @@ inline double CalcCAPE1040(double Tenv, double prevTenv, double Tparcel, double 
 }
 
 CUDA_DEVICE
-inline double CalcCAPE3km(double Tenv, double prevTenv, double Tparcel, double prevTparcel, double Penv,
-                          double prevPenv, double Zenv, double prevZenv)
+inline float CalcCAPE3km(float Tenv, float prevTenv, float Tparcel, float prevTparcel, float Penv, float prevPenv,
+                         float Zenv, float prevZenv)
 {
-	double C = 0.;
+	float C = 0.;
 
 	if (Tparcel > Tenv)
 	{
@@ -509,7 +510,7 @@ inline double CalcCAPE3km(double Tenv, double prevTenv, double Tparcel, double p
 			if (prevTparcel >= prevTenv)
 			{
 				// Firmly in the zone
-				C = himan::constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
+				C = static_cast<float>(himan::constants::kG) * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
 			}
 			else
 			{
@@ -537,9 +538,9 @@ inline double CalcCAPE3km(double Tenv, double prevTenv, double Tparcel, double p
 			if (Zenv <= 3000.)
 			{
 				// Integrate from previous height to intersection
-				double CAPE, x1, x2;
+				float CAPE, x1, x2, x3;
 				CAPE::IntegrateLeavingParcel(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv, CAPE,
-				                             x1, x2);
+				                             x1, x2, x3);
 				C = CAPE;
 			}
 
@@ -555,13 +556,13 @@ inline double CalcCAPE3km(double Tenv, double prevTenv, double Tparcel, double p
 }
 
 CUDA_DEVICE
-inline void CalcCAPE(double Tenv, double prevTenv, double Tparcel, double prevTparcel, double Penv, double prevPenv,
-                     double Zenv, double prevZenv, double& out_CAPE, double& out_ELT, double& out_ELP)
+inline void CalcCAPE(float Tenv, float prevTenv, float Tparcel, float prevTparcel, float Penv, float prevPenv,
+                     float Zenv, float prevZenv, float& out_CAPE, float& out_ELT, float& out_ELP, float& out_ELZ)
 {
 	out_CAPE = 0.;
-
-	out_ELT = himan::MissingDouble();
-	out_ELP = himan::MissingDouble();
+	out_ELP = himan::MissingFloat();
+	out_ELT = himan::MissingFloat();
+	out_ELZ = himan::MissingFloat();
 
 	ASSERT((Tenv == Tenv) && (Penv == Penv) && (Tparcel == Tparcel));
 
@@ -574,7 +575,7 @@ inline void CalcCAPE(double Tenv, double prevTenv, double Tparcel, double prevTp
 	if (Tparcel >= Tenv && prevTparcel >= Tenv)
 	{
 		// We are fully in a CAPE zone
-		out_CAPE = himan::constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
+		out_CAPE = static_cast<float>(himan::constants::kG) * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
 	}
 	else if (Tparcel >= Tenv && prevTparcel < prevTenv)
 	{
@@ -583,15 +584,15 @@ inline void CalcCAPE(double Tenv, double prevTenv, double Tparcel, double prevTp
 	else if (Tparcel < Tenv && prevTparcel >= prevTenv)
 	{
 		CAPE::IntegrateLeavingParcel(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv, out_CAPE,
-		                             out_ELT, out_ELP);
+		                             out_ELT, out_ELP, out_ELZ);
 	}
 
 	ASSERT(out_CAPE >= 0);
 }
 
 CUDA_DEVICE
-inline double CalcCIN(double Tenv, double prevTenv, double Tparcel, double prevTparcel, double Penv, double prevPenv,
-                      double Zenv, double prevZenv)
+inline float CalcCIN(float Tenv, float prevTenv, float Tparcel, float prevTparcel, float Penv, float prevPenv,
+                     float Zenv, float prevZenv)
 {
 	if (Tparcel >= Tenv && prevTparcel >= prevTenv)
 	{
@@ -599,12 +600,12 @@ inline double CalcCIN(double Tenv, double prevTenv, double Tparcel, double prevT
 		return 0;
 	}
 
-	double cin = 0;
+	float cin = 0;
 
 	if (Tparcel < Tenv && prevTparcel < Tenv)
 	{
 		// We are fully in a CIN zone
-		cin = himan::constants::kG * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
+		cin = static_cast<float>(himan::constants::kG) * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
 	}
 	else if (Tparcel < Tenv && prevTparcel >= prevTenv)
 	{
@@ -612,8 +613,9 @@ inline double CalcCIN(double Tenv, double prevTenv, double Tparcel, double prevT
 	}
 	else if (Tparcel >= Tenv && prevTparcel < prevTenv)
 	{
-		double cin, x1, x2;
-		CAPE::IntegrateLeavingParcel(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv, cin, x1, x2);
+		float cin, x1, x2, x3;
+		CAPE::IntegrateLeavingParcel(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv, cin, x1, x2,
+		                             x3);
 	}
 
 	return cin;
@@ -626,7 +628,7 @@ inline double CalcCIN(double Tenv, double prevTenv, double Tparcel, double prevT
 #include "info_simple.h"
 #include "plugin_configuration.h"
 
-typedef std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> cape_source;
+typedef std::tuple<std::vector<float>, std::vector<float>, std::vector<float>> cape_source;
 
 namespace himan
 {
@@ -636,18 +638,17 @@ namespace cape_cuda
 {
 cape_source GetHighestThetaEValuesGPU(const std::shared_ptr<const plugin_configuration> conf,
                                       std::shared_ptr<info> myTargetInfo);
-std::pair<std::vector<double>, std::vector<double>> GetLFCGPU(const std::shared_ptr<const plugin_configuration> conf,
-                                                              std::shared_ptr<info> myTargetInfo,
-                                                              std::vector<double>& T, std::vector<double>& P,
-                                                              std::vector<double>& TenvLCL);
+std::pair<std::vector<float>, std::vector<float>> GetLFCGPU(const std::shared_ptr<const plugin_configuration> conf,
+                                                            std::shared_ptr<info> myTargetInfo, std::vector<float>& T,
+                                                            std::vector<float>& P, std::vector<float>& TenvLCL);
 cape_source Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_configuration> conf,
                                         std::shared_ptr<info> myTargetInfo);
 void GetCINGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo,
-               const std::vector<double>& Tsource, const std::vector<double>& Psource, const std::vector<double>& TLCL,
-               const std::vector<double>& PLCL, const std::vector<double>& ZLCL, const std::vector<double>& PLFC,
-               const std::vector<double>& ZLFC);
+               const std::vector<float>& Tsource, const std::vector<float>& Psource, const std::vector<float>& TLCL,
+               const std::vector<float>& PLCL, const std::vector<float>& ZLCL, const std::vector<float>& PLFC,
+               const std::vector<float>& ZLFC);
 void GetCAPEGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo,
-                const std::vector<double>& T, const std::vector<double>& P);
+                const std::vector<float>& T, const std::vector<float>& P);
 
 extern bool itsUseVirtualTemperature;
 extern level itsBottomLevel;

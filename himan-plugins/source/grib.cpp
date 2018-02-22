@@ -806,12 +806,7 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 			bitsPerValue = DetermineBitsPerValue(values, precision);
 
 			// Change missing value 'nan' to a real fp value
-			replace_if(values.begin(), values.end(),
-			           [](const double& v)
-			           {
-				           return IsMissingDouble(v);
-				       },
-			           gribMissing);
+			replace_if(values.begin(), values.end(), [](const double& v) { return IsMissingDouble(v); }, gribMissing);
 
 			itsGrib->Message().BitsPerValue(bitsPerValue);
 			itsGrib->Message().Values(values.data(), static_cast<long>(values.size()));
@@ -1078,18 +1073,6 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 			rg->Orientation(itsGrib->Message().GridOrientation());
 			rg->Di(itsGrib->Message().XLengthInMeters());
 			rg->Dj(itsGrib->Message().YLengthInMeters());
-
-			/*
-			 * Do not support stereographic projections but in bottom left scanning mode.
-			 *
-			 * The calculation of grid extremes could be done with f.ex. NFmiAzimuthalArea
-			 * but lets not do that unless it's absolutely necessary.
-			 */
-
-			if (m != kBottomLeft)
-			{
-				throw runtime_error("Stereographic projection only supported when scanning mode is bottom left");
-			}
 
 			rg->ScanningMode(m);
 
@@ -2101,6 +2084,16 @@ void EncodePrecipitationFormToGrib2(vector<double>& arr)
 			case 5:
 				val = 3;
 				break;
+			// graupel
+			case 6:
+				val = 9;
+				break;
+			// snow pellet
+			case 7:
+				val = 13;
+			// ice pellet
+			case 8:
+				break;
 			default:
 				throw runtime_error("Unknown precipitation form: " + to_string(val));
 		}
@@ -2138,6 +2131,17 @@ void DecodePrecipitationFormFromGrib2(vector<double>& arr)
 			// freezing rain
 			case 3:
 				val = 5.;
+				break;
+			// graupel
+			case 9:
+				val = 6;
+				break;
+			// snow pellet
+			case 13:
+				val = 7;
+				break;
+			// ice pellet
+			case 8:
 				break;
 			default:
 				throw runtime_error("Unknown precipitation form: " + to_string(val));
