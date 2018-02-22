@@ -160,6 +160,33 @@ std::shared_ptr<himan::info> Fetch(const std::shared_ptr<const plugin_configurat
 	}
 }
 
+__global__ void CapELValuesKernel(const float* __restrict__ d_CAPE, float* __restrict__ d_ELT,
+                                  float* __restrict__ d_ELP, float* __restrict__ d_ELZ, float* __restrict__ d_LastELT,
+                                  float* __restrict__ d_LastELP, float* __restrict__ d_LastELZ,
+                                  const float* __restrict__ d_Tenv, const float* __restrict__ d_Penv,
+                                  const float* __restrict__ d_Zenv, size_t N)
+{
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < N)
+	{
+		// If the CAPE area is continued all the way to stopLevel and beyond, we don't have an EL for that
+		// (since integration is forcefully stopped)
+		// In this case let last level be EL
+
+		if (d_CAPE[idx] > 0 && IsMissing(d_ELT[idx]))
+		{
+			d_ELT[idx] = d_Tenv[idx];
+			d_ELP[idx] = d_Penv[idx];
+			d_ELZ[idx] = d_Zenv[idx];
+
+			d_LastELT[idx] = d_Tenv[idx];
+			d_LastELP[idx] = d_Penv[idx];
+			d_LastELZ[idx] = d_Zenv[idx];
+		}
+	}
+}
+
 __global__ void VirtualTemperatureKernel(float* __restrict__ d_T, const float* __restrict__ d_P, size_t N)
 {
 	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -1415,12 +1442,18 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 	CUDA_CHECK(cudaFree(d_Piter));
 	CUDA_CHECK(cudaFree(d_Titer));
 	CUDA_CHECK(cudaFree(d_found));
-	CUDA_CHECK(cudaFree(d_Tenv));
-	CUDA_CHECK(cudaFree(d_Penv));
-	CUDA_CHECK(cudaFree(d_Zenv));
 	CUDA_CHECK(cudaFree(d_prevTenv));
 	CUDA_CHECK(cudaFree(d_prevPenv));
 	CUDA_CHECK(cudaFree(d_prevZenv));
+
+	CapELValuesKernel<<<gridSize, blockSize, 0, stream>>>(d_CAPE, d_ELT, d_ELP, d_ELZ, d_LastELT, d_LastELP, d_LastELZ,
+	                                                      d_Tenv, d_Penv, d_Zenv, N);
+
+	CUDA_CHECK(cudaStreamSynchronize(stream));
+
+	CUDA_CHECK(cudaFree(d_Tenv));
+	CUDA_CHECK(cudaFree(d_Penv));
+	CUDA_CHECK(cudaFree(d_Zenv));
 
 	std::vector<float> CAPE(T.size());
 	std::vector<float> CAPE1040(T.size());
@@ -1443,27 +1476,6 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 	CUDA_CHECK(cudaMemcpyAsync(LastELZ.data(), d_LastELZ, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
-
-	// If the CAPE area is continued all the way to stopLevel and beyond, we don't have an EL for that
-	// (since integration is forcefully stopped)
-	// In this case let last level be EL
-
-	for (size_t i = 0; i < CAPE.size(); i++)
-	{
-		if (CAPE[i] > 0 && IsMissing(ELT[i]))
-		{
-			TenvInfo->LocationIndex(i);
-			PenvInfo->LocationIndex(i);
-
-			ELT[i] = TenvInfo->Value();
-			ELP[i] = PenvInfo->Value();
-			ELZ[i] = ZenvInfo->Value();
-
-			LastELT[i] = TenvInfo->Value();
-			LastELP[i] = PenvInfo->Value();
-			LastELZ[i] = ZenvInfo->Value();
-		}
-	}
 
 	CUDA_CHECK(cudaFree(d_CAPE));
 	CUDA_CHECK(cudaFree(d_CAPE1040));
