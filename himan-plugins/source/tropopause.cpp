@@ -38,6 +38,7 @@ void tropopause::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	h->ForecastType(myTargetInfo->ForecastType());
 	h->HeightUnit(kHPa);
 
+	//Search is limited to the interval FL140-FL530 i.e. 600-100 HPa
 	auto FL530 = h->LevelForHeight(myTargetInfo->Producer(), 100.);
 	auto FL140 = h->LevelForHeight(myTargetInfo->Producer(), 600.);
 
@@ -51,6 +52,7 @@ void tropopause::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	size_t firstLevel = static_cast<size_t>(FL140.second.Value());
 	size_t lastLevel = static_cast<size_t>(FL530.first.Value());
 
+	// fetch all data first to vectors representing vertical dimension
 	vector<vector<double>> height;
 	vector<vector<double>> temp;
         vector<vector<double>> pres;
@@ -69,14 +71,19 @@ void tropopause::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	size_t grd_size = temp[0].size();
 	vector<double> tropopause(grd_size, MissingDouble());
 
+	// outer loop goes horizontal direction
 	for (size_t i = 0; i < grd_size; ++i)
 	{
+		// inner loop goes vertical and searches for lapse rate smaller 2K/km and check average lapse rate to all levels within 2km above is also smaller 2K/km
 		for (size_t j = 1; j < firstLevel - lastLevel - 1; ++j)
 		{
 			const double lapseRate = -1000.0*(temp[j + 1][i] - temp[j - 1][i]) / (height[j + 1][i] - height[j - 1][i]);
 			if (lapseRate <= 2.0 )
 			{
+				// set tropopause height
 				tropopause[i] = 100.*pres[j][i];
+
+				// check 2km above condition
 				size_t k = j + 1;
 				while (height[k][i] - height[j][i] <= 2000.0 && k < firstLevel - lastLevel-1)
 				{
@@ -92,6 +99,7 @@ void tropopause::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		}
 	}
 
+	// convert pressure to flight level
 	transform(tropopause.begin(), tropopause.end(), tropopause.begin(), metutil::FlightLevel_);
 
 	myTargetInfo->ParamIndex(0);

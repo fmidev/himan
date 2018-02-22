@@ -11,6 +11,11 @@ using namespace himan;
 
 double metutil::FlightLevel_(double P)
 {
+	// Return missing value if missing value is passed as an argument. This is done because missing value was turned
+	// into -nan in some unknown way, probably inside a math function.
+	if (IsMissing(P))
+		return P;
+
 	// International Standard Atmosphere Conditions
 
 	// average temperature lapse rate within the troposphere
@@ -34,14 +39,14 @@ double metutil::FlightLevel_(double P)
 	// troposphere
 	if (P > p_tropo)
 	{
-		h = (pow(P / PG, -(constants::kRd * gamma) / constants::kG) - 1) * TG / gamma * m_hft;
+		h = (std::pow(P / PG, -(constants::kRd * gamma) / constants::kG) - 1) * TG / gamma * m_hft;
 	}
 	// above tropopause
 	else
 	{
-		h = (-log(P / p_tropo) * constants::kRd * T_tropo / constants::kG + h_tropo) * m_hft;
+		h = (-std::log(P / p_tropo) * constants::kRd * T_tropo / constants::kG + h_tropo) * m_hft;
 	}
 
 	// round to multiple of 5
-	return round(h / 5) * 5;
+	return std::round(h / 5.) * 5.;
 }
