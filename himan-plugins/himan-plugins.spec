@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.2.20
-Release: 3.el7.fmi
+Version: 18.2.22
+Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -111,6 +111,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Feb 22 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.2.22-1.fmi
+- Minor fix for cape
 * Tue Feb 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.2.20-3.fmi
 - Fix relative_humidity scaling with missing values
 * Tue Feb 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.2.20-2.fmi
