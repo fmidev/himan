@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.2.22
+Version: 18.2.24
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -111,6 +111,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Sat Feb 24 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.2.24-1.fmi
+- Hotfix to situation where cape plugin does not find LFC
 * Thu Feb 22 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.2.22-1.fmi
 - Minor fix for cape
 * Tue Feb 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.2.20-3.fmi
