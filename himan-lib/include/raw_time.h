@@ -73,8 +73,8 @@ class raw_time
 
    private:
 	std::string FormatTime(const std::string& theTimeMask) const;
-	std::string ToNeonsTime() const;
-	void FromNeonsTime(const std::string& neonsTime);
+	std::string ToDatabaseTime() const;
+	void FromDatabaseTime(const std::string& databaseTime);
 
 	std::string ToSQLTime() const;
 	void FromSQLTime(const std::string& SQLTime);

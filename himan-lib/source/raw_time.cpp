@@ -18,7 +18,7 @@ raw_time::raw_time(const std::string& theDateTime, const std::string& theTimeMas
 	}
 	else if (theTimeMask == "%Y%m%d%H%M")
 	{
-		FromNeonsTime(theDateTime);
+		FromDatabaseTime(theDateTime);
 	}
 	else
 	{
@@ -65,7 +65,7 @@ bool raw_time::operator!=(const raw_time& other) const
 }
 raw_time::operator std::string() const
 {
-	return ToNeonsTime();
+	return ToDatabaseTime();
 }
 std::string raw_time::String(const std::string& theTimeMask) const
 {
@@ -80,7 +80,7 @@ std::string raw_time::String(const std::string& theTimeMask) const
 	}
 	else if (theTimeMask == "%Y%m%d%H%M")
 	{
-		return ToNeonsTime();
+		return ToDatabaseTime();
 	}
 
 	return FormatTime(theTimeMask);
@@ -165,7 +165,7 @@ std::ostream& raw_time::Write(std::ostream& file) const
 	return file;
 }
 
-std::string raw_time::ToNeonsTime() const
+std::string raw_time::ToDatabaseTime() const
 {
 	const auto& date = itsDateTime.date();
 	const auto& time = itsDateTime.time_of_day();
@@ -177,13 +177,13 @@ std::string raw_time::ToNeonsTime() const
 	return std::string(fmt);
 }
 
-void raw_time::FromNeonsTime(const std::string& neonsTime)
+void raw_time::FromDatabaseTime(const std::string& databaseTime)
 {
-	const auto year = static_cast<unsigned short>(stoi(neonsTime.substr(0, 4)));
-	const auto month = static_cast<unsigned short>(stoi(neonsTime.substr(4, 2)));
-	const auto day = static_cast<unsigned short>(stoi(neonsTime.substr(6, 2)));
-	const auto hour = static_cast<unsigned short>(stoi(neonsTime.substr(8, 2)));
-	const auto minute = static_cast<unsigned short>(stoi(neonsTime.substr(10, 2)));
+	const auto year = static_cast<unsigned short>(stoi(databaseTime.substr(0, 4)));
+	const auto month = static_cast<unsigned short>(stoi(databaseTime.substr(4, 2)));
+	const auto day = static_cast<unsigned short>(stoi(databaseTime.substr(6, 2)));
+	const auto hour = static_cast<unsigned short>(stoi(databaseTime.substr(8, 2)));
+	const auto minute = static_cast<unsigned short>(stoi(databaseTime.substr(10, 2)));
 
 	using namespace boost;
 

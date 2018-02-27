@@ -34,7 +34,7 @@ class forecast_time
 	std::string ClassName() const
 	{
 		return "himan::forecast_time";
-	};
+	}
 	std::ostream& Write(std::ostream& file) const;
 
 	bool operator==(const forecast_time& other) const;

@@ -131,8 +131,8 @@ class param
 	std::ostream& Write(std::ostream& file) const;
 
    private:
-	long itsId;           //<! neons id
-	std::string itsName;  //!< neons name
+	long itsId;           //<! database id
+	std::string itsName;  //!< database name
 	double itsScale;
 	double itsBase;
 	long itsUnivId;
