@@ -365,8 +365,12 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	mySubThreadedLogger.Info("LFC calculated in " + to_string(aTimer.GetTime()) + " ms");
 
-	if (LFC.first.empty())
+	const auto missingLFCcount =
+	    count_if(LFC.first.begin(), LFC.first.end(), [](const float& f) { return IsMissing(f); });
+
+	if (LFC.first.empty() || static_cast<int>(LFC.first.size()) == missingLFCcount)
 	{
+		mySubThreadedLogger.Warning("LFC level not found");
 		return;
 	}
 

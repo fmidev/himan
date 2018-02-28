@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.2.12
+Version: 18.2.24
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -13,10 +13,10 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 18.1.9
+Requires: himan-lib >= 18.2.12
 Requires: lua >= 5.1.4
 Requires: unixODBC
-Requires: libfmigrib >= 18.1.24
+Requires: libfmigrib >= 18.2.12
 Requires: libfmidb >= 18.2.8
 Requires: smartmet-library-newbase >= 17.12.1
 Requires: libpqxx
@@ -35,7 +35,7 @@ Requires: jasper-libs
 Requires: eccodes
 %endif
 BuildRequires: libfmidb-devel >= 17.9.18
-BuildRequires: libfmigrib-devel >= 18.1.24
+BuildRequires: libfmigrib-devel >= 18.2.12
 BuildRequires: smartmet-library-newbase-devel >= 17.12.1
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
@@ -111,6 +111,19 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Sat Feb 24 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.2.24-1.fmi
+- Hotfix to situation where cape plugin does not find LFC
+* Thu Feb 22 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.2.22-1.fmi
+- Minor fix for cape
+* Tue Feb 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.2.20-3.fmi
+- Fix relative_humidity scaling with missing values
+* Tue Feb 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.2.20-2.fmi
+- grib-plugin support for three new prec form values
+- bugfix for transformer
+* Tue Feb 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.2.20-1.fmi
+- fmigrib api change
+* Tue Feb 13 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.2.13-1.fmi
+- cape in single precision
 * Mon Feb 12 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.2.12-1.fmi
 - Icing changes
 * Thu Feb  6 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.2.8-1.fmi

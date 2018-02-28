@@ -3,8 +3,8 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 18.2.8
-Release: 1.el7.fmi
+Version: 18.2.20
+Release: 3.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -14,7 +14,7 @@ Requires: glibc
 Requires: libgcc
 Requires: libstdc++
 Requires: libfmidb >= 17.9.18
-Requires: libfmigrib >= 17.12.11
+Requires: libfmigrib >= 18.2.12
 Requires: gdal
 
 %if %{defined suse_version}
@@ -29,7 +29,7 @@ BuildRequires: gcc-c++ >= 4.8.2
 Requires: eccodes
 %endif
 BuildRequires: libfmidb-devel >= 17.9.18
-BuildRequires: libfmigrib-devel >= 17.12.11
+BuildRequires: libfmigrib-devel >= 18.2.12
 BuildRequires: zlib-devel
 BuildRequires: boost-devel >= 1.65
 BuildRequires: smartmet-library-newbase-devel >= 17.9.27
@@ -60,6 +60,15 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Tue Feb 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.2.20-3.fmi
+- Remove constraint of +x+y scanning mode with stereographic projections (json_parser)
+* Tue Feb 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.2.20-2.fmi
+- Allow stereographic projections to have TopLeft scanning mode
+- Add "an" forecast type
+* Tue Feb 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.2.20-1.fmi
+- fmigrib api change
+* Tue Feb 13 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.2.13-1.fmi
+- templatized interpolation functions
 * Thu Feb  8 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.2.8-1.fmi
 - Isothermal level added
 - metutil refactoring
