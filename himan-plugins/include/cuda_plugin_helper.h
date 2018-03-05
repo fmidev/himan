@@ -9,7 +9,9 @@
 #ifdef HAVE_CUDA
 
 #include "cuda_helper.h"
+#include "info.h"
 #include "info_simple.h"
+#include "plugin_configuration.h"
 #include "simple_packed.h"
 
 namespace himan
@@ -90,6 +92,21 @@ __global__ void Fill(T* devptr, size_t N, T fillValue)
 		devptr[idx] = fillValue;
 	}
 }
+
+namespace cuda
+{
+template <typename T>
+void PrepareInfo(std::shared_ptr<himan::info> info, T* d_ret, cudaStream_t& stream);
+
+template <typename T>
+void ReleaseInfo(std::shared_ptr<himan::info> info, T* d_ret, cudaStream_t& stream);
+
+std::shared_ptr<himan::info> Fetch(const std::shared_ptr<const plugin_configuration> conf,
+                                   const himan::forecast_time& theTime, const himan::level& theLevel,
+                                   const himan::param& theParam, const himan::forecast_type& theType,
+                                   bool returnPacked = true);
+
+}  // namespace cuda
 
 #endif /* __NVCC__ */
 

@@ -64,16 +64,22 @@ if have_cuda:
 	for p in cuda_plugins:
 		objects = []
 
-
+		# cpp base class
 		base = 'source/compiled_plugin_base.cpp'
 		obj='obj/'+ base.replace(".cpp","")
 		objects += env.SharedObject(obj, base)
 
-		file="source/" + p + ".cpp"
+		# cuda helper class
+		cubase = 'source/cuda_plugin_helper.cu'
+		cuobj='obj/'+ cubase.replace(".cu","")
+		objects += env.SharedObject(cuobj, cubase)
 
+		# cpp class definition
+		file="source/" + p + ".cpp"
 		obj='obj/'+ file.replace(".cpp","")
 		objects += env.SharedObject(obj, file)
 
+		# cuda functions definition
 		cufile="source/" + p + ".cu"	
                 obj='obj/cu_'+ cufile.replace(".cu","")
 
