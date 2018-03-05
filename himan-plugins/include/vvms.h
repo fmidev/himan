@@ -8,7 +8,6 @@
 
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
-#include "vvms.cuh"
 
 namespace himan
 {
@@ -49,10 +48,6 @@ class vvms : public compiled_plugin, private compiled_plugin_base
 
    private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
-#ifdef HAVE_CUDA
-	std::unique_ptr<vvms_cuda::options> CudaPrepare(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo,
-	                                                std::shared_ptr<info> VVInfo, std::shared_ptr<info> PInfo);
-#endif
 	double itsScale;
 };
 
