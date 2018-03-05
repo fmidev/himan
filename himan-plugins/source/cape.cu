@@ -3,7 +3,6 @@
 #include <string>
 
 #include <cuda_runtime.h>
-#include <thrust/count.h>
 #include <thrust/device_vector.h>
 #include <thrust/system/cuda/execution_policy.h>
 
@@ -16,13 +15,12 @@
 
 #include <NFmiGribPacking.h>
 
+#include "cuda_plugin_helper.h"
 #include "forecast_time.h"
 #include "level.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 
-#include "cache.h"
-#include "fetcher.h"
 #include "hitool.h"
 
 #include "debug.h"
@@ -80,84 +78,6 @@ void MultiplyWith(T* d_arr, T val, size_t N, cudaStream_t& stream)
 	const int gridSize = N / blockSize + (N % blockSize == 0 ? 0 : 1);
 
 	MultiplyWith<T><<<gridSize, blockSize, 0, stream>>>(d_arr, val, N);
-}
-
-void PrepareInfo(std::shared_ptr<himan::info> fullInfo, cudaStream_t& stream, float* d_farr)
-{
-	const size_t N = fullInfo->SizeLocations();
-
-	ASSERT(N > 0);
-	ASSERT(d_farr);
-
-	// 1. Reserve memory at device for unpacked data
-	double* d_arr = 0;
-	CUDA_CHECK(cudaMalloc(reinterpret_cast<double**>(&d_arr), N * sizeof(double)));
-
-	// 2. Unpack if needed, leave data to device and simultaneously copy it back to cpu (himan cache)
-	auto tempGrid = fullInfo->Grid();
-
-	if (tempGrid->IsPackedData())
-	{
-		ASSERT(tempGrid->PackedData().ClassName() == "simple_packed" ||
-		       tempGrid->PackedData().ClassName() == "jpeg_packed");
-		ASSERT(N > 0);
-		ASSERT(tempGrid->Data().Size() == N);
-
-		double* arr = const_cast<double*>(tempGrid->Data().ValuesAsPOD());
-		CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(arr), sizeof(double) * N, 0));
-
-		ASSERT(arr);
-
-		tempGrid->PackedData().Unpack(d_arr, N, &stream);
-
-		CUDA_CHECK(cudaMemcpyAsync(arr, d_arr, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
-
-		tempGrid->PackedData().Clear();
-
-		auto c = GET_PLUGIN(cache);
-
-		CUDA_CHECK(cudaStreamSynchronize(stream));
-
-		c->Insert(fullInfo);
-
-		CUDA_CHECK(cudaHostUnregister(arr));
-	}
-	else
-	{
-		CUDA_CHECK(
-		    cudaMemcpyAsync(d_arr, fullInfo->Data().ValuesAsPOD(), sizeof(double) * N, cudaMemcpyHostToDevice, stream));
-	}
-
-	thrust::device_ptr<double> dt_arr = thrust::device_pointer_cast(d_arr);
-	thrust::device_ptr<float> dt_farr = thrust::device_pointer_cast(d_farr);
-
-	thrust::copy(thrust::cuda::par.on(stream), dt_arr, dt_arr + N, dt_farr);
-	thrust::replace_if(thrust::cuda::par.on(stream), dt_farr, dt_farr + N,
-	                   [] __device__(const float& val) { return ::isnan(val); }, himan::MissingFloat());
-
-	CUDA_CHECK(cudaStreamSynchronize(stream));
-	CUDA_CHECK(cudaFree(d_arr));
-}
-
-std::shared_ptr<himan::info> Fetch(const std::shared_ptr<const plugin_configuration> conf,
-                                   const himan::forecast_time& theTime, const himan::level& theLevel,
-                                   const himan::param& theParam, const himan::forecast_type& theType,
-                                   bool returnPacked = true)
-{
-	try
-	{
-		auto f = GET_PLUGIN(fetcher);
-		return f->Fetch(conf, theTime, theLevel, theParam, theType, returnPacked);
-	}
-	catch (HPExceptionType& e)
-	{
-		if (e != kFileDataNotFound)
-		{
-			throw std::runtime_error("cape_cuda::Fetch(): Unable to proceed");
-		}
-
-		return std::shared_ptr<info>();
-	}
 }
 
 __global__ void CapELValuesKernel(const float* __restrict__ d_CAPE, float* __restrict__ d_ELT,
@@ -699,18 +619,19 @@ cape_source cape_cuda::GetHighestThetaEValuesGPU(const std::shared_ptr<const plu
 
 	while (true)
 	{
-		auto TInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
-		auto RHInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("RH-PRCNT"), myTargetInfo->ForecastType());
-		auto PInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
+		auto TInfo = cuda::Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
+		auto RHInfo =
+		    cuda::Fetch(conf, myTargetInfo->Time(), curLevel, param("RH-PRCNT"), myTargetInfo->ForecastType());
+		auto PInfo = cuda::Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
 
 		if (!TInfo || !RHInfo || !PInfo)
 		{
 			return std::make_tuple(std::vector<float>(), std::vector<float>(), std::vector<float>());
 		}
 
-		PrepareInfo(TInfo, stream, d_T);
-		PrepareInfo(PInfo, stream, d_P);
-		PrepareInfo(RHInfo, stream, d_RH);
+		cuda::PrepareInfo(TInfo, d_T, stream);
+		cuda::PrepareInfo(PInfo, d_P, stream);
+		cuda::PrepareInfo(RHInfo, d_RH, stream);
 
 		ThetaEKernel<<<gridSize, blockSize, 0, stream>>>(d_T, d_RH, d_P, d_prevT, d_prevRH, d_prevP, d_maxThetaE,
 		                                                 d_Tresult, d_TDresult, d_Presult, d_found, N);
@@ -784,7 +705,8 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	tp.HeightInMeters(false);
 	mr.HeightInMeters(false);
 
-	info_t PInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
+	info_t PInfo =
+	    cuda::Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
 
 	if (!PInfo || PInfo->Data().MissingCount() == PInfo->SizeLocations())
 	{
@@ -882,8 +804,8 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	float* d_Psurf = 0;
 	CUDA_CHECK(cudaMalloc((float**)&d_Psurf, N * sizeof(float)));
 
-	auto Psurf = Fetch(conf, myTargetInfo->Time(), itsBottomLevel, param("P-HPA"), myTargetInfo->ForecastType());
-	PrepareInfo(Psurf, stream, d_Psurf);
+	auto Psurf = cuda::Fetch(conf, myTargetInfo->Time(), itsBottomLevel, param("P-HPA"), myTargetInfo->ForecastType());
+	cuda::PrepareInfo(Psurf, d_Psurf, stream);
 
 	InitializeArray<float>(d_T, himan::MissingFloat(), N, stream);
 	InitializeArray<float>(d_TD, himan::MissingFloat(), N, stream);
@@ -978,11 +900,11 @@ std::pair<std::vector<float>, std::vector<float>> cape_cuda::GetLFCGPU(
 
 	level curLevel = levels.first;
 
-	auto prevPenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
-	auto prevTenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
+	auto prevPenvInfo = cuda::Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
+	auto prevTenvInfo = cuda::Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
 
-	PrepareInfo(prevTenvInfo, stream, d_prevTenv);
-	PrepareInfo(prevPenvInfo, stream, d_prevPenv);
+	cuda::PrepareInfo(prevTenvInfo, d_prevTenv, stream);
+	cuda::PrepareInfo(prevPenvInfo, d_prevPenv, stream);
 
 	if (cape_cuda::itsUseVirtualTemperature)
 	{
@@ -1018,11 +940,11 @@ std::pair<std::vector<float>, std::vector<float>> cape_cuda::GetLFCGPU(
 	while (curLevel.Value() > stopLevel.first.Value())
 	{
 		// Get environment temperature and pressure values for this level
-		auto TenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
-		auto PenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
+		auto TenvInfo = cuda::Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
+		auto PenvInfo = cuda::Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
 
-		PrepareInfo(PenvInfo, stream, d_Penv);
-		PrepareInfo(TenvInfo, stream, d_Tenv);
+		cuda::PrepareInfo(PenvInfo, d_Penv, stream);
+		cuda::PrepareInfo(TenvInfo, d_Tenv, stream);
 
 		if (cape_cuda::itsUseVirtualTemperature)
 		{
@@ -1111,9 +1033,9 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 
 	level curLevel = itsBottomLevel;
 
-	auto prevZenvInfo = Fetch(conf, ftime, curLevel, param("HL-M"), ftype);
-	auto prevTenvInfo = Fetch(conf, ftime, curLevel, param("T-K"), ftype);
-	auto prevPenvInfo = Fetch(conf, ftime, curLevel, param("P-HPA"), ftype);
+	auto prevZenvInfo = cuda::Fetch(conf, ftime, curLevel, param("HL-M"), ftype);
+	auto prevTenvInfo = cuda::Fetch(conf, ftime, curLevel, param("T-K"), ftype);
+	auto prevPenvInfo = cuda::Fetch(conf, ftime, curLevel, param("P-HPA"), ftype);
 
 	const size_t N = myTargetInfo->Data().Size();
 	const int blockSize = 256;
@@ -1159,9 +1081,9 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 
 	CUDA_CHECK(cudaMalloc((unsigned char**)&d_found, N * sizeof(unsigned char)));
 
-	PrepareInfo(prevZenvInfo, stream, d_prevZenv);
-	PrepareInfo(prevTenvInfo, stream, d_prevTenv);
-	PrepareInfo(prevPenvInfo, stream, d_prevPenv);
+	cuda::PrepareInfo(prevZenvInfo, d_prevZenv, stream);
+	cuda::PrepareInfo(prevTenvInfo, d_prevTenv, stream);
+	cuda::PrepareInfo(prevPenvInfo, d_prevPenv, stream);
 
 	InitializeArray<float>(d_cinh, 0., N, stream);
 	InitializeArray<float>(d_Tparcel, himan::MissingFloat(), N, stream);
@@ -1198,13 +1120,13 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration> conf
 
 	while (curLevel.Value() > hPa100.first.Value())
 	{
-		auto ZenvInfo = Fetch(conf, ftime, curLevel, param("HL-M"), ftype);
-		auto TenvInfo = Fetch(conf, ftime, curLevel, param("T-K"), ftype);
-		auto PenvInfo = Fetch(conf, ftime, curLevel, param("P-HPA"), ftype);
+		auto ZenvInfo = cuda::Fetch(conf, ftime, curLevel, param("HL-M"), ftype);
+		auto TenvInfo = cuda::Fetch(conf, ftime, curLevel, param("T-K"), ftype);
+		auto PenvInfo = cuda::Fetch(conf, ftime, curLevel, param("P-HPA"), ftype);
 
-		PrepareInfo(ZenvInfo, stream, d_Zenv);
-		PrepareInfo(PenvInfo, stream, d_Penv);
-		PrepareInfo(TenvInfo, stream, d_Tenv);
+		cuda::PrepareInfo(ZenvInfo, d_Zenv, stream);
+		cuda::PrepareInfo(PenvInfo, d_Penv, stream);
+		cuda::PrepareInfo(TenvInfo, d_Tenv, stream);
 
 		LiftLCLKernel<<<gridSize, blockSize, 0, stream>>>(d_Piter, d_Titer, d_PLCL, d_Penv, d_Tparcel, N);
 
@@ -1369,13 +1291,13 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 
 	level curLevel = levels.first;
 
-	auto prevZenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("HL-M"), myTargetInfo->ForecastType());
-	auto prevTenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
-	auto prevPenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
+	auto prevZenvInfo = cuda::Fetch(conf, myTargetInfo->Time(), curLevel, param("HL-M"), myTargetInfo->ForecastType());
+	auto prevTenvInfo = cuda::Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
+	auto prevPenvInfo = cuda::Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
 
-	PrepareInfo(prevZenvInfo, stream, d_prevZenv);
-	PrepareInfo(prevPenvInfo, stream, d_prevPenv);
-	PrepareInfo(prevTenvInfo, stream, d_prevTenv);
+	cuda::PrepareInfo(prevZenvInfo, d_prevZenv, stream);
+	cuda::PrepareInfo(prevPenvInfo, d_prevPenv, stream);
+	cuda::PrepareInfo(prevTenvInfo, d_prevTenv, stream);
 
 	if (cape_cuda::itsUseVirtualTemperature)
 	{
@@ -1393,18 +1315,18 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration> con
 
 	while (curLevel.Value() > stopLevel.first.Value())
 	{
-		PenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
-		TenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
-		ZenvInfo = Fetch(conf, myTargetInfo->Time(), curLevel, param("HL-M"), myTargetInfo->ForecastType());
+		PenvInfo = cuda::Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
+		TenvInfo = cuda::Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
+		ZenvInfo = cuda::Fetch(conf, myTargetInfo->Time(), curLevel, param("HL-M"), myTargetInfo->ForecastType());
 
 		if (!PenvInfo || !TenvInfo || !ZenvInfo)
 		{
 			break;
 		}
 
-		PrepareInfo(ZenvInfo, stream, d_Zenv);
-		PrepareInfo(PenvInfo, stream, d_Penv);
-		PrepareInfo(TenvInfo, stream, d_Tenv);
+		cuda::PrepareInfo(ZenvInfo, d_Zenv, stream);
+		cuda::PrepareInfo(PenvInfo, d_Penv, stream);
+		cuda::PrepareInfo(TenvInfo, d_Tenv, stream);
 
 		if (cape_cuda::itsUseVirtualTemperature)
 		{
