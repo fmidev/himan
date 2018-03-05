@@ -4,7 +4,7 @@
 Summary: himan core library
 Name: %{LIBNAME}
 Version: 18.3.5
-Release: 1.el7.fmi
+Release: 2.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -60,6 +60,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Mon Mar  5 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.3.5-2.fmi
+- Tweaking stereographic area parameters
 * Mon Mar  5 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.3.5-1.fmi
 - Neons-references removed
 * Tue Feb 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.2.20-3.fmi
