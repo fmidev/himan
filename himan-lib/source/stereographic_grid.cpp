@@ -106,7 +106,7 @@ void stereographic_grid::CreateAreaAndGrid() const
 {
 	NFmiPoint bl(itsBottomLeft.X(), itsBottomLeft.Y());
 	auto area = unique_ptr<NFmiStereographicArea>(new NFmiStereographicArea(
-	    bl, itsDi * (static_cast<double>(itsNi) - 1), itsDj * (static_cast<double>(itsNj) - 1), itsOrientation));
+	    bl, itsDi * (static_cast<double>(itsNi)), itsDj * (static_cast<double>(itsNj)), itsOrientation));
 
 	itsStereGrid = unique_ptr<NFmiGrid>(new NFmiGrid(area.get(), itsNi, itsNj));
 }
