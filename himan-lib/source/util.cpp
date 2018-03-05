@@ -242,8 +242,8 @@ string util::Join(const vector<string>& elements, const string& delim)
 pair<point, point> util::CoordinatesFromFirstGridPoint(const point& firstPoint, double orientation, size_t ni,
                                                        size_t nj, double xSizeInMeters, double ySizeInMeters)
 {
-	double xWidthInMeters = (static_cast<double>(ni) - 1.) * xSizeInMeters;
-	double yWidthInMeters = (static_cast<double>(nj) - 1.) * ySizeInMeters;
+	double xWidthInMeters = (static_cast<double>(ni)) * xSizeInMeters;
+	double yWidthInMeters = (static_cast<double>(nj)) * ySizeInMeters;
 
 	NFmiStereographicArea a(NFmiPoint(firstPoint.X(), firstPoint.Y()), xWidthInMeters, yWidthInMeters, orientation,
 	                        NFmiPoint(0, 0), NFmiPoint(1, 1), 90.);

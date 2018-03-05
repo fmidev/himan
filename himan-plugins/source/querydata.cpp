@@ -378,8 +378,8 @@ NFmiHPlaceDescriptor querydata::CreateGrid(info& info) const
 			stereographic_grid* const g = dynamic_cast<stereographic_grid*>(info.Grid());
 
 			theArea = new NFmiStereographicArea(NFmiPoint(g->BottomLeft().X(), g->BottomLeft().Y()),
-			                                    g->Di() * static_cast<double>((g->Ni() - 1)),
-			                                    g->Dj() * static_cast<double>((g->Nj() - 1)), g->Orientation());
+			                                    g->Di() * static_cast<double>((g->Ni())),
+			                                    g->Dj() * static_cast<double>((g->Nj())), g->Orientation());
 
 			break;
 		}
