@@ -30,7 +30,7 @@ bool writer::CreateFile(info& theInfo, std::shared_ptr<const plugin_configuratio
 
 	if (theOutputFile.empty())
 	{
-		theOutputFile = util::MakeFileName(itsWriteOptions.configuration->FileWriteOption(), theInfo);
+		theOutputFile = util::MakeFileName(itsWriteOptions.configuration->FileWriteOption(), theInfo, *conf);
 	}
 
 	fs::path pathname(theOutputFile);
