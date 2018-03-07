@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.3.5
-Release: 2.el7.fmi
+Version: 18.3.7
+Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 18.2.12
+Requires: himan-lib >= 18.3.7
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 18.2.12
@@ -105,13 +105,14 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libunstagger.so
 %{_libdir}/himan-plugins/libvisibility.so
 %{_libdir}/himan-plugins/libvvms.so
-%{_libdir}/himan-plugins/libweather_symbol.so
-%{_libdir}/himan-plugins/libweather_code_1.so
 %{_libdir}/himan-plugins/libweather_code_2.so
 %{_libdir}/himan-plugins/libwindvector.so
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Mar  7 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.3.7-1.fmi
+- Removing plugins weather_symbol, weather_code_1
+- vvms plugin to single precision
 * Mon Mar  5 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.3.5-2.fmi
 - Tweaking stereographic area parameters
 * Mon Mar  5 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.3.5-1.fmi
