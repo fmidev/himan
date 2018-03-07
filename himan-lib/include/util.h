@@ -8,6 +8,7 @@
 #ifndef UTIL_H_
 #define UTIL_H_
 
+#include "configuration.h"
 #include "himan_common.h"
 #include "info.h"
 #include <boost/iterator/zip_iterator.hpp>
@@ -33,7 +34,7 @@ HPFileType FileType(const std::string& theFile);
  * @brief Creates a neons-style filename with path, but without file extension
  */
 
-std::string MakeFileName(HPFileWriteOption fileWriteOption, const info& info);
+std::string MakeFileName(HPFileWriteOption fileWriteOption, const info& info, const configuration& conf);
 
 /**
  * @brief Splits a string and fills the gaps if requested

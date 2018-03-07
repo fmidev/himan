@@ -10,9 +10,9 @@
 using namespace std;
 using namespace himan::plugin;
 
-#include "cuda_helper.h"
-#include "vvms.cuh"
-
+#ifdef HAVE_CUDA
+extern void ProcessGPU(std::shared_ptr<const himan::plugin_configuration> conf, std::shared_ptr<himan::info> myTargetInfo);
+#endif
 // Required source parameters
 
 const himan::param TParam("T-K");
@@ -116,9 +116,7 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	{
 		deviceType = "GPU";
 
-		auto opts = CudaPrepare(myTargetInfo, TInfo, VVInfo, PInfo);
-
-		vvms_cuda::Process(*opts);
+		ProcessGPU(itsConfiguration, myTargetInfo);
 	}
 	else
 #endif
@@ -154,43 +152,3 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
 	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
-
-#ifdef HAVE_CUDA
-
-unique_ptr<vvms_cuda::options> vvms::CudaPrepare(shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo,
-                                                 shared_ptr<info> VVInfo, shared_ptr<info> PInfo)
-{
-	unique_ptr<vvms_cuda::options> opts(new vvms_cuda::options);
-
-	opts->is_constant_pressure = (myTargetInfo->Level().Type() == kPressure);
-
-	opts->t = TInfo->ToSimple();
-	opts->vv = VVInfo->ToSimple();
-	opts->vv_ms = myTargetInfo->ToSimple();
-
-	if (!opts->is_constant_pressure)
-	{
-		opts->p = PInfo->ToSimple();
-
-		if (PInfo->Param().Unit() == kHPa || PInfo->Param().Name() == "P-HPA")
-		{
-			opts->p_scale = 100;
-		}
-	}
-	else
-	{
-		opts->p_const = myTargetInfo->Level().Value() * 100;  // Pa
-	}
-
-	if (TInfo->Param().Unit() == kC)
-	{
-		opts->t_base = himan::constants::kKelvin;
-	}
-
-	opts->N = TInfo->Grid()->Size();
-
-	opts->vv_ms_scale = itsScale;
-
-	return opts;
-}
-#endif

@@ -1,69 +1,91 @@
 #include "cuda_plugin_helper.h"
-#include "vvms.cuh"
 
-__global__ void himan::plugin::vvms_cuda::Calculate(cdarr_t d_t, cdarr_t d_vv, cdarr_t d_p, darr_t d_vv_ms,
-                                                    options opts)
+using namespace himan;
+
+template <typename Type>
+__device__ Type VVMS(Type VV, Type T, Type P)
 {
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	ASSERT(P < 1200 || IsMissing(P));
+	return 287 * -VV * T / (static_cast<Type>(himan::constants::kG) * 100 * P);
+}
 
-	if (idx < opts.N)
+template <typename T>
+__global__ void VVMSKernel(const T* __restrict__ d_t, const T* __restrict__ d_vv, const T* __restrict__ d_p,
+                           T* __restrict__ d_vv_ms, T vv_scale, size_t N)
+{
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < N)
 	{
-		double P = (opts.is_constant_pressure) ? opts.p_const : d_p[idx];
-
-		d_vv_ms[idx] = opts.vv_ms_scale *
-		               (287 * -d_vv[idx] * (opts.t_base + d_t[idx]) / (himan::constants::kG * P * opts.p_scale));
+		d_vv_ms[idx] = vv_scale * VVMS<T>(d_vv[idx], d_t[idx], d_p[idx]);
 	}
 }
 
-void himan::plugin::vvms_cuda::Process(options& opts)
+template <typename T>
+__global__ void VVMSKernel(const T* __restrict__ d_t, const T* __restrict__ d_vv, const T P, T* __restrict__ d_vv_ms,
+                           T vv_scale, size_t N)
+{
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < N)
+	{
+		d_vv_ms[idx] = vv_scale * VVMS<T>(d_vv[idx], d_t[idx], P);
+	}
+}
+
+void ProcessGPU(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo)
 {
 	cudaStream_t stream;
-
 	CUDA_CHECK(cudaStreamCreate(&stream));
-
-	size_t memsize = opts.N * sizeof(double);
 
 	// Allocate device arrays
 
-	double* d_t = 0;
-	double* d_p = 0;
-	double* d_vv = 0;
-	double* d_vv_ms = 0;
+	float* d_t = 0;
+	float* d_p = 0;
+	float* d_vv = 0;
+	float* d_vv_ms = 0;
+
+	const size_t N = myTargetInfo->SizeLocations();
+	const size_t memsize = N * sizeof(float);
 
 	CUDA_CHECK(cudaMalloc((void**)&d_vv_ms, memsize));
 	CUDA_CHECK(cudaMalloc((void**)&d_t, memsize));
 	CUDA_CHECK(cudaMalloc((void**)&d_vv, memsize));
 
-	PrepareInfo(opts.t, d_t, stream);
-	PrepareInfo(opts.vv, d_vv, stream);
-	PrepareInfo(opts.vv_ms);
+	auto TInfo =
+	    cuda::Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("T-K"), myTargetInfo->ForecastType());
+	auto VVInfo =
+	    cuda::Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("VV-PAS"), myTargetInfo->ForecastType());
 
-	if (!opts.is_constant_pressure)
-	{
-		CUDA_CHECK(cudaMalloc((void**)&d_p, memsize));
-
-		PrepareInfo(opts.p, d_p, stream);
-	}
+	cuda::PrepareInfo(TInfo, d_t, stream);
+	cuda::PrepareInfo(VVInfo, d_vv, stream);
 
 	// dims
 
 	const int blockSize = 512;
-	const int gridSize = opts.N / blockSize + (opts.N % blockSize == 0 ? 0 : 1);
+	const int gridSize = N / blockSize + (N % blockSize == 0 ? 0 : 1);
 
-	CUDA_CHECK(cudaStreamSynchronize(stream));
+	bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
 
-	Calculate<<<gridSize, blockSize, 0, stream>>>(d_t, d_vv, d_p, d_vv_ms, opts);
+	const float vv_scale = (myTargetInfo->Param().Name() == "VV-MMS") ? 1000. : 1.;
 
-	// block until the device has completed
-	CUDA_CHECK(cudaStreamSynchronize(stream));
+	if (isPressureLevel == false)
+	{
+		CUDA_CHECK(cudaMalloc((void**)&d_p, memsize));
 
-	CUDA_CHECK_ERROR_MSG("Kernel invocation");
+		auto PInfo = cuda::Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("P-HPA"),
+		                         myTargetInfo->ForecastType());
+		cuda::PrepareInfo(PInfo, d_p, stream);
 
-	// Retrieve result from device
+		VVMSKernel<float><<<gridSize, blockSize, 0, stream>>>(d_t, d_vv, d_p, d_vv_ms, vv_scale, N);
+	}
+	else
+	{
+		VVMSKernel<float><<<gridSize, blockSize, 0, stream>>>(d_t, d_vv, myTargetInfo->Level().Value(), d_vv_ms,
+		                                                      vv_scale, N);
+	}
 
-	himan::ReleaseInfo(opts.vv_ms, d_vv_ms, stream);
-	himan::ReleaseInfo(opts.t);
-	himan::ReleaseInfo(opts.vv);
+	cuda::ReleaseInfo(myTargetInfo, d_vv_ms, stream);
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
@@ -73,7 +95,7 @@ void himan::plugin::vvms_cuda::Process(options& opts)
 
 	if (d_p)
 	{
-		himan::ReleaseInfo(opts.p);
+		// himan::ReleaseInfo(opts.p);
 		CUDA_CHECK(cudaFree(d_p));
 	}
 

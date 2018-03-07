@@ -53,6 +53,8 @@ void tropopause::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	size_t firstLevel = static_cast<size_t>(FL140.second.Value());
 	size_t lastLevel = static_cast<size_t>(FL530.first.Value());
 
+	size_t lvl_size = firstLevel - lastLevel;
+
 	// fetch all data first to vectors representing vertical dimension
 	vector<vector<double>> height;
 	vector<vector<double>> temp;
@@ -65,7 +67,10 @@ void tropopause::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		auto presInfo = Fetch(forecastTime, level(kHybrid, static_cast<double>(lvl)), P, forecastType, false);
 
 		if (!(heightInfo && tempInfo && presInfo))
+		{
+			--lvl_size;
 			continue;
+		}
 
 		height.push_back(VEC(heightInfo));
 		temp.push_back(VEC(tempInfo));
@@ -80,7 +85,7 @@ void tropopause::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	{
 		// inner loop goes vertical and searches for lapse rate smaller 2K/km and check average lapse rate to all levels
 		// within 2km above is also smaller 2K/km
-		for (size_t j = 1; j < firstLevel - lastLevel - 1; ++j)
+		for (size_t j = 1; j < lvl_size - 1; ++j)
 		{
 			const double lapseRate =
 			    -1000.0 * (temp[j + 1][i] - temp[j - 1][i]) / (height[j + 1][i] - height[j - 1][i]);
@@ -91,7 +96,7 @@ void tropopause::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 				// check 2km above condition
 				size_t k = j + 1;
-				while (height[k][i] - height[j][i] <= 2000.0 && k < firstLevel - lastLevel - 1)
+				while (height[k][i] - height[j][i] <= 2000.0 && k < lvl_size -1)
 				{
 					if (-1000.0 * (temp[k][i] - temp[j][i]) / (height[k][i] - height[j][i]) > 2.0)
 					{

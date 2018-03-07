@@ -21,7 +21,7 @@
 using namespace himan;
 using namespace std;
 
-string util::MakeFileName(HPFileWriteOption fileWriteOption, const info& info)
+string util::MakeFileName(HPFileWriteOption fileWriteOption, const info& info, const configuration& conf)
 {
 	ostringstream fileName;
 	ostringstream base;
@@ -47,7 +47,9 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, const info& info)
 		}
 
 		base << "/" << info.Producer().Centre() << "_" << info.Producer().Process() << "/"
-		     << info.Time().OriginDateTime().String("%Y%m%d%H%M") << "/" << info.Time().Step();
+		     << info.Time().OriginDateTime().String("%Y%m%d%H%M") << "/" << conf.TargetGeomName() << "/"
+
+		     << info.Time().Step();
 	}
 
 	// Create a unique file name when creating multiple files from one info
