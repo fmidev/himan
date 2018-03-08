@@ -2091,6 +2091,7 @@ void EncodePrecipitationFormToGrib2(vector<double>& arr)
 			// snow pellet
 			case 7:
 				val = 13;
+				break;
 			// ice pellet
 			case 8:
 				break;
