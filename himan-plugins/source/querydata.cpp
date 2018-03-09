@@ -378,9 +378,8 @@ NFmiHPlaceDescriptor querydata::CreateGrid(info& info) const
 			stereographic_grid* const g = dynamic_cast<stereographic_grid*>(info.Grid());
 
 			theArea = new NFmiStereographicArea(NFmiPoint(g->BottomLeft().X(), g->BottomLeft().Y()),
-			                                    g->Di() * static_cast<double>((g->Ni())),
-			                                    g->Dj() * static_cast<double>((g->Nj())), g->Orientation());
-
+			                                    g->Di() * static_cast<double>((g->Ni() - 1)),
+			                                    g->Dj() * static_cast<double>((g->Nj() - 1)), g->Orientation());
 			break;
 		}
 
@@ -408,6 +407,18 @@ NFmiHPlaceDescriptor querydata::CreateGrid(info& info) const
 	}
 
 	ASSERT(theArea);
+
+#ifdef DEBUG
+	OGRSpatialReference crs;
+	const auto wkt = theArea->WKT();
+	if (crs.SetFromUserInput(wkt.c_str()) == OGRERR_NONE)
+	{
+		char* proj4 = 0;
+		crs.exportToProj4(&proj4);
+		itsLogger.Trace(string(proj4));
+		OGRFree(proj4);
+	}
+#endif
 
 	NFmiGrid theGrid(theArea, info.Grid()->Ni(), info.Grid()->Nj());
 

@@ -974,11 +974,7 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 			const double X0 = boost::lexical_cast<double>(geominfo["long_orig"]) * scale;
 			const double Y0 = boost::lexical_cast<double>(geominfo["lat_orig"]) * scale;
 
-			const auto coordinates = himan::util::CoordinatesFromFirstGridPoint(point(X0, Y0), sg->Orientation(),
-			                                                                    sg->Ni(), sg->Nj(), di, dj);
-
-			sg->BottomLeft(coordinates.first);
-			sg->TopRight(coordinates.second);
+			sg->BottomLeft(point(X0, Y0));
 		}
 		else if (geominfo["grid_type_id"] == "6")
 		{
@@ -1088,6 +1084,22 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 	{
 		log.Fatal(string("Error parsing area information: ") + e.what());
 		himan::Abort();
+	}
+
+	// Until shape of earth is added to radon, hard code default value for all geoms
+	// in radon to sphere with radius 6367470 meters, except SMARTMET7500 where we know
+	// it's 6371220 meters
+
+	if (g)
+	{
+		double a = 6367470., b = a;
+
+		if (conf.TargetGeomName() == "SMARTMET7500")
+		{
+			a = b = 6371220;
+		}
+
+		g->EarthShape(earth_shape(a, b));
 	}
 
 	return g;

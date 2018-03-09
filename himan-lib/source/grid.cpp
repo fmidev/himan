@@ -52,7 +52,8 @@ grid::grid(const grid& other)
       itsAB(other.itsAB),
       itsScanningMode(other.itsScanningMode),
       itsPackedData(),
-      itsUVRelativeToGrid(other.itsUVRelativeToGrid)
+      itsUVRelativeToGrid(other.itsUVRelativeToGrid),
+      itsEarthShape(other.itsEarthShape)
 {
 #ifdef HAVE_CUDA
 	if (other.itsPackedData)
@@ -78,6 +79,14 @@ bool grid::EqualsTo(const grid& other) const
 	{
 		itsLogger.Trace("Grid type does not match: " + HPGridTypeToString.at(itsGridType) + " vs " +
 		                HPGridTypeToString.at(other.Type()));
+		return false;
+	}
+
+	if (other.itsEarthShape != itsEarthShape)
+	{
+		itsLogger.Trace("Earth shape does not match: A: " + to_string(other.itsEarthShape.A()) + " vs " +
+		                to_string(itsEarthShape.A()) + " and B: " + to_string(other.itsEarthShape.B()) + " vs " +
+		                to_string(itsEarthShape.B()));
 		return false;
 	}
 
@@ -158,6 +167,7 @@ ostream& grid::Write(std::ostream& file) const
 
 	file << std::endl;
 
+	file << itsEarthShape;
 	file << "__IsPackedData__ " << IsPackedData() << std::endl;
 	file << itsData;
 
@@ -207,4 +217,14 @@ bool grid::UVRelativeToGrid() const
 void grid::UVRelativeToGrid(bool theUVRelativeToGrid)
 {
 	itsUVRelativeToGrid = theUVRelativeToGrid;
+}
+
+earth_shape grid::EarthShape() const
+{
+	return itsEarthShape;
+}
+
+void grid::EarthShape(const earth_shape& theEarthShape)
+{
+	itsEarthShape = theEarthShape;
 }

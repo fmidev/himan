@@ -562,11 +562,16 @@ bool lambert_conformal_grid::SetCoordinates() const
 		itsStandardParallel2 = itsStandardParallel1;
 	}
 
-	ss << "+proj=lcc +lat_1=" << itsStandardParallel1 << " +lat_2=" << itsStandardParallel2
-	   << " +lat_0=" << itsStandardParallel1 << " +lon_0=" << itsOrientation;
+	// clang-format off
+	ss << "+proj=lcc +lat_1=" << itsStandardParallel1
+	   << " +lat_2=" << itsStandardParallel2
+	   << " +lat_0=" << itsStandardParallel1
+	   << " +lon_0=" << itsOrientation
+	   << " +a=" << fixed << itsEarthShape.A()
+	   << " +b=" << itsEarthShape.B()
+	   << " +units=m +no_defs +wktext";
 
-	// NOTE! Assuming earth is a sphere!
-	ss << " +a=6367470 +b=6367470 +units=m +no_defs +wktext";
+	// clang-format on
 
 	auto err = itsSpatialReference->importFromProj4(ss.str().c_str());
 
@@ -603,9 +608,9 @@ bool lambert_conformal_grid::SetCoordinates() const
 	// Setting falsings directly to translator will make handling them cleaner
 	// later.
 
-	ss << " +x_0=" << (-falseEasting) << " +y_0=" << (-falseNorthing);
+	ss << " +x_0=" << fixed << (-falseEasting) << " +y_0=" << (-falseNorthing);
 
-	// itsLogger.Trace("PROJ4: " + ss.str());
+	itsLogger.Trace(ss.str());
 
 	err = itsSpatialReference->importFromProj4(ss.str().c_str());
 

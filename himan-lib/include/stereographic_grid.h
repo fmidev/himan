@@ -15,7 +15,9 @@
 #define override  // override specifier not support until 4.8
 #endif
 
-class NFmiGrid;
+class OGRCoordinateTransformation;
+class OGRSpatialReference;
+
 namespace himan
 {
 class stereographic_grid : public grid
@@ -92,7 +94,9 @@ class stereographic_grid : public grid
 
 	bool EqualsTo(const stereographic_grid& other) const;
 
-	mutable std::unique_ptr<NFmiGrid> itsStereGrid;
+	mutable std::unique_ptr<OGRCoordinateTransformation> itsXYToLatLonTransformer;
+	mutable std::unique_ptr<OGRCoordinateTransformation> itsLatLonToXYTransformer;
+	mutable std::unique_ptr<OGRSpatialReference> itsSpatialReference;
 
 	point itsBottomLeft;
 	point itsTopRight;

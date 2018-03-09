@@ -58,20 +58,6 @@ std::vector<std::string> Split(const std::string& s, const std::string& delims, 
 std::string Join(const std::vector<std::string>& elements, const std::string& delim);
 
 /**
- * @brief Calculate area coordinates from first gridpoint. Works for stereographic projections only!
- * @param firstPoint First point specified in grib
- * @param orientation Orientation of grid
- * @param ni Grid size in X direction
- * @param nj Grid size in Y direction
- * @param xSizeInMeters Distance between two points in meters in X direction
- * @param ySizeInMeters Distance between two points in meters in Y direction
- * @return
- */
-
-std::pair<point, point> CoordinatesFromFirstGridPoint(const point& firstPoint, double orientation, size_t ni, size_t nj,
-                                                      double xSizeInMeters, double ySizeInMeters);
-
-/**
  * @brief Calculate coefficients for transforming U and V from grid relative to earth relative.
  *
  * Algorithm by J.E. HAUGEN (HIRLAM JUNE -92), modified by K. EEROLA

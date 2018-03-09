@@ -241,21 +241,6 @@ string util::Join(const vector<string>& elements, const string& delim)
 	return s.str();
 }
 
-pair<point, point> util::CoordinatesFromFirstGridPoint(const point& firstPoint, double orientation, size_t ni,
-                                                       size_t nj, double xSizeInMeters, double ySizeInMeters)
-{
-	double xWidthInMeters = (static_cast<double>(ni)) * xSizeInMeters;
-	double yWidthInMeters = (static_cast<double>(nj)) * ySizeInMeters;
-
-	NFmiStereographicArea a(NFmiPoint(firstPoint.X(), firstPoint.Y()), xWidthInMeters, yWidthInMeters, orientation,
-	                        NFmiPoint(0, 0), NFmiPoint(1, 1), 90.);
-
-	point bottomLeft(a.BottomLeftLatLon().X(), a.BottomLeftLatLon().Y());
-	point topRight(a.TopRightLatLon().X(), a.TopRightLatLon().Y());
-
-	return pair<point, point>(bottomLeft, topRight);
-}
-
 tuple<double, double, double, double> util::EarthRelativeUVCoefficients(const himan::point& regPoint,
                                                                         const himan::point& rotPoint,
                                                                         const himan::point& southPole)
