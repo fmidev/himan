@@ -327,10 +327,10 @@ function WeatherNumber()
 
   for i=1,#N do
     local pot  = DiscretizePOT(POT[i])
-    local pref = PREF[i]
-    local pret = PRET[i]
+    local pref = math.floor(PREF[i])
+    local pret = math.floor(PRET[i])
     local rr   = DiscretizeRR(RR[i])
-    local fog  = FOG[i]
+    local fog  = math.floor(FOG[i])
     local n    = DiscretizeN(N[i])
     local cldt = 0 -- disabled for now
 
