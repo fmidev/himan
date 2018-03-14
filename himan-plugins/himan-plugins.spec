@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.3.7
+Version: 18.3.14
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -110,6 +110,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Mar 14 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.3.14-1.fmi
+- Remove vvms double data fetch
 * Wed Mar  7 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.3.7-1.fmi
 - Removing plugins weather_symbol, weather_code_1
 - vvms plugin to single precision
