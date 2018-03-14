@@ -8,7 +8,6 @@
 
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
-#include "relative_humidity.cuh"
 
 namespace himan
 {
@@ -48,21 +47,6 @@ class relative_humidity : public compiled_plugin, private compiled_plugin_base
    private:
 	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
 
-#ifdef HAVE_CUDA
-	std::unique_ptr<relative_humidity_cuda::options> CudaPrepareTTD(std::shared_ptr<info> myTargetInfo,
-	                                                                std::shared_ptr<info> TInfo,
-	                                                                std::shared_ptr<info> TDInfo, double TDBase,
-	                                                                double TBase);
-	std::unique_ptr<relative_humidity_cuda::options> CudaPrepareTQP(std::shared_ptr<info> myTargetInfo,
-	                                                                std::shared_ptr<info> TInfo,
-	                                                                std::shared_ptr<info> QInfo,
-	                                                                std::shared_ptr<info> PInfo, double PScale,
-	                                                                double TBase);
-	std::unique_ptr<relative_humidity_cuda::options> CudaPrepareTQ(std::shared_ptr<info> myTargetInfo,
-	                                                               std::shared_ptr<info> TInfo,
-	                                                               std::shared_ptr<info> QInfo, double P_level,
-	                                                               double TBase);
-#endif
 };
 
 // the class factory

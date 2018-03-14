@@ -1,206 +1,226 @@
 // System includes
-#include <iostream>
-#include <string>
 
 #include "cuda_plugin_helper.h"
 #include "moisture.h"
-#include "relative_humidity.cuh"
+
+using namespace himan;
 
 // CUDA-kernel that computes RH from T and TD
-__global__ void himan::plugin::relative_humidity_cuda::CalculateTTD(cdarr_t d_T, cdarr_t d_TD, darr_t d_RH,
-                                                                    options opts)
+template <typename Type>
+__global__ void CalculateTTD(const Type* __restrict__ d_T, const Type* __restrict__ d_TD, Type* __restrict__ d_RH,
+                             size_t N)
 {
-	const double b = 17.27;
-	const double c = 237.3;
-	const double d = 1.8;
+	const Type b = static_cast<Type>(17.27);
+	const Type c = static_cast<Type>(237.3);
+	const Type d = static_cast<Type>(1.8);
 
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	if (idx < opts.N)
+	if (idx < N)
 	{
-		d_RH[idx] = MissingDouble();
+		d_RH[idx] = MissingValue<Type>();
 
-		if (!IsMissingDouble(d_T[idx]) && !IsMissingDouble(d_TD[idx]))
+		const Type td = d_TD[idx] - static_cast<Type>(constants::kKelvin);
+		const Type t = d_T[idx] - static_cast<Type>(constants::kKelvin);
+		const Type nomin = exp(d + b * (td / (td + c)));
+		const Type denom = exp(d + b * (t / (t + c)));
+
+		const Type RH = nomin / denom;
+
+		if (!IsMissing(RH))
 		{
-			double td = d_TD[idx] + opts.TDBase - constants::kKelvin;
-			double t = d_T[idx] + opts.TBase - constants::kKelvin;
-
-			d_RH[idx] = exp(d + b * (td / (td + c))) / exp(d + b * (t / (t + c)));
-			d_RH[idx] = fmax(fmin(1.0, d_RH[idx]), 0.0) * 100.0;
+			d_RH[idx] = 100 * max(min(1.0, RH), 0.0);
 		}
 	}
 }
 
 // CUDA-kernel that computes RH from T, Q and P
-__global__ void himan::plugin::relative_humidity_cuda::CalculateTQP(cdarr_t d_T, cdarr_t d_Q, cdarr_t d_P, darr_t d_RH,
-                                                                    options opts)
+template <typename Type>
+__global__ void CalculateTQP(const Type* __restrict__ d_T, const Type* __restrict__ d_Q, const Type* __restrict__ d_P,
+                             Type* __restrict__ d_RH, Type PScale, size_t N)
 {
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	if (idx < opts.N)
+	if (idx < N)
 	{
-		d_RH[idx] = MissingDouble();
+		d_RH[idx] = MissingValue<Type>();
 
-		if (!IsMissingDouble(d_T[idx]) && !IsMissingDouble(d_Q[idx]) && !IsMissingDouble(d_P[idx]))
+		const Type p = d_P[idx] * PScale;
+		const Type ES = himan::metutil::Es_<Type>(d_T[idx]) * 0.01;
+		const Type RH = (p * d_Q[idx] / constants::kEp / ES) * (p - ES) / (p - d_Q[idx] * p / constants::kEp);
+
+		if (!IsMissing(RH))
 		{
-			double p = d_P[idx] * opts.PScale;
-			double ES = himan::metutil::Es_<double>(d_T[idx]) * 0.01;
-
-			d_RH[idx] = (p * d_Q[idx] / constants::kEp / ES) * (p - ES) / (p - d_Q[idx] * p / constants::kEp);
-			d_RH[idx] = fmax(fmin(1.0, d_RH[idx]), 0.0) * 100.0;
+			d_RH[idx] = 100.0 * max(min(1.0, RH), 0.0);
 		}
 	}
 }
 
 // CUDA-kernel that computes RH on pressure-level from T and Q
-__global__ void himan::plugin::relative_humidity_cuda::CalculateTQ(cdarr_t d_T, cdarr_t d_Q, darr_t d_RH, options opts)
+template <typename Type>
+__global__ void CalculateTQ(const Type* __restrict__ d_T, const Type* __restrict__ d_Q, Type* __restrict__ d_RH, Type P,
+                            size_t N)
 {
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	if (idx < opts.N)
+	if (idx < N)
 	{
-		d_RH[idx] = MissingDouble();
+		d_RH[idx] = MissingValue<Type>();
+		const Type ES = himan::metutil::Es_<Type>(d_T[idx]) * 0.01;
+		const Type RH = (P * d_Q[idx] / constants::kEp / ES) * (P - ES) / (P - d_Q[idx] * P / constants::kEp);
 
-		if (!IsMissingDouble(d_T[idx]) && !IsMissingDouble(d_Q[idx]))
+		if (!IsMissing(RH))
 		{
-			double ES = himan::metutil::Es_<double>(d_T[idx]) * 0.01;
-
-			d_RH[idx] = (opts.P_level * d_Q[idx] / constants::kEp / ES) * (opts.P_level - ES) /
-			            (opts.P_level - d_Q[idx] * opts.P_level / constants::kEp);
-			d_RH[idx] = fmax(fmin(1.0, d_RH[idx]), 0.0) * 100.0;
+			d_RH[idx] = 100.0 * max(min(1.0, RH), 0.0);
 		}
 	}
 }
 
-void himan::plugin::relative_humidity_cuda::Process(options& opts)
+void ProcessGPU(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo)
 {
 	cudaStream_t stream;
 
 	CUDA_CHECK(cudaStreamCreate(&stream));
 
-	size_t memsize = opts.N * sizeof(double);
+	const size_t N = myTargetInfo->SizeLocations();
+
+	size_t memsize = N * sizeof(float);
 
 	// Define device arrays
 
-	double* d_RH = 0;
-	double* d_T = 0;
+	float* d_RH = 0;
+	float* d_T = 0;
 
 	// Allocate memory on device
+
+	info_t TInfo =
+	    cuda::Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("T-K"), myTargetInfo->ForecastType());
+
+	if (!TInfo)
+	{
+		return;
+	}
 
 	CUDA_CHECK(cudaMalloc((void**)&d_RH, memsize));
 	CUDA_CHECK(cudaMalloc((void**)&d_T, memsize));
 
-	// Copy data to device
+	cuda::PrepareInfo(TInfo, d_T, stream);
 
-	PrepareInfo(opts.T, d_T, stream);
-	PrepareInfo(opts.RH);
-
-	// dims
-
-	const int blockSize = 512;
-	const int gridSize = opts.N / blockSize + (opts.N % blockSize == 0 ? 0 : 1);
-
-	// Select mode in which RH is calculated (with T-TD, T-Q-P or T-Q)
-	switch (opts.select_case)
+	if (myTargetInfo->Level().Type() == kHybrid)
 	{
-		// Case where RH is calculated from T and TD
-		case 0:
+		const size_t paramIndex = myTargetInfo->ParamIndex();
+
+		for (myTargetInfo->ResetParam(); myTargetInfo->NextParam();)
 		{
-			// Define device arrays
-			double* d_TD = 0;
-
-			// Allocate memory on device
-
-			CUDA_CHECK(cudaMalloc((void**)&d_TD, memsize));
-
-			// Copy data to device
-
-			PrepareInfo(opts.TD, d_TD, stream);
-
-			CalculateTTD<<<gridSize, blockSize, 0, stream>>>(d_T, d_TD, d_RH, opts);
-
-			// block until the stream has completed
-			CUDA_CHECK(cudaStreamSynchronize(stream));
-
-			// check if kernel execution generated an error
-			CUDA_CHECK_ERROR_MSG("Kernel invocation");
-
-			ReleaseInfo(opts.TD);
-
-			// Free device memory
-
-			CUDA_CHECK(cudaFree(d_TD));
-
-			break;
+			myTargetInfo->Grid()->AB(TInfo->Grid()->AB());
 		}
-		// Case where RH is calculated from T, Q and P
-		case 1:
-		{
-			// Define device arrays
 
-			double* d_Q = 0;
-			double* d_P = 0;
-
-			// Allocate memory on device
-			CUDA_CHECK(cudaMalloc((void**)&d_Q, memsize));
-			CUDA_CHECK(cudaMalloc((void**)&d_P, memsize));
-
-			// Copy data to device
-			PrepareInfo(opts.Q, d_Q, stream);
-			PrepareInfo(opts.P, d_P, stream);
-
-			CalculateTQP<<<gridSize, blockSize, 0, stream>>>(d_T, d_Q, d_P, d_RH, opts);
-
-			// block until the stream has completed
-			CUDA_CHECK(cudaStreamSynchronize(stream));
-
-			// check if kernel execution generated an error
-			CUDA_CHECK_ERROR_MSG("Kernel invocation");
-
-			// Retrieve result from device
-			ReleaseInfo(opts.Q);
-			ReleaseInfo(opts.P);
-
-			// Free device memory
-
-			CUDA_CHECK(cudaFree(d_Q));
-			CUDA_CHECK(cudaFree(d_P));
-
-			break;
-		}
-		// Case where RH is calculated for pressure levels from T and Q
-		case 2:
-		{
-			// Define device arrays
-			double* d_Q = 0;
-
-			// Allocate memory on device
-			CUDA_CHECK(cudaMalloc((void**)&d_Q, memsize));
-
-			// Copy data to device
-			PrepareInfo(opts.Q, d_Q, stream);
-
-			CalculateTQ<<<gridSize, blockSize, 0, stream>>>(d_T, d_Q, d_RH, opts);
-
-			// block until the stream has completed
-			CUDA_CHECK(cudaStreamSynchronize(stream));
-
-			// check if kernel execution generated an error
-			CUDA_CHECK_ERROR_MSG("Kernel invocation");
-
-			// Retrieve result from device
-			ReleaseInfo(opts.Q);
-
-			// Free device memory
-
-			CUDA_CHECK(cudaFree(d_Q));
-
-			break;
-		}
+		myTargetInfo->ParamIndex(paramIndex);
 	}
 
-	ReleaseInfo(opts.T);
-	ReleaseInfo(opts.RH, d_RH, stream);
+	// First try to calculate using Q and P
+
+	info_t QInfo =
+	    cuda::Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("Q-KGKG"), myTargetInfo->ForecastType());
+
+	const int blockSize = 512;
+	const int gridSize = N / blockSize + (N % blockSize == 0 ? 0 : 1);
+
+	// Select mode in which RH is calculated (with T-TD, T-Q-P or T-Q)
+	if (!QInfo)
+	{
+		// Case where RH is calculated from T and TD
+		float* d_TD = 0;
+
+		// Allocate memory on device
+
+		CUDA_CHECK(cudaMalloc((void**)&d_TD, memsize));
+
+		info_t TDInfo =
+		    cuda::Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("TD-K"), myTargetInfo->ForecastType());
+
+		// Copy data to device
+
+		cuda::PrepareInfo(TDInfo, d_TD, stream);
+
+		CalculateTTD<float><<<gridSize, blockSize, 0, stream>>>(d_T, d_TD, d_RH, N);
+
+		// block until the stream has completed
+		CUDA_CHECK(cudaStreamSynchronize(stream));
+
+		// check if kernel execution generated an error
+		CUDA_CHECK_ERROR_MSG("Kernel invocation");
+
+		CUDA_CHECK(cudaFree(d_TD));
+	}
+	else if (myTargetInfo->Level().Type() != kPressure)
+	{
+		info_t PInfo = cuda::Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level(),
+		                           params({param("P-HPA"), param("P-PA")}), myTargetInfo->ForecastType());
+
+		if (!PInfo)
+		{
+			CUDA_CHECK(cudaFree(d_T));
+			CUDA_CHECK(cudaFree(d_RH));
+			return;
+		}
+
+		// Case where RH is calculated from T, Q and P
+		float* d_Q = 0;
+		float* d_P = 0;
+
+		// Allocate memory on device
+		CUDA_CHECK(cudaMalloc((void**)&d_Q, memsize));
+		CUDA_CHECK(cudaMalloc((void**)&d_P, memsize));
+
+		cuda::PrepareInfo<float>(QInfo, d_Q, stream);
+		cuda::PrepareInfo<float>(PInfo, d_P, stream);
+
+		float PScale = 1;
+
+		if (PInfo->Param().Name() == "P-PA")
+		{
+			PScale = 0.01;
+		}
+
+		CalculateTQP<float><<<gridSize, blockSize, 0, stream>>>(d_T, d_Q, d_P, d_RH, PScale, N);
+
+		// block until the stream has completed
+		CUDA_CHECK(cudaStreamSynchronize(stream));
+
+		// check if kernel execution generated an error
+		CUDA_CHECK_ERROR_MSG("Kernel invocation");
+
+		// Free device memory
+		CUDA_CHECK(cudaFree(d_Q));
+		CUDA_CHECK(cudaFree(d_P));
+	}
+	else
+	{
+		// Case where RH is calculated for pressure levels from T and Q
+		float* d_Q = 0;
+
+		// Allocate memory on device
+		CUDA_CHECK(cudaMalloc((void**)&d_Q, memsize));
+
+		// Copy data to device
+		cuda::PrepareInfo(QInfo, d_Q, stream);
+
+		CalculateTQ<float><<<gridSize, blockSize, 0, stream>>>(d_T, d_Q, d_RH, myTargetInfo->Level().Value(), N);
+
+		// block until the stream has completed
+		CUDA_CHECK(cudaStreamSynchronize(stream));
+
+		// check if kernel execution generated an error
+		CUDA_CHECK_ERROR_MSG("Kernel invocation");
+
+		// Free device memory
+
+		CUDA_CHECK(cudaFree(d_Q));
+	}
+
+	cuda::ReleaseInfo<float>(myTargetInfo, d_RH, stream);
+	CUDA_CHECK(cudaStreamSynchronize(stream));
 
 	CUDA_CHECK(cudaFree(d_T));
 	CUDA_CHECK(cudaFree(d_RH));
