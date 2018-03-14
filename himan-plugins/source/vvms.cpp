@@ -11,7 +11,8 @@ using namespace std;
 using namespace himan::plugin;
 
 #ifdef HAVE_CUDA
-extern void ProcessGPU(std::shared_ptr<const himan::plugin_configuration> conf, std::shared_ptr<himan::info> myTargetInfo);
+extern void ProcessGPU(std::shared_ptr<const himan::plugin_configuration> conf,
+                       std::shared_ptr<himan::info> myTargetInfo);
 #endif
 // Required source parameters
 
@@ -64,50 +65,6 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 	                      static_cast<string>(forecastLevel));
 
-	double PScale = 1;
-	double TBase = 0;
-
-	/*
-	 * If vvms is calculated for pressure levels, the P value
-	 * equals to level value. Otherwise we have to fetch P
-	 * separately.
-	 */
-
-	info_t PInfo;
-
-	bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
-
-	info_t VVInfo = Fetch(forecastTime, forecastLevel, VVParam, forecastType, itsConfiguration->UseCudaForPacking());
-	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, itsConfiguration->UseCudaForPacking());
-
-	if (!isPressureLevel)
-	{
-		// Source info for P
-		PInfo = Fetch(forecastTime, forecastLevel, PParam, forecastType, itsConfiguration->UseCudaForPacking());
-	}
-
-	if (!VVInfo || !TInfo || (!isPressureLevel && !PInfo))
-	{
-		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
-		                         static_cast<string>(forecastLevel));
-		return;
-	}
-
-	if (PInfo && (PInfo->Param().Unit() == kHPa || PInfo->Param().Name() == "P-HPA"))
-	{
-		PScale = 100;
-	}
-
-	ASSERT(TInfo->Grid()->AB() == VVInfo->Grid()->AB() &&
-	       (isPressureLevel || PInfo->Grid()->AB() == TInfo->Grid()->AB()));
-
-	SetAB(myTargetInfo, TInfo);
-
-	if (TInfo->Param().Unit() == kC)
-	{
-		TBase = himan::constants::kKelvin;
-	}
-
 	string deviceType;
 
 #ifdef HAVE_CUDA
@@ -122,6 +79,44 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 #endif
 	{
 		deviceType = "CPU";
+
+		double PScale = 1;
+
+		/*
+		 * If vvms is calculated for pressure levels, the P value
+		 * equals to level value. Otherwise we have to fetch P
+		 * separately.
+		 */
+
+		info_t PInfo;
+
+		bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
+
+		info_t VVInfo = Fetch(forecastTime, forecastLevel, VVParam, forecastType, false);
+		info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, false);
+
+		if (!isPressureLevel)
+		{
+			// Source info for P
+			PInfo = Fetch(forecastTime, forecastLevel, PParam, forecastType, false);
+		}
+
+		if (!VVInfo || !TInfo || (!isPressureLevel && !PInfo))
+		{
+			myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+			                         static_cast<string>(forecastLevel));
+			return;
+		}
+
+		if (PInfo && (PInfo->Param().Unit() == kHPa || PInfo->Param().Name() == "P-HPA"))
+		{
+			PScale = 100;
+		}
+
+		ASSERT(TInfo->Grid()->AB() == VVInfo->Grid()->AB() &&
+		       (isPressureLevel || PInfo->Grid()->AB() == TInfo->Grid()->AB()));
+
+		SetAB(myTargetInfo, TInfo);
 
 		if (PInfo)
 		{
@@ -143,7 +138,7 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				P = PInfo->Value();
 			}
 
-			double w = itsScale * (287 * -VV * (T + TBase) / (himan::constants::kG * P * PScale));
+			double w = itsScale * (287 * -VV * T / (himan::constants::kG * P * PScale));
 
 			myTargetInfo->Value(w);
 		}
