@@ -7,26 +7,17 @@ earth_shape::earth_shape() : itsA(MissingDouble()), itsB(MissingDouble())
 {
 }
 
+earth_shape::earth_shape(double r) : itsA(r), itsB(r)
+{
+}
+
 earth_shape::earth_shape(double theA, double theB) : itsA(theA), itsB(theB)
 {
 }
 
 bool earth_shape::operator==(const earth_shape& other) const
 {
-        if (this == &other)
-        {
-                return true;
-        }
-        else if (itsA != other.itsA)
-        {
-                return false;
-        }
-	else if (itsB != other.itsB)
-        {
-                return false;
-        }
-
-        return true;
+	return (itsA == other.itsA && itsB == other.itsB);
 }
 
 bool earth_shape::operator!=(const earth_shape& other) const
@@ -46,12 +37,12 @@ void earth_shape::A(double theA)
 
 double earth_shape::B() const
 {
-	return itsA;
+	return itsB;
 }
 
 void earth_shape::B(double theB)
 {
-	itsA = theB;
+	itsB = theB;
 }
 
 double earth_shape::F() const

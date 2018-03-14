@@ -8,6 +8,7 @@ class earth_shape
 {
    public:
 	earth_shape();
+	earth_shape(double r); // sphere
 	earth_shape(double theA, double theB);
 	~earth_shape() = default;
 	earth_shape(const earth_shape& other) = default;
