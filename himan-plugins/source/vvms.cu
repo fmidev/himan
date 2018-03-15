@@ -48,10 +48,6 @@ void ProcessGPU(std::shared_ptr<const plugin_configuration> conf, std::shared_pt
 	const size_t N = myTargetInfo->SizeLocations();
 	const size_t memsize = N * sizeof(float);
 
-	CUDA_CHECK(cudaMalloc((void**)&d_vv_ms, memsize));
-	CUDA_CHECK(cudaMalloc((void**)&d_t, memsize));
-	CUDA_CHECK(cudaMalloc((void**)&d_vv, memsize));
-
 	auto TInfo =
 	    cuda::Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("T-K"), myTargetInfo->ForecastType());
 	auto VVInfo =
@@ -61,6 +57,10 @@ void ProcessGPU(std::shared_ptr<const plugin_configuration> conf, std::shared_pt
 	{
 		return;
 	}
+
+	CUDA_CHECK(cudaMalloc((void**)&d_vv_ms, memsize));
+	CUDA_CHECK(cudaMalloc((void**)&d_t, memsize));
+	CUDA_CHECK(cudaMalloc((void**)&d_vv, memsize));
 
 	cuda::PrepareInfo(TInfo, d_t, stream);
 	cuda::PrepareInfo(VVInfo, d_vv, stream);
