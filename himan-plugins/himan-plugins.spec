@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.3.14
+Version: 18.3.15
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -110,6 +110,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Mar 15 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.3.15-1.fmi
+- Fix for transformer
 * Wed Mar 14 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.3.14-1.fmi
 - Remove vvms double data fetch
 * Wed Mar  7 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.3.7-1.fmi
