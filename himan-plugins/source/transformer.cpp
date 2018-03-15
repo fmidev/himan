@@ -26,7 +26,8 @@ transformer::transformer()
       itsApplyLandSeaMask(false),
       itsLandSeaMaskThreshold(0.5),
       itsInterpolationMethod(kUnknownInterpolationMethod),
-      itsTargetForecastType(kUnknownType)
+      itsTargetForecastType(kUnknownType),
+      itsSourceForecastType(kUnknownType)
 {
 	itsCudaEnabledCalculation = true;
 
@@ -207,11 +208,20 @@ void transformer::Process(std::shared_ptr<const plugin_configuration> conf)
 	Init(conf);
 	SetAdditionalParameters();
 
+	// Need to set this before starting Calculate, since we don't want to fetch with 'targetForecastType'.
 	if (itsTargetForecastType.Type() != kUnknownType)
 	{
-		ASSERT(itsInfo->ForecastTypeIterator().Size() == 1);
-		itsInfo->ForecastTypeIterator().First();
-		itsInfo->ForecastTypeIterator().Replace(itsTargetForecastType);
+		if (itsInfo->ForecastTypeIterator().Size() > 1)
+		{
+			throw std::runtime_error("Forecast type iterator can only be set when there's only 1 source forecast type");
+		}
+		else
+		{
+			itsInfo->ForecastTypeIterator().First();
+			// Copy the original so that we can fetch the right data.
+			itsSourceForecastType = itsInfo->ForecastType();
+			itsInfo->ForecastTypeIterator().Replace(itsTargetForecastType);
+		}
 	}
 
 	/*
@@ -270,7 +280,16 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
-	forecast_type forecastType = myTargetInfo->ForecastType();
+
+	forecast_type forecastType;
+	if (itsSourceForecastType.Type() != kUnknownType)
+	{
+		forecastType = itsSourceForecastType;
+	}
+	else
+	{
+		forecastType = myTargetInfo->ForecastType();
+	}
 
 	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 	                      static_cast<string>(forecastLevel));
