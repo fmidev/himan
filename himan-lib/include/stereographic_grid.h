@@ -67,7 +67,7 @@ class stereographic_grid : public grid
 	point BottomRight() const;
 
 	void BottomLeft(const point& theBottomLeft);
-	void TopRight(const point& theTopRight);
+	void TopLeft(const point& theTopLeft);
 
 	void Orientation(double theOrientation);
 	double Orientation() const;
@@ -99,9 +99,7 @@ class stereographic_grid : public grid
 	mutable std::unique_ptr<OGRSpatialReference> itsSpatialReference;
 
 	point itsBottomLeft;
-	point itsTopRight;
-	//	point itsBottomRight;
-	//	point itsTopLeft;
+	point itsTopLeft;
 
 	double itsOrientation;
 

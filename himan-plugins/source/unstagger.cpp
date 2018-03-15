@@ -205,9 +205,7 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 			break;
 		case kStereographic:
 			dynamic_cast<stereographic_grid*>(UInfo->Grid())->BottomLeft(point(u_bl.X() - (u_di * 0.5), u_bl.Y()));
-			dynamic_cast<stereographic_grid*>(UInfo->Grid())->TopRight(point(u_tr.X() - (u_di * 0.5), u_tr.Y()));
 			dynamic_cast<stereographic_grid*>(VInfo->Grid())->BottomLeft(point(v_bl.X(), v_bl.Y() - (v_dj * 0.5)));
-			dynamic_cast<stereographic_grid*>(VInfo->Grid())->TopRight(point(v_tr.X(), v_tr.Y() - (v_dj * 0.5)));
 			break;
 		default:
 			throw runtime_error("Unsupported grid type: " + HPGridTypeToString.at(UInfo->Grid()->Type()));

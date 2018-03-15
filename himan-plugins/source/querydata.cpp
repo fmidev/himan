@@ -646,7 +646,6 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 			stereographic_grid* const s = dynamic_cast<stereographic_grid*>(newGrid);
 			s->Orientation(reinterpret_cast<const NFmiStereographicArea*>(qinfo.Area())->Orientation());
 			s->BottomLeft(point(qinfo.Area()->BottomLeftLatLon().X(), qinfo.Area()->BottomLeftLatLon().Y()));
-			s->TopRight(point(qinfo.Area()->TopRightLatLon().X(), qinfo.Area()->TopRightLatLon().Y()));
 			s->Ni(ni);
 			s->Nj(nj);
 		}
@@ -658,6 +657,7 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 	}
 
 	newGrid->ScanningMode(kBottomLeft);
+	newGrid->EarthShape(earth_shape(6371220));
 
 	newInfo->Create(newGrid);
 

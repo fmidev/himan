@@ -1092,14 +1092,14 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 
 	if (g)
 	{
-		double a = 6367470., b = a;
+		double r = 6367470.;
 
 		if (conf.TargetGeomName() == "SMARTMET7500")
 		{
-			a = b = 6371220;
+			r = 6371220.;
 		}
 
-		g->EarthShape(earth_shape(a, b));
+		g->EarthShape(earth_shape(r));
 	}
 
 	return g;
@@ -1344,8 +1344,6 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 			rg = unique_ptr<stereographic_grid>(new stereographic_grid);
 			dynamic_cast<stereographic_grid*>(rg.get())->BottomLeft(
 			    point(pt.get<double>("bottom_left_longitude"), pt.get<double>("bottom_left_latitude")));
-			dynamic_cast<stereographic_grid*>(rg.get())->TopRight(
-			    point(pt.get<double>("top_right_longitude"), pt.get<double>("top_right_latitude")));
 			dynamic_cast<stereographic_grid*>(rg.get())->Orientation(pt.get<double>("orientation"));
 			dynamic_cast<stereographic_grid*>(rg.get())->Ni(pt.get<size_t>("ni"));
 			dynamic_cast<stereographic_grid*>(rg.get())->Nj(pt.get<size_t>("nj"));

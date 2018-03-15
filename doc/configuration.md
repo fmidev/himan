@@ -101,8 +101,6 @@ Example:
     "projection" : "stereographic",
     "bottom_left_latitude" : "51.3",
     "bottom_left_longitude" : "6.0",
-    "top_right_latitude" : "70.2",
-    "top_right_longitude" : "49",
     "orientation" : "20"
 
     "projection" : "rotated_latlon",

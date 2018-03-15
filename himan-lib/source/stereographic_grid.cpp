@@ -7,7 +7,7 @@ using namespace std;
 stereographic_grid::stereographic_grid()
     : grid(kRegularGrid, kStereographic),
       itsBottomLeft(),
-      itsTopRight(),
+      itsTopLeft(),
       itsOrientation(kHPMissingInt),
       itsDi(kHPMissingValue),
       itsDj(kHPMissingValue),
@@ -17,11 +17,11 @@ stereographic_grid::stereographic_grid()
 	itsLogger = logger("stereographic_grid");
 }
 
-stereographic_grid::stereographic_grid(HPScanningMode theScanningMode, point theBottomLeft, point theTopRight,
+stereographic_grid::stereographic_grid(HPScanningMode theScanningMode, point theBottomLeft, point theTopLeft,
                                        double theOrientation)
     : grid(kRegularGrid, kStereographic, theScanningMode),
       itsBottomLeft(theBottomLeft),
-      itsTopRight(theTopRight),
+      itsTopLeft(theTopLeft),
       itsOrientation(theOrientation)
 {
 	itsLogger = logger("stereographic_grid");
@@ -30,7 +30,7 @@ stereographic_grid::stereographic_grid(HPScanningMode theScanningMode, point the
 stereographic_grid::stereographic_grid(const stereographic_grid& other)
     : grid(other),
       itsBottomLeft(other.itsBottomLeft),
-      itsTopRight(other.itsTopRight),
+      itsTopLeft(other.itsTopLeft),
       itsOrientation(other.itsOrientation),
       itsDi(other.itsDi),
       itsDj(other.itsDj),
@@ -232,13 +232,29 @@ void stereographic_grid::BottomLeft(const point& theBottomLeft)
 {
 	itsBottomLeft = theBottomLeft;
 }
-void stereographic_grid::TopRight(const point& theTopRight)
+void stereographic_grid::TopLeft(const point& theTopLeft)
 {
-	itsTopRight = theTopRight;
+	itsTopLeft = theTopLeft;
 }
 point stereographic_grid::BottomLeft() const
 {
-	return itsBottomLeft;
+	switch (itsScanningMode)
+	{
+		case kBottomLeft:
+			return itsBottomLeft;
+			break;
+		case kTopLeft:
+			if (itsNi == static_cast<size_t>(kHPMissingInt) || itsNj == static_cast<size_t>(kHPMissingInt))
+			{
+				return point();
+			}
+
+			return LatLon(itsNj * itsNi - itsNi);
+		case kUnknownScanningMode:
+			return point();
+		default:
+			throw runtime_error("Unhandled scanning mode: " + HPScanningModeToString.at(itsScanningMode));
+	}
 }
 point stereographic_grid::TopRight() const
 {
@@ -271,7 +287,7 @@ point stereographic_grid::TopLeft() const
 
 			return LatLon(itsNj * itsNi - itsNi);
 		case kTopLeft:
-			return FirstPoint();
+			return itsTopLeft;
 		case kUnknownScanningMode:
 			return point();
 		default:
@@ -318,7 +334,7 @@ point stereographic_grid::LastPoint() const
 	switch (itsScanningMode)
 	{
 		case kBottomLeft:
-			return itsTopRight;
+			return TopRight();
 		case kTopLeft:
 			return BottomRight();
 		case kUnknownScanningMode:
@@ -375,7 +391,7 @@ ostream& stereographic_grid::Write(std::ostream& file) const
 	grid::Write(file);
 
 	file << itsBottomLeft;
-	file << itsTopRight;
+	file << itsTopLeft;
 	file << "__itsNi__ " << itsNi << endl;
 	file << "__itsNj__ " << itsNj << endl;
 	file << "__itsDi__ " << itsDi << endl;
@@ -409,20 +425,20 @@ bool stereographic_grid::EqualsTo(const stereographic_grid& other) const
 		return false;
 	}
 
-	if (itsBottomLeft != other.BottomLeft())
+	if (BottomLeft() != other.BottomLeft())
 	{
-		itsLogger.Trace("BottomLeft does not match: X " + to_string(itsBottomLeft.X()) + " vs " +
+		itsLogger.Trace("BottomLeft does not match: X " + to_string(BottomLeft().X()) + " vs " +
 		                to_string(other.BottomLeft().X()));
-		itsLogger.Trace("BottomLeft does not match: Y " + to_string(itsBottomLeft.Y()) + " vs " +
+		itsLogger.Trace("BottomLeft does not match: Y " + to_string(BottomLeft().Y()) + " vs " +
 		                to_string(other.BottomLeft().Y()));
 		return false;
 	}
 
-	if (itsTopRight != other.TopRight())
+	if (TopRight() != other.TopRight())
 	{
-		itsLogger.Trace("TopRight does not match: X " + to_string(itsTopRight.X()) + " vs " +
+		itsLogger.Trace("TopRight does not match: X " + to_string(TopRight().X()) + " vs " +
 		                to_string(other.TopRight().X()));
-		itsLogger.Trace("TopRight does not match: Y " + to_string(itsTopRight.Y()) + " vs " +
+		itsLogger.Trace("TopRight does not match: Y " + to_string(TopRight().Y()) + " vs " +
 		                to_string(other.TopRight().Y()));
 		return false;
 	}
