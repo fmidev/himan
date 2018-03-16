@@ -8,7 +8,7 @@ local lvl = level(HPLevelType.kHeight, 0)
 
 function Product1()
 
-  local vis = param("VV-M")
+  local vis = param("VV2-M")
   local rr = param("RRR-KGM2")
   local ptype = param("PRECFORM-N")
   local wiparam = param("TOPL2-N")
@@ -98,10 +98,10 @@ end
 
 function Product2()
 
-  local vis = param("VV-M")
+  local vis = param("VV2-M")
   local rr = param("RRR-KGM2")
   local ptype = param("PRECFORM-N")
-  local ceil = param("CL-FT")
+  local ceil = param("CL-2-FT")
   local wiparam = param("TOPL3-N")
 
   local visdata = luatool:Fetch(current_time, lvl, vis)
