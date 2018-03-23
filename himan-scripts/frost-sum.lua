@@ -5,102 +5,6 @@
 -- Daily (24h) mean t2m are: -4, -6, -1, +2, -5
 -- Frost sum is: -16 (sic)
 --
--- Script should only be used with ECMWF data
-
--- Calculate daily (24h) mean temperature by reading all t2m values
--- found and doing simple arithmetic mean.
--- Function reads past 24h from given time.
-
-function WriteMeanToFile(mean, ftime)
-  local start = ftime:GetStep() - 24
-  local agg = aggregation(HPAggregationType.kAverage, HPTimeResolution.kHourResolution, 24, 999999)
-  local par = param("T-MEAN-K")
-  par:SetAggregation(agg)
-
-  result:SetParam(par)
-  result:SetValues(mean)
-  luatool:WriteToFile(result)
-end
-
-function DailyMeanTemperature(atime, lastTime)
-
-  local curTime = forecast_time(atime, lastTime)
-
-  if curTime:GetStep() == 0 then
-    return
-  end
-
-  local mean = luatool:FetchWithType(curTime, current_level, param("T-MEAN-K"), current_forecast_type)
-
-  if mean then
-    -- got lucky
-    return mean
-  end
-
-  -- calculate 24h mean temperature
-
-  local tsum = {}
-
-  local stopStep = math.max(curTime:GetStep() - 24, 0)
-
-  local count = 0
-
-
-  local step = curTime:GetStep()
-
-  while true do
-    local stepAdjustment = -1
-
-    if step >= 150 then
-      stepAdjustment = -6
-    elseif step >= 93 then
-      stepAdjustment = -3
-    end
-
---    lastTime:Adjust(HPTimeResolution.kHourResolution, -configuration:GetForecastStep())
-    lastTime:Adjust(HPTimeResolution.kHourResolution, stepAdjustment)
-    local time = forecast_time(atime, lastTime)
-
-    if time:GetStep() < stopStep or time:GetStep() < 0 then
-      break
-    end
-
-    local t2m = luatool:FetchWithType(time, current_level, param("T-K"), current_forecast_type)
-
-    if t2m then
-      if #tsum == 0 then
-        for i=1, #t2m do
-         tsum[i] = 0
-        end
-      end
-
-      for i=1, #t2m do
-        tsum[i] = tsum[i] + t2m[i] 
-      end
-      count = count + 1
-    end
-
-    step = time:GetStep()
-  end
-
-  if #tsum == 0 then  
-    return
-  end
-
-  mean = {}
-
-  for i=1,#tsum do
-    mean[i] = tsum[i] / count
-  end
-
-  WriteMeanToFile(mean, curTime)
-
-  return mean
-
-end
-
-local atime = current_time:GetOriginDateTime()
-local vtime = raw_time(current_time:GetValidDateTime():String("%Y-%m-%d %H:%M:%S"))
 
 local step = current_time:GetStep()
 
@@ -111,13 +15,13 @@ end
 
 local frostSum = {}
 
+local curtime = forecast_time(current_time:GetOriginDateTime(), current_time:GetValidDateTime())
+
 while true do
 
-  local curtime = raw_time(vtime:String("%Y-%m-%d %H:%M:%S"))
- 
-  logger:Info(string.format("Fetching mean temperature for a 24h period ending at %s", curtime:String("%Y%m%d%H")))
+  logger:Info(string.format("Fetching mean temperature for a 24h period ending at %s", curtime:GetValidDateTime():String("%Y%m%d%H")))
 
-  local mean = DailyMeanTemperature(atime, curtime)
+  local mean = luatool:FetchWithType(curtime, current_level, param("T-MEAN-K"), current_forecast_type)
 
   if mean then
     -- initialize frost sum array to zero
@@ -135,11 +39,11 @@ while true do
     end
   end
 
-  if tonumber(curtime:String("%Y%m%d%H")) <= tonumber(atime:String("%Y%m%d%H")) then
+  curtime:GetValidDateTime():Adjust(HPTimeResolution.kHourResolution, -24)
+
+  if curtime:GetStep() <= 0 then
     break
   end
-
-  vtime:Adjust(HPTimeResolution.kHourResolution, -24)
 end
 
 local agg = aggregation(HPAggregationType.kAccumulation, HPTimeResolution.kHourResolution, current_time:GetStep(), 0)
