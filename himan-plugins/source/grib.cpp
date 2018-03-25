@@ -1022,6 +1022,20 @@ himan::earth_shape ReadEarthShape(const NFmiGribMessage& msg)
 		}
 	}
 
+	// Same hard coding here as in json_parser: first replace newbase area classes with gdal *and*
+	// maintaing backwards compatibility, ie use the same values for earth radius as before.
+	// The next phase is then to use the correct values and decide what to do with differing interpolation
+	// results (newbase vs himan native).
+
+	if (msg.NormalizedGridType() == 3)
+	{
+		a = b = 6367470.;
+	}
+	else
+	{
+		a = b = 6371220.;
+	}
+
 	return himan::earth_shape(a, b);
 }
 

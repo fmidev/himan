@@ -1087,19 +1087,20 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 	}
 
 	// Until shape of earth is added to radon, hard code default value for all geoms
-	// in radon to sphere with radius 6367470 meters, except SMARTMET7500 where we know
-	// it's 6371220 meters
+	// in radon to sphere with radius 6371220, which is the one used in newbase
+	// (in most cases that's not *not* the one used by the weather model).
+	// Exception to this lambert conformal conic where we use radius 6367470.
 
 	if (g)
 	{
-		double r = 6367470.;
-
-		if (conf.TargetGeomName() == "SMARTMET7500")
+		if (g->Type() == kLambertConformalConic)
 		{
-			r = 6371220.;
+			g->EarthShape(earth_shape(6367470.));
 		}
-
-		g->EarthShape(earth_shape(r));
+		else
+		{
+			g->EarthShape(earth_shape(6371220.));
+		}
 	}
 
 	return g;
