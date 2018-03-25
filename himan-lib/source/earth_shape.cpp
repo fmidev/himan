@@ -17,12 +17,18 @@ earth_shape::earth_shape(double theA, double theB) : itsA(theA), itsB(theB)
 
 bool earth_shape::operator==(const earth_shape& other) const
 {
-	return (itsA == other.itsA && itsB == other.itsB);
+	if (itsA == other.itsA && itsB == other.itsB)
+	{
+		return true;
+	}
+
+	// Check for missing values so that we can compare with default constructor
+	return ((IsMissing(itsA) && IsMissing(other.itsA)) && (IsMissing(itsB) && IsMissing(other.itsB)));
 }
 
 bool earth_shape::operator!=(const earth_shape& other) const
 {
-        return !(*this == other);
+	return !(*this == other);
 }
 
 double earth_shape::A() const
@@ -52,10 +58,9 @@ double earth_shape::F() const
 
 std::ostream& himan::earth_shape::Write(std::ostream& file) const
 {
-        file << "<" << ClassName() << ">" << std::endl;
-        file << "__itsA__ " << std::fixed << itsA << std::endl;
-        file << "__itsB__ " << std::fixed << itsB << std::endl;
+	file << "<" << ClassName() << ">" << std::endl;
+	file << "__itsA__ " << std::fixed << itsA << std::endl;
+	file << "__itsB__ " << std::fixed << itsB << std::endl;
 
-        return file;
+	return file;
 }
-
