@@ -26,6 +26,7 @@ class grid
 {
    public:
 	grid();
+	grid(const std::string& WKT);
 	grid(HPGridClass theGridClass, HPGridType theGridType);
 	grid(HPGridClass theGridClass, HPGridType theGridType, HPScanningMode theScanningMode);
 
@@ -116,6 +117,9 @@ class grid
 
 	earth_shape EarthShape() const;
 	void EarthShape(const earth_shape& theEarthShape);
+
+	std::string WKT() const;
+	std::string Proj4() const;
 
    protected:
 	bool EqualsTo(const grid& other) const;
