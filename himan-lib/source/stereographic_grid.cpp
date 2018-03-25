@@ -103,6 +103,12 @@ void stereographic_grid::ScanningMode(HPScanningMode theScanningMode)
 
 void stereographic_grid::CreateAreaAndGrid() const
 {
+	if (itsOrientation == kHPMissingInt || itsEarthShape == earth_shape() || FirstPoint() == point())
+	{
+		itsLogger.Fatal("Missing required area information");
+		himan::Abort();
+	}
+
 	// see lambert_conformal.cpp for explanation for this function
 	itsSpatialReference = unique_ptr<OGRSpatialReference>(new OGRSpatialReference);
 
