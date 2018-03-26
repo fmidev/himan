@@ -287,15 +287,6 @@ void grib::WriteAreaAndGrid(info& anInfo)
 				itsGrib->Message().SetLongKey("Latin2InDegrees", static_cast<long>(lccg->StandardParallel2()));
 			}
 
-			if (edition == 1)
-			{
-				itsGrib->Message().SetLongKey("earthIsOblate", 0);
-			}
-			else
-			{
-				itsGrib->Message().SetLongKey("shapeOfTheEarth", 0);
-			}
-
 			scmode = lccg->ScanningMode();
 
 			break;
@@ -306,12 +297,50 @@ void grib::WriteAreaAndGrid(info& anInfo)
 			                boost::lexical_cast<string>(anInfo.Grid()->Type()));
 			himan::Abort();
 	}
-	/*
-	    if (options.prod.Centre() == kHPMissingInt && options.configuration->DatabaseType() != kNoDatabase)
-	    {
 
-	    }
-	*/
+	// Earth shape is not set yet, as it will change many of the test results (metadata changes)
+	// and we don't want to do that until we have set the *correct* radius for those producers
+	// that we have it for. Remember that at this point we force all producers to use radius
+	// found from newbase.
+
+#if 0
+	// Set earth shape
+
+	const double a = anInfo.Grid()->EarthShape().A(), b = anInfo.Grid()->EarthShape().B();
+
+	if (a == b)
+	{
+		// sphere
+		if (edition == 1)
+		{
+			itsGrib->Message().SetLongKey("earthIsOblate", 0);
+
+			long flag = itsGrib->Message().ResolutionAndComponentFlags();
+
+			flag &= ~(1UL << 6);
+
+			itsGrib->Message().ResolutionAndComponentFlags(flag);
+		}
+		else
+		{
+			if (a == 6367470)
+			{
+				itsGrib->Message().SetLongKey("shapeOfTheEarth", 0);
+			}
+			else
+			{
+				itsGrib->Message().SetLongKey("shapeOfTheEarth", 1);
+				itsGrib->Message().SetLongKey("scaleFactorOfRadiusOfSphericalEarth", 1);
+				itsGrib->Message().SetLongKey("scaledValueOfRadiusOfSphericalEarth", a);
+			}
+		}
+	}
+	else
+	{
+		itsLogger.Fatal("A spheroid, really?");
+		himan::Abort();
+	}
+#endif
 	itsGrib->Message().Centre(anInfo.Producer().Centre() == kHPMissingInt ? 86 : anInfo.Producer().Centre());
 	itsGrib->Message().Process(anInfo.Producer().Process() == kHPMissingInt ? 255 : anInfo.Producer().Process());
 
