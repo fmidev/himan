@@ -315,9 +315,11 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		myTargetInfo->Param(LPLTParam);
 		myTargetInfo->Data().Set(Convert(get<0>(sourceValues)));
 		myTargetInfo->Param(LPLPParam);
-		myTargetInfo->Data().Set(Convert(get<2>(sourceValues)));
 
-		auto height = h->VerticalValue(param("HL-M"), Convert(get<1>(sourceValues)));
+		const auto LPLPressure = Convert(get<2>(sourceValues));
+		myTargetInfo->Data().Set(LPLPressure);
+
+		auto height = h->VerticalValue(param("HL-M"), LPLPressure);
 
 		myTargetInfo->Param(LPLZParam);
 		myTargetInfo->Data().Set(height);

@@ -117,6 +117,22 @@ void ReleaseInfo(std::shared_ptr<himan::info> info, float* d_arr, cudaStream_t& 
 
 std::shared_ptr<himan::info> Fetch(const std::shared_ptr<const plugin_configuration> conf,
                                    const himan::forecast_time& theTime, const himan::level& theLevel,
+                                   const himan::params& theParams, const himan::forecast_type& theType, bool returnPacked)
+{
+	for (const auto& p : theParams)
+	{
+		auto ret = Fetch(conf, theTime, theLevel, p, theType, returnPacked);
+
+		if (ret)
+		{
+			return ret;
+		}
+	}
+	return std::shared_ptr<info>();
+}
+
+std::shared_ptr<himan::info> Fetch(const std::shared_ptr<const plugin_configuration> conf,
+                                   const himan::forecast_time& theTime, const himan::level& theLevel,
                                    const himan::param& theParam, const himan::forecast_type& theType, bool returnPacked)
 {
 	try

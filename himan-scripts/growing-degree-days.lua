@@ -1,10 +1,12 @@
--- Calculate frost sum from 2 meter daily mean temperature
--- Positive values do not increase the value of frost sum
+-- Calculate growing degree days.
+--
+-- https://en.wikipedia.org/wiki/Growing_degree-day
+--
+-- Base temperature is 5 degrees. 
 -- 
 -- For example:
--- Daily (24h) mean t2m are: -4, -6, -1, +2, -5
--- Frost sum is: -16 (sic)
---
+-- Daily (24h) mean t2m are: 5, 10, 7, 6, 3
+-- Growing degree days value is: 8
 
 local step = current_time:GetStep()
 
@@ -13,7 +15,7 @@ if step % 24 ~= 0 then
   return
 end
 
-local frostSum = {}
+local gdd = {}
 
 local curtime = forecast_time(current_time:GetOriginDateTime(), current_time:GetValidDateTime())
 
@@ -25,17 +27,16 @@ while true do
 
   if mean then
     -- initialize frost sum array to zero
-    if #frostSum == 0 then
+    if #gdd == 0 then
       for i=1,#mean do
-        frostSum[i] = 0
+        gdd[i] = 0
       end
     end
 
     for i=1,#mean do
-      -- positive values should not affect the value of frost sum
-      local m = math.min(mean[i] - 273.15, 0)
+      local m = math.max(mean[i] - 273.15 - 5, 0)
 
-      frostSum[i] = frostSum[i] + m
+      gdd[i] = gdd[i] + m
     end
   end
 
@@ -44,14 +45,15 @@ while true do
   if curtime:GetStep() <= 0 then
     break
   end
+
 end
 
 local agg = aggregation(HPAggregationType.kAccumulation, HPTimeResolution.kHourResolution, current_time:GetStep(), 0)
-local par = param("FROSTSUM-C")
+local par = param("GDD-C")
 
 par:SetAggregation(agg)
 
 result:SetParam(par)
-result:SetValues(frostSum)
+result:SetValues(gdd)
 
 luatool:WriteToFile(result)

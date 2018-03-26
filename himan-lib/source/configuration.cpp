@@ -36,7 +36,8 @@ configuration::configuration()
       itsCacheLimit(-1),
       itsParamFile(),
       itsAsyncExecution(false),
-      itsUpdateSSStateTable(true)
+      itsUpdateSSStateTable(true),
+      itsUploadStatistics(true)
 {
 }
 
@@ -68,7 +69,8 @@ configuration::configuration(const configuration& other)
       itsCacheLimit(other.itsCacheLimit),
       itsParamFile(other.itsParamFile),
       itsAsyncExecution(other.itsAsyncExecution),
-      itsUpdateSSStateTable(other.itsUpdateSSStateTable)
+      itsUpdateSSStateTable(other.itsUpdateSSStateTable),
+      itsUploadStatistics(other.itsUploadStatistics)
 {
 	ASSERT(itsSourceProducerIterator);
 	itsSourceProducerIterator->Set(other.itsSourceProducerIterator->Index());
@@ -118,6 +120,7 @@ std::ostream& configuration::Write(std::ostream& file) const
 	file << "__itsParamFile__ " << itsParamFile << std::endl;
 	file << "__itsAsyncExecution__ " << itsAsyncExecution << std::endl;
 	file << "__itsUpdateSSStateTable__" << itsUpdateSSStateTable << std::endl;
+	file << "__itsUploadStatistics__" << itsUploadStatistics << std::endl;
 
 	return file;
 }
@@ -375,4 +378,14 @@ bool configuration::UpdateSSStateTable() const
 void configuration::UpdateSSStateTable(bool theUpdateSSStateTable)
 {
 	itsUpdateSSStateTable = theUpdateSSStateTable;
+}
+
+bool configuration::UploadStatistics() const
+{
+	return itsUploadStatistics;
+}
+
+void configuration::UploadStatistics(bool theUploadStatistics)
+{
+	itsUploadStatistics = theUploadStatistics;
 }
