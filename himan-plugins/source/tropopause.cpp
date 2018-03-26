@@ -85,10 +85,10 @@ void tropopause::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	{
 		// inner loop goes vertical and searches for lapse rate smaller 2K/km and check average lapse rate to all levels
 		// within 2km above is also smaller 2K/km
-		for (size_t j = 1; j < lvl_size - 1; ++j)
+		for (size_t j = 0; j < lvl_size - 1; ++j)
 		{
 			const double lapseRate =
-			    -1000.0 * (temp[j + 1][i] - temp[j - 1][i]) / (height[j + 1][i] - height[j - 1][i]);
+			    -1000.0 * (temp[j + 1][i] - temp[j][i]) / (height[j + 1][i] - height[j][i]);
 			if (lapseRate <= 2.0)
 			{
 				// set tropopause height
