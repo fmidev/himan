@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.3.15
+Version: 18.3.26
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 18.3.7
+Requires: himan-lib >= 18.3.26
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 18.2.12
@@ -43,7 +43,7 @@ BuildRequires: boost-devel >= 1.65
 BuildRequires: scons
 
 %description
-FMI himan-plugins -- hila manipulaatio -- plugin library
+Himan -- hilojen manipulaatio -- plugin collection
 
 %prep
 rm -rf $RPM_BUILD_ROOT
@@ -110,6 +110,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Mar 26 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.3.26-1.fmi
+- vvms cuda in single precision
+- cape smallish bugfix
 * Thu Mar 15 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.3.15-1.fmi
 - Fix for transformer
 * Wed Mar 14 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.3.14-1.fmi

@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 18.3.7
+Version: 18.3.26
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -38,7 +38,7 @@ BuildRequires: scons
 Provides: libhiman.so
 
 %description
-FMI himan -- hila manipulaatio -- core library
+Himan -- hilojen manipulaatio -- core library
 
 %prep
 rm -rf $RPM_BUILD_ROOT
@@ -60,6 +60,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Mon Mar 26 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.3.26-1.fmi
+- New configuration option to allow/disallow statistics upload
 * Wed Mar  7 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.3.7-1.fmi
 - Add geometry name to file path
 * Mon Mar  5 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.3.5-2.fmi

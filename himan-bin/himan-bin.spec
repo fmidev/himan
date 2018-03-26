@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 17.12.4
+Version: 18.3.26
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 17.8.14
+Requires: himan-lib >= 18.3.26
 Requires: himan-plugins
 Requires: gdal >= 1.11.0
 Requires: zlib
@@ -40,7 +40,7 @@ Provides: himan
 AutoReqProv:	no
 
 %description
-FMI himan -- hilojen manipulaatio -- executable
+Himan -- hilojen manipulaatio -- executable
 
 %prep
 rm -rf $RPM_BUILD_ROOT
@@ -62,6 +62,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Mon Mar 26 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.3.26-1.fmi
+- Support for uploading run statistics to database
 * Mon Dec  4 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.12.4-1.fmi
 - Support for ss_state table updates
 * Mon Sep 25 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.9.25-1.fmi
