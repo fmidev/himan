@@ -17,8 +17,8 @@ void WithQ(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t QInfo,
 void WithQ(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t QInfo, double P);
 
 #ifdef HAVE_CUDA
-extern void ProcessGPU(std::shared_ptr<const himan::plugin_configuration> conf,
-                       std::shared_ptr<himan::info> myTargetInfo);
+extern void ProcessHumidityGPU(std::shared_ptr<const himan::plugin_configuration> conf,
+                               std::shared_ptr<himan::info> myTargetInfo);
 #endif
 
 relative_humidity::relative_humidity()
@@ -67,7 +67,7 @@ void relative_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short 
 	{
 		deviceType = "GPU";
 
-		ProcessGPU(itsConfiguration, myTargetInfo);
+		ProcessHumidityGPU(itsConfiguration, myTargetInfo);
 	}
 	else
 #endif
