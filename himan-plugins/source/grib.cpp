@@ -112,8 +112,18 @@ shared_ptr<NFmiGrib> grib::Reader()
 }
 void grib::WriteAreaAndGrid(info& anInfo)
 {
-	long edition = itsGrib->Message().Edition();
+	const long edition = itsGrib->Message().Edition();
 	HPScanningMode scmode = kUnknownScanningMode;
+
+	auto firstGridPoint = anInfo.Grid()->FirstPoint();
+
+	if (edition == 2)
+	{
+		if (firstGridPoint.X() < 0)
+		{
+			firstGridPoint.X(firstGridPoint.X() + 360.);
+		}
+	}
 
 	switch (anInfo.Grid()->Type())
 	{
@@ -121,7 +131,6 @@ void grib::WriteAreaAndGrid(info& anInfo)
 		{
 			latitude_longitude_grid* const rg = dynamic_cast<latitude_longitude_grid*>(anInfo.Grid());
 
-			himan::point firstGridPoint = rg->FirstPoint();
 			himan::point lastGridPoint = rg->LastPoint();
 
 			long gridType = 0;  // Grib 1
@@ -153,7 +162,6 @@ void grib::WriteAreaAndGrid(info& anInfo)
 		{
 			rotated_latitude_longitude_grid* const rg = dynamic_cast<rotated_latitude_longitude_grid*>(anInfo.Grid());
 
-			himan::point firstGridPoint = rg->FirstPoint();
 			himan::point lastGridPoint = rg->LastPoint();
 
 			long gridType = 10;  // Grib 1
@@ -201,8 +209,8 @@ void grib::WriteAreaAndGrid(info& anInfo)
 
 			itsGrib->Message().GridType(gridType);
 
-			itsGrib->Message().X0(rg->BottomLeft().X());
-			itsGrib->Message().Y0(rg->BottomLeft().Y());
+			itsGrib->Message().X0(firstGridPoint.X());
+			itsGrib->Message().Y0(firstGridPoint.Y());
 
 			itsGrib->Message().GridOrientation(rg->Orientation());
 
@@ -221,9 +229,6 @@ void grib::WriteAreaAndGrid(info& anInfo)
 		{
 			reduced_gaussian_grid* const gg = dynamic_cast<reduced_gaussian_grid*>(anInfo.Grid());
 
-			// himan::point firstGridPoint = gg->FirstGridPoint();
-			// himan::point lastGridPoint = gg->LastGridPoint();
-
 			long gridType = 4;  // Grib 1
 
 			if (edition == 2)
@@ -240,8 +245,6 @@ void grib::WriteAreaAndGrid(info& anInfo)
 			itsGrib->Message().X1(gg->TopRight().X());
 			itsGrib->Message().Y1(gg->TopRight().Y());
 
-			// itsGrib->Message().SizeX(static_cast<long> (65535));
-			// itsGrib->Message().SizeY(static_cast<long> (gg->Nj()));
 			itsGrib->Message().SetLongKey("iDirectionIncrement", 65535);
 			itsGrib->Message().SetLongKey("numberOfPointsAlongAParallel", 65535);
 
@@ -266,8 +269,8 @@ void grib::WriteAreaAndGrid(info& anInfo)
 
 			itsGrib->Message().GridType(gridType);
 
-			itsGrib->Message().X0(lccg->FirstPoint().X());
-			itsGrib->Message().Y0(lccg->FirstPoint().Y());
+			itsGrib->Message().X0(firstGridPoint.X());
+			itsGrib->Message().Y0(firstGridPoint.Y());
 
 			itsGrib->Message().GridOrientation(lccg->Orientation());
 
