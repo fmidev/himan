@@ -64,6 +64,7 @@ class transformer : public compiled_plugin, private compiled_plugin_base
 	double itsLandSeaMaskThreshold;
 	HPInterpolationMethod itsInterpolationMethod;
 	forecast_type itsTargetForecastType;
+	forecast_type itsSourceForecastType;
 };
 
 // the class factory

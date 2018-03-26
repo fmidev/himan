@@ -106,6 +106,11 @@ std::shared_ptr<himan::info> Fetch(const std::shared_ptr<const plugin_configurat
                                    const himan::param& theParam, const himan::forecast_type& theType,
                                    bool returnPacked = true);
 
+std::shared_ptr<himan::info> Fetch(const std::shared_ptr<const plugin_configuration> conf,
+                                   const himan::forecast_time& theTime, const himan::level& theLevel,
+                                   const himan::params& theParams, const himan::forecast_type& theType,
+                                   bool returnPacked = true);
+
 }  // namespace cuda
 
 #endif /* __NVCC__ */
