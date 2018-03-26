@@ -33,7 +33,66 @@ struct plugin_timing
 	size_t time_elapsed;  // elapsed time in ms
 };
 
-vector<plugin_timing> pluginTimes;
+void UploadRunStatisticsToDatabase(shared_ptr<configuration> conf, const vector<plugin_timing>& pluginTimes)
+{
+	stringstream json, query;
+
+	// read configuration file
+	ifstream ifs(conf->ConfigurationFile());
+	string content((istreambuf_iterator<char>(ifs)), (istreambuf_iterator<char>()));
+
+	// create json out of timings
+	json << "{\n    'plugins' : [";
+
+	for (const auto& t : pluginTimes)
+	{
+		string name = t.plugin_name;
+
+		if (t.order_number > 1)
+		{
+			name += " #" + to_string(t.order_number);
+		}
+
+		json << "\n        { 'name' : '" << name << "' : 'elapsed_ms' : '" << (t.time_elapsed) << "' },";
+	}
+
+	json.seekp(-1, json.cur);  // remove comma from last element
+	json << "\n    ]\n}";
+
+	char* host = getenv("HOSTNAME");
+
+	auto now = chrono::system_clock::to_time_t(chrono::system_clock::now());
+	char timestr[80];
+	strftime(timestr, 80, "%Y-%m-%d %H:%M:%S %Z", localtime(&now));
+
+	// clang-format off
+
+	query << "INSERT INTO himan_run_statistics (hostname, finish_time, configuration_name, configuration, statistics) VALUES ("
+	      << "'" << host << "', "
+	      << "'" << timestr << "', "
+	      << "'" << conf->ConfigurationFile() << "', "
+	      << "to_json($$" << content << "$$::text), "
+	      << "to_json($$" << json.str() << "$$::text))";
+
+	// clang-format on
+
+	auto r = GET_PLUGIN(radon);
+
+	logger log("himan");
+
+	try
+	{
+		r->RadonDB().Query(query.str());
+	}
+	catch (const pqxx::pqxx_exception& e)
+	{
+		log.Error(e.base().what());
+	}
+	catch (const exception& e)
+	{
+		log.Error(e.what());
+	}
+}
 
 int HighestOrderNumber(const vector<plugin_timing>& timingList, const std::string& pluginName)
 {
@@ -146,7 +205,7 @@ void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
 	log.Debug("Update of ss_state: " + to_string(inserts) + " inserts, " + to_string(updates) + " updates");
 }
 
-void ExecutePlugin(shared_ptr<plugin_configuration> pc)
+void ExecutePlugin(shared_ptr<plugin_configuration> pc, vector<plugin_timing>& pluginTimes)
 {
 	timer aTimer;
 	logger aLogger("himan");
@@ -250,6 +309,7 @@ int main(int argc, char** argv)
 	aLogger.Debug("Processqueue size: " + std::to_string(plugins.size()));
 
 	vector<future<void>> asyncs;
+	vector<plugin_timing> pluginTimes;
 
 	while (plugins.size() > 0)
 	{
@@ -260,12 +320,14 @@ int main(int argc, char** argv)
 		if (pc->AsyncExecution())
 		{
 			aLogger.Info("Asynchronous launch for " + pc->Name());
-			asyncs.push_back(async(launch::async, [](shared_ptr<plugin_configuration> pc) { ExecutePlugin(pc); }, pc));
+			asyncs.push_back(
+			    async(launch::async,
+			          [&pluginTimes](shared_ptr<plugin_configuration> pc) { ExecutePlugin(pc, pluginTimes); }, pc));
 
 			continue;
 		}
 
-		ExecutePlugin(pc);
+		ExecutePlugin(pc, pluginTimes);
 	}
 
 	for (auto& fut : asyncs)
@@ -339,6 +401,11 @@ int main(int argc, char** argv)
 
 		cout << "------------------------------------" << endl;
 		cout << "Total duration:\t\t" << totalTime << " ms" << endl;
+
+		if (conf->DatabaseType() == kRadon && conf->FileWriteOption() == kDatabase)
+		{
+			UploadRunStatisticsToDatabase(conf, pluginTimes);
+		}
 	}
 
 	return 0;
@@ -479,6 +546,7 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		("param-file", po::value(&paramFile), "parameter definition file for no-database mode (syntax: shortName,paramName)")
 		("no-auxiliary-file-full-cache-read", "disable the initial reading of all auxiliary files to cache")
 		("no-ss_state-update,X", "do not update ss_state table information")
+		("no-statistics-upload", "do not upload statistics to database")
 	;
 
 	// clang-format on
@@ -573,6 +641,11 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	if (opt.count("no-ss_state-update"))
 	{
 		conf->UpdateSSStateTable(false);
+	}
+
+	if (opt.count("no-statistics-upload"))
+	{
+		conf->UploadStatistics(false);
 	}
 
 	// get cuda device count for this server

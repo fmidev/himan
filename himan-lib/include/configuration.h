@@ -263,6 +263,9 @@ class configuration
 	bool UpdateSSStateTable() const;
 	void UpdateSSStateTable(bool theUpdateSSStateTable);
 
+	bool UploadStatistics() const;
+	void UploadStatistics(bool theUploadStatistics);
+
    protected:
 	std::unique_ptr<producer_iter> itsSourceProducerIterator;
 
@@ -300,6 +303,7 @@ class configuration
 	std::string itsParamFile;
 	bool itsAsyncExecution;
 	bool itsUpdateSSStateTable;
+	bool itsUploadStatistics;
 };
 
 inline std::ostream& operator<<(std::ostream& file, const configuration& ob)
