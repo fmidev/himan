@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.3.26
+Version: 18.3.27
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -110,6 +110,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Mar 27 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.3.27-1.fmi
+- Tropopause tuning
 * Mon Mar 26 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.3.26-1.fmi
 - vvms cuda in single precision
 - cape smallish bugfix
