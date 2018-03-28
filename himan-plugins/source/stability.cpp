@@ -95,6 +95,7 @@ void stability::Process(std::shared_ptr<const plugin_configuration> conf)
 	SetParams({EHIParam}, {OneKMLevel});
 	SetParams({BRNParam}, {SixKMLevel});
 	SetParams({FFParam}, {EuropeanMileLevel});
+	SetParams({QParam}, {HalfKMLevel});
 
 	Start();
 }
@@ -449,6 +450,21 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 		myTargetInfo->Param(FFParam);
 		myTargetInfo->Level(EuropeanMileLevel);
 		myTargetInfo->Data().Set(FF1500);
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e == kFileDataNotFound)
+		{
+		}
+	}
+
+	try
+	{
+		vec Q500 = h->VerticalAverage(QParam, 0, 500);
+
+		myTargetInfo->Param(QParam);
+		myTargetInfo->Level(HalfKMLevel);
+		myTargetInfo->Data().Set(Q500);
 	}
 	catch (const HPExceptionType& e)
 	{
