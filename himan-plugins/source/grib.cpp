@@ -112,8 +112,18 @@ shared_ptr<NFmiGrib> grib::Reader()
 }
 void grib::WriteAreaAndGrid(info& anInfo)
 {
-	long edition = itsGrib->Message().Edition();
+	const long edition = itsGrib->Message().Edition();
 	HPScanningMode scmode = kUnknownScanningMode;
+
+	auto firstGridPoint = anInfo.Grid()->FirstPoint();
+
+	if (edition == 2)
+	{
+		if (firstGridPoint.X() < 0)
+		{
+			firstGridPoint.X(firstGridPoint.X() + 360.);
+		}
+	}
 
 	switch (anInfo.Grid()->Type())
 	{
@@ -121,7 +131,6 @@ void grib::WriteAreaAndGrid(info& anInfo)
 		{
 			latitude_longitude_grid* const rg = dynamic_cast<latitude_longitude_grid*>(anInfo.Grid());
 
-			himan::point firstGridPoint = rg->FirstPoint();
 			himan::point lastGridPoint = rg->LastPoint();
 
 			long gridType = 0;  // Grib 1
@@ -153,7 +162,6 @@ void grib::WriteAreaAndGrid(info& anInfo)
 		{
 			rotated_latitude_longitude_grid* const rg = dynamic_cast<rotated_latitude_longitude_grid*>(anInfo.Grid());
 
-			himan::point firstGridPoint = rg->FirstPoint();
 			himan::point lastGridPoint = rg->LastPoint();
 
 			long gridType = 10;  // Grib 1
@@ -201,8 +209,8 @@ void grib::WriteAreaAndGrid(info& anInfo)
 
 			itsGrib->Message().GridType(gridType);
 
-			itsGrib->Message().X0(rg->BottomLeft().X());
-			itsGrib->Message().Y0(rg->BottomLeft().Y());
+			itsGrib->Message().X0(firstGridPoint.X());
+			itsGrib->Message().Y0(firstGridPoint.Y());
 
 			itsGrib->Message().GridOrientation(rg->Orientation());
 
@@ -221,9 +229,6 @@ void grib::WriteAreaAndGrid(info& anInfo)
 		{
 			reduced_gaussian_grid* const gg = dynamic_cast<reduced_gaussian_grid*>(anInfo.Grid());
 
-			// himan::point firstGridPoint = gg->FirstGridPoint();
-			// himan::point lastGridPoint = gg->LastGridPoint();
-
 			long gridType = 4;  // Grib 1
 
 			if (edition == 2)
@@ -240,8 +245,6 @@ void grib::WriteAreaAndGrid(info& anInfo)
 			itsGrib->Message().X1(gg->TopRight().X());
 			itsGrib->Message().Y1(gg->TopRight().Y());
 
-			// itsGrib->Message().SizeX(static_cast<long> (65535));
-			// itsGrib->Message().SizeY(static_cast<long> (gg->Nj()));
 			itsGrib->Message().SetLongKey("iDirectionIncrement", 65535);
 			itsGrib->Message().SetLongKey("numberOfPointsAlongAParallel", 65535);
 
@@ -266,8 +269,8 @@ void grib::WriteAreaAndGrid(info& anInfo)
 
 			itsGrib->Message().GridType(gridType);
 
-			itsGrib->Message().X0(lccg->FirstPoint().X());
-			itsGrib->Message().Y0(lccg->FirstPoint().Y());
+			itsGrib->Message().X0(firstGridPoint.X());
+			itsGrib->Message().Y0(firstGridPoint.Y());
 
 			itsGrib->Message().GridOrientation(lccg->Orientation());
 
@@ -284,15 +287,6 @@ void grib::WriteAreaAndGrid(info& anInfo)
 				itsGrib->Message().SetLongKey("Latin2InDegrees", static_cast<long>(lccg->StandardParallel2()));
 			}
 
-			if (edition == 1)
-			{
-				itsGrib->Message().SetLongKey("earthIsOblate", 0);
-			}
-			else
-			{
-				itsGrib->Message().SetLongKey("shapeOfTheEarth", 0);
-			}
-
 			scmode = lccg->ScanningMode();
 
 			break;
@@ -303,12 +297,50 @@ void grib::WriteAreaAndGrid(info& anInfo)
 			                boost::lexical_cast<string>(anInfo.Grid()->Type()));
 			himan::Abort();
 	}
-	/*
-	    if (options.prod.Centre() == kHPMissingInt && options.configuration->DatabaseType() != kNoDatabase)
-	    {
 
-	    }
-	*/
+	// Earth shape is not set yet, as it will change many of the test results (metadata changes)
+	// and we don't want to do that until we have set the *correct* radius for those producers
+	// that we have it for. Remember that at this point we force all producers to use radius
+	// found from newbase.
+
+#if 0
+	// Set earth shape
+
+	const double a = anInfo.Grid()->EarthShape().A(), b = anInfo.Grid()->EarthShape().B();
+
+	if (a == b)
+	{
+		// sphere
+		if (edition == 1)
+		{
+			itsGrib->Message().SetLongKey("earthIsOblate", 0);
+
+			long flag = itsGrib->Message().ResolutionAndComponentFlags();
+
+			flag &= ~(1UL << 6);
+
+			itsGrib->Message().ResolutionAndComponentFlags(flag);
+		}
+		else
+		{
+			if (a == 6367470)
+			{
+				itsGrib->Message().SetLongKey("shapeOfTheEarth", 0);
+			}
+			else
+			{
+				itsGrib->Message().SetLongKey("shapeOfTheEarth", 1);
+				itsGrib->Message().SetLongKey("scaleFactorOfRadiusOfSphericalEarth", 1);
+				itsGrib->Message().SetLongKey("scaledValueOfRadiusOfSphericalEarth", a);
+			}
+		}
+	}
+	else
+	{
+		itsLogger.Fatal("A spheroid, really?");
+		himan::Abort();
+	}
+#endif
 	itsGrib->Message().Centre(anInfo.Producer().Centre() == kHPMissingInt ? 86 : anInfo.Producer().Centre());
 	itsGrib->Message().Process(anInfo.Producer().Process() == kHPMissingInt ? 255 : anInfo.Producer().Process());
 
@@ -917,6 +949,128 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 
 // ---------------------------------------------------------------------------
 
+himan::earth_shape ReadEarthShape(const NFmiGribMessage& msg)
+{
+	double a = himan::MissingDouble(), b = himan::MissingDouble();
+	if (msg.Edition() == 1)
+	{
+		const long flag = msg.ResolutionAndComponentFlags();
+
+		if (flag & (1 << 6))
+		{
+			// Earth assumed oblate spheroid with size as determined by IAU in 1965:
+			// 6378.160 km, 6356.775 km, f = 1/297.0
+			a = 6378160;
+			b = 6356775;
+		}
+		else
+		{
+			// Earth assumed spherical with radius = 6367.47 km
+			a = 6367470;
+			b = 6367470;
+		}
+	}
+	else
+	{
+		const long flag = msg.GetLongKey("shapeOfTheEarth");
+
+		switch (flag)
+		{
+			// http://apps.ecmwf.int/codes/grib/format/grib2/ctables/3/2
+			case 0:
+				// Earth assumed spherical with radius = 6,367,470.0 m
+				a = b = 6367470;
+				break;
+			case 1:
+			{
+				// Earth assumed spherical with radius specified (in m) by data producer
+				const long scale = msg.GetLongKey("scaleFactorOfRadiusOfSphericalEarth");
+				const long r = msg.GetLongKey("scaledValueOfRadiusOfSphericalEarth");
+				a = b = static_cast<double>(scale * r);
+				break;
+			}
+			case 2:
+				// Earth assumed oblate spheroid with size as determined by IAU in 1965 (major axis = 6,378,160.0 m,
+				// minor axis = 6,356,775.0 m, f = 1/297.0)
+				a = 6378160;
+				b = 6356775;
+				break;
+			case 3:
+			{
+				// Earth assumed oblate spheroid with major and minor axes specified (in km) by data producer
+				long scale = msg.GetLongKey("scaleFactorOfEarthMajorAxis");
+				long val = msg.GetLongKey("scaledValueOfEarthMajorAxis");
+				a = static_cast<double>(1000 * scale * val);
+
+				scale = msg.GetLongKey("scaleFactorOfEarthMinorAxis");
+				val = msg.GetLongKey("scaledValueOfEarthMinorAxis");
+				b = static_cast<double>(1000 * scale * val);
+				break;
+			}
+			case 4:
+				// Earth assumed oblate spheroid as defined in IAG-GRS80 model (major axis = 6,378,137.0 m, minor axis =
+				// 6,356,752.314 m, f = 1/298.257222101)
+				a = 6378137;
+				b = 6356752.314;
+				break;
+			case 5:
+				// Earth assumed represented by WGS84 (as used by ICAO since 1998)
+				a = 6378137;
+				b = 6356752.314245;
+				break;
+			case 6:
+				// Earth assumed spherical with radius of 6,371,229.0 m
+				a = b = 6371229;
+				break;
+			case 7:
+			{
+				// Earth assumed oblate spheroid with major and minor axes specified (in m) by data producer
+				long scale = msg.GetLongKey("scaleFactorOfEarthMajorAxis");
+				long val = msg.GetLongKey("scaledValueOfEarthMajorAxis");
+				a = static_cast<double>(scale * val);
+
+				scale = msg.GetLongKey("scaleFactorOfEarthMinorAxis");
+				val = msg.GetLongKey("scaledValueOfEarthMinorAxis");
+				b = static_cast<double>(scale * val);
+				break;
+			}
+			case 8:
+				// Earth model assumed spherical with radius 6371200 m, but the horizontal datum of the resulting
+				// latitude/longitude field is the WGS84 reference frame
+				a = b = 6371200;
+				break;
+			case 9:
+				//  Earth represented by the Ordnance Survey Great Britain 1936 Datum, using the Airy 1830 Spheroid, the
+				//  Greenwich meridian as 0 longitude, and the Newlyn datum as mean sea level, 0 height
+				a = 6377563.396;
+				b = 6356256.909;
+				break;
+			default:
+			{
+				himan::logger log("grib");
+				log.Fatal("Unknown shape of earth in grib: " + to_string(flag));
+				himan::Abort();
+			}
+		}
+	}
+
+	// Same hard coding here as in json_parser: first replace newbase area classes with gdal *and*
+	// maintaing backwards compatibility, ie use the same values for earth radius as before.
+	// The next phase is then to use the correct values and decide what to do with differing interpolation
+	// results (newbase vs himan native).
+
+	if (msg.NormalizedGridType() == 3)
+	{
+		a = b = 6367470.;
+	}
+	else
+	{
+		a = b = 6371220.;
+	}
+
+	return himan::earth_shape(a, b);
+}
+
 unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 {
 	bool iNegative = itsGrib->Message().IScansNegatively();
@@ -1031,13 +1185,6 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 			lccg->StandardParallel2(static_cast<double>(itsGrib->Message().GetLongKey("Latin2InDegrees")));
 			lccg->UVRelativeToGrid(itsGrib->Message().UVRelativeToGrid());
 
-			long earthIsOblate = itsGrib->Message().GetLongKey("earthIsOblate");
-
-			if (earthIsOblate)
-			{
-				itsLogger.Warning("No support for ellipsoids in lambert projection (grib key: earthIsOblate)");
-			}
-
 			break;
 		}
 		case 4:
@@ -1080,11 +1227,6 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 
 			rg->BottomLeft(first);
 
-			std::pair<point, point> coordinates =
-			    util::CoordinatesFromFirstGridPoint(first, rg->Orientation(), ni, nj, rg->Di(), rg->Dj());
-
-			rg->TopRight(coordinates.second);
-
 			break;
 		}
 
@@ -1121,6 +1263,9 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 			                    boost::lexical_cast<string>(itsGrib->Message().NormalizedGridType()));
 			break;
 	}
+
+	const auto shape = ReadEarthShape(itsGrib->Message());
+	newGrid->EarthShape(shape);
 
 	return newGrid;
 }

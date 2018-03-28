@@ -1,6 +1,5 @@
 #include "stereographic_grid.h"
-#include <NFmiGrid.h>
-#include <NFmiStereographicArea.h>
+#include <ogr_spatialref.h>
 
 using namespace himan;
 using namespace std;
@@ -8,7 +7,7 @@ using namespace std;
 stereographic_grid::stereographic_grid()
     : grid(kRegularGrid, kStereographic),
       itsBottomLeft(),
-      itsTopRight(),
+      itsTopLeft(),
       itsOrientation(kHPMissingInt),
       itsDi(kHPMissingValue),
       itsDj(kHPMissingValue),
@@ -18,11 +17,11 @@ stereographic_grid::stereographic_grid()
 	itsLogger = logger("stereographic_grid");
 }
 
-stereographic_grid::stereographic_grid(HPScanningMode theScanningMode, point theBottomLeft, point theTopRight,
+stereographic_grid::stereographic_grid(HPScanningMode theScanningMode, point theBottomLeft, point theTopLeft,
                                        double theOrientation)
     : grid(kRegularGrid, kStereographic, theScanningMode),
       itsBottomLeft(theBottomLeft),
-      itsTopRight(theTopRight),
+      itsTopLeft(theTopLeft),
       itsOrientation(theOrientation)
 {
 	itsLogger = logger("stereographic_grid");
@@ -31,7 +30,7 @@ stereographic_grid::stereographic_grid(HPScanningMode theScanningMode, point the
 stereographic_grid::stereographic_grid(const stereographic_grid& other)
     : grid(other),
       itsBottomLeft(other.itsBottomLeft),
-      itsTopRight(other.itsTopRight),
+      itsTopLeft(other.itsTopLeft),
       itsOrientation(other.itsOrientation),
       itsDi(other.itsDi),
       itsDj(other.itsDj),
@@ -104,73 +103,221 @@ void stereographic_grid::ScanningMode(HPScanningMode theScanningMode)
 
 void stereographic_grid::CreateAreaAndGrid() const
 {
-	NFmiPoint bl(itsBottomLeft.X(), itsBottomLeft.Y());
-	auto area = unique_ptr<NFmiStereographicArea>(new NFmiStereographicArea(
-	    bl, itsDi * (static_cast<double>(itsNi)), itsDj * (static_cast<double>(itsNj)), itsOrientation));
+	if (itsOrientation == kHPMissingInt || itsEarthShape == earth_shape() || FirstPoint() == point())
+	{
+		itsLogger.Fatal("Missing required area information");
+		himan::Abort();
+	}
 
-	itsStereGrid = unique_ptr<NFmiGrid>(new NFmiGrid(area.get(), itsNi, itsNj));
+	// see lambert_conformal.cpp for explanation for this function
+	itsSpatialReference = unique_ptr<OGRSpatialReference>(new OGRSpatialReference);
+
+	std::stringstream ss;
+
+	// clang-format off
+
+	ss << "+proj=stere +lat_0=90 +lat_ts=60"
+	   << " +lon_0=" << itsOrientation
+	   << " +k=1 +units=m +no_defs"
+	   << " +a=" << fixed << itsEarthShape.A()
+	   << " +b=" << itsEarthShape.B()
+	   << " +wktext";
+
+	// clang-format on
+
+	auto err = itsSpatialReference->importFromProj4(ss.str().c_str());
+
+	if (err != OGRERR_NONE)
+	{
+		itsLogger.Fatal("Error in area definition");
+		himan::Abort();
+	}
+
+	OGRSpatialReference* sterell = itsSpatialReference->CloneGeogCS();
+
+	double falseEasting = FirstPoint().X();
+	double falseNorthing = FirstPoint().Y();
+
+	ASSERT(!IsKHPMissingValue(falseEasting) && !IsKHPMissingValue(falseNorthing));
+
+	itsLatLonToXYTransformer =
+	    unique_ptr<OGRCoordinateTransformation>(OGRCreateCoordinateTransformation(sterell, itsSpatialReference.get()));
+
+	if (!itsLatLonToXYTransformer->Transform(1, &falseEasting, &falseNorthing))
+	{
+		itsLogger.Error("Error determining false easting and northing");
+		himan::Abort();
+	}
+
+	// Setting falsings directly to translator will make handling them cleaner
+	// later.
+
+	ss << " +x_0=" << fixed << (-falseEasting) << " +y_0=" << (-falseNorthing);
+
+	itsLogger.Trace(ss.str());
+
+	err = itsSpatialReference->importFromProj4(ss.str().c_str());
+
+	if (err != OGRERR_NONE)
+	{
+		itsLogger.Error("Error in area definition");
+		himan::Abort();
+	}
+
+	delete sterell;
+
+	sterell = itsSpatialReference->CloneGeogCS();
+
+	// Initialize transformer for later use (xy --> latlon))
+
+	itsXYToLatLonTransformer = std::unique_ptr<OGRCoordinateTransformation>(
+	    OGRCreateCoordinateTransformation(itsSpatialReference.get(), sterell));
+
+	// ... and a transformer for reverse transformation
+
+	itsLatLonToXYTransformer =
+	    unique_ptr<OGRCoordinateTransformation>(OGRCreateCoordinateTransformation(sterell, itsSpatialReference.get()));
+
+	delete sterell;
 }
 
 point stereographic_grid::XY(const point& latlon) const
 {
-	if (!itsStereGrid)
+	if (!itsLatLonToXYTransformer)
 	{
 		CreateAreaAndGrid();
 	}
 
-	auto xy = itsStereGrid->LatLonToGrid(latlon.X(), latlon.Y());
-	return point(xy.X(), xy.Y());
+	double projX = latlon.X(), projY = latlon.Y();
+
+	if (!itsLatLonToXYTransformer->Transform(1, &projX, &projY))
+	{
+		itsLogger.Error("Error determining xy value for latlon point " + to_string(latlon.X()) + "," +
+		                to_string(latlon.Y()));
+		return point();
+	}
+
+	const double x = (projX / itsDi);
+	const double y = (projY / itsDj);
+
+	return point(x, y);
+
+	//	auto xy = itsStereGrid->LatLonToGrid(latlon.X(), latlon.Y());
+	//	return point(xy.X(), xy.Y());
 }
 
 point stereographic_grid::LatLon(size_t locationIndex) const
 {
-	if (!itsStereGrid)
+	if (!itsXYToLatLonTransformer)
 	{
 		CreateAreaAndGrid();
 	}
 
-	auto ll = itsStereGrid->LatLon(locationIndex);
+	const size_t jIndex = static_cast<size_t>(locationIndex / itsNi);
+	const size_t iIndex = static_cast<size_t>(locationIndex % itsNi);
 
-	return point(ll.X(), ll.Y());
+	double x = static_cast<double>(iIndex) * Di();
+	double y = static_cast<double>(jIndex) * Dj();
+
+	if (itsScanningMode == kTopLeft)
+	{
+		y *= -1;
+	}
+
+	ASSERT(itsXYToLatLonTransformer);
+	if (!itsXYToLatLonTransformer->Transform(1, &x, &y))
+	{
+		itsLogger.Error("Error determining latitude longitude value for xy point " + to_string(x) + "," + to_string(y));
+		return point();
+	}
+
+	return point(x, y);
 }
 
 void stereographic_grid::BottomLeft(const point& theBottomLeft)
 {
 	itsBottomLeft = theBottomLeft;
 }
-void stereographic_grid::TopRight(const point& theTopRight)
+void stereographic_grid::TopLeft(const point& theTopLeft)
 {
-	itsTopRight = theTopRight;
+	itsTopLeft = theTopLeft;
 }
 point stereographic_grid::BottomLeft() const
 {
-	return itsBottomLeft;
+	switch (itsScanningMode)
+	{
+		case kBottomLeft:
+			return itsBottomLeft;
+			break;
+		case kTopLeft:
+			if (itsNi == static_cast<size_t>(kHPMissingInt) || itsNj == static_cast<size_t>(kHPMissingInt))
+			{
+				return point();
+			}
+
+			return LatLon(itsNj * itsNi - itsNi);
+		case kUnknownScanningMode:
+			return point();
+		default:
+			throw runtime_error("Unhandled scanning mode: " + HPScanningModeToString.at(itsScanningMode));
+	}
 }
 point stereographic_grid::TopRight() const
 {
-	return itsTopRight;
+	if (itsNi == static_cast<size_t>(kHPMissingInt) || itsNj == static_cast<size_t>(kHPMissingInt))
+	{
+		return point();
+	}
+
+	switch (itsScanningMode)
+	{
+		case kBottomLeft:
+			return LatLon(itsNj * itsNi - 1);
+		case kTopLeft:
+			return LatLon(itsNi - 1);
+		case kUnknownScanningMode:
+			return point();
+		default:
+			throw runtime_error("Unhandled scanning mode: " + HPScanningModeToString.at(itsScanningMode));
+	}
 }
 point stereographic_grid::TopLeft() const
 {
-	if (!itsStereGrid)
+	switch (itsScanningMode)
 	{
-		CreateAreaAndGrid();
+		case kBottomLeft:
+			if (itsNi == static_cast<size_t>(kHPMissingInt) || itsNj == static_cast<size_t>(kHPMissingInt))
+			{
+				return point();
+			}
+
+			return LatLon(itsNj * itsNi - itsNi);
+		case kTopLeft:
+			return itsTopLeft;
+		case kUnknownScanningMode:
+			return point();
+		default:
+			throw runtime_error("Unhandled scanning mode: " + HPScanningModeToString.at(itsScanningMode));
 	}
-
-	const auto ll = itsStereGrid->Area()->TopLeft();
-
-	return point(ll.X(), ll.Y());
 }
 point stereographic_grid::BottomRight() const
 {
-	if (!itsStereGrid)
+	if (itsNi == static_cast<size_t>(kHPMissingInt) || itsNj == static_cast<size_t>(kHPMissingInt))
 	{
-		CreateAreaAndGrid();
+		return point();
 	}
 
-	const auto ll = itsStereGrid->Area()->BottomRight();
-
-	return point(ll.X(), ll.Y());
+	switch (itsScanningMode)
+	{
+		case kBottomLeft:
+			return LatLon(itsNi - 1);
+		case kTopLeft:
+			return LatLon(itsNi * itsNj - 1);
+		case kUnknownScanningMode:
+			return point();
+		default:
+			throw runtime_error("Unhandled scanning mode: " + HPScanningModeToString.at(itsScanningMode));
+	}
 }
 
 point stereographic_grid::FirstPoint() const
@@ -193,7 +340,7 @@ point stereographic_grid::LastPoint() const
 	switch (itsScanningMode)
 	{
 		case kBottomLeft:
-			return itsTopRight;
+			return TopRight();
 		case kTopLeft:
 			return BottomRight();
 		case kUnknownScanningMode:
@@ -250,7 +397,7 @@ ostream& stereographic_grid::Write(std::ostream& file) const
 	grid::Write(file);
 
 	file << itsBottomLeft;
-	file << itsTopRight;
+	file << itsTopLeft;
 	file << "__itsNi__ " << itsNi << endl;
 	file << "__itsNj__ " << itsNj << endl;
 	file << "__itsDi__ " << itsDi << endl;
@@ -284,20 +431,20 @@ bool stereographic_grid::EqualsTo(const stereographic_grid& other) const
 		return false;
 	}
 
-	if (itsBottomLeft != other.BottomLeft())
+	if (BottomLeft() != other.BottomLeft())
 	{
-		itsLogger.Trace("BottomLeft does not match: X " + to_string(itsBottomLeft.X()) + " vs " +
+		itsLogger.Trace("BottomLeft does not match: X " + to_string(BottomLeft().X()) + " vs " +
 		                to_string(other.BottomLeft().X()));
-		itsLogger.Trace("BottomLeft does not match: Y " + to_string(itsBottomLeft.Y()) + " vs " +
+		itsLogger.Trace("BottomLeft does not match: Y " + to_string(BottomLeft().Y()) + " vs " +
 		                to_string(other.BottomLeft().Y()));
 		return false;
 	}
 
-	if (itsTopRight != other.TopRight())
+	if (TopRight() != other.TopRight())
 	{
-		itsLogger.Trace("TopRight does not match: X " + to_string(itsTopRight.X()) + " vs " +
+		itsLogger.Trace("TopRight does not match: X " + to_string(TopRight().X()) + " vs " +
 		                to_string(other.TopRight().X()));
-		itsLogger.Trace("TopRight does not match: Y " + to_string(itsTopRight.Y()) + " vs " +
+		itsLogger.Trace("TopRight does not match: Y " + to_string(TopRight().Y()) + " vs " +
 		                to_string(other.TopRight().Y()));
 		return false;
 	}

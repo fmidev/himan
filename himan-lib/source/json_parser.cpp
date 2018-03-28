@@ -974,11 +974,7 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 			const double X0 = boost::lexical_cast<double>(geominfo["long_orig"]) * scale;
 			const double Y0 = boost::lexical_cast<double>(geominfo["lat_orig"]) * scale;
 
-			const auto coordinates = himan::util::CoordinatesFromFirstGridPoint(point(X0, Y0), sg->Orientation(),
-			                                                                    sg->Ni(), sg->Nj(), di, dj);
-
-			sg->BottomLeft(coordinates.first);
-			sg->TopRight(coordinates.second);
+			sg->BottomLeft(point(X0, Y0));
 		}
 		else if (geominfo["grid_type_id"] == "6")
 		{
@@ -1088,6 +1084,23 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 	{
 		log.Fatal(string("Error parsing area information: ") + e.what());
 		himan::Abort();
+	}
+
+	// Until shape of earth is added to radon, hard code default value for all geoms
+	// in radon to sphere with radius 6371220, which is the one used in newbase
+	// (in most cases that's not *not* the one used by the weather model).
+	// Exception to this lambert conformal conic where we use radius 6367470.
+
+	if (g)
+	{
+		if (g->Type() == kLambertConformalConic)
+		{
+			g->EarthShape(earth_shape(6367470.));
+		}
+		else
+		{
+			g->EarthShape(earth_shape(6371220.));
+		}
 	}
 
 	return g;
@@ -1332,8 +1345,6 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 			rg = unique_ptr<stereographic_grid>(new stereographic_grid);
 			dynamic_cast<stereographic_grid*>(rg.get())->BottomLeft(
 			    point(pt.get<double>("bottom_left_longitude"), pt.get<double>("bottom_left_latitude")));
-			dynamic_cast<stereographic_grid*>(rg.get())->TopRight(
-			    point(pt.get<double>("top_right_longitude"), pt.get<double>("top_right_latitude")));
 			dynamic_cast<stereographic_grid*>(rg.get())->Orientation(pt.get<double>("orientation"));
 			dynamic_cast<stereographic_grid*>(rg.get())->Ni(pt.get<size_t>("ni"));
 			dynamic_cast<stereographic_grid*>(rg.get())->Nj(pt.get<size_t>("nj"));
