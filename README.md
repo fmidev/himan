@@ -73,6 +73,13 @@ Himan is able to produce the following parameters, given required source data:
 * energy-helicity index
 * bulk richardson number
 * frozen soil depths (bottom and top)
+* growing degree days
+* frost sum
+* tropopause height
+* cloud layers for taf generation
+* smartsymbol (weather symbol)
+* weather number
+* low visibility procedures probability
 
 # Architecture
 
