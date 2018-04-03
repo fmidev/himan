@@ -433,19 +433,19 @@ bool lambert_conformal_grid::EqualsTo(const lambert_conformal_grid& other) const
 
 	if (BottomLeft() != other.BottomLeft())
 	{
-		itsLogger.Trace("BottomLeft does not match: X " + boost::lexical_cast<std::string>(itsBottomLeft.X()) + " vs " +
-		                boost::lexical_cast<std::string>(other.BottomLeft().X()));
-		itsLogger.Trace("BottomLeft does not match: Y " + boost::lexical_cast<std::string>(itsBottomLeft.Y()) + " vs " +
-		                boost::lexical_cast<std::string>(other.BottomLeft().Y()));
+		itsLogger.Trace("BottomLeft does not match: X " + to_string(BottomLeft().X()) + " vs " +
+		                to_string(other.BottomLeft().X()));
+		itsLogger.Trace("BottomLeft does not match: Y " + to_string(BottomLeft().Y()) + " vs " +
+		                to_string(other.BottomLeft().Y()));
 		return false;
 	}
 
 	if (TopLeft() != other.TopLeft())
 	{
-		itsLogger.Trace("BottomLeft does not match: X " + boost::lexical_cast<std::string>(itsBottomLeft.X()) + " vs " +
-		                boost::lexical_cast<std::string>(other.BottomLeft().X()));
-		itsLogger.Trace("BottomLeft does not match: Y " + boost::lexical_cast<std::string>(itsBottomLeft.Y()) + " vs " +
-		                boost::lexical_cast<std::string>(other.BottomLeft().Y()));
+		itsLogger.Trace("TopLeft does not match: X " + to_string(TopLeft().X()) + " vs " +
+		                to_string(other.TopLeft().X()));
+		itsLogger.Trace("TopLeft does not match: Y " + to_string(TopLeft().Y()) + " vs " +
+		                to_string(other.TopLeft().Y()));
 		return false;
 	}
 
@@ -453,52 +453,46 @@ bool lambert_conformal_grid::EqualsTo(const lambert_conformal_grid& other) const
 
 	if (fabs(itsDi - other.itsDi) > kEpsilon)
 	{
-		itsLogger.Trace("Di does not match: " + boost::lexical_cast<std::string>(Di()) + " vs " +
-		                boost::lexical_cast<std::string>(other.Di()));
+		itsLogger.Trace("Di does not match: " + to_string(Di()) + " vs " + to_string(other.Di()));
 		return false;
 	}
 
 	if (fabs(itsDj - other.itsDj) > kEpsilon)
 	{
-		itsLogger.Trace("Dj does not match: " + boost::lexical_cast<std::string>(Dj()) + " vs " +
-		                boost::lexical_cast<std::string>(other.Dj()));
+		itsLogger.Trace("Dj does not match: " + to_string(Dj()) + " vs " + to_string(other.Dj()));
 		return false;
 	}
 
 	if (itsNi != other.Ni())
 	{
-		itsLogger.Trace("Ni does not match: " + boost::lexical_cast<std::string>(itsNi) + " vs " +
-		                boost::lexical_cast<std::string>(other.Ni()));
+		itsLogger.Trace("Ni does not match: " + to_string(itsNi) + " vs " + to_string(other.Ni()));
 		return false;
 	}
 
 	if (itsNj != other.Nj())
 	{
-		itsLogger.Trace("Nj does not match: " + boost::lexical_cast<std::string>(itsNj) + " vs " +
-		                boost::lexical_cast<std::string>(other.Nj()));
+		itsLogger.Trace("Nj does not match: " + to_string(itsNj) + " vs " + to_string(other.Nj()));
 		return false;
 	}
 
 	if (itsOrientation != other.itsOrientation)
 	{
-		itsLogger.Trace("Orientation does not match: " + boost::lexical_cast<std::string>(itsOrientation) + " vs " +
-		                boost::lexical_cast<std::string>(other.itsOrientation));
+		itsLogger.Trace("Orientation does not match: " + to_string(itsOrientation) + " vs " +
+		                to_string(other.itsOrientation));
 		return false;
 	}
 
 	if (itsStandardParallel1 != other.itsStandardParallel1)
 	{
-		itsLogger.Trace("Standard latitude 1 does not match: " +
-		                boost::lexical_cast<std::string>(itsStandardParallel1) + " vs " +
-		                boost::lexical_cast<std::string>(other.itsStandardParallel1));
+		itsLogger.Trace("Standard latitude 1 does not match: " + to_string(itsStandardParallel1) + " vs " +
+		                to_string(other.itsStandardParallel1));
 		return false;
 	}
 
 	if (itsStandardParallel2 != other.itsStandardParallel2)
 	{
-		itsLogger.Trace("Standard latitude 2 does not match: " +
-		                boost::lexical_cast<std::string>(itsStandardParallel2) + " vs " +
-		                boost::lexical_cast<std::string>(other.itsStandardParallel2));
+		itsLogger.Trace("Standard latitude 2 does not match: " + to_string(itsStandardParallel2) + " vs " +
+		                to_string(other.itsStandardParallel2));
 		return false;
 	}
 
@@ -562,11 +556,16 @@ bool lambert_conformal_grid::SetCoordinates() const
 		itsStandardParallel2 = itsStandardParallel1;
 	}
 
-	ss << "+proj=lcc +lat_1=" << itsStandardParallel1 << " +lat_2=" << itsStandardParallel2
-	   << " +lat_0=" << itsStandardParallel1 << " +lon_0=" << itsOrientation;
+	// clang-format off
+	ss << "+proj=lcc +lat_1=" << itsStandardParallel1
+	   << " +lat_2=" << itsStandardParallel2
+	   << " +lat_0=" << itsStandardParallel1
+	   << " +lon_0=" << itsOrientation
+	   << " +a=" << fixed << itsEarthShape.A()
+	   << " +b=" << itsEarthShape.B()
+	   << " +units=m +no_defs +wktext";
 
-	// NOTE! Assuming earth is a sphere!
-	ss << " +a=6367470 +b=6367470 +units=m +no_defs +wktext";
+	// clang-format on
 
 	auto err = itsSpatialReference->importFromProj4(ss.str().c_str());
 
@@ -603,9 +602,9 @@ bool lambert_conformal_grid::SetCoordinates() const
 	// Setting falsings directly to translator will make handling them cleaner
 	// later.
 
-	ss << " +x_0=" << (-falseEasting) << " +y_0=" << (-falseNorthing);
+	ss << " +x_0=" << fixed << (-falseEasting) << " +y_0=" << (-falseNorthing);
 
-	// itsLogger.Trace("PROJ4: " + ss.str());
+	itsLogger.Trace(ss.str());
 
 	err = itsSpatialReference->importFromProj4(ss.str().c_str());
 

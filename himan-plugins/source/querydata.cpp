@@ -378,9 +378,8 @@ NFmiHPlaceDescriptor querydata::CreateGrid(info& info) const
 			stereographic_grid* const g = dynamic_cast<stereographic_grid*>(info.Grid());
 
 			theArea = new NFmiStereographicArea(NFmiPoint(g->BottomLeft().X(), g->BottomLeft().Y()),
-			                                    g->Di() * static_cast<double>((g->Ni())),
-			                                    g->Dj() * static_cast<double>((g->Nj())), g->Orientation());
-
+			                                    g->Di() * static_cast<double>((g->Ni() - 1)),
+			                                    g->Dj() * static_cast<double>((g->Nj() - 1)), g->Orientation());
 			break;
 		}
 
@@ -408,6 +407,18 @@ NFmiHPlaceDescriptor querydata::CreateGrid(info& info) const
 	}
 
 	ASSERT(theArea);
+
+#ifdef DEBUG
+	OGRSpatialReference crs;
+	const auto wkt = theArea->WKT();
+	if (crs.SetFromUserInput(wkt.c_str()) == OGRERR_NONE)
+	{
+		char* proj4 = 0;
+		crs.exportToProj4(&proj4);
+		itsLogger.Trace(string(proj4));
+		OGRFree(proj4);
+	}
+#endif
 
 	NFmiGrid theGrid(theArea, info.Grid()->Ni(), info.Grid()->Nj());
 
@@ -635,7 +646,6 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 			stereographic_grid* const s = dynamic_cast<stereographic_grid*>(newGrid);
 			s->Orientation(reinterpret_cast<const NFmiStereographicArea*>(qinfo.Area())->Orientation());
 			s->BottomLeft(point(qinfo.Area()->BottomLeftLatLon().X(), qinfo.Area()->BottomLeftLatLon().Y()));
-			s->TopRight(point(qinfo.Area()->TopRightLatLon().X(), qinfo.Area()->TopRightLatLon().Y()));
 			s->Ni(ni);
 			s->Nj(nj);
 		}
@@ -647,6 +657,7 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 	}
 
 	newGrid->ScanningMode(kBottomLeft);
+	newGrid->EarthShape(earth_shape(6371220));
 
 	newInfo->Create(newGrid);
 

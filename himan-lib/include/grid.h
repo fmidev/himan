@@ -12,6 +12,7 @@
  * @brief Interface for all grids
  */
 
+#include "earth_shape.h"
 #include "himan_common.h"
 #include "logger.h"
 #include "matrix.h"
@@ -25,6 +26,7 @@ class grid
 {
    public:
 	grid();
+	grid(const std::string& WKT);
 	grid(HPGridClass theGridClass, HPGridType theGridType);
 	grid(HPGridClass theGridClass, HPGridType theGridType, HPScanningMode theScanningMode);
 
@@ -113,6 +115,12 @@ class grid
 	bool UVRelativeToGrid() const;
 	void UVRelativeToGrid(bool theUVRelativeToGrid);
 
+	earth_shape EarthShape() const;
+	void EarthShape(const earth_shape& theEarthShape);
+
+	std::string WKT() const;
+	std::string Proj4() const;
+
    protected:
 	bool EqualsTo(const grid& other) const;
 
@@ -137,6 +145,8 @@ class grid
 
 	bool itsUVRelativeToGrid;
 
+	earth_shape itsEarthShape;
+
 #ifdef SERIALIZATION
 	friend class cereal::access;
 
@@ -145,7 +155,7 @@ class grid
 	{
 		ar(CEREAL_NVP(itsData), CEREAL_NVP(itsGridClass), CEREAL_NVP(itsGridType), CEREAL_NVP(itsAB),
 		   CEREAL_NVP(itsLogger), CEREAL_NVP(itsScanningMode), CEREAL_NVP(itsPackedData),
-		   CEREAL_NVP(itsUVRelativeToGrid));
+		   CEREAL_NVP(itsUVRelativeToGrid), CEREAL_NVP(itsEarthShape));
 	}
 #endif
 };
