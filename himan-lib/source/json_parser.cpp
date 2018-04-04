@@ -974,7 +974,7 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 			const double X0 = boost::lexical_cast<double>(geominfo["long_orig"]) * scale;
 			const double Y0 = boost::lexical_cast<double>(geominfo["lat_orig"]) * scale;
 
-			sg->BottomLeft(point(X0, Y0));
+			sg->FirstPoint(point(X0, Y0));
 		}
 		else if (geominfo["grid_type_id"] == "6")
 		{
