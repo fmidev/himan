@@ -10,7 +10,8 @@ using namespace std;
 
 // The following two functions are used for convenience in GPU specific code:
 // in grid rotation we need the standard parallels and orientation, but in order
-// to get those we need to include this file and ogr_spatialref.h, which is a lot
+// to get those we need to include this file and ogr_spatialref.h, which is a
+// lot
 // of unnecessary code to be added to already slow compilation.
 
 double GetStandardParallel(himan::grid* g, int parallelno)
@@ -104,7 +105,6 @@ lambert_conformal_grid::lambert_conformal_grid(const lambert_conformal_grid& oth
       itsSouthPole(other.itsSouthPole)
 {
 	itsLogger = logger("lambert_conformal_grid");
-	SetCoordinates();  // Create transformer
 }
 
 lambert_conformal_grid::~lambert_conformal_grid() = default;
@@ -211,16 +211,12 @@ void lambert_conformal_grid::BottomLeft(const point& theBottomLeft)
 	itsTopLeft = point();  // "reset" other possible starting corner to
 	                       // avoid situations where starting corner is changed
 	                       // and old value persists
-
-	SetCoordinates();
 }
 
 void lambert_conformal_grid::TopLeft(const point& theTopLeft)
 {
 	itsTopLeft = theTopLeft;
 	itsBottomLeft = point();
-
-	SetCoordinates();
 }
 
 point lambert_conformal_grid::FirstPoint() const
@@ -251,13 +247,7 @@ point lambert_conformal_grid::LastPoint() const
 
 point lambert_conformal_grid::XY(const point& latlon) const
 {
-	if (!itsLatLonToXYTransformer)
-	{
-		if (!SetCoordinates())
-		{
-			return point();
-		}
-	}
+	SetCoordinates();
 
 	double projX = latlon.X(), projY = latlon.Y();
 	ASSERT(itsLatLonToXYTransformer);
@@ -292,13 +282,7 @@ point lambert_conformal_grid::LatLon(size_t locationIndex) const
 	ASSERT(!IsKHPMissingValue(Dj()));
 	ASSERT(locationIndex < itsNi * itsNj);
 
-	if (!itsXYToLatLonTransformer)
-	{
-		if (!SetCoordinates())
-		{
-			return point();
-		}
-	}
+	SetCoordinates();
 
 	const size_t jIndex = static_cast<size_t>(locationIndex / itsNi);
 	const size_t iIndex = static_cast<size_t>(locationIndex % itsNi);
@@ -536,101 +520,101 @@ double lambert_conformal_grid::StandardParallel2() const
 {
 	return itsStandardParallel2;
 }
-bool lambert_conformal_grid::SetCoordinates() const
+void lambert_conformal_grid::SetCoordinates() const
 {
-	itsSpatialReference = unique_ptr<OGRSpatialReference>(new OGRSpatialReference);
+	call_once(itsAreaFlag, [&]() {
+		itsSpatialReference = unique_ptr<OGRSpatialReference>(new OGRSpatialReference);
 
-	// Build OGR presentation of LCC
-	std::stringstream ss;
+		// Build OGR presentation of LCC
+		std::stringstream ss;
 
-	if (IsKHPMissingValue(itsStandardParallel1) || IsKHPMissingValue(itsOrientation) || FirstPoint() == point())
-	{
-		// itsLogger.Error("First standard latitude or orientation missing");
-		return false;
-	}
+		if (IsKHPMissingValue(itsStandardParallel1) || IsKHPMissingValue(itsOrientation) || FirstPoint() == point())
+		{
+			// itsLogger.Error("First standard latitude or orientation missing");
+			return;
+		}
 
-	// If latin1==latin2, projection is effectively lccSP1
+		// If latin1==latin2, projection is effectively lccSP1
 
-	if (IsKHPMissingValue(itsStandardParallel2))
-	{
-		itsStandardParallel2 = itsStandardParallel1;
-	}
+		if (IsKHPMissingValue(itsStandardParallel2))
+		{
+			itsStandardParallel2 = itsStandardParallel1;
+		}
 
-	// clang-format off
-	ss << "+proj=lcc +lat_1=" << itsStandardParallel1
-	   << " +lat_2=" << itsStandardParallel2
-	   << " +lat_0=" << itsStandardParallel1
-	   << " +lon_0=" << itsOrientation
-	   << " +a=" << fixed << itsEarthShape.A()
-	   << " +b=" << itsEarthShape.B()
-	   << " +units=m +no_defs +wktext";
+		// clang-format off
 
-	// clang-format on
+		    ss << "+proj=lcc +lat_1=" << itsStandardParallel1
+		       << " +lat_2=" << itsStandardParallel2
+		       << " +lat_0=" << itsStandardParallel1 << " +lon_0=" << itsOrientation
+		       << " +a=" << fixed << itsEarthShape.A() << " +b=" << itsEarthShape.B()
+		       << " +units=m +no_defs +wktext";
 
-	auto err = itsSpatialReference->importFromProj4(ss.str().c_str());
+		// clang-format on
 
-	if (err != OGRERR_NONE)
-	{
-		itsLogger.Fatal("Error in area definition");
-		himan::Abort();
-	}
+		auto err = itsSpatialReference->importFromProj4(ss.str().c_str());
 
-	// Area copy will be used for transform
-	OGRSpatialReference* lccll = itsSpatialReference->CloneGeogCS();
+		if (err != OGRERR_NONE)
+		{
+			itsLogger.Fatal("Error in area definition");
+			himan::Abort();
+		}
 
-	// Initialize transformer (latlon --> xy).
-	// We need this to get east and north falsings because projection coordinates are
-	// set for the area center and grid coordinates are in the area corner.
+		// Area copy will be used for transform
+		OGRSpatialReference* lccll = itsSpatialReference->CloneGeogCS();
 
-	itsLatLonToXYTransformer =
-	    unique_ptr<OGRCoordinateTransformation>(OGRCreateCoordinateTransformation(lccll, itsSpatialReference.get()));
+		// Initialize transformer (latlon --> xy).
+		// We need this to get east and north falsings because projection
+		// coordinates are
+		// set for the area center and grid coordinates are in the area corner.
 
-	ASSERT(itsLatLonToXYTransformer);
-	ASSERT(itsScanningMode == kBottomLeft || itsScanningMode == kTopLeft);
+		itsLatLonToXYTransformer = unique_ptr<OGRCoordinateTransformation>(
+		    OGRCreateCoordinateTransformation(lccll, itsSpatialReference.get()));
 
-	double falseEasting = FirstPoint().X();
-	double falseNorthing = FirstPoint().Y();
+		ASSERT(itsLatLonToXYTransformer);
+		ASSERT(itsScanningMode == kBottomLeft || itsScanningMode == kTopLeft);
 
-	ASSERT(!IsKHPMissingValue(falseEasting) && !IsKHPMissingValue(falseNorthing));
+		double falseEasting = FirstPoint().X();
+		double falseNorthing = FirstPoint().Y();
 
-	if (!itsLatLonToXYTransformer->Transform(1, &falseEasting, &falseNorthing))
-	{
-		itsLogger.Error("Error determining false easting and northing");
-		return false;
-	}
+		ASSERT(!IsKHPMissingValue(falseEasting) && !IsKHPMissingValue(falseNorthing));
 
-	// Setting falsings directly to translator will make handling them cleaner
-	// later.
+		if (!itsLatLonToXYTransformer->Transform(1, &falseEasting, &falseNorthing))
+		{
+			itsLogger.Error("Error determining false easting and northing");
+			return;
+		}
 
-	ss << " +x_0=" << fixed << (-falseEasting) << " +y_0=" << (-falseNorthing);
+		// Setting falsings directly to translator will make handling them cleaner
+		// later.
 
-	itsLogger.Trace(ss.str());
+		ss << " +x_0=" << fixed << (-falseEasting) << " +y_0=" << (-falseNorthing);
 
-	err = itsSpatialReference->importFromProj4(ss.str().c_str());
+		itsLogger.Trace(ss.str());
 
-	if (err != OGRERR_NONE)
-	{
-		itsLogger.Error("Error in area definition");
-		return false;
-	}
+		err = itsSpatialReference->importFromProj4(ss.str().c_str());
 
-	delete lccll;
+		if (err != OGRERR_NONE)
+		{
+			itsLogger.Error("Error in area definition");
+			return;
+		}
 
-	lccll = itsSpatialReference->CloneGeogCS();
+		delete lccll;
 
-	// Initialize transformer for later use (xy --> latlon))
+		lccll = itsSpatialReference->CloneGeogCS();
 
-	itsXYToLatLonTransformer = std::unique_ptr<OGRCoordinateTransformation>(
-	    OGRCreateCoordinateTransformation(itsSpatialReference.get(), lccll));
+		// Initialize transformer for later use (xy --> latlon))
 
-	// ... and a transformer for reverse transformation
+		itsXYToLatLonTransformer = std::unique_ptr<OGRCoordinateTransformation>(
+		    OGRCreateCoordinateTransformation(itsSpatialReference.get(), lccll));
 
-	itsLatLonToXYTransformer =
-	    unique_ptr<OGRCoordinateTransformation>(OGRCreateCoordinateTransformation(lccll, itsSpatialReference.get()));
+		// ... and a transformer for reverse transformation
 
-	delete lccll;
+		itsLatLonToXYTransformer = unique_ptr<OGRCoordinateTransformation>(
+		    OGRCreateCoordinateTransformation(lccll, itsSpatialReference.get()));
 
-	return true;
+		delete lccll;
+	});
 }
 
 OGRSpatialReference lambert_conformal_grid::SpatialReference() const
