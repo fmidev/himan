@@ -14,6 +14,7 @@
 #include <boost/thread.hpp>
 #include <iostream>
 #include <math.h>
+#include "interpolate.h"
 
 #include "cache.h"
 #include "fetcher.h"
@@ -199,6 +200,8 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	ASSERT(UInfo->Grid()->Type() == VInfo->Grid()->Type());
 
 	string deviceType;
+
+	interpolate::RotateVectorComponents(*UInfo, *VInfo, itsConfiguration->UseCuda() && itsConfiguration->UseCudaForInterpolation());
 
 #ifdef HAVE_CUDA
 	if (itsConfiguration->UseCuda() &&
