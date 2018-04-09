@@ -1038,9 +1038,13 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 
 			lcg->StandardParallel1(boost::lexical_cast<double>(geominfo["latin1"]));
 
-			if (!geominfo["latin2"].empty())
+			if (geominfo["latin2"].empty())
 			{
-				lcg->StandardParallel1(boost::lexical_cast<double>(geominfo["latin2"]));
+				lcg->StandardParallel2(lcg->StandardParallel1());
+			}
+			else
+			{
+				lcg->StandardParallel2(boost::lexical_cast<double>(geominfo["latin2"]));
 			}
 
 			if (!geominfo["south_pole_lon"].empty())
