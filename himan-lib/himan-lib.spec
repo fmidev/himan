@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 18.4.3
+Version: 18.4.9
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -60,6 +60,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Mon Apr  9 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.4.9-1.fmi
+- stereographic fixes
 * Tue Apr  3 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.4.3-1.fmi
 - use gdal for stereographic area projections
 - In geometry configuration add support for different shapes of earth
