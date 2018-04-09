@@ -543,11 +543,13 @@ void lambert_conformal_grid::SetCoordinates() const
 
 		// clang-format off
 
-		    ss << "+proj=lcc +lat_1=" << itsStandardParallel1
-		       << " +lat_2=" << itsStandardParallel2
-		       << " +lat_0=" << itsStandardParallel1 << " +lon_0=" << itsOrientation
-		       << " +a=" << fixed << itsEarthShape.A() << " +b=" << itsEarthShape.B()
-		       << " +units=m +no_defs +wktext";
+		ss << "+proj=lcc +lat_1=" << itsStandardParallel1
+		   << " +lat_2=" << itsStandardParallel2
+		   << " +lat_0=" << itsStandardParallel1
+		   << " +lon_0=" << itsOrientation
+		   << " +a=" << fixed << itsEarthShape.A()
+		   << " +b=" << itsEarthShape.B()
+		   << " +units=m +no_defs +wktext";
 
 		// clang-format on
 
@@ -573,8 +575,9 @@ void lambert_conformal_grid::SetCoordinates() const
 		ASSERT(itsLatLonToXYTransformer);
 		ASSERT(itsScanningMode == kBottomLeft || itsScanningMode == kTopLeft);
 
-		double falseEasting = FirstPoint().X();
-		double falseNorthing = FirstPoint().Y();
+		const point fp = FirstPoint();
+		double falseEasting = fp.X();
+		double falseNorthing = fp.Y();
 
 		ASSERT(!IsKHPMissingValue(falseEasting) && !IsKHPMissingValue(falseNorthing));
 
