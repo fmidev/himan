@@ -10,7 +10,7 @@ function Product1()
 
   local vis = param("VV2-M")
   local rr = param("RRR-KGM2")
-  local ptype = param("PRECFORM-N")
+  local ptype = param("PRECFORM2-N")
   local wiparam = param("TOPL2-N")
 
   local visdata = luatool:Fetch(current_time, lvl, vis)
@@ -100,7 +100,7 @@ function Product2()
 
   local vis = param("VV2-M")
   local rr = param("RRR-KGM2")
-  local ptype = param("PRECFORM-N")
+  local ptype = param("PRECFORM2-N")
   local ceil = param("CL-2-FT")
   local wiparam = param("TOPL3-N")
 
