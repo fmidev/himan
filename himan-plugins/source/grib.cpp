@@ -1223,9 +1223,7 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 
 			rg->ScanningMode(m);
 
-			const point first(X0, Y0);
-
-			rg->BottomLeft(first);
+			rg->FirstPoint(firstPoint);
 
 			break;
 		}

@@ -75,6 +75,8 @@ class stereographic_grid : public grid
 	point FirstPoint() const override;
 	point LastPoint() const override;
 
+	void FirstPoint(const point& theFirstPoint);
+
 	virtual HPScanningMode ScanningMode() const override;
 	virtual void ScanningMode(HPScanningMode theScanningMode) override;
 
@@ -93,6 +95,8 @@ class stereographic_grid : public grid
 	void CreateAreaAndGrid() const;
 
 	bool EqualsTo(const stereographic_grid& other) const;
+
+	mutable std::once_flag itsAreaFlag;
 
 	mutable std::unique_ptr<OGRCoordinateTransformation> itsXYToLatLonTransformer;
 	mutable std::unique_ptr<OGRCoordinateTransformation> itsLatLonToXYTransformer;
