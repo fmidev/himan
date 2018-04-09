@@ -48,8 +48,8 @@ bool csv::ToFile(info& theInfo, string& theOutputFile)
 			const string stationName = (s.Name() != "Himan default station") ? "" : s.Name();
 
 			// boost cast handles floats more elegantly
-			const string lon = (IsKHPMissingValue(s.X())) ? "" : boost::lexical_cast<string>(s.X());
-			const string lat = (IsKHPMissingValue(s.Y())) ? "" : boost::lexical_cast<string>(s.Y());
+			const string lon = (IsKHPMissingValue(s.X())) ? "" : to_string(s.X());
+			const string lat = (IsKHPMissingValue(s.Y())) ? "" : to_string(s.Y());
 
 			out << theInfo.Producer().Id() << "," << originTime << "," << stationId << "," << stationName << "," << lon
 			    << "," << lat << "," << theInfo.Param().Name() << "," << HPLevelTypeToString.at(theInfo.Level().Type())
@@ -67,7 +67,7 @@ bool csv::ToFile(info& theInfo, string& theOutputFile)
 	double bytes = static_cast<double>(boost::filesystem::file_size(theOutputFile));
 
 	double speed = floor((bytes / 1024. / 1024.) / (duration / 1000.));
-	itsLogger.Info("Wrote file '" + theOutputFile + "' (" + boost::lexical_cast<string>(speed) + " MB/s)");
+	itsLogger.Info("Wrote file '" + theOutputFile + "' (" + to_string(speed) + " MB/s)");
 
 	return true;
 }
@@ -197,10 +197,9 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, const search_opti
 		dynamic_cast<point_list*>(requested->Grid())->Stations(stations);
 	}
 
-	itsLogger.Debug("Read " + boost::lexical_cast<string>(times.size()) + " times, " +
-	                boost::lexical_cast<string>(levels.size()) + " levels, " +
-	                boost::lexical_cast<string>(ftypes.size()) + " forecast types and " +
-	                boost::lexical_cast<string>(params.size()) + " params from file '" + inputFile + "'");
+	itsLogger.Debug("Read " + to_string(times.size()) + " times, " + to_string(levels.size()) + " levels, " +
+	                to_string(ftypes.size()) + " forecast types and " + to_string(params.size()) +
+	                " params from file '" + inputFile + "'");
 
 	requested->First();
 	requested->ResetParam();

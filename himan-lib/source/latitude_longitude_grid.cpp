@@ -382,19 +382,19 @@ bool latitude_longitude_grid::EqualsTo(const latitude_longitude_grid& other) con
 
 	if (itsBottomLeft != other.BottomLeft())
 	{
-		itsLogger.Trace("BottomLeft does not match: X " + boost::lexical_cast<std::string>(itsBottomLeft.X()) + " vs " +
-		                boost::lexical_cast<std::string>(other.BottomLeft().X()));
-		itsLogger.Trace("BottomLeft does not match: Y " + boost::lexical_cast<std::string>(itsBottomLeft.Y()) + " vs " +
-		                boost::lexical_cast<std::string>(other.BottomLeft().Y()));
+		itsLogger.Trace("BottomLeft does not match: X " + to_string(itsBottomLeft.X()) + " vs " +
+		                to_string(other.BottomLeft().X()));
+		itsLogger.Trace("BottomLeft does not match: Y " + to_string(itsBottomLeft.Y()) + " vs " +
+		                to_string(other.BottomLeft().Y()));
 		return false;
 	}
 
 	if (itsTopRight != other.TopRight())
 	{
-		itsLogger.Trace("TopRight does not match: X " + boost::lexical_cast<std::string>(itsTopRight.X()) + " vs " +
-		                boost::lexical_cast<std::string>(other.TopRight().X()));
-		itsLogger.Trace("TopRight does not match: Y " + boost::lexical_cast<std::string>(itsTopRight.Y()) + " vs " +
-		                boost::lexical_cast<std::string>(other.TopRight().Y()));
+		itsLogger.Trace("TopRight does not match: X " + to_string(itsTopRight.X()) + " vs " +
+		                to_string(other.TopRight().X()));
+		itsLogger.Trace("TopRight does not match: Y " + to_string(itsTopRight.Y()) + " vs " +
+		                to_string(other.TopRight().Y()));
 		return false;
 	}
 
@@ -402,29 +402,25 @@ bool latitude_longitude_grid::EqualsTo(const latitude_longitude_grid& other) con
 
 	if (fabs(Di() - other.Di()) > kEpsilon)
 	{
-		itsLogger.Trace("Di does not match: " + boost::lexical_cast<std::string>(Di()) + " vs " +
-		                boost::lexical_cast<std::string>(other.Di()));
+		itsLogger.Trace("Di does not match: " + to_string(Di()) + " vs " + to_string(other.Di()));
 		return false;
 	}
 
 	if (fabs(Dj() - other.Dj()) > kEpsilon)
 	{
-		itsLogger.Trace("Dj does not match: " + boost::lexical_cast<std::string>(Dj()) + " vs " +
-		                boost::lexical_cast<std::string>(other.Dj()));
+		itsLogger.Trace("Dj does not match: " + to_string(Dj()) + " vs " + to_string(other.Dj()));
 		return false;
 	}
 
 	if (itsNi != other.Ni())
 	{
-		itsLogger.Trace("Ni does not match: " + boost::lexical_cast<std::string>(itsNi) + " vs " +
-		                boost::lexical_cast<std::string>(other.Ni()));
+		itsLogger.Trace("Ni does not match: " + to_string(itsNi) + " vs " + to_string(other.Ni()));
 		return false;
 	}
 
 	if (itsNj != other.Nj())
 	{
-		itsLogger.Trace("Nj does not match: " + boost::lexical_cast<std::string>(itsNj) + " vs " +
-		                boost::lexical_cast<std::string>(other.Nj()));
+		itsLogger.Trace("Nj does not match: " + to_string(itsNj) + " vs " + to_string(other.Nj()));
 		return false;
 	}
 
@@ -499,20 +495,12 @@ bool rotated_latitude_longitude_grid::EqualsTo(const rotated_latitude_longitude_
 
 	if (itsSouthPole != other.SouthPole())
 	{
-		itsLogger.Trace("SouthPole does not match: X " + boost::lexical_cast<std::string>(itsSouthPole.X()) + " vs " +
-		                boost::lexical_cast<std::string>(other.SouthPole().X()));
-		itsLogger.Trace("SouthPole does not match: Y " + boost::lexical_cast<std::string>(itsSouthPole.Y()) + " vs " +
-		                boost::lexical_cast<std::string>(other.SouthPole().Y()));
+		itsLogger.Trace("SouthPole does not match: X " + to_string(itsSouthPole.X()) + " vs " +
+		                to_string(other.SouthPole().X()));
+		itsLogger.Trace("SouthPole does not match: Y " + to_string(itsSouthPole.Y()) + " vs " +
+		                to_string(other.SouthPole().Y()));
 		return false;
 	}
-
-	// Note! We DON'T test for uv relative to grid!
-	// if (itsUVRelativeToGrid != other.UVRelativeToGrid())
-	//{
-	//	itsLogger.Trace("UVRelativeToGrid does not match: " + boost::lexical_cast<std::string> (itsUVRelativeToGrid) +
-	//" vs " + boost::lexical_cast<std::string> (other.UVRelativeToGrid()));
-	//	return false;
-	//}
 
 	return true;
 }

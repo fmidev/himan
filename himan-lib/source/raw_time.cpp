@@ -141,8 +141,8 @@ bool raw_time::Adjust(HPTimeResolution timeResolution, int theValue)
 	}
 	else
 	{
-		throw std::runtime_error(ClassName() + ": Invalid time adjustment unit: " +
-		                         boost::lexical_cast<std::string>(timeResolution) + "'");
+		throw std::runtime_error(ClassName() + ": Invalid time adjustment unit: " + std::to_string(timeResolution) +
+		                         "'");
 	}
 
 	return true;

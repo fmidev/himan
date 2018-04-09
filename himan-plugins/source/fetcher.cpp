@@ -9,7 +9,6 @@
 #include "plugin_factory.h"
 #include "util.h"
 #include <boost/filesystem/operations.hpp>
-#include <boost/lexical_cast.hpp>
 #include <fstream>
 #include <future>
 
@@ -82,13 +81,12 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 	for (size_t prodNum = 0; prodNum < config->SizeSourceProducers(); prodNum++)
 	{
-		optsStr += boost::lexical_cast<string>(config->SourceProducer(prodNum).Id()) + ",";
+		optsStr += to_string(config->SourceProducer(prodNum).Id()) + ",";
 	}
 
 	optsStr = optsStr.substr(0, optsStr.size() - 1);
 
-	optsStr += " origintime: " + requestedTime.OriginDateTime().String() + ", step: " +
-	           boost::lexical_cast<string>(requestedTime.Step());
+	optsStr += " origintime: " + requestedTime.OriginDateTime().String() + ", step: " + to_string(requestedTime.Step());
 
 	optsStr += " param(s): ";
 
@@ -101,8 +99,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 	if (static_cast<int>(requestedType.Type()) > 2)
 	{
-		optsStr += " forecast type: " + string(himan::HPForecastTypeToString.at(requestedType.Type())) + "/" +
-		           boost::lexical_cast<string>(requestedType.Value());
+		optsStr += " forecast type: " + static_cast<string>(requestedType);
 	}
 
 	itsLogger.Warning("No valid data found with given search options " + optsStr);
@@ -160,8 +157,7 @@ shared_ptr<himan::info> fetcher::FetchFromProducer(search_options& opts, bool re
 
 	if (itsApplyLandSeaMask)
 	{
-		itsLogger.Trace("Applying land-sea mask with threshold " +
-		                boost::lexical_cast<string>(itsLandSeaMaskThreshold));
+		itsLogger.Trace("Applying land-sea mask with threshold " + to_string(itsLandSeaMaskThreshold));
 
 		itsApplyLandSeaMask = false;
 
@@ -271,8 +267,8 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 			optsStr = optsStr.substr(0, optsStr.size() - 1);
 
-			optsStr += " origintime: " + requestedTime.OriginDateTime().String() + ", step: " +
-			           to_string(requestedTime.Step());
+			optsStr += " origintime: " + requestedTime.OriginDateTime().String() +
+			           ", step: " + to_string(requestedTime.Step());
 			optsStr += " param: " + requestedParam.Name();
 			optsStr += " level: " + static_cast<string>(requestedLevel);
 
@@ -432,9 +428,8 @@ himan::level fetcher::LevelTransform(const shared_ptr<const configuration>& conf
 			return ret;
 		}
 
-		auto levelXrefInfo =
-		    r->RadonDB().GetLevelTransform(sourceProducer.Id(), boost::lexical_cast<int>(paramInfo["id"]),
-		                                   boost::lexical_cast<int>(levelInfo["id"]), targetLevel.Value());
+		auto levelXrefInfo = r->RadonDB().GetLevelTransform(sourceProducer.Id(), stoi(paramInfo["id"]),
+		                                                    stoi(levelInfo["id"]), targetLevel.Value());
 
 		if (!levelXrefInfo.empty())
 		{

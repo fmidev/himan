@@ -259,8 +259,8 @@ point lambert_conformal_grid::XY(const point& latlon) const
 
 	if (!itsLatLonToXYTransformer->Transform(1, &projX, &projY))
 	{
-		itsLogger.Error("Error determining xy value for latlon point " + boost::lexical_cast<std::string>(latlon.X()) +
-		                "," + boost::lexical_cast<std::string>(latlon.Y()));
+		itsLogger.Error("Error determining xy value for latlon point " + to_string(latlon.X()) + "," +
+		                to_string(latlon.Y()));
 		return point();
 	}
 
@@ -298,8 +298,7 @@ point lambert_conformal_grid::LatLon(size_t locationIndex) const
 	ASSERT(itsXYToLatLonTransformer);
 	if (!itsXYToLatLonTransformer->Transform(1, &x, &y))
 	{
-		itsLogger.Error("Error determining latitude longitude value for xy point " +
-		                boost::lexical_cast<std::string>(x) + "," + boost::lexical_cast<std::string>(y));
+		itsLogger.Error("Error determining latitude longitude value for xy point " + to_string(x) + "," + to_string(y));
 		return point();
 	}
 

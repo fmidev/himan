@@ -7,7 +7,6 @@
 #include "info.h"
 #include "logger.h"
 #include "plugin_factory.h"
-#include <boost/lexical_cast.hpp>
 #include <time.h>
 
 using namespace std;
@@ -95,7 +94,8 @@ void cache::SplitToPool(info_t anInfo, bool pin)
 
 	if (localInfo->DimensionSize() > 1)
 	{
-		auto newInfo = make_shared<info>(localInfo->ForecastType(), localInfo->Time(), localInfo->Level(), localInfo->Param());
+		auto newInfo =
+		    make_shared<info>(localInfo->ForecastType(), localInfo->Time(), localInfo->Level(), localInfo->Param());
 		newInfo->Grid(localInfo->SharedGrid());
 		localInfo = newInfo;
 	}
