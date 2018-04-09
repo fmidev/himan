@@ -622,5 +622,6 @@ void lambert_conformal_grid::SetCoordinates() const
 
 OGRSpatialReference lambert_conformal_grid::SpatialReference() const
 {
+	SetCoordinates();
 	return OGRSpatialReference(*itsSpatialReference);
 }
