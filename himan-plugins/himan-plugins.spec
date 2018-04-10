@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.4.9
+Version: 18.4.10
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -39,7 +39,7 @@ BuildRequires: libfmigrib-devel >= 18.2.12
 BuildRequires: smartmet-library-newbase-devel >= 17.12.1
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
-BuildRequires: boost-devel >= 1.65
+BuildRequires: boost-devel >= 1.66
 BuildRequires: scons
 
 %description
@@ -110,6 +110,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Apr 10 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.4.10-1.fmi
+- New boost
 * Mon Apr  9 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.4.9-1.fmi
 - Rotation fix for u & v components
 * Tue Apr  3 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.4.3-1.fmi

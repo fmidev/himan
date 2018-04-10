@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 18.4.9
+Version: 18.4.10
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -31,7 +31,7 @@ Requires: eccodes
 BuildRequires: libfmidb-devel >= 17.9.18
 BuildRequires: libfmigrib-devel >= 18.2.12
 BuildRequires: zlib-devel
-BuildRequires: boost-devel >= 1.65
+BuildRequires: boost-devel >= 1.66
 BuildRequires: smartmet-library-newbase-devel >= 17.9.27
 BuildRequires: scons
 
@@ -60,6 +60,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Tue Apr 10 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.4.10-1.fmi
+- New boost
 * Mon Apr  9 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.4.9-1.fmi
 - stereographic fixes
 * Tue Apr  3 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.4.3-1.fmi

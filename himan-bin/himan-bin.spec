@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 18.3.26
+Version: 18.4.10
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -17,7 +17,7 @@ Requires: himan-lib >= 18.3.26
 Requires: himan-plugins
 Requires: gdal >= 1.11.0
 Requires: zlib
-BuildRequires: boost-devel >= 1.65
+BuildRequires: boost-devel >= 1.66
 
 %if %{defined suse_version}
 Requires: libjasper
@@ -62,6 +62,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Tue Apr 10 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.4.10-1.fmi
+- New boost
 * Mon Mar 26 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.3.26-1.fmi
 - Support for uploading run statistics to database
 * Mon Dec  4 2017 Mikko Partio <mikko.partio@fmi.fi> - 17.12.4-1.fmi
