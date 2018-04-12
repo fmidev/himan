@@ -72,8 +72,8 @@ struct cached_grid
 	{
 	}
 
-	__host__ cached_grid(const cached_grid& other) = default;
-	__host__ cached_grid& operator=(const cached_grid& other) = default;
+	cached_grid(const cached_grid& other) = default;
+	cached_grid& operator=(const cached_grid& other) = default;
 
 	__host__ cached_grid& operator=(cached_grid&& other) noexcept = delete;
 };
