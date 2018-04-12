@@ -23,7 +23,29 @@ static mutex singleFileWriteMutex;
 
 static const string kClassName = "himan::plugin::blend";
 
-blend::blend()
+// 'decaying factor' for bias and mae
+static const double alpha = 0.05;
+
+static const int kOriginTimeStep = 6;
+static const int kNumForecasts = 4;
+
+static const producer kLapsProd(109, 86, 109, "LAPSSCAN");
+static const string kLapsGeom = "LAPSSCANLARGE";
+static const forecast_type kLapsFtype(kAnalysis);
+
+static const producer kBlendWeightProd(182, 86, 182, "BLENDW");
+static const producer kBlendRawProd(183, 86, 183, "BLENDR");
+static const producer kBlendBiasProd(184, 86, 184, "BLENDBIAS");
+
+// Each blend producer is composed of these original producers. We use forecast_types to distinguish them
+// from each other, and this way we don't have to create bunch of extra producers. But still, it is a hack.
+static const forecast_type kMosFtype (kEpsPerturbation, 1.0);
+static const forecast_type kEcmwfFtype(kEpsPerturbation, 2.0);
+static const forecast_type kHirFtype(kEpsPerturbation, 3.0);
+static const forecast_type kMepsFtype(kEpsPerturbation, 4.0);
+static const forecast_type kGfsFtype(kEpsPerturbation, 5.0);
+
+blend::blend() : itsCalculationMode(kNone), itsNumHours(0), itsProdFtype()
 {
 	itsLogger = logger("blend");
 }
@@ -62,12 +84,25 @@ static info_t FetchWithProperties(shared_ptr<plugin_configuration> cnf, const fo
 	}
 }
 
-static vector<meta> ParseProducerOptions(shared_ptr<const plugin_configuration> conf);
+static info_t FetchProd(shared_ptr<plugin_configuration> cnf, const forecast_time& forecastTime,
+                        HPTimeResolution stepResolution, const level& lvl, const param& parm, const forecast_type& type,
+                        const producer& prod)
+{
+	auto f = GET_PLUGIN(fetcher);
+
+	const string geomName = cnf->TargetGeomName();
+
+	forecast_time ftime = forecastTime;
+	ftime.StepResolution(stepResolution);
+
+	cnf->SourceGeomNames({geomName});
+	cnf->SourceProducers({prod});
+
+	return f->Fetch(cnf, ftime, lvl, parm, type, false);
+}
 
 static mutex dimensionMutex;
 
-// We overload Start & Run functions since we don't want to step through the forecast types defined in targetInfo.
-// Presumably we don't want to iterate over levels either. (Not sure how that would be configured.)
 void blend::Run(unsigned short threadIndex)
 {
 	// Iterate through timesteps
@@ -96,10 +131,13 @@ void blend::Run(unsigned short threadIndex)
 
 		if (itsConfiguration->StatisticsEnabled())
 		{
+			// NOTE this is likely wrong. (Only counts the current iterator position's missing count.)
 			itsConfiguration->Statistics()->AddToMissingCount(targetInfo->Data().MissingCount());
 			itsConfiguration->Statistics()->AddToValueCount(targetInfo->Data().Size());
 		}
-		WriteToFile(targetInfo);
+
+		// NOTE: Each Calculate-function will call WriteToFile manually, since each of them have different requirements
+		// for its behavior.
 	}
 }
 
@@ -133,6 +171,74 @@ void blend::Process(shared_ptr<const plugin_configuration> conf)
 	Init(conf);
 	vector<param> params;
 
+	const string mode = conf->Exists("mode") ? conf->GetValue("mode") : "";
+	if (mode.empty())
+	{
+		throw std::runtime_error(ClassName() + ": blender 'mode' not specified");
+	}
+
+	if (mode == "blend")
+	{
+		itsCalculationMode = kCalculateBlend;
+	}
+	else if (mode == "mae")
+	{
+		itsCalculationMode = kCalculateMAE;
+	}
+	else if (mode == "bias")
+	{
+		itsCalculationMode = kCalculateBias;
+	}
+	else
+	{
+		throw std::runtime_error(ClassName() + ": invalid blender 'mode' specified");
+	}
+
+	const string hours = conf->Exists("hours") ? conf->GetValue("hours") : "";
+	if ((itsCalculationMode == kCalculateBias || itsCalculationMode == kCalculateMAE) && hours.empty())
+	{
+		throw std::runtime_error(ClassName() + ": number of previous hours ('hours') for calculation not specified");
+	}
+	if (itsCalculationMode == kCalculateBias || itsCalculationMode == kCalculateMAE)
+	{
+		itsNumHours = stoi(hours);
+	}
+
+    // Producer for bias and mae calculation
+	const string prod = conf->Exists("producer") ? conf->GetValue("producer") : "";
+	if ((itsCalculationMode == kCalculateBias || itsCalculationMode == kCalculateMAE) && prod.empty())
+	{
+		throw std::runtime_error(ClassName() + ": bias calculation data producer ('producer') not defined");
+	}
+
+	if (itsCalculationMode == kCalculateBias || itsCalculationMode == kCalculateMAE)
+	{
+		if (prod == "ECG")
+		{
+			itsProdFtype = kEcmwfFtype;
+		}
+		else if (prod == "HL2")
+		{
+			itsProdFtype = kHirFtype;
+		}
+		else if (prod == "MEPS")
+		{
+			itsProdFtype = kMepsFtype;
+		}
+		else if (prod == "GFS")
+		{
+			itsProdFtype = kGfsFtype;
+		}
+        else if (prod == "MOS")
+        {
+            itsProdFtype = kMosFtype;
+        }
+		else
+		{
+			throw std::runtime_error(ClassName() + ": unknown producer for bias/mae calculation");
+		}
+	}
+
 	// Each parameter has to be processed with a separate process queue invocation.
 	const string p = conf->Exists("param") ? conf->GetValue("param") : "";
 	if (p.empty())
@@ -141,10 +247,7 @@ void blend::Process(shared_ptr<const plugin_configuration> conf)
 	}
 	params.push_back(param(p));
 
-	itsMetaOpts = ParseProducerOptions(conf);
-
 	PrimaryDimension(kTimeDimension);
-	SetupOutputForecastTypes(itsInfo);
 	SetParams(params);
 	Start();
 }
@@ -156,93 +259,432 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 	const string deviceType = "CPU";
 
 	forecast_time currentTime = targetInfo->Time();
+	const param currentParam = targetInfo->Param();
+
+	switch (itsCalculationMode)
+	{
+		case kCalculateBlend:
+			log.Info("Calculating blend for " + currentParam.Name() + " " +
+			         static_cast<string>(currentTime.ValidDateTime()));
+			CalculateBlend(targetInfo, threadIndex);
+			break;
+		case kCalculateMAE:
+			log.Info("Calculating weights for " + currentParam.Name() + " " +
+			         static_cast<string>(currentTime.ValidDateTime()));
+			CalculateMember(targetInfo, threadIndex, kCalculateMAE);
+			break;
+		case kCalculateBias:
+			log.Info("Calculating bias corrected grids for " + currentParam.Name() + " " +
+			         static_cast<string>(currentTime.ValidDateTime()));
+			CalculateMember(targetInfo, threadIndex, kCalculateBias);
+			break;
+		default:
+			log.Error("Invalid calculation mode");
+			himan::Abort();
+	}
+}
+
+matrix<double> blend::CalculateBias(logger& log, shared_ptr<info> targetInfo, const forecast_type& ftype,
+                                    const level& lvl, const forecast_time& calcTime)
+{
+	shared_ptr<plugin_configuration> cnf = make_shared<plugin_configuration>(*itsConfiguration);
+
+	param currentParam = targetInfo->Param();
+	level currentLevel = targetInfo->Level();
+	forecast_time currentTime = targetInfo->Time();
+	HPTimeResolution currentRes = currentTime.StepResolution();
+
+	info_t analysis = FetchWithProperties(cnf, currentTime, currentRes, level(kHeight, 2.0), currentParam, kLapsFtype,
+	                                      kLapsGeom, kLapsProd);
+	if (!analysis)
+	{
+		log.Error("Analysis (LAPS) data not found");
+		himan::Abort();
+	}
+
+	matrix<double> currentBias(targetInfo->Data().SizeX(), targetInfo->Data().SizeY(), targetInfo->Data().SizeZ(),
+	                           MissingDouble());
+
+	forecast_time leadTime(calcTime);
+	info_t Info = FetchProd(cnf, leadTime, currentRes, lvl, currentParam, ftype, kBlendRawProd);
+
+	// Previous forecast's bias corrected data is optional. If the data is not found we'll set the grid to missing.
+	// (This happens, for example, during initialization.)
+	forecast_time prevLeadTime(leadTime);
+	prevLeadTime.OriginDateTime().Adjust(currentRes, -kOriginTimeStep);
+
+	vector<double> prevBias;
+	try
+	{
+		info_t temp = FetchProd(cnf, prevLeadTime, currentRes, lvl, currentParam, ftype, kBlendBiasProd);
+		prevBias = VEC(temp);
+	}
+	catch (HPExceptionType& e)
+	{
+		if (e == kFileDataNotFound)
+		{
+			// There's no benefit to setting the grid to 0, since we might get a valid grid and this might contain
+			// missing values. We still have to check for missing values in the calculation loop.
+			prevBias = vector<double>(targetInfo->Data().Size(), MissingDouble());
+		}
+		else
+		{
+			throw;
+		}
+	}
+
+	// Introduce shorter names for clarity
+	const vector<double>& O = VEC(analysis);
+	const vector<double>& F = VEC(Info);
+	const vector<double>& BC = prevBias;
+	vector<double>& B = currentBias.Values();
+
+	for (size_t i = 0; i < F.size(); i++)
+	{
+		double f = F[i];
+		double o = O[i];
+		double bc = BC[i];
+
+		if (IsMissing(bc))
+		{
+			bc = 0.0;
+		}
+
+		if (IsMissing(f) || IsMissing(o))
+		{
+			f = 0.0;
+			o = 0.0;
+		}
+		B[i] = (1.0 - alpha) * bc + alpha * (f - o);
+	}
+
+	return currentBias;
+}
+
+matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info> targetInfo, const forecast_type& ftype,
+                                   const level& lvl, const forecast_time& calcTime)
+{
+	shared_ptr<plugin_configuration> cnf = make_shared<plugin_configuration>(*itsConfiguration);
+
+	param currentParam = targetInfo->Param();
+	level currentLevel = targetInfo->Level();
+	forecast_time currentTime = targetInfo->Time();
+	HPTimeResolution currentRes = currentTime.StepResolution();
+
+	info_t analysis = FetchWithProperties(cnf, currentTime, currentRes, level(kHeight, 2.0), currentParam, kLapsFtype,
+	                                      kLapsGeom, kLapsProd);
+	if (!analysis)
+	{
+		log.Error("Analysis (LAPS) data not found");
+		himan::Abort();
+	}
+
+	matrix<double> MAE(targetInfo->Data().SizeX(), targetInfo->Data().SizeY(), targetInfo->Data().SizeZ(),
+	                   MissingDouble());
+
+	forecast_time leadTime(calcTime);
+	forecast_time prevLeadTime(leadTime);
+	prevLeadTime.OriginDateTime().Adjust(currentRes, -kOriginTimeStep);
+
+	info_t bias = FetchProd(cnf, leadTime, currentRes, lvl, currentParam, ftype, kBlendBiasProd);
+	info_t forecast = FetchProd(cnf, leadTime, currentRes, lvl, currentParam, ftype, kBlendRawProd);
+
+	vector<double> prevMAE;
+	try
+	{
+		info_t temp = FetchProd(cnf, prevLeadTime, currentRes, lvl, currentParam, ftype, kBlendWeightProd);
+		prevMAE = VEC(temp);
+	}
+	catch (HPExceptionType& e)
+	{
+		if (e == kFileDataNotFound)
+		{
+			prevMAE = vector<double>(targetInfo->Data().Size(), MissingDouble());
+		}
+		else
+		{
+			throw;
+		}
+	}
+
+	const vector<double>& O = VEC(analysis);
+	const vector<double>& B = VEC(bias);
+	const vector<double>& F = VEC(forecast);
+	vector<double>& mae = MAE.Values();
+
+	for (size_t i = 0; i < mae.size(); i++)
+	{
+		double o = O[i];
+		double f = F[i];
+        double b = B[i];
+		double _prevMAE = prevMAE[i];
+
+        if (IsMissing(f) || IsMissing(o))
+        {
+            f = 0.0;
+            o = 0.0;
+        }
+
+        if (IsMissing(_prevMAE))
+        {
+            _prevMAE = 0.0;
+        }
+
+        if (IsMissing(b))
+        {
+            b = 0.0;
+        }
+
+        const double bcf = f - b;
+        mae[i] = (1.0 - alpha) * _prevMAE + alpha * std::abs(bcf - o);
+	}
+
+	return MAE;
+}
+
+void blend::CalculateMember(shared_ptr<info> targetInfo, unsigned short threadIdx, blend_mode mode)
+{
+	logger log;
+	if (mode == kCalculateBias)
+	{
+		log = logger("calculateBias#" + to_string(threadIdx));
+	}
+	else
+	{
+		log = logger("calculateMAE#" + to_string(threadIdx));
+	}
+
+	forecast_type forecastType = itsProdFtype;
+	level targetLevel = targetInfo->Level();
+	forecast_time current = targetInfo->Time();
+
+	forecast_time ftime(current);
+	ftime.OriginDateTime().Adjust(kHourResolution, -itsNumHours);
+
+	// Problem: targetInfo has information for the data that we want to fetch...
+	// but because of the convoluted way of calculating everything, this doesn't match with the data we want to write
+	// out
+	// Solution: create a new info and write that out
+	info_t Info = make_shared<info>(*targetInfo);
+	vector<forecast_type> ftypes{itsProdFtype};
+
+	if (mode == kCalculateBias)
+	{
+		Info->Producer(kBlendBiasProd);
+	}
+	else
+	{
+		Info->Producer(kBlendWeightProd);
+	}
+
+	SetupOutputForecastTimes(Info);
+	Info->ForecastTypes(ftypes);
+	Info->Create(targetInfo->Grid(), true);
+	Info->First();
+
+	while (true)
+	{
+		matrix<double> d;
+		if (mode == kCalculateBias)
+		{
+			d = CalculateBias(log, targetInfo, forecastType, targetLevel, ftime);
+		}
+		else
+		{
+			d = CalculateMAE(log, targetInfo, forecastType, targetLevel, ftime);
+		}
+
+		if (Info->ForecastType(forecastType))
+		{
+			Info->Grid()->Data(d);
+			WriteToFile(Info);
+		}
+		else
+		{
+			log.Error("Failed to set the correct output forecast type");
+			himan::Abort();
+		}
+
+        if (ftime == current)
+        {
+            break;
+        }
+
+		Info->NextTime();
+		ftime.OriginDateTime().Adjust(kHourResolution, kOriginTimeStep);
+	}
+}
+
+static std::vector<info_t> FetchRawGrids(shared_ptr<info> targetInfo, shared_ptr<plugin_configuration> cnf)
+{
+	auto f = GET_PLUGIN(fetcher);
+	auto log = logger("calculateBlend_FetchRawGrids");
+
+	forecast_time currentTime = targetInfo->Time();
 	HPTimeResolution currentResolution = currentTime.StepResolution();
+	const param currentParam = targetInfo->Param();
+
+	info_t mos_raw, ec_raw, meps_raw, hirlam_raw, gfs_raw;
+
+    mos_raw =
+	    FetchProd(cnf, currentTime, currentResolution, level(kHeight, 0.0), currentParam, kMosFtype, kBlendRawProd);
+	log.Info("MOS_raw missing: " + to_string(mos_raw->Data().MissingCount()));
+
+	ec_raw =
+	    FetchProd(cnf, currentTime, currentResolution, level(kGround, 0.0), currentParam, kEcmwfFtype, kBlendRawProd);
+	log.Info("EC_raw missing: " + to_string(ec_raw->Data().MissingCount()));
+
+	meps_raw =
+	    FetchProd(cnf, currentTime, currentResolution, level(kHeight, 2.0), currentParam, kMepsFtype, kBlendRawProd);
+	log.Info("MEPS_raw missing: " + to_string(meps_raw->Data().MissingCount()));
+
+	hirlam_raw =
+	    FetchProd(cnf, currentTime, currentResolution, level(kHeight, 2.0), currentParam, kHirFtype, kBlendRawProd);
+	log.Info("HIRLAM_raw missing: " + to_string(hirlam_raw->Data().MissingCount()));
+
+	gfs_raw =
+	    FetchProd(cnf, currentTime, currentResolution, level(kGround, 0.0), currentParam, kGfsFtype, kBlendRawProd);
+	log.Info("GFS_raw missing: " + to_string(gfs_raw->Data().MissingCount()));
+
+	return std::vector<info_t>{mos_raw, ec_raw, meps_raw, hirlam_raw, gfs_raw};
+}
+
+static std::vector<info_t> FetchBiasGrids(shared_ptr<info> targetInfo, shared_ptr<plugin_configuration> cnf)
+{
+	auto f = GET_PLUGIN(fetcher);
+	auto log = logger("calculateBlend_FetchBiasGrids");
+
+	forecast_time currentTime = targetInfo->Time();
+	HPTimeResolution currentResolution = currentTime.StepResolution();
+	const param currentParam = targetInfo->Param();
+
+    // |empty_bias| since we want to have raw, bias, and mae std::vector be of the same size and in the same order.
+	info_t empty_bias, ec_bias, meps_bias, hirlam_bias, gfs_bias;
+
+	ec_bias =
+	    FetchProd(cnf, currentTime, currentResolution, level(kGround, 0.0), currentParam, kEcmwfFtype, kBlendBiasProd);
+	log.Info("EC_bias missing: " + to_string(ec_bias->Data().MissingCount()));
+
+	meps_bias =
+	    FetchProd(cnf, currentTime, currentResolution, level(kHeight, 2.0), currentParam, kMepsFtype, kBlendBiasProd);
+	log.Info("MEPS_bias missing: " + to_string(meps_bias->Data().MissingCount()));
+
+	hirlam_bias =
+	    FetchProd(cnf, currentTime, currentResolution, level(kHeight, 2.0), currentParam, kHirFtype, kBlendBiasProd);
+	log.Info("HIRLAM_bias missing: " + to_string(hirlam_bias->Data().MissingCount()));
+
+	gfs_bias =
+	    FetchProd(cnf, currentTime, currentResolution, level(kGround, 0.0), currentParam, kEcmwfFtype, kBlendBiasProd);
+	log.Info("GFS_bias missing: " + to_string(gfs_bias->Data().MissingCount()));
+
+	return std::vector<info_t>{empty_bias, ec_bias, meps_bias, hirlam_bias, gfs_bias};
+}
+
+static std::vector<info_t> FetchMAEGrids(shared_ptr<info> targetInfo, shared_ptr<plugin_configuration> cnf)
+{
+	auto f = GET_PLUGIN(fetcher);
+	auto log = logger("calculateBlend_FetchMAEGrids");
+
+	forecast_time currentTime = targetInfo->Time();
+	HPTimeResolution currentResolution = currentTime.StepResolution();
+	const param currentParam = targetInfo->Param();
+
+	info_t mos, ec, meps, hirlam, gfs;
+
+	mos =
+	    FetchProd(cnf, currentTime, currentResolution, level(kHeight, 0.0), currentParam, kMosFtype, kBlendWeightProd);
+	log.Info("MOS_mae missing: " + to_string(mos->Data().MissingCount()));
+
+	ec = FetchProd(cnf, currentTime, currentResolution, level(kGround, 0.0), currentParam, kEcmwfFtype,
+	               kBlendWeightProd);
+	log.Info("EC_mae missing: " + to_string(ec->Data().MissingCount()));
+
+	meps =
+	    FetchProd(cnf, currentTime, currentResolution, level(kHeight, 2.0), currentParam, kMepsFtype, kBlendWeightProd);
+	log.Info("MEPS_mae missing: " + to_string(meps->Data().MissingCount()));
+
+	hirlam =
+	    FetchProd(cnf, currentTime, currentResolution, level(kHeight, 2.0), currentParam, kHirFtype, kBlendWeightProd);
+	log.Info("HIRLAM_mae missing: " + to_string(hirlam->Data().MissingCount()));
+
+	gfs =
+	    FetchProd(cnf, currentTime, currentResolution, level(kGround, 0.0), currentParam, kGfsFtype, kBlendWeightProd);
+	log.Info("GFS_mae missing: " + to_string(gfs->Data().MissingCount()));
+
+	return std::vector<info_t>{ec, meps, hirlam, gfs};
+}
+
+void blend::CalculateBlend(shared_ptr<info> targetInfo, unsigned short threadIdx)
+{
+	auto f = GET_PLUGIN(fetcher);
+	auto log = logger("calculateBlend#" + to_string(threadIdx));
+	const string deviceType = "CPU";
+
+	forecast_time currentTime = targetInfo->Time();
 	const level currentLevel = targetInfo->Level();
 	const param currentParam = targetInfo->Param();
 
 	log.Info("Blending " + currentParam.Name() + " " + static_cast<string>(currentTime.ValidDateTime()));
 
-	// Construct a bunch of jobs for parallel fetching and interpolation.
-	vector<future<info_t>> futures;
-
-	for (const auto& m : itsMetaOpts)
-	{
-		futures.push_back(async(launch::async, [=]() {
-			auto cnf = make_shared<plugin_configuration>(*itsConfiguration);
-			return FetchWithProperties(cnf, currentTime, currentResolution, currentLevel, currentParam, m.type, m.geom,
-			                           m.prod);
-		}));
-	}
-
-	// Copy the fetched forecasts into the target info so that we can simply write them out after calculation.
-	// TODO: Don't copy the data? Should just point to the already existing data?
-	vector<info_t> forecasts;
-	forecasts.reserve(itsMetaOpts.size());
-
-	targetInfo->FirstForecastType();
-	size_t findex = 0;
-	for (auto& f : futures)
-	{
-		info_t Info = f.get();
-
-		if (!Info)
-		{
-			continue;
-		}
-
-		forecasts.push_back(Info);
-		findex++;
-
-		targetInfo->Data() = Info->Data();
-
-		if (!targetInfo->NextForecastType())
-		{
-			log.Warning("Not enough forecast types defined for target info, breaking");
-			break;
-		}
-	}
-
+	// NOTE: If one of the grids is missing, we should still put an empty grid there. Since all the stages assume that
+	// F[i], B[i], W[i] are all of the same model! This means that the ordering is fixed for the return vector of
+	// FetchRawGrids, FetchBiasGrids, FetchMAEGrids.
+	vector<info_t> forecasts = FetchRawGrids(targetInfo, make_shared<plugin_configuration>(*itsConfiguration));
 	if (forecasts.empty())
 	{
 		log.Error("Failed to acquire any source data");
 		himan::Abort();
 	}
 
-	if (!targetInfo->ForecastType(forecast_type(kEpsControl, 0.0)))
-	{
-		throw runtime_error(ClassName() + ": unable to select the control forecast for the target info");
-	}
-
 	// First reset all the locations for the upcoming loop.
 	for (const auto& f : forecasts)
 	{
-		f->ResetLocation();
+		if (f)
+		{
+			f->ResetLocation();
+		}
 	}
 
-	// Used to accumulate values in the case of missing values.
-	vector<double> values;
-	values.reserve(forecasts.size());
-
-	// Pick weights from the current set into this vector
-	vector<info_t> weights;
-	weights.reserve(forecasts.size());
-
-	vector<double> currentWeights;
-	currentWeights.reserve(forecasts.size());
-
-	// Create unit weight grids based on the target info. This is in preparation for the precalculated
-	// weight grids stored on disk.
-	for (size_t i = 0; i < forecasts.size(); i++)
+	vector<info_t> biases = FetchBiasGrids(targetInfo, make_shared<plugin_configuration>(*itsConfiguration));
+	if (biases.empty())
 	{
-		auto w = std::make_shared<info>(*targetInfo);
-		w->Create(targetInfo->Grid(), true);
-
-		const double unitWeight = 1.0 / static_cast<double>(forecasts.size());
-		w->Data().Fill(unitWeight);
-		w->ResetLocation();
-
-		weights.push_back(w);
+		log.Error("Failed to acquire bias grids");
+		himan::Abort();
 	}
+
+	for (const auto& b : biases)
+	{
+		if (b)
+		{
+			b->ResetLocation();
+		}
+	}
+
+	// Load all the precalculated weights from BLENDW
+	vector<info_t> weights = FetchMAEGrids(targetInfo, make_shared<plugin_configuration>(*itsConfiguration));
+	if (weights.empty())
+	{
+		log.Error("Failed to acquire weight grids");
+		himan::Abort();
+	}
+
+	for (auto& w : weights)
+	{
+		if (w)
+		{
+			w->ResetLocation();
+		}
+    }
+
+	// Used to collect values in the case of missing values.
+	vector<double> collectedValues;
+	collectedValues.reserve(forecasts.size());
+
+	vector<double> collectedWeights;
+	collectedWeights.reserve(forecasts.size());
+
+	vector<double> collectedBiases;
+	collectedBiases.reserve(forecasts.size());
 
 	targetInfo->ResetLocation();
 	while (targetInfo->NextLocation())
@@ -250,10 +692,11 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 		double F = 0.0;
 		size_t numMissing = 0;
 
-		for (const auto&& tup : zip_range(forecasts, weights))
+		for (const auto&& tup : zip_range(forecasts, weights, biases))
 		{
 			info_t f = tup.get<0>();
 			info_t w = tup.get<1>();
+			info_t b = tup.get<2>();
 
 			if (!f->NextLocation())
 			{
@@ -267,17 +710,41 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 				continue;
 			}
 
+			if (!b->NextLocation())
+			{
+				log.Warning("unable to advance bias location iterator position");
+				continue;
+			}
+
 			const double v = f->Value();
 			const double wv = w->Value();
-			if (IsMissing(v) || IsMissing(wv))
+			const double bb = b->Value();
+			if (IsMissing(v) || IsMissing(wv) || IsMissing(bb))
 			{
 				numMissing++;
 				continue;
 			}
 
-			values.push_back(v);
-			currentWeights.push_back(wv);
+			collectedValues.push_back(v);
+			collectedWeights.push_back(wv);
+			collectedBiases.push_back(bb);
 		}
+
+		// Used for the actual application of the weights.
+        vector<double> weights;
+		weights.resize(collectedWeights.size());
+
+        for (size_t i = 0; i < weights.size(); i++)
+        {
+            double sum = 0.0;
+            for (const double& w : collectedWeights)
+            {
+				// currentWeights already pruned of missing values
+                sum +=  1.0 / w;
+            }
+
+            weights[i] = 1.0 / sum;
+        }
 
 		if (numMissing == forecasts.size())
 		{
@@ -286,35 +753,41 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 		else
 		{
 			double sw = 0.0;
-			for (const auto& w : currentWeights)
+			for (const auto& w : weights)
 			{
 				sw += w;
 			}
 
-			if (sw <= 0.0)
+			if (sw > 0.0)
 			{
-				continue;
-			}
+				// Finally apply the weights to the forecast values.
+				for (const auto&& tup : zip_range(weights, collectedValues, collectedBiases))
+				{
+					const double w = tup.get<0>();
+					const double v = tup.get<1>();
+					const double b = tup.get<2>();
+					F += w * (v - b);
+				}
 
-			// Finally apply the weights to the forecast values.
-			for (const auto&& tup : zip_range(currentWeights, values))
+				F /= sw;
+			}
+			else
 			{
-				const double w = tup.get<0>();
-				const double v = tup.get<1>();
-				F += w * v;
+				F = MissingDouble();
 			}
-
-			F /= sw;
 		}
 
 		targetInfo->Value(F);
 
-		currentWeights.clear();
-		values.clear();
+		collectedValues.clear();
+		collectedBiases.clear();
+		collectedWeights.clear();
 	}
 
 	log.Info("[" + deviceType + "] Missing values: " + to_string(targetInfo->Data().MissingCount()) + "/" +
 	         to_string(targetInfo->Data().Size()));
+
+	WriteToFile(targetInfo);
 }
 
 void blend::WriteToFile(const info_t targetInfo, write_options writeOptions)
@@ -324,20 +797,15 @@ void blend::WriteToFile(const info_t targetInfo, write_options writeOptions)
 	aWriter->WriteOptions(writeOptions);
 	auto tempInfo = make_shared<info>(*targetInfo);
 
-	tempInfo->ResetForecastType();
-
-	while (tempInfo->NextForecastType())
+	if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
 	{
-		if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
-		{
-			aWriter->ToFile(tempInfo, itsConfiguration);
-		}
-		else
-		{
-			lock_guard<mutex> lock(singleFileWriteMutex);
+		aWriter->ToFile(tempInfo, itsConfiguration);
+	}
+	else
+	{
+		lock_guard<mutex> lock(singleFileWriteMutex);
 
-			aWriter->ToFile(tempInfo, itsConfiguration, itsConfiguration->ConfigurationFile());
-		}
+		aWriter->ToFile(tempInfo, itsConfiguration, itsConfiguration->ConfigurationFile());
 	}
 
 	if (itsConfiguration->UseDynamicMemoryAllocation())
@@ -346,130 +814,25 @@ void blend::WriteToFile(const info_t targetInfo, write_options writeOptions)
 	}
 }
 
-// Output original forecasts as perturbations and the generated 'blend' as the control forecast.
-void blend::SetupOutputForecastTypes(shared_ptr<info> Info)
+void blend::SetupOutputForecastTimes(shared_ptr<info> Info)
 {
-	vector<forecast_type> ftypes;
+	vector<forecast_time> ftimes;
 
-	for (size_t index = 1; index <= itsMetaOpts.size(); index++)
+	Info->FirstTime();
+	forecast_time current = Info->Time();
+
+	forecast_time ftime (current);
+	ftime.OriginDateTime().Adjust(kHourResolution, -itsNumHours);
+
+	while (ftime != current)
 	{
-		ftypes.push_back(forecast_type(kEpsPerturbation, static_cast<double>(index)));
+		ftimes.push_back(ftime);
+		ftime.OriginDateTime().Adjust(kHourResolution, kOriginTimeStep);
 	}
 
-	ftypes.push_back(forecast_type(kEpsControl, 0.0));
-	Info->ForecastTypes(ftypes);
-}
+    ftimes.push_back(ftime);
 
-vector<meta> ParseProducerOptions(shared_ptr<const plugin_configuration> conf)
-{
-	vector<meta> metaOpts;
-
-	auto R = GET_PLUGIN(radon);
-
-	auto producers = conf->GetParameterNames();
-	for (const auto& p : producers)
-	{
-		const string producerName = p;
-		string geom;
-		vector<forecast_type> ftypes;
-
-		auto options = conf->GetParameterOptions(p);
-		for (const auto& option : options)
-		{
-			if (option.first == "forecast_type")
-			{
-				vector<string> types = himan::util::Split(option.second, ",", false);
-				for (const string& type : types)
-				{
-					HPForecastType ty;
-
-					if (type.find("pf") != string::npos)
-					{
-						ty = kEpsPerturbation;
-						string list = "";
-						for (size_t i = 2; i < type.size(); i++)
-						{
-							list += type[i];
-						}
-
-						vector<string> range = himan::util::Split(list, "-", false);
-						if (range.size() == 1)
-						{
-							ftypes.push_back(forecast_type(ty, stoi(range[0])));
-						}
-						else
-						{
-							ASSERT(range.size() == 2);
-							int current = stoi(range[0]);
-							const int stop = stoi(range[1]);
-
-							while (current <= stop)
-							{
-								ftypes.push_back(forecast_type(ty, current));
-								current++;
-							}
-						}
-					}
-					else
-					{
-						if (type == "cf")
-						{
-							ftypes.push_back(forecast_type(kEpsControl, 0));
-						}
-						else if (type == "deterministic")
-						{
-							ftypes.push_back(forecast_type(kDeterministic));
-						}
-						else
-						{
-							throw runtime_error("invalid forecast_type: " + type);
-						}
-					}
-				}
-			}
-			else if (option.first == "geom")
-			{
-				geom = option.second;
-			}
-			else
-			{
-				throw runtime_error(kClassName + ": invalid configuration " + option.first + " : " + option.second);
-			}
-		}
-
-		// Fetch producer information from database by producer name
-		// Problems:
-		// - easy to configure wrong geometry for a producer (this is not checked, and only seen when we don't find
-		//   data)
-		auto producerDefinition = R->RadonDB().GetProducerDefinition(producerName);
-		if (producerDefinition.empty())
-		{
-			throw runtime_error(kClassName + ": producer information not found for '" + producerName + "'");
-		}
-
-		const long prodId = stol(producerDefinition["producer_id"]);
-		const string name = producerDefinition["ref_prod"];
-		const long centre = stol(producerDefinition["ident_id"]);
-		const long ident = stol(producerDefinition["model_id"]);
-		const producer prod(prodId, centre, ident, name);
-
-		if (!geom.empty() && !ftypes.empty())
-		{
-			for (const auto& f : ftypes)
-			{
-				meta m;
-				m.prod = prod;
-				m.geom = geom;
-				m.type = f;
-				metaOpts.push_back(m);
-			}
-		}
-		else
-		{
-			throw runtime_error(kClassName + ": missing producer information");
-		}
-	}
-	return metaOpts;
+	Info->Times(ftimes);
 }
 
 }  // namespace plugin

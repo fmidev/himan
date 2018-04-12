@@ -8,13 +8,14 @@ namespace himan
 {
 namespace plugin
 {
-// Gather producer, geometry, and time information.
-struct meta
+
+enum blend_mode
 {
-	producer prod;
-	std::string geom;
-	forecast_type type;
-	forecast_time ftime;
+	kNone,
+	//
+	kCalculateBlend,
+	kCalculateMAE,
+	kCalculateBias
 };
 
 class blend : public compiled_plugin, private compiled_plugin_base
@@ -49,10 +50,19 @@ class blend : public compiled_plugin, private compiled_plugin_base
 	virtual void WriteToFile(const info_t targetInfo, write_options opts = write_options()) override;
 
    private:
-	void SetupOutputForecastTypes(std::shared_ptr<info> Info);
+	void CalculateBlend(std::shared_ptr<info> targetInfo, unsigned short threadIndex);
+	void CalculateMember(std::shared_ptr<info> targetInfo, unsigned short threadIndex, blend_mode mode);
 
-	std::vector<meta> itsMetaOpts;
-	std::vector<double> itsWeights;
+	matrix<double> CalculateMAE(logger& log, std::shared_ptr<info> targetInfo, const forecast_type& ftype,
+	                            const level& lvl, const forecast_time& calcTime);
+	matrix<double> CalculateBias(logger& log, std::shared_ptr<info> targetInfo, const forecast_type& ftype,
+	                             const level& lvl, const forecast_time& calcTime);
+
+	void SetupOutputForecastTimes(std::shared_ptr<info> Info);
+
+	blend_mode itsCalculationMode;
+	int itsNumHours;
+	forecast_type itsProdFtype;
 };
 
 extern "C" std::shared_ptr<himan_plugin> create()
