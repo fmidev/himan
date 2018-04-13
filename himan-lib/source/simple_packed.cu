@@ -6,8 +6,9 @@
 #include "simple_packed.h"
 
 #include <NFmiGribPacking.h>
-#include <cub/cub.cuh>
 #include <grib_api.h>
+#include <thrust/device_ptr.h>
+#include <thrust/extrema.h>
 
 #include "cuda_helper.h"
 
@@ -104,53 +105,19 @@ long get_decimal_scale_fact(double max, double min, long bpval, long binary_scal
 }
 
 template <typename T>
-__host__ T simple_packed::Min(T* d_arr, size_t N, cudaStream_t& stream)
+__host__ T simple_packed::Max(T* d_arr, size_t N, cudaStream_t& stream)
 {
-	void* d_temp = 0;
-	size_t temp_N = 0;
-	T* d_min = 0;
-	T min;
+	T* ret = thrust::max_element(thrust::cuda::par.on(stream), d_arr, d_arr + N);
 
-	CUDA_CHECK(cudaMalloc((void**)&d_min, sizeof(T)));
-
-	// Allocate temp storage
-	CUDA_CHECK(cub::DeviceReduce::Min(d_temp, temp_N, d_arr, d_min, N, stream));
-	CUDA_CHECK(cudaMalloc((void**)&d_temp, temp_N));
-
-	CUDA_CHECK(cub::DeviceReduce::Min(d_temp, temp_N, d_arr, d_min, N, stream));
-
-	CUDA_CHECK(cudaStreamSynchronize(stream));
-
-	CUDA_CHECK(cudaFree(d_temp));
-	CUDA_CHECK(cudaMemcpyAsync(&min, d_min, sizeof(T), cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaFree(d_min));
-
-	return min;
+	return *ret;
 }
 
 template <typename T>
-__host__ T simple_packed::Max(T* d_arr, size_t N, cudaStream_t& stream)
+__host__ T simple_packed::Min(T* d_arr, size_t N, cudaStream_t& stream)
 {
-	void* d_temp = 0;
-	size_t temp_N = 0;
-	T* d_max = 0;
-	T max;
+	T* ret = thrust::min_element(thrust::cuda::par.on(stream), d_arr, d_arr + N);
 
-	CUDA_CHECK(cudaMalloc((void**)&d_max, sizeof(T)));
-
-	// Allocate temp storage
-	CUDA_CHECK(cub::DeviceReduce::Max(d_temp, temp_N, d_arr, d_max, N, stream));
-	CUDA_CHECK(cudaMalloc((void**)&d_temp, temp_N));
-
-	CUDA_CHECK(cub::DeviceReduce::Max(d_temp, temp_N, d_arr, d_max, N, stream));
-
-	CUDA_CHECK(cudaStreamSynchronize(stream));
-
-	CUDA_CHECK(cudaFree(d_temp));
-	CUDA_CHECK(cudaMemcpyAsync(&max, d_max, sizeof(T), cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaFree(d_max));
-
-	return max;
+	return *ret;
 }
 
 template <typename T>
@@ -190,7 +157,6 @@ __host__ void simple_packed::Unpack(double* arr, size_t N, cudaStream_t* stream)
 
 		// For empty grid (all values missing), grib_api gives reference value 1!
 		double fillValue = coefficients.referenceValue;
-		std::cout << "SPECIAL CASE with fillValue=" << fillValue << "\n";
 
 		if (HasBitmap())
 		{
