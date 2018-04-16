@@ -112,7 +112,7 @@ class lambert_conformal_grid : public grid
 
    private:
 	bool EqualsTo(const lambert_conformal_grid& other) const;
-	bool SetCoordinates() const;
+	void SetCoordinates() const;
 
 	point itsBottomLeft;
 	point itsTopLeft;
@@ -129,6 +129,7 @@ class lambert_conformal_grid : public grid
 
 	point itsSouthPole;
 
+	mutable std::once_flag itsAreaFlag;
 	mutable std::unique_ptr<OGRCoordinateTransformation> itsXYToLatLonTransformer;
 	mutable std::unique_ptr<OGRCoordinateTransformation> itsLatLonToXYTransformer;
 	mutable std::unique_ptr<OGRSpatialReference> itsSpatialReference;

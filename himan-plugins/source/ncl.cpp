@@ -8,7 +8,6 @@
 #include "level.h"
 #include "logger.h"
 #include "plugin_factory.h"
-#include <boost/lexical_cast.hpp>
 
 #include "radon.h"
 
@@ -32,9 +31,9 @@ void ncl::Process(std::shared_ptr<const plugin_configuration> conf)
 	{
 		auto r = GET_PLUGIN(radon);
 
-		itsBottomLevel = boost::lexical_cast<int>(
-		    r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer().Id(), "last hybrid level number"));
-		itsTopLevel = boost::lexical_cast<int>(
+		itsBottomLevel =
+		    stoi(r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer().Id(), "last hybrid level number"));
+		itsTopLevel = stoi(
 		    r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer().Id(), "first hybrid level number"));
 	}
 

@@ -8,7 +8,6 @@
 #include "logger.h"
 #include "plugin_factory.h"
 #include "util.h"
-#include <boost/lexical_cast.hpp>
 
 #include "fetcher.h"
 
@@ -44,7 +43,7 @@ vector<himan::level> transformer::LevelsFromString(const string& levelType, cons
 
 	for (size_t i = 0; i < levelsStr.size(); i++)
 	{
-		levels.push_back(level(theLevelType, boost::lexical_cast<float>(levelsStr[i]), levelType));
+		levels.push_back(level(theLevelType, stof(levelsStr[i]), levelType));
 	}
 
 	return levels;
@@ -58,7 +57,7 @@ void transformer::SetAdditionalParameters()
 
 	if (!itsConfiguration->GetValue("base").empty())
 	{
-		itsBase = boost::lexical_cast<double>(itsConfiguration->GetValue("base"));
+		itsBase = stod(itsConfiguration->GetValue("base"));
 	}
 	else
 	{
@@ -67,7 +66,7 @@ void transformer::SetAdditionalParameters()
 
 	if (!itsConfiguration->GetValue("scale").empty())
 	{
-		itsScale = boost::lexical_cast<double>(itsConfiguration->GetValue("scale"));
+		itsScale = stod(itsConfiguration->GetValue("scale"));
 	}
 	else
 	{
@@ -76,7 +75,7 @@ void transformer::SetAdditionalParameters()
 
 	if (!itsConfiguration->GetValue("target_univ_id").empty())
 	{
-		itsTargetUnivID = boost::lexical_cast<int>(itsConfiguration->GetValue("target_univ_id"));
+		itsTargetUnivID = stoi(itsConfiguration->GetValue("target_univ_id"));
 	}
 	else
 	{
@@ -138,7 +137,7 @@ void transformer::SetAdditionalParameters()
 		// Check for optional threshold parameter
 		if (itsConfiguration->Exists("landsea_mask_threshold"))
 		{
-			itsLandSeaMaskThreshold = boost::lexical_cast<double>(itsConfiguration->GetValue("landsea_mask_threshold"));
+			itsLandSeaMaskThreshold = stod(itsConfiguration->GetValue("landsea_mask_threshold"));
 		}
 	}
 
@@ -246,9 +245,9 @@ void transformer::Process(std::shared_ptr<const plugin_configuration> conf)
 		    !itsConfiguration->GetValue("grib_category").empty() &&
 		    !itsConfiguration->GetValue("grib_parameter").empty())
 		{
-			requestedParam.GribDiscipline(boost::lexical_cast<int>(itsConfiguration->GetValue("grib_discipline")));
-			requestedParam.GribCategory(boost::lexical_cast<int>(itsConfiguration->GetValue("grib_category")));
-			requestedParam.GribParameter(boost::lexical_cast<int>(itsConfiguration->GetValue("grib_parameter")));
+			requestedParam.GribDiscipline(stoi(itsConfiguration->GetValue("grib_discipline")));
+			requestedParam.GribCategory(stoi(itsConfiguration->GetValue("grib_category")));
+			requestedParam.GribParameter(stoi(itsConfiguration->GetValue("grib_parameter")));
 		}
 	}
 
@@ -276,7 +275,7 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 
 	param InputParam(itsSourceParam);
 
-	auto myThreadedLogger = logger("transformerThread #" + boost::lexical_cast<string>(threadIndex));
+	auto myThreadedLogger = logger("transformerThread #" + to_string(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();

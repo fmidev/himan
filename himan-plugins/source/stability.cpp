@@ -23,7 +23,10 @@ static level itsBottomLevel;
 typedef vector<double> vec;
 
 pair<vec, vec> GetSRHSourceData(const shared_ptr<info>& myTargetInfo, shared_ptr<hitool> h);
+
+#ifdef HAVE_CUDA
 void RunCuda(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo, shared_ptr<hitool>& h);
+#endif
 
 namespace STABILITY
 {
@@ -603,6 +606,7 @@ pair<vec, vec> GetSRHSourceData(const shared_ptr<info>& myTargetInfo, shared_ptr
 	return make_pair(Uid, Vid);
 }
 
+#ifdef HAVE_CUDA
 void RunCuda(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo, shared_ptr<hitool>& h)
 {
 	unique_ptr<stability_cuda::options> opts(new stability_cuda::options);
@@ -654,6 +658,7 @@ void RunCuda(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo,
 
 	stability_cuda::Process(*opts);
 }
+#endif
 
 void stability::RunTimeDimension(info_t myTargetInfo, unsigned short threadIndex)
 {

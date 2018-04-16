@@ -622,7 +622,7 @@ raw_time GetLatestOriginDateTime(const shared_ptr<configuration> conf, const str
 	if (strlist.size() == 2)
 	{
 		// will throw if origintime is not in the form "latest-X", where X : integer >= 0
-		offset = boost::lexical_cast<unsigned int>(strlist[1]);
+		offset = stoi(strlist[1]);
 	}
 
 	HPDatabaseType dbtype = conf->DatabaseType();
@@ -711,7 +711,7 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 
 		for (size_t i = 0; i < timesStr.size(); i++)
 		{
-			times.push_back(boost::lexical_cast<int>(timesStr[i]));
+			times.push_back(stoi(timesStr[i]));
 		}
 
 		sort(times.begin(), times.end());
@@ -853,8 +853,8 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 
 unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::property_tree::ptree& pt)
 {
-	using himan::kTopLeft;
 	using himan::kBottomLeft;
+	using himan::kTopLeft;
 
 	unique_ptr<grid> g;
 
@@ -885,17 +885,17 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 			g = unique_ptr<latitude_longitude_grid>(new latitude_longitude_grid);
 			latitude_longitude_grid* const llg = dynamic_cast<latitude_longitude_grid*>(g.get());
 
-			const double di = scale * boost::lexical_cast<double>(geominfo["pas_longitude"]);
-			const double dj = scale * boost::lexical_cast<double>(geominfo["pas_latitude"]);
+			const double di = scale * stod(geominfo["pas_longitude"]);
+			const double dj = scale * stod(geominfo["pas_latitude"]);
 
-			llg->Ni(boost::lexical_cast<size_t>(geominfo["col_cnt"]));
-			llg->Nj(boost::lexical_cast<size_t>(geominfo["row_cnt"]));
+			llg->Ni(static_cast<size_t>(stol(geominfo["col_cnt"])));
+			llg->Nj(static_cast<size_t>(stol(geominfo["row_cnt"])));
 			llg->Di(di);
 			llg->Dj(dj);
 			llg->ScanningMode(scmode);
 
-			const double X0 = boost::lexical_cast<double>(geominfo["long_orig"]) * scale;
-			const double Y0 = boost::lexical_cast<double>(geominfo["lat_orig"]) * scale;
+			const double X0 = stod(geominfo["long_orig"]) * scale;
+			const double Y0 = stod(geominfo["lat_orig"]) * scale;
 
 			const double X1 = fmod(X0 + static_cast<double>(llg->Ni() - 1) * di, 360);
 
@@ -921,20 +921,19 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 			g = unique_ptr<rotated_latitude_longitude_grid>(new rotated_latitude_longitude_grid);
 			rotated_latitude_longitude_grid* const rllg = dynamic_cast<rotated_latitude_longitude_grid*>(g.get());
 
-			const double di = scale * boost::lexical_cast<double>(geominfo["pas_longitude"]);
-			const double dj = scale * boost::lexical_cast<double>(geominfo["pas_latitude"]);
+			const double di = scale * stod(geominfo["pas_longitude"]);
+			const double dj = scale * stod(geominfo["pas_latitude"]);
 
-			rllg->Ni(boost::lexical_cast<size_t>(geominfo["col_cnt"]));
-			rllg->Nj(boost::lexical_cast<size_t>(geominfo["row_cnt"]));
+			rllg->Ni(static_cast<size_t>(stol(geominfo["col_cnt"])));
+			rllg->Nj(static_cast<size_t>(stol(geominfo["row_cnt"])));
 			rllg->Di(di);
 			rllg->Dj(dj);
 			rllg->ScanningMode(scmode);
 
-			rllg->SouthPole(point(boost::lexical_cast<double>(geominfo["geom_parm_2"]) * scale,
-			                      boost::lexical_cast<double>(geominfo["geom_parm_1"]) * scale));
+			rllg->SouthPole(point(stod(geominfo["geom_parm_2"]) * scale, stod(geominfo["geom_parm_1"]) * scale));
 
-			const double X0 = boost::lexical_cast<double>(geominfo["long_orig"]) * scale;
-			const double Y0 = boost::lexical_cast<double>(geominfo["lat_orig"]) * scale;
+			const double X0 = stod(geominfo["long_orig"]) * scale;
+			const double Y0 = stod(geominfo["lat_orig"]) * scale;
 
 			const double X1 = fmod(X0 + static_cast<double>(rllg->Ni() - 1) * di, 360);
 
@@ -960,19 +959,19 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 			g = unique_ptr<stereographic_grid>(new stereographic_grid);
 			stereographic_grid* const sg = dynamic_cast<stereographic_grid*>(g.get());
 
-			const double di = boost::lexical_cast<double>(geominfo["pas_longitude"]);
-			const double dj = boost::lexical_cast<double>(geominfo["pas_latitude"]);
+			const double di = stod(geominfo["pas_longitude"]);
+			const double dj = stod(geominfo["pas_latitude"]);
 
-			sg->Orientation(boost::lexical_cast<double>(geominfo["geom_parm_1"]) * scale);
+			sg->Orientation(stod(geominfo["geom_parm_1"]) * scale);
 			sg->Di(di);
 			sg->Dj(dj);
 
-			sg->Ni(boost::lexical_cast<size_t>(geominfo["col_cnt"]));
-			sg->Nj(boost::lexical_cast<size_t>(geominfo["row_cnt"]));
+			sg->Ni(static_cast<size_t>(stol(geominfo["col_cnt"])));
+			sg->Nj(static_cast<size_t>(stol(geominfo["row_cnt"])));
 			sg->ScanningMode(scmode);
 
-			const double X0 = boost::lexical_cast<double>(geominfo["long_orig"]) * scale;
-			const double Y0 = boost::lexical_cast<double>(geominfo["lat_orig"]) * scale;
+			const double X0 = stod(geominfo["long_orig"]) * scale;
+			const double Y0 = stod(geominfo["lat_orig"]) * scale;
 
 			sg->FirstPoint(point(X0, Y0));
 		}
@@ -981,25 +980,23 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 			g = unique_ptr<reduced_gaussian_grid>(new reduced_gaussian_grid);
 			reduced_gaussian_grid* const gg = dynamic_cast<reduced_gaussian_grid*>(g.get());
 
-			gg->N(boost::lexical_cast<int>(geominfo["n"]));
-			gg->Nj(boost::lexical_cast<int>(geominfo["nj"]));
+			gg->N(stoi(geominfo["n"]));
+			gg->Nj(stoi(geominfo["nj"]));
 
 			auto strlongitudes = himan::util::Split(geominfo["longitudes_along_parallels"], ",", false);
 			vector<int> longitudes;
 
 			for (auto& l : strlongitudes)
 			{
-				longitudes.push_back(boost::lexical_cast<int>(l));
+				longitudes.push_back(stoi(l));
 			}
 
 			gg->NumberOfPointsAlongParallels(longitudes);
 
-			ASSERT(boost::lexical_cast<size_t>(geominfo["n"]) * 2 == longitudes.size());
+			ASSERT(static_cast<size_t>(stol(geominfo["n"])) * 2 == longitudes.size());
 
-			const point first(boost::lexical_cast<double>(geominfo["first_point_lon"]),
-			                  boost::lexical_cast<double>(geominfo["first_point_lat"]));
-			const point last(boost::lexical_cast<double>(geominfo["last_point_lon"]),
-			                 boost::lexical_cast<double>(geominfo["last_point_lat"]));
+			const point first(stod(geominfo["first_point_lon"]), stod(geominfo["first_point_lat"]));
+			const point last(stod(geominfo["last_point_lon"]), stod(geominfo["last_point_lat"]));
 
 			gg->ScanningMode(scmode);
 
@@ -1028,31 +1025,33 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 			g = unique_ptr<lambert_conformal_grid>(new lambert_conformal_grid);
 			lambert_conformal_grid* const lcg = dynamic_cast<lambert_conformal_grid*>(g.get());
 
-			lcg->Ni(boost::lexical_cast<int>(geominfo["ni"]));
-			lcg->Nj(boost::lexical_cast<int>(geominfo["nj"]));
+			lcg->Ni(stoi(geominfo["ni"]));
+			lcg->Nj(stoi(geominfo["nj"]));
 
-			lcg->Di(boost::lexical_cast<double>(geominfo["di"]));
-			lcg->Dj(boost::lexical_cast<double>(geominfo["dj"]));
+			lcg->Di(stod(geominfo["di"]));
+			lcg->Dj(stod(geominfo["dj"]));
 
-			lcg->Orientation(boost::lexical_cast<double>(geominfo["orientation"]));
+			lcg->Orientation(stod(geominfo["orientation"]));
 
-			lcg->StandardParallel1(boost::lexical_cast<double>(geominfo["latin1"]));
+			lcg->StandardParallel1(stod(geominfo["latin1"]));
 
-			if (!geominfo["latin2"].empty())
+			if (geominfo["latin2"].empty())
 			{
-				lcg->StandardParallel1(boost::lexical_cast<double>(geominfo["latin2"]));
+				lcg->StandardParallel2(lcg->StandardParallel1());
+			}
+			else
+			{
+				lcg->StandardParallel2(stod(geominfo["latin2"]));
 			}
 
 			if (!geominfo["south_pole_lon"].empty())
 			{
-				const point sp(boost::lexical_cast<double>(geominfo["south_pole_lon"]),
-				               boost::lexical_cast<double>(geominfo["south_pole_lat"]));
+				const point sp(stod(geominfo["south_pole_lon"]), stod(geominfo["south_pole_lat"]));
 
 				lcg->SouthPole(sp);
 			}
 
-			const point first(boost::lexical_cast<double>(geominfo["first_point_lon"]),
-			                  boost::lexical_cast<double>(geominfo["first_point_lat"]));
+			const point first(stod(geominfo["first_point_lon"]), stod(geominfo["first_point_lat"]));
 
 			lcg->ScanningMode(scmode);
 
@@ -1138,8 +1137,7 @@ unique_ptr<grid> ParseAreaAndGridFromPoints(configuration& conf, const boost::pr
 			boost::algorithm::trim(lon);
 			boost::trim(lat);
 
-			theStations.push_back(station(i, "point_" + boost::lexical_cast<string>(i),
-			                              boost::lexical_cast<double>(lon), boost::lexical_cast<double>(lat)));
+			theStations.push_back(station(i, "point_" + to_string(i), stod(lon), stod(lat)));
 
 			i++;
 		}
@@ -1177,9 +1175,9 @@ unique_ptr<grid> ParseAreaAndGridFromPoints(configuration& conf, const boost::pr
 
 			try
 			{
-				fmisid = boost::lexical_cast<unsigned long>(str);
+				fmisid = static_cast<unsigned long>(stol(str));
 			}
-			catch (boost::bad_lexical_cast& e)
+			catch (const invalid_argument& e)
 			{
 				cout << "Error::json_parser Invalid fmisid: " << str << endl;
 				continue;
@@ -1194,8 +1192,7 @@ unique_ptr<grid> ParseAreaAndGridFromPoints(configuration& conf, const boost::pr
 			}
 
 			theStations.push_back(station(static_cast<int>(fmisid), stationinfo["station_name"],
-			                              boost::lexical_cast<double>(stationinfo["longitude"]),
-			                              boost::lexical_cast<double>(stationinfo["latitude"])));
+			                              stod(stationinfo["longitude"]), stod(stationinfo["latitude"])));
 		}
 
 		dynamic_cast<point_list*>(g.get())->Stations(theStations);
@@ -1284,10 +1281,8 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 
 		rg = unique_ptr<latitude_longitude_grid>(new latitude_longitude_grid);
 
-		dynamic_cast<latitude_longitude_grid*>(rg.get())->BottomLeft(
-		    point(boost::lexical_cast<double>(coordinates[0]), boost::lexical_cast<double>(coordinates[1])));
-		dynamic_cast<latitude_longitude_grid*>(rg.get())->TopRight(
-		    point(boost::lexical_cast<double>(coordinates[2]), boost::lexical_cast<double>(coordinates[3])));
+		dynamic_cast<latitude_longitude_grid*>(rg.get())->BottomLeft(point(stod(coordinates[0]), stod(coordinates[1])));
+		dynamic_cast<latitude_longitude_grid*>(rg.get())->TopRight(point(stod(coordinates[2]), stod(coordinates[3])));
 
 		dynamic_cast<latitude_longitude_grid*>(rg.get())->Ni(pt.get<size_t>("ni"));
 		dynamic_cast<latitude_longitude_grid*>(rg.get())->Nj(pt.get<size_t>("nj"));
@@ -1395,8 +1390,8 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 
 					if (!prodInfo["ident_id"].empty())
 					{
-						prod.Centre(boost::lexical_cast<long>(prodInfo["ident_id"]));
-						prod.Process(boost::lexical_cast<long>(prodInfo["model_id"]));
+						prod.Centre(stol(prodInfo["ident_id"]));
+						prod.Process(stol(prodInfo["model_id"]));
 					}
 
 					prod.Class(static_cast<HPProducerClass>(stoi(prodInfo["producer_class"])));
@@ -1445,7 +1440,7 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 
 		HPDatabaseType dbtype = conf->DatabaseType();
 
-		long pid = boost::lexical_cast<long>(pt.get<string>("target_producer"));
+		long pid = stol(pt.get<string>("target_producer"));
 		producer prod(pid);
 
 		auto r = GET_PLUGIN(radon);
@@ -1459,8 +1454,8 @@ void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, con
 			}
 			else
 			{
-				prod.Centre(boost::lexical_cast<long>(prodInfo["ident_id"]));
-				prod.Process(boost::lexical_cast<long>(prodInfo["model_id"]));
+				prod.Centre(stol(prodInfo["ident_id"]));
+				prod.Process(stol(prodInfo["model_id"]));
 			}
 
 			prod.Name(prodInfo["ref_prod"]);
@@ -1536,8 +1531,7 @@ vector<level> LevelsFromString(const string& levelType, const string& levelValue
 				    "lxN_lyN)");
 			}
 
-			levels.push_back(level(theLevelType, boost::lexical_cast<float>(levelIntervals[0]),
-			                       boost::lexical_cast<float>(levelIntervals[1])));
+			levels.push_back(level(theLevelType, stof(levelIntervals[0]), stof(levelIntervals[1])));
 		}
 	}
 	else
@@ -1545,7 +1539,7 @@ vector<level> LevelsFromString(const string& levelType, const string& levelValue
 		const vector<string> levelsStr = himan::util::Split(levelValues, ",", true);
 		for (size_t i = 0; i < levelsStr.size(); i++)
 		{
-			levels.push_back(level(theLevelType, boost::lexical_cast<float>(levelsStr[i]), levelType));
+			levels.push_back(level(theLevelType, stof(levelsStr[i]), levelType));
 		}
 	}
 
@@ -1578,18 +1572,18 @@ vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt)
 
 				if (range.size() == 1)
 				{
-					forecastTypes.push_back(forecast_type(forecastType, boost::lexical_cast<double>(range[0])));
+					forecastTypes.push_back(forecast_type(forecastType, stod(range[0])));
 				}
 				else
 				{
 					ASSERT(range.size() == 2);
 
-					int start = boost::lexical_cast<int>(range[0]);
-					int stop = boost::lexical_cast<int>(range[1]);
+					int start = stoi(range[0]);
+					int stop = stoi(range[1]);
 
 					while (start <= stop)
 					{
-						forecastTypes.push_back(forecast_type(forecastType, boost::lexical_cast<double>(start)));
+						forecastTypes.push_back(forecast_type(forecastType, start));
 						start++;
 					}
 				}

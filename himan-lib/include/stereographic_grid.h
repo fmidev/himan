@@ -91,7 +91,6 @@ class stereographic_grid : public grid
 	stereographic_grid* Clone() const override;
 
    private:
-	bool SetCoordinates();
 	void CreateAreaAndGrid() const;
 
 	bool EqualsTo(const stereographic_grid& other) const;

@@ -6,8 +6,9 @@
 #include "simple_packed.h"
 
 #include <NFmiGribPacking.h>
-#include <cub/cub.cuh>
 #include <grib_api.h>
+#include <thrust/device_ptr.h>
+#include <thrust/extrema.h>
 
 #include "cuda_helper.h"
 
@@ -104,53 +105,33 @@ long get_decimal_scale_fact(double max, double min, long bpval, long binary_scal
 }
 
 template <typename T>
-__host__ T simple_packed::Min(T* d_arr, size_t N, cudaStream_t& stream)
+__host__ T simple_packed::Max(T* d_arr, size_t N, cudaStream_t& stream)
 {
-	void* d_temp = 0;
-	size_t temp_N = 0;
-	T* d_min = 0;
-	T min;
+	T* ret = thrust::max_element(thrust::cuda::par.on(stream), d_arr, d_arr + N);
 
-	CUDA_CHECK(cudaMalloc((void**)&d_min, sizeof(T)));
-
-	// Allocate temp storage
-	CUDA_CHECK(cub::DeviceReduce::Min(d_temp, temp_N, d_arr, d_min, N, stream));
-	CUDA_CHECK(cudaMalloc((void**)&d_temp, temp_N));
-
-	CUDA_CHECK(cub::DeviceReduce::Min(d_temp, temp_N, d_arr, d_min, N, stream));
-
-	CUDA_CHECK(cudaStreamSynchronize(stream));
-
-	CUDA_CHECK(cudaFree(d_temp));
-	CUDA_CHECK(cudaMemcpyAsync(&min, d_min, sizeof(T), cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaFree(d_min));
-
-	return min;
+	return *ret;
 }
 
 template <typename T>
-__host__ T simple_packed::Max(T* d_arr, size_t N, cudaStream_t& stream)
+__host__ T simple_packed::Min(T* d_arr, size_t N, cudaStream_t& stream)
 {
-	void* d_temp = 0;
-	size_t temp_N = 0;
-	T* d_max = 0;
-	T max;
+	T* ret = thrust::min_element(thrust::cuda::par.on(stream), d_arr, d_arr + N);
 
-	CUDA_CHECK(cudaMalloc((void**)&d_max, sizeof(T)));
+	return *ret;
+}
 
-	// Allocate temp storage
-	CUDA_CHECK(cub::DeviceReduce::Max(d_temp, temp_N, d_arr, d_max, N, stream));
-	CUDA_CHECK(cudaMalloc((void**)&d_temp, temp_N));
+template <typename T>
+__global__ void CopyWithBitmap(T* d_arr, int* d_b, T value, size_t N)
+{
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	CUDA_CHECK(cub::DeviceReduce::Max(d_temp, temp_N, d_arr, d_max, N, stream));
-
-	CUDA_CHECK(cudaStreamSynchronize(stream));
-
-	CUDA_CHECK(cudaFree(d_temp));
-	CUDA_CHECK(cudaMemcpyAsync(&max, d_max, sizeof(T), cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaFree(d_max));
-
-	return max;
+	if (idx < N)
+	{
+		if (d_b[idx] == 1)
+		{
+			d_arr[idx] = value;
+		}
+	}
 }
 
 __host__ void simple_packed::Unpack(double* arr, size_t N, cudaStream_t* stream)
@@ -158,29 +139,52 @@ __host__ void simple_packed::Unpack(double* arr, size_t N, cudaStream_t* stream)
 	ASSERT(arr);
 	ASSERT(N > 0);
 
+	const int blockSize = 512;
+	const int gridSize = unpackedLength / blockSize + (unpackedLength % blockSize == 0 ? 0 : 1);
+
+	bool destroyStream = false;
+
+	if (!stream)
+	{
+		stream = new cudaStream_t;
+		CUDA_CHECK(cudaStreamCreate(stream));
+		destroyStream = true;
+	}
+
 	if (packedLength == 0 && coefficients.bitsPerValue == 0)
 	{
 		// Special case for static grid
 
 		// For empty grid (all values missing), grib_api gives reference value 1!
-
 		double fillValue = coefficients.referenceValue;
 
 		if (HasBitmap())
 		{
-			// Make an assumption: if grid is static and bitmap is defined, it is probably
-			// all missing.
+			if (NFmiGribPacking::IsHostPointer(arr))
+			{
+				// too lazy to write this now
+				throw std::runtime_error("Host pointer, static grid and bitmap code is missing");
+			}
 
-			fillValue = himan::MissingDouble();
-		}
+			int* d_b = 0;
+			CUDA_CHECK(cudaMalloc((void**)(&d_b), bitmapLength * sizeof(int)));
+			CUDA_CHECK(cudaMemcpyAsync(d_b, bitmap, bitmapLength * sizeof(int), cudaMemcpyHostToDevice, *stream));
 
-		if (NFmiGribPacking::IsHostPointer(arr))
-		{
-			std::fill(arr, arr + N, fillValue);
+			CopyWithBitmap<<<blockSize, gridSize, 0, *stream>>>(arr, d_b, fillValue, N);
+
+			CUDA_CHECK(cudaStreamSynchronize(*stream));
+			CUDA_CHECK(cudaFree(d_b));
 		}
 		else
 		{
-			NFmiGribPacking::Fill(arr, N, fillValue);
+			if (NFmiGribPacking::IsHostPointer(arr))
+			{
+				std::fill(arr, arr + N, fillValue);
+			}
+			else
+			{
+				NFmiGribPacking::Fill(arr, N, fillValue);
+			}
 		}
 
 		return;
@@ -191,18 +195,6 @@ __host__ void simple_packed::Unpack(double* arr, size_t N, cudaStream_t* stream)
 		std::cerr << "Error::" << ClassName() << " Allocated memory size is different from data: " << N << " vs "
 		          << unpackedLength << std::endl;
 		return;
-	}
-
-	// We need to create a stream if no stream is specified since dereferencing
-	// a null pointer is, well, not a good thing.
-
-	bool destroyStream = false;
-
-	if (!stream)
-	{
-		stream = new cudaStream_t;
-		CUDA_CHECK(cudaStreamCreate(stream));
-		destroyStream = true;
 	}
 
 	// Allocate memory on device for packed data
@@ -227,9 +219,6 @@ __host__ void simple_packed::Unpack(double* arr, size_t N, cudaStream_t* stream)
 	{
 		d_arr = arr;
 	}
-
-	int blockSize = 512;
-	int gridSize = unpackedLength / blockSize + (unpackedLength % blockSize == 0 ? 0 : 1);
 
 	int* d_b = 0;  // device-bitmap
 
@@ -263,12 +252,6 @@ __host__ void simple_packed::Unpack(double* arr, size_t N, cudaStream_t* stream)
 		CUDA_CHECK(cudaStreamDestroy(*stream));
 		delete stream;
 	}
-}
-
-__global__ void print(double* d)
-{
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-	printf("%d %f\n", idx, d[idx]);
 }
 
 CUDA_HOST

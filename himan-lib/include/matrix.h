@@ -150,7 +150,6 @@ class matrix
  * @brief Print information on contents if T == double
  *
  */
-#ifndef __NVCC__
 	void PrintData(std::ostream& file, const std::vector<double>& theValues) const
 	{
 		if (!theValues.size())
@@ -243,7 +242,6 @@ class matrix
 			binmax += binw;
 		}
 	}
-#endif
 
 	size_t Size() const
 	{

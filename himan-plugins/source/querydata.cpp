@@ -241,11 +241,11 @@ NFmiTimeDescriptor querydata::CreateTimeDescriptor(info& info, bool theActiveOnl
 
 	if (theActiveOnly)
 	{
-		originTime = NFmiMetTime(boost::lexical_cast<long>(info.Time().ValidDateTime().String("%Y%m%d")),
-		                         boost::lexical_cast<long>(info.Time().OriginDateTime().String("%H%M")));
+		originTime = NFmiMetTime(stol(info.Time().ValidDateTime().String("%Y%m%d")),
+		                         stol(info.Time().OriginDateTime().String("%H%M")));
 
-		tlist.Add(new NFmiMetTime(boost::lexical_cast<long>(info.Time().ValidDateTime().String("%Y%m%d")),
-		                          boost::lexical_cast<long>(info.Time().ValidDateTime().String("%H%M"))));
+		tlist.Add(new NFmiMetTime(stol(info.Time().ValidDateTime().String("%Y%m%d")),
+		                          stol(info.Time().ValidDateTime().String("%H%M"))));
 	}
 	else
 	{
@@ -258,8 +258,7 @@ NFmiTimeDescriptor querydata::CreateTimeDescriptor(info& info, bool theActiveOnl
 			if (firstOriginTime.Empty())
 			{
 				firstOriginTime = info.Time().OriginDateTime();
-				originTime = NFmiMetTime(boost::lexical_cast<long>(firstOriginTime.String("%Y%m%d")),
-				                         boost::lexical_cast<long>(firstOriginTime.String("%H%M")));
+				originTime = NFmiMetTime(stol(firstOriginTime.String("%Y%m%d")), stol(firstOriginTime.String("%H%M")));
 			}
 			else
 			{
@@ -270,8 +269,8 @@ NFmiTimeDescriptor querydata::CreateTimeDescriptor(info& info, bool theActiveOnl
 				}
 			}
 
-			tlist.Add(new NFmiMetTime(boost::lexical_cast<long>(info.Time().ValidDateTime().String("%Y%m%d")),
-			                          boost::lexical_cast<long>(info.Time().ValidDateTime().String("%H%M"))));
+			tlist.Add(new NFmiMetTime(stol(info.Time().ValidDateTime().String("%Y%m%d")),
+			                          stol(info.Time().ValidDateTime().String("%H%M"))));
 		}
 	}
 
