@@ -4,7 +4,7 @@
 Summary: himan-plugins library
 Name: %{LIBNAME}
 Version: 18.4.16
-Release: 1.el7.fmi
+Release: 2.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -27,10 +27,10 @@ Requires: grib_api
 %else
 BuildRequires: gdal-devel
 BuildRequires: gcc-c++ >= 4.8.2
-BuildRequires: cuda-8-0
+BuildRequires: cuda-9-1
 BuildRequires: eccodes-devel
 BuildRequires: redhat-rpm-config
-BuildRequires: cusp >= 0.5.1
+BuildRequires: cuda-cusp-9-1 >= 0.5.1
 Requires: jasper-libs
 Requires: eccodes
 %endif
@@ -110,6 +110,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Apr 16 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.4.16-2.fmi
+- Built with cuda 9.1
 * Mon Apr 16 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.4.16-1.fmi
 - Changes to blend
 * Tue Apr 10 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.4.10-1.fmi

@@ -4,7 +4,7 @@
 Summary: himan core library
 Name: %{LIBNAME}
 Version: 18.4.16
-Release: 1.el7.fmi
+Release: 2.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -23,7 +23,7 @@ Requires: grib_api
 %else
 BuildRequires: bzip2-devel
 BuildRequires: redhat-rpm-config
-BuildRequires: cuda-8-0
+BuildRequires: cuda-9-1
 BuildRequires: gcc-c++ >= 4.8.2
 Requires: eccodes
 %endif
@@ -59,6 +59,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Mon Apr 16 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.4.16-2.fmi
+- Built with cuda 9.1
 * Mon Apr 16 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.4.16-1.fmi
 - Minor grid restructuring
 - Replacing cub with thrust
