@@ -292,6 +292,10 @@ matrix<double> blend::CalculateBias(logger& log, shared_ptr<info> targetInfo, co
 	param currentParam = targetInfo->Param();
 	level currentLevel = targetInfo->Level();
 	forecast_time currentTime = targetInfo->Time();
+
+	// Account for the fact that LAPS is an analysis
+	currentTime.OriginDateTime() = currentTime.ValidDateTime();
+
 	HPTimeResolution currentRes = currentTime.StepResolution();
 
 	info_t analysis = FetchWithProperties(cnf, currentTime, currentRes, level(kHeight, 2.0), currentParam, kLapsFtype,
@@ -369,6 +373,10 @@ matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info> targetInfo, con
 	param currentParam = targetInfo->Param();
 	level currentLevel = targetInfo->Level();
 	forecast_time currentTime = targetInfo->Time();
+
+	// Account for the fact that LAPS is an analysis
+	currentTime.OriginDateTime() = currentTime.ValidDateTime();
+
 	HPTimeResolution currentRes = currentTime.StepResolution();
 
 	info_t analysis = FetchWithProperties(cnf, currentTime, currentRes, level(kHeight, 2.0), currentParam, kLapsFtype,
