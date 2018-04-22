@@ -8,6 +8,11 @@
 
 namespace PROB
 {
+bool AllowMissingValuesInEnsemble(const std::string& name)
+{
+	return (name == "CL-2-FT" || name == "PRECFORM-N" || name == "PRECFORM2-N");
+}
+
 template <typename T>
 param_configuration<T> ToParamConfiguration(const partial_param_configuration& partial);
 
@@ -90,7 +95,7 @@ struct EQINCompare : public std::binary_function<double, std::vector<double>, bo
  *
  * This struct implements the "in between" operator for BETW, i.e. check if a data value
  * is within a range bounded by [lower value,upper value]
-*/
+ */
 
 struct BTWNCompare : public std::binary_function<double, std::vector<double>, bool>
 {
@@ -111,6 +116,9 @@ void Probability(std::shared_ptr<himan::info> targetInfo, const param_configurat
 
 	const bool isGrid = (targetInfo->Grid()->Type() != himan::kPointList);
 
+	// HIMAN-216: allow missing values in ensemble for some parameters
+	const bool allowMissing = AllowMissingValuesInEnsemble(ens->Param().Name());
+
 	while (targetInfo->NextLocation() && ens->NextLocation())
 	{
 		auto values = ens->Values();
@@ -118,9 +126,12 @@ void Probability(std::shared_ptr<himan::info> targetInfo, const param_configurat
 		// HIMAN-184: if ensemble has no values, or all values are missing, the resulting probability should
 		// be missing
 
-		values.erase(
-		    std::remove_if(values.begin(), values.end(), [](const double& v) { return himan::IsMissingDouble(v); }),
-		    values.end());
+		if (allowMissing == false)
+		{
+			values.erase(
+			    std::remove_if(values.begin(), values.end(), [](const double& v) { return himan::IsMissingDouble(v); }),
+			    values.end());
+		}
 
 		if (values.empty())
 		{
