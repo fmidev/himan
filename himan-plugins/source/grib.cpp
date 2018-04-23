@@ -125,6 +125,8 @@ void grib::WriteAreaAndGrid(info& anInfo)
 		}
 	}
 
+	// UVRelativeToGrid is set in ToFile()
+
 	switch (anInfo.Grid()->Type())
 	{
 		case kLatitudeLongitude:
@@ -185,8 +187,6 @@ void grib::WriteAreaAndGrid(info& anInfo)
 			itsGrib->Message().jDirectionIncrement(rg->Dj());
 
 			itsGrib->Message().GridType(gridType);
-
-			itsGrib->Message().UVRelativeToGrid(rg->UVRelativeToGrid());
 
 			itsGrib->Message().SizeX(static_cast<long>(rg->Ni()));
 			itsGrib->Message().SizeY(static_cast<long>(rg->Nj()));
@@ -298,12 +298,12 @@ void grib::WriteAreaAndGrid(info& anInfo)
 			himan::Abort();
 	}
 
+#if 0
 	// Earth shape is not set yet, as it will change many of the test results (metadata changes)
 	// and we don't want to do that until we have set the *correct* radius for those producers
 	// that we have it for. Remember that at this point we force all producers to use radius
 	// found from newbase.
 
-#if 0
 	// Set earth shape
 
 	const double a = anInfo.Grid()->EarthShape().A(), b = anInfo.Grid()->EarthShape().B();
@@ -905,7 +905,6 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 	}
 	else
 	{
-		// TODO: check if parameter really is rotated uv
 		if (edition == 1)
 		{
 			itsGrib->Message().ResolutionAndComponentFlags(128);  // 10000000
@@ -913,6 +912,11 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 		else
 		{
 			itsGrib->Message().ResolutionAndComponentFlags(48);  // 00110000
+		}
+
+		if (anInfo.Grid()->UVRelativeToGrid())
+		{
+			itsGrib->Message().UVRelativeToGrid(true);
 		}
 	}
 
@@ -1222,6 +1226,7 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 			rg->Dj(round(100. * itsGrib->Message().YLengthInMeters()) / 100.);
 
 			rg->ScanningMode(m);
+			rg->UVRelativeToGrid(itsGrib->Message().UVRelativeToGrid());
 
 			rg->FirstPoint(firstPoint);
 
@@ -1308,10 +1313,10 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 
 		if (parmName.empty())
 		{
-			itsLogger.Warning("Parameter name not found from " + HPDatabaseTypeToString.at(dbtype) + " for no_vers: " +
-			                  boost::lexical_cast<string>(no_vers) + ", number: " +
-			                  boost::lexical_cast<string>(number) + ", timeRangeIndicator: " +
-			                  boost::lexical_cast<string>(timeRangeIndicator));
+			itsLogger.Warning("Parameter name not found from " + HPDatabaseTypeToString.at(dbtype) +
+			                  " for no_vers: " + boost::lexical_cast<string>(no_vers) +
+			                  ", number: " + boost::lexical_cast<string>(number) +
+			                  ", timeRangeIndicator: " + boost::lexical_cast<string>(timeRangeIndicator));
 		}
 		else
 		{
@@ -1378,10 +1383,10 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 
 		if (parmName.empty())
 		{
-			itsLogger.Warning("Parameter name not found from database for discipline: " +
-			                  boost::lexical_cast<string>(discipline) + ", category: " +
-			                  boost::lexical_cast<string>(category) + ", number: " +
-			                  boost::lexical_cast<string>(number));
+			itsLogger.Warning(
+			    "Parameter name not found from database for discipline: " + boost::lexical_cast<string>(discipline) +
+			    ", category: " + boost::lexical_cast<string>(category) +
+			    ", number: " + boost::lexical_cast<string>(number));
 		}
 		else
 		{
