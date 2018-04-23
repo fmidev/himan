@@ -48,6 +48,7 @@ class transformer : public compiled_plugin, private compiled_plugin_base
 	// Check and write json parameters needed for transformer plug-in to local variables.
 	void SetAdditionalParameters();
 	std::vector<level> LevelsFromString(const std::string& levelType, const std::string& levelValues) const;
+	void Rotate(himan::info_t myTargetInfo);
 
 #ifdef HAVE_CUDA
 	std::unique_ptr<transformer_cuda::options> CudaPrepare(std::shared_ptr<info> myTargetInfo,
@@ -56,15 +57,15 @@ class transformer : public compiled_plugin, private compiled_plugin_base
 
 	double itsBase;
 	double itsScale;
-	std::string itsSourceParam;
-	std::string itsTargetParam;
-	int itsTargetUnivID;
+	std::vector<std::string> itsSourceParam;
+	std::vector<std::string> itsTargetParam;
 	std::vector<level> itsSourceLevels;
 	bool itsApplyLandSeaMask;
 	double itsLandSeaMaskThreshold;
 	HPInterpolationMethod itsInterpolationMethod;
 	forecast_type itsTargetForecastType;
 	forecast_type itsSourceForecastType;
+	bool itsRotateVectorComponents;
 };
 
 // the class factory
