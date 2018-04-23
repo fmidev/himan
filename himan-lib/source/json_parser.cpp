@@ -1316,6 +1316,8 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 		if (projection == "latlon")
 		{
 			rg = unique_ptr<latitude_longitude_grid>(new latitude_longitude_grid);
+			rg->ScanningMode(mode);
+
 			dynamic_cast<latitude_longitude_grid*>(rg.get())->BottomLeft(
 			    point(pt.get<double>("bottom_left_longitude"), pt.get<double>("bottom_left_latitude")));
 			dynamic_cast<latitude_longitude_grid*>(rg.get())->TopRight(
@@ -1326,6 +1328,8 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 		else if (projection == "rotated_latlon")
 		{
 			rg = unique_ptr<rotated_latitude_longitude_grid>(new rotated_latitude_longitude_grid);
+			rg->ScanningMode(mode);
+
 			dynamic_cast<rotated_latitude_longitude_grid*>(rg.get())->BottomLeft(
 			    point(pt.get<double>("bottom_left_longitude"), pt.get<double>("bottom_left_latitude")));
 			dynamic_cast<rotated_latitude_longitude_grid*>(rg.get())->TopRight(
@@ -1338,8 +1342,12 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 		else if (projection == "stereographic")
 		{
 			rg = unique_ptr<stereographic_grid>(new stereographic_grid);
-			dynamic_cast<stereographic_grid*>(rg.get())->BottomLeft(
-			    point(pt.get<double>("bottom_left_longitude"), pt.get<double>("bottom_left_latitude")));
+			rg->ScanningMode(mode);
+
+			dynamic_cast<stereographic_grid*>(rg.get())->FirstPoint(
+			    point(pt.get<double>("first_point_longitude"), pt.get<double>("first_point_latitude")));
+			dynamic_cast<stereographic_grid*>(rg.get())->Di(pt.get<double>("di"));
+			dynamic_cast<stereographic_grid*>(rg.get())->Dj(pt.get<double>("dj"));
 			dynamic_cast<stereographic_grid*>(rg.get())->Orientation(pt.get<double>("orientation"));
 			dynamic_cast<stereographic_grid*>(rg.get())->Ni(pt.get<size_t>("ni"));
 			dynamic_cast<stereographic_grid*>(rg.get())->Nj(pt.get<size_t>("nj"));
@@ -1348,8 +1356,6 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 		{
 			throw runtime_error(ClassName() + ": Unknown type: " + projection);
 		}
-
-		rg->ScanningMode(mode);
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
@@ -1359,6 +1365,8 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 	{
 		throw runtime_error(string("Error parsing area: ") + e.what());
 	}
+
+	rg->EarthShape(earth_shape(6371220.));
 
 	return rg;
 }
