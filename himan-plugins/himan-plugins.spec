@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.4.18
+Version: 18.4.24
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -110,6 +110,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Apr 24 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.4.24-1.fmi
+- Unstagger fix
+- Support rotation with transformer
+- Allow missing values for some parameters in probability
 * Wed Apr 18 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.4.18-1.fmi
 - Changes to blend
 * Mon Apr 16 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.4.16-2.fmi
