@@ -4,6 +4,7 @@
 
 #include "transformer.h"
 #include "forecast_time.h"
+#include "interpolate.h"
 #include "level.h"
 #include "logger.h"
 #include "plugin_factory.h"
@@ -21,12 +22,12 @@ mutex aggregationMutex;
 transformer::transformer()
     : itsBase(0.0),
       itsScale(1.0),
-      itsTargetUnivID(9999),
       itsApplyLandSeaMask(false),
       itsLandSeaMaskThreshold(0.5),
       itsInterpolationMethod(kUnknownInterpolationMethod),
       itsTargetForecastType(kUnknownType),
-      itsSourceForecastType(kUnknownType)
+      itsSourceForecastType(kUnknownType),
+      itsRotateVectorComponents(false)
 {
 	itsCudaEnabledCalculation = true;
 
@@ -73,32 +74,38 @@ void transformer::SetAdditionalParameters()
 		itsLogger.Trace("Scale not specified, using default value 1.0");
 	}
 
-	if (!itsConfiguration->GetValue("target_univ_id").empty())
+	if (itsConfiguration->Exists("rotation"))
 	{
-		itsTargetUnivID = stoi(itsConfiguration->GetValue("target_univ_id"));
+		itsTargetParam = util::Split(itsConfiguration->GetValue("rotation"), ",", false);
+		itsSourceParam = itsTargetParam;
+		itsRotateVectorComponents = true;
 	}
 	else
 	{
-		itsLogger.Trace("Target_univ_id not specified, using default value 9999");
-	}
-
-	if (!itsConfiguration->GetValue("target_param").empty())
-	{
-		itsTargetParam = itsConfiguration->GetValue("target_param");
-	}
-	else
-	{
-		throw runtime_error("Transformer_plugin: target_param not specified.");
+		if (!itsConfiguration->GetValue("target_param").empty())
+		{
+			itsTargetParam = vector<string>({itsConfiguration->GetValue("target_param")});
+		}
+		else
+		{
+			throw runtime_error("Transformer_plugin: target_param not specified.");
+		}
 	}
 
 	if (!itsConfiguration->GetValue("source_param").empty())
 	{
-		itsSourceParam = itsConfiguration->GetValue("source_param");
+		itsSourceParam = vector<string>({itsConfiguration->GetValue("source_param")});
 	}
 	else
 	{
 		itsSourceParam = itsTargetParam;
 		itsLogger.Trace("Source_param not specified, source_param set to target_param");
+	}
+
+	if (itsSourceParam.size() != itsTargetParam.size())
+	{
+		itsLogger.Fatal("Number source params does not match target params");
+		himan::Abort();
 	}
 
 	if (!itsConfiguration->GetValue("source_level_type").empty())
@@ -223,58 +230,55 @@ void transformer::Process(std::shared_ptr<const plugin_configuration> conf)
 		}
 	}
 
-	/*
-	 * Set target parameter to T
-	 * - name T-C
-	 * - univ_id 4
-	 * - grib2 descriptor 0'00'000
-	 *
-	 * We need to specify grib and querydata parameter information
-	 * since we don't know which one will be the output format.
-	 *
-	 */
-
 	vector<param> theParams;
 
-	param requestedParam(itsTargetParam, itsTargetUnivID);
-
-	// GRIB 2
-	if (itsConfiguration->OutputFileType() == kGRIB2)
+	for (const auto& name : itsTargetParam)
 	{
-		if (!itsConfiguration->GetValue("grib_discipline").empty() &&
-		    !itsConfiguration->GetValue("grib_category").empty() &&
-		    !itsConfiguration->GetValue("grib_parameter").empty())
-		{
-			requestedParam.GribDiscipline(stoi(itsConfiguration->GetValue("grib_discipline")));
-			requestedParam.GribCategory(stoi(itsConfiguration->GetValue("grib_category")));
-			requestedParam.GribParameter(stoi(itsConfiguration->GetValue("grib_parameter")));
-		}
+		theParams.push_back(param(name));
 	}
 
 	if (itsInterpolationMethod != kUnknownInterpolationMethod)
 	{
-		requestedParam.InterpolationMethod(itsInterpolationMethod);
+		for (auto& p : theParams)
+		{
+			p.InterpolationMethod(itsInterpolationMethod);
+		}
 	}
-
-	theParams.push_back(requestedParam);
 
 	SetParams(theParams);
 
 	Start();
 }
 
-/*
- * Calculate()
- *
- * This function does the actual calculation.
- */
+void transformer::Rotate(info_t myTargetInfo)
+{
+	itsLogger.Trace("Rotating vector component");
+
+	if (itsSourceParam.size() != 2)
+	{
+		itsLogger.Error("Two source parameters are needed for rotation");
+		return;
+	}
+
+	auto a = Fetch(myTargetInfo->Time(), myTargetInfo->Level(), param(itsSourceParam[0]), myTargetInfo->ForecastType(),
+	               itsConfiguration->UseCudaForPacking());
+	auto b = Fetch(myTargetInfo->Time(), myTargetInfo->Level(), param(itsSourceParam[1]), myTargetInfo->ForecastType(),
+	               itsConfiguration->UseCudaForPacking());
+
+	myTargetInfo->ParamIndex(0);
+	myTargetInfo->Data().Set(VEC(a));
+	myTargetInfo->Grid()->UVRelativeToGrid(a->Grid()->UVRelativeToGrid());
+
+	auto secondInfo = make_shared<info>(*myTargetInfo);
+	secondInfo->ParamIndex(1);
+	secondInfo->Data().Set(VEC(b));
+	secondInfo->Grid()->UVRelativeToGrid(b->Grid()->UVRelativeToGrid());
+
+	interpolate::RotateVectorComponents(*myTargetInfo, *secondInfo, itsConfiguration->UseCudaForInterpolation());
+}
 
 void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 {
-	// Required source parameter
-
-	param InputParam(itsSourceParam);
-
 	auto myThreadedLogger = logger("transformerThread #" + to_string(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
@@ -293,6 +297,12 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 	                      static_cast<string>(forecastLevel));
 
+	if (itsRotateVectorComponents)
+	{
+		Rotate(myTargetInfo);
+		return;
+	}
+
 	auto f = GET_PLUGIN(fetcher);
 
 	if (itsApplyLandSeaMask)
@@ -305,8 +315,8 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 
 	try
 	{
-		sourceInfo = f->Fetch(itsConfiguration, forecastTime, itsSourceLevels[myTargetInfo->LevelIndex()], InputParam,
-		                      forecastType, itsConfiguration->UseCudaForPacking());
+		sourceInfo = f->Fetch(itsConfiguration, forecastTime, itsSourceLevels[myTargetInfo->LevelIndex()],
+		                      param(itsSourceParam[0]), forecastType, itsConfiguration->UseCudaForPacking());
 	}
 	catch (HPExceptionType& e)
 	{
@@ -315,7 +325,7 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 		return;
 	}
 
-	if (itsSourceParam == itsTargetParam && sourceInfo->Param().Aggregation().Type() != kUnknownAggregationType)
+	if (itsSourceParam[0] == itsTargetParam[0] && sourceInfo->Param().Aggregation().Type() != kUnknownAggregationType)
 	{
 		// If source parameter is an aggregation, copy that to target param
 		param p = myTargetInfo->Param();
@@ -329,6 +339,7 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 	}
 
 	SetAB(myTargetInfo, sourceInfo);
+	myTargetInfo->Grid()->UVRelativeToGrid(sourceInfo->Grid()->UVRelativeToGrid());
 
 	string deviceType;
 
@@ -347,12 +358,11 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 	{
 		deviceType = "CPU";
 
-		LOCKSTEP(myTargetInfo, sourceInfo)
-		{
-			double value = sourceInfo->Value();
+		auto& result = VEC(myTargetInfo);
+		const auto& source = VEC(sourceInfo);
 
-			myTargetInfo->Value(value * itsScale + itsBase);
-		}
+		transform(source.begin(), source.end(), result.begin(),
+		          [&](const double& value) { return fma(value, itsScale, itsBase); });
 	}
 
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +

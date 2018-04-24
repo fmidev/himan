@@ -64,4 +64,8 @@ interpolation: define interpolation method (default: whatever is defined in data
 
 target_forecast_type: define the target forecast type, if it differs from source type
 
-	"target_forecast_type" : "cf|deterministic|analysis|pfNN"
+    "target_forecast_type" : "cf|deterministic|analysis|pfNN"
+
+rotation: specify which parameters (if any) should be rotated from projection north coordinate to earth-normal north, default: not done
+
+    "rotation" : "U-MS,V-MS"

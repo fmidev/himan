@@ -177,46 +177,8 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 		myTargetInfo->Grid()->Data(unstaggered_V);
 	}
 
-	// Re-calculate grid coordinates
-
-	point u_bl = UInfo->Grid()->BottomLeft(), u_tr = UInfo->Grid()->TopRight();
-	point v_bl = VInfo->Grid()->BottomLeft(), v_tr = VInfo->Grid()->TopRight();
-	double u_di = UInfo->Grid()->Di();
-	double v_dj = VInfo->Grid()->Dj();
-
-	// this is ugly, there has to be a better solution
-	switch (UInfo->Grid()->Type())
-	{
-		case kLatitudeLongitude:
-			dynamic_cast<latitude_longitude_grid*>(UInfo->Grid())->BottomLeft(point(u_bl.X() - (u_di * 0.5), u_bl.Y()));
-			dynamic_cast<latitude_longitude_grid*>(UInfo->Grid())->TopRight(point(u_tr.X() - (u_di * 0.5), u_tr.Y()));
-			dynamic_cast<latitude_longitude_grid*>(VInfo->Grid())->BottomLeft(point(v_bl.X(), v_bl.Y() - (v_dj * 0.5)));
-			dynamic_cast<latitude_longitude_grid*>(VInfo->Grid())->TopRight(point(v_tr.X(), v_tr.Y() - (v_dj * 0.5)));
-			break;
-		case kRotatedLatitudeLongitude:
-			dynamic_cast<rotated_latitude_longitude_grid*>(UInfo->Grid())
-			    ->BottomLeft(point(u_bl.X() - (u_di * 0.5), u_bl.Y()));
-			dynamic_cast<rotated_latitude_longitude_grid*>(UInfo->Grid())
-			    ->TopRight(point(u_tr.X() - (u_di * 0.5), u_tr.Y()));
-			dynamic_cast<rotated_latitude_longitude_grid*>(VInfo->Grid())
-			    ->BottomLeft(point(v_bl.X(), v_bl.Y() - (v_dj * 0.5)));
-			dynamic_cast<rotated_latitude_longitude_grid*>(VInfo->Grid())
-			    ->TopRight(point(v_tr.X(), v_tr.Y() - (v_dj * 0.5)));
-			break;
-		case kStereographic:
-			dynamic_cast<stereographic_grid*>(UInfo->Grid())->BottomLeft(point(u_bl.X() - (u_di * 0.5), u_bl.Y()));
-			dynamic_cast<stereographic_grid*>(VInfo->Grid())->BottomLeft(point(v_bl.X(), v_bl.Y() - (v_dj * 0.5)));
-			break;
-		default:
-			throw runtime_error("Unsupported grid type: " + HPGridTypeToString.at(UInfo->Grid()->Type()));
-	}
-
-	auto c = GET_PLUGIN(cache);
-
-	c->Insert(UInfo);
-	c->Insert(VInfo);
-
-	myThreadedLogger.Info("[" + deviceType + "] Missing values: " +
-	                      to_string(UInfo->Data().MissingCount() + VInfo->Data().MissingCount()) + "/" +
-	                      to_string(UInfo->Data().Size() + VInfo->Data().Size()));
+	myTargetInfo->ParamIndex(0);
+	myTargetInfo->Grid()->UVRelativeToGrid(UInfo->Grid()->UVRelativeToGrid());
+	myTargetInfo->ParamIndex(1);
+	myTargetInfo->Grid()->UVRelativeToGrid(VInfo->Grid()->UVRelativeToGrid());
 }
