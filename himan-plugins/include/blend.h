@@ -58,10 +58,13 @@ class blend : public compiled_plugin, private compiled_plugin_base
 	matrix<double> CalculateBias(logger& log, std::shared_ptr<info> targetInfo, const forecast_type& ftype,
 	                             const level& lvl, const forecast_time& calcTime);
 
-	void SetupOutputForecastTimes(std::shared_ptr<info> Info);
+	void SetupOutputForecastTimes(std::shared_ptr<info> Info, const raw_time& latestOrigin,
+	                              const forecast_time& current);
+	raw_time LatestOriginTimeForProducer(const std::string& producer) const;
 
 	blend_mode itsCalculationMode;
 	int itsNumHours;
+	std::string itsProducer;
 	forecast_type itsProdFtype;
 };
 
