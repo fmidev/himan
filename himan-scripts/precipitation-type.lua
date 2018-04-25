@@ -3,10 +3,21 @@ local function CheckedFetch(parm_name, lvl, time)
   if not p then
     msg = string.format("Failed to find parameter '%s'", parm_name)
     logger:Error(msg)
-    error("luatool:Fetch failed")
   else
     return p
   end
+end
+
+local function Interpolate(parm_name, height)
+
+  hitool:SetHeightUnit(HPParameterUnit.kHPa)
+  local data = hitool:VerticalValue(param(parm_name), height)
+
+  if not data then
+    error("Data not found")
+  end
+ 
+  return data
 end
 
 local MISS = missing
@@ -20,23 +31,36 @@ local rh925 = nil
 local rh850 = nil
 local rh700 = nil
 
+local RHParam = "RH-PRCNT"
+
 if currentProducerName == "MEPS" or currentProducerName == "MEPSMTA" then
-  rh925 = CheckedFetch("RH-0TO1", level(HPLevelType.kPressure, 925), current_time)
-  rh850 = CheckedFetch("RH-0TO1", level(HPLevelType.kPressure, 850), current_time)
-  rh700 = CheckedFetch("RH-0TO1", level(HPLevelType.kPressure, 700), current_time)
-else
-  rh925 = CheckedFetch("RH-PRCNT", level(HPLevelType.kPressure, 925), current_time)
-  rh850 = CheckedFetch("RH-PRCNT", level(HPLevelType.kPressure, 850), current_time)
-  rh700 = CheckedFetch("RH-PRCNT", level(HPLevelType.kPressure, 700), current_time)
+  RHParam = "RH-0TO1"
+end
+
+local rh925 = CheckedFetch(RHParam, level(HPLevelType.kPressure, 925), current_time)
+local rh850 = CheckedFetch(RHParam, level(HPLevelType.kPressure, 850), current_time)
+local rh700 = CheckedFetch(RHParam, level(HPLevelType.kPressure, 700), current_time)
+
+if not rh925 or not rh850 or not rh700 then
+  logger:Info("Trying to interpolate from model levels")
+  rh925 = Interpolate(RHParam, 925)
+  rh850 = Interpolate(RHParam, 850)
+  rh700 = Interpolate(RHParam, 700)
 end
 
 local pref = CheckedFetch("POTPRECF-N", level(HPLevelType.kHeight, 0), current_time)
 local rrr = CheckedFetch("RRR-KGM2", level(HPLevelType.kHeight, 0), current_time)
 
+if not pref or not rrr then
+  error("Data not found")
+end
+
 -- Limit for relative humidity
 -- HARMONIE and HIRLAM seem to have PRCNT in the range [0,1] but EC
 -- seems to have it in [0,100]
+
 local Limit
+
 if currentProducerName == "ECG" or currentProducerName == "ECGMTA" or currentProducerName == "GFSMTA" then
   Limit = 80
 elseif currentProducerName == "AROME" or currentProducerName == "AROMTA" or
