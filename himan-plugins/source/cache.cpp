@@ -114,8 +114,9 @@ vector<shared_ptr<himan::info>> cache::GetInfo(search_options& options)
 	if (foundInfo)
 	{
 		info.push_back(foundInfo);
-		itsLogger.Trace("Found matching data for " + uniqueName);
 	}
+
+	itsLogger.Trace("Data " + string(foundInfo ? "found" : "not found") + " for " + uniqueName);
 
 	return info;
 }

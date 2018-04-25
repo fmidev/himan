@@ -86,7 +86,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 	// Required source parameters
 
 	const param TParam("T-K");
-	const param RHParam("RH-PRCNT");
+	const params RHParam({param("RH-PRCNT"), param("RH-0TO1")});
 	const param SNRParam("SNR-KGM2");
 
 	// Source precipitation parameter is "precipitation rate" which by my definition is always either
