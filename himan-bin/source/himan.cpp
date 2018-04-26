@@ -322,7 +322,7 @@ int main(int argc, char** argv)
 			aLogger.Info("Asynchronous launch for " + pc->Name());
 			asyncs.push_back(
 			    async(launch::async,
-			          [&pluginTimes](shared_ptr<plugin_configuration> pc) { ExecutePlugin(pc, pluginTimes); }, pc));
+			          [&pluginTimes](shared_ptr<plugin_configuration> _pc) { ExecutePlugin(_pc, pluginTimes); }, pc));
 
 			continue;
 		}
@@ -474,14 +474,14 @@ void CudaCapabilities()
 		          << "Maximum memory pitch:\t\t" << devProp.memPitch << std::endl
 		          << "Maximum threads per block:\t" << devProp.maxThreadsPerBlock << std::endl;
 
-		for (int i = 0; i < 3; ++i)
+		for (int j = 0; j < 3; ++j)
 		{
-			std::cout << "Maximum dimension " << i << " of block:\t" << devProp.maxThreadsDim[i] << std::endl;
+			std::cout << "Maximum dimension " << j << " of block:\t" << devProp.maxThreadsDim[j] << std::endl;
 		}
 
-		for (int i = 0; i < 3; ++i)
+		for (int j = 0; j < 3; ++j)
 		{
-			std::cout << "Maximum dimension " << i << " of grid:\t" << devProp.maxGridSize[i] << std::endl;
+			std::cout << "Maximum dimension " << j << " of grid:\t" << devProp.maxGridSize[j] << std::endl;
 		}
 
 		std::cout << "Clock rate:\t\t\t" << devProp.clockRate << std::endl

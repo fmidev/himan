@@ -125,21 +125,21 @@ void PrintBacktrace()
 			size_t addrStart = std::string::npos;  // '['
 
 			// Make only one pass through the string.
-			for (size_t i = 0; i < symbol.size(); i++)
+			for (size_t j = 0; j < symbol.size(); j++)
 			{
-				switch (symbol[i])
+				switch (symbol[j])
 				{
 					case '(':
-						start = i;
+						start = j;
 						break;
 					case '+':
-						end = i;
+						end = j;
 						break;
 					case ')':
-						closingParen = i;
+						closingParen = j;
 						break;
 					case '[':
-						addrStart = i;
+						addrStart = j;
 						break;
 					default:
 						break;

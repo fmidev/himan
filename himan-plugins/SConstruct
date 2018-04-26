@@ -136,16 +136,14 @@ cflags_normal.append('-Wall')
 cflags_normal.append('-W')
 cflags_normal.append('-Wno-unused-parameter')
 cflags_normal.append('-Werror')
-
-if not IS_SLES:
-	cflags_normal.append('-Wno-narrowing')
+cflags_normal.append('-Wno-narrowing')
+cflags_normal.append('-Wpointer-arith')
+cflags_normal.append('-Wcast-qual')
+cflags_normal.append('-Wcast-align')
 
 # Extra flags
 
 cflags_extra = []
-cflags_extra.append('-Wpointer-arith')
-cflags_extra.append('-Wcast-qual')
-cflags_extra.append('-Wcast-align')
 cflags_extra.append('-Wwrite-strings')
 cflags_extra.append('-Wconversion')
 # cflags_extra.append('-Winline')
@@ -154,6 +152,7 @@ cflags_extra.append('-Wno-pmf-conversions')
 cflags_extra.append('-Wsign-promo')
 cflags_extra.append('-Wchar-subscripts')
 cflags_extra.append('-Wold-style-cast')
+cflags_extra.append('-Wunreachable-code')
 
 # Difficult flags
 
@@ -163,7 +162,6 @@ cflags_difficult.append('-Weffc++')
 cflags_difficult.append('-Wredundant-decls')
 cflags_difficult.append('-Wshadow')
 cflags_difficult.append('-Woverloaded-virtual')
-cflags_difficult.append('-Wunreachable-code')
 cflags_difficult.append('-Wctor-dtor-privacy')
 
 # Default flags (common for release/debug)
@@ -195,14 +193,17 @@ if have_cuda:
 # Cuda
 
 env.Append(NVCCFLAGS = ['-m64'])
-env.Append(NVCCFLAGS = ['-Xcompiler','-fPIC'])
-env.Append(NVCCFLAGS = ['-Xcompiler','-Wall']) # This producers lots of warnings from cuda system libraries
 env.Append(NVCCFLAGS = ['-gencode=arch=compute_35,code=sm_35'])
 env.Append(NVCCFLAGS = ['-gencode=arch=compute_52,code=sm_52'])
 env.Append(NVCCFLAGS = ['-gencode=arch=compute_60,code=sm_60'])
-env.Append(NVCCFLAGS = ['-std=c++11'])
 env.Append(NVCCFLAGS = ['--expt-extended-lambda'])
 env.Append(NVCCFLAGS = ['--expt-relaxed-constexpr'])
+env.Append(NVCCFLAGS = ['-std=c++11'])
+
+for flag in cflags + cflags_normal:
+	if flag == "-Wcast-qual":
+		continue
+	env.Append(NVCCFLAGS = ['-Xcompiler', flag])
 
 env.Append(NVCCPATH = ['./include'])
 env.Append(NVCCPATH = [workspace + '/himan-lib/include']) # timer

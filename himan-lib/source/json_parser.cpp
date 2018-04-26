@@ -351,7 +351,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 		try
 		{
-			auto g = ParseAreaAndGrid(conf, element.second);
+			g = ParseAreaAndGrid(conf, element.second);
 
 			anInfo->itsBaseGrid = move(g);
 		}
@@ -681,7 +681,7 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 				originDateTimes.push_back(raw_time(dateString, mask));
 			}
 		}
-		catch (boost::property_tree::ptree_bad_path& e)
+		catch (boost::property_tree::ptree_bad_path& ee)
 		{
 			throw runtime_error("Origin datetime not found with keys 'origintime' or 'origindatetimes'");
 		}
