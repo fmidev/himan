@@ -149,7 +149,7 @@ cflags_extra.append('-Wcast-qual')
 cflags_extra.append('-Wcast-align')
 cflags_extra.append('-Wwrite-strings')
 cflags_extra.append('-Wconversion')
-cflags_extra.append('-Winline')
+# cflags_extra.append('-Winline')
 cflags_extra.append('-Wnon-virtual-dtor')
 cflags_extra.append('-Wno-pmf-conversions')
 cflags_extra.append('-Wsign-promo')
@@ -180,6 +180,7 @@ cflags.append('-fPIC')
 
 env.Append(CCFLAGS = cflags)
 env.Append(CCFLAGS = cflags_normal)
+env.Append(CCFLAGS = cflags_extra)
 
 # Linker flags
 
@@ -225,7 +226,6 @@ if RELEASE:
 if DEBUG:
 	env.Append(CCFLAGS = ['-O0'])
 	env.Append(CCFLAGS = ['-ggdb', '-g3'])	
-	env.Append(CCFLAGS = cflags_extra)
 	#env.Append(CCFLAGS = cflags_difficult)
 	env.Append(CPPDEFINES = ['DEBUG'])
 
