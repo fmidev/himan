@@ -261,9 +261,9 @@ void transformer::Rotate(info_t myTargetInfo)
 	}
 
 	auto a = Fetch(myTargetInfo->Time(), myTargetInfo->Level(), param(itsSourceParam[0]), myTargetInfo->ForecastType(),
-	               itsConfiguration->UseCudaForPacking());
+	               false);
 	auto b = Fetch(myTargetInfo->Time(), myTargetInfo->Level(), param(itsSourceParam[1]), myTargetInfo->ForecastType(),
-	               itsConfiguration->UseCudaForPacking());
+	               false);
 
 	myTargetInfo->ParamIndex(0);
 	myTargetInfo->Data().Set(VEC(a));
@@ -274,7 +274,7 @@ void transformer::Rotate(info_t myTargetInfo)
 	secondInfo->Data().Set(VEC(b));
 	secondInfo->Grid()->UVRelativeToGrid(b->Grid()->UVRelativeToGrid());
 
-	interpolate::RotateVectorComponents(*myTargetInfo, *secondInfo, itsConfiguration->UseCudaForInterpolation());
+	interpolate::RotateVectorComponents(*myTargetInfo, *secondInfo, false);
 }
 
 void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
