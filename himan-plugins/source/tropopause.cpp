@@ -77,6 +77,11 @@ void tropopause::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		pres.push_back(VEC(presInfo));
 	}
 
+	if (height.empty())
+	{
+		return;
+	}
+
 	size_t grd_size = myTargetInfo->SizeLocations();
 	vector<double> tropopause(grd_size, MissingDouble());
 
