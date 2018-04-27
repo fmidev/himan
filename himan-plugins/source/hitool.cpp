@@ -161,6 +161,11 @@ pair<level, level> hitool::LevelForHeight(const producer& prod, double height) c
 			producerId = 260;
 			break;
 
+		case 7:
+		case 270:
+			producerId = 270;
+			break;
+
 		default:
 			itsLogger.Error("Unsupported producer for hitool::LevelForHeight(): " + lexical_cast<string>(prod.Id()));
 			break;
@@ -315,21 +320,6 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 
 	switch (mod->Type())
 	{
-		/*
-		 * -- FIRST HYBRID LEVEL --
-		 *
-		 * -- pick highest max above MAX HEIGHT --
-		 *
-		 * -- MAX HEIGHT in data--
-		 *
-		 *
-		 * -- MIN HEIGHT in data --
-		 *
-		 * -- pick lowest min below MIN HEIGHT --
-		 *
-		 * -- LAST HYBRID LEVEL --
-		 */
-
 		case kAverageModifier:
 		case kMinimumModifier:
 		case kMaximumModifier:
