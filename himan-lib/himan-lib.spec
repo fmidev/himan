@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 18.4.24
+Version: 18.5.2
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -59,6 +59,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Wed May  2 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.5.2-1.fmi
+- Stricter compiler warning flags
+- raw_time comparison operator
 * Tue Apr 24 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.4.24-1.fmi
 - Change in parsing of manual stereographic area definition
 * Mon Apr 16 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.4.16-2.fmi
