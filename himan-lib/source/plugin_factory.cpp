@@ -68,12 +68,12 @@ std::shared_ptr<himan_plugin> plugin_factory::Plugin(const std::string& theClass
 	// Try to find the requested plugin twice. Populate the plugin registry if the plugin is not found.
 	for (int i = 0; i < 2; i++)
 	{
-		for (size_t i = 0; i < itsPluginFactory.size(); i++)
+		for (size_t j = 0; j < itsPluginFactory.size(); j++)
 		{
-			if ((itsPluginFactory[i]->Plugin()->ClassName() == theClassName) ||
-			    (itsPluginFactory[i]->Plugin()->ClassName() == "himan::plugin::" + theClassName))
+			if ((itsPluginFactory[j]->Plugin()->ClassName() == theClassName) ||
+			    (itsPluginFactory[j]->Plugin()->ClassName() == "himan::plugin::" + theClassName))
 			{
-				return itsPluginFactory[i]->Clone();
+				return itsPluginFactory[j]->Clone();
 			}
 		}
 		ReadPlugins(theClassName);

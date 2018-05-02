@@ -77,6 +77,11 @@ void tropopause::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		pres.push_back(VEC(presInfo));
 	}
 
+	if (height.empty())
+	{
+		return;
+	}
+
 	size_t grd_size = myTargetInfo->SizeLocations();
 	vector<double> tropopause(grd_size, MissingDouble());
 
@@ -87,8 +92,7 @@ void tropopause::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		// within 2km above is also smaller 2K/km
 		for (size_t j = 0; j < lvl_size - 1; ++j)
 		{
-			const double lapseRate =
-			    -1000.0 * (temp[j + 1][i] - temp[j][i]) / (height[j + 1][i] - height[j][i]);
+			const double lapseRate = -1000.0 * (temp[j + 1][i] - temp[j][i]) / (height[j + 1][i] - height[j][i]);
 			if (lapseRate <= 2.0)
 			{
 				// set tropopause height
@@ -96,7 +100,7 @@ void tropopause::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 				// check 2km above condition
 				size_t k = j + 1;
-				while (height[k][i] - height[j][i] <= 2000.0 && k < lvl_size -1)
+				while (height[k][i] - height[j][i] <= 2000.0 && k < lvl_size - 1)
 				{
 					if (-1000.0 * (temp[k][i] - temp[j][i]) / (height[k][i] - height[j][i]) > 2.0)
 					{

@@ -45,7 +45,7 @@ static const forecast_type kHirFtype(kEpsPerturbation, 3.0);
 static const forecast_type kMepsFtype(kEpsPerturbation, 4.0);
 static const forecast_type kGfsFtype(kEpsPerturbation, 5.0);
 
-blend::blend() : itsCalculationMode(kNone), itsNumHours(0), itsProdFtype()
+blend::blend() : itsCalculationMode(kNone), itsNumHours(0), itsProducer(), itsProdFtype()
 {
 	itsLogger = logger("blend");
 }
@@ -141,6 +141,54 @@ void blend::Run(unsigned short threadIndex)
 	}
 }
 
+raw_time blend::LatestOriginTimeForProducer(const string& producer) const
+{
+	int producerId = -1;
+	string geom;
+	if (producer == "MOS")
+	{
+		producerId = 120;
+		geom = "MOSKRIGING2";
+	}
+	else if (producer == "ECG")
+	{
+		producerId = 131;
+		geom = "ECGLO0100";
+	}
+	else if (producer == "HL2")
+	{
+		producerId = 1;
+		geom = "RCR068";
+	}
+	else if (producer == "MEPS")
+	{
+		producerId = 4;
+		geom = "MEPSSCAN2500";
+	}
+	else if (producer == "GFS")
+	{
+		producerId = 53;
+		geom = "GFS0250";
+	}
+	else
+	{
+		itsLogger.Error("Invalid producer string: " + producer);
+		himan::Abort();
+	}
+
+	auto r = GET_PLUGIN(radon);
+
+	const string latest = r->RadonDB().GetLatestTime(producerId, geom, 0);
+	if (latest.empty())
+	{
+		itsLogger.Error("Failed to find latest time for producer: " + to_string(producerId) + " and geom: " + geom +
+		                " from Radon");
+		himan::Abort();
+	}
+
+	return raw_time(latest);
+}
+
 void blend::Start()
 {
 	itsThreadCount = static_cast<short>(itsInfo->SizeTimes());
@@ -213,6 +261,7 @@ void blend::Process(shared_ptr<const plugin_configuration> conf)
 
 	if (itsCalculationMode == kCalculateBias || itsCalculationMode == kCalculateMAE)
 	{
+		itsProducer = prod;
 		if (prod == "ECG")
 		{
 			itsProdFtype = kEcmwfFtype;
@@ -298,6 +347,11 @@ matrix<double> blend::CalculateBias(logger& log, shared_ptr<info> targetInfo, co
 
 	HPTimeResolution currentRes = currentTime.StepResolution();
 
+	log.Info("Target origin time: " + currentTime.OriginDateTime().String() +
+	         " valid time: " + currentTime.ValidDateTime().String());
+	log.Info("Calculation origin time: " + calcTime.OriginDateTime().String() +
+	         " valid time: " + calcTime.ValidDateTime().String());
+
 	info_t analysis = FetchWithProperties(cnf, currentTime, currentRes, level(kHeight, 2.0), currentParam, kLapsFtype,
 	                                      kLapsGeom, kLapsProd);
 	if (!analysis)
@@ -379,6 +433,11 @@ matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info> targetInfo, con
 
 	HPTimeResolution currentRes = currentTime.StepResolution();
 
+	log.Info("Target origin time: " + currentTime.OriginDateTime().String() +
+	         " valid time: " + currentTime.ValidDateTime().String());
+	log.Info("Calculation origin time: " + calcTime.OriginDateTime().String() +
+	         " valid time: " + calcTime.ValidDateTime().String());
+
 	info_t analysis = FetchWithProperties(cnf, currentTime, currentRes, level(kHeight, 2.0), currentParam, kLapsFtype,
 	                                      kLapsGeom, kLapsProd);
 	if (!analysis)
@@ -450,6 +509,22 @@ matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info> targetInfo, con
 	return MAE;
 }
 
+static bool TimeAdjustmentRequired(const forecast_time& current, const forecast_time& calc)
+{
+	// NOTE Assume that minutes and seconds are '00'
+	const int currentHour = stoi(current.OriginDateTime().String("%H"));
+	const int calcHour = stoi(calc.OriginDateTime().String("%H"));
+
+	if (currentHour == 0 || currentHour == 6 || currentHour == 12 || currentHour == 18)
+	{
+		if (currentHour >= calcHour)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 void blend::CalculateMember(shared_ptr<info> targetInfo, unsigned short threadIdx, blend_mode mode)
 {
 	logger log;
@@ -466,13 +541,30 @@ void blend::CalculateMember(shared_ptr<info> targetInfo, unsigned short threadId
 	level targetLevel = targetInfo->Level();
 	forecast_time current = targetInfo->Time();
 
-	forecast_time ftime(current);
+	raw_time latestOrigin = LatestOriginTimeForProducer(itsProducer);
+	log.Info("Latest origin time for producer: " + latestOrigin.String());
+
+	// Used for fetching raw model output, bias, and weight for models.
+	forecast_time ftime(latestOrigin, current.ValidDateTime());
+
+	if (TimeAdjustmentRequired(current, ftime))
+	{
+		// Analysis updates more frequently than models.
+		// So if analysis time is 00, 06, 12, 18, then adjust the origin time for DMO fetching by -6h (valid time stays
+		// the same).
+		log.Info("Adjusting ftime");
+		ftime.OriginDateTime().Adjust(kHourResolution, -kOriginTimeStep);
+	}
+	else
+	{
+		log.Info("Not adjusting ftime");
+	}
+
 	ftime.OriginDateTime().Adjust(kHourResolution, -itsNumHours);
 
-	// Problem: targetInfo has information for the data that we want to fetch...
-	// but because of the convoluted way of calculating everything, this doesn't match with the data we want to write
-	// out
-	// Solution: create a new info and write that out
+	// Problem: targetInfo has information for the data that we want to fetch, but because of the convoluted way of
+	// calculating everything, this doesn't match with the data we want to write out.
+	// Solution: Create a new info and write that out.
 	info_t Info = make_shared<info>(*targetInfo);
 	vector<forecast_type> ftypes{itsProdFtype};
 
@@ -485,13 +577,29 @@ void blend::CalculateMember(shared_ptr<info> targetInfo, unsigned short threadId
 		Info->Producer(kBlendWeightProd);
 	}
 
-	SetupOutputForecastTimes(Info);
+	SetupOutputForecastTimes(Info, latestOrigin, current);
 	Info->ForecastTypes(ftypes);
 	Info->Create(targetInfo->Grid(), true);
 	Info->First();
 
 	while (true)
 	{
+		/// LAPS fetching is done via forecast time in |targetInfo|. Each call to Calculate{Bias,MAE} calculates for one
+		/// time step.
+		/// So we want to adjust ftime based on time.
+
+		// Newest forecast
+		if (ftime.Step() < 0)
+		{
+			log.Trace("End of forecast, breaking");
+			break;
+		}
+
+		if (ftime.OriginDateTime() >= current.OriginDateTime() || ftime.OriginDateTime() > latestOrigin)
+		{
+			break;
+		}
+
 		matrix<double> d;
 		if (mode == kCalculateBias)
 		{
@@ -512,11 +620,6 @@ void blend::CalculateMember(shared_ptr<info> targetInfo, unsigned short threadId
 			log.Error("Failed to set the correct output forecast type");
 			himan::Abort();
 		}
-
-        if (ftime == current)
-        {
-            break;
-        }
 
 		Info->NextTime();
 		ftime.OriginDateTime().Adjust(kHourResolution, kOriginTimeStep);
@@ -619,7 +722,7 @@ static std::vector<info_t> FetchMAEGrids(shared_ptr<info> targetInfo, shared_ptr
 	    FetchProd(cnf, currentTime, currentResolution, level(kGround, 0.0), currentParam, kGfsFtype, kBlendWeightProd);
 	log.Info("GFS_mae missing: " + to_string(gfs->Data().MissingCount()));
 
-	return std::vector<info_t>{ec, meps, hirlam, gfs};
+	return std::vector<info_t>{mos, ec, meps, hirlam, gfs};
 }
 
 void blend::CalculateBlend(shared_ptr<info> targetInfo, unsigned short threadIdx)
@@ -822,23 +925,21 @@ void blend::WriteToFile(const info_t targetInfo, write_options writeOptions)
 	}
 }
 
-void blend::SetupOutputForecastTimes(shared_ptr<info> Info)
+void blend::SetupOutputForecastTimes(shared_ptr<info> Info, const raw_time& latestOrigin, const forecast_time& current)
 {
 	vector<forecast_time> ftimes;
 
-	Info->FirstTime();
-	forecast_time current = Info->Time();
+	Info->ResetTime();
 
-	forecast_time ftime (current);
+	forecast_time ftime(latestOrigin, current.ValidDateTime());
 	ftime.OriginDateTime().Adjust(kHourResolution, -itsNumHours);
 
-	while (ftime != current)
+	for (int i = 0; i < itsNumHours; i += 6)
 	{
 		ftimes.push_back(ftime);
 		ftime.OriginDateTime().Adjust(kHourResolution, kOriginTimeStep);
 	}
-
-    ftimes.push_back(ftime);
+	ftimes.push_back(ftime);
 
 	Info->Times(ftimes);
 }

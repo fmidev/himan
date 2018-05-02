@@ -137,21 +137,23 @@ cflags_normal.append('-Wall')
 cflags_normal.append('-W')
 cflags_normal.append('-Wno-unused-parameter')
 cflags_normal.append('-Werror')
+cflags_normal.append('-Wpointer-arith')
+cflags_normal.append('-Wcast-qual')
+cflags_normal.append('-Wcast-align')
 
 # Extra flags
 
 cflags_extra = []
-cflags_extra.append('-Wpointer-arith')
-cflags_extra.append('-Wcast-qual')
-cflags_extra.append('-Wcast-align')
 cflags_extra.append('-Wwrite-strings')
 cflags_extra.append('-Wconversion')
-cflags_extra.append('-Winline')
+# cflags_extra.append('-Winline')
 cflags_extra.append('-Wnon-virtual-dtor')
 cflags_extra.append('-Wno-pmf-conversions')
 cflags_extra.append('-Wsign-promo')
 cflags_extra.append('-Wchar-subscripts')
 cflags_extra.append('-Wold-style-cast')
+cflags_extra.append('-Wshadow')
+cflags_extra.append('-Wunreachable-code')
 
 # Difficult flags
 
@@ -159,9 +161,7 @@ cflags_difficult = []
 cflags_difficult.append('-pedantic')
 cflags_difficult.append('-Weffc++')
 cflags_difficult.append('-Wredundant-decls')
-cflags_difficult.append('-Wshadow')
 cflags_difficult.append('-Woverloaded-virtual')
-cflags_difficult.append('-Wunreachable-code')
 cflags_difficult.append('-Wctor-dtor-privacy')
 
 # Default flags (common for release/debug)
@@ -178,6 +178,7 @@ cflags.append('-pie')
 
 env.Append(CCFLAGS = cflags)
 env.Append(CCFLAGS = cflags_normal)
+env.Append(CCFLAGS = cflags_extra)
 
 # Linker flags
 
@@ -203,7 +204,6 @@ if DEBUG:
 	env.Append(CPPDEFINES = ['DEBUG'])
 	env.Append(CCFLAGS = ['-O0'])
 	env.Append(CCFLAGS = ['-ggdb', '-g3'])
-	env.Append(CCFLAGS = cflags_extra)
 #	env.Append(CCFLAGS = cflags_difficult)
 	build_dir = "build/debug"
 

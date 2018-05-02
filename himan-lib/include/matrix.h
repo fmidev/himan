@@ -17,6 +17,11 @@ namespace himan
 {
 class grid;
 
+namespace util
+{
+extern void DumpVector(const std::vector<double>& vec, const std::string& name);
+}
+
 /**
  * @brief Compare float/double bitwise, i.e. nan comparison is possible
  *
@@ -146,10 +151,10 @@ class matrix
 		return file;
 	}
 
-/**
- * @brief Print information on contents if T == double
- *
- */
+	/**
+	 * @brief Print information on contents if T == double
+	 *
+	 */
 	void PrintData(std::ostream& file, const std::vector<double>& theValues) const
 	{
 		if (!theValues.size())
@@ -160,87 +165,7 @@ class matrix
 
 		ASSERT(theValues.size() > 0);
 
-		double min = 1e38;
-		double max = -1e38;
-		double sum = 0;
-		size_t count = 0;
-		size_t missing = 0;
-		size_t nan = 0;
-
-		for (size_t i = 0; i < theValues.size(); i++)
-		{
-			double d = theValues[i];
-
-			// Choosing the lesser evil between two options to compare
-			// 1. itsMissingValue that can be of any type
-			// 2. kFloatMissing which is of type double but can be different from itsMissingValue even for a double
-			// matrix
-			// ->this function should not be a member function of Matrix in this form
-			if (himan::IsMissing(d))
-			{
-				missing++;
-				continue;
-			}
-			else if (d != d)
-			{
-				nan++;
-				continue;
-			}
-
-			min = (min < d) ? min : d;
-			max = (max > d) ? max : d;
-			sum += d;
-			count++;
-		}
-
-		file << "__min__ " << (min == 1e38 ? std::numeric_limits<double>::quiet_NaN() : min) << std::endl;
-		file << "__max__ " << (max == -1e38 ? std::numeric_limits<double>::quiet_NaN() : max) << std::endl;
-		file << "__avg__ " << (count == 0 ? std::numeric_limits<double>::quiet_NaN() : sum / static_cast<double>(count))
-		     << std::endl;
-		file << "__missing__ " << missing << std::endl;
-		file << "__nan__ " << nan << std::endl;
-
-		if (max == -1e38 || min == 1e38)
-		{
-			return;
-		}
-
-		int binn = 10;
-		double binw = (max - min) / 10;
-
-		double binmin = min;
-		double binmax = binmin + binw;
-
-		file << "distribution:" << std::endl;
-
-		for (int i = 1; i <= binn; i++)
-		{
-			if (i == binn)
-				binmax += 0.001;
-
-			size_t count = 0;
-
-			for (size_t j = 0; j < theValues.size(); j++)
-			{
-				double val = theValues[j];
-				// same problem as above with other missing value case
-				if (himan::IsMissing(val))
-					continue;
-
-				if (val >= binmin && val < binmax)
-				{
-					count++;
-				}
-			}
-
-			if (i == binn)
-				binmax -= 0.001;
-
-			file << binmin << ":" << binmax << " " << count << std::endl;
-
-			binmin += binw;
-			binmax += binw;
-		}
+		util::DumpVector(theValues, "");
 	}
 
 	size_t Size() const
@@ -331,10 +256,10 @@ class matrix
 	}
 
 	/**
- * @brief Set value of whole matrix by move assignement
- *
- * @param theData
- */
+	 * @brief Set value of whole matrix by move assignement
+	 *
+	 * @param theData
+	 */
 	void Set(std::vector<T>&& theData)
 	{
 		ASSERT(itsData.size() == theData.size());

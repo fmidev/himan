@@ -33,7 +33,7 @@ local rh700 = nil
 
 local RHParam = "RH-PRCNT"
 
-if currentProducerName == "MEPS" or currentProducerName == "MEPSMTA" then
+if currentProducerName == "MEPS" or currentProducerName == "MEPSMTA" or currentProducerName == "HL2MTA" then
   RHParam = "RH-0TO1"
 end
 

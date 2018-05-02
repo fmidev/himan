@@ -65,6 +65,10 @@ class raw_time
 	}
 	bool operator==(const raw_time& other) const;
 	bool operator!=(const raw_time& other) const;
+	bool operator>(const raw_time& other) const;
+	bool operator<(const raw_time& other) const;
+	bool operator>=(const raw_time& other) const;
+	bool operator<=(const raw_time& other) const;
 
 	bool Adjust(HPTimeResolution timeResolution, int theValue);
 

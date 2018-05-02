@@ -154,11 +154,11 @@ himan::HPFileType util::FileType(const string& theFile)
 
 		keywordLength = 5;
 
-		char content[keywordLength];
+		char qcontent[keywordLength];
 
-		f.read(content, keywordLength);
+		f.read(qcontent, keywordLength);
 
-		if (strncmp(content, "QINFO", 5) == 0)
+		if (strncmp(qcontent, "QINFO", 5) == 0)
 		{
 			ret = kQueryData;
 		}
@@ -554,7 +554,7 @@ void util::DumpVector(const vector<double>& vec, const string& name)
 			if (i == binn)
 				binmax += 0.001;
 
-			size_t count = 0;
+			count = 0;
 
 			for (const double& val : vec)
 			{
