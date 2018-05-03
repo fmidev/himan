@@ -35,7 +35,7 @@ static const forecast_type kLapsFtype(kAnalysis);
 
 static const producer kBlendWeightProd(182, 86, 182, "BLENDW");
 static const producer kBlendRawProd(183, 86, 183, "BLENDR");
-static const producer kBlendBiasProd(184, 86, 184, "BLENDBIAS");
+static const producer kBlendBiasProd(184, 86, 184, "BLENDB");
 
 // Each blend producer is composed of these original producers. We use forecast_types to distinguish them
 // from each other, and this way we don't have to create bunch of extra producers. But still, it is a hack.
