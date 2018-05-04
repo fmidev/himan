@@ -32,7 +32,10 @@ using namespace std;
 unique_ptr<grid> ParseAreaAndGridFromPoints(configuration& conf, const boost::property_tree::ptree& pt);
 unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::property_tree::ptree& pt);
 void ParseLevels(shared_ptr<info> anInfo, const boost::property_tree::ptree& pt);
-void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, const boost::property_tree::ptree& pt);
+void ParseSourceProducer(shared_ptr<configuration> conf, shared_ptr<info> anInfo,
+                         const boost::property_tree::ptree& pt);
+void ParseTargetProducer(shared_ptr<configuration> conf, shared_ptr<info> anInfo,
+                         const boost::property_tree::ptree& pt);
 vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt);
 
 vector<level> LevelsFromString(const string& levelType, const string& levelValues);
@@ -101,7 +104,8 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 	/* Check producers */
 
-	ParseProducers(conf, baseInfo, pt);
+	ParseSourceProducer(conf, baseInfo, pt);
+	ParseTargetProducer(conf, baseInfo, pt);
 
 	/* Check area definitions */
 
@@ -493,6 +497,24 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		}
 
 		boost::property_tree::ptree& plugins = element.second.get_child("plugins");
+
+		// Check local producer option
+
+		try
+		{
+			ParseSourceProducer(conf, anInfo, element.second);
+		}
+		catch (...)
+		{
+		}
+
+		try
+		{
+			ParseTargetProducer(conf, anInfo, element.second);
+		}
+		catch (...)
+		{
+		}
 
 		if (plugins.empty())
 		{
@@ -1371,130 +1393,106 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 	return rg;
 }
 
-void ParseProducers(shared_ptr<configuration> conf, shared_ptr<info> anInfo, const boost::property_tree::ptree& pt)
+void ParseSourceProducer(shared_ptr<configuration> conf, shared_ptr<info> anInfo, const boost::property_tree::ptree& pt)
 {
-	try
+	std::vector<producer> sourceProducers;
+	vector<string> sourceProducersStr = himan::util::Split(pt.get<string>("source_producer"), ",", false);
+
+	const HPDatabaseType dbtype = conf->DatabaseType();
+
+	if (dbtype == kRadon)
 	{
-		std::vector<producer> sourceProducers;
-		vector<string> sourceProducersStr = himan::util::Split(pt.get<string>("source_producer"), ",", false);
-
-		HPDatabaseType dbtype = conf->DatabaseType();
-
-		if (dbtype == kRadon)
-		{
-			auto r = GET_PLUGIN(radon);
-
-			for (const auto& prodstr : sourceProducersStr)
-			{
-				long pid = stol(prodstr);
-
-				producer prod(pid);
-
-				map<string, string> prodInfo = r->RadonDB().GetProducerDefinition(static_cast<unsigned long>(pid));
-
-				if (!prodInfo.empty())
-				{
-					prod.Name(prodInfo["ref_prod"]);
-
-					if (!prodInfo["ident_id"].empty())
-					{
-						prod.Centre(stol(prodInfo["ident_id"]));
-						prod.Process(stol(prodInfo["model_id"]));
-					}
-
-					prod.Class(static_cast<HPProducerClass>(stoi(prodInfo["producer_class"])));
-
-					sourceProducers.push_back(prod);
-				}
-				else
-				{
-					itsLogger.Warning("Failed to find source producer from Radon: " + prodstr);
-				}
-			}
-		}
-		else if (dbtype != kNoDatabase && sourceProducers.size() == 0)
-		{
-			itsLogger.Fatal("Source producer information was not found from database");
-			himan::Abort();
-		}
-		else if (dbtype == kNoDatabase)
-		{
-			for (const auto& prodstr : sourceProducersStr)
-			{
-				sourceProducers.push_back(producer(stoi(prodstr)));
-			}
-		}
-
-		conf->SourceProducers(sourceProducers);
-	}
-
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		itsLogger.Fatal("Source producer definitions not found: " + string(e.what()));
-		himan::Abort();
-	}
-	catch (exception& e)
-	{
-		itsLogger.Fatal("Error parsing source producer information: " + string(e.what()));
-		himan::Abort();
-	}
-
-	try
-	{
-		/*
-		 * Target producer is also set to target info; source infos (and producers) are created
-		 * as data is fetched from files.
-		 */
-
-		HPDatabaseType dbtype = conf->DatabaseType();
-
-		long pid = stol(pt.get<string>("target_producer"));
-		producer prod(pid);
-
 		auto r = GET_PLUGIN(radon);
-		auto prodInfo = r->RadonDB().GetProducerDefinition(static_cast<unsigned long>(pid));
 
-		if (!prodInfo.empty())
+		for (const auto& prodstr : sourceProducersStr)
 		{
-			if (prodInfo["ident_id"].empty() || prodInfo["model_id"].empty())
-			{
-				itsLogger.Warning("Centre or ident information not found for producer " + prodInfo["ref_prod"]);
-			}
-			else
-			{
-				prod.Centre(stol(prodInfo["ident_id"]));
-				prod.Process(stol(prodInfo["model_id"]));
-			}
+			long pid = stol(prodstr);
 
-			prod.Name(prodInfo["ref_prod"]);
+			producer prod(pid);
 
-			if (prodInfo["producer_class"].empty())
+			map<string, string> prodInfo = r->RadonDB().GetProducerDefinition(static_cast<unsigned long>(pid));
+
+			if (!prodInfo.empty())
 			{
-				prod.Class(kGridClass);
-			}
-			else
-			{
+				prod.Name(prodInfo["ref_prod"]);
+
+				if (!prodInfo["ident_id"].empty())
+				{
+					prod.Centre(stol(prodInfo["ident_id"]));
+					prod.Process(stol(prodInfo["model_id"]));
+				}
+
 				prod.Class(static_cast<HPProducerClass>(stoi(prodInfo["producer_class"])));
+
+				sourceProducers.push_back(prod);
+			}
+			else
+			{
+				itsLogger.Warning("Failed to find source producer from Radon: " + prodstr);
 			}
 		}
-		else if (dbtype != kNoDatabase)
+	}
+	else if (dbtype != kNoDatabase && sourceProducers.size() == 0)
+	{
+		itsLogger.Fatal("Source producer information was not found from database");
+		himan::Abort();
+	}
+	else if (dbtype == kNoDatabase)
+	{
+		for (const auto& prodstr : sourceProducersStr)
 		{
-			itsLogger.Warning("Unknown target producer: " + pt.get<string>("target_producer"));
+			sourceProducers.push_back(producer(stoi(prodstr)));
+		}
+	}
+
+	conf->SourceProducers(sourceProducers);
+}
+
+void ParseTargetProducer(shared_ptr<configuration> conf, shared_ptr<info> anInfo, const boost::property_tree::ptree& pt)
+{
+	const HPDatabaseType dbtype = conf->DatabaseType();
+
+	/*
+	 * Target producer is also set to target info; source infos (and producers) are created
+	 * as data is fetched from files.
+	 */
+
+	long pid = stol(pt.get<string>("target_producer"));
+	producer prod(pid);
+
+	auto r = GET_PLUGIN(radon);
+	auto prodInfo = r->RadonDB().GetProducerDefinition(static_cast<unsigned long>(pid));
+
+	if (!prodInfo.empty())
+	{
+		if (prodInfo["ident_id"].empty() || prodInfo["model_id"].empty())
+		{
+			itsLogger.Warning("Centre or ident information not found for producer " + prodInfo["ref_prod"]);
+		}
+		else
+		{
+			prod.Centre(stol(prodInfo["ident_id"]));
+			prod.Process(stol(prodInfo["model_id"]));
 		}
 
-		conf->TargetProducer(prod);
-		anInfo->Producer(prod);
+		prod.Name(prodInfo["ref_prod"]);
+
+		if (prodInfo["producer_class"].empty())
+		{
+			prod.Class(kGridClass);
+		}
+		else
+		{
+			prod.Class(static_cast<HPProducerClass>(stoi(prodInfo["producer_class"])));
+		}
 	}
-	catch (boost::property_tree::ptree_bad_path& e)
+	else if (dbtype != kNoDatabase)
 	{
-		itsLogger.Fatal("Target producer definitions not found: " + string(e.what()));
-		himan::Abort();
+		itsLogger.Warning("Unknown target producer: " + pt.get<string>("target_producer"));
 	}
-	catch (exception& e)
-	{
-		itsLogger.Fatal("Error parsing target producer information: " + string(e.what()));
-		himan::Abort();
-	}
+
+	conf->TargetProducer(prod);
+	anInfo->Producer(prod);
 }
 
 void ParseLevels(shared_ptr<info> anInfo, const boost::property_tree::ptree& pt)

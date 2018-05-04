@@ -192,6 +192,8 @@ Example:
     "source_producer" : "1,230",
     "target_producer" : "230"
 
+Keys can be set in the global or processqueue scope.
+
 <a name="Time"/>
 
 # Time
