@@ -27,7 +27,6 @@ static const string kClassName = "himan::plugin::blend";
 static const double alpha = 0.05;
 
 static const int kOriginTimeStep = 6;
-static const int kNumForecasts = 4;
 
 static const producer kLapsProd(109, 86, 109, "LAPSSCAN");
 static const string kLapsGeom = "LAPSSCANLARGE";
@@ -343,7 +342,7 @@ matrix<double> blend::CalculateBias(logger& log, shared_ptr<info> targetInfo, co
 	forecast_time currentTime = targetInfo->Time();
 
 	// Account for the fact that LAPS is an analysis
-	currentTime.OriginDateTime() = currentTime.ValidDateTime();
+	currentTime.ValidDateTime() = currentTime.OriginDateTime();
 
 	HPTimeResolution currentRes = currentTime.StepResolution();
 
@@ -429,7 +428,7 @@ matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info> targetInfo, con
 	forecast_time currentTime = targetInfo->Time();
 
 	// Account for the fact that LAPS is an analysis
-	currentTime.OriginDateTime() = currentTime.ValidDateTime();
+	currentTime.ValidDateTime() = currentTime.OriginDateTime();
 
 	HPTimeResolution currentRes = currentTime.StepResolution();
 
