@@ -205,6 +205,7 @@ void grib::WriteAreaAndGrid(info& anInfo)
 			if (edition == 2)
 			{
 				gridType = itsGrib->Message().GridTypeToAnotherEdition(gridType, 2);
+				itsGrib->Message().SetLongKey("LaDInDegrees", 60);
 			}
 
 			itsGrib->Message().GridType(gridType);
