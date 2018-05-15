@@ -44,6 +44,14 @@ static const forecast_type kHirFtype(kEpsPerturbation, 3.0);
 static const forecast_type kMepsFtype(kEpsPerturbation, 4.0);
 static const forecast_type kGfsFtype(kEpsPerturbation, 5.0);
 
+// When adjusting origin times, we need to check that the resulting time is compatible with the model's
+// forecast length.
+const int kMosLength = 192;
+const int kEcmwfLength = 192;
+const int kHirLength = 54;
+const int kMepsLength = 66;
+const int kGfsLength = 192;
+
 blend::blend() : itsCalculationMode(kNone), itsNumHours(0), itsProducer(), itsProdFtype()
 {
 	itsLogger = logger("blend");
@@ -561,6 +569,29 @@ void blend::CalculateMember(shared_ptr<info> targetInfo, unsigned short threadId
 
 	ftime.OriginDateTime().Adjust(kHourResolution, -itsNumHours);
 
+	int maxStep = 0;
+	if (itsProdFtype == kMosFtype)
+		maxStep = kMosLength;
+	else if (itsProdFtype == kEcmwfFtype)
+		maxStep = kEcmwfLength;
+	else if (itsProdFtype == kHirFtype)
+		maxStep = kHirLength;
+	else if (itsProdFtype == kMepsFtype)
+		maxStep = kMepsLength;
+	else if (itsProdFtype == kGfsFtype)
+		maxStep = kGfsLength;
+	else
+	{
+		log.Error("Invalid producer forecast type");
+		himan::Abort();
+	}
+
+	// Check that we're not overstepping the forecast length.
+	while (ftime.Step() > maxStep)
+	{
+		ftime.OriginDateTime().Adjust(kHourResolution, kOriginTimeStep);
+	}
+
 	// Problem: targetInfo has information for the data that we want to fetch, but because of the convoluted way of
 	// calculating everything, this doesn't match with the data we want to write out.
 	// Solution: Create a new info and write that out.
@@ -576,7 +607,7 @@ void blend::CalculateMember(shared_ptr<info> targetInfo, unsigned short threadId
 		Info->Producer(kBlendWeightProd);
 	}
 
-	SetupOutputForecastTimes(Info, latestOrigin, current);
+	SetupOutputForecastTimes(Info, latestOrigin, current, maxStep);
 	Info->ForecastTypes(ftypes);
 	Info->Create(targetInfo->Grid(), true);
 	Info->First();
@@ -621,6 +652,7 @@ void blend::CalculateMember(shared_ptr<info> targetInfo, unsigned short threadId
 		}
 
 		Info->NextTime();
+
 		ftime.OriginDateTime().Adjust(kHourResolution, kOriginTimeStep);
 	}
 }
@@ -924,7 +956,8 @@ void blend::WriteToFile(const info_t targetInfo, write_options writeOptions)
 	}
 }
 
-void blend::SetupOutputForecastTimes(shared_ptr<info> Info, const raw_time& latestOrigin, const forecast_time& current)
+void blend::SetupOutputForecastTimes(shared_ptr<info> Info, const raw_time& latestOrigin, const forecast_time& current,
+                                     int maxStep)
 {
 	vector<forecast_time> ftimes;
 
@@ -932,6 +965,11 @@ void blend::SetupOutputForecastTimes(shared_ptr<info> Info, const raw_time& late
 
 	forecast_time ftime(latestOrigin, current.ValidDateTime());
 	ftime.OriginDateTime().Adjust(kHourResolution, -itsNumHours);
+
+	while (ftime.Step() > maxStep)
+	{
+		ftime.OriginDateTime().Adjust(kHourResolution, kOriginTimeStep);
+	}
 
 	for (int i = 0; i < itsNumHours; i += 6)
 	{
