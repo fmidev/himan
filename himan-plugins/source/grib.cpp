@@ -205,7 +205,6 @@ void grib::WriteAreaAndGrid(info& anInfo)
 			if (edition == 2)
 			{
 				gridType = itsGrib->Message().GridTypeToAnotherEdition(gridType, 2);
-				itsGrib->Message().SetLongKey("LaDInDegrees", 60);
 			}
 
 			itsGrib->Message().GridType(gridType);
@@ -222,6 +221,11 @@ void grib::WriteAreaAndGrid(info& anInfo)
 			itsGrib->Message().SizeY(static_cast<long>(rg->Nj()));
 
 			scmode = rg->ScanningMode();
+
+			if (edition == 2)
+			{
+				itsGrib->Message().SetLongKey("LaDInDegrees", 60);
+			}
 
 			break;
 		}
@@ -289,6 +293,11 @@ void grib::WriteAreaAndGrid(info& anInfo)
 			}
 
 			scmode = lccg->ScanningMode();
+
+			if (edition == 2)
+			{
+				itsGrib->Message().SetLongKey("LaDInDegrees", 60);
+			}
 
 			break;
 		}
