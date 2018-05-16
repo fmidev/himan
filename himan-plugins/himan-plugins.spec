@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.5.8
+Version: 18.5.16
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -110,6 +110,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed May 16 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.5.16-1.fmi
+- Blend fixes
+- Write LaDInDegrees to grib (stereographic and lcc projections)
 * Tue May  8 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.5.8-1.fmi
 - Blend fixes
 * Thu May  3 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.5.3-1.fmi
