@@ -222,6 +222,11 @@ void grib::WriteAreaAndGrid(info& anInfo)
 
 			scmode = rg->ScanningMode();
 
+			if (edition == 2)
+			{
+				itsGrib->Message().SetLongKey("LaDInDegrees", 60);
+			}
+
 			break;
 		}
 
@@ -288,6 +293,11 @@ void grib::WriteAreaAndGrid(info& anInfo)
 			}
 
 			scmode = lccg->ScanningMode();
+
+			if (edition == 2)
+			{
+				itsGrib->Message().SetLongKey("LaDInDegrees", 60);
+			}
 
 			break;
 		}

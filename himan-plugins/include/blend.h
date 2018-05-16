@@ -59,7 +59,7 @@ class blend : public compiled_plugin, private compiled_plugin_base
 	                             const level& lvl, const forecast_time& calcTime);
 
 	void SetupOutputForecastTimes(std::shared_ptr<info> Info, const raw_time& latestOrigin,
-	                              const forecast_time& current);
+	                              const forecast_time& current, int maxStep);
 	raw_time LatestOriginTimeForProducer(const std::string& producer) const;
 
 	blend_mode itsCalculationMode;
