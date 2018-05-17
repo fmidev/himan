@@ -18,9 +18,17 @@ CIN500 = luatool:FetchWithType(current_time, HL, param("CIN-JKG"), current_forec
 
 LCLmu = luatool:FetchWithType(current_time, MU, param("LCL-HPA"), current_forecast_type)
 LFCmu = luatool:FetchWithType(current_time, MU, param("LFC-HPA"), current_forecast_type)
+LFCmu_metric = luatool:FetchWithType(current_time, MU, param("LFC-M"), current_forecast_type)
 ELmu = luatool:FetchWithType(current_time, MU, param("EL-HPA"), current_forecast_type)
 CINmu = luatool:FetchWithType(current_time, MU, param("CIN-JKG"), current_forecast_type)
 CAPEmu = luatool:FetchWithType(current_time, MU, param("CAPE-JKG"), current_forecast_type)
+
+Ttop = luatool:FetchWithType(current_time, HL, param("EL-K"), current_forecast_type)
+Tbase = luatool:FetchWithType(current_time, HL, param("LCL-K"), current_forecast_type)
+TtopMU = luatool:FetchWithType(current_time, MU, param("EL-K"), current_forecast_type)
+--LFC probably better than LCL for elev conv. base
+TbaseMU = luatool:FetchWithType(current_time, MU, param("LFC-K"), current_forecast_type)
+
 
 NL = luatool:FetchWithType(current_time, HG, param("NL-PRCNT"), current_forecast_type)
 NM = luatool:FetchWithType(current_time, HG, param("NM-PRCNT"), current_forecast_type)
@@ -44,15 +52,6 @@ TopLim = 650
 
 --Denominator to calculate overshooting top based on CAPE, +1000ft/350J/kg (tweak this!)
 overshoot = 35
-
-hitool:SetHeightUnit(HPParameterUnit.kHPa)
-
-Ttop = hitool:VerticalValueGrid(param("T-K"),EL500)
-Tbase = hitool:VerticalValueGrid(param("T-K"),LCL500)
-
-TtopMU = hitool:VerticalValueGrid(param("T-K"),ELmu)
---LFC probably better than LCL for elev conv. base
-TbaseMU = hitool:VerticalValueGrid(param("T-K"),LFCmu)
 
 local i = 0
 local res = {}
@@ -88,7 +87,7 @@ for i=1, #EL500 do
   end
 
   --If no TOP from above, check also with MU values, for elev. conv. only from blw 3,5km
-  if (not res[i]==res[i] and (LFCmu[i]<LCL500[i]) and (LFCmu[i]>650)) then
+  if (not res[i]==res[i] and (LFCmu[i]>LCL500[i]) and (LFCmu_metric[i]>650)) then
     -- TCU
     if ((TbaseMU[i]-TtopMU[i]>TCUlimit) and ((NL[i]>0) or (NM[i]>0)) and (CINmu[i]>-1)) then
       res[i] =  FlightLevel_(ELmu[i]*100)
