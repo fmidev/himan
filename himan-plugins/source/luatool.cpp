@@ -8,6 +8,7 @@
 #include "logger.h"
 #include "metutil.h"
 #include "numerical_functions.h"
+#include "numerical_functions_impl.h"
 #include "plugin_factory.h"
 #include "radon.h"
 #include "reduced_gaussian_grid.h"
@@ -931,6 +932,14 @@ object GetValues(matrix<double>& mat)
 }
 }  // matrix_wrapper
 
+namespace luabind_workaround
+{
+matrix<double> ProbLimit2D(const matrix<double>& A, const matrix<double>& B, double limit)
+{
+	return numerical_functions::Prob2D(A, B, [=](double a) { return a > limit; });
+}
+}
+
 // clang-format off
 
 void BindLib(lua_State* L)
@@ -1239,6 +1248,7 @@ void BindLib(lua_State* L)
 	          def("Filter2D", &numerical_functions::Filter2D),
 	          def("Max2D", &numerical_functions::Max2D),
 	          def("Min2D", &numerical_functions::Min2D),
+                  def("ProbLimit2D", &luabind_workaround::ProbLimit2D),
 	          // metutil namespace
 	          def("LCL_", &metutil::LCL_<double>), 
 	          def("Es_", &metutil::Es_<double>), 
