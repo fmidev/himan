@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.6.4
+Version: 18.6.5
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -110,6 +110,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Jun  5 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.6.5-1.fmi
+- Blend fixes
+- Generalized version of Filter2D
 * Mon Jun  4 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.6.4-1.fmi
 - Blend fixes
 * Mon May 21 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.5.21-1.fmi
