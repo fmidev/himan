@@ -1682,8 +1682,7 @@ himan::producer grib::ReadProducer(const search_options& options) const
 		}
 		else
 		{
-			if (centre == 98 &&
-			    (process == 146 || process == 145 || process == 144 || process == 143 || process == 142))
+			if (centre == 98 && (process <= 148 && process >= 142))
 			{
 				// Older ECMWF forecast
 				prod.Id(131);
