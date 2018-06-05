@@ -8,7 +8,7 @@ local MISS = missing
 -- This mask is for ECMWF; for other models with different
 -- horizontal grid size it would need to be adjusted
 local mask1 = matrix(3, 3, 1, MISS)
-mask1:SetValues({0, 1, 0, 1, 1, 1, 0, 1, 0})
+mask1:SetValues({MISS, 1, MISS, 1, 1, 1, MISS, 1, MISS})
 
 local mask2 = matrix(21, 21, 1, MISS)
 mask2:SetValues({

@@ -23,7 +23,7 @@ himan::matrix<double> Filter2D(const himan::matrix<double>& A, const himan::matr
  *
  * Matrix B acts also as a weight; a default boxed maximum search would have all matrix B
  * elements set to 1, but if for example origin needs to be excluded, that value
- * can be set to 0.
+ * can be set to Missing.
  *
  * @param A Data
  * @param B Kernel
@@ -37,11 +37,11 @@ himan::matrix<double> Max2D(const himan::matrix<double>& A, const himan::matrix<
  *
  * Matrix B acts also as a weight; a default boxed minimum search would have all matrix B
  * elements set to 1, but if for example origin needs to be excluded, that value
- * can be set to 0.
+ * can be set to Missing.
  *
  * @param A Data
  * @param B Kernel
- * @return Maximum data
+ * @return Miniimum data
  */
 
 himan::matrix<double> Min2D(const himan::matrix<double>& A, const himan::matrix<double>& B);
@@ -117,7 +117,7 @@ CUDA_KERNEL void Filter2DCuda(cdarr_t A, cdarr_t B, darr_t C, filter_opts opts)
 					const double aVal = A[aIdx];
 					const double bVal = B[bIdx];
 
-					if (aVal == missing)
+					if (aVal == missing || IsMissing(aVal))
 					{
 						kernelMissingCount++;
 						continue;
@@ -127,14 +127,7 @@ CUDA_KERNEL void Filter2DCuda(cdarr_t A, cdarr_t B, darr_t C, filter_opts opts)
 				}
 			}
 		}
-		if (kernelMissingCount < 3)
-		{
-			CudaMatrixSet(C, i, j, 0, M, N, convolutionValue / kernelWeightSum);
-		}
-		else
-		{
-			CudaMatrixSet(C, i, j, 0, M, N, MissingDouble());
-		}
+		CudaMatrixSet(C, i, j, 0, M, N, kernelWeightSum == 0 ? MissingDouble() : convolutionValue / kernelWeightSum);
 	}
 }
 

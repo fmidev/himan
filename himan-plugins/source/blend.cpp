@@ -578,7 +578,7 @@ void blend::CalculateMember(shared_ptr<info> targetInfo, unsigned short threadId
 	if (itsProdFtype == kMosFtype)
 	{
 		maxStep = kMosForecastLength;
-		originTimeStep = 6;
+		originTimeStep = 12; // only steps 00 and 12
 	}
 	else if (itsProdFtype == kEcmwfFtype)
 	{
