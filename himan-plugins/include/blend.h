@@ -11,7 +11,7 @@ namespace plugin
 
 enum blend_mode
 {
-	kNone,
+	kCalculateNone,
 	//
 	kCalculateBlend,
 	kCalculateMAE,
@@ -54,12 +54,12 @@ class blend : public compiled_plugin, private compiled_plugin_base
 	void CalculateMember(std::shared_ptr<info> targetInfo, unsigned short threadIndex, blend_mode mode);
 
 	matrix<double> CalculateMAE(logger& log, std::shared_ptr<info> targetInfo, const forecast_type& ftype,
-	                            const level& lvl, const forecast_time& calcTime);
+	                            const level& lvl, const forecast_time& calcTime, int originTimeStep);
 	matrix<double> CalculateBias(logger& log, std::shared_ptr<info> targetInfo, const forecast_type& ftype,
-	                             const level& lvl, const forecast_time& calcTime);
+	                             const level& lvl, const forecast_time& calcTime, int originTimeStep);
 
 	void SetupOutputForecastTimes(std::shared_ptr<info> Info, const raw_time& latestOrigin,
-	                              const forecast_time& current, int maxStep);
+	                              const forecast_time& current, int maxStep, int originTimeStep);
 	raw_time LatestOriginTimeForProducer(const std::string& producer) const;
 
 	blend_mode itsCalculationMode;
