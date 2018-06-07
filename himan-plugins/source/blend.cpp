@@ -8,6 +8,7 @@
 #include <future>
 #include <mutex>
 #include <thread>
+#include <algorithm>
 
 //
 // Forecast blender
@@ -104,6 +105,39 @@ static info_t FetchProd(shared_ptr<plugin_configuration> cnf, const forecast_tim
 	cnf->SourceProducers({prod});
 
 	return f->Fetch(cnf, ftime, lvl, parm, type, false);
+}
+
+static info_t FetchNoExcept(shared_ptr<plugin_configuration> cnf, const forecast_time& forecastTime,
+                            HPTimeResolution stepResolution, const level& lvl, const param& parm,
+                            const forecast_type& type, const producer& prod)
+{
+	auto f = GET_PLUGIN(fetcher);
+
+	const string geomName = cnf->TargetGeomName();
+
+	forecast_time ftime = forecastTime;
+	ftime.StepResolution(stepResolution);
+
+	cnf->SourceGeomNames({geomName});
+	cnf->SourceProducers({prod});
+
+	info_t I;
+	try
+	{
+		I = f->Fetch(cnf, ftime, lvl, parm, type, false);
+	}
+	catch (HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			himan::Abort();
+		}
+		else
+		{
+			return nullptr;
+		}
+	}
+	return I;
 }
 
 static mutex dimensionMutex;
@@ -382,8 +416,8 @@ matrix<double> blend::CalculateBias(logger& log, shared_ptr<info> targetInfo, co
 	log.Info("Calculation origin time: " + calcTime.OriginDateTime().String() +
 	         " valid time: " + calcTime.ValidDateTime().String());
 
-	info_t analysis = FetchWithProperties(cnf, analysisFetchTime, currentRes, level(kHeight, 2.0), currentParam, kLapsFtype,
-	                                      kLapsGeom, kLapsProd);
+	info_t analysis = FetchWithProperties(cnf, analysisFetchTime, currentRes, level(kHeight, 2.0), currentParam,
+	                                      kLapsFtype, kLapsGeom, kLapsProd);
 	if (!analysis)
 	{
 		log.Error("Analysis (LAPS) data not found");
@@ -464,8 +498,8 @@ matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info> targetInfo, con
 	log.Info("Calculation origin time: " + calcTime.OriginDateTime().String() +
 	         " valid time: " + calcTime.ValidDateTime().String());
 
-	info_t analysis = FetchWithProperties(cnf, analysisFetchTime, currentRes, level(kHeight, 2.0), currentParam, kLapsFtype,
-	                                      kLapsGeom, kLapsProd);
+	info_t analysis = FetchWithProperties(cnf, analysisFetchTime, currentRes, level(kHeight, 2.0), currentParam,
+	                                      kLapsFtype, kLapsGeom, kLapsProd);
 	if (!analysis)
 	{
 		log.Error("Analysis (LAPS) data not found");
@@ -701,29 +735,30 @@ static std::vector<info_t> FetchRawGrids(shared_ptr<info> targetInfo, shared_ptr
 	HPTimeResolution currentResolution = currentTime.StepResolution();
 	const param currentParam = targetInfo->Param();
 
-	info_t mos_raw, ec_raw, meps_raw, hirlam_raw, gfs_raw;
+	// We want to return nullptrs here so that we can skip over these entries in the Calculate-loop.
+	info_t mosRaw =
+	    FetchNoExcept(cnf, currentTime, currentResolution, level(kHeight, 0.0), currentParam, kMosFtype, kBlendRawProd);
+	info_t ecRaw = FetchNoExcept(cnf, currentTime, currentResolution, level(kGround, 0.0), currentParam, kEcmwfFtype,
+	                             kBlendRawProd);
+	info_t mepsRaw = FetchNoExcept(cnf, currentTime, currentResolution, level(kHeight, 2.0), currentParam, kMepsFtype,
+	                               kBlendRawProd);
+	info_t hirlamRaw = FetchNoExcept(cnf, currentTime, currentResolution, level(kHeight, 2.0), currentParam,
+	                                 kHirlamFtype, kBlendRawProd);
+	info_t gfsRaw =
+	    FetchNoExcept(cnf, currentTime, currentResolution, level(kGround, 0.0), currentParam, kGfsFtype, kBlendRawProd);
 
-    mos_raw =
-	    FetchProd(cnf, currentTime, currentResolution, level(kHeight, 0.0), currentParam, kMosFtype, kBlendRawProd);
-	log.Info("MOS_raw missing: " + to_string(mos_raw->Data().MissingCount()));
+	if (mosRaw)
+		log.Info("MOS_raw missing: " + to_string(mosRaw->Data().MissingCount()));
+	if (ecRaw)
+		log.Info("EC_raw missing: " + to_string(ecRaw->Data().MissingCount()));
+	if (mepsRaw)
+		log.Info("MEPS_raw missing: " + to_string(mepsRaw->Data().MissingCount()));
+	if (hirlamRaw)
+		log.Info("HIRLAM_raw missing: " + to_string(hirlamRaw->Data().MissingCount()));
+	if (gfsRaw)
+		log.Info("GFS_raw missing: " + to_string(gfsRaw->Data().MissingCount()));
 
-	ec_raw =
-	    FetchProd(cnf, currentTime, currentResolution, level(kGround, 0.0), currentParam, kEcmwfFtype, kBlendRawProd);
-	log.Info("EC_raw missing: " + to_string(ec_raw->Data().MissingCount()));
-
-	meps_raw =
-	    FetchProd(cnf, currentTime, currentResolution, level(kHeight, 2.0), currentParam, kMepsFtype, kBlendRawProd);
-	log.Info("MEPS_raw missing: " + to_string(meps_raw->Data().MissingCount()));
-
-	hirlam_raw =
-	    FetchProd(cnf, currentTime, currentResolution, level(kHeight, 2.0), currentParam, kHirlamFtype, kBlendRawProd);
-	log.Info("HIRLAM_raw missing: " + to_string(hirlam_raw->Data().MissingCount()));
-
-	gfs_raw =
-	    FetchProd(cnf, currentTime, currentResolution, level(kGround, 0.0), currentParam, kGfsFtype, kBlendRawProd);
-	log.Info("GFS_raw missing: " + to_string(gfs_raw->Data().MissingCount()));
-
-	return std::vector<info_t>{mos_raw, ec_raw, meps_raw, hirlam_raw, gfs_raw};
+	return std::vector<info_t>{mosRaw, ecRaw, mepsRaw, hirlamRaw, gfsRaw};
 }
 
 static std::vector<info_t> FetchBiasGrids(shared_ptr<info> targetInfo, shared_ptr<plugin_configuration> cnf)
@@ -735,26 +770,29 @@ static std::vector<info_t> FetchBiasGrids(shared_ptr<info> targetInfo, shared_pt
 	HPTimeResolution currentResolution = currentTime.StepResolution();
 	const param currentParam = targetInfo->Param();
 
-    // |empty_bias| since we want to have raw, bias, and mae std::vector be of the same size and in the same order.
-	info_t empty_bias, ec_bias, meps_bias, hirlam_bias, gfs_bias;
+	info_t mosBias = FetchNoExcept(cnf, currentTime, currentResolution, level(kHeight, 0.0), currentParam, kMosFtype,
+	                               kBlendBiasProd);
+	info_t ecBias = FetchNoExcept(cnf, currentTime, currentResolution, level(kGround, 0.0), currentParam, kEcmwfFtype,
+	                              kBlendBiasProd);
+	info_t mepsBias = FetchNoExcept(cnf, currentTime, currentResolution, level(kHeight, 2.0), currentParam, kMepsFtype,
+	                                kBlendBiasProd);
+	info_t hirlamBias = FetchNoExcept(cnf, currentTime, currentResolution, level(kHeight, 2.0), currentParam,
+	                                  kHirlamFtype, kBlendBiasProd);
+	info_t gfsBias = FetchNoExcept(cnf, currentTime, currentResolution, level(kGround, 0.0), currentParam, kEcmwfFtype,
+	                               kBlendBiasProd);
 
-	ec_bias =
-	    FetchProd(cnf, currentTime, currentResolution, level(kGround, 0.0), currentParam, kEcmwfFtype, kBlendBiasProd);
-	log.Info("EC_bias missing: " + to_string(ec_bias->Data().MissingCount()));
+	if (mosBias)
+		log.Info("MOS_bias missing: " + to_string(mosBias->Data().MissingCount()));
+	if (ecBias)
+		log.Info("EC_bias missing: " + to_string(ecBias->Data().MissingCount()));
+	if (mepsBias)
+		log.Info("MEPS_bias missing: " + to_string(mepsBias->Data().MissingCount()));
+	if (hirlamBias)
+		log.Info("HIRLAM_bias missing: " + to_string(hirlamBias->Data().MissingCount()));
+	if (gfsBias)
+		log.Info("GFS_bias missing: " + to_string(gfsBias->Data().MissingCount()));
 
-	meps_bias =
-	    FetchProd(cnf, currentTime, currentResolution, level(kHeight, 2.0), currentParam, kMepsFtype, kBlendBiasProd);
-	log.Info("MEPS_bias missing: " + to_string(meps_bias->Data().MissingCount()));
-
-	hirlam_bias =
-	    FetchProd(cnf, currentTime, currentResolution, level(kHeight, 2.0), currentParam, kHirlamFtype, kBlendBiasProd);
-	log.Info("HIRLAM_bias missing: " + to_string(hirlam_bias->Data().MissingCount()));
-
-	gfs_bias =
-	    FetchProd(cnf, currentTime, currentResolution, level(kGround, 0.0), currentParam, kEcmwfFtype, kBlendBiasProd);
-	log.Info("GFS_bias missing: " + to_string(gfs_bias->Data().MissingCount()));
-
-	return std::vector<info_t>{empty_bias, ec_bias, meps_bias, hirlam_bias, gfs_bias};
+	return std::vector<info_t>{mosBias, ecBias, mepsBias, hirlamBias, gfsBias};
 }
 
 static std::vector<info_t> FetchMAEGrids(shared_ptr<info> targetInfo, shared_ptr<plugin_configuration> cnf)
@@ -766,27 +804,27 @@ static std::vector<info_t> FetchMAEGrids(shared_ptr<info> targetInfo, shared_ptr
 	HPTimeResolution currentResolution = currentTime.StepResolution();
 	const param currentParam = targetInfo->Param();
 
-	info_t mos, ec, meps, hirlam, gfs;
+	info_t mos = FetchNoExcept(cnf, currentTime, currentResolution, level(kHeight, 0.0), currentParam, kMosFtype,
+	                           kBlendWeightProd);
+	info_t ec = FetchNoExcept(cnf, currentTime, currentResolution, level(kGround, 0.0), currentParam, kEcmwfFtype,
+	                          kBlendWeightProd);
+	info_t meps = FetchNoExcept(cnf, currentTime, currentResolution, level(kHeight, 2.0), currentParam, kMepsFtype,
+	                            kBlendWeightProd);
+	info_t hirlam = FetchNoExcept(cnf, currentTime, currentResolution, level(kHeight, 2.0), currentParam, kHirlamFtype,
+	                              kBlendWeightProd);
+	info_t gfs = FetchNoExcept(cnf, currentTime, currentResolution, level(kGround, 0.0), currentParam, kGfsFtype,
+	                           kBlendWeightProd);
 
-	mos =
-	    FetchProd(cnf, currentTime, currentResolution, level(kHeight, 0.0), currentParam, kMosFtype, kBlendWeightProd);
-	log.Info("MOS_mae missing: " + to_string(mos->Data().MissingCount()));
-
-	ec = FetchProd(cnf, currentTime, currentResolution, level(kGround, 0.0), currentParam, kEcmwfFtype,
-	               kBlendWeightProd);
-	log.Info("EC_mae missing: " + to_string(ec->Data().MissingCount()));
-
-	meps =
-	    FetchProd(cnf, currentTime, currentResolution, level(kHeight, 2.0), currentParam, kMepsFtype, kBlendWeightProd);
-	log.Info("MEPS_mae missing: " + to_string(meps->Data().MissingCount()));
-
-	hirlam =
-	    FetchProd(cnf, currentTime, currentResolution, level(kHeight, 2.0), currentParam, kHirlamFtype, kBlendWeightProd);
-	log.Info("HIRLAM_mae missing: " + to_string(hirlam->Data().MissingCount()));
-
-	gfs =
-	    FetchProd(cnf, currentTime, currentResolution, level(kGround, 0.0), currentParam, kGfsFtype, kBlendWeightProd);
-	log.Info("GFS_mae missing: " + to_string(gfs->Data().MissingCount()));
+	if (mos)
+		log.Info("MOS_mae missing: " + to_string(mos->Data().MissingCount()));
+	if (ec)
+		log.Info("EC_mae missing: " + to_string(ec->Data().MissingCount()));
+	if (meps)
+		log.Info("MEPS_mae missing: " + to_string(meps->Data().MissingCount()));
+	if (hirlam)
+		log.Info("HIRLAM_mae missing: " + to_string(hirlam->Data().MissingCount()));
+	if (gfs)
+		log.Info("GFS_mae missing: " + to_string(gfs->Data().MissingCount()));
 
 	return std::vector<info_t>{mos, ec, meps, hirlam, gfs};
 }
@@ -807,7 +845,7 @@ void blend::CalculateBlend(shared_ptr<info> targetInfo, unsigned short threadIdx
 	// F[i], B[i], W[i] are all of the same model! This means that the ordering is fixed for the return vector of
 	// FetchRawGrids, FetchBiasGrids, FetchMAEGrids.
 	vector<info_t> forecasts = FetchRawGrids(targetInfo, make_shared<plugin_configuration>(*itsConfiguration));
-	if (forecasts.empty())
+	if (std::all_of(forecasts.begin(), forecasts.end(), [&](info_t i) { return i == nullptr; }))
 	{
 		log.Error("Failed to acquire any source data");
 		himan::Abort();
@@ -823,9 +861,9 @@ void blend::CalculateBlend(shared_ptr<info> targetInfo, unsigned short threadIdx
 	}
 
 	vector<info_t> biases = FetchBiasGrids(targetInfo, make_shared<plugin_configuration>(*itsConfiguration));
-	if (biases.empty())
+	if (std::all_of(biases.begin(), biases.end(), [&](info_t i) { return i == nullptr; }))
 	{
-		log.Error("Failed to acquire bias grids");
+		log.Error("Failed to acquire any bias grids");
 		himan::Abort();
 	}
 
@@ -839,9 +877,9 @@ void blend::CalculateBlend(shared_ptr<info> targetInfo, unsigned short threadIdx
 
 	// Load all the precalculated weights from BLENDW
 	vector<info_t> weights = FetchMAEGrids(targetInfo, make_shared<plugin_configuration>(*itsConfiguration));
-	if (weights.empty())
+	if (std::all_of(weights.begin(), weights.end(), [&](info_t i) { return i == nullptr; }))
 	{
-		log.Error("Failed to acquire weight grids");
+		log.Error("Failed to acquire any weight grids");
 		himan::Abort();
 	}
 
@@ -863,6 +901,10 @@ void blend::CalculateBlend(shared_ptr<info> targetInfo, unsigned short threadIdx
 	vector<double> collectedBiases;
 	collectedBiases.reserve(forecasts.size());
 
+	size_t forecastWarnings = 0;
+	size_t biasWarnings = 0;
+	size_t weightWarnings = 0;
+
 	targetInfo->ResetLocation();
 	while (targetInfo->NextLocation())
 	{
@@ -875,21 +917,21 @@ void blend::CalculateBlend(shared_ptr<info> targetInfo, unsigned short threadIdx
 			info_t w = tup.get<1>();
 			info_t b = tup.get<2>();
 
-			if (!f->NextLocation())
+			if (!f || !f->NextLocation())
 			{
-				log.Warning("unable to advance forecast location iterator position");
+				forecastWarnings++;
 				continue;
 			}
 
-			if (!w->NextLocation())
+			if (!w || !w->NextLocation())
 			{
-				log.Warning("unable to advance weight location iterator position");
+				weightWarnings++;
 				continue;
 			}
 
-			if (!b->NextLocation())
+			if (!b || !b->NextLocation())
 			{
-				log.Warning("unable to advance bias location iterator position");
+				biasWarnings++;
 				continue;
 			}
 
@@ -960,6 +1002,10 @@ void blend::CalculateBlend(shared_ptr<info> targetInfo, unsigned short threadIdx
 		collectedBiases.clear();
 		collectedWeights.clear();
 	}
+
+	log.Warning("Failed to advance forecast iterator position " + to_string(forecastWarnings) + " times");
+	log.Warning("Failed to advance bias iterator position " + to_string(biasWarnings) + " times");
+	log.Warning("Failed to advance weight iterator position " + to_string(weightWarnings) + " times");
 
 	log.Info("[" + deviceType + "] Missing values: " + to_string(targetInfo->Data().MissingCount()) + "/" +
 	         to_string(targetInfo->Data().Size()));

@@ -934,9 +934,25 @@ object GetValues(matrix<double>& mat)
 
 namespace luabind_workaround
 {
-matrix<double> ProbLimit2D(const matrix<double>& A, const matrix<double>& B, double limit)
+matrix<double> ProbLimitGt2D(const matrix<double>& A, const matrix<double>& B, double limit)
 {
-	return numerical_functions::Prob2D(A, B, [=](double a) { return a > limit; });
+	return numerical_functions::Reduce2D(A, B,
+	                                     [=](double& val1, double& val2, const double& a, const double& b) {
+		                                     if (IsValid(a * b) && a * b > limit)
+			                                     val1 += 1;
+	                                     },
+	                                     [](const double& val1, const double& val2) { return (val1 >= 1) ? 1 : 0; },
+	                                     0.0, 0.0);
+}
+matrix<double> ProbLimitEq2D(const matrix<double>& A, const matrix<double>& B, double limit)
+{
+	return numerical_functions::Reduce2D(A, B,
+	                                     [=](double& val1, double& val2, const double& a, const double& b) {
+		                                     if (IsValid(a * b) && a * b == limit)
+			                                     val1 += 1;
+	                                     },
+	                                     [](const double& val1, const double& val2) { return (val1 >= 1) ? 1 : 0; },
+	                                     0.0, 0.0);
 }
 }
 
@@ -1248,7 +1264,8 @@ void BindLib(lua_State* L)
 	          def("Filter2D", &numerical_functions::Filter2D),
 	          def("Max2D", &numerical_functions::Max2D),
 	          def("Min2D", &numerical_functions::Min2D),
-                  def("ProbLimit2D", &luabind_workaround::ProbLimit2D),
+                  def("ProbLimitGt2D", &luabind_workaround::ProbLimitGt2D),
+                  def("ProbLimitEq2D", &luabind_workaround::ProbLimitEq2D),
 	          // metutil namespace
 	          def("LCL_", &metutil::LCL_<double>), 
 	          def("Es_", &metutil::Es_<double>), 
@@ -1271,7 +1288,9 @@ void BindPlugins(lua_State* L)
 	          class_<luatool, compiled_plugin_base>("luatool")
 	              .def(constructor<>())
 	              .def("ClassName", &luatool::ClassName)
-	              .def("FetchInfo", &luatool::FetchInfo)
+	              .def("FetchInfo", LUA_CMEMFN(std::shared_ptr<himan::info>, luatool, FetchInfo, const forecast_time&, const level&, const param&))
+                      .def("FetchInfoWithType", LUA_CMEMFN(std::shared_ptr<himan::info>, luatool, FetchInfo, const forecast_time&, const level&,
+                                                           const param&, const forecast_type&))
 	              .def("Fetch", LUA_CMEMFN(object, luatool, Fetch, const forecast_time&, const level&, const param&))
 	              .def("FetchWithType", LUA_CMEMFN(object, luatool, Fetch, const forecast_time&, const level&,
 	                                               const param&, const forecast_type&)),
@@ -1335,6 +1354,12 @@ std::shared_ptr<info> luatool::FetchInfo(const forecast_time& theTime, const lev
                                          const param& theParam) const
 {
 	return compiled_plugin_base::Fetch(theTime, theLevel, theParam, forecast_type(kDeterministic), false);
+}
+
+std::shared_ptr<info> luatool::FetchInfo(const forecast_time& theTime, const level& theLevel, const param& theParam,
+                                         const forecast_type& theType) const
+{
+	return compiled_plugin_base::Fetch(theTime, theLevel, theParam, theType, false);
 }
 
 luabind::object luatool::Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam) const

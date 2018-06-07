@@ -2,7 +2,7 @@
  * @file luatool.h
  *
  *
-*/
+ */
 
 #ifndef LUATOOL_H
 #define LUATOOL_H
@@ -57,8 +57,8 @@ class luatool : public compiled_plugin, public compiled_plugin_base
 	void Process(std::shared_ptr<const plugin_configuration> configuration);
 
 	std::shared_ptr<info> FetchInfo(const forecast_time& theTime, const level& theLevel, const param& theParam) const;
-	// std::shared_ptr<info> FetchInfo(const forecast_time& theTime, const level& theLevel, const param& theParam, const
-	// forecast_type& theType) const;
+	std::shared_ptr<info> FetchInfo(const forecast_time& theTime, const level& theLevel, const param& theParam,
+	                                const forecast_type& theType) const;
 
 	luabind::object Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam) const;
 	luabind::object Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam,
