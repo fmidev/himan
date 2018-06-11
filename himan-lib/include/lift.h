@@ -383,7 +383,7 @@ CUDA_DEVICE Type MoistLiftA_(Type P, Type T, Type targetP)
 	using namespace constants;
 	const Type kelvin = static_cast<Type>(kKelvin);
 
-	const Type theta = Theta_(T, P) - kelvin;  // pot temp, C
+	const Type theta = Theta_<Type>(T, P) - kelvin;  // pot temp, C
 	T -= kelvin;
 
 	const Type thetaw = theta - Wobf<Type>(theta) + Wobf<Type>(T);  // moist pot temp, C
