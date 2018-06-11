@@ -553,7 +553,7 @@ pair<shared_ptr<himan::info>, shared_ptr<himan::info>> split_sum::GetSourceDataF
 
 	if (step != kHPMissingInt)
 	{
-		if (myTargetInfo->Producer().Id() == 210)
+		if (myTargetInfo->Producer().Id() == 210 || myTargetInfo->Producer().Id() == 270)
 		{
 			step = 60;  // Forecast step is 15 (Harmonie), but it has been agreed
 			            // with AKS that we'll use one hour since editor displays
@@ -582,7 +582,7 @@ pair<shared_ptr<himan::info>, shared_ptr<himan::info>> split_sum::GetSourceDataF
 	int maxSteps = 6;  // by default look for 6 hours forward or backward
 	step = 1;          // by default the difference between time steps is one (ie. one hour))
 
-	if (myTargetInfo->Producer().Id() == 210)
+	if (myTargetInfo->Producer().Id() == 210 || myTargetInfo->Producer().Id() == 270)
 	{
 		step = 60;
 	}

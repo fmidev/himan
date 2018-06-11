@@ -395,7 +395,7 @@ void grib::WriteTime(info& anInfo)
 	double divisor = 1;
 	long unitOfTimeRange = 1;
 
-	if (anInfo.Producer().Id() == 210)
+	if (anInfo.Producer().Id() == 210 || anInfo.Producer().Id() == 270)
 	{
 		// Harmonie
 		unitOfTimeRange = 13;  // 15 minutes
