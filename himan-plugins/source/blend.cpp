@@ -225,7 +225,19 @@ raw_time blend::LatestOriginTimeForProducer(const string& producer) const
 		himan::Abort();
 	}
 
-	return raw_time(latest);
+	raw_time raw = (latest);
+
+	// With ECMWF and MOS we only want 00 and 12 times
+	const int hour = stoi(raw.String("%H"));
+	if (producer == "ECG" || producer == "MOS")
+	{
+		if (hour == 6 || hour == 18)
+		{
+			raw.Adjust(kHourResolution, -6);
+		}
+	}
+
+	return raw;
 }
 
 void blend::Start()
