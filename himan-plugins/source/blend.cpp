@@ -225,7 +225,19 @@ raw_time blend::LatestOriginTimeForProducer(const string& producer) const
 		himan::Abort();
 	}
 
-	return raw_time(latest);
+	raw_time raw = (latest);
+
+	// With ECMWF and MOS we only want 00 and 12 times
+	const int hour = stoi(raw.String("%H"));
+	if (producer == "ECG" || producer == "MOS")
+	{
+		if (hour == 6 || hour == 18)
+		{
+			raw.Adjust(kHourResolution, -6);
+		}
+	}
+
+	return raw;
 }
 
 void blend::Start()
@@ -375,9 +387,9 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 static forecast_time CalculateAnalysisFetchTime(const forecast_time& currentTime)
 {
 	const int validHour = stoi(currentTime.ValidDateTime().String("%H"));
-	const int validDay = stoi(currentTime.ValidDateTime().String("%D"));
+	const int validDay = stoi(currentTime.ValidDateTime().String("%d"));
 	const int originHour = stoi(currentTime.OriginDateTime().String("%H"));
-	const int originDay = stoi(currentTime.OriginDateTime().String("%D"));
+	const int originDay = stoi(currentTime.OriginDateTime().String("%d"));
 
 	forecast_time analysisFetchTime = currentTime;
 
