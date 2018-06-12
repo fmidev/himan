@@ -303,8 +303,7 @@ void grib::WriteAreaAndGrid(info& anInfo)
 		}
 
 		default:
-			itsLogger.Fatal("Invalid projection while writing grib: " +
-			                boost::lexical_cast<string>(anInfo.Grid()->Type()));
+			itsLogger.Fatal("Invalid projection while writing grib: " + to_string(anInfo.Grid()->Type()));
 			himan::Abort();
 	}
 
@@ -389,8 +388,8 @@ void grib::WriteAreaAndGrid(info& anInfo)
 
 void grib::WriteTime(info& anInfo)
 {
-	itsGrib->Message().DataDate(boost::lexical_cast<long>(anInfo.Time().OriginDateTime().String("%Y%m%d")));
-	itsGrib->Message().DataTime(boost::lexical_cast<long>(anInfo.Time().OriginDateTime().String("%H%M")));
+	itsGrib->Message().DataDate(stol(anInfo.Time().OriginDateTime().String("%Y%m%d")));
+	itsGrib->Message().DataTime(stol(anInfo.Time().OriginDateTime().String("%H%M")));
 
 	double divisor = 1;
 	long unitOfTimeRange = 1;
@@ -576,8 +575,7 @@ void grib::WriteParameter(info& anInfo)
 		else if (anInfo.Producer().Id() != kHPMissingInt)  // no-database example has 999999 as producer
 		{
 			itsLogger.Warning("Parameter " + anInfo.Param().Name() + " does not have mapping for producer " +
-			                  boost::lexical_cast<string>(anInfo.Producer().Id()) +
-			                  " in radon, setting table2version to 203");
+			                  to_string(anInfo.Producer().Id()) + " in radon, setting table2version to 203");
 			itsGrib->Message().ParameterNumber(0);
 			itsGrib->Message().Table2Version(203);
 		}
@@ -587,7 +585,7 @@ void grib::WriteParameter(info& anInfo)
 		if (anInfo.Param().GribParameter() == kHPMissingInt)
 		{
 			itsLogger.Warning("Parameter information not found from radon for producer " +
-			                  boost::lexical_cast<string>(anInfo.Producer().Id()) + ", name " + anInfo.Param().Name());
+			                  to_string(anInfo.Producer().Id()) + ", name " + anInfo.Param().Name());
 		}
 		else
 		{
@@ -817,11 +815,10 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 		itsGrib->Message().DecimalScaleFactor(static_cast<long>(s->coefficients.decimalScaleFactor));
 		itsGrib->Message().BitsPerValue(s->coefficients.bitsPerValue);
 
-		itsLogger.Trace("bits per value: " + boost::lexical_cast<string>(itsGrib->Message().BitsPerValue()));
-		itsLogger.Trace("decimal scale factor: " +
-		                boost::lexical_cast<string>(itsGrib->Message().DecimalScaleFactor()));
-		itsLogger.Trace("binary scale factor: " + boost::lexical_cast<string>(itsGrib->Message().BinaryScaleFactor()));
-		itsLogger.Trace("reference value: " + boost::lexical_cast<string>(itsGrib->Message().ReferenceValue()));
+		itsLogger.Trace("bits per value: " + to_string(itsGrib->Message().BitsPerValue()));
+		itsLogger.Trace("decimal scale factor: " + to_string(itsGrib->Message().DecimalScaleFactor()));
+		itsLogger.Trace("binary scale factor: " + to_string(itsGrib->Message().BinaryScaleFactor()));
+		itsLogger.Trace("reference value: " + to_string(itsGrib->Message().ReferenceValue()));
 
 		itsGrib->Message().PackedValues(s->data, anInfo.Data().Size(), 0, 0);
 	}
@@ -957,7 +954,7 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 	double speed = floor((bytes / 1024. / 1024.) / (duration / 1000.));
 
 	string verb = (appendToFile ? "Appended to " : "Wrote ");
-	itsLogger.Info(verb + "file '" + outputFile + "' (" + boost::lexical_cast<string>(speed) + " MB/s)");
+	itsLogger.Info(verb + "file '" + outputFile + "' (" + to_string(speed) + " MB/s)");
 
 	return true;
 }
@@ -1273,8 +1270,8 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 			break;
 		}
 		default:
-			throw runtime_error(ClassName() + ": Unsupported grid type: " +
-			                    boost::lexical_cast<string>(itsGrib->Message().NormalizedGridType()));
+			throw runtime_error(ClassName() +
+			                    ": Unsupported grid type: " + to_string(itsGrib->Message().NormalizedGridType()));
 			break;
 	}
 
@@ -1325,9 +1322,8 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 		if (parmName.empty())
 		{
 			itsLogger.Warning("Parameter name not found from " + HPDatabaseTypeToString.at(dbtype) +
-			                  " for no_vers: " + boost::lexical_cast<string>(no_vers) +
-			                  ", number: " + boost::lexical_cast<string>(number) +
-			                  ", timeRangeIndicator: " + boost::lexical_cast<string>(timeRangeIndicator));
+			                  " for no_vers: " + to_string(no_vers) + ", number: " + to_string(number) +
+			                  ", timeRangeIndicator: " + to_string(timeRangeIndicator));
 		}
 		else
 		{
@@ -1394,10 +1390,8 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 
 		if (parmName.empty())
 		{
-			itsLogger.Warning(
-			    "Parameter name not found from database for discipline: " + boost::lexical_cast<string>(discipline) +
-			    ", category: " + boost::lexical_cast<string>(category) +
-			    ", number: " + boost::lexical_cast<string>(number));
+			itsLogger.Warning("Parameter name not found from database for discipline: " + to_string(discipline) +
+			                  ", category: " + to_string(category) + ", number: " + to_string(number));
 		}
 		else
 		{
@@ -1503,7 +1497,7 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 
 himan::forecast_time grib::ReadTime() const
 {
-	string dataDate = boost::lexical_cast<string>(itsGrib->Message().DataDate());
+	string dataDate = to_string(itsGrib->Message().DataDate());
 
 	/*
 	 * dataTime is HH24MM in long datatype.
@@ -1578,8 +1572,7 @@ himan::level grib::ReadLevel(const search_options& opts, const producer& prod) c
 				levelType = himan::kHybrid;
 				break;
 			default:
-				itsLogger.Fatal("Unsupported level type for no database mode: " +
-				                boost::lexical_cast<string>(gribLevel));
+				itsLogger.Fatal("Unsupported level type for no database mode: " + to_string(gribLevel));
 				himan::Abort();
 		}
 	}
@@ -1680,7 +1673,7 @@ himan::producer grib::ReadProducer(const search_options& options) const
 
 		if (!prodInfo.empty())
 		{
-			prod.Id(boost::lexical_cast<int>(prodInfo["id"]));
+			prod.Id(stoi(prodInfo["id"]));
 		}
 		else
 		{
@@ -1744,7 +1737,7 @@ void grib::ReadData(info_t newInfo, bool readPackedData) const
 			itsGrib->Message().PackedValues(packed->data);
 			packed->packedLength = len;
 
-			itsLogger.Trace("Retrieved " + boost::lexical_cast<string>(len) + " bytes of packed data from grib");
+			itsLogger.Trace("Retrieved " + to_string(len) + " bytes of packed data from grib");
 		}
 		else
 		{
@@ -1756,8 +1749,8 @@ void grib::ReadData(info_t newInfo, bool readPackedData) const
 			size_t bitmap_len = itsGrib->Message().BytesLength("bitmap");
 			size_t bitmap_size = static_cast<size_t>(ceil(static_cast<double>(bitmap_len) / 8));
 
-			itsLogger.Trace("Grib has bitmap, length " + boost::lexical_cast<string>(bitmap_len) + " size " +
-			                boost::lexical_cast<string>(bitmap_size) + " bytes");
+			itsLogger.Trace("Grib has bitmap, length " + to_string(bitmap_len) + " size " + to_string(bitmap_size) +
+			                " bytes");
 
 			CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**>(&unpackedBitmap), bitmap_len * sizeof(int)));
 
@@ -1882,24 +1875,7 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 		else
 		{
 			itsLogger.Trace("Level does not match");
-
-			if (options.level.Type() != l.Type())
-			{
-				itsLogger.Trace("Type: " + string(HPLevelTypeToString.at(options.level.Type())) + " (requested) vs " +
-				                string(HPLevelTypeToString.at(l.Type())) + " (found)");
-			}
-
-			if (options.level.Value() != l.Value())
-			{
-				itsLogger.Trace("Value: " + string(boost::lexical_cast<string>(options.level.Value())) +
-				                " (requested) vs " + string(boost::lexical_cast<string>(l.Value())) + " (found)");
-			}
-
-			if (options.level.Value2() != l.Value2())
-			{
-				itsLogger.Trace("Value2: " + string(boost::lexical_cast<string>(options.level.Value2())) +
-				                " (requested) vs " + string(boost::lexical_cast<string>(l.Value2())) + " (found)");
-			}
+			itsLogger.Trace(static_cast<string>(options.level) + " vs " + static_cast<string>(l));
 
 			return false;
 		}
@@ -1917,18 +1893,7 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 		else
 		{
 			itsLogger.Trace("Forecast type does not match");
-
-			if (options.ftype.Type() != ty.Type())
-			{
-				itsLogger.Trace("Type: " + string(HPForecastTypeToString.at(options.ftype.Type())) +
-				                " (requested) vs " + string(HPForecastTypeToString.at(ty.Type())) + " (found)");
-			}
-
-			if (options.ftype.Value() != ty.Value())
-			{
-				itsLogger.Trace("Value: " + string(boost::lexical_cast<string>(options.ftype.Value())) +
-				                " (requested) vs " + string(boost::lexical_cast<string>(ty.Value())) + " (found)");
-			}
+			itsLogger.Trace(static_cast<string>(options.ftype) + " vs " + static_cast<string>(ty));
 
 			return false;
 		}
@@ -2019,8 +1984,8 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 	if (options.prod.Centre() == kHPMissingInt && options.configuration->DatabaseType() != kNoDatabase)
 	{
-		itsLogger.Error("Process and centre information for producer " +
-		                boost::lexical_cast<string>(options.prod.Id()) + " are undefined");
+		itsLogger.Error("Process and centre information for producer " + to_string(options.prod.Id()) +
+		                " are undefined");
 		return infos;
 	}
 
@@ -2049,7 +2014,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 
 	double speed = floor((static_cast<double>(bytes) / 1024. / 1024.) / (static_cast<double>(duration) / 1000.));
 
-	itsLogger.Debug("Read file '" + theInputFile + "' (" + boost::lexical_cast<string>(speed) + " MB/s)");
+	itsLogger.Debug("Read file '" + theInputFile + "' (" + to_string(speed) + " MB/s)");
 
 	return infos;
 }
@@ -2068,8 +2033,8 @@ vector<shared_ptr<himan::info>> grib::FromIndexFile(const string& theInputFile, 
 
 	if (options.prod.Centre() == kHPMissingInt)
 	{
-		itsLogger.Error("Process and centre information for producer " +
-		                boost::lexical_cast<string>(options.prod.Id()) + " are undefined");
+		itsLogger.Error("Process and centre information for producer " + to_string(options.prod.Id()) +
+		                " are undefined");
 		return infos;
 	}
 
@@ -2090,8 +2055,7 @@ vector<shared_ptr<himan::info>> grib::FromIndexFile(const string& theInputFile, 
 
 	long duration = aTimer.GetTime();
 
-	itsLogger.Debug("Read message using grib index file '" + theInputFile + "' in " +
-	                boost::lexical_cast<std::string>(duration) + " ms");
+	itsLogger.Debug("Read message using grib index file '" + theInputFile + "' in " + to_string(duration) + " ms");
 
 	return infos;
 }
