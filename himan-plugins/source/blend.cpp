@@ -387,9 +387,9 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 static forecast_time CalculateAnalysisFetchTime(const forecast_time& currentTime)
 {
 	const int validHour = stoi(currentTime.ValidDateTime().String("%H"));
-	const int validDay = stoi(currentTime.ValidDateTime().String("%D"));
+	const int validDay = stoi(currentTime.ValidDateTime().String("%d"));
 	const int originHour = stoi(currentTime.OriginDateTime().String("%H"));
-	const int originDay = stoi(currentTime.OriginDateTime().String("%D"));
+	const int originDay = stoi(currentTime.OriginDateTime().String("%d"));
 
 	forecast_time analysisFetchTime = currentTime;
 
