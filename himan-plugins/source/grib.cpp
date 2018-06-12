@@ -511,6 +511,7 @@ void grib::WriteTime(info& anInfo)
 	}
 	else
 	{
+		// GRIB2: http://www.nco.ncep.noaa.gov/pmb/docs/grib2/grib2_table4-4.shtml
 		if (unitOfTimeRange == 13)
 		{
 			unitOfTimeRange = 254;
@@ -1536,11 +1537,12 @@ himan::forecast_time grib::ReadTime() const
 		case 0:
 		case 13:
 		case 14:
+		case 254:
 			timeResolution = kMinuteResolution;
 			break;
 
 		default:
-			itsLogger.Warning("Unsupported unit of time range: " + boost::lexical_cast<string>(timeResolution));
+			itsLogger.Warning("Unsupported unit of time range: " + to_string(unitOfTimeRange));
 			break;
 	}
 
