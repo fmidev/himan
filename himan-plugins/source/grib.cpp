@@ -1679,14 +1679,20 @@ himan::producer grib::ReadProducer(const search_options& options) const
 		{
 			if (centre == 98 && (process <= 148 && process >= 142))
 			{
-				// Older ECMWF forecast
-				prod.Id(131);
+				if (typeId == 1 || typeId == 2)
+				{
+					prod.Id(131);
+				}
+				else if (typeId == 3)
+				{
+					prod.Id(134);
+				}
+
+				return prod;
 			}
-			else
-			{
-				itsLogger.Warning("Producer information not found from database for centre " + to_string(centre) +
-				                  ", process " + to_string(process) + " type " + to_string(typeId));
-			}
+
+			itsLogger.Warning("Producer information not found from database for centre " + to_string(centre) +
+			                  ", process " + to_string(process) + " type " + to_string(typeId));
 		}
 	}
 
