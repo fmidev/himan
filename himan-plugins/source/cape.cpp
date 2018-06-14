@@ -26,6 +26,8 @@ using namespace himan::numerical_functions;
 
 extern mutex dimensionMutex;
 
+typedef vector<vector<float>> vec2d;
+
 // parameters are defined in cape.cuh
 
 const himan::level SURFACE(himan::kHeight, 0);
@@ -50,7 +52,109 @@ vector<double> Convert(const vector<float>& arr)
 	return ret;
 }
 
-vector<float> VirtualTemperature(vector<float> T, const std::vector<float>& P)
+vector<float> Sample(const vector<float>& x, const vector<float>& y, const vector<float>& samples)
+{
+	vector<float> ret(samples.size());
+
+	for (size_t i = 0; i < samples.size(); i++)
+	{
+		const float& sample = samples[i];
+
+		// const auto it = upper_bound(x.rbegin(), x.rend(), sample);
+		const auto it = upper_bound(x.rbegin(), x.rend(), sample, [](float a, float b) { return a <= b; });
+
+		if (it == x.rend())
+		{
+			continue;
+		}
+
+		const long dist = distance(x.begin(), it.base());
+		const float x1 = *it;
+		const float y1 = y[dist - 1];
+		const float x2 = *(it - 1);
+		const float y2 = y[dist];
+
+		ret[i] = interpolation::Linear<float>(sample, x1, x2, y1, y2);
+	}
+
+	return ret;
+}
+
+vec2d Sample(const vec2d& x, const vec2d& y, const vec2d& samples)
+{
+	vec2d ret(x.size());
+
+	for (size_t i = 0; i < x.size(); i++)
+	{
+		ret[i] = Sample(x[i], y[i], samples[i]);
+	}
+
+	return ret;
+}
+
+tuple<vec2d, vec2d, vec2d> GetSampledSourceData(shared_ptr<const himan::plugin_configuration> conf,
+                                                himan::info_t myTargetInfo, const vector<float>& P500m,
+                                                const vector<float>& Psurface, const himan::level& startLevel,
+                                                const himan::level& stopLevel)
+{
+	using namespace himan;
+
+	// Pre-sample vertical data to make prosessing faster
+	// We need temperature and relative humidity interpolated to 1hPa intervals
+	// in the lowest 500 meters.
+
+
+	const size_t N = myTargetInfo->SizeLocations();
+
+	vec2d pressureProfile(N), temperatureProfile(N), humidityProfile(N);
+
+	level curLevel = startLevel;
+
+	const int levelCount = 1 + static_cast<int>(curLevel.Value() - stopLevel.Value());
+
+	for (size_t i = 0; i < N; i++)
+	{
+		pressureProfile[i].resize(levelCount);
+		temperatureProfile[i].resize(levelCount);
+		humidityProfile[i].resize(levelCount);
+	}
+
+	auto f = GET_PLUGIN(fetcher);
+
+	unsigned int k = 0;
+
+	while (curLevel.Value() >= stopLevel.Value())
+	{
+		auto PInfo =
+		    f->Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
+		auto TInfo = f->Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType(), false);
+		auto RHInfo =
+		    f->Fetch(conf, myTargetInfo->Time(), curLevel, param("RH-PRCNT"), myTargetInfo->ForecastType(), false);
+
+		const auto P = Convert(VEC(PInfo));
+		const auto T = Convert(VEC(TInfo));
+		const auto RH = Convert(VEC(RHInfo));
+
+		for (size_t i = 0; i < P.size(); i++)
+		{
+			pressureProfile[i][k] = P[i];
+			temperatureProfile[i][k] = T[i];
+			humidityProfile[i][k] = RH[i];
+		}
+		k++;
+		curLevel.Value(curLevel.Value() - 1);
+	}
+
+	auto Psample = numerical_functions::Arange<float>(Psurface, P500m, -1);
+	auto Tsample = Sample(pressureProfile, temperatureProfile, Psample);
+	auto RHsample = Sample(pressureProfile, humidityProfile, Psample);
+
+	ASSERT(Psample.size() == Tsample.size() && Tsample.size() == RHsample.size());
+	ASSERT(Psample[0].size() == Tsample[0].size() && Tsample[0].size() == RHsample[0].size());
+	return make_tuple(Psample, Tsample, RHsample);
+}
+
+vector<float> VirtualTemperature(vector<float> T, const vector<float>& P)
 {
 	for (size_t i = 0; i < T.size(); i++)
 	{
@@ -148,7 +252,7 @@ void MoistLift(const float* Piter, const float* Titer, const float* Penv, float*
 			                        {
 				                        Tparcel[i] = himan::metutil::MoistLiftA_<float>(Piter[i], Titer[i], Penv[i]);
 			                        }
-			                    },
+		                        },
 		                        start));
 	}
 
@@ -162,7 +266,7 @@ cape::cape() : itsBottomLevel(kHybrid, kHPMissingInt), itsUseVirtualTemperature(
 {
 	itsLogger = logger("cape");
 }
-void cape::Process(std::shared_ptr<const plugin_configuration> conf)
+void cape::Process(shared_ptr<const plugin_configuration> conf)
 {
 	compiled_plugin_base::Init(conf);
 
@@ -293,7 +397,7 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			break;
 
 		default:
-			throw runtime_error("Invalid source level: " + static_cast<std::string>(sourceLevel));
+			throw runtime_error("Invalid source level: " + static_cast<string>(sourceLevel));
 			break;
 	}
 
@@ -544,7 +648,7 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<float>& Tsource
 	auto prevTenvVec = Convert(VEC(prevTenvInfo));
 	auto prevPenvVec = Convert(VEC(prevPenvInfo));
 
-	std::vector<float> cinh(PLCL.size(), 0);
+	vector<float> cinh(PLCL.size(), 0);
 
 	size_t foundCount = count(found.begin(), found.end(), true);
 
@@ -1073,7 +1177,7 @@ pair<vector<float>, vector<float>> cape::GetLFCCPU(shared_ptr<info> myTargetInfo
 		// This requirement is important later when CAPE integration
 		// starts.
 
-		if ((T[i] - TenvLCL[i]) > 0.001)
+		if ((T[i] - TenvLCL[i]) > 0.0001)
 		{
 			found[i] = true;
 			LFCT[i] = T[i];
@@ -1187,7 +1291,7 @@ pair<vector<float>, vector<float>> cape::GetLFCCPU(shared_ptr<info> myTargetInfo
 
 			const float diff = Tparcel - Tenv;
 
-			if (diff >= 0)
+			if (diff >= 0 || fabs(diff) < 1e-5)
 			{
 				// Parcel is now warmer than environment, we have found LFC and entering CAPE zone
 
@@ -1364,6 +1468,7 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info> myTargetInfo)
 {
 	modifier_mean tp, mr;
 	level curLevel = itsBottomLevel;
+	const size_t N = myTargetInfo->SizeLocations();
 
 	auto h = GET_PLUGIN(hitool);
 
@@ -1401,7 +1506,11 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info> myTargetInfo)
 
 	auto P = VEC(PInfo);
 
+	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 500.);
 	auto P500m = h->VerticalValue(param("P-HPA"), 500.);
+
+	auto sourceData =
+	    GetSampledSourceData(itsConfiguration, myTargetInfo, Convert(P500m), Convert(P), curLevel, stopLevel.second);
 
 	h->HeightUnit(kHPa);
 
@@ -1411,6 +1520,56 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info> myTargetInfo)
 	tp.UpperHeight(P500m);
 	mr.UpperHeight(P500m);
 
+	unsigned int k = 0;
+
+	const auto& Psample = get<0>(sourceData);
+	const auto& Tsample = get<1>(sourceData);
+	const auto& RHsample = get<2>(sourceData);
+
+	while (true)
+	{
+		vector<double> Tpot(N, MissingDouble());
+		vector<double> MR(N, MissingDouble());
+		vector<double> Pres(N, MissingDouble());
+
+		for (size_t i = 0; i < N; i++)
+		{
+			if (k >= Psample[i].size())
+			{
+				continue;
+			}
+
+			const double& T = Tsample[i][k];
+			const double& RH = RHsample[i][k];
+			const double& P = Psample[i][k];
+
+			if (IsMissingDouble(T) || IsMissingDouble(P) || IsMissingDouble(RH))
+			{
+				continue;
+			}
+
+			ASSERT(T > 150 && T < 350);
+			ASSERT(RH > 0 && RH < 102);
+			ASSERT(P > 100);
+
+			Tpot[i] = metutil::Theta_(T, 100 * P);
+			MR[i] = metutil::smarttool::MixingRatio_(T, RH, 100 * P);
+			Pres[i] = P;
+		}
+
+		if (static_cast<unsigned int>(
+		        count_if(Pres.begin(), Pres.end(), [](const double& v) { return IsMissing(v); })) == Pres.size())
+		{
+			break;
+		}
+
+		tp.Process(Tpot, Pres);
+		mr.Process(MR, Pres);
+
+		k++;
+	}
+
+#if 0
 	vector<bool> found(myTargetInfo->Data().Size(), false);
 	size_t foundCount = 0;
 
@@ -1459,7 +1618,7 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info> myTargetInfo)
 			}
 		}
 	}
-
+#endif
 	auto Tpot = Convert(tp.Result());
 	auto MR = Convert(mr.Result());
 

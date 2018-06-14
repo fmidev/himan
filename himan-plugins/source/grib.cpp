@@ -947,11 +947,11 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 	itsGrib->Message().Write(outputFile, appendToFile);
 
 	aTimer.Stop();
-	double duration = static_cast<double>(aTimer.GetTime());
+	const double duration = static_cast<double>(aTimer.GetTime());
 
-	double bytes = static_cast<double>(boost::filesystem::file_size(outputFile));
+	const double bytes = static_cast<double>(boost::filesystem::file_size(outputFile));
 
-	double speed = floor((bytes / 1024. / 1024.) / (duration / 1000.));
+	const int speed = static_cast<int>(floor((bytes / 1024. / 1024.) / (duration / 1000.)));
 
 	string verb = (appendToFile ? "Appended to " : "Wrote ");
 	itsLogger.Info(verb + "file '" + outputFile + "' (" + to_string(speed) + " MB/s)");
@@ -1679,14 +1679,20 @@ himan::producer grib::ReadProducer(const search_options& options) const
 		{
 			if (centre == 98 && (process <= 148 && process >= 142))
 			{
-				// Older ECMWF forecast
-				prod.Id(131);
+				if (typeId == 1 || typeId == 2)
+				{
+					prod.Id(131);
+				}
+				else if (typeId == 3)
+				{
+					prod.Id(134);
+				}
+
+				return prod;
 			}
-			else
-			{
-				itsLogger.Warning("Producer information not found from database for centre " + to_string(centre) +
-				                  ", process " + to_string(process) + " type " + to_string(typeId));
-			}
+
+			itsLogger.Warning("Producer information not found from database for centre " + to_string(centre) +
+			                  ", process " + to_string(process) + " type " + to_string(typeId));
 		}
 	}
 
@@ -2009,10 +2015,11 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 		}
 	}
 
-	long duration = aTimer.GetTime();
-	long bytes = boost::filesystem::file_size(theInputFile);
+	const long duration = aTimer.GetTime();
+	const long bytes = boost::filesystem::file_size(theInputFile);
 
-	double speed = floor((static_cast<double>(bytes) / 1024. / 1024.) / (static_cast<double>(duration) / 1000.));
+	const int speed =
+	    static_cast<int>(floor((static_cast<double>(bytes) / 1024. / 1024.) / (static_cast<double>(duration) / 1000.)));
 
 	itsLogger.Debug("Read file '" + theInputFile + "' (" + to_string(speed) + " MB/s)");
 

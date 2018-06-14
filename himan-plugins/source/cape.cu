@@ -34,9 +34,15 @@ using namespace himan::plugin;
 himan::level cape_cuda::itsBottomLevel;
 bool cape_cuda::itsUseVirtualTemperature;
 
+typedef std::vector<std::vector<float>> vec2d;
+
 extern float Max(const std::vector<float>& vec);
 extern std::vector<float> Convert(const std::vector<double>& arr);
 extern std::vector<double> Convert(const std::vector<float>& arr);
+extern std::tuple<vec2d, vec2d, vec2d> GetSampledSourceData(std::shared_ptr<const plugin_configuration> conf,
+                                                            info_t myTargetInfo, const std::vector<float>& P500m,
+                                                            const std::vector<float>& Psurface, const level& startLevel,
+                                                            const level& stopLevel);
 
 template <typename T>
 __global__ void InitializeArrayKernel(T* d_arr, T val, size_t N)
@@ -422,7 +428,7 @@ __global__ void LFCKernel(const float* __restrict__ d_T, const float* __restrict
 
 		const float diff = Tparcel - Tenv;
 
-		if (Penv < LCLP && diff > 0)
+		if (Penv < LCLP && (diff >= 0 || fabs(diff) < 1e-5))
 		{
 			d_found[idx] = 1;
 
@@ -516,7 +522,7 @@ __global__ void ThetaEKernel(const float* __restrict__ d_T, const float* __restr
 	}
 }
 
-__global__ void MixingRatioKernel(const float* __restrict__ d_T, float* __restrict__ d_P,
+__global__ void MixingRatioKernel(const float* __restrict__ d_T, const float* __restrict__ d_P,
                                   const float* __restrict__ d_RH, float* __restrict__ d_Tpot, float* __restrict__ d_MR,
                                   size_t N)
 {
@@ -536,10 +542,11 @@ __global__ void MixingRatioKernel(const float* __restrict__ d_T, float* __restri
 		ASSERT((P > 100 && P < 1500) || IsMissing(P));
 		ASSERT((RH >= 0 && RH < 102) || IsMissing(RH));
 
-		d_Tpot[idx] = metutil::Theta_<float>(T, 100 * P);
-		d_MR[idx] = metutil::smarttool::MixingRatio_<float>(T, RH, 100 * P);
-
-		d_P[idx] = P - 2.0;
+		if (IsValid(T))
+		{
+			d_Tpot[idx] = metutil::Theta_<float>(T, 100 * P);
+			d_MR[idx] = metutil::smarttool::MixingRatio_<float>(T, RH, 100 * P);
+		}
 	}
 }
 
@@ -716,6 +723,7 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	auto dPVec = VEC(PInfo);
 
 	auto P500m = h->VerticalValue(param("P-HPA"), 500.);
+	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 500.);
 
 	h->HeightUnit(kHPa);
 
@@ -726,6 +734,8 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	mr.UpperHeight(P500m);
 
 	auto PVec = Convert(dPVec);
+
+	auto sourceData = GetSampledSourceData(conf, myTargetInfo, Convert(P500m), PVec, itsBottomLevel, stopLevel.second);
 
 	float* d_Tpot = 0;
 	float* d_MR = 0;
@@ -749,17 +759,43 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 
 	CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(Tpot.data()), sizeof(float) * N, 0));
 	CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(MR.data()), sizeof(float) * N, 0));
-	CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(PVec.data()), sizeof(float) * N, 0));
 
-	CUDA_CHECK(cudaMemcpyAsync(d_P, PVec.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
+	const auto& Psample = std::get<0>(sourceData);
+	const auto& Tsample = std::get<1>(sourceData);
+	const auto& RHsample = std::get<2>(sourceData);
+
+	std::vector<float> T(N, MissingFloat());
+	std::vector<float> RH(N, MissingFloat());
+	std::vector<float> P(N, MissingFloat());
+
+	unsigned int k = 0;
 
 	while (true)
 	{
-		auto TVec = Convert(h->VerticalValue(param("T-K"), Convert(PVec)));
-		CUDA_CHECK(cudaMemcpyAsync(d_T, &TVec[0], sizeof(float) * N, cudaMemcpyHostToDevice, stream));
+		for (size_t i = 0; i < N; i++)
+		{
+			if (k >= Psample[i].size())
+			{
+				T[i] = RH[i] = P[i] = MissingFloat();
+				continue;
+			}
 
-		auto RHVec = Convert(h->VerticalValue(param("RH-PRCNT"), Convert(PVec)));
-		CUDA_CHECK(cudaMemcpyAsync(d_RH, &RHVec[0], sizeof(float) * N, cudaMemcpyHostToDevice, stream));
+			T[i] = Tsample[i][k];
+			RH[i] = RHsample[i][k];
+			P[i] = Psample[i][k];
+		}
+
+		k++;
+
+		if (static_cast<unsigned int>(count_if(P.begin(), P.end(), [](const float& v) { return IsMissing(v); })) ==
+		    P.size())
+		{
+			break;
+		}
+
+		CUDA_CHECK(cudaMemcpyAsync(d_T, T.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync(d_RH, RH.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync(d_P, P.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
 
 		MixingRatioKernel<<<gridSize, blockSize, 0, stream>>>(d_T, d_P, d_RH, d_Tpot, d_MR, N);
 
@@ -768,27 +804,12 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
-		tp.Process(Convert(Tpot), Convert(PVec));
-		mr.Process(Convert(MR), Convert(PVec));
-
-		size_t foundCount = tp.HeightsCrossed();
-
-		ASSERT(tp.HeightsCrossed() == mr.HeightsCrossed());
-
-		if (foundCount == N)
-		{
-			break;
-		}
-
-		for (auto& v : PVec)
-		{
-			v -= 2.0;
-		}
+		tp.Process(Convert(Tpot), Convert(P));
+		mr.Process(Convert(MR), Convert(P));
 	}
 
 	CUDA_CHECK(cudaHostUnregister(Tpot.data()));
 	CUDA_CHECK(cudaHostUnregister(MR.data()));
-	CUDA_CHECK(cudaHostUnregister(PVec.data()));
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
@@ -810,7 +831,7 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	InitializeArray<float>(d_T, himan::MissingFloat(), N, stream);
 	InitializeArray<float>(d_TD, himan::MissingFloat(), N, stream);
 
-	std::vector<float> T(Tpot.size(), himan::MissingFloat());
+	fill(T.begin(), T.end(), himan::MissingFloat());
 	std::vector<float> TD(T.size(), himan::MissingFloat());
 
 	MixingRatioFinalizeKernel<<<gridSize, blockSize, 0, stream>>>(d_T, d_TD, d_Psurf, d_Tpot, d_MR, N);
@@ -921,7 +942,7 @@ std::pair<std::vector<float>, std::vector<float>> cape_cuda::GetLFCGPU(
 
 	for (size_t i = 0; i < N; i++)
 	{
-		if ((T[i] - TenvLCL[i]) > 0.001)
+		if ((T[i] - TenvLCL[i]) > 0.0001)
 		{
 			found[i] = 1;
 			LFCT[i] = T[i];

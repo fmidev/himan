@@ -3,19 +3,8 @@
 
 local MISS = missing
 
--- Create area masks used later
-local mask = matrix(3, 3, 1, MISS)
-mask:SetValues({
-  1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1
-})
+local mask = matrix(33, 33, 1, MISS)
+mask:Fill(1)
 
 function produceProbabilities(sourceparam, targetparam, op, limit)
 
@@ -33,7 +22,6 @@ function produceProbabilities(sourceparam, targetparam, op, limit)
     end
 
     for j=0,3 do -- Look for the past 3 hours
-      curtime:GetValidDateTime():Adjust(HPTimeResolution.kHourResolution, -1)
       local data = luatool:FetchInfoWithType(curtime, current_level, sourceparam, ftype)
 
       if data then
@@ -45,6 +33,8 @@ function produceProbabilities(sourceparam, targetparam, op, limit)
         end
         datas[#datas+1] = reduced
       end
+      curtime:GetValidDateTime():Adjust(HPTimeResolution.kHourResolution, -1)
+
     end
   end
 
