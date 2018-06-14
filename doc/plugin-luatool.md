@@ -191,6 +191,17 @@ A logger instance is automatically assigned for a lua script as a global variabl
 | | Error | string | Log something in error level |
 | | Fatal | string | Log something in fatal level |
 
+## matrix
+
+Matrix is a wrapper class for the actual container holding the data (ie. std::vector).
+It provides basic 2D accessing capabilities.
+
+| Return value  | Name | Arguments | Description |
+|---|---|---|---|
+| | SetValues | table | Set matrix values |
+| table | GetValues | | Return matrix values |
+| | Fill | | Fill matrix with given value |
+
 ## modifier
 
 modifier class is used to process data and height. Different modifiers exist for calculating min, max, mean etc for grids with given heights. modifier is usually used through

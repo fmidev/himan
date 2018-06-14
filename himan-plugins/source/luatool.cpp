@@ -930,6 +930,10 @@ object GetValues(matrix<double>& mat)
 {
 	return VectorToTable(std::vector<double>(mat.Values()));
 }
+void Fill(matrix<double>& mat, double value)
+{
+	mat.Fill(value);
+}
 }  // matrix_wrapper
 
 namespace luabind_workaround
@@ -1061,6 +1065,7 @@ void BindLib(lua_State* L)
 	              .def(constructor<size_t, size_t, size_t, double>())
 	              .def("SetValues", &matrix_wrapper::SetValues)
 	              .def("GetValues", &matrix_wrapper::GetValues)
+	              .def("Fill", &matrix_wrapper::Fill)
 	          ,
 	          class_<param>("param")
 	              .def(constructor<const std::string&>())
