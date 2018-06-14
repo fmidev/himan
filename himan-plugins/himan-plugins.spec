@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.6.12
+Version: 18.6.14
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -110,7 +110,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
-* Mon Jun 12 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.6.12-1.fmi
+* Thu Jun 14 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.6.14-1.fmi
+- Performance optimization to cape/500m
+- Minor additions to luatool
+* Tue Jun 12 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.6.12-1.fmi
 - Blend fixes
 - Grib fixes
 * Mon Jun 11 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.6.11-1.fmi
