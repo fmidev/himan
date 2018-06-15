@@ -75,7 +75,7 @@ class pot_gfs : public compiled_plugin, private compiled_plugin_base
 
 	virtual std::string ClassName() const
 	{
-		return "himan::plugin::pot";
+		return "himan::plugin::pot_gfs";
 	}
 	virtual HPPluginClass PluginClass() const
 	{
