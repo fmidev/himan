@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 18.6.14
+Version: 18.6.15
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -59,6 +59,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Fri Jun 15 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.6.15-1.fmi
+- Minor tweak to plugin_configuration statistics logging
 * Thu Jun 14 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.6.14-1.fmi
 - Minor tweak to lift.h
 * Tue Jun  5 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.6.5-1.fmi
