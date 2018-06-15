@@ -85,6 +85,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libncl.so
 %{_libdir}/himan-plugins/libpop.so
 %{_libdir}/himan-plugins/libpot.so
+%{_libdir}/himan-plugins/libpot_gfs.so
 %{_libdir}/himan-plugins/libprecipitation_rate.so
 %{_libdir}/himan-plugins/libpreform_hybrid.so
 %{_libdir}/himan-plugins/libpreform_pressure.so
@@ -110,6 +111,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Fri Jun 15 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.6.15-1.fmi
+- Add pot for gfs (legacy version)
 * Thu Jun 14 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.6.14-1.fmi
 - Performance optimization to cape/500m
 - Minor additions to luatool
