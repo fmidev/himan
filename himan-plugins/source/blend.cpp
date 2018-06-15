@@ -51,7 +51,7 @@ const int kHirlamForecastLength = 54;
 const int kMepsForecastLength = 66;
 const int kGfsForecastLength = 192;
 
-blend::blend() : itsCalculationMode(kCalculateNone), itsNumHours(0), itsProducer(), itsProdFtype()
+blend::blend() : itsCalculationMode(kCalculateNone), itsNumHours(0), itsAnalysisHour(0), itsProducer(), itsProdFtype()
 {
 	itsLogger = logger("blend");
 }
@@ -339,6 +339,16 @@ void blend::Process(shared_ptr<const plugin_configuration> conf)
 		}
 	}
 
+	const string analysisHour = conf->Exists("analysis_hour") ? conf->GetValue("analysis_hour") : "";
+	if (analysisHour.empty())
+	{
+		throw std::runtime_error(ClassName() + ": analysis_hour not defined");
+	}
+	else
+	{
+		itsAnalysisHour = stoi(analysisHour);
+	}
+
 	// Each parameter has to be processed with a separate process queue invocation.
 	const string p = conf->Exists("param") ? conf->GetValue("param") : "";
 	if (p.empty())
@@ -384,29 +394,14 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 	}
 }
 
-static forecast_time CalculateAnalysisFetchTime(const forecast_time& currentTime)
+static forecast_time CalculateAnalysisFetchTime(const forecast_time& currentTime, int analysisHours)
 {
 	const int validHour = stoi(currentTime.ValidDateTime().String("%H"));
-	const int validDay = stoi(currentTime.ValidDateTime().String("%d"));
-	const int originHour = stoi(currentTime.OriginDateTime().String("%H"));
-	const int originDay = stoi(currentTime.OriginDateTime().String("%d"));
 
 	forecast_time analysisFetchTime = currentTime;
 
 	analysisFetchTime.ValidDateTime().Adjust(kHourResolution, -validHour); // set to 00
-
-	int ndays = validDay - originDay;
-	/// This is how much to adjust from 00
-	if (ndays > 0)
-	{
-		int nhours = originHour - (24 - validHour) + (validHour - originHour);
-		analysisFetchTime.ValidDateTime().Adjust(kHourResolution, nhours);
-	}
-	else
-	{
-		int nhours = abs(originHour - validHour);
-		analysisFetchTime.ValidDateTime().Adjust(kHourResolution, nhours);
-	}
+	analysisFetchTime.ValidDateTime().Adjust(kHourResolution, analysisHours);
 
 	analysisFetchTime.OriginDateTime() = analysisFetchTime.ValidDateTime();
 
@@ -421,7 +416,7 @@ matrix<double> blend::CalculateBias(logger& log, shared_ptr<info> targetInfo, co
 	param currentParam = targetInfo->Param();
 	level currentLevel = targetInfo->Level();
 	forecast_time currentTime = targetInfo->Time();
-	forecast_time analysisFetchTime = CalculateAnalysisFetchTime(currentTime);
+	forecast_time analysisFetchTime = CalculateAnalysisFetchTime(currentTime, itsAnalysisHour);
 
 	HPTimeResolution currentRes = currentTime.StepResolution();
 
@@ -503,7 +498,7 @@ matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info> targetInfo, con
 	param currentParam = targetInfo->Param();
 	level currentLevel = targetInfo->Level();
 	forecast_time currentTime = targetInfo->Time();
-	forecast_time analysisFetchTime = CalculateAnalysisFetchTime(currentTime);
+	forecast_time analysisFetchTime = CalculateAnalysisFetchTime(currentTime, itsAnalysisHour);
 
 	HPTimeResolution currentRes = currentTime.StepResolution();
 
@@ -581,22 +576,6 @@ matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info> targetInfo, con
 	return MAE;
 }
 
-static bool TimeAdjustmentRequired(const forecast_time& current, const forecast_time& calc)
-{
-	// NOTE Assume that minutes and seconds are '00'
-	const int currentHour = stoi(current.OriginDateTime().String("%H"));
-	const int calcHour = stoi(calc.OriginDateTime().String("%H"));
-
-	if (currentHour == 0 || currentHour == 6 || currentHour == 12 || currentHour == 18)
-	{
-		if (currentHour >= calcHour)
-		{
-			return true;
-		}
-	}
-	return false;
-}
-
 void blend::CalculateMember(shared_ptr<info> targetInfo, unsigned short threadIdx, blend_mode mode)
 {
 	logger log;
@@ -617,6 +596,17 @@ void blend::CalculateMember(shared_ptr<info> targetInfo, unsigned short threadId
 	log.Info("Latest origin time for producer: " + latestOrigin.String());
 
 	// Used for fetching raw model output, bias, and weight for models.
+
+	if (itsProdFtype == kMosFtype || itsProdFtype == kEcmwfFtype)
+	{
+		// ValidDateTime can be borked on ECMWF and MOS.
+		const int validHour = stoi(current.OriginDateTime().String("%H"));
+		if (validHour == 6 ||  validHour == 18)
+		{
+			current.ValidDateTime().Adjust(kHourResolution, -6);
+		}
+	}
+
 	forecast_time ftime(latestOrigin, current.ValidDateTime());
 
 	int maxStep = 0;
@@ -650,19 +640,6 @@ void blend::CalculateMember(shared_ptr<info> targetInfo, unsigned short threadId
 	{
 		log.Error("Invalid producer forecast type");
 		himan::Abort();
-	}
-
-	if (TimeAdjustmentRequired(current, ftime))
-	{
-		// Analysis updates more frequently than models.
-		// So if analysis time is 00, 06, 12, 18, then adjust the origin time for DMO fetching by -originTimeStep (valid time stays
-		// the same).
-		log.Info("Adjusting ftime");
-		ftime.OriginDateTime().Adjust(kHourResolution, -originTimeStep);
-	}
-	else
-	{
-		log.Info("Not adjusting ftime");
 	}
 
 	ftime.OriginDateTime().Adjust(kHourResolution, -itsNumHours);
@@ -706,7 +683,7 @@ void blend::CalculateMember(shared_ptr<info> targetInfo, unsigned short threadId
 			break;
 		}
 
-		if (ftime.OriginDateTime() >= current.OriginDateTime() || ftime.OriginDateTime() > latestOrigin)
+		if (ftime.OriginDateTime() > current.OriginDateTime() || ftime.OriginDateTime() > latestOrigin)
 		{
 			break;
 		}
