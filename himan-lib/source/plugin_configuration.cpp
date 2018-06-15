@@ -184,7 +184,17 @@ void plugin_configuration::WriteStatistics()
 	cout << "File write:\t\t" << HPFileWriteOptionToString.at(itsFileWriteOption) << endl;
 	cout << "Read from database:\t" << (itsReadDataFromDatabase ? "true" : "false") << endl;
 
-	cout << "Source producer:\t" << SourceProducer().Id() << endl;
+	string sourceProducers = "";
+	FirstSourceProducer();
+
+	do
+	{
+		sourceProducers += to_string(SourceProducer().Id()) + ",";
+	} while (NextSourceProducer());
+
+	sourceProducers.pop_back();
+
+	cout << "Source producer:\t" << sourceProducers << endl;
 	cout << "Target producer:\t" << TargetProducer().Id() << endl;
 
 	// Statistics from class statistics
@@ -197,8 +207,9 @@ void plugin_configuration::WriteStatistics()
 	    static_cast<int>(100 * static_cast<double>(itsStatistics->itsFetchingTime) /
 	                     static_cast<double>(itsStatistics->itsUsedThreadCount) / static_cast<double>(elapsedTime));
 	int processingTimePercentage =
-	    static_cast<int>(100 * static_cast<double>(itsStatistics->itsProcessingTime -
-	                                               itsStatistics->itsFetchingTime / itsStatistics->itsUsedThreadCount) /
+	    static_cast<int>(100 *
+	                     static_cast<double>(itsStatistics->itsProcessingTime -
+	                                         itsStatistics->itsFetchingTime / itsStatistics->itsUsedThreadCount) /
 	                     static_cast<double>(elapsedTime));
 	int initTimePercentage =
 	    static_cast<int>(100 * static_cast<double>(itsStatistics->itsInitTime) / static_cast<double>(elapsedTime));
