@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.6.14
+Version: 18.6.15
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
