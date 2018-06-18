@@ -339,6 +339,7 @@ forecast.
 | number | ExpectedSize | | Returns the expected size of the ensemble, which can be different from the current size of the ensemble |
 | | SetMaximumMissingForecasts | integer | Set the number of allowed missing forecasts in the ensemble |
 | number | GetMaximumMissingForecasts | | Get the number of allowed missing forecasts in the ensemble |
+| info | GetForecast | number | Get the data of an ensemble member with given order number |
 
 ## lagged_ensemble
 
@@ -346,6 +347,7 @@ lagged_ensemble is an ensemble that is composed of ensembles from different anal
 
 	local e = lagged_ensemble(param("T-K"), ensemble_size, HPTimeResolution.kHourResolution, lag, steps)
 
+lagged_ensemble is derived from ensemble.
 
 | Return value | Name | Arguments | Description |
 |---|---|---|---|
@@ -413,6 +415,9 @@ Note! The argument for WriteToFile MUST be 'result'!
 |---|---|---|---|
 | string | ClassName | | Returns class name |
 | table | Fetch | forecast_time, level, param | Fetch data with given search arguments |
+| table | FetchWithType | forecast_time, level, param, forecast_type | Fetch data with given search arguments including forecast_type |
+| info | FetchInfo | forecast_time, level, param | Fetch data with given search arguments, return info |
+| info | FetchInfoWithTypw | forecast_time, level, param, forecast_type | Fetch data with given search arguments including forecast_type, return info |
 | | WriteToFile | table | Writes gived data to file |
 
 ## Missing

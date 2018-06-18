@@ -64,6 +64,7 @@ class blend : public compiled_plugin, private compiled_plugin_base
 
 	blend_mode itsCalculationMode;
 	int itsNumHours;
+	int itsAnalysisHour;
 	std::string itsProducer;
 	forecast_type itsProdFtype;
 };
