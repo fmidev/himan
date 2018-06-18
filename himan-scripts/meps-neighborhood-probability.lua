@@ -9,20 +9,25 @@ mask:Fill(1)
 function produceProbabilities(sourceparam, targetparam, op, limit)
 
   local datas = {}
+  local producer = configuration:GetSourceProducer(0)
+  local ensemble_size = tonumber(radon:GetProducerMetaData(producer, "ensemble size"))
+  local steps = 2
+  local lag = 6
 
   logger:Info("Producing area probabilities for " .. sourceparam:GetName())
 
-  for i=0,9 do -- TODO: get this from database
-    local curtime = forecast_time(current_time:GetOriginDateTime(), current_time:GetValidDateTime())
+  local ens = lagged_ensemble(sourceparam, ensemble_size, HPTimeResolution.kHourResolution, -lag, steps)
+  ens:SetMaximumMissingForecasts(ensemble_size * steps)
 
-    local ftype = forecast_type(HPForecastType.kEpsControl, i)
+  local curtime = forecast_time(current_time:GetOriginDateTime(), current_time:GetValidDateTime())
 
-    if i > 0 then
-      ftype:SetType(HPForecastType.kEpsPerturbation)
-    end
+  for j=0,3 do -- Look for the past 3 hours
 
-    for j=0,3 do -- Look for the past 3 hours
-      local data = luatool:FetchInfoWithType(curtime, current_level, sourceparam, ftype)
+    ens:Fetch(configuration, curtime, current_level)
+
+    local actual_size = ens:Size()
+    for i=0,actual_size-1 do
+      local data = ens:GetForecast(i)
 
       if data then
         local reduced = nil
@@ -33,11 +38,11 @@ function produceProbabilities(sourceparam, targetparam, op, limit)
         end
         datas[#datas+1] = reduced
       end
-      curtime:GetValidDateTime():Adjust(HPTimeResolution.kHourResolution, -1)
-
     end
-  end
 
+    curtime:GetValidDateTime():Adjust(HPTimeResolution.kHourResolution, -1)
+
+  end
   logger:Info(string.format("Read %d grids", #datas))
 
   if #datas == 0 then
