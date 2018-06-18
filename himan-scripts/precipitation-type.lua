@@ -33,7 +33,8 @@ local rh700 = nil
 
 local RHParam = "RH-PRCNT"
 
-if currentProducerName == "MEPS" or currentProducerName == "MEPSMTA" or currentProducerName == "HL2MTA" then
+if currentProducerName == "MEPS" or currentProducerName == "MEPSMTA" or currentProducerName == "HL2MTA"
+  or currentProducerName == "MNWCMTA" then
   RHParam = "RH-0TO1"
 end
 
@@ -65,7 +66,8 @@ if currentProducerName == "ECG" or currentProducerName == "ECGMTA" or currentPro
   Limit = 80
 elseif currentProducerName == "AROME" or currentProducerName == "AROMTA" or
   currentProducerName == "HL2" or currentProducerName == "HL2MTA" or
-  currentProducerName == "MEPS" or currentProducerName == "MEPSMTA" then
+  currentProducerName == "MEPS" or currentProducerName == "MEPSMTA" or
+  currentProducerName == "MNWCMTA" then
   Limit = 0.8
 end
 
