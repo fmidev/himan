@@ -2,6 +2,14 @@
 
 logger:Info("Calculating total precipitation")
 
+local subhour = current_time:GetStep() % 60
+
+if subhour == 0 then
+  -- RR needs to be calculated only for subhours
+  logger:Info("Skipping full hour RR calculation for " .. current_time:GetStep())
+  return
+end
+
 local par1 = param("RACC-KGM2") -- rain
 local par2 = param("GR-KGM2") -- graupel
 local par3 = param("SNACC-KGM2") -- snowfall
