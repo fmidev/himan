@@ -7,11 +7,11 @@ RUN echo -e "[himan]\nname=Himan\nbaseurl=https://download.fmi.fi/himan/rhel/7/x
 # Add smartmet-open repository (newbase library)
 RUN echo -e "[smartmet-open]\nname=Smartmet Open\nbaseurl=https://download.fmi.fi/smartmet-open/rhel/7/x86_64\nenabled=1\ngpgcheck=0\n" > /etc/yum.repos.d/smartmet-open.repo
 
-# Add fmiforge repository (boost libraries)
-RUN echo -e "[fmiforge]\nname=Fmiforge\nbaseurl=https://download.fmi.fi/fmiforge/rhel/7/x86_64\nenabled=1\ngpgcheck=0\n" > /etc/yum.repos.d/fmiforge.repo
-
-# Add epel repository (libpqxx et al)
+# Add epel repository
 RUN rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+
+# Add postgres 9.5 repo for libpqxx 5
+RUN rpm -ivh https://download.postgresql.org/pub/repos/yum/9.5/redhat/rhel-7-x86_64/pgdg-centos95-9.5-3.noarch.rpm
 
 # Install Himan and dependencies
 RUN yum -y install \
