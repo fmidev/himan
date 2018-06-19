@@ -394,14 +394,25 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 	}
 }
 
-static forecast_time CalculateAnalysisFetchTime(const forecast_time& currentTime, int analysisHours)
+static forecast_time CalculateAnalysisFetchTime(const forecast_time& currentTime, int analysisHour)
 {
+	const int validDay = stoi(currentTime.ValidDateTime().String("%d"));
 	const int validHour = stoi(currentTime.ValidDateTime().String("%H"));
+	const int originDay = stoi(currentTime.OriginDateTime().String("%d"));
+	const int originHour = stoi(currentTime.OriginDateTime().String("%H"));
 
 	forecast_time analysisFetchTime = currentTime;
 
 	analysisFetchTime.ValidDateTime().Adjust(kHourResolution, -validHour); // set to 00
-	analysisFetchTime.ValidDateTime().Adjust(kHourResolution, analysisHours);
+	analysisFetchTime.ValidDateTime().Adjust(kHourResolution, analysisHour);
+
+	int ndays = validDay - originDay;
+	int nhours = (ndays * 24) - (validHour - originHour);
+
+	if (nhours > 24)
+	{
+		analysisFetchTime.ValidDateTime().Adjust(kDayResolution, -1);
+	}
 
 	analysisFetchTime.OriginDateTime() = analysisFetchTime.ValidDateTime();
 
@@ -420,6 +431,8 @@ matrix<double> blend::CalculateBias(logger& log, shared_ptr<info> targetInfo, co
 
 	HPTimeResolution currentRes = currentTime.StepResolution();
 
+	log.Info("Current origin time: " + currentTime.OriginDateTime().String() +
+	         " valid time: " + currentTime.ValidDateTime().String());
 	log.Info("Calculation origin time: " + calcTime.OriginDateTime().String() +
 	         " valid time: " + calcTime.ValidDateTime().String());
 
@@ -502,6 +515,8 @@ matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info> targetInfo, con
 
 	HPTimeResolution currentRes = currentTime.StepResolution();
 
+	log.Info("Current origin time: " + currentTime.OriginDateTime().String() +
+	         " valid time: " + currentTime.ValidDateTime().String());
 	log.Info("Calculation origin time: " + calcTime.OriginDateTime().String() +
 	         " valid time: " + calcTime.ValidDateTime().String());
 
