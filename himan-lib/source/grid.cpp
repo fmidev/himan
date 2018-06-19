@@ -220,12 +220,12 @@ void grid::UVRelativeToGrid(bool theUVRelativeToGrid)
 	itsUVRelativeToGrid = theUVRelativeToGrid;
 }
 
-earth_shape grid::EarthShape() const
+earth_shape<double> grid::EarthShape() const
 {
 	return itsEarthShape;
 }
 
-void grid::EarthShape(const earth_shape& theEarthShape)
+void grid::EarthShape(const earth_shape<double>& theEarthShape)
 {
 	itsEarthShape = theEarthShape;
 }

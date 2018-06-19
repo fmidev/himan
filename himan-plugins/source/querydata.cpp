@@ -656,7 +656,7 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 	}
 
 	newGrid->ScanningMode(kBottomLeft);
-	newGrid->EarthShape(earth_shape(6371220));
+	newGrid->EarthShape(earth_shape<double>(6371220));
 
 	newInfo->Create(newGrid);
 
