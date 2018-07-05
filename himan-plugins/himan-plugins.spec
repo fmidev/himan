@@ -41,6 +41,7 @@ BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: boost-devel >= 1.66
 BuildRequires: scons
+BuildRequires: eigen >= 3.3.4
 
 %description
 Himan -- hilojen manipulaatio -- plugin collection
