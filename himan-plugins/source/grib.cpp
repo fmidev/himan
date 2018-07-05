@@ -961,7 +961,7 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 
 // ---------------------------------------------------------------------------
 
-himan::earth_shape ReadEarthShape(const NFmiGribMessage& msg)
+himan::earth_shape<double> ReadEarthShape(const NFmiGribMessage& msg)
 {
 	double a = himan::MissingDouble(), b = himan::MissingDouble();
 	if (msg.Edition() == 1)
@@ -1080,7 +1080,7 @@ himan::earth_shape ReadEarthShape(const NFmiGribMessage& msg)
 		a = b = 6371220.;
 	}
 
-	return himan::earth_shape(a, b);
+	return himan::earth_shape<double>(a, b);
 }
 
 unique_ptr<himan::grid> grib::ReadAreaAndGrid() const

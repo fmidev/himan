@@ -1116,11 +1116,11 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 	{
 		if (g->Type() == kLambertConformalConic)
 		{
-			g->EarthShape(earth_shape(6367470.));
+			g->EarthShape(earth_shape<double>(6367470.));
 		}
 		else
 		{
-			g->EarthShape(earth_shape(6371220.));
+			g->EarthShape(earth_shape<double>(6371220.));
 		}
 	}
 
@@ -1388,7 +1388,7 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 		throw runtime_error(string("Error parsing area: ") + e.what());
 	}
 
-	rg->EarthShape(earth_shape(6371220.));
+	rg->EarthShape(earth_shape<double>(6371220.));
 
 	return rg;
 }

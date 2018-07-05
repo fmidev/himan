@@ -106,7 +106,7 @@ void stereographic_grid::CreateAreaAndGrid() const
 	call_once(itsAreaFlag, [&]() {
 		std::stringstream ss;
 
-		if (itsOrientation == kHPMissingInt || itsEarthShape == earth_shape() || FirstPoint() == point())
+		if (itsOrientation == kHPMissingInt || itsEarthShape == earth_shape<double>() || FirstPoint() == point())
 		{
 			itsLogger.Fatal("Missing required area information");
 			himan::Abort();

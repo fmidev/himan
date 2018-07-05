@@ -115,8 +115,8 @@ class grid
 	bool UVRelativeToGrid() const;
 	void UVRelativeToGrid(bool theUVRelativeToGrid);
 
-	earth_shape EarthShape() const;
-	void EarthShape(const earth_shape& theEarthShape);
+	earth_shape<double> EarthShape() const;
+	void EarthShape(const earth_shape<double>& theEarthShape);
 
 	std::string WKT() const;
 	std::string Proj4() const;
@@ -145,7 +145,7 @@ class grid
 
 	bool itsUVRelativeToGrid;
 
-	earth_shape itsEarthShape;
+	earth_shape<double> itsEarthShape;
 
 #ifdef SERIALIZATION
 	friend class cereal::access;
