@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.6.18
+Version: 18.7.5
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -111,6 +111,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Jul  5 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.7.5-1.fmi
+- Additions to earth_shape functionality
 * Mon Jun 18 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.6.18-1.fmi
 - Blend fixes
 - Luatool tweaking
