@@ -245,7 +245,7 @@ void blend::Start()
 	itsThreadCount = static_cast<short>(itsInfo->SizeTimes());
 
 	vector<thread> threads;
-	threads.reserve(itsThreadCount);
+	threads.reserve(static_cast<size_t>(itsThreadCount));
 
 	itsInfo->Reset();
 	itsInfo->FirstForecastType();
@@ -254,7 +254,7 @@ void blend::Start()
 
 	for (unsigned short i = 0; i < itsThreadCount; i++)
 	{
-		threads.push_back(move(thread(&blend::Run, this, i)));
+		threads.push_back(thread(&blend::Run, this, i));
 	}
 
 	for (auto&& t : threads)
