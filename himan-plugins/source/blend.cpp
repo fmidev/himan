@@ -339,14 +339,17 @@ void blend::Process(shared_ptr<const plugin_configuration> conf)
 		}
 	}
 
-	const string analysisHour = conf->Exists("analysis_hour") ? conf->GetValue("analysis_hour") : "";
-	if (analysisHour.empty())
+	if (itsCalculationMode != kCalculateBlend)
 	{
-		throw std::runtime_error(ClassName() + ": analysis_hour not defined");
-	}
-	else
-	{
-		itsAnalysisHour = stoi(analysisHour);
+		const string analysisHour = conf->Exists("analysis_hour") ? conf->GetValue("analysis_hour") : "";
+		if (analysisHour.empty())
+		{
+			throw std::runtime_error(ClassName() + ": analysis_hour not defined");
+		}
+		else
+		{
+			itsAnalysisHour = stoi(analysisHour);
+		}
 	}
 
 	// Each parameter has to be processed with a separate process queue invocation.
