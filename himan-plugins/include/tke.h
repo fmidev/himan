@@ -48,7 +48,6 @@ class tke : public compiled_plugin, private compiled_plugin_base
 
    private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
-	int itsTopLevel;
 };
 
 // the class factory

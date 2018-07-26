@@ -15,7 +15,7 @@
 using namespace std;
 using namespace himan::plugin;
 
-tke::tke() : itsTopLevel()
+tke::tke()
 {
 	itsLogger = logger("tke");
 }
