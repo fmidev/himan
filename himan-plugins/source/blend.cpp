@@ -2,10 +2,8 @@
 #include "fetcher.h"
 #include "plugin_factory.h"
 #include "radon.h"
-#include "util.h"
 #include "writer.h"
 
-#include <future>
 #include <mutex>
 #include <thread>
 #include <algorithm>
