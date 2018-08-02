@@ -407,8 +407,8 @@ static forecast_time CalculateAnalysisFetchTime(const forecast_time& currentTime
 	analysisFetchTime.ValidDateTime().Adjust(kHourResolution, -validHour); // set to 00
 	analysisFetchTime.ValidDateTime().Adjust(kHourResolution, analysisHour);
 
-	int ndays = validDay - originDay;
-	int nhours = (ndays * 24) - (validHour - originHour);
+	const int ndays = validDay - originDay;
+	const int nhours = (ndays * 24) - (validHour - originHour);
 
 	if (nhours > 24)
 	{
@@ -540,21 +540,14 @@ matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info> targetInfo, con
 	info_t forecast = FetchProd(cnf, leadTime, currentRes, lvl, currentParam, ftype, kBlendRawProd);
 
 	vector<double> prevMAE;
-	try
+	info_t prevMAE_Info = FetchNoExcept(cnf, prevLeadTime, currentRes, lvl, currentParam, ftype, kBlendWeightProd);
+	if (!prevMAE_Info)
 	{
-		info_t temp = FetchProd(cnf, prevLeadTime, currentRes, lvl, currentParam, ftype, kBlendWeightProd);
-		prevMAE = VEC(temp);
+		prevMAE = vector<double>(targetInfo->Data().Size(), MissingDouble());
 	}
-	catch (HPExceptionType& e)
+	else
 	{
-		if (e == kFileDataNotFound)
-		{
-			prevMAE = vector<double>(targetInfo->Data().Size(), MissingDouble());
-		}
-		else
-		{
-			throw;
-		}
+		prevMAE = VEC(prevMAE_Info);
 	}
 
 	const vector<double>& O = VEC(analysis);
@@ -737,14 +730,21 @@ static std::vector<info_t> FetchRawGrids(shared_ptr<info> targetInfo, shared_ptr
 	auto f = GET_PLUGIN(fetcher);
 	auto log = logger("calculateBlend_FetchRawGrids");
 
-	forecast_time currentTime = targetInfo->Time();
-	HPTimeResolution currentResolution = currentTime.StepResolution();
+	const forecast_time currentTime = targetInfo->Time();
+	const HPTimeResolution currentResolution = currentTime.StepResolution();
 	const param currentParam = targetInfo->Param();
 
-	// We want to return nullptrs here so that we can skip over these entries in the Calculate-loop.
-	info_t mosRaw = FetchNoExcept(cnf, currentTime, currentResolution, level(kHeight, 0.0), currentParam, kMosFtype,
+	// Fetch previous model runs raw fields for EC and MOS when we're calculating during the 06 and 18 cycles.
+	forecast_time ecmosFetchTime  = currentTime;
+	const int hour = stoi(ecmosFetchTime.OriginDateTime().String("%H"));
+	if (hour == 6 || hour == 18)
+	{
+		ecmosFetchTime.OriginDateTime().Adjust(kHourResolution, -6);
+	}
+
+	info_t mosRaw = FetchNoExcept(cnf, ecmosFetchTime, currentResolution, level(kHeight, 0.0), currentParam, kMosFtype,
 								  kBlendRawProd);
-	info_t ecRaw = FetchNoExcept(cnf, currentTime, currentResolution, level(kGround, 0.0), currentParam, kEcmwfFtype,
+	info_t ecRaw = FetchNoExcept(cnf, ecmosFetchTime, currentResolution, level(kGround, 0.0), currentParam, kEcmwfFtype,
 	                             kBlendRawProd);
 	info_t mepsRaw = FetchNoExcept(cnf, currentTime, currentResolution, level(kHeight, 2.0), currentParam, kMepsFtype,
 	                               kBlendRawProd);
@@ -752,6 +752,10 @@ static std::vector<info_t> FetchRawGrids(shared_ptr<info> targetInfo, shared_ptr
 	                                 kHirlamFtype, kBlendRawProd);
 	info_t gfsRaw = FetchNoExcept(cnf, currentTime, currentResolution, level(kGround, 0.0), currentParam, kGfsFtype,
 					  kBlendRawProd);
+
+	//
+	// We want to return nullptrs here so that we can skip over these entries in the Calculate-loop.
+	//
 
 	if (mosRaw)
 		log.Info("MOS_raw missing count: " + to_string(mosRaw->Data().MissingCount()));
