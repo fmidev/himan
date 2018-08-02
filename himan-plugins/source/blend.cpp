@@ -853,9 +853,8 @@ std::vector<info_t> FetchBiasGrids(shared_ptr<info> targetInfo, shared_ptr<plugi
 	auto f = GET_PLUGIN(fetcher);
 	auto log = logger("calculateBlend_FetchBiasGrids");
 
-	forecast_time currentTime = targetInfo->Time();
-	forecast_time fetchTime = currentTime;
-	HPTimeResolution currentResolution = currentTime.StepResolution();
+	const forecast_time fetchTime = targetInfo->Time();
+	const HPTimeResolution currentResolution = fetchTime.StepResolution();
 	const param currentParam = targetInfo->Param();
 	const int kOriginTimestep = 6;
 
@@ -903,10 +902,9 @@ std::vector<info_t> FetchMAEGrids(shared_ptr<info> targetInfo, shared_ptr<plugin
 	auto f = GET_PLUGIN(fetcher);
 	auto log = logger("calculateBlend_FetchMAEGrids");
 
-	forecast_time currentTime = targetInfo->Time();
-	HPTimeResolution currentResolution = currentTime.StepResolution();
+	const forecast_time fetchTime = targetInfo->Time();
+	const HPTimeResolution currentResolution = fetchTime.StepResolution();
 	const param currentParam = targetInfo->Param();
-	forecast_time fetchTime = currentTime;
 	const int kOriginTimestep = 6;
 
 	info_t mos = FetchHistorical(log, cnf, fetchTime, currentResolution, level(kHeight, 0.0), currentParam, kMosFtype,
@@ -956,7 +954,7 @@ void blend::CalculateBlend(shared_ptr<info> targetInfo, unsigned short threadIdx
 	auto log = logger("calculateBlend#" + to_string(threadIdx));
 	const string deviceType = "CPU";
 
-	forecast_time currentTime = targetInfo->Time();
+	const forecast_time currentTime = targetInfo->Time();
 	const level currentLevel = targetInfo->Level();
 	const param currentParam = targetInfo->Param();
 
