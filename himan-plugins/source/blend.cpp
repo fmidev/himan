@@ -784,9 +784,12 @@ static std::vector<info_t> FetchRawGrids(shared_ptr<info> targetInfo, shared_ptr
 namespace
 {
 
-info_t TryFetch(logger& log, shared_ptr<plugin_configuration> cnf, const forecast_time& forecastTime,
-				HPTimeResolution stepResolution, const level& lvl, const param& parm,
-				const forecast_type& type, const producer& prod, const int originTimeStep, const int forecastLength)
+// Try to fetch 'historical data' for the given arguments. This is done because Bias and MAE data is calculated for
+// 'old data'. Naturally we don't have the appropriate weights for current data (the data we want to blend), so we'll
+// scan for the first occurance of a grid with the wanted parameters.
+info_t FetchHistorical(logger& log, shared_ptr<plugin_configuration> cnf, const forecast_time& forecastTime,
+					   HPTimeResolution stepResolution, const level& lvl, const param& parm,
+					   const forecast_type& type, const producer& prod, int originTimeStep, int forecastLength)
 {
 	auto f = GET_PLUGIN(fetcher);
 	auto r = GET_PLUGIN(radon);
@@ -856,16 +859,16 @@ std::vector<info_t> FetchBiasGrids(shared_ptr<info> targetInfo, shared_ptr<plugi
 	const param currentParam = targetInfo->Param();
 	const int kOriginTimestep = 6;
 
-	info_t mosBias = TryFetch(log, cnf, fetchTime, currentResolution, level(kHeight, 0.0), currentParam, kMosFtype,
-							  kBlendBiasProd, kOriginTimestep, kMosForecastLength);
-	info_t ecBias = TryFetch(log, cnf, fetchTime, currentResolution, level(kGround, 0.0), currentParam, kEcmwfFtype,
-							 kBlendBiasProd, kOriginTimestep, kEcmwfForecastLength);
-	info_t mepsBias = TryFetch(log, cnf, fetchTime, currentResolution, level(kHeight, 2.0), currentParam, kMepsFtype,
-							   kBlendBiasProd, kOriginTimestep, kMepsForecastLength);
-	info_t hirlamBias = TryFetch(log, cnf, fetchTime, currentResolution, level(kHeight, 2.0), currentParam,
-								 kHirlamFtype, kBlendBiasProd, kOriginTimestep, kHirlamForecastLength);
-	info_t gfsBias = TryFetch(log, cnf, fetchTime, currentResolution, level(kGround, 0.0), currentParam, kEcmwfFtype,
-							  kBlendBiasProd, kOriginTimestep, kGfsForecastLength);
+	info_t mosBias = FetchHistorical(log, cnf, fetchTime, currentResolution, level(kHeight, 0.0), currentParam,
+									 kMosFtype, kBlendBiasProd, kOriginTimestep, kMosForecastLength);
+	info_t ecBias = FetchHistorical(log, cnf, fetchTime, currentResolution, level(kGround, 0.0), currentParam,
+									kEcmwfFtype, kBlendBiasProd, kOriginTimestep, kEcmwfForecastLength);
+	info_t mepsBias = FetchHistorical(log, cnf, fetchTime, currentResolution, level(kHeight, 2.0), currentParam,
+									  kMepsFtype, kBlendBiasProd, kOriginTimestep, kMepsForecastLength);
+	info_t hirlamBias = FetchHistorical(log, cnf, fetchTime, currentResolution, level(kHeight, 2.0), currentParam,
+										kHirlamFtype, kBlendBiasProd, kOriginTimestep, kHirlamForecastLength);
+	info_t gfsBias = FetchHistorical(log, cnf, fetchTime, currentResolution, level(kGround, 0.0), currentParam,
+									 kEcmwfFtype, kBlendBiasProd, kOriginTimestep, kGfsForecastLength);
 
 	if (mosBias)
 		log.Info("MOS_bias missing count: " + to_string(mosBias->Data().MissingCount()));
@@ -906,16 +909,16 @@ std::vector<info_t> FetchMAEGrids(shared_ptr<info> targetInfo, shared_ptr<plugin
 	forecast_time fetchTime = currentTime;
 	const int kOriginTimestep = 6;
 
-	info_t mos = TryFetch(log, cnf, fetchTime, currentResolution, level(kHeight, 0.0), currentParam, kMosFtype,
-						  kBlendWeightProd, kOriginTimestep, kMosForecastLength);
-	info_t ec = TryFetch(log, cnf, fetchTime, currentResolution, level(kGround, 0.0), currentParam, kEcmwfFtype,
-						 kBlendWeightProd, kOriginTimestep, kEcmwfForecastLength);
-	info_t meps = TryFetch(log, cnf, fetchTime, currentResolution, level(kHeight, 2.0), currentParam, kMepsFtype,
-						   kBlendWeightProd, kOriginTimestep, kMepsForecastLength);
-	info_t hirlam = TryFetch(log, cnf, fetchTime, currentResolution, level(kHeight, 2.0), currentParam, kHirlamFtype,
-							 kBlendWeightProd, kOriginTimestep, kHirlamForecastLength);
-	info_t gfs = TryFetch(log, cnf, fetchTime, currentResolution, level(kGround, 0.0), currentParam, kGfsFtype,
-						  kBlendWeightProd, kOriginTimestep, kGfsForecastLength);
+	info_t mos = FetchHistorical(log, cnf, fetchTime, currentResolution, level(kHeight, 0.0), currentParam, kMosFtype,
+								 kBlendWeightProd, kOriginTimestep, kMosForecastLength);
+	info_t ec = FetchHistorical(log, cnf, fetchTime, currentResolution, level(kGround, 0.0), currentParam, kEcmwfFtype,
+								kBlendWeightProd, kOriginTimestep, kEcmwfForecastLength);
+	info_t meps = FetchHistorical(log, cnf, fetchTime, currentResolution, level(kHeight, 2.0), currentParam, kMepsFtype,
+								  kBlendWeightProd, kOriginTimestep, kMepsForecastLength);
+	info_t hirlam = FetchHistorical(log, cnf, fetchTime, currentResolution, level(kHeight, 2.0), currentParam,
+									kHirlamFtype, kBlendWeightProd, kOriginTimestep, kHirlamForecastLength);
+	info_t gfs = FetchHistorical(log, cnf, fetchTime, currentResolution, level(kGround, 0.0), currentParam, kGfsFtype,
+								 kBlendWeightProd, kOriginTimestep, kGfsForecastLength);
 
 	if (mos)
 		log.Info("MOS_mae missing count: " + to_string(mos->Data().MissingCount()));
