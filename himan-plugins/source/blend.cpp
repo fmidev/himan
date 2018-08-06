@@ -43,11 +43,15 @@ static const forecast_type kGfsFtype(kEpsPerturbation, 5.0);
 
 // When adjusting origin times, we need to check that the resulting time is compatible with the model's
 // (used) forecast length.
-const int kMosForecastLength = 192;
-const int kEcmwfForecastLength = 192;
-const int kHirlamForecastLength = 54;
-const int kMepsForecastLength = 66;
-const int kGfsForecastLength = 192;
+static const int kMosForecastLength = 240;
+static const int kEcmwfForecastLength = 240;
+static const int kHirlamForecastLength = 54;
+static const int kMepsForecastLength = 66;
+static const int kGfsForecastLength = 240;
+
+static const level HEIGHT_0 = level(kHeight, 0.0);
+static const level HEIGHT_2 = level(kHeight, 2.0);
+static const level GROUND = level(kGround, 0.0);
 
 blend::blend() : itsCalculationMode(kCalculateNone), itsNumHours(0), itsAnalysisHour(0), itsProducer(), itsProdFtype()
 {
@@ -437,7 +441,7 @@ matrix<double> blend::CalculateBias(logger& log, shared_ptr<info> targetInfo, co
 	log.Info("Calculation origin time: " + calcTime.OriginDateTime().String() +
 	         " valid time: " + calcTime.ValidDateTime().String());
 
-	info_t analysis = FetchWithProperties(cnf, analysisFetchTime, currentRes, level(kHeight, 2.0), currentParam,
+	info_t analysis = FetchWithProperties(cnf, analysisFetchTime, currentRes, HEIGHT_2, currentParam,
 	                                      kLapsFtype, kLapsGeom, kLapsProd);
 	if (!analysis)
 	{
@@ -521,7 +525,7 @@ matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info> targetInfo, con
 	log.Info("Calculation origin time: " + calcTime.OriginDateTime().String() +
 	         " valid time: " + calcTime.ValidDateTime().String());
 
-	info_t analysis = FetchWithProperties(cnf, analysisFetchTime, currentRes, level(kHeight, 2.0), currentParam,
+	info_t analysis = FetchWithProperties(cnf, analysisFetchTime, currentRes, HEIGHT_2, currentParam,
 	                                      kLapsFtype, kLapsGeom, kLapsProd);
 	if (!analysis)
 	{
@@ -742,15 +746,15 @@ static std::vector<info_t> FetchRawGrids(shared_ptr<info> targetInfo, shared_ptr
 		ecmosFetchTime.OriginDateTime().Adjust(kHourResolution, -6);
 	}
 
-	info_t mosRaw = FetchNoExcept(cnf, ecmosFetchTime, currentResolution, level(kHeight, 0.0), currentParam, kMosFtype,
+	info_t mosRaw = FetchNoExcept(cnf, ecmosFetchTime, currentResolution, HEIGHT_0, currentParam, kMosFtype,
 								  kBlendRawProd);
-	info_t ecRaw = FetchNoExcept(cnf, ecmosFetchTime, currentResolution, level(kGround, 0.0), currentParam, kEcmwfFtype,
+	info_t ecRaw = FetchNoExcept(cnf, ecmosFetchTime, currentResolution, GROUND, currentParam, kEcmwfFtype,
 	                             kBlendRawProd);
-	info_t mepsRaw = FetchNoExcept(cnf, currentTime, currentResolution, level(kHeight, 2.0), currentParam, kMepsFtype,
+	info_t mepsRaw = FetchNoExcept(cnf, currentTime, currentResolution, HEIGHT_2, currentParam, kMepsFtype,
 	                               kBlendRawProd);
-	info_t hirlamRaw = FetchNoExcept(cnf, currentTime, currentResolution, level(kHeight, 2.0), currentParam,
+	info_t hirlamRaw = FetchNoExcept(cnf, currentTime, currentResolution, HEIGHT_2, currentParam,
 	                                 kHirlamFtype, kBlendRawProd);
-	info_t gfsRaw = FetchNoExcept(cnf, currentTime, currentResolution, level(kGround, 0.0), currentParam, kGfsFtype,
+	info_t gfsRaw = FetchNoExcept(cnf, currentTime, currentResolution, GROUND, currentParam, kGfsFtype,
 					  kBlendRawProd);
 
 	//
@@ -862,15 +866,15 @@ std::vector<info_t> FetchBiasGrids(shared_ptr<info> targetInfo, shared_ptr<plugi
 	const param currentParam = targetInfo->Param();
 	const int kOriginTimestep = 6;
 
-	info_t mosBias = FetchHistorical(log, cnf, fetchTime, currentResolution, level(kHeight, 0.0), currentParam,
+	info_t mosBias = FetchHistorical(log, cnf, fetchTime, currentResolution, HEIGHT_0, currentParam,
 									 kMosFtype, kBlendBiasProd, kOriginTimestep, kMosForecastLength);
-	info_t ecBias = FetchHistorical(log, cnf, fetchTime, currentResolution, level(kGround, 0.0), currentParam,
+	info_t ecBias = FetchHistorical(log, cnf, fetchTime, currentResolution, GROUND, currentParam,
 									kEcmwfFtype, kBlendBiasProd, kOriginTimestep, kEcmwfForecastLength);
-	info_t mepsBias = FetchHistorical(log, cnf, fetchTime, currentResolution, level(kHeight, 2.0), currentParam,
+	info_t mepsBias = FetchHistorical(log, cnf, fetchTime, currentResolution, HEIGHT_2, currentParam,
 									  kMepsFtype, kBlendBiasProd, kOriginTimestep, kMepsForecastLength);
-	info_t hirlamBias = FetchHistorical(log, cnf, fetchTime, currentResolution, level(kHeight, 2.0), currentParam,
+	info_t hirlamBias = FetchHistorical(log, cnf, fetchTime, currentResolution, HEIGHT_2, currentParam,
 										kHirlamFtype, kBlendBiasProd, kOriginTimestep, kHirlamForecastLength);
-	info_t gfsBias = FetchHistorical(log, cnf, fetchTime, currentResolution, level(kGround, 0.0), currentParam,
+	info_t gfsBias = FetchHistorical(log, cnf, fetchTime, currentResolution, GROUND, currentParam,
 									 kEcmwfFtype, kBlendBiasProd, kOriginTimestep, kGfsForecastLength);
 
 	if (mosBias)
@@ -911,15 +915,15 @@ std::vector<info_t> FetchMAEGrids(shared_ptr<info> targetInfo, shared_ptr<plugin
 	const param currentParam = targetInfo->Param();
 	const int kOriginTimestep = 6;
 
-	info_t mos = FetchHistorical(log, cnf, fetchTime, currentResolution, level(kHeight, 0.0), currentParam, kMosFtype,
+	info_t mos = FetchHistorical(log, cnf, fetchTime, currentResolution, HEIGHT_0, currentParam, kMosFtype,
 								 kBlendWeightProd, kOriginTimestep, kMosForecastLength);
-	info_t ec = FetchHistorical(log, cnf, fetchTime, currentResolution, level(kGround, 0.0), currentParam, kEcmwfFtype,
+	info_t ec = FetchHistorical(log, cnf, fetchTime, currentResolution, GROUND, currentParam, kEcmwfFtype,
 								kBlendWeightProd, kOriginTimestep, kEcmwfForecastLength);
-	info_t meps = FetchHistorical(log, cnf, fetchTime, currentResolution, level(kHeight, 2.0), currentParam, kMepsFtype,
+	info_t meps = FetchHistorical(log, cnf, fetchTime, currentResolution, HEIGHT_2, currentParam, kMepsFtype,
 								  kBlendWeightProd, kOriginTimestep, kMepsForecastLength);
-	info_t hirlam = FetchHistorical(log, cnf, fetchTime, currentResolution, level(kHeight, 2.0), currentParam,
+	info_t hirlam = FetchHistorical(log, cnf, fetchTime, currentResolution, HEIGHT_2, currentParam,
 									kHirlamFtype, kBlendWeightProd, kOriginTimestep, kHirlamForecastLength);
-	info_t gfs = FetchHistorical(log, cnf, fetchTime, currentResolution, level(kGround, 0.0), currentParam, kGfsFtype,
+	info_t gfs = FetchHistorical(log, cnf, fetchTime, currentResolution, GROUND, currentParam, kGfsFtype,
 								 kBlendWeightProd, kOriginTimestep, kGfsForecastLength);
 
 	if (mos)
