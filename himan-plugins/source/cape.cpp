@@ -523,18 +523,39 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	cinInfo->Param(CINParam);
 	auto& cin_ = VEC(cinInfo);
 	capeInfo->Param(ELZParam);
-	const auto& elz_ = VEC(capeInfo);
+	auto& elz_ = VEC(capeInfo);
 	capeInfo->Param(CAPEParam);
 	const auto& cape_ = VEC(capeInfo);
+	capeInfo->Param(LCLZParam);
+	auto& lclz_ = VEC(capeInfo);
 
 	for (size_t i = 0; i < lfcz_.size(); i++)
 	{
+		// If LFC was found but EL was not, set LFC to missing also to avoid
+		// unclosed CAPE ranges.
+
 		if (cape_[i] == 0 && himan::IsMissing(elz_[i]) && !himan::IsMissing(lfcz_[i]))
 		{
 			cin_[i] = 0;
 			lfcz_[i] = MissingDouble();
 			lfcp_[i] = MissingDouble();
 			lfct_[i] = MissingDouble();
+		}
+
+		// Due to numeric inaccuracies sometimes LFC is slightly *below*
+		// LCL. If the shift is small enough, consider them to be at
+		// equal height.
+
+		if ((lclz_[i] - lfcz_[i]) > 0 && (lclz_[i] - lfcz_[i]) < 0.1)
+		{
+			lfcz_[i] = lclz_[i];
+		}
+
+		// The same with LFC & EL.
+
+		if ((lfcz_[i] - elz_[i]) > 0 && (lfcz_[i] - elz_[i]) < 0.1)
+		{
+			elz_[i] = lfcz_[i];
 		}
 	}
 
@@ -543,8 +564,6 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	ASSERT(cape_.size() == elz_.size());
 	ASSERT(cin_.size() == elz_.size());
 
-	capeInfo->Param(LCLZParam);
-	auto& lclz_ = VEC(capeInfo);
 
 	for (size_t i = 0; i < lfcz_.size(); i++)
 	{
@@ -557,7 +576,7 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		// * CIN must be zero or negative real value
 
 		ASSERT((IsMissing(lfcz_[i]) && IsMissing(elz_[i])) ||
-		       (!IsMissing(lfcz_[i]) && !IsMissing(elz_[i]) && (lfcz_[i] < elz_[i])));
+		       (!IsMissing(lfcz_[i]) && !IsMissing(elz_[i]) && (lfcz_[i] <= elz_[i])));
 		ASSERT(IsMissing(lfcz_[i]) || (lfcz_[i] >= lclz_[i] && !IsMissing(lclz_[i])));
 		ASSERT(cape_[i] >= 0);
 		ASSERT(cin_[i] <= 0);
