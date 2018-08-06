@@ -103,7 +103,6 @@ tuple<vec2d, vec2d, vec2d> GetSampledSourceData(shared_ptr<const himan::plugin_c
 	// We need temperature and relative humidity interpolated to 1hPa intervals
 	// in the lowest 500 meters.
 
-
 	const size_t N = myTargetInfo->SizeLocations();
 
 	vec2d pressureProfile(N), temperatureProfile(N), humidityProfile(N);
@@ -544,16 +543,22 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	ASSERT(cape_.size() == elz_.size());
 	ASSERT(cin_.size() == elz_.size());
 
+	capeInfo->Param(LCLZParam);
+	auto& lclz_ = VEC(capeInfo);
+
 	for (size_t i = 0; i < lfcz_.size(); i++)
 	{
 		// Check:
 		// * If LFC is missing, EL is missing
 		// * If LFC is present, EL is present
 		// * If both are present, LFC must be below EL
+		// * LFC must be above LCL or equal to it
 		// * CAPE must be zero or positive real value
 		// * CIN must be zero or negative real value
+
 		ASSERT((IsMissing(lfcz_[i]) && IsMissing(elz_[i])) ||
 		       (!IsMissing(lfcz_[i]) && !IsMissing(elz_[i]) && (lfcz_[i] < elz_[i])));
+		ASSERT(IsMissing(lfcz_[i]) || (lfcz_[i] >= lclz_[i] && !IsMissing(lclz_[i])));
 		ASSERT(cape_[i] >= 0);
 		ASSERT(cin_[i] <= 0);
 	}
