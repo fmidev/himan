@@ -567,7 +567,7 @@ __global__ void MixingRatioFinalizeKernel(float* __restrict__ d_T, float* __rest
 		const float T = Tpot * pow((P / 1000.), 0.2854);
 		const float Es = metutil::Es_<float>(T);  // Saturated water vapor pressure
 		const float E = metutil::E_<float>(MR, 100 * P);
-		const float RH = E / Es * 100;
+		const float RH = fminf(102., E / Es * 100);
 
 		d_TD[idx] = metutil::DewPointFromRH_<float>(T, RH);
 		d_T[idx] = T;

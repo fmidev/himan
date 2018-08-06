@@ -1666,10 +1666,11 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info> myTargetInfo)
 	{
 		if (!IsMissing(T[i]) && !IsMissing(MR[i]) && !IsMissing(P[i]))
 		{
-			float Es = metutil::Es_<float>(T[i]);  // Saturated water vapor pressure
-			float E = metutil::E_<float>(MR[i], 100 * PSurf[i]);
+			const float Es = metutil::Es_<float>(T[i]);  // Saturated water vapor pressure
+			const float E = metutil::E_<float>(MR[i], 100 * PSurf[i]);
 
-			float RH = E / Es * 100;
+			const float RH = fminf(102., E / Es * 100);
+
 			TD[i] = metutil::DewPointFromRH_<float>(T[i], RH);
 		}
 	}
