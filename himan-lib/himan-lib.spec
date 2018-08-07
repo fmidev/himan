@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 18.7.5
+Version: 18.8.7
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -59,6 +59,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Tue Aug  7 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.7-1.fmi
+- Minor fixes
+- RHEL 7.5 build
 * Thu Jul  5 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.7.5-1.fmi
 - Additions to earth_shape functionality
 * Fri Jun 15 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.6.15-1.fmi
