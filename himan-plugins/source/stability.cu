@@ -121,6 +121,20 @@ __global__ void BulkShearKernel(cdarr_t d_u, cdarr_t d_v, darr_t d_bs, himan::pl
 	}
 }
 
+__global__ void CAPEShearKernel(cdarr_t d_cape, cdarr_t d_ebs, darr_t d_capes,
+                                himan::plugin::stability_cuda::options opts)
+{
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < opts.N)
+	{
+		const double cape = d_cape[idx];
+		const double ebs = d_ebs[idx];
+
+		d_capes[idx] = ebs * __dsqrt_rn(cape);
+	}
+}
+
 __global__ void RHToTDKernel(cdarr_t d_t, darr_t d_rh, size_t N)
 {
 	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -205,14 +219,9 @@ void CalculateBulkShear(himan::plugin::stability_cuda::options& opts, cudaStream
 	double* d_bs03 = 0;
 	double* d_bs06 = 0;
 	double* d_ebs = 0;
-	double* d_u01 = 0;
-	double* d_v01 = 0;
-	double* d_u03 = 0;
-	double* d_v03 = 0;
-	double* d_u06 = 0;
-	double* d_v06 = 0;
-	double* d_uebs = 0;
-	double* d_vebs = 0;
+	double* d_capes = 0;
+	double* d_u = 0;
+	double* d_v = 0;
 	double* d_el = 0;
 	double* d_lpl = 0;
 
@@ -222,52 +231,54 @@ void CalculateBulkShear(himan::plugin::stability_cuda::options& opts, cudaStream
 		CUDA_CHECK(cudaMalloc((void**)&d_bs03, memsize));
 		CUDA_CHECK(cudaMalloc((void**)&d_bs06, memsize));
 		CUDA_CHECK(cudaMalloc((void**)&d_ebs, memsize));
+		CUDA_CHECK(cudaMalloc((void**)&d_capes, memsize));
 
 		PrepareInfo(opts.bs01);
 		PrepareInfo(opts.bs03);
 		PrepareInfo(opts.bs06);
 		PrepareInfo(opts.ebs);
+		PrepareInfo(opts.capes);
 
-		CUDA_CHECK(cudaMalloc((void**)&d_u01, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_v01, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_u03, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_v03, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_u06, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_v06, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_uebs, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_vebs, memsize));
+		CUDA_CHECK(cudaMalloc((void**)&d_u, memsize));
+		CUDA_CHECK(cudaMalloc((void**)&d_v, memsize));
 		CUDA_CHECK(cudaMalloc((void**)&d_el, memsize));
 		CUDA_CHECK(cudaMalloc((void**)&d_lpl, memsize));
 
 		const auto u01 = STABILITY::Shear(opts.h, UParam, 10, 1000, opts.N);
-		CUDA_CHECK(cudaMemcpyAsync((void*)d_u01, (const void*)u01.data(), memsize, cudaMemcpyHostToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync((void*)d_u, (const void*)u01.data(), memsize, cudaMemcpyHostToDevice, stream));
 
 		const auto v01 = STABILITY::Shear(opts.h, VParam, 10, 1000, opts.N);
-		CUDA_CHECK(cudaMemcpyAsync((void*)d_v01, (const void*)v01.data(), memsize, cudaMemcpyHostToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync((void*)d_v, (const void*)v01.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		BulkShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u01, d_v01, d_bs01, opts);
+		BulkShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u, d_v, d_bs01, opts);
 
 		himan::ReleaseInfo(opts.bs01, d_bs01, stream);
 
+		CUDA_CHECK(cudaStreamSynchronize(stream));
+
 		const auto u03 = STABILITY::Shear(opts.h, UParam, 10, 3000, opts.N);
-		CUDA_CHECK(cudaMemcpyAsync((void*)d_u03, (const void*)u03.data(), memsize, cudaMemcpyHostToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync((void*)d_u, (const void*)u03.data(), memsize, cudaMemcpyHostToDevice, stream));
 
 		const auto v03 = STABILITY::Shear(opts.h, VParam, 10, 3000, opts.N);
-		CUDA_CHECK(cudaMemcpyAsync((void*)d_v03, (const void*)v03.data(), memsize, cudaMemcpyHostToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync((void*)d_v, (const void*)v03.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		BulkShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u03, d_v03, d_bs03, opts);
+		BulkShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u, d_v, d_bs03, opts);
 
 		himan::ReleaseInfo(opts.bs03, d_bs03, stream);
+		CUDA_CHECK(cudaStreamSynchronize(stream));
 
 		const auto u06 = STABILITY::Shear(opts.h, UParam, 10, 6000, opts.N);
-		CUDA_CHECK(cudaMemcpyAsync((void*)d_u06, (const void*)u06.data(), memsize, cudaMemcpyHostToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync((void*)d_u, (const void*)u06.data(), memsize, cudaMemcpyHostToDevice, stream));
 
 		const auto v06 = STABILITY::Shear(opts.h, VParam, 10, 6000, opts.N);
-		CUDA_CHECK(cudaMemcpyAsync((void*)d_v06, (const void*)v06.data(), memsize, cudaMemcpyHostToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync((void*)d_v, (const void*)v06.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		BulkShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u06, d_v06, d_bs06, opts);
+		BulkShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u, d_v, d_bs06, opts);
 
 		himan::ReleaseInfo(opts.bs06, d_bs06, stream);
+		CUDA_CHECK(cudaStreamSynchronize(stream));
+
+		// Effective bulk shear
 
 		auto ELInfo =
 		    STABILITY::Fetch(opts.conf, opts.myTargetInfo, level(kMaximumThetaE, 0), param("EL-LAST-M"), false);
@@ -284,29 +295,35 @@ void CalculateBulkShear(himan::plugin::stability_cuda::options& opts, cudaStream
 		}
 
 		const auto uebs = STABILITY::Shear(opts.h, UParam, lpl, Midway);
-		CUDA_CHECK(cudaMemcpyAsync((void*)d_uebs, (const void*)uebs.data(), memsize, cudaMemcpyHostToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync((void*)d_u, (const void*)uebs.data(), memsize, cudaMemcpyHostToDevice, stream));
 
 		const auto vebs = STABILITY::Shear(opts.h, VParam, lpl, Midway);
-		CUDA_CHECK(cudaMemcpyAsync((void*)d_vebs, (const void*)vebs.data(), memsize, cudaMemcpyHostToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync((void*)d_v, (const void*)vebs.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		BulkShearKernel<<<gridSize, blockSize, 0, stream>>>(d_uebs, d_vebs, d_ebs, opts);
+		BulkShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u, d_v, d_ebs, opts);
 
 		himan::ReleaseInfo(opts.ebs, d_ebs, stream);
+		CUDA_CHECK(cudaStreamSynchronize(stream));
 
+		// CAPE shear
+
+		auto CAPEInfo =
+		    STABILITY::Fetch(opts.conf, opts.myTargetInfo, level(kMaximumThetaE, 0), param("CAPE1040-JKG"), false);
+		CUDA_CHECK(cudaMemcpyAsync((void*)d_u, (const void*)CAPEInfo->Data().ValuesAsPOD(), memsize,
+		                           cudaMemcpyHostToDevice, stream));
+
+		CAPEShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u, d_ebs, d_capes, opts);
+
+		himan::ReleaseInfo(opts.capes, d_capes, stream);
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
 		CUDA_CHECK(cudaFree(d_bs01));
 		CUDA_CHECK(cudaFree(d_bs03));
 		CUDA_CHECK(cudaFree(d_bs06));
 		CUDA_CHECK(cudaFree(d_ebs));
-		CUDA_CHECK(cudaFree(d_u01));
-		CUDA_CHECK(cudaFree(d_v01));
-		CUDA_CHECK(cudaFree(d_u03));
-		CUDA_CHECK(cudaFree(d_v03));
-		CUDA_CHECK(cudaFree(d_u06));
-		CUDA_CHECK(cudaFree(d_v06));
-		CUDA_CHECK(cudaFree(d_uebs));
-		CUDA_CHECK(cudaFree(d_vebs));
+		CUDA_CHECK(cudaFree(d_capes));
+		CUDA_CHECK(cudaFree(d_u));
+		CUDA_CHECK(cudaFree(d_v));
 		CUDA_CHECK(cudaFree(d_el));
 		CUDA_CHECK(cudaFree(d_lpl));
 	}
@@ -322,22 +339,12 @@ void CalculateBulkShear(himan::plugin::stability_cuda::options& opts, cudaStream
 				CUDA_CHECK(cudaFree(d_bs06));
 			if (d_ebs)
 				CUDA_CHECK(cudaFree(d_ebs));
-			if (d_u01)
-				CUDA_CHECK(cudaFree(d_u01));
-			if (d_v01)
-				CUDA_CHECK(cudaFree(d_v01));
-			if (d_u03)
-				CUDA_CHECK(cudaFree(d_u03));
-			if (d_v03)
-				CUDA_CHECK(cudaFree(d_v03));
-			if (d_u06)
-				CUDA_CHECK(cudaFree(d_u06));
-			if (d_v06)
-				CUDA_CHECK(cudaFree(d_v06));
-			if (d_uebs)
-				CUDA_CHECK(cudaFree(d_uebs));
-			if (d_vebs)
-				CUDA_CHECK(cudaFree(d_vebs));
+			if (d_capes)
+				CUDA_CHECK(cudaFree(d_capes));
+			if (d_u)
+				CUDA_CHECK(cudaFree(d_u));
+			if (d_v)
+				CUDA_CHECK(cudaFree(d_v));
 			if (d_el)
 				CUDA_CHECK(cudaFree(d_el));
 			if (d_lpl)
@@ -864,7 +871,7 @@ void himan::plugin::stability_cuda::Process(options& opts)
 	 * |        LIFTED INDICES             |
 	 * |                                   |
 	 * =====================================
-	*/
+	 */
 
 	CalculateLiftedIndices(opts, stream);
 
@@ -873,7 +880,7 @@ void himan::plugin::stability_cuda::Process(options& opts)
 	 * |            THETAE                 |
 	 * |                                   |
 	 * =====================================
-	*/
+	 */
 
 	CalculateThetaEIndices(opts, stream);
 
@@ -882,7 +889,7 @@ void himan::plugin::stability_cuda::Process(options& opts)
 	 * |          BULK SHEAR               |
 	 * |                                   |
 	 * =====================================
-	*/
+	 */
 
 	CalculateBulkShear(opts, stream);
 
@@ -891,7 +898,7 @@ void himan::plugin::stability_cuda::Process(options& opts)
 	 * |            HELICITY               |
 	 * |                                   |
 	 * =====================================
-	*/
+	 */
 
 	CalculateHelicity(opts, stream);
 
@@ -900,7 +907,7 @@ void himan::plugin::stability_cuda::Process(options& opts)
 	 * |       BULK-RICHARDSON NUMBER      |
 	 * |                                   |
 	 * =====================================
-	*/
+	 */
 
 	CalculateBulkRichardsonNumber(opts, stream);
 

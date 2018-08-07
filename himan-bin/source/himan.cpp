@@ -29,8 +29,8 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv);
 struct plugin_timing
 {
 	std::string plugin_name;
-	int order_number;     // plugin order number (if called more than once))
-	size_t time_elapsed;  // elapsed time in ms
+	int order_number;      // plugin order number (if called more than once))
+	int64_t time_elapsed;  // elapsed time in ms
 };
 
 void UploadRunStatisticsToDatabase(shared_ptr<configuration> conf, const vector<plugin_timing>& pluginTimes)
@@ -359,7 +359,7 @@ int main(int argc, char** argv)
 			}
 		} while (!passed);
 
-		size_t totalTime = 0;
+		int64_t totalTime = 0;
 
 		for (const auto& time : pluginTimes)
 		{

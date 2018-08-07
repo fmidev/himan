@@ -91,7 +91,7 @@ void stability::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	itsInfo->LevelIterator().Clear();
 
-	SetParams({EBSParam, LIParam, SIParam}, {Height0Level});
+	SetParams({EBSParam, LIParam, SIParam, CAPESParam}, {Height0Level});
 	SetParams({BSParam}, {OneKMLevel, ThreeKMLevel, SixKMLevel});
 	SetParams({SRHParam}, {OneKMLevel, ThreeKMLevel});
 	SetParams({TPEParam}, {ThreeKMLevel});
@@ -406,6 +406,22 @@ vec CalculateEffectiveBulkShear(shared_ptr<const plugin_configuration>& conf, in
 	return BS;
 }
 
+vec CalculateCapeShear(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo, const vec& EBS)
+{
+	auto CAPEInfo = STABILITY::Fetch(conf, myTargetInfo, level(kMaximumThetaE, 0), param("CAPE1040-JKG"));
+
+	const auto& CAPE = VEC(CAPEInfo);
+
+	vec ret(EBS.size());
+
+	for (size_t i = 0; i < EBS.size(); i++)
+	{
+		ret[i] = EBS[i] * sqrt(CAPE[i]);
+	}
+
+	return ret;
+}
+
 void CalculateBulkShearIndices(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo,
                                shared_ptr<hitool>& h)
 {
@@ -427,6 +443,10 @@ void CalculateBulkShearIndices(shared_ptr<const plugin_configuration>& conf, inf
 	myTargetInfo->Level(Height0Level);
 	const auto EBS = CalculateEffectiveBulkShear(conf, myTargetInfo, h);
 	myTargetInfo->Data().Set(EBS);
+
+	myTargetInfo->Param(CAPESParam);
+	const auto CAPES = CalculateCapeShear(conf, myTargetInfo, EBS);
+	myTargetInfo->Data().Set(CAPES);
 }
 
 void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadIndex)
@@ -632,6 +652,9 @@ void RunCuda(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo,
 	myTargetInfo->Param(EBSParam);
 	myTargetInfo->Level(Height0Level);
 	opts->ebs = myTargetInfo->ToSimple();
+
+	myTargetInfo->Param(CAPESParam);
+	opts->capes = myTargetInfo->ToSimple();
 
 	myTargetInfo->Param(SRHParam);
 	myTargetInfo->Level(OneKMLevel);

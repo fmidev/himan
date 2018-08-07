@@ -39,19 +39,19 @@ void statistics::AddToValueCount(size_t theValueCount)
 {
 	itsValueCount += theValueCount;
 }
-void statistics::AddToFetchingTime(size_t theFetchingTime)
+void statistics::AddToFetchingTime(int64_t theFetchingTime)
 {
 	itsFetchingTime += theFetchingTime;
 }
-void statistics::AddToProcessingTime(size_t theProcessingTime)
+void statistics::AddToProcessingTime(int64_t theProcessingTime)
 {
 	itsProcessingTime += theProcessingTime;
 }
-void statistics::AddToWritingTime(size_t theWritingTime)
+void statistics::AddToWritingTime(int64_t theWritingTime)
 {
 	itsWritingTime += theWritingTime;
 }
-void statistics::AddToInitTime(size_t theInitTime)
+void statistics::AddToInitTime(int64_t theInitTime)
 {
 	itsInitTime += theInitTime;
 }
@@ -85,7 +85,7 @@ void statistics::UsedGPUCount(short theUsedGPUCount)
 {
 	itsUsedGPUCount = theUsedGPUCount;
 }
-size_t statistics::FetchingTime() const
+int64_t statistics::FetchingTime() const
 {
 	return itsFetchingTime;
 }

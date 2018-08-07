@@ -25,6 +25,7 @@ const himan::param UParam("U-MS");
 const himan::param VParam("V-MS");
 const himan::param RHParam("RH-PRCNT");
 const himan::param QParam("Q-KGKG");
+const himan::param CAPESParam("CAPES-JKG");
 
 const himan::level P850Level(himan::kPressure, 850);
 const himan::level P700Level(himan::kPressure, 700);
@@ -41,7 +42,7 @@ namespace STABILITY
 /**
  * See eq 1 from
  * https://www.weather.gov/media/unr/soo/scm/BKZTW00.pdf
-*/
+ */
 
 CUDA_DEVICE
 inline void UVId(double u_shr, double v_shr, double u_avg, double v_avg, double& u_id, double& v_id)
@@ -58,7 +59,7 @@ inline void UVId(double u_shr, double v_shr, double u_avg, double v_avg, double&
  * @brief Bulk richardson number
  *
  * CAPE needs to be at least 500 J/ms and wind shear 10 m/s
-*/
+ */
 
 CUDA_DEVICE
 inline double BRN(double CAPE, double U6, double V6, double U05, double V05)
@@ -100,6 +101,7 @@ struct options
 	info_simple* bs03;
 	info_simple* bs06;
 	info_simple* ebs;
+	info_simple* capes;
 	info_simple* srh01;
 	info_simple* srh03;
 	info_simple* ehi;
@@ -119,6 +121,7 @@ struct options
 	      bs03(0),
 	      bs06(0),
 	      ebs(0),
+	      capes(0),
 	      srh01(0),
 	      srh03(0),
 	      ehi(0),
