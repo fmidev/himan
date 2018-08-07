@@ -177,13 +177,14 @@ void blend::Run(unsigned short threadIndex)
 			itsConfiguration->Statistics()->AddToValueCount(targetInfo->Data().Size());
 		}
 
-		// NOTE: Each Calculate-function will call WriteToFile manually, since each of them have different requirements
-		// for its behavior.
+		// NOTE: Each Calculate-function will call WriteToFile manually, since they write out data at different
+		// frequencies.
 	}
 }
 
 raw_time blend::LatestOriginTimeForProducer(const string& producer) const
 {
+	// These are hardcoded for simplicity.
 	int producerId = -1;
 	string geom;
 	if (producer == "MOS")
@@ -229,7 +230,8 @@ raw_time blend::LatestOriginTimeForProducer(const string& producer) const
 
 	raw_time raw (latest);
 
-	// With ECMWF and MOS we only want 00 and 12 times
+	// With ECMWF and MOS we only want 00 and 12 times. MOS is only calculated for 00 and 12. ECMWF forecast length is
+	// shorter for 6 and 18, and that seems to break everything.
 	const int hour = stoi(raw.String("%H"));
 	if (producer == "ECG" || producer == "MOS")
 	{
@@ -305,7 +307,7 @@ void blend::Process(shared_ptr<const plugin_configuration> conf)
 		itsNumHours = stoi(hours);
 	}
 
-    // Producer for bias and mae calculation
+    // Producer for bias and mae calculation (itsProdFtype is only used with these modes)
 	const string prod = conf->Exists("producer") ? conf->GetValue("producer") : "";
 	if ((itsCalculationMode == kCalculateBias || itsCalculationMode == kCalculateMAE) && prod.empty())
 	{
@@ -470,8 +472,6 @@ matrix<double> blend::CalculateBias(logger& log, shared_ptr<info> targetInfo, co
 	{
 		if (e == kFileDataNotFound)
 		{
-			// There's no benefit to setting the grid to 0, since we might get a valid grid and this might contain
-			// missing values. We still have to check for missing values in the calculation loop.
 			prevBias = vector<double>(targetInfo->Data().Size(), MissingDouble());
 		}
 		else
@@ -508,6 +508,7 @@ matrix<double> blend::CalculateBias(logger& log, shared_ptr<info> targetInfo, co
 	return currentBias;
 }
 
+// Follows largely the same format as CalculateBias
 matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info> targetInfo, const forecast_type& ftype,
                                    const level& lvl, const forecast_time& calcTime, int originTimeStep)
 {
@@ -620,6 +621,7 @@ void blend::CalculateMember(shared_ptr<info> targetInfo, unsigned short threadId
 		}
 	}
 
+	// Start from the 'earliest' (set below) point in time, and proceed to current time.
 	forecast_time ftime(latestOrigin, current.ValidDateTime());
 
 	int maxStep = 0;
@@ -814,6 +816,8 @@ info_t FetchHistorical(logger& log, shared_ptr<plugin_configuration> cnf, const 
 
 	for (;;)
 	{
+		// Query radon directly. This way we don't get lots of spammy output from data that is not found.
+		// If data is found, do a regular fetch.
 		search_options opts (ftime, parm, lvl, prod, type, cnf);
 		const vector<string> files = r->Files(opts);
 
@@ -1163,6 +1167,7 @@ void blend::WriteToFile(const info_t targetInfo, write_options writeOptions)
 	}
 }
 
+// Sets the forecast times for |Info| to the times we want to calculate for Bias and MAE (we need to go back in time).
 void blend::SetupOutputForecastTimes(shared_ptr<info> Info, const raw_time& latestOrigin, const forecast_time& current,
                                      int maxStep, int originTimeStep)
 {
