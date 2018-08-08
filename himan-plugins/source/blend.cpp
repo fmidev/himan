@@ -438,11 +438,6 @@ matrix<double> blend::CalculateBias(logger& log, shared_ptr<info> targetInfo, co
 
 	HPTimeResolution currentRes = currentTime.StepResolution();
 
-	log.Info("Current origin time: " + currentTime.OriginDateTime().String() +
-	         " valid time: " + currentTime.ValidDateTime().String());
-	log.Info("Calculation origin time: " + calcTime.OriginDateTime().String() +
-	         " valid time: " + calcTime.ValidDateTime().String());
-
 	info_t analysis = FetchWithProperties(cnf, analysisFetchTime, currentRes, HEIGHT_2, currentParam,
 	                                      kLapsFtype, kLapsGeom, kLapsProd);
 	if (!analysis)
@@ -520,11 +515,6 @@ matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info> targetInfo, con
 	forecast_time analysisFetchTime = CalculateAnalysisFetchTime(currentTime, itsAnalysisHour);
 
 	HPTimeResolution currentRes = currentTime.StepResolution();
-
-	log.Info("Current origin time: " + currentTime.OriginDateTime().String() +
-	         " valid time: " + currentTime.ValidDateTime().String());
-	log.Info("Calculation origin time: " + calcTime.OriginDateTime().String() +
-	         " valid time: " + calcTime.ValidDateTime().String());
 
 	info_t analysis = FetchWithProperties(cnf, analysisFetchTime, currentRes, HEIGHT_2, currentParam,
 	                                      kLapsFtype, kLapsGeom, kLapsProd);
@@ -731,10 +721,11 @@ void blend::CalculateMember(shared_ptr<info> targetInfo, unsigned short threadId
 	}
 }
 
-static std::vector<info_t> FetchRawGrids(shared_ptr<info> targetInfo, shared_ptr<plugin_configuration> cnf)
+static std::vector<info_t> FetchRawGrids(shared_ptr<info> targetInfo, shared_ptr<plugin_configuration> cnf,
+	unsigned short threadIdx)
 {
 	auto f = GET_PLUGIN(fetcher);
-	auto log = logger("calculateBlend_FetchRawGrids");
+	auto log = logger("calculateBlend_FetchRawGrids#" + to_string(threadIdx));
 
 	const forecast_time currentTime = targetInfo->Time();
 	const HPTimeResolution currentResolution = currentTime.StepResolution();
@@ -766,27 +757,27 @@ static std::vector<info_t> FetchRawGrids(shared_ptr<info> targetInfo, shared_ptr
 	if (mosRaw)
 		log.Info("MOS_raw missing count: " + to_string(mosRaw->Data().MissingCount()));
 	else
-		log.Info("MOS_raw missing fully");
+		log.Info("MOS_raw missing completely");
 
 	if (ecRaw)
 		log.Info("EC_raw missing count: " + to_string(ecRaw->Data().MissingCount()));
 	else
-		log.Info("EC_raw missing fully");
+		log.Info("EC_raw missing completely");
 
 	if (mepsRaw)
 		log.Info("MEPS_raw missing count: " + to_string(mepsRaw->Data().MissingCount()));
 	else
-		log.Info("MEPS_raw missing fully");
+		log.Info("MEPS_raw missing completely");
 
 	if (hirlamRaw)
 		log.Info("HIRLAM_raw missing count: " + to_string(hirlamRaw->Data().MissingCount()));
 	else
-		log.Info("HIRLAM_raw missing fully");
+		log.Info("HIRLAM_raw missing completely");
 
 	if (gfsRaw)
 		log.Info("GFS_raw missing count: " + to_string(gfsRaw->Data().MissingCount()));
 	else
-		log.Info("GFS_raw missing fully");
+		log.Info("GFS_raw missing completely");
 
 	return std::vector<info_t>{mosRaw, ecRaw, mepsRaw, hirlamRaw, gfsRaw};
 }
@@ -860,59 +851,61 @@ info_t FetchHistorical(logger& log, shared_ptr<plugin_configuration> cnf, const 
 	return Info;
 }
 
-std::vector<info_t> FetchBiasGrids(shared_ptr<info> targetInfo, shared_ptr<plugin_configuration> cnf)
+std::vector<info_t> FetchBiasGrids(shared_ptr<info> targetInfo, shared_ptr<plugin_configuration> cnf,
+                                   unsigned short threadIdx)
 {
 	auto f = GET_PLUGIN(fetcher);
-	auto log = logger("calculateBlend_FetchBiasGrids");
+	auto log = logger("calculateBlend_FetchBiasGrids#" + to_string(threadIdx));
 
 	const forecast_time fetchTime = targetInfo->Time();
 	const HPTimeResolution currentResolution = fetchTime.StepResolution();
 	const param currentParam = targetInfo->Param();
 	const int kOriginTimestep = 6;
 
-	info_t mosBias = FetchHistorical(log, cnf, fetchTime, currentResolution, HEIGHT_0, currentParam,
-									 kMosFtype, kBlendBiasProd, kOriginTimestep, kMosForecastLength);
-	info_t ecBias = FetchHistorical(log, cnf, fetchTime, currentResolution, GROUND, currentParam,
-									kEcmwfFtype, kBlendBiasProd, kOriginTimestep, kEcmwfForecastLength);
-	info_t mepsBias = FetchHistorical(log, cnf, fetchTime, currentResolution, HEIGHT_2, currentParam,
-									  kMepsFtype, kBlendBiasProd, kOriginTimestep, kMepsForecastLength);
-	info_t hirlamBias = FetchHistorical(log, cnf, fetchTime, currentResolution, HEIGHT_2, currentParam,
-										kHirlamFtype, kBlendBiasProd, kOriginTimestep, kHirlamForecastLength);
-	info_t gfsBias = FetchHistorical(log, cnf, fetchTime, currentResolution, GROUND, currentParam,
-									 kEcmwfFtype, kBlendBiasProd, kOriginTimestep, kGfsForecastLength);
+	info_t mosBias = FetchHistorical(log, cnf, fetchTime, currentResolution, HEIGHT_0, currentParam, kMosFtype,
+	                                 kBlendBiasProd, kOriginTimestep, kMosForecastLength);
+	info_t ecBias = FetchHistorical(log, cnf, fetchTime, currentResolution, GROUND, currentParam, kEcmwfFtype,
+	                                kBlendBiasProd, kOriginTimestep, kEcmwfForecastLength);
+	info_t mepsBias = FetchHistorical(log, cnf, fetchTime, currentResolution, HEIGHT_2, currentParam, kMepsFtype,
+	                                  kBlendBiasProd, kOriginTimestep, kMepsForecastLength);
+	info_t hirlamBias = FetchHistorical(log, cnf, fetchTime, currentResolution, HEIGHT_2, currentParam, kHirlamFtype,
+	                                    kBlendBiasProd, kOriginTimestep, kHirlamForecastLength);
+	info_t gfsBias = FetchHistorical(log, cnf, fetchTime, currentResolution, GROUND, currentParam, kEcmwfFtype,
+	                                 kBlendBiasProd, kOriginTimestep, kGfsForecastLength);
 
 	if (mosBias)
 		log.Info("MOS_bias missing count: " + to_string(mosBias->Data().MissingCount()));
 	else
-		log.Info("MOS_bias missing fully");
+		log.Info("MOS_bias missing completely");
 
 	if (ecBias)
 		log.Info("EC_bias missing count: " + to_string(ecBias->Data().MissingCount()));
 	else
-		log.Info("EC_bias missing fully");
+		log.Info("EC_bias missing completely");
 
 	if (mepsBias)
 		log.Info("MEPS_bias missing count: " + to_string(mepsBias->Data().MissingCount()));
 	else
-		log.Info("MEPS_bias missing fully");
+		log.Info("MEPS_bias missing completely");
 
 	if (hirlamBias)
 		log.Info("HIRLAM_bias missing count: " + to_string(hirlamBias->Data().MissingCount()));
 	else
-		log.Info("HIRLAM_bias missing fully");
+		log.Info("HIRLAM_bias missing completely");
 
 	if (gfsBias)
 		log.Info("GFS_bias missing count: " + to_string(gfsBias->Data().MissingCount()));
 	else
-		log.Info("GFS_bias missing fully");
+		log.Info("GFS_bias missing completely");
 
 	return std::vector<info_t>{mosBias, ecBias, mepsBias, hirlamBias, gfsBias};
 }
 
-std::vector<info_t> FetchMAEGrids(shared_ptr<info> targetInfo, shared_ptr<plugin_configuration> cnf)
+std::vector<info_t> FetchMAEGrids(shared_ptr<info> targetInfo, shared_ptr<plugin_configuration> cnf,
+                                  unsigned short threadIdx)
 {
 	auto f = GET_PLUGIN(fetcher);
-	auto log = logger("calculateBlend_FetchMAEGrids");
+	auto log = logger("calculateBlend_FetchMAEGrids#" + to_string(threadIdx));
 
 	const forecast_time fetchTime = targetInfo->Time();
 	const HPTimeResolution currentResolution = fetchTime.StepResolution();
@@ -920,40 +913,40 @@ std::vector<info_t> FetchMAEGrids(shared_ptr<info> targetInfo, shared_ptr<plugin
 	const int kOriginTimestep = 6;
 
 	info_t mos = FetchHistorical(log, cnf, fetchTime, currentResolution, HEIGHT_0, currentParam, kMosFtype,
-								 kBlendWeightProd, kOriginTimestep, kMosForecastLength);
+	                             kBlendWeightProd, kOriginTimestep, kMosForecastLength);
 	info_t ec = FetchHistorical(log, cnf, fetchTime, currentResolution, GROUND, currentParam, kEcmwfFtype,
-								kBlendWeightProd, kOriginTimestep, kEcmwfForecastLength);
+	                            kBlendWeightProd, kOriginTimestep, kEcmwfForecastLength);
 	info_t meps = FetchHistorical(log, cnf, fetchTime, currentResolution, HEIGHT_2, currentParam, kMepsFtype,
-								  kBlendWeightProd, kOriginTimestep, kMepsForecastLength);
-	info_t hirlam = FetchHistorical(log, cnf, fetchTime, currentResolution, HEIGHT_2, currentParam,
-									kHirlamFtype, kBlendWeightProd, kOriginTimestep, kHirlamForecastLength);
+	                              kBlendWeightProd, kOriginTimestep, kMepsForecastLength);
+	info_t hirlam = FetchHistorical(log, cnf, fetchTime, currentResolution, HEIGHT_2, currentParam, kHirlamFtype,
+	                                kBlendWeightProd, kOriginTimestep, kHirlamForecastLength);
 	info_t gfs = FetchHistorical(log, cnf, fetchTime, currentResolution, GROUND, currentParam, kGfsFtype,
-								 kBlendWeightProd, kOriginTimestep, kGfsForecastLength);
+	                             kBlendWeightProd, kOriginTimestep, kGfsForecastLength);
 
 	if (mos)
 		log.Info("MOS_mae missing count: " + to_string(mos->Data().MissingCount()));
 	else
-		log.Info("MOS_mae missing fully");
+		log.Info("MOS_mae missing completely");
 
 	if (ec)
 		log.Info("EC_mae missing count: " + to_string(ec->Data().MissingCount()));
 	else
-		log.Info("EC_mae missing fully");
+		log.Info("EC_mae missing completely");
 
 	if (meps)
 		log.Info("MEPS_mae missing count: " + to_string(meps->Data().MissingCount()));
 	else
-		log.Info("MEPS_mae missing fully");
+		log.Info("MEPS_mae missing completely");
 
 	if (hirlam)
 		log.Info("HIRLAM_mae missing count: " + to_string(hirlam->Data().MissingCount()));
 	else
-		log.Info("HIRLAM_mae missing fully");
+		log.Info("HIRLAM_mae missing completely");
 
 	if (gfs)
 		log.Info("GFS_mae missing count: " + to_string(gfs->Data().MissingCount()));
 	else
-		log.Info("GFS_mae missing fully");
+		log.Info("GFS_mae missing completely");
 
 	return std::vector<info_t>{mos, ec, meps, hirlam, gfs};
 }
@@ -975,7 +968,8 @@ void blend::CalculateBlend(shared_ptr<info> targetInfo, unsigned short threadIdx
 	// NOTE: If one of the grids is missing, we should still put an empty grid there. Since all the stages assume that
 	// F[i], B[i], W[i] are all of the same model! This means that the ordering is fixed for the return vector of
 	// FetchRawGrids, FetchBiasGrids, FetchMAEGrids.
-	vector<info_t> forecasts = FetchRawGrids(targetInfo, make_shared<plugin_configuration>(*itsConfiguration));
+	vector<info_t> forecasts = FetchRawGrids(targetInfo, make_shared<plugin_configuration>(*itsConfiguration),
+		threadIdx);
 	if (std::all_of(forecasts.begin(), forecasts.end(), [&](info_t i) { return i == nullptr; }))
 	{
 		log.Error("Failed to acquire any source data");
@@ -992,7 +986,7 @@ void blend::CalculateBlend(shared_ptr<info> targetInfo, unsigned short threadIdx
 	}
 
 	// Load all the precalculated bias factors from BLENDB
-	vector<info_t> biases = FetchBiasGrids(targetInfo, make_shared<plugin_configuration>(*itsConfiguration));
+	vector<info_t> biases = FetchBiasGrids(targetInfo, make_shared<plugin_configuration>(*itsConfiguration), threadIdx);
 	if (std::all_of(biases.begin(), biases.end(), [&](info_t i) { return i == nullptr; }))
 	{
 		log.Error("Failed to acquire any bias grids");
@@ -1007,7 +1001,7 @@ void blend::CalculateBlend(shared_ptr<info> targetInfo, unsigned short threadIdx
 	}
 
 	// Load all the precalculated weights from BLENDW
-	vector<info_t> weights = FetchMAEGrids(targetInfo, make_shared<plugin_configuration>(*itsConfiguration));
+	vector<info_t> weights = FetchMAEGrids(targetInfo, make_shared<plugin_configuration>(*itsConfiguration), threadIdx);
 	if (std::all_of(weights.begin(), weights.end(), [&](info_t i) { return i == nullptr; }))
 	{
 		log.Error("Failed to acquire any MAE grids");
