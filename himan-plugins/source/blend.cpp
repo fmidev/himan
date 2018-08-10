@@ -448,9 +448,37 @@ matrix<double> blend::CalculateBias(logger& log, shared_ptr<info> targetInfo, co
 
 	matrix<double> currentBias(targetInfo->Data().SizeX(), targetInfo->Data().SizeY(), targetInfo->Data().SizeZ(),
 	                           MissingDouble());
+	vector<double> forecast;
 
 	forecast_time leadTime(calcTime);
-	info_t Info = FetchProd(cnf, leadTime, currentRes, lvl, currentParam, ftype, kBlendRawProd);
+
+	// MOS doesn't have hours 0, 1, 2. So we'll set this to missing. We don't want to do this with other models, since
+	// in these cases it is certainly an error that needs to be looked at and fixed manually.
+	const int validHour = stoi(currentTime.ValidDateTime().String("%H"));
+	if (itsProdFtype == kMosFtype && validHour >= 0 && validHour <= 2)
+	{
+		try
+		{
+			info_t Info = FetchProd(cnf, leadTime, currentRes, lvl, currentParam, ftype, kBlendRawProd);
+			forecast = VEC(Info);
+		}
+		catch (HPExceptionType& e)
+		{
+			if (e == kFileDataNotFound)
+			{
+				forecast = vector<double>(targetInfo->Data().Size(), MissingDouble());	
+			}
+			else
+			{
+				throw;
+			}
+		}
+	}
+	else
+	{
+		info_t Info = FetchProd(cnf, leadTime, currentRes, lvl, currentParam, ftype, kBlendRawProd);
+		forecast = VEC(Info);
+	}
 
 	// Previous forecast's bias corrected data is optional. If the data is not found we'll set the grid to missing.
 	// (This happens, for example, during initialization.)
@@ -477,13 +505,12 @@ matrix<double> blend::CalculateBias(logger& log, shared_ptr<info> targetInfo, co
 
 	// Introduce shorter names for clarity
 	const vector<double>& O = VEC(analysis);
-	const vector<double>& F = VEC(Info);
 	const vector<double>& BC = prevBias;
 	vector<double>& B = currentBias.Values();
 
-	for (size_t i = 0; i < F.size(); i++)
+	for (size_t i = 0; i < forecast.size(); i++)
 	{
-		double f = F[i];
+		double f = forecast[i];
 		double o = O[i];
 		double bc = BC[i];
 
@@ -532,7 +559,34 @@ matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info> targetInfo, con
 	prevLeadTime.OriginDateTime().Adjust(currentRes, -originTimeStep);
 
 	info_t bias = FetchProd(cnf, leadTime, currentRes, lvl, currentParam, ftype, kBlendBiasProd);
-	info_t forecast = FetchProd(cnf, leadTime, currentRes, lvl, currentParam, ftype, kBlendRawProd);
+
+	// See note pertaining to MOS at CalculateBias.
+	vector<double> forecast;
+	const int validHour = stoi(currentTime.ValidDateTime().String("%H"));
+	if (itsProdFtype == kMosFtype && validHour >= 0 && validHour <= 2)
+	{
+		try
+		{
+			info_t Info = FetchProd(cnf, leadTime, currentRes, lvl, currentParam, ftype, kBlendRawProd);
+			forecast = VEC(Info);
+		}
+		catch (HPExceptionType& e)
+		{
+			if (e == kFileDataNotFound)
+			{
+				forecast = vector<double>(targetInfo->Data().Size(), MissingDouble());
+			}
+			else
+			{
+				throw;
+			}
+		}
+	}
+	else
+	{
+		info_t Info = FetchProd(cnf, leadTime, currentRes, lvl, currentParam, ftype, kBlendRawProd);
+		forecast = VEC(Info);
+	}
 
 	vector<double> prevMAE;
 	info_t prevMAE_Info = FetchNoExcept(cnf, prevLeadTime, currentRes, lvl, currentParam, ftype, kBlendWeightProd);
@@ -547,34 +601,33 @@ matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info> targetInfo, con
 
 	const vector<double>& O = VEC(analysis);
 	const vector<double>& B = VEC(bias);
-	const vector<double>& F = VEC(forecast);
 	vector<double>& mae = MAE.Values();
 
 	for (size_t i = 0; i < mae.size(); i++)
 	{
 		double o = O[i];
-		double f = F[i];
-        double b = B[i];
+		double f = forecast[i];
+		double b = B[i];
 		double _prevMAE = prevMAE[i];
 
-        if (IsMissing(f) || IsMissing(o))
-        {
-            f = 0.0;
-            o = 0.0;
-        }
+		if (IsMissing(f) || IsMissing(o))
+		{
+			f = 0.0;
+			o = 0.0;
+		}
 
-        if (IsMissing(_prevMAE))
-        {
-            _prevMAE = 0.0;
-        }
+		if (IsMissing(_prevMAE))
+		{
+			_prevMAE = 0.0;
+		}
 
-        if (IsMissing(b))
-        {
-            b = 0.0;
-        }
+		if (IsMissing(b))
+		{
+			b = 0.0;
+		}
 
-        const double bcf = f - b;
-        mae[i] = (1.0 - alpha) * _prevMAE + alpha * std::abs(bcf - o);
+		const double bcf = f - b;
+		mae[i] = (1.0 - alpha) * _prevMAE + alpha * std::abs(bcf - o);
 	}
 
 	return MAE;
