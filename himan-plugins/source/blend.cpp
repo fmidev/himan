@@ -62,6 +62,10 @@ blend::~blend()
 {
 }
 
+// 3 fetching helper functions are used:
+// - FetchWithProperties: specify all information and return nullptr if data is not found (used for bias & mae)
+// - FetchProd: specify all information except geometry name, throws exception if data is not found
+// - FetchNoExcept: same as FetchProd, except exceptions are caught and nullptr is returned
 static info_t FetchWithProperties(shared_ptr<plugin_configuration> cnf, const forecast_time& forecastTime,
                                   HPTimeResolution stepResolution, const level& lvl, const param& parm,
                                   const forecast_type& type, const string& geom, const producer& prod)
@@ -269,6 +273,11 @@ void blend::Start()
 	Finish();
 }
 
+// Read the configuration and set plugin properties:
+// - calculation mode (bias, mae, blend) that is to be dispatched in Calculate()
+// - producer for bias and mae
+// - analysis hour
+// - parameter
 void blend::Process(shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
@@ -374,8 +383,7 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 	auto f = GET_PLUGIN(fetcher);
 	auto log = logger("blendThread#" + to_string(threadIndex));
 	const string deviceType = "CPU";
-
-	forecast_time currentTime = targetInfo->Time();
+	const forecast_time currentTime = targetInfo->Time();
 	const param currentParam = targetInfo->Param();
 
 	switch (itsCalculationMode)
