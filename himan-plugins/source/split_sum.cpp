@@ -694,10 +694,3 @@ shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTarg
 
 	return SumInfo;
 }
-
-void split_sum::WriteToFile(const info_t targetInfo, write_options writeOptions)
-{
-	writeOptions.write_empty_grid = false;
-
-	compiled_plugin_base::WriteToFile(targetInfo, writeOptions);
-}
