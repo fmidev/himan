@@ -62,40 +62,9 @@ blend::~blend()
 {
 }
 
-// 3 fetching helper functions are used:
-// - FetchWithProperties: specify all information and return nullptr if data is not found (used for bias & mae)
+// 2 fetching helper functions are used:
 // - FetchProd: specify all information except geometry name, throws exception if data is not found
 // - FetchNoExcept: same as FetchProd, except exceptions are caught and nullptr is returned
-static info_t FetchWithProperties(shared_ptr<plugin_configuration> cnf, const forecast_time& forecastTime,
-                                  HPTimeResolution stepResolution, const level& lvl, const param& parm,
-                                  const forecast_type& type, const string& geom, const producer& prod)
-{
-	auto f = GET_PLUGIN(fetcher);
-
-	forecast_time ftime = forecastTime;
-	ftime.StepResolution(stepResolution);
-
-	cnf->SourceGeomNames({geom});
-	cnf->SourceProducers({prod});
-
-	try
-	{
-		info_t ret = f->Fetch(cnf, ftime, lvl, parm, type, false);
-		return ret;
-	}
-	catch (HPExceptionType& e)
-	{
-		if (e != kFileDataNotFound)
-		{
-			himan::Abort();
-		}
-		else
-		{
-			return nullptr;
-		}
-	}
-}
-
 static info_t FetchProd(shared_ptr<plugin_configuration> cnf, const forecast_time& forecastTime,
                         HPTimeResolution stepResolution, const level& lvl, const param& parm,
 						const forecast_type& type, const producer& prod)
@@ -115,16 +84,14 @@ static info_t FetchProd(shared_ptr<plugin_configuration> cnf, const forecast_tim
 
 static info_t FetchNoExcept(shared_ptr<plugin_configuration> cnf, const forecast_time& forecastTime,
                             HPTimeResolution stepResolution, const level& lvl, const param& parm,
-                            const forecast_type& type, const producer& prod)
+                            const forecast_type& type, const string& geom, const producer& prod)
 {
 	auto f = GET_PLUGIN(fetcher);
-
-	const string geomName = cnf->TargetGeomName();
 
 	forecast_time ftime = forecastTime;
 	ftime.StepResolution(stepResolution);
 
-	cnf->SourceGeomNames({geomName});
+	cnf->SourceGeomNames({geom});
 	cnf->SourceProducers({prod});
 
 	info_t I;
@@ -409,25 +376,14 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 	}
 }
 
-static forecast_time CalculateAnalysisFetchTime(const forecast_time& currentTime, int analysisHour)
+static forecast_time MakeAnalysisFetchTime(const forecast_time& currentTime, int analysisHour)
 {
-	const int validDay = stoi(currentTime.ValidDateTime().String("%d"));
 	const int validHour = stoi(currentTime.ValidDateTime().String("%H"));
-	const int originDay = stoi(currentTime.OriginDateTime().String("%d"));
-	const int originHour = stoi(currentTime.OriginDateTime().String("%H"));
 
 	forecast_time analysisFetchTime = currentTime;
 
 	analysisFetchTime.ValidDateTime().Adjust(kHourResolution, -validHour); // set to 00
 	analysisFetchTime.ValidDateTime().Adjust(kHourResolution, analysisHour);
-
-	const int ndays = validDay - originDay;
-	const int nhours = (ndays * 24) - (validHour - originHour);
-
-	if (nhours > 24)
-	{
-		analysisFetchTime.ValidDateTime().Adjust(kDayResolution, -1);
-	}
 
 	analysisFetchTime.OriginDateTime() = analysisFetchTime.ValidDateTime();
 
@@ -442,12 +398,12 @@ matrix<double> blend::CalculateBias(logger& log, shared_ptr<info> targetInfo, co
 	param currentParam = targetInfo->Param();
 	level currentLevel = targetInfo->Level();
 	forecast_time currentTime = targetInfo->Time();
-	forecast_time analysisFetchTime = CalculateAnalysisFetchTime(currentTime, itsAnalysisHour);
+	forecast_time analysisFetchTime = MakeAnalysisFetchTime(currentTime, itsAnalysisHour);
 
 	HPTimeResolution currentRes = currentTime.StepResolution();
 
-	info_t analysis = FetchWithProperties(cnf, analysisFetchTime, currentRes, HEIGHT_2, currentParam,
-	                                      kLapsFtype, kLapsGeom, kLapsProd);
+	info_t analysis =
+	    FetchNoExcept(cnf, analysisFetchTime, currentRes, HEIGHT_2, currentParam, kLapsFtype, kLapsGeom, kLapsProd);
 	if (!analysis)
 	{
 		log.Error("Analysis (LAPS) data not found");
@@ -544,15 +500,18 @@ matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info> targetInfo, con
 {
 	shared_ptr<plugin_configuration> cnf = make_shared<plugin_configuration>(*itsConfiguration);
 
+	const string geom = cnf->TargetGeomName();
+
 	param currentParam = targetInfo->Param();
 	level currentLevel = targetInfo->Level();
 	forecast_time currentTime = targetInfo->Time();
-	forecast_time analysisFetchTime = CalculateAnalysisFetchTime(currentTime, itsAnalysisHour);
+	forecast_time analysisFetchTime = MakeAnalysisFetchTime(currentTime, itsAnalysisHour);
+
 
 	HPTimeResolution currentRes = currentTime.StepResolution();
 
-	info_t analysis = FetchWithProperties(cnf, analysisFetchTime, currentRes, HEIGHT_2, currentParam,
-	                                      kLapsFtype, kLapsGeom, kLapsProd);
+	info_t analysis =
+	    FetchNoExcept(cnf, analysisFetchTime, currentRes, HEIGHT_2, currentParam, kLapsFtype, kLapsGeom, kLapsProd);
 	if (!analysis)
 	{
 		log.Error("Analysis (LAPS) data not found");
@@ -597,7 +556,8 @@ matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info> targetInfo, con
 	}
 
 	vector<double> prevMAE;
-	info_t prevMAE_Info = FetchNoExcept(cnf, prevLeadTime, currentRes, lvl, currentParam, ftype, kBlendWeightProd);
+	info_t prevMAE_Info =
+	    FetchNoExcept(cnf, prevLeadTime, currentRes, lvl, currentParam, ftype, geom, kBlendWeightProd);
 	if (!prevMAE_Info)
 	{
 		prevMAE = vector<double>(targetInfo->Data().Size(), MissingDouble());
@@ -783,7 +743,7 @@ void blend::CalculateMember(shared_ptr<info> targetInfo, unsigned short threadId
 }
 
 static std::vector<info_t> FetchRawGrids(shared_ptr<info> targetInfo, shared_ptr<plugin_configuration> cnf,
-	unsigned short threadIdx)
+                                         unsigned short threadIdx)
 {
 	auto f = GET_PLUGIN(fetcher);
 	auto log = logger("calculateBlend_FetchRawGrids#" + to_string(threadIdx));
@@ -791,6 +751,7 @@ static std::vector<info_t> FetchRawGrids(shared_ptr<info> targetInfo, shared_ptr
 	const forecast_time currentTime = targetInfo->Time();
 	const HPTimeResolution currentResolution = currentTime.StepResolution();
 	const param currentParam = targetInfo->Param();
+	const string geom = cnf->TargetGeomName();
 
 	// Fetch previous model runs raw fields for EC and MOS when we're calculating during the 06 and 18 cycles.
 	forecast_time ecmosFetchTime  = currentTime;
@@ -800,16 +761,16 @@ static std::vector<info_t> FetchRawGrids(shared_ptr<info> targetInfo, shared_ptr
 		ecmosFetchTime.OriginDateTime().Adjust(kHourResolution, -6);
 	}
 
-	info_t mosRaw = FetchNoExcept(cnf, ecmosFetchTime, currentResolution, HEIGHT_0, currentParam, kMosFtype,
-								  kBlendRawProd);
-	info_t ecRaw = FetchNoExcept(cnf, ecmosFetchTime, currentResolution, GROUND, currentParam, kEcmwfFtype,
-	                             kBlendRawProd);
-	info_t mepsRaw = FetchNoExcept(cnf, currentTime, currentResolution, HEIGHT_2, currentParam, kMepsFtype,
-	                               kBlendRawProd);
-	info_t hirlamRaw = FetchNoExcept(cnf, currentTime, currentResolution, HEIGHT_2, currentParam,
-	                                 kHirlamFtype, kBlendRawProd);
-	info_t gfsRaw = FetchNoExcept(cnf, currentTime, currentResolution, GROUND, currentParam, kGfsFtype,
-					  kBlendRawProd);
+	info_t mosRaw =
+	    FetchNoExcept(cnf, ecmosFetchTime, currentResolution, HEIGHT_0, currentParam, kMosFtype, geom, kBlendRawProd);
+	info_t ecRaw =
+	    FetchNoExcept(cnf, ecmosFetchTime, currentResolution, GROUND, currentParam, kEcmwfFtype, geom, kBlendRawProd);
+	info_t mepsRaw =
+	    FetchNoExcept(cnf, currentTime, currentResolution, HEIGHT_2, currentParam, kMepsFtype, geom, kBlendRawProd);
+	info_t hirlamRaw =
+	    FetchNoExcept(cnf, currentTime, currentResolution, HEIGHT_2, currentParam, kHirlamFtype, geom, kBlendRawProd);
+	info_t gfsRaw =
+	    FetchNoExcept(cnf, currentTime, currentResolution, GROUND, currentParam, kGfsFtype, geom, kBlendRawProd);
 
 	//
 	// We want to return nullptrs here so that we can skip over these entries in the Calculate-loop.
