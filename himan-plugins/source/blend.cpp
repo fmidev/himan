@@ -34,7 +34,7 @@ static const producer kBlendRawProd(183, 86, 183, "BLENDR");
 static const producer kBlendBiasProd(184, 86, 184, "BLENDB");
 
 // Each blend producer is composed of these original producers. We use forecast_types to distinguish them
-// from each other, and this way we don't have to create bunch of extra producers. But still, it is a hack.
+// from each other, and this way we don't have to create bunch of extra producers.
 static const forecast_type kMosFtype(kEpsPerturbation, 1.0);
 static const forecast_type kEcmwfFtype(kEpsPerturbation, 2.0);
 static const forecast_type kHirlamFtype(kEpsPerturbation, 3.0);
@@ -66,8 +66,8 @@ blend::~blend()
 // - FetchProd: specify all information except geometry name, throws exception if data is not found
 // - FetchNoExcept: same as FetchProd, except exceptions are caught and nullptr is returned
 static info_t FetchProd(shared_ptr<plugin_configuration> cnf, const forecast_time& forecastTime,
-                        HPTimeResolution stepResolution, const level& lvl, const param& parm,
-						const forecast_type& type, const producer& prod)
+                        HPTimeResolution stepResolution, const level& lvl, const param& parm, const forecast_type& type,
+                        const producer& prod)
 {
 	auto f = GET_PLUGIN(fetcher);
 
@@ -806,13 +806,12 @@ static std::vector<info_t> FetchRawGrids(shared_ptr<info> targetInfo, shared_ptr
 
 namespace
 {
-
 // Try to fetch 'historical data' for the given arguments. This is done because Bias and MAE data is calculated for
 // 'old data'. Naturally we don't have the appropriate weights for current data (the data we want to blend), so we'll
 // scan for the first occurance of a grid with the wanted parameters.
 info_t FetchHistorical(logger& log, shared_ptr<plugin_configuration> cnf, const forecast_time& forecastTime,
-					   HPTimeResolution stepResolution, const level& lvl, const param& parm,
-					   const forecast_type& type, const producer& prod, int originTimeStep, int forecastLength)
+                       HPTimeResolution stepResolution, const level& lvl, const param& parm, const forecast_type& type,
+                       const producer& prod, int originTimeStep, int forecastLength)
 {
 	auto f = GET_PLUGIN(fetcher);
 	auto r = GET_PLUGIN(radon);
@@ -831,7 +830,7 @@ info_t FetchHistorical(logger& log, shared_ptr<plugin_configuration> cnf, const 
 	{
 		// Query radon directly. This way we don't get lots of spammy output from data that is not found.
 		// If data is found, do a regular fetch.
-		search_options opts (ftime, parm, lvl, prod, type, cnf);
+		search_options opts(ftime, parm, lvl, prod, type, cnf);
 		const vector<string> files = r->Files(opts);
 
 		// We didn't find any files for this timestep, keep going until we find a matching file or overstep the
@@ -973,7 +972,7 @@ std::vector<info_t> FetchMAEGrids(shared_ptr<info> targetInfo, shared_ptr<plugin
 	return std::vector<info_t>{mos, ec, meps, hirlam, gfs};
 }
 
-} // namespace
+}  // namespace
 
 void blend::CalculateBlend(shared_ptr<info> targetInfo, unsigned short threadIdx)
 {
@@ -990,8 +989,8 @@ void blend::CalculateBlend(shared_ptr<info> targetInfo, unsigned short threadIdx
 	// NOTE: If one of the grids is missing, we should still put an empty grid there. Since all the stages assume that
 	// F[i], B[i], W[i] are all of the same model! This means that the ordering is fixed for the return vector of
 	// FetchRawGrids, FetchBiasGrids, FetchMAEGrids.
-	vector<info_t> forecasts = FetchRawGrids(targetInfo, make_shared<plugin_configuration>(*itsConfiguration),
-		threadIdx);
+	vector<info_t> forecasts =
+	    FetchRawGrids(targetInfo, make_shared<plugin_configuration>(*itsConfiguration), threadIdx);
 	if (std::all_of(forecasts.begin(), forecasts.end(), [&](info_t i) { return i == nullptr; }))
 	{
 		log.Error("Failed to acquire any source data");
@@ -1035,7 +1034,7 @@ void blend::CalculateBlend(shared_ptr<info> targetInfo, unsigned short threadIdx
 		{
 			w->ResetLocation();
 		}
-    }
+	}
 
 	// Used to collect values in the case of missing values.
 	vector<double> collectedValues;
@@ -1096,20 +1095,20 @@ void blend::CalculateBlend(shared_ptr<info> targetInfo, unsigned short threadIdx
 		}
 
 		// Used for the actual application of the weights.
-        vector<double> weights;
+		vector<double> weights;
 		weights.resize(collectedWeights.size());
 
-        for (size_t i = 0; i < weights.size(); i++)
-        {
-            double sum = 0.0;
-            for (const double& w : collectedWeights)
-            {
+		for (size_t i = 0; i < weights.size(); i++)
+		{
+			double sum = 0.0;
+			for (const double& w : collectedWeights)
+			{
 				// currentWeights already pruned of missing values
-                sum +=  1.0 / w; // could be zero
-            }
+				sum += 1.0 / w;  // could be zero
+			}
 
-            weights[i] = 1.0 / sum;
-        }
+			weights[i] = 1.0 / sum;
+		}
 
 		if (numMissing == forecasts.size())
 		{
