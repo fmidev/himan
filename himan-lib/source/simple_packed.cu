@@ -162,18 +162,25 @@ __host__ void simple_packed::Unpack(double* arr, size_t N, cudaStream_t* stream)
 		{
 			if (NFmiGribPacking::IsHostPointer(arr))
 			{
-				// too lazy to write this now
-				throw std::runtime_error("Host pointer, static grid and bitmap code is missing");
+				for (size_t i = 0; i < N; i++)
+				{
+					if (bitmap[i])
+					{
+						arr[i] = fillValue;
+					}
+				}
 			}
+			else
+			{
+				int* d_b = 0;
+				CUDA_CHECK(cudaMalloc((void**)(&d_b), bitmapLength * sizeof(int)));
+				CUDA_CHECK(cudaMemcpyAsync(d_b, bitmap, bitmapLength * sizeof(int), cudaMemcpyHostToDevice, *stream));
 
-			int* d_b = 0;
-			CUDA_CHECK(cudaMalloc((void**)(&d_b), bitmapLength * sizeof(int)));
-			CUDA_CHECK(cudaMemcpyAsync(d_b, bitmap, bitmapLength * sizeof(int), cudaMemcpyHostToDevice, *stream));
+				CopyWithBitmap<<<blockSize, gridSize, 0, *stream>>>(arr, d_b, fillValue, N);
 
-			CopyWithBitmap<<<blockSize, gridSize, 0, *stream>>>(arr, d_b, fillValue, N);
-
-			CUDA_CHECK(cudaStreamSynchronize(*stream));
-			CUDA_CHECK(cudaFree(d_b));
+				CUDA_CHECK(cudaStreamSynchronize(*stream));
+				CUDA_CHECK(cudaFree(d_b));
+			}
 		}
 		else
 		{
