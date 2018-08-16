@@ -4,7 +4,7 @@
 Summary: himan core library
 Name: %{LIBNAME}
 Version: 18.8.16
-Release: 1.el7.fmi
+Release: 2.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -59,6 +59,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Thu Aug 16 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.16-2.fmi
+- Hotfixing issue if reading static grids of missing value
 * Thu Aug 16 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.16-1.fmi
 - Removing obsolete logger_factory
 * Tue Aug  7 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.7-1.fmi
