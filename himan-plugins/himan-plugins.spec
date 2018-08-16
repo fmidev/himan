@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.8.7
+Version: 18.8.16
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -112,6 +112,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Aug 16 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.16-1.fmi
+- Blend fixes
+- CAPE shear with MUCAPE
+- split_sum writes empty grids
 * Tue Aug  7 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.7-1.fmi
 - Blend fixes
 - Minor changes to cape
