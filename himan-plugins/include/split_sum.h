@@ -47,9 +47,6 @@ class split_sum : public compiled_plugin, private compiled_plugin_base
 		return HPVersionNumber(1, 2);
 	}
 
-   protected:
-	virtual void WriteToFile(const info_t targetInfo, write_options opts = write_options()) override;
-
    private:
 	void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
 	void DoParam(std::shared_ptr<info> myTargetInfo, std::string myParamName, std::string threadIndex) const;

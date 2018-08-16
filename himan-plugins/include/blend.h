@@ -18,6 +18,39 @@ enum blend_mode
 	kCalculateBias
 };
 
+struct blend_producer
+{
+	enum
+	{
+		kNone = 0,
+		kMos = 1,
+		kEcmwf = 2,
+		kHirlam = 3,
+		kMeps = 4,
+		kGfs = 5
+	};
+
+	blend_producer() : type(), lvl(), forecastLength(), originTimestep(0)
+	{
+	}
+
+	blend_producer(const forecast_type& type, const level& lvl, int forecastLength, int originTimestep)
+	    : type(type), lvl(lvl), forecastLength(forecastLength), originTimestep(originTimestep)
+	{
+	}
+
+	bool operator==(const blend_producer& other) const
+	{
+		return type == other.type && lvl == other.lvl && forecastLength == other.forecastLength &&
+		       originTimestep == other.originTimestep;
+	}
+
+	forecast_type type;
+	level lvl;
+	int forecastLength;
+	int originTimestep;
+};
+
 class blend : public compiled_plugin, private compiled_plugin_base
 {
    public:
@@ -53,10 +86,10 @@ class blend : public compiled_plugin, private compiled_plugin_base
 	void CalculateBlend(std::shared_ptr<info> targetInfo, unsigned short threadIndex);
 	void CalculateMember(std::shared_ptr<info> targetInfo, unsigned short threadIndex, blend_mode mode);
 
-	matrix<double> CalculateMAE(logger& log, std::shared_ptr<info> targetInfo, const forecast_type& ftype,
-	                            const level& lvl, const forecast_time& calcTime, int originTimeStep);
-	matrix<double> CalculateBias(logger& log, std::shared_ptr<info> targetInfo, const forecast_type& ftype,
-	                             const level& lvl, const forecast_time& calcTime, int originTimeStep);
+	matrix<double> CalculateMAE(logger& log, std::shared_ptr<info> targetInfo, const forecast_time& calcTime,
+	                            const blend_producer& blendProd);
+	matrix<double> CalculateBias(logger& log, std::shared_ptr<info> targetInfo, const forecast_time& calcTime,
+	                             const blend_producer& blendProd);
 
 	void SetupOutputForecastTimes(std::shared_ptr<info> Info, const raw_time& latestOrigin,
 	                              const forecast_time& current, int maxStep, int originTimeStep);
@@ -66,7 +99,7 @@ class blend : public compiled_plugin, private compiled_plugin_base
 	int itsNumHours;
 	int itsAnalysisHour;
 	std::string itsProducer;
-	forecast_type itsProdFtype;
+	blend_producer itsBlendProducer;
 };
 
 extern "C" std::shared_ptr<himan_plugin> create()
