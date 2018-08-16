@@ -308,7 +308,7 @@ void CalculateBulkShear(himan::plugin::stability_cuda::options& opts, cudaStream
 		// CAPE shear
 
 		auto CAPEInfo =
-		    STABILITY::Fetch(opts.conf, opts.myTargetInfo, level(kMaximumThetaE, 0), param("CAPE1040-JKG"), false);
+		    STABILITY::Fetch(opts.conf, opts.myTargetInfo, level(kMaximumThetaE, 0), param("CAPE-JKG"), false);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_u, (const void*)CAPEInfo->Data().ValuesAsPOD(), memsize,
 		                           cudaMemcpyHostToDevice, stream));
 

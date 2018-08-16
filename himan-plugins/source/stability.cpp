@@ -408,7 +408,7 @@ vec CalculateEffectiveBulkShear(shared_ptr<const plugin_configuration>& conf, in
 
 vec CalculateCapeShear(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo, const vec& EBS)
 {
-	auto CAPEInfo = STABILITY::Fetch(conf, myTargetInfo, level(kMaximumThetaE, 0), param("CAPE1040-JKG"));
+	auto CAPEInfo = STABILITY::Fetch(conf, myTargetInfo, level(kMaximumThetaE, 0), param("CAPE-JKG"));
 
 	const auto& CAPE = VEC(CAPEInfo);
 
