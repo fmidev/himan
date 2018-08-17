@@ -1,35 +1,33 @@
 # Summary
 
-Blend plugin calculates a weighted blend of different forecasts specified in its configuration.
+Blend plugin calculates a weighted blend of different forecast models using precalculated bias correction fields and weights calculated with method based on mean absolute error (MAE).
+
+For calculating the bias correction and MAE fields LAPS analysis is used as the truth field. This means that all the data needs to be converted to a common grid, currently we employ LAPS' grid. The transformation is done with the transformer plugin as a separate pass as the data comes in. Correct operation of the actual blending needs a days worth of BC and MAE fields.
+
+# Configuration
+
+* param = radon parameter name, for example "T-K"
+* mode = "blend" | "mae" | "bias"
+
+if mode = "mae" or mode = "bias":
+
+	"producer" : "MOS" | "ECG" | "HL2" | "MEPS" | "GFS"
+	"analysis_hour" : 0 .. 23
+	"hours" : number of hours to process in total (fetching historical data)
+
+
+For example:
+	"plugins" : [ { "name" : "blend", "param" : "T-K", "mode" : "bias", "producer" : "HL2", "hours" : 54, "analysis_hour" : "0" } ]
+
+Or:
+
+	"plugins" : [ { "name" : "blend", "param" : "T-K", "mode" : "blend" } ]
 
 # Required source parameters
 
-The parameter that is specified in the configuration file is required from all source producers at
-the specified levels.
+Bias correction phase (with mode set to "bias") needs LAPS data and raw model data. MAE calculation (mode set to "mae") needs LAPS data, bias data, and raw model data. The actual blending operation (mode set to "blend") requires bias, mae, and current raw model data.
+
 
 # Output parameters
 
-A weighted blend is calculated from all of the specified source producers.
-
-The plugin outputs an ensemble consisting of the source forecasts as perturbed members and the blend as the control forecast.
-
-# Method of calculation
-
-```CF_Output = f[0] * w[0] + f[1] * w[1] + ... + f[n] * w[n]```
-
-# Per-plugin configuration options
-
-param: Specifies the parameter to be blended
-
-options: Specifies a list of producer specifications of the form: 
-```{ "producer" : PROD, "geom" : GEOM, "forecast_type" : FTYPE }```
-
-Full plugin configuration example:
-```
-"plugins" : [ { "name" : "blend", "param" : "T-K",
-		"options" : [
-			{ "producer" : "HL2", "geom" : "RCR068", "forecast_type" : "deterministic" },
-			{ "producer" : "MEPS", "geom" : "MEPSNOFMI2500", "forecast_type" : "cf" } ]
-		} ]
-```
-
+A weighted blend is calculated from the current model data using precalculated bias correction fields and MAE fields as weights.
