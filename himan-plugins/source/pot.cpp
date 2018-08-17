@@ -463,7 +463,21 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	h->Time(myTargetInfo->Time());
 	h->ForecastType(myTargetInfo->ForecastType());
 
-	auto CbTopTemp = h->VerticalValue(param("T-K"), filtered_CbTop.Values());
+	vector<double> CbTopTemp;
+
+	try
+	{
+		CbTopTemp = h->VerticalValue(param("T-K"), filtered_CbTop.Values());
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e == kFileDataNotFound)
+		{
+			return;
+		}
+
+		throw e;
+	}
 
 	string deviceType = "CPU";
 
