@@ -153,12 +153,15 @@ bool luatool::ReadFile(const std::string& luaFile)
 
 	try
 	{
+		timer t(true);
 		ASSERT(myL.get());
 		if (luaL_dofile(myL.get(), luaFile.c_str()))
 		{
 			itsLogger.Error(lua_tostring(myL.get(), -1));
 			return false;
 		}
+		t.Stop();
+		itsLogger.Debug("Script " + luaFile + " executed in " + std::to_string(t.GetTime()) + " ms");
 	}
 	catch (const error& e)
 	{
