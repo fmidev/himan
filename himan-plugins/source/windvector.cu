@@ -15,19 +15,15 @@ __global__ void Calculate(cdarr_t d_u, cdarr_t d_v, darr_t d_speed, darr_t d_dir
 
 	if (idx < opts.N)
 	{
-		double U = d_u[idx], V = d_v[idx];
-		d_speed[idx] = himan::MissingDouble();
-		if (d_dir)
-			d_dir[idx] = himan::MissingDouble();
+		const double U = d_u[idx];
+		const double V = d_v[idx];
 
-		double speed = sqrt(U * U + V * V);
+		d_speed[idx] = __dsqrt_rn(U * U + V * V);
 
-		d_speed[idx] = speed;
-
-		double dir = 0;
 
 		if (opts.target_type != himan::plugin::kGust)
 		{
+
 			int offset = 180;
 
 			if (opts.target_type == himan::plugin::kSea || opts.target_type == himan::plugin::kIce)
@@ -35,7 +31,7 @@ __global__ void Calculate(cdarr_t d_u, cdarr_t d_v, darr_t d_speed, darr_t d_dir
 				offset = 0;
 			}
 
-			dir = himan::constants::kRad * atan2(U, V) + offset;
+			double dir = himan::constants::kRad * atan2(U, V) + offset;
 
 			// modulo operator is supposedly slow on cuda ?
 
