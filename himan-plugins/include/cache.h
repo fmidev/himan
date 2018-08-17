@@ -62,6 +62,8 @@ class cache : public auxiliary_plugin
 	}
 	size_t Size() const;
 
+	void Replace(info_t anInfo, bool pin = false);
+
    private:
 	void SplitToPool(info_t anInfo, bool pin);
 	std::string UniqueName(const info& anInfo);
@@ -104,6 +106,14 @@ class cache_pool : public auxiliary_plugin
 	 */
 
 	size_t Size() const;
+
+	/**
+	 * @brief Replaces an element in the cache.
+	 *
+	 * If element is not found, insert is made.
+	 */
+
+	void Replace(const std::string& uniqueName, std::shared_ptr<himan::info> info, bool pin);
 
    private:
 	cache_pool();

@@ -129,6 +129,22 @@ size_t cache::Size() const
 {
 	return cache_pool::Instance()->Size();
 }
+
+void cache::Replace(info_t anInfo, bool pin)
+{
+	auto localInfo = make_shared<info>(*anInfo);
+
+	if (localInfo->DimensionSize() > 1)
+	{
+		auto newInfo =
+		    make_shared<info>(localInfo->ForecastType(), localInfo->Time(), localInfo->Level(), localInfo->Param());
+		newInfo->Grid(localInfo->SharedGrid());
+		localInfo = newInfo;
+	}
+
+	cache_pool::Instance()->Replace(UniqueName(*localInfo), localInfo, pin);
+}
+
 cache_pool* cache_pool::itsInstance = NULL;
 
 cache_pool::cache_pool() : itsCacheLimit(-1)
@@ -173,6 +189,30 @@ void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info> anInfo
 	if (itsCacheLimit > -1 && itsCache.size() > static_cast<size_t>(itsCacheLimit))
 	{
 		Clean();
+	}
+}
+void cache_pool::Replace(const string& uniqueName, shared_ptr<himan::info> anInfo, bool pin)
+{
+	cache_item item;
+	item.info = anInfo;
+	item.access_time = time(nullptr);
+	item.pinned = pin;
+
+	// possible race condition ?
+
+	const auto it = itsCache.find(uniqueName);
+
+	if (it != itsCache.end())
+	{
+		{
+			Lock lock(itsAccessMutex);
+			itsCache[uniqueName] = item;
+		}
+		itsLogger.Trace("Data with name " + uniqueName + " replaced");
+	}
+	else
+	{
+		Insert(uniqueName, anInfo, pin);
 	}
 }
 
