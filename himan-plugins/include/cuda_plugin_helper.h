@@ -95,8 +95,10 @@ __global__ void Fill(T* devptr, size_t N, T fillValue)
 
 namespace cuda
 {
+void Unpack(std::shared_ptr<himan::info> fullInfo, cudaStream_t& stream, double* d_arr);
+
 template <typename T>
-void PrepareInfo(std::shared_ptr<himan::info> info, T* d_ret, cudaStream_t& stream);
+void PrepareInfo(std::shared_ptr<himan::info> info, T* d_ret, cudaStream_t& stream, bool copyToHost = true);
 
 template <typename T>
 void ReleaseInfo(std::shared_ptr<himan::info> info, T* d_ret, cudaStream_t& stream);

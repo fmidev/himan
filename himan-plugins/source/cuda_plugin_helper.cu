@@ -11,6 +11,10 @@
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
+namespace himan
+{
+namespace cuda
+{
 void Unpack(std::shared_ptr<himan::info> fullInfo, cudaStream_t& stream, double* d_arr)
 {
 	using namespace himan;
@@ -21,7 +25,7 @@ void Unpack(std::shared_ptr<himan::info> fullInfo, cudaStream_t& stream, double*
 	ASSERT(N > 0);
 	ASSERT(d_arr);
 
-	// Unpack if needed, leave data to device and simultaneously copy it back to cpu (himan cache)
+	// Unpack if needed, leave data to device
 	auto tempGrid = fullInfo->Grid();
 
 	if (tempGrid->IsPackedData())
@@ -38,15 +42,9 @@ void Unpack(std::shared_ptr<himan::info> fullInfo, cudaStream_t& stream, double*
 
 		tempGrid->PackedData().Unpack(d_arr, N, &stream);
 
-		CUDA_CHECK(cudaMemcpyAsync(arr, d_arr, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
-
 		tempGrid->PackedData().Clear();
 
-		auto c = GET_PLUGIN(cache);
-
 		CUDA_CHECK(cudaStreamSynchronize(stream));
-
-		c->Insert(fullInfo);
 
 		CUDA_CHECK(cudaHostUnregister(arr));
 	}
@@ -59,18 +57,24 @@ void Unpack(std::shared_ptr<himan::info> fullInfo, cudaStream_t& stream, double*
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 }
 
-namespace himan
-{
-namespace cuda
-{
 template <>
-void PrepareInfo(std::shared_ptr<himan::info> info, double* d_ret, cudaStream_t& stream)
+void PrepareInfo(std::shared_ptr<himan::info> info, double* d_ret, cudaStream_t& stream, bool copyToHost)
 {
 	Unpack(info, stream, d_ret);
+
+	if (copyToHost)
+	{
+		CUDA_CHECK(cudaMemcpyAsync(info->Data().ValuesAsPOD(), d_ret, sizeof(double) * info->SizeLocations(),
+		                           cudaMemcpyDeviceToHost, stream));
+		CUDA_CHECK(cudaStreamSynchronize(stream));
+
+		auto c = GET_PLUGIN(cache);
+		c->Insert(info);
+	}
 }
 
 template <>
-void PrepareInfo(std::shared_ptr<himan::info> info, float* d_ret, cudaStream_t& stream)
+void PrepareInfo(std::shared_ptr<himan::info> info, float* d_ret, cudaStream_t& stream, bool copyToHost)
 {
 	const size_t N = info->SizeLocations();
 
@@ -78,6 +82,16 @@ void PrepareInfo(std::shared_ptr<himan::info> info, float* d_ret, cudaStream_t& 
 	CUDA_CHECK(cudaMalloc(reinterpret_cast<double**>(&d_arr), N * sizeof(double)));
 
 	Unpack(info, stream, d_arr);
+
+	if (copyToHost)
+	{
+		CUDA_CHECK(cudaMemcpyAsync(info->Data().ValuesAsPOD(), d_ret, sizeof(double) * info->SizeLocations(),
+		                           cudaMemcpyDeviceToHost, stream));
+		CUDA_CHECK(cudaStreamSynchronize(stream));
+
+		auto c = GET_PLUGIN(cache);
+		c->Insert(info);
+	}
 
 	thrust::device_ptr<double> dt_arr = thrust::device_pointer_cast(d_arr);
 	thrust::device_ptr<float> dt_farr = thrust::device_pointer_cast(d_ret);
@@ -117,7 +131,8 @@ void ReleaseInfo(std::shared_ptr<himan::info> info, float* d_arr, cudaStream_t& 
 
 std::shared_ptr<himan::info> Fetch(const std::shared_ptr<const plugin_configuration> conf,
                                    const himan::forecast_time& theTime, const himan::level& theLevel,
-                                   const himan::params& theParams, const himan::forecast_type& theType, bool returnPacked)
+                                   const himan::params& theParams, const himan::forecast_type& theType,
+                                   bool returnPacked)
 {
 	for (const auto& p : theParams)
 	{
