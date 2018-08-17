@@ -98,7 +98,8 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 
 	SetAB(myTargetInfo, TInfo);
 
-	auto h = dynamic_pointer_cast<hitool>(plugin_factory::Instance()->Plugin("hitool"));
+	auto h = GET_PLUGIN(hitool);
+
 	h->Configuration(itsConfiguration);
 	h->Time(myTargetInfo->Time());
 	h->ForecastType(myTargetInfo->ForecastType());
@@ -110,7 +111,6 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 
 	auto& target = VEC(myTargetInfo);
 
-	// LOCKSTEP(myTargetInfo, TInfo, VvInfo, ClInfo)
 	for (auto&& tup : zip_range(target, VEC(TInfo), VEC(VvInfo), VEC(ClInfo), VEC(PrecFormInfo), VEC(PrecInfo),
 	                            VEC(ZeroLevelInfo), VEC(HeightInfo), base, VEC(HeightInfo2down)))
 	{
@@ -130,7 +130,7 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 			continue;
 		}
 
-		double Icing;
+		double Icing = 0;
 		double TBase = constants::kKelvin;
 		int vCor = kHPMissingInt;
 		int tCor = kHPMissingInt;
@@ -139,78 +139,66 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 		Vv *= VvScale;
 		Cl *= ClScale;
 
-		// Vertical velocity correction factor
+		if (Cl > 0 && T <= 0)
+		{
+			// Vertical velocity correction factor
 
-		if (Vv < 0)
-		{
-			vCor = -1;
-		}
-		else if ((Vv >= 0) && (Vv <= 50))
-		{
-			vCor = 0;
-		}
-		else if ((Vv >= 50) && (Vv <= 100))
-		{
-			vCor = 1;
-		}
-		else if ((Vv >= 100) && (Vv <= 200))
-		{
-			vCor = 2;
-		}
-		else if ((Vv >= 200) && (Vv <= 300))
-		{
-			vCor = 3;
-		}
-		else if ((Vv >= 300) && (Vv <= 1000))
-		{
-			vCor = 4;
-		}
-		else if (Vv > 1000)
-		{
-			vCor = 5;
-		}
+			vCor = 5;  // vv > 1000
 
-		// Temperature correction factor
+			if (Vv < 0)
+			{
+				vCor = -1;
+			}
+			else if (Vv <= 50)
+			{
+				vCor = 0;
+			}
+			else if (Vv <= 100)
+			{
+				vCor = 1;
+			}
+			else if (Vv <= 200)
+			{
+				vCor = 2;
+			}
+			else if (Vv <= 300)
+			{
+				vCor = 3;
+			}
+			else if (Vv <= 1000)
+			{
+				vCor = 4;
+			}
 
-		if ((T <= 0) && (T > -1))
-		{
-			tCor = -2;
-		}
-		else if ((T <= -1) && (T > -2))
-		{
-			tCor = -1;
-		}
-		else if ((T <= -2) && (T > -3))
-		{
-			tCor = 0;
-		}
-		else if ((T <= -3) && (T > -12))
-		{
-			tCor = 1;
-		}
-		else if ((T <= -12) && (T > -15))
-		{
-			tCor = 0;
-		}
-		else if ((T <= -15) && (T > -18))
-		{
-			tCor = -1;
-		}
-		else if (T < -18)
-		{
-			tCor = -2;
-		}
-		else
-		{
-			tCor = 0;
-		}
+			// Temperature correction factor
 
-		if ((Cl <= 0) || (T > 0))
-		{
-			Icing = 0;
-		}
-		else
-		{
+			tCor = 0;  // T > 0
+
+			if (T > -1 || T < -18)
+			{
+				tCor = -2;
+			}
+			else if (T > -2)
+			{
+				tCor = -1;
+			}
+			else if (T > -3)
+			{
+				tCor = 0;
+			}
+			else if (T > -12)
+			{
+				tCor = 1;
+			}
+			else if (T > -15)
+			{
+				tCor = 0;
+			}
+			else if (T > -18)
+			{
+				tCor = -1;
+			}
+
 			Icing = round(log(Cl) + 6) + vCor + tCor;
 		}
 
@@ -244,17 +232,10 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 			Icing = 7 + Rr * 1.5;
 		}
 
-		// Maximum and minimum values for index
+		// Maximum (15) and minimum (0) values for index
 
-		if (Icing > 15)
-		{
-			Icing = 15;
-		}
-
-		if (Icing < 0)
-		{
-			Icing = 0;
-		}
+		Icing = fmin(15., Icing);
+		Icing = fmax(0., Icing);
 
 		result = Icing;
 	}
