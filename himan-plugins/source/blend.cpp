@@ -1009,7 +1009,7 @@ void blend::CalculateBlend(shared_ptr<info> targetInfo, unsigned short threadIdx
 		double F = 0.0;
 		size_t numMissing = 0;
 
-		for (const auto&& tup : zip_range(forecasts, weights, biases))
+		for (const auto& tup : zip_range(forecasts, weights, biases))
 		{
 			info_t f = tup.get<0>();
 			info_t w = tup.get<1>();
@@ -1078,7 +1078,7 @@ void blend::CalculateBlend(shared_ptr<info> targetInfo, unsigned short threadIdx
 			if (sw > 0.0)
 			{
 				// Finally apply the weights to the forecast values.
-				for (const auto&& tup : zip_range(weights, collectedValues, collectedBiases))
+				for (const auto& tup : zip_range(weights, collectedValues, collectedBiases))
 				{
 					const double w = tup.get<0>();
 					const double v = tup.get<1>();
