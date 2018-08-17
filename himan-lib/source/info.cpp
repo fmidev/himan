@@ -30,7 +30,7 @@ info::info()
 }
 
 info::info(const vector<forecast_type>& ftypes, const vector<forecast_time>& times, const vector<level>& levels,
-           const vector<param>& params)
+           const vector<param>& params) : info()
 {
 	ForecastTypes(ftypes);
 	Times(times);
@@ -482,6 +482,7 @@ void info::ResetLevel()
 }
 bool info::FirstLevel()
 {
+	ASSERT(itsLevelOrder != kUnknownLevelOrder);
 	if (itsLevelOrder == kBottomToTop)
 	{
 		return itsLevelIterator.Last();
