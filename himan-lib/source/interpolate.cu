@@ -92,7 +92,7 @@ static __host__ std::string CacheEntryName(const himan::info& Info)
 	return ss.str();
 }
 
-void CreateGrid(himan::info& sourceInfo, himan::info& targetInfo, std::vector<point>& grid)
+void CreateGrid(himan::info& sourceInfo, himan::info& targetInfo, std::vector<::point>& grid)
 {
 	int i = 0;
 	targetInfo.ResetLocation();
@@ -492,7 +492,7 @@ __global__ void InterpolateCudaKernel(const double* __restrict__ d_source, doubl
 	}
 }
 
-bool InterpolateAreaGPU(himan::info& base, himan::info& source, himan::matrix<double>& targetData)
+bool himan::interpolate::InterpolateAreaGPU(himan::info& base, himan::info& source, himan::matrix<double>& targetData)
 {
 	cudaStream_t stream;
 	CUDA_CHECK(cudaStreamCreate(&stream));
@@ -514,8 +514,8 @@ bool InterpolateAreaGPU(himan::info& base, himan::info& source, himan::matrix<do
 	// Determine all grid point coordinates that need to be interpolated.
 	const size_t N = base.SizeLocations();
 
-	std::vector<point> grid_(N);
-	point* d_grid = 0;
+	std::vector<::point> grid_(N);
+	::point* d_grid = 0;
 
 	CreateGrid(source, base, grid_);
 
@@ -656,7 +656,7 @@ __global__ void RotateRotatedLatitudeLongitude(double* __restrict__ d_u, double*
 	}
 }
 
-void RotateVectorComponentsGPU(himan::info& UInfo, himan::info& VInfo)
+void himan::interpolate::RotateVectorComponentsGPU(himan::info& UInfo, himan::info& VInfo, double* d_u, double* d_v)
 {
 	const size_t N = UInfo.SizeLocations();
 	const int bs = 256;
@@ -665,18 +665,23 @@ void RotateVectorComponentsGPU(himan::info& UInfo, himan::info& VInfo)
 	cudaStream_t stream;
 	CUDA_CHECK(cudaStreamCreate(&stream));
 
-	double* d_u = 0;
-	double* d_v = 0;
 	double* d_lon = 0;
 
-	CUDA_CHECK(cudaMalloc((void**)&d_u, N * sizeof(double)));
-	CUDA_CHECK(cudaMalloc((void**)&d_v, N * sizeof(double)));
+	bool release = false;
+	himan::info_simple *USimple, *VSimple;
 
-	auto USimple = UInfo.ToSimple();
-	auto VSimple = VInfo.ToSimple();
+	if (d_u == 0)
+	{
+		release = true;
+		CUDA_CHECK(cudaMalloc((void**)&d_u, N * sizeof(double)));
+		CUDA_CHECK(cudaMalloc((void**)&d_v, N * sizeof(double)));
 
-	PrepareInfo(USimple, d_u, stream);
-	PrepareInfo(VSimple, d_v, stream);
+		USimple = UInfo.ToSimple();
+		VSimple = VInfo.ToSimple();
+
+		PrepareInfo(USimple, d_u, stream);
+		PrepareInfo(VSimple, d_v, stream);
+	}
 
 	switch (UInfo.Grid()->Type())
 	{
@@ -753,11 +758,14 @@ void RotateVectorComponentsGPU(himan::info& UInfo, himan::info& VInfo)
 	}
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
-	himan::ReleaseInfo(USimple, d_u, stream);
-	himan::ReleaseInfo(VSimple, d_v, stream);
+	if (release)
+	{
+		himan::ReleaseInfo(USimple, d_u, stream);
+		himan::ReleaseInfo(VSimple, d_v, stream);
 
-	CUDA_CHECK(cudaFree(d_u));
-	CUDA_CHECK(cudaFree(d_v));
+		CUDA_CHECK(cudaFree(d_u));
+		CUDA_CHECK(cudaFree(d_v));
+	}
 
 	if (d_lon)
 	{

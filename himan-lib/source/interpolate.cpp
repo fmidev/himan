@@ -17,11 +17,6 @@
 
 #include "NFmiFastQueryInfo.h"
 
-#ifdef HAVE_CUDA
-extern bool InterpolateAreaGPU(himan::info& targetInfo, himan::info& baseInfo, himan::matrix<double>& targetData);
-extern void RotateVectorComponentsGPU(himan::info& UInfo, himan::info& VInfo);
-#endif
-
 using namespace himan;
 
 namespace himan
@@ -787,7 +782,7 @@ void RotateVectorComponents(info& UInfo, info& VInfo, bool useCuda)
 #ifdef HAVE_CUDA
 	if (useCuda)
 	{
-		RotateVectorComponentsGPU(UInfo, VInfo);
+		RotateVectorComponentsGPU(UInfo, VInfo, 0, 0);
 	}
 	else
 #endif
