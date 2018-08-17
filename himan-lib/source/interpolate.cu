@@ -656,19 +656,18 @@ __global__ void RotateRotatedLatitudeLongitude(double* __restrict__ d_u, double*
 	}
 }
 
-void himan::interpolate::RotateVectorComponentsGPU(himan::info& UInfo, himan::info& VInfo, double* d_u, double* d_v)
+void himan::interpolate::RotateVectorComponentsGPU(himan::info& UInfo, himan::info& VInfo, cudaStream_t& stream,
+                                                   double* d_u, double* d_v)
 {
 	const size_t N = UInfo.SizeLocations();
 	const int bs = 256;
 	const int gs = N / bs + (N % bs == 0 ? 0 : 1);
 
-	cudaStream_t stream;
-	CUDA_CHECK(cudaStreamCreate(&stream));
-
 	double* d_lon = 0;
 
 	bool release = false;
-	himan::info_simple *USimple, *VSimple;
+	himan::info_simple* USimple = UInfo.ToSimple();
+	himan::info_simple *VSimple = 0;
 
 	if (d_u == 0)
 	{
@@ -676,7 +675,6 @@ void himan::interpolate::RotateVectorComponentsGPU(himan::info& UInfo, himan::in
 		CUDA_CHECK(cudaMalloc((void**)&d_u, N * sizeof(double)));
 		CUDA_CHECK(cudaMalloc((void**)&d_v, N * sizeof(double)));
 
-		USimple = UInfo.ToSimple();
 		VSimple = VInfo.ToSimple();
 
 		PrepareInfo(USimple, d_u, stream);
@@ -767,12 +765,20 @@ void himan::interpolate::RotateVectorComponentsGPU(himan::info& UInfo, himan::in
 		CUDA_CHECK(cudaFree(d_v));
 	}
 
+	if (USimple)
+	{
+		delete USimple;
+	}
+
+	if (VSimple)
+	{
+		delete VSimple;
+	}
+
 	if (d_lon)
 	{
 		CUDA_CHECK(cudaFree(d_lon));
 	}
-
-	CUDA_CHECK(cudaStreamDestroy(stream));
 
 	if (UInfo.Grid()->IsPackedData())
 	{

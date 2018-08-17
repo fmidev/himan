@@ -28,7 +28,7 @@ void RotateVectorComponentsCPU(info& UInfo, info& VInfo);
 
 #ifdef HAVE_CUDA
 bool InterpolateAreaGPU(himan::info& targetInfo, himan::info& baseInfo, himan::matrix<double>& targetData);
-void RotateVectorComponentsGPU(info& UInfo, info& VInfo, double* d_u, double* d_v);
+void RotateVectorComponentsGPU(info& UInfo, info& VInfo, cudaStream_t& stream, double* d_u, double* d_v);
 #endif
 
 bool IsSupportedGridForRotation(HPGridType type);

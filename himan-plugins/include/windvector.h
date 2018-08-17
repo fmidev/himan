@@ -50,11 +50,6 @@ class windvector : public compiled_plugin, private compiled_plugin_base
 
    private:
 	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
-	std::unique_ptr<NFmiArea> ToNewbaseArea(std::shared_ptr<info> myTargetInfo) const;
-#ifdef HAVE_CUDA
-	std::unique_ptr<windvector_cuda::options> CudaPrepare(std::shared_ptr<info> myTargetInfo,
-	                                                      std::shared_ptr<info> UInfo, std::shared_ptr<info> VInfo);
-#endif
 
 	HPWindVectorTargetType itsCalculationTarget;
 	bool itsVectorCalculation;

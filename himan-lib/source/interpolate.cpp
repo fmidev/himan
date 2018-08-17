@@ -782,7 +782,10 @@ void RotateVectorComponents(info& UInfo, info& VInfo, bool useCuda)
 #ifdef HAVE_CUDA
 	if (useCuda)
 	{
-		RotateVectorComponentsGPU(UInfo, VInfo, 0, 0);
+		cudaStream_t stream;
+		CUDA_CHECK(cudaStreamCreate(&stream));
+		RotateVectorComponentsGPU(UInfo, VInfo, stream, 0, 0);
+		CUDA_CHECK(cudaStreamSynchronize(stream));
 	}
 	else
 #endif

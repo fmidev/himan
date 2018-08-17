@@ -85,7 +85,7 @@ void PrepareInfo(std::shared_ptr<himan::info> info, float* d_ret, cudaStream_t& 
 
 	if (copyToHost)
 	{
-		CUDA_CHECK(cudaMemcpyAsync(info->Data().ValuesAsPOD(), d_ret, sizeof(double) * info->SizeLocations(),
+		CUDA_CHECK(cudaMemcpyAsync(info->Data().ValuesAsPOD(), d_arr, sizeof(double) * info->SizeLocations(),
 		                           cudaMemcpyDeviceToHost, stream));
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 

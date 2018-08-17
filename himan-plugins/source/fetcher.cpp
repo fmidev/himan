@@ -542,6 +542,10 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vec
 
 			interpolate::RotateVectorComponents(*u, *v, opts.configuration->UseCudaForInterpolation());
 
+			auto c = GET_PLUGIN(cache);
+			c->Replace(u);
+			c->Replace(v);
+
 			// RotateVectorComponent modifies both components, so make sure we don't re-rotate the other
 			// component.
 			skip.push_back(other);

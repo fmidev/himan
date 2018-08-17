@@ -26,23 +26,8 @@ enum HPWindVectorTargetType
 
 namespace windvector_cuda
 {
-struct options
-{
-	info_simple* u;
-	info_simple* v;
-	info_simple* speed;
-	info_simple* dir;
-
-	HPWindVectorTargetType target_type;
-	size_t missing;
-	size_t N;
-
-	options() : u(0), v(0), speed(0), dir(0), target_type(kUnknownElement), missing(0), N(0)
-	{
-	}
-};
-
-void Process(options& opts);
+void RunCuda(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo,
+             const param& UParam, const param& VParam, HPWindVectorTargetType itsTargetType);
 
 }  // namespace windvector_cuda
 
