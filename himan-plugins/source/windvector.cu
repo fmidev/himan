@@ -97,9 +97,14 @@ void himan::plugin::windvector_cuda::RunCuda(std::shared_ptr<const plugin_config
 	// Fetch U & V, unpack to device, do not copy to host
 
 	auto UInfo = cuda::Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level(), UParam, myTargetInfo->ForecastType());
-	cuda::Unpack(UInfo, stream, d_u);
-
 	auto VInfo = cuda::Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level(), VParam, myTargetInfo->ForecastType());
+
+	if (!UInfo || !VInfo)
+	{
+		return;
+	}
+
+	cuda::Unpack(UInfo, stream, d_u);
 	cuda::Unpack(VInfo, stream, d_v);
 
 	// Rotate components; data already at device memory
