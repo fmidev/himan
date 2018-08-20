@@ -32,7 +32,7 @@ The indices are
 * cape shear
   * http://apps.ecmwf.int/codes/grib/param-db?id=228044
   * ebs is used as wind shear parameter
-  * most unstable cold cape is the cape parameter
+  * most unstable cape is the cape parameter
 * storm relative helicity
   * between 0 and 1km
   * between 0 and 3km
