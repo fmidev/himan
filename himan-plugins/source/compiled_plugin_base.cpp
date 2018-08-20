@@ -705,18 +705,20 @@ void compiled_plugin_base::PrimaryDimension(HPDimensionType thePrimaryDimension)
 
 void compiled_plugin_base::AllocateMemory(info myTargetInfo)
 {
-	if (myTargetInfo.Grid()->Class() == kIrregularGrid)
-	{
-		return;
-	}
-
 	size_t paramIndex = myTargetInfo.ParamIndex();
 
 	for (myTargetInfo.ResetParam(); myTargetInfo.NextParam();)
 	{
 		if (myTargetInfo.IsValidGrid())
 		{
-			myTargetInfo.Data().Resize(myTargetInfo.Grid()->Ni(), myTargetInfo.Grid()->Nj());
+			if (myTargetInfo.Grid()->Class() == kRegularGrid)
+			{
+				myTargetInfo.Data().Resize(dynamic_cast<regular_grid*>(myTargetInfo.Grid())->Ni(), dynamic_cast<regular_grid*>(myTargetInfo.Grid())->Nj());
+			}
+			else
+			{
+				myTargetInfo.Data().Resize(myTargetInfo.Grid()->Size(), 1);
+			}
 		}
 	}
 
@@ -725,11 +727,6 @@ void compiled_plugin_base::AllocateMemory(info myTargetInfo)
 
 void compiled_plugin_base::DeallocateMemory(info myTargetInfo)
 {
-	if (myTargetInfo.Grid()->Class() == kIrregularGrid)
-	{
-		return;
-	}
-
 	size_t paramIndex = myTargetInfo.ParamIndex();
 
 	for (myTargetInfo.ResetParam(); myTargetInfo.NextParam();)

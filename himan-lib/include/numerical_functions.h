@@ -19,7 +19,8 @@ namespace numerical_functions
 himan::matrix<double> Filter2D(const himan::matrix<double>& A, const himan::matrix<double>& B);
 
 /**
- * @brief Compute the maximum value in matrix A from the area specified by matrix B
+ * @brief Compute the maximum value in matrix A from the area specified by
+ * matrix B
  *
  * Matrix B acts also as a weight; a default boxed maximum search would have all matrix B
  * elements set to 1, but if for example origin needs to be excluded, that value
@@ -33,7 +34,8 @@ himan::matrix<double> Filter2D(const himan::matrix<double>& A, const himan::matr
 himan::matrix<double> Max2D(const himan::matrix<double>& A, const himan::matrix<double>& B);
 
 /**
- * @brief Compute the minimum value in matrix A from the area specified by matrix B
+ * @brief Compute the minimum value in matrix A from the area specified by
+ * matrix B
  *
  * Matrix B acts also as a weight; a default boxed minimum search would have all matrix B
  * elements set to 1, but if for example origin needs to be excluded, that value
@@ -57,7 +59,8 @@ CUDA_DEVICE size_t CudaMatrixIndex(size_t x, size_t y, size_t z, size_t W, size_
 CUDA_DEVICE void CudaMatrixSet(darr_t C, size_t x, size_t y, size_t z, size_t W, size_t H, double v);
 
 /**
- * @brief Structure passed to CUDA Filter2D kernel containing the input matrix sizes.
+ * @brief Structure passed to CUDA Filter2D kernel containing the input matrix
+ * sizes.
  *
  * Set these before calling the CUDA kernel.
  */
@@ -68,7 +71,8 @@ struct filter_opts
 	int aDimY;           /**< input matrix height */
 	int bDimX;           /**< convolution kernel width */
 	int bDimY;           /**< convolution kernel height */
-	double missingValue; /**< input matrix missing value (used for detecting missing values in the CUDA kernel) */
+	double missingValue; /**< input matrix missing value (used for detecting
+	                        missing values in the CUDA kernel) */
 };
 
 /**
@@ -218,6 +222,21 @@ std::vector<std::vector<T>> Linspace(const std::vector<T>& start, const std::vec
 
 	return ret;
 }
+
+/**
+ * LegGauss
+ *
+ * Gauss-Legendre quadrature. Computes the sample points and weights for Gauss-Legendre quadrature. These sample points
+ * and weights will correctly integrate polynomials of degree 2*deg - 1 or less over the interval [-1, 1] with the
+ * weight function f( x ) = 1. The computeWeights flag can be set to false if only quadrature points are needed.
+ * Implementation is based on numpy's leggauss function following the Golub and Welsh algorithm.
+ *
+ * https://docs.scipy.org/doc/numpy-1.14.0/reference/generated/numpy.polynomial.legendre.leggauss.html
+ * https://web.stanford.edu/class/cme335/spr11/S0025-5718-69-99647-1.pdf
+ */
+
+template <typename T>
+std::pair<std::vector<T>, std::vector<T>> LegGauss(size_t N, bool computeWeights);
 
 namespace interpolation
 {

@@ -17,7 +17,7 @@
 class NFmiRotatedLatLonArea;
 namespace himan
 {
-class latitude_longitude_grid : public grid
+class latitude_longitude_grid : public regular_grid
 {
    public:
 	latitude_longitude_grid();
@@ -106,7 +106,7 @@ class latitude_longitude_grid : public grid
 	point XY(const point& latlon) const override;
 	point LatLon(size_t locationIndex) const override;
 
-	latitude_longitude_grid* Clone() const override;
+	std::unique_ptr<grid> Clone() const override;
 
    protected:
 	void UpdateCoordinates() const;
@@ -132,7 +132,7 @@ class latitude_longitude_grid : public grid
 	template <class Archive>
 	void serialize(Archive& ar)
 	{
-		ar(cereal::base_class<grid>(this), CEREAL_NVP(itsBottomLeft), CEREAL_NVP(itsBottomRight),
+		ar(cereal::base_class<regular_grid>(this), CEREAL_NVP(itsBottomLeft), CEREAL_NVP(itsBottomRight),
 		   CEREAL_NVP(itsTopLeft), CEREAL_NVP(itsTopRight), CEREAL_NVP(itsDi), CEREAL_NVP(itsDj), CEREAL_NVP(itsNi),
 		   CEREAL_NVP(itsNj), CEREAL_NVP(itsIsGlobal));
 	}
@@ -163,7 +163,7 @@ class rotated_latitude_longitude_grid : public latitude_longitude_grid
 	{
 		return "himan::rotated_latitude_longitude_grid";
 	}
-	rotated_latitude_longitude_grid* Clone() const override;
+	std::unique_ptr<grid> Clone() const override;
 
 	point SouthPole() const;
 	void SouthPole(const point& theSouthPole);

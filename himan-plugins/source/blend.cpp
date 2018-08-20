@@ -285,7 +285,7 @@ void blend::Process(shared_ptr<const plugin_configuration> conf)
 		itsNumHours = stoi(hours);
 	}
 
-    // Producer for bias and mae calculation
+    // Producer for bias and mae calculation (itsProdFtype is only used with these modes)
 	const string prod = conf->Exists("producer") ? conf->GetValue("producer") : "";
 	if ((itsCalculationMode == kCalculateBias || itsCalculationMode == kCalculateMAE) && prod.empty())
 	{

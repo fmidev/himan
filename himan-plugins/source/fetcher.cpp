@@ -136,6 +136,7 @@ shared_ptr<himan::info> fetcher::FetchFromProducer(search_options& opts, bool re
 	}
 
 	auto baseInfo = make_shared<info>(*opts.configuration->Info());
+
 	ASSERT(baseInfo->Dimensions().size());
 
 	baseInfo->First();
@@ -144,6 +145,7 @@ shared_ptr<himan::info> fetcher::FetchFromProducer(search_options& opts, bool re
 
 	if (itsDoInterpolation)
 	{
+		// fall back to standard interpolation if no cached interpolation exist
 		if (!interpolate::Interpolate(*baseInfo, theInfos, opts.configuration->UseCudaForInterpolation()))
 		{
 			// interpolation failed
@@ -690,7 +692,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts,
 
 	if (opts.prod.Class() == kGridClass)
 	{
-		vector<string> files;
+		pair<vector<string>, string> files;
 
 		if (dbtype == kRadon)
 		{
@@ -701,7 +703,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts,
 			files = r->Files(opts);
 		}
 
-		if (files.empty())
+		if (files.first.empty())
 		{
 			const string ref_prod = opts.prod.Name();
 			const string analtime = opts.time.OriginDateTime().String("%Y%m%d%H%M%S");
@@ -711,7 +713,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts,
 		}
 		else
 		{
-			ret = FromFile(files, opts, true, readPackedData);
+			ret = FromFile(files.first, opts, true, readPackedData);
 
 			if (dynamic_pointer_cast<const plugin_configuration>(opts.configuration)->StatisticsEnabled())
 			{
@@ -727,6 +729,7 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts,
 				itsLogger.Trace("Updating sticky param cache: " + UniqueName(opts.prod, opts.param, opts.level));
 				stickyParamCache.push_back(uName);
 			}
+			ret.front()->Grid()->Identifier(files.second);
 			return ret;
 		}
 	}

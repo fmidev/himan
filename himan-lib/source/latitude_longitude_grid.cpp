@@ -10,7 +10,7 @@ using namespace himan;
 using namespace std;
 
 latitude_longitude_grid::latitude_longitude_grid()
-    : grid(kRegularGrid, kLatitudeLongitude),
+    : regular_grid(),
       itsBottomLeft(),
       itsTopRight(),
       itsBottomRight(),
@@ -22,10 +22,11 @@ latitude_longitude_grid::latitude_longitude_grid()
       itsIsGlobal(false)
 {
 	itsLogger = logger("latitude_longitude_grid");
+	Type(kLatitudeLongitude);
 }
 
 latitude_longitude_grid::latitude_longitude_grid(HPScanningMode theScanningMode, point theBottomLeft, point theTopRight)
-    : grid(kRegularGrid, kLatitudeLongitude, theScanningMode),
+    : regular_grid(),
       itsBottomLeft(theBottomLeft),
       itsTopRight(theTopRight),
       itsBottomRight(),
@@ -37,11 +38,13 @@ latitude_longitude_grid::latitude_longitude_grid(HPScanningMode theScanningMode,
       itsIsGlobal(false)
 {
 	itsLogger = logger("latitude_longitude_grid");
+	Type(kLatitudeLongitude);
+	ScanningMode(theScanningMode);
 	UpdateCoordinates();
 }
 
 latitude_longitude_grid::latitude_longitude_grid(const latitude_longitude_grid& other)
-    : grid(other),
+    : regular_grid(other),
       itsBottomLeft(other.itsBottomLeft),
       itsTopRight(other.itsTopRight),
       itsBottomRight(other.itsBottomRight),
@@ -427,10 +430,11 @@ bool latitude_longitude_grid::EqualsTo(const latitude_longitude_grid& other) con
 	return true;
 }
 
-latitude_longitude_grid* latitude_longitude_grid::Clone() const
+unique_ptr<grid> latitude_longitude_grid::Clone() const
 {
-	return new latitude_longitude_grid(*this);
+	return unique_ptr<grid>(new latitude_longitude_grid(*this));
 }
+
 ostream& latitude_longitude_grid::Write(std::ostream& file) const
 {
 	grid::Write(file);
@@ -505,9 +509,9 @@ bool rotated_latitude_longitude_grid::EqualsTo(const rotated_latitude_longitude_
 	return true;
 }
 
-rotated_latitude_longitude_grid* rotated_latitude_longitude_grid::Clone() const
+unique_ptr<grid> rotated_latitude_longitude_grid::Clone() const
 {
-	return new rotated_latitude_longitude_grid(*this);
+	return unique_ptr<grid>(new rotated_latitude_longitude_grid(*this));
 }
 
 point rotated_latitude_longitude_grid::SouthPole() const

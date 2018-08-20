@@ -19,6 +19,10 @@ namespace himan
 
 namespace geoutil
 {
+// check if a point p is inside of a triangle formed by a|b|c
+bool InsideTriangle(const himan::point& a, const himan::point& b, const himan::point& c, const himan::point& p);
+
+// spherical distance from point a to b
 double Distance(const himan::point& a, const himan::point& b, double r = 1.0);
 
 // area of a spherical triangle with corner points P1|P2|P3

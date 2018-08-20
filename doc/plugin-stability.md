@@ -9,7 +9,6 @@ The indices are
 
 * k-index
   * http://glossary.ametsoc.org/wiki/Stability_index
-* cross totals index
   * http://glossary.ametsoc.org/wiki/Stability_index
 * vertical totals index
   * http://glossary.ametsoc.org/wiki/Stability_index

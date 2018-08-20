@@ -2,7 +2,6 @@
  * @file json_parser.cpp
  *
  */
-
 #include "json_parser.h"
 #include "lambert_conformal_grid.h"
 #include "latitude_longitude_grid.h"
@@ -39,6 +38,8 @@ void ParseTargetProducer(shared_ptr<configuration> conf, shared_ptr<info> anInfo
 vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt);
 
 vector<level> LevelsFromString(const string& levelType, const string& levelValues);
+
+//void BuildInterpolationCache(shared_ptr<configuration> conf);
 
 static logger itsLogger;
 
@@ -888,214 +889,8 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 
 		conf.TargetGeomName(geom);
 
-		double scale = 1;
+		g = util::GridFromDatabase(geom);
 
-		auto r = GET_PLUGIN(radon);
-
-		auto geominfo = r->RadonDB().GetGeometryDefinition(geom);
-
-		if (geominfo.empty())
-		{
-			log.Fatal("Unknown geometry '" + geom + "' found");
-			himan::Abort();
-		}
-
-		const auto scmode = HPScanningModeFromString.at(geominfo["scanning_mode"]);
-
-		if (geominfo["grid_type_id"] == "1")
-		{
-			g = unique_ptr<latitude_longitude_grid>(new latitude_longitude_grid);
-			latitude_longitude_grid* const llg = dynamic_cast<latitude_longitude_grid*>(g.get());
-
-			const double di = scale * stod(geominfo["pas_longitude"]);
-			const double dj = scale * stod(geominfo["pas_latitude"]);
-
-			llg->Ni(static_cast<size_t>(stol(geominfo["col_cnt"])));
-			llg->Nj(static_cast<size_t>(stol(geominfo["row_cnt"])));
-			llg->Di(di);
-			llg->Dj(dj);
-			llg->ScanningMode(scmode);
-
-			const double X0 = stod(geominfo["long_orig"]) * scale;
-			const double Y0 = stod(geominfo["lat_orig"]) * scale;
-
-			const double X1 = fmod(X0 + static_cast<double>(llg->Ni() - 1) * di, 360);
-
-			double Y1 = kHPMissingValue;
-
-			switch (llg->ScanningMode())
-			{
-				case kTopLeft:
-					Y1 = Y0 - static_cast<double>(llg->Nj() - 1) * dj;
-					break;
-				case kBottomLeft:
-					Y1 = Y0 + static_cast<double>(llg->Nj() - 1) * dj;
-					break;
-				default:
-					break;
-			}
-
-			llg->FirstPoint(point(X0, Y0));
-			llg->LastPoint(point(X1, Y1));
-		}
-		else if (geominfo["grid_type_id"] == "4")
-		{
-			g = unique_ptr<rotated_latitude_longitude_grid>(new rotated_latitude_longitude_grid);
-			rotated_latitude_longitude_grid* const rllg = dynamic_cast<rotated_latitude_longitude_grid*>(g.get());
-
-			const double di = scale * stod(geominfo["pas_longitude"]);
-			const double dj = scale * stod(geominfo["pas_latitude"]);
-
-			rllg->Ni(static_cast<size_t>(stol(geominfo["col_cnt"])));
-			rllg->Nj(static_cast<size_t>(stol(geominfo["row_cnt"])));
-			rllg->Di(di);
-			rllg->Dj(dj);
-			rllg->ScanningMode(scmode);
-
-			rllg->SouthPole(point(stod(geominfo["geom_parm_2"]) * scale, stod(geominfo["geom_parm_1"]) * scale));
-
-			const double X0 = stod(geominfo["long_orig"]) * scale;
-			const double Y0 = stod(geominfo["lat_orig"]) * scale;
-
-			const double X1 = fmod(X0 + static_cast<double>(rllg->Ni() - 1) * di, 360);
-
-			double Y1 = kHPMissingValue;
-
-			switch (rllg->ScanningMode())
-			{
-				case kTopLeft:
-					Y1 = Y0 - static_cast<double>(rllg->Nj() - 1) * dj;
-					break;
-				case kBottomLeft:
-					Y1 = Y0 + static_cast<double>(rllg->Nj() - 1) * dj;
-					break;
-				default:
-					break;
-			}
-
-			rllg->FirstPoint(point(X0, Y0));
-			rllg->LastPoint(point(X1, Y1));
-		}
-		else if (geominfo["grid_type_id"] == "2")
-		{
-			g = unique_ptr<stereographic_grid>(new stereographic_grid);
-			stereographic_grid* const sg = dynamic_cast<stereographic_grid*>(g.get());
-
-			const double di = stod(geominfo["pas_longitude"]);
-			const double dj = stod(geominfo["pas_latitude"]);
-
-			sg->Orientation(stod(geominfo["geom_parm_1"]) * scale);
-			sg->Di(di);
-			sg->Dj(dj);
-
-			sg->Ni(static_cast<size_t>(stol(geominfo["col_cnt"])));
-			sg->Nj(static_cast<size_t>(stol(geominfo["row_cnt"])));
-			sg->ScanningMode(scmode);
-
-			const double X0 = stod(geominfo["long_orig"]) * scale;
-			const double Y0 = stod(geominfo["lat_orig"]) * scale;
-
-			sg->FirstPoint(point(X0, Y0));
-		}
-		else if (geominfo["grid_type_id"] == "6")
-		{
-			g = unique_ptr<reduced_gaussian_grid>(new reduced_gaussian_grid);
-			reduced_gaussian_grid* const gg = dynamic_cast<reduced_gaussian_grid*>(g.get());
-
-			gg->N(stoi(geominfo["n"]));
-			gg->Nj(stoi(geominfo["nj"]));
-
-			auto strlongitudes = himan::util::Split(geominfo["longitudes_along_parallels"], ",", false);
-			vector<int> longitudes;
-
-			for (auto& l : strlongitudes)
-			{
-				longitudes.push_back(stoi(l));
-			}
-
-			gg->NumberOfPointsAlongParallels(longitudes);
-
-			ASSERT(static_cast<size_t>(stol(geominfo["n"])) * 2 == longitudes.size());
-
-			const point first(stod(geominfo["first_point_lon"]), stod(geominfo["first_point_lat"]));
-			const point last(stod(geominfo["last_point_lon"]), stod(geominfo["last_point_lat"]));
-
-			gg->ScanningMode(scmode);
-
-			if (geominfo["scanning_mode"] == "+x-y")
-			{
-				gg->BottomLeft(point(first.X(), last.Y()));
-				gg->TopRight(point(last.X(), first.Y()));
-				gg->TopLeft(first);
-				gg->BottomRight(last);
-			}
-			else if (geominfo["scanning_mode"] == "+x+y")
-			{
-				gg->BottomLeft(first);
-				gg->TopRight(last);
-				gg->TopLeft(point(first.X(), last.Y()));
-				gg->BottomRight(point(last.X(), first.Y()));
-			}
-			else
-			{
-				log.Fatal("Scanning mode " + geominfo["scanning_mode"] + " not supported yet");
-				himan::Abort();
-			}
-		}
-		else if (geominfo["grid_type_id"] == "5")
-		{
-			g = unique_ptr<lambert_conformal_grid>(new lambert_conformal_grid);
-			lambert_conformal_grid* const lcg = dynamic_cast<lambert_conformal_grid*>(g.get());
-
-			lcg->Ni(stoi(geominfo["ni"]));
-			lcg->Nj(stoi(geominfo["nj"]));
-
-			lcg->Di(stod(geominfo["di"]));
-			lcg->Dj(stod(geominfo["dj"]));
-
-			lcg->Orientation(stod(geominfo["orientation"]));
-
-			lcg->StandardParallel1(stod(geominfo["latin1"]));
-
-			if (geominfo["latin2"].empty())
-			{
-				lcg->StandardParallel2(lcg->StandardParallel1());
-			}
-			else
-			{
-				lcg->StandardParallel2(stod(geominfo["latin2"]));
-			}
-
-			if (!geominfo["south_pole_lon"].empty())
-			{
-				const point sp(stod(geominfo["south_pole_lon"]), stod(geominfo["south_pole_lat"]));
-
-				lcg->SouthPole(sp);
-			}
-
-			const point first(stod(geominfo["first_point_lon"]), stod(geominfo["first_point_lat"]));
-
-			lcg->ScanningMode(scmode);
-
-			if (geominfo["scanning_mode"] == "+x-y")
-			{
-				lcg->TopLeft(first);
-			}
-			else if (geominfo["scanning_mode"] == "+x+y")
-			{
-				lcg->BottomLeft(first);
-			}
-			else
-			{
-				log.Fatal("Scanning mode " + geominfo["scanning_mode"] + " not supported yet");
-				himan::Abort();
-			}
-		}
-		else
-		{
-			log.Fatal("Unknown projection: " + geominfo["name"]);
-			himan::Abort();
-		}
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
@@ -1105,23 +900,6 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 	{
 		log.Fatal(string("Error parsing area information: ") + e.what());
 		himan::Abort();
-	}
-
-	// Until shape of earth is added to radon, hard code default value for all geoms
-	// in radon to sphere with radius 6371220, which is the one used in newbase
-	// (in most cases that's not *not* the one used by the weather model).
-	// Exception to this lambert conformal conic where we use radius 6367470.
-
-	if (g)
-	{
-		if (g->Type() == kLambertConformalConic)
-		{
-			g->EarthShape(earth_shape<double>(6367470.));
-		}
-		else
-		{
-			g->EarthShape(earth_shape<double>(6371220.));
-		}
 	}
 
 	return g;
@@ -1309,7 +1087,8 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 		dynamic_cast<latitude_longitude_grid*>(rg.get())->Ni(pt.get<size_t>("ni"));
 		dynamic_cast<latitude_longitude_grid*>(rg.get())->Nj(pt.get<size_t>("nj"));
 
-		rg->ScanningMode(HPScanningModeFromString.at(pt.get<string>("scanning_mode")));
+		dynamic_cast<latitude_longitude_grid*>(rg.get())->ScanningMode(
+		    HPScanningModeFromString.at(pt.get<string>("scanning_mode")));
 
 		return rg;
 	}
@@ -1338,7 +1117,7 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 		if (projection == "latlon")
 		{
 			rg = unique_ptr<latitude_longitude_grid>(new latitude_longitude_grid);
-			rg->ScanningMode(mode);
+			dynamic_cast<latitude_longitude_grid*>(rg.get())->ScanningMode(mode);
 
 			dynamic_cast<latitude_longitude_grid*>(rg.get())->BottomLeft(
 			    point(pt.get<double>("bottom_left_longitude"), pt.get<double>("bottom_left_latitude")));
@@ -1350,7 +1129,7 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 		else if (projection == "rotated_latlon")
 		{
 			rg = unique_ptr<rotated_latitude_longitude_grid>(new rotated_latitude_longitude_grid);
-			rg->ScanningMode(mode);
+			dynamic_cast<rotated_latitude_longitude_grid*>(rg.get())->ScanningMode(mode);
 
 			dynamic_cast<rotated_latitude_longitude_grid*>(rg.get())->BottomLeft(
 			    point(pt.get<double>("bottom_left_longitude"), pt.get<double>("bottom_left_latitude")));
@@ -1364,7 +1143,7 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 		else if (projection == "stereographic")
 		{
 			rg = unique_ptr<stereographic_grid>(new stereographic_grid);
-			rg->ScanningMode(mode);
+			dynamic_cast<stereographic_grid*>(rg.get())->ScanningMode(mode);
 
 			dynamic_cast<stereographic_grid*>(rg.get())->FirstPoint(
 			    point(pt.get<double>("first_point_longitude"), pt.get<double>("first_point_latitude")));
@@ -1629,3 +1408,42 @@ vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt)
 
 	return forecastTypes;
 }
+#if 0
+void BuildInterpolationCache(shared_ptr<configuration> conf)
+{
+	std::unique_ptr<grid> target_geom;
+	try
+	{
+		target_geom = util::GridFromDatabase(conf->TargetGeomName());
+	}
+	catch (exception& e)
+	{
+		itsLogger.Warning(e.what());
+		return;
+	}
+
+	target_geom->Identifier(conf->TargetGeomName());
+
+	for (const auto& source_geom_name : conf->SourceGeomNames())
+	{
+		if (source_geom_name == conf->TargetGeomName())
+			continue;
+
+		std::unique_ptr<grid> source_geom;
+		try
+		{
+			source_geom = util::GridFromDatabase(source_geom_name);
+			source_geom->Identifier(source_geom_name);
+		}
+		catch (exception& e)
+		{
+			itsLogger.Warning(e.what());
+			continue;
+		}
+		source_geom->Identifier(source_geom_name);
+		if (himan::interpolate::interpolator().Insert(source_geom.get(), target_geom.get()))
+			itsLogger.Info("Interpolation from " + source_geom_name + " to " + conf->TargetGeomName() +
+			               " added to interpolation cache.");
+	}
+}
+#endif

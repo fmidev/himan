@@ -88,7 +88,14 @@ static std::mutex s_cachedGridMutex;
 static __host__ std::string CacheEntryName(const himan::info& Info)
 {
 	std::stringstream ss;
-	ss << himan::HPGridTypeToString.at(Info.Grid()->Type()) << "_" << Info.Grid()->Ni() << "_" << Info.Grid()->Nj();
+	if(Info.Grid()->Class() == himan::kRegularGrid)
+	{
+		ss << himan::HPGridTypeToString.at(Info.Grid()->Type()) << "_" << dynamic_cast<himan::regular_grid*>(Info.Grid())->Ni() << "_" << dynamic_cast<himan::regular_grid*>(Info.Grid())->Nj();
+	}
+	else
+	{
+		ss << himan::HPGridTypeToString.at(Info.Grid()->Type()) << "_1_" << Info.Grid()->Size();
+	}
 	return ss.str();
 }
 
@@ -115,13 +122,26 @@ void CreateGrid(himan::info& sourceInfo, himan::info& targetInfo, std::vector<::
 	}
 	else
 	{
-		while (targetInfo.NextLocation())
+		if (sourceInfo.Grid()->Class() == himan::kRegularGrid)
 		{
-			himan::point gp = sourceInfo.Grid()->XY(targetInfo.LatLon());
+			while (targetInfo.NextLocation())
+			{
+				himan::point gp = dynamic_cast<himan::regular_grid*>(sourceInfo.Grid())->XY(targetInfo.LatLon());
 
-			grid[i].x = gp.X();
-			grid[i].y = gp.Y();
-			i++;
+				grid[i].x = gp.X();
+				grid[i].y = gp.Y();
+				i++;
+			}
+		}
+		else
+		{
+                        while (targetInfo.NextLocation())
+                        {
+                                grid[i].x = 1;
+                                grid[i].y = i+1;
+                                i++;
+                        }
+
 		}
 
 		{

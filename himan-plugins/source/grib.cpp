@@ -241,14 +241,17 @@ void grib::WriteAreaAndGrid(info& anInfo)
 				gridType = itsGrib->Message().GridTypeToAnotherEdition(gridType, 2);
 			}
 
-			ASSERT(gg->ScanningMode() == kTopLeft);
-
 			itsGrib->Message().GridType(gridType);
 
-			itsGrib->Message().X0(gg->BottomLeft().X());
-			itsGrib->Message().Y0(gg->BottomLeft().Y());
-			itsGrib->Message().X1(gg->TopRight().X());
-			itsGrib->Message().Y1(gg->TopRight().Y());
+			const double lonMin = firstGridPoint.X();
+			const double lonMax = gg->LatLon(gg->NumberOfPointsAlongParallels()[gg->N()], gg->N()).X();
+			const double latMin = gg->Latitudes().back();
+			const double latMax = gg->Latitudes().front();
+
+			itsGrib->Message().X0(lonMin);
+			itsGrib->Message().Y0(latMax);
+			itsGrib->Message().X1(lonMax);
+			itsGrib->Message().Y1(latMin);
 
 			itsGrib->Message().SetLongKey("iDirectionIncrement", 65535);
 			itsGrib->Message().SetLongKey("numberOfPointsAlongAParallel", 65535);
@@ -257,10 +260,11 @@ void grib::WriteAreaAndGrid(info& anInfo)
 
 			itsGrib->Message().PL(gg->NumberOfPointsAlongParallels());
 
-			scmode = gg->ScanningMode();
+			scmode = kTopLeft;
 
 			break;
 		}
+
 		case kLambertConformalConic:
 		{
 			lambert_conformal_grid* const lccg = dynamic_cast<lambert_conformal_grid*>(anInfo.Grid());
@@ -1199,25 +1203,21 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 
 			break;
 		}
+
 		case 4:
 		{
-			newGrid = unique_ptr<reduced_gaussian_grid>(new reduced_gaussian_grid);
-			reduced_gaussian_grid* const gg = dynamic_cast<reduced_gaussian_grid*>(newGrid.get());
+			if (m == kTopLeft || m == kUnknownScanningMode)
+			{
+				newGrid = unique_ptr<reduced_gaussian_grid>(new reduced_gaussian_grid);
+				reduced_gaussian_grid* const gg = dynamic_cast<reduced_gaussian_grid*>(newGrid.get());
 
-			gg->N(static_cast<int>(itsGrib->Message().GetLongKey("N")));
-			gg->NumberOfPointsAlongParallels(itsGrib->Message().PL());
-			gg->Nj(static_cast<size_t>(itsGrib->Message().SizeY()));
-			gg->ScanningMode(m);
+				gg->N(static_cast<int>(itsGrib->Message().GetLongKey("N")));
+				gg->NumberOfPointsAlongParallels(itsGrib->Message().PL());
 
-			ASSERT(m == kTopLeft);
-
-			gg->TopLeft(firstPoint);
-
-			point lastPoint(itsGrib->Message().X1(), itsGrib->Message().Y1());
-			gg->BottomRight(lastPoint);
-
-			break;
+				break;
+			}
 		}
+
 		case 5:
 		{
 			newGrid = unique_ptr<stereographic_grid>(new stereographic_grid);

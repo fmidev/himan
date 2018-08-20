@@ -32,3 +32,24 @@ double geoutil::Area(const point& P1, const point& P2, const point& P3, double r
 	           std::sqrt(std::tan(s / 2) * std::tan((s - a) / 2) * std::tan((s - b) / 2) * std::tan((s - c) / 2))) *
 	       r * r;
 }
+
+bool geoutil::InsideTriangle(const point& a, const point& b, const point& c, const point& p)
+{
+	const double epsilon = 1e-12;
+
+	position<double> A(a.Y() / 180 * M_PI, a.X() / 180 * M_PI, 0, earth_shape<double>(1));
+	position<double> B(b.Y() / 180 * M_PI, b.X() / 180 * M_PI, 0, earth_shape<double>(1));
+	position<double> C(c.Y() / 180 * M_PI, c.X() / 180 * M_PI, 0, earth_shape<double>(1));
+
+	position<double> P(p.Y() / 180 * M_PI, p.X() / 180 * M_PI, 0, earth_shape<double>(1));
+
+	Matrix<double, 3, 1> v(P.Data());
+	Matrix<double, 3, 3> M;
+	M << A.X(), B.X(), C.X(), A.Y(), B.Y(), C.Y(), A.Z(), B.Z(), C.Z();
+
+	ColPivHouseholderQR<Matrix<double, 3, 3>> dec(M);
+
+	Matrix<double, 3, 1> beta = dec.solve(v);
+
+	return beta(0) >= -epsilon && beta(1) >= -epsilon && beta(2) >= -epsilon;
+}

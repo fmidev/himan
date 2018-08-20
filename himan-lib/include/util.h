@@ -9,9 +9,11 @@
 #define UTIL_H_
 
 #include "configuration.h"
+#include "grid.h"
 #include "himan_common.h"
 #include "info.h"
 #include <boost/iterator/zip_iterator.hpp>
+#include <memory>
 #include <mutex>
 #include <tuple>
 
@@ -237,6 +239,12 @@ double MissingPercent(const himan::info& info);
  */
 
 bool ParseBoolean(const std::string& val);
+
+/**
+ * @brief create an empty grid for a given geom_name from db
+ */
+
+std::unique_ptr<grid> GridFromDatabase(const std::string& geom_name);
 
 template <class... Conts>
 inline auto zip_range(Conts&... conts)

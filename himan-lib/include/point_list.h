@@ -15,7 +15,7 @@ namespace himan
 {
 class logger;
 
-class point_list : public grid
+class point_list : public irregular_grid
 {
    public:
 	point_list();
@@ -33,22 +33,12 @@ class point_list : public grid
 	std::ostream& Write(std::ostream& file) const;
 
 	size_t Size() const override;
-	size_t Ni() const override;
-	size_t Nj() const override;
-	double Di() const override;
-	double Dj() const override;
 	point FirstPoint() const override;
 	point LastPoint() const override;
-
-	bool Swap(HPScanningMode newScanningMode) override;
-
-	point BottomLeft() const override;
-	point TopRight() const override;
 
 	bool operator==(const point_list& other) const;
 	bool operator!=(const point_list& other) const;
 
-	point XY(const point& latlon) const override;
 	point LatLon(size_t locationIndex) const;
 
 	const std::vector<station>& Stations() const;
@@ -57,9 +47,7 @@ class point_list : public grid
 	station Station(size_t locationIndex) const;
 	void Station(size_t locationIndex, const station& theStation);
 
-	HPScanningMode ScanningMode() const override;
-
-	point_list* Clone() const override;
+	std::unique_ptr<grid> Clone() const override;
 
    private:
 	bool EqualsTo(const point_list& other) const;
@@ -71,7 +59,7 @@ class point_list : public grid
 	template <class Archive>
 	void serialize(Archive& ar)
 	{
-		ar(cereal::base_class<grid>(this), CEREAL_NVP(itsStations));
+		ar(cereal::base_class<irregular_grid>(this), CEREAL_NVP(itsStations));
 	}
 #endif
 };
