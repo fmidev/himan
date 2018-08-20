@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.6.15
+Version: 18.8.17
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 18.4.9
+Requires: himan-lib >= 18.8.16
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 18.2.12
@@ -41,6 +41,7 @@ BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: boost-devel >= 1.66
 BuildRequires: scons
+BuildRequires: eigen >= 3.3.4
 
 %description
 Himan -- hilojen manipulaatio -- plugin collection
@@ -111,6 +112,21 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Fri Aug 17 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.17-1.fmi
+- pot fix
+* Thu Aug 16 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.16-1.fmi
+- Blend fixes
+- CAPE shear with MUCAPE
+- split_sum writes empty grids
+* Tue Aug  7 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.7-1.fmi
+- Blend fixes
+- Minor changes to cape
+- RHEL7.5 build
+* Thu Jul  5 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.7.5-1.fmi
+- Additions to earth_shape functionality
+* Mon Jun 18 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.6.18-1.fmi
+- Blend fixes
+- Luatool tweaking
 * Fri Jun 15 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.6.15-1.fmi
 - Add pot for gfs (legacy version)
 * Thu Jun 14 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.6.14-1.fmi

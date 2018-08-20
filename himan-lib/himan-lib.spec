@@ -3,8 +3,8 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 18.6.14
-Release: 1.el7.fmi
+Version: 18.8.16
+Release: 2.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -59,6 +59,17 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Thu Aug 16 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.16-2.fmi
+- Hotfixing issue if reading static grids of missing value
+* Thu Aug 16 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.16-1.fmi
+- Removing obsolete logger_factory
+* Tue Aug  7 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.7-1.fmi
+- Minor fixes
+- RHEL 7.5 build
+* Thu Jul  5 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.7.5-1.fmi
+- Additions to earth_shape functionality
+* Fri Jun 15 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.6.15-1.fmi
+- Minor tweak to plugin_configuration statistics logging
 * Thu Jun 14 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.6.14-1.fmi
 - Minor tweak to lift.h
 * Tue Jun  5 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.6.5-1.fmi

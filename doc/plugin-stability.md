@@ -8,40 +8,41 @@ four parameters in the list below, 'stability' holds the rest.
 The indices are 
 
 * k-index
-** http://glossary.ametsoc.org/wiki/Stability_index
+  * http://glossary.ametsoc.org/wiki/Stability_index
 * cross totals index
-** http://glossary.ametsoc.org/wiki/Stability_index
+  * http://glossary.ametsoc.org/wiki/Stability_index
 * vertical totals index
-** http://glossary.ametsoc.org/wiki/Stability_index
+  * http://glossary.ametsoc.org/wiki/Stability_index
 * total totals index
-** http://glossary.ametsoc.org/wiki/Stability_index
+  * http://glossary.ametsoc.org/wiki/Stability_index
 * showalter index
-** http://glossary.ametsoc.org/wiki/Stability_index
+  * http://glossary.ametsoc.org/wiki/Stability_index
 * lifted index
-** http://glossary.ametsoc.org/wiki/Stability_index
-** source data for the lifted parcel is an average from the lowest 500 meters
+  * http://glossary.ametsoc.org/wiki/Stability_index
+  * source data for the lifted parcel is an average from the lowest 500 meters
 * bulk shear
-** between 0 and 1km
-** between 0 and 3km
-** between 0 and 6km
-** https://en.wikipedia.org/wiki/Wind_shear
+  * between 0 and 1km
+  * between 0 and 3km
+  * between 0 and 6km
+  * https://en.wikipedia.org/wiki/Wind_shear
 * effective bulk shear
-** http://www.spc.noaa.gov/exper/mesoanalysis/help/help_eshr.html
-** Lifted parcel level is used as effective inflow base
-** effective inflow top is found when going upwards from base up to 50% of EL height
+  * http://www.spc.noaa.gov/exper/mesoanalysis/help/help_eshr.html
+  * Lifted parcel level is used as effective inflow base
+  * effective inflow top is found when going upwards from base up to 50% of EL height
 * cape shear
-** http://apps.ecmwf.int/codes/grib/param-db?id=228044
-** ebs is used as wind shear parameter
+  * http://apps.ecmwf.int/codes/grib/param-db?id=228044
+  * ebs is used as wind shear parameter
+  * most unstable cold cape is the cape parameter
 * storm relative helicity
-** between 0 and 1km
-** between 0 and 3km
-** http://www.spc.noaa.gov/exper/mesoanalysis/help/help_srh1.html
+  * between 0 and 1km
+  * between 0 and 3km
+  * http://www.spc.noaa.gov/exper/mesoanalysis/help/help_srh1.html
 * equivalent potential temperature difference between 0 and 3km
 * wind speed at 1.5km
 * energy-helicity index 
-** https://en.wikipedia.org/wiki/Hydrodynamical_helicity
+  * https://en.wikipedia.org/wiki/Hydrodynamical_helicity
 * bulk richardson number
-** http://glossary.ametsoc.org/wiki/Bulk_richardson_number
+  * http://glossary.ametsoc.org/wiki/Bulk_richardson_number
 * mean mixing ratio in the lowest 500m
 
 Plugin is optimized for GPU use.
