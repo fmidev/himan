@@ -123,6 +123,11 @@ void himan::plugin::windvector_cuda::RunCuda(std::shared_ptr<const plugin_config
 	c->Insert(UInfo);
 	c->Insert(VInfo);
 
+	for (myTargetInfo->ResetParam(); myTargetInfo->NextParam();)
+	{
+		myTargetInfo->Grid()->AB(UInfo->Grid()->AB());
+	}
+
 	// dims
 
 	const int blockSize = 256;
@@ -136,6 +141,8 @@ void himan::plugin::windvector_cuda::RunCuda(std::shared_ptr<const plugin_config
 	// check if kernel execution generated an error
 
 	CUDA_CHECK_ERROR_MSG("Kernel invocation");
+
+	myTargetInfo->ParamIndex(0);
 
 	cuda::ReleaseInfo(myTargetInfo, d_speed, stream);
 
