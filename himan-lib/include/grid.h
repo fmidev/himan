@@ -144,6 +144,7 @@ class regular_grid : public grid
 	regular_grid();
 	~regular_grid();
 	regular_grid(const regular_grid&);
+	regular_grid& operator=(const regular_grid& other) = delete;
 
 	/* Return grid point value (incl. fractions) of a given latlon point */
 	virtual point XY(const point& latlon) const = 0;
@@ -189,6 +190,7 @@ class irregular_grid : public grid
 	irregular_grid();
 	~irregular_grid();
 	irregular_grid(const irregular_grid&);
+	regular_grid& operator=(const regular_grid& other) = delete;
 
    protected:
 	bool EqualsTo(const irregular_grid& other) const;
