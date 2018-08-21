@@ -564,7 +564,7 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName, const st
 
 	if (geominfo.empty())
 	{
-		ASSERT(resultInfo.Grid()->Class() == kRegularGrid)
+		if(resultInfo.Grid()->Class() == kRegularGrid)
 		{
 			geominfo = itsRadonDB->GetGeometryDefinition(
 				dynamic_cast<regular_grid*>(resultInfo.Grid())->Ni(), dynamic_cast<regular_grid*>(resultInfo.Grid())->Nj(), firstGridPoint.Y(), firstGridPoint.X(),
