@@ -535,15 +535,15 @@ bool himan::interpolate::InterpolateAreaGPU(himan::info& base, himan::info& sour
 	const size_t N = base.SizeLocations();
 
 	std::vector<::point> grid_(N);
-	::point* d_grid = 0;
+	::point* d_grid = nullptr;
 
 	CreateGrid(source, base, grid_);
 
 	CUDA_CHECK(cudaMalloc((void**)&d_grid, sizeof(::point) * N));
 	CUDA_CHECK(cudaMemcpyAsync(d_grid, grid_.data(), sizeof(::point) * N, cudaMemcpyHostToDevice, stream));
 
-	double* d_source = 0;
-	double* d_target = 0;
+	double* d_source = nullptr;
+	double* d_target = nullptr;
 
 	CUDA_CHECK(cudaMalloc((void**)&d_source, source.SizeLocations() * sizeof(double)));
 	CUDA_CHECK(cudaMalloc((void**)&d_target, N * sizeof(double)));
@@ -680,20 +680,23 @@ void himan::interpolate::RotateVectorComponentsGPU(himan::info& UInfo, himan::in
                                                    double* d_u, double* d_v)
 {
 	const size_t N = UInfo.SizeLocations();
+	const size_t memsize = N * sizeof(double);
+
 	const int bs = 256;
 	const int gs = N / bs + (N % bs == 0 ? 0 : 1);
 
-	double* d_lon = 0;
+	double* d_lon = nullptr;
 
 	bool release = false;
-	himan::info_simple* USimple = UInfo.ToSimple();
-	himan::info_simple *VSimple = 0;
 
-	if (d_u == 0)
+	himan::info_simple* USimple = UInfo.ToSimple();
+	himan::info_simple* VSimple = nullptr;
+
+	if (d_u == nullptr && d_v == nullptr)
 	{
 		release = true;
-		CUDA_CHECK(cudaMalloc((void**)&d_u, N * sizeof(double)));
-		CUDA_CHECK(cudaMalloc((void**)&d_v, N * sizeof(double)));
+		CUDA_CHECK(cudaMalloc((void**)&d_u, memsize));
+		CUDA_CHECK(cudaMalloc((void**)&d_v, memsize));
 
 		VSimple = VInfo.ToSimple();
 
@@ -709,18 +712,18 @@ void himan::interpolate::RotateVectorComponentsGPU(himan::info& UInfo, himan::in
 
 		case himan::kLambertConformalConic:
 		{
-			CUDA_CHECK(cudaMalloc((void**)&d_lon, N * sizeof(double)));
+			CUDA_CHECK(cudaMalloc((void**)&d_lon, memsize));
 
-			double* lon = 0;
+			double* lon = nullptr;
 
-			CUDA_CHECK(cudaMallocHost((void**)&lon, N * sizeof(double)));
+			CUDA_CHECK(cudaMallocHost((void**)&lon, memsize));
 
 			for (UInfo.ResetLocation(); UInfo.NextLocation();)
 			{
 				lon[UInfo.LocationIndex()] = UInfo.LatLon().X();
 			}
 
-			CUDA_CHECK(cudaMemcpyAsync(d_lon, lon, N * sizeof(double), cudaMemcpyHostToDevice));
+			CUDA_CHECK(cudaMemcpyAsync(d_lon, lon, memsize, cudaMemcpyHostToDevice));
 
 			const double latin1 = GetStandardParallel(UInfo.Grid(), 1);
 			const double latin2 = GetStandardParallel(UInfo.Grid(), 2);
@@ -751,18 +754,18 @@ void himan::interpolate::RotateVectorComponentsGPU(himan::info& UInfo, himan::in
 		case himan::kStereographic:
 		{
 			const double orientation = dynamic_cast<himan::stereographic_grid*>(UInfo.Grid())->Orientation();
-			CUDA_CHECK(cudaMalloc((void**)&d_lon, N * sizeof(double)));
+			CUDA_CHECK(cudaMalloc((void**)&d_lon, memsize));
 
-			double* lon = 0;
+			double* lon = nullptr;
 
-			CUDA_CHECK(cudaMallocHost((void**)&lon, N * sizeof(double)));
+			CUDA_CHECK(cudaMallocHost((void**)&lon, memsize));
 
 			for (UInfo.ResetLocation(); UInfo.NextLocation();)
 			{
 				lon[UInfo.LocationIndex()] = UInfo.LatLon().X();
 			}
 
-			CUDA_CHECK(cudaMemcpyAsync(d_lon, lon, N * sizeof(double), cudaMemcpyHostToDevice));
+			CUDA_CHECK(cudaMemcpyAsync(d_lon, lon, memsize, cudaMemcpyHostToDevice));
 
 			RotateLambert<<<gs, bs, 0, stream>>>(d_u, d_v, d_lon, 1, orientation, *USimple);
 
