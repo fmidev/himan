@@ -190,7 +190,7 @@ class irregular_grid : public grid
 	irregular_grid();
 	~irregular_grid();
 	irregular_grid(const irregular_grid&);
-	regular_grid& operator=(const regular_grid& other) = delete;
+	irregular_grid& operator=(const irregular_grid& other) = delete;
 
    protected:
 	bool EqualsTo(const irregular_grid& other) const;
