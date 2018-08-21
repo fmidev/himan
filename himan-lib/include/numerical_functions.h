@@ -236,7 +236,7 @@ std::vector<std::vector<T>> Linspace(const std::vector<T>& start, const std::vec
  */
 
 template <typename T>
-std::pair<std::vector<T>, std::vector<T>> LegGauss(size_t N, bool computeWeights);
+std::pair<std::vector<T>, std::vector<T>> LegGauss(size_t N, bool computeWeights = true);
 
 namespace interpolation
 {

@@ -801,7 +801,7 @@ info_t FetchHistorical(logger& log, shared_ptr<plugin_configuration> cnf, const 
 		ftime.ValidDateTime().Adjust(kHourResolution, currentStep);
 
 		search_options opts(ftime, parm, blendProd.lvl, prod, blendProd.type, cnf);
-		const vector<string> files = r->Files(opts);
+		const vector<string> files = r->Files(opts).first;
 		if (files.empty())
 		{
 			log.Trace("Failed to find matching files for: " + to_string(prod.Id()) + "/" +

@@ -47,7 +47,7 @@ matrix<double> numerical_functions::Min2D(const matrix<double>& A, const matrix<
 }
 
 template <typename T>
-std::pair<std::vector<T>, std::vector<T>> numerical_functions::LegGauss(size_t N, bool computeWeights = true)
+std::pair<std::vector<T>, std::vector<T>> numerical_functions::LegGauss(size_t N, bool computeWeights)
 {
 	// Set up Eigenvalue problem
 	//-------------------------------------------------------------------------------------------------------
