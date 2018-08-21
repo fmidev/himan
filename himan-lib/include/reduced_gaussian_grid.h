@@ -54,8 +54,6 @@ class reduced_gaussian_grid : public irregular_grid
 
 	point LatLon(size_t locationIndex) const override;
 
-
-	using irregular_grid::Value;
 	/**
 	 * @brief Return value of given grid point coordinates
 	 */

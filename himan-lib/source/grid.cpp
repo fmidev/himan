@@ -163,14 +163,6 @@ size_t grid::Size() const
 {
 	throw runtime_error("grid::Size() called");
 }
-void grid::Value(size_t theLocationIndex, double theValue)
-{
-	itsData.Set(theLocationIndex, theValue);
-}
-double grid::Value(size_t theLocationIndex) const
-{
-	return double(itsData.At(theLocationIndex));
-}
 vector<double> grid::AB() const
 {
 	return itsAB;

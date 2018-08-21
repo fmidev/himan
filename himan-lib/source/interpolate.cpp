@@ -79,7 +79,9 @@ bool FromReducedGaussianCPU(info& base, info& source, matrix<double>& targetData
 
 		double sum = 0;
 		for (size_t j = 0; j < w.first.size(); ++j)
-			sum += w.second[j] * gg->Value(w.first[j]);
+		{
+			sum += w.second[j] * gg->Data().At(w.first[j]);
+		}
 		targetData.Set(i, sum);
 	}
 

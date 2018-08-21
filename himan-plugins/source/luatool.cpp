@@ -294,11 +294,11 @@ namespace info_wrapper
 
 void SetValue(std::shared_ptr<info>& anInfo, int index, double value)
 {
-	anInfo->Grid()->Value(--index, value);
+	anInfo->Grid()->Data().Set(--index, value);
 }
 double GetValue(std::shared_ptr<info>& anInfo, int index)
 {
-	return anInfo->Grid()->Value(--index);
+	return anInfo->Grid()->Data().At(--index);
 }
 size_t GetLocationIndex(std::shared_ptr<info> anInfo)
 {

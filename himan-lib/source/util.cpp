@@ -810,7 +810,7 @@ info_t util::CSVToInfo(const vector<string>& csv)
 			if (s == stats[i])
 			{
 				// Add the data point
-				ret->Grid()->Value(i, stod(elems[13]));
+				ret->Grid()->Data().Set(i, stod(elems[13]));
 			}
 		}
 	}
