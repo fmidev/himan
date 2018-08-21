@@ -55,7 +55,7 @@ const blend_producer GFS(forecast_type(kEpsPerturbation, static_cast<float>(blen
                          kGfsForecastLength, 6);
 
 blend::blend()
-    : itsCalculationMode(kCalculateNone), itsNumHours(0), itsAnalysisHour(0), itsProducer(), itsBlendProducer()
+    : itsCalculationMode(kCalculateNone), itsNumHours(0), itsAnalysisHour(0), itsBlendProducer()
 {
 	itsLogger = logger("blend");
 }
@@ -155,39 +155,39 @@ void blend::Run(unsigned short threadIndex)
 	}
 }
 
-raw_time blend::LatestOriginTimeForProducer(const string& producer) const
+raw_time blend::LatestOriginTimeForProducer(const blend_producer& producer) const
 {
 	// These are hardcoded for simplicity.
 	int producerId = -1;
 	string geom;
-	if (producer == "MOS")
+	if (producer == MOS)
 	{
 		producerId = 120;
 		geom = "MOSKRIGING2";
 	}
-	else if (producer == "ECG")
+	else if (producer == ECMWF)
 	{
 		producerId = 131;
 		geom = "ECGLO0100";
 	}
-	else if (producer == "HL2")
+	else if (producer == HIRLAM)
 	{
 		producerId = 1;
 		geom = "RCR068";
 	}
-	else if (producer == "MEPS")
+	else if (producer == MEPS)
 	{
 		producerId = 4;
 		geom = "MEPSSCAN2500";
 	}
-	else if (producer == "GFS")
+	else if (producer == GFS)
 	{
 		producerId = 53;
 		geom = "GFS0250";
 	}
 	else
 	{
-		itsLogger.Error("Invalid producer string: " + producer);
+		itsLogger.Error("Invalid producer type");
 		himan::Abort();
 	}
 
@@ -206,7 +206,7 @@ raw_time blend::LatestOriginTimeForProducer(const string& producer) const
 	// With ECMWF and MOS we only want 00 and 12 times. MOS is only calculated for 00 and 12. ECMWF forecast length is
 	// shorter for 6 and 18, and that seems to break everything.
 	const int hour = stoi(raw.String("%H"));
-	if (producer == "ECG" || producer == "MOS")
+	if (producer == ECMWF || producer == MOS)
 	{
 		if (hour == 6 || hour == 18)
 		{
@@ -294,7 +294,6 @@ void blend::Process(shared_ptr<const plugin_configuration> conf)
 
 	if (itsCalculationMode == kCalculateBias || itsCalculationMode == kCalculateMAE)
 	{
-		itsProducer = prod;
 		if (prod == "ECG")
 		{
 			itsBlendProducer = ECMWF;
@@ -617,7 +616,7 @@ void blend::CalculateMember(shared_ptr<info> targetInfo, unsigned short threadId
 	level targetLevel = targetInfo->Level();
 	forecast_time current = targetInfo->Time();
 
-	raw_time latestOrigin = LatestOriginTimeForProducer(itsProducer);
+	raw_time latestOrigin = LatestOriginTimeForProducer(itsBlendProducer);
 	log.Info("Latest origin time for producer: " + latestOrigin.String());
 
 	// Used for fetching raw model output, bias, and weight for models.
