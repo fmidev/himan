@@ -217,10 +217,10 @@ void info::Create(const grid* baseGrid, bool createDataBackend)
 
 					if (baseGrid->Class() == kRegularGrid)
 					{
-						const regular_grid* RegGrid(dynamic_cast<const regular_grid*>(baseGrid));
+						const regular_grid* regGrid(dynamic_cast<const regular_grid*>(baseGrid));
 						if (createDataBackend)
 						{
-							Grid()->Data().Resize(RegGrid->Ni(), RegGrid->Nj());
+							Grid()->Data().Resize(regGrid->Ni(), regGrid->Nj());
 						}
 					}
 					else if (baseGrid->Class() == kIrregularGrid)
