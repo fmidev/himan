@@ -11,9 +11,8 @@ using namespace himan;
 
 void packed_data::Set(unsigned char* newData, size_t newPackedLength, size_t newUnpackedLength)
 {
-	if (packedLength)
+	if (data)
 	{
-		ASSERT(data);
 		CUDA_CHECK(cudaFreeHost(data));
 	}
 
@@ -24,9 +23,8 @@ void packed_data::Set(unsigned char* newData, size_t newPackedLength, size_t new
 
 void packed_data::Bitmap(int* newBitmap, size_t newBitmapLength)
 {
-	if (newBitmapLength && bitmapLength)
+	if (bitmap)
 	{
-		ASSERT(bitmap);
 		CUDA_CHECK(cudaFreeHost(bitmap));
 	}
 
@@ -38,15 +36,15 @@ void packed_data::Resize(size_t newPackedLength, size_t newUnpackedLength)
 {
 	ASSERT(newPackedLength > packedLength);
 
-	packedLength = newPackedLength;
-	unpackedLength = newUnpackedLength;
+	unsigned char* newData = nullptr;
 
-	unsigned char* newData = 0;
-
-	CUDA_CHECK(
-	    cudaHostAlloc(reinterpret_cast<void**>(&newData), packedLength * sizeof(unsigned char), cudaHostAllocMapped));
+	CUDA_CHECK(cudaHostAlloc(reinterpret_cast<void**>(&newData), newPackedLength * sizeof(unsigned char),
+	                         cudaHostAllocMapped));
 
 	memcpy(newData, data, packedLength * sizeof(unsigned char));
+
+	packedLength = newPackedLength;
+	unpackedLength = newUnpackedLength;
 
 	CUDA_CHECK(cudaFreeHost(data));
 
@@ -59,8 +57,8 @@ packed_data::packed_data(const packed_data& other)
       bitmapLength(other.bitmapLength),
       packingType(other.packingType)
 {
-	data = 0;
-	bitmap = 0;
+	data = nullptr;
+	bitmap = nullptr;
 
 	if (other.packedLength)
 	{
@@ -80,20 +78,18 @@ packed_data::packed_data(const packed_data& other)
 
 void packed_data::Clear()
 {
-	if (packedLength)
+	if (data)
 	{
-		ASSERT(data);
 		CUDA_CHECK(cudaFreeHost(data));
 		packedLength = 0;
-		data = 0;
+		data = nullptr;
 	}
 
-	if (bitmapLength)
+	if (bitmap)
 	{
-		ASSERT(bitmap);
 		CUDA_CHECK(cudaFreeHost(bitmap));
 		bitmapLength = 0;
-		bitmap = 0;
+		bitmap = nullptr;
 	}
 
 	unpackedLength = 0;
