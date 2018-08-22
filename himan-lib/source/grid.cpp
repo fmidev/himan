@@ -72,11 +72,14 @@ bool grid::EqualsTo(const grid& other) const
 
 	if (other.itsGridClass != itsGridClass)
 	{
+		itsLogger.Trace("Grid class does not match: " + HPGridClassToString.at(itsGridClass) + " vs " +
+		                HPGridClassToString.at(other.itsGridClass));
 		return false;
 	}
 
 	if (other.itsIdentifier != itsIdentifier)
 	{
+		itsLogger.Trace("Identifier does not match: " + itsIdentifier + " vs " + other.itsIdentifier);
 		return false;
 	}
 
