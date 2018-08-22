@@ -84,16 +84,6 @@ void himan::plugin::windvector_cuda::RunCuda(std::shared_ptr<const plugin_config
 
 	const size_t memsize = N * sizeof(double);
 
-	CUDA_CHECK(cudaMalloc((void**)&d_u, memsize));
-	CUDA_CHECK(cudaMalloc((void**)&d_v, memsize));
-
-	CUDA_CHECK(cudaMalloc((void**)&d_speed, memsize));
-
-	if (itsTargetType != kGust)
-	{
-		CUDA_CHECK(cudaMalloc((void**)&d_dir, memsize));
-	}
-
 	// Fetch U & V, unpack to device, do not copy to host
 
 	auto UInfo = cuda::Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level(), UParam, myTargetInfo->ForecastType());
@@ -102,6 +92,15 @@ void himan::plugin::windvector_cuda::RunCuda(std::shared_ptr<const plugin_config
 	if (!UInfo || !VInfo)
 	{
 		return;
+	}
+
+	CUDA_CHECK(cudaMalloc((void**)&d_u, memsize));
+	CUDA_CHECK(cudaMalloc((void**)&d_v, memsize));
+	CUDA_CHECK(cudaMalloc((void**)&d_speed, memsize));
+
+	if (itsTargetType != kGust)
+	{
+		CUDA_CHECK(cudaMalloc((void**)&d_dir, memsize));
 	}
 
 	cuda::Unpack(UInfo, stream, d_u);
