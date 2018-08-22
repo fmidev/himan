@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.8.20
-Release: 2.el7.fmi
+Version: 18.8.22
+Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -112,6 +112,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Aug 22 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.22-1.fmi
+- Fix memory leak in cuda functions
 * Mon Aug 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.20-2.fmi
 - More fixing to windvector
 * Mon Aug 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.20-1.fmi
