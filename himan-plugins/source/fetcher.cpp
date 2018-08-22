@@ -729,7 +729,12 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts,
 				itsLogger.Trace("Updating sticky param cache: " + UniqueName(opts.prod, opts.param, opts.level));
 				stickyParamCache.push_back(uName);
 			}
-			ret.front()->Grid()->Identifier(files.second);
+
+			if (ret.empty() == false)
+			{
+				ret.front()->Grid()->Identifier(files.second);
+			}
+
 			return ret;
 		}
 	}
