@@ -77,7 +77,8 @@ bool grid::EqualsTo(const grid& other) const
 		return false;
 	}
 
-	if (other.itsIdentifier != itsIdentifier)
+	// Disabled for now
+	if (false && other.itsIdentifier != itsIdentifier)
 	{
 		itsLogger.Trace("Identifier does not match: " + itsIdentifier + " vs " + other.itsIdentifier);
 		return false;
@@ -157,6 +158,7 @@ ostream& grid::Write(std::ostream& file) const
 
 	file << itsEarthShape;
 	file << "__IsPackedData__ " << IsPackedData() << std::endl;
+	file << "__itsIdentifier__" << itsIdentifier << std::endl;
 	file << itsData;
 
 	return file;
