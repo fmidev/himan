@@ -383,6 +383,8 @@ __global__ void CINKernel(const float* __restrict__ d_Tenv, const float* __restr
 				d_cinh[idx] += CAPE::CalcCIN(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv);
 				ASSERT(d_cinh[idx] <= 0);
 			}
+
+			ASSERT(d_cinh[idx] <= 0.f);
 		}
 	}
 }
