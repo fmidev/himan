@@ -377,6 +377,16 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 	}
 }
 
+// MOS doesn't have forecast hours 0, 1, 2
+static bool IsDuringMosFirstHours(const forecast_time& currentTime)
+{
+	const int validHour = stoi(currentTime.ValidDateTime().String("%H"));
+	const int originHour = stoi(currentTime.OriginDateTime().String("%H"));
+	const bool firstHours = (originHour == 0 && validHour >= 0 && validHour <= 2) ||
+	                        (originHour == 12 && validHour >= 12 && validHour <= 14);
+	return firstHours;
+}
+
 static forecast_time MakeAnalysisFetchTime(const forecast_time& currentTime, int analysisHour)
 {
 	const int validHour = stoi(currentTime.ValidDateTime().String("%H"));
@@ -418,8 +428,7 @@ matrix<double> blend::CalculateBias(logger& log, shared_ptr<info> targetInfo, co
 
 	// MOS doesn't have hours 0, 1, 2. So we'll set this to missing. We don't want to do this with other models, since
 	// in these cases it is certainly an error that needs to be looked at and fixed manually.
-	const int validHour = stoi(currentTime.ValidDateTime().String("%H"));
-	if (itsBlendProducer == MOS && validHour >= 0 && validHour <= 2)
+	if (itsBlendProducer == MOS && IsDuringMosFirstHours(currentTime))
 	{
 		try
 		{
@@ -528,8 +537,7 @@ matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info> targetInfo, con
 
 	// See note pertaining to MOS at CalculateBias.
 	vector<double> forecast;
-	const int validHour = stoi(currentTime.ValidDateTime().String("%H"));
-	if (itsBlendProducer == MOS && validHour >= 0 && validHour <= 2)
+	if (itsBlendProducer == MOS && IsDuringMosFirstHours(currentTime))
 	{
 		try
 		{
