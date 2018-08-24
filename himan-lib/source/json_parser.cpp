@@ -13,7 +13,6 @@
 #include "util.h"
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/property_tree/json_parser.hpp>
-#include <boost/regex.hpp>
 #include <map>
 #include <stdexcept>
 #include <utility>
@@ -39,7 +38,7 @@ vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt);
 
 vector<level> LevelsFromString(const string& levelType, const string& levelValues);
 
-//void BuildInterpolationCache(shared_ptr<configuration> conf);
+// void BuildInterpolationCache(shared_ptr<configuration> conf);
 
 static logger itsLogger;
 
@@ -680,7 +679,7 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 
 		boost::algorithm::to_lower(originDateTime);
 
-		if (boost::regex_search(originDateTime, boost::regex("latest")))
+		if (originDateTime.find("latest") != string::npos)
 		{
 			if (conf->DatabaseType() == kNoDatabase)
 			{
@@ -890,7 +889,6 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 		conf.TargetGeomName(geom);
 
 		g = util::GridFromDatabase(geom);
-
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
@@ -1346,7 +1344,7 @@ vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt)
 			boost::algorithm::to_lower(type);
 			HPForecastType forecastType;
 
-			if (boost::regex_search(type, boost::regex("pf")))
+			if (type.find("pf") != string::npos)
 			{
 				forecastType = kEpsPerturbation;
 				string list = "";
