@@ -497,7 +497,17 @@ matrix<double> blend::CalculateBias(logger& log, shared_ptr<info> targetInfo, co
 			f = 0.0;
 			o = 0.0;
 		}
-		B[i] = (1.0 - alpha) * bc + alpha * (f - o);
+
+		// Don't output 0.0, as this will 'contaminate' all future results
+		const double result = (1.0 - alpha) * bc + alpha * (f - o);
+		if (result == 0.0)
+		{
+			B[i] = MissingDouble();
+		}
+		else
+		{
+			B[i] = result;
+		}
 	}
 
 	return currentBias;
@@ -602,7 +612,17 @@ matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info> targetInfo, con
 		}
 
 		const double bcf = f - b;
-		mae[i] = (1.0 - alpha) * _prevMAE + alpha * std::abs(bcf - o);
+		const double result = (1.0 - alpha) * _prevMAE + alpha * std::abs(bcf - o);
+
+		// Don't output 0.0, as this will 'contaminate' all future results
+		if (result == 0.0)
+		{
+			mae[i] = MissingDouble();
+		}
+		else
+		{
+			mae[i] = result;
+		}
 	}
 
 	return MAE;
