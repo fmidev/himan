@@ -93,12 +93,11 @@ class blend : public compiled_plugin, private compiled_plugin_base
 
 	void SetupOutputForecastTimes(std::shared_ptr<info> Info, const raw_time& latestOrigin,
 	                              const forecast_time& current, int maxStep, int originTimeStep);
-	raw_time LatestOriginTimeForProducer(const std::string& producer) const;
+	raw_time LatestOriginTimeForProducer(const blend_producer& producer) const;
 
 	blend_mode itsCalculationMode;
 	int itsNumHours;
 	int itsAnalysisHour;
-	std::string itsProducer;
 	blend_producer itsBlendProducer;
 };
 

@@ -48,7 +48,7 @@ double GetOrientation(himan::grid* g)
 #endif
 
 lambert_conformal_grid::lambert_conformal_grid()
-    : grid(kRegularGrid, kLambertConformalConic),
+    : regular_grid(),
       itsBottomLeft(),
       itsTopLeft(),
       itsDi(kHPMissingValue),
@@ -61,10 +61,11 @@ lambert_conformal_grid::lambert_conformal_grid()
       itsSouthPole(0, -90)
 {
 	itsLogger = logger("lambert_conformal_grid");
+	Type(kLambertConformalConic);
 }
 
 lambert_conformal_grid::lambert_conformal_grid(HPScanningMode theScanningMode, point theFirstPoint)
-    : grid(kRegularGrid, kLambertConformalConic, theScanningMode),
+    : regular_grid(),
       itsBottomLeft(),
       itsTopLeft(),
       itsDi(kHPMissingValue),
@@ -77,7 +78,8 @@ lambert_conformal_grid::lambert_conformal_grid(HPScanningMode theScanningMode, p
       itsSouthPole(0, -90)
 {
 	itsLogger = logger("lambert_conformal_grid");
-
+	Type(kLambertConformalConic);
+	ScanningMode(theScanningMode);
 	switch (theScanningMode)
 	{
 		case kBottomLeft:
@@ -92,7 +94,7 @@ lambert_conformal_grid::lambert_conformal_grid(HPScanningMode theScanningMode, p
 }
 
 lambert_conformal_grid::lambert_conformal_grid(const lambert_conformal_grid& other)
-    : grid(other),
+    : regular_grid(other),
       itsBottomLeft(other.itsBottomLeft),
       itsTopLeft(other.itsTopLeft),
       itsDi(other.itsDi),
@@ -409,7 +411,7 @@ bool lambert_conformal_grid::operator==(const grid& other) const
 
 bool lambert_conformal_grid::EqualsTo(const lambert_conformal_grid& other) const
 {
-	if (!grid::EqualsTo(other))
+	if (!regular_grid::EqualsTo(other))
 	{
 		return false;
 	}
@@ -482,10 +484,11 @@ bool lambert_conformal_grid::EqualsTo(const lambert_conformal_grid& other) const
 	return true;
 }
 
-lambert_conformal_grid* lambert_conformal_grid::Clone() const
+unique_ptr<grid> lambert_conformal_grid::Clone() const
 {
-	return new lambert_conformal_grid(*this);
+	return unique_ptr<grid>(new lambert_conformal_grid(*this));
 }
+
 ostream& lambert_conformal_grid::Write(std::ostream& file) const
 {
 	grid::Write(file);

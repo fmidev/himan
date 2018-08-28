@@ -14,21 +14,23 @@
 using namespace himan;
 using namespace std;
 
-point_list::point_list() : grid(kIrregularGrid, kPointList), itsStations()
+point_list::point_list() : irregular_grid(), itsStations()
 {
 	itsLogger = logger("point_list");
+	Type(kPointList);
 }
 
-point_list::point_list(const vector<station>& theStations) : grid(kIrregularGrid, kPointList), itsStations(theStations)
+point_list::point_list(const vector<station>& theStations) : irregular_grid(), itsStations(theStations)
 {
 	itsLogger = logger("point_list");
 
+	Type(kPointList);
 	itsData.Resize(theStations.size(), 1, 1);
 
 	ASSERT(itsData.Size() == theStations.size());
 }
 
-point_list::point_list(const point_list& other) : grid(other), itsStations(other.itsStations)
+point_list::point_list(const point_list& other) : irregular_grid(other), itsStations(other.itsStations)
 {
 	itsLogger = logger("point_list");
 }
@@ -39,7 +41,7 @@ size_t point_list::Size() const
 }
 bool point_list::EqualsTo(const point_list& other) const
 {
-	if (grid::EqualsTo(other))
+	if (irregular_grid::EqualsTo(other))
 	{
 		if (itsGridType != other.itsGridType)
 		{
@@ -93,16 +95,6 @@ void point_list::Station(size_t theLocationIndex, const station& theStation)
 	itsStations[theLocationIndex] = theStation;
 }
 
-const vector<station>& point_list::Stations() const
-{
-	return itsStations;
-}
-void point_list::Stations(const vector<station>& theStations)
-{
-	itsStations = theStations;
-	itsData.Resize(theStations.size(), 1, 1);
-}
-
 point point_list::FirstPoint() const
 {
 	if (itsStations.empty())
@@ -123,70 +115,14 @@ point point_list::LastPoint() const
 	return LatLon(itsStations.size() - 1);
 }
 
-point point_list::BottomLeft() const
+const vector<station>& point_list::Stations() const
 {
-	// Maybe a useless implementation, but nevertheless: return the most western and
-	// southern point
-
-	point ret;
-
-	for (const auto& p : itsStations)
-	{
-		if (IsKHPMissingValue(ret.X()) || p.X() < ret.X())
-		{
-			if (IsKHPMissingValue(ret.Y()) || p.Y() > ret.Y())
-			{
-				ret = p;
-			}
-		}
-	}
-
-	return ret;
+	return itsStations;
 }
-
-point point_list::TopRight() const
+void point_list::Stations(const vector<station>& theStations)
 {
-	point ret;
-
-	for (const auto& p : itsStations)
-	{
-		if (IsKHPMissingValue(ret.X()) || p.X() > ret.X())
-		{
-			if (IsKHPMissingValue(ret.Y()) || p.Y() < ret.Y())
-			{
-				ret = p;
-			}
-		}
-	}
-
-	return ret;
-}
-
-HPScanningMode point_list::ScanningMode() const
-{
-	return kUnknownScanningMode;
-}
-bool point_list::Swap(HPScanningMode newScanningMode)
-{
-	// can't be done here
-	return false;
-}
-
-double point_list::Di() const
-{
-	return kHPMissingValue;
-}
-double point_list::Dj() const
-{
-	return kHPMissingValue;
-}
-size_t point_list::Ni() const
-{
-	return itsData.Size();
-}
-size_t point_list::Nj() const
-{
-	return 1;
+	itsStations = theStations;
+	itsData.Resize(theStations.size(), 1, 1);
 }
 bool point_list::operator!=(const point_list& other) const
 {
@@ -204,24 +140,7 @@ bool point_list::operator==(const point_list& other) const
 	return false;
 }
 
-point_list* point_list::Clone() const
+unique_ptr<grid> point_list::Clone() const
 {
-	return new point_list(*this);
-}
-point point_list::XY(const point& latlon) const
-{
-	// Linear search
-	// Returned value is in 1D vector format, ie. Y = 0.
-	int x = 0;
-	for (const auto& p : itsStations)
-	{
-		if (p == station(p.Id(), p.Name(), latlon.X(), latlon.Y()))
-		{
-			return point(x, 0);
-		}
-
-		x++;
-	}
-
-	return point();
+	return unique_ptr<grid>(new point_list(*this));
 }

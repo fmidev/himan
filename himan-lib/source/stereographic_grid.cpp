@@ -5,7 +5,7 @@ using namespace himan;
 using namespace std;
 
 stereographic_grid::stereographic_grid()
-    : grid(kRegularGrid, kStereographic),
+    : regular_grid(),
       itsBottomLeft(),
       itsTopLeft(),
       itsOrientation(kHPMissingInt),
@@ -15,20 +15,23 @@ stereographic_grid::stereographic_grid()
       itsNj(kHPMissingInt)
 {
 	itsLogger = logger("stereographic_grid");
+	Type(kStereographic);
 }
 
 stereographic_grid::stereographic_grid(HPScanningMode theScanningMode, point theBottomLeft, point theTopLeft,
                                        double theOrientation)
-    : grid(kRegularGrid, kStereographic, theScanningMode),
+    : regular_grid(),
       itsBottomLeft(theBottomLeft),
       itsTopLeft(theTopLeft),
       itsOrientation(theOrientation)
 {
 	itsLogger = logger("stereographic_grid");
+	Type(kStereographic);
+	ScanningMode(theScanningMode);
 }
 
 stereographic_grid::stereographic_grid(const stereographic_grid& other)
-    : grid(other),
+    : regular_grid(other),
       itsBottomLeft(other.itsBottomLeft),
       itsTopLeft(other.itsTopLeft),
       itsOrientation(other.itsOrientation),
@@ -395,10 +398,11 @@ bool stereographic_grid::Swap(HPScanningMode newScanningMode)
 	return true;
 }
 
-stereographic_grid* stereographic_grid::Clone() const
+unique_ptr<grid> stereographic_grid::Clone() const
 {
-	return new stereographic_grid(*this);
+	return unique_ptr<grid>(new stereographic_grid(*this));
 }
+
 ostream& stereographic_grid::Write(std::ostream& file) const
 {
 	grid::Write(file);
@@ -433,7 +437,7 @@ bool stereographic_grid::operator==(const grid& other) const
 
 bool stereographic_grid::EqualsTo(const stereographic_grid& other) const
 {
-	if (!grid::EqualsTo(other))
+	if (!regular_grid::EqualsTo(other))
 	{
 		return false;
 	}

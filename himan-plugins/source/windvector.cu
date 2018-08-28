@@ -116,8 +116,8 @@ void himan::plugin::windvector_cuda::RunCuda(std::shared_ptr<const plugin_config
 
 	// Copy to host
 
-	CUDA_CHECK(cudaMemcpyAsync(UInfo->Data().ValuesAsPOD(), d_u, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaMemcpyAsync(VInfo->Data().ValuesAsPOD(), d_v, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(UInfo->Data().ValuesAsPOD(), d_u, memsize, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(VInfo->Data().ValuesAsPOD(), d_v, memsize, cudaMemcpyDeviceToHost, stream));
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 

@@ -275,7 +275,7 @@ string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<v
 
 	if (sameTableForAllGeometries)
 	{
-		query << "SELECT file_location, geometry_id FROM " << firstTable << "_v "
+		query << "SELECT file_location, geometry_id, geometry_name FROM " << firstTable << "_v "
 		      << "WHERE analysis_time = '" << analtime << "'"
 		      << " AND param_name = '" << parm_name << "'"
 		      << " AND level_name = upper('" << level_name << "')"
@@ -335,7 +335,7 @@ string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<v
 	return query.str();
 }
 
-vector<string> radon::Files(search_options& options)
+pair<vector<string>,string> radon::Files(search_options& options)
 {
 	Init();
 
@@ -345,14 +345,14 @@ vector<string> radon::Files(search_options& options)
 
 	if (gridgeoms.empty())
 	{
-		return files;
+		return make_pair(files,string());
 	}
 
 	const auto query = CreateFileSQLQuery(options, gridgeoms);
 
 	if (query.empty())
 	{
-		return files;
+		return make_pair(files,string());
 	}
 
 	try
@@ -378,14 +378,14 @@ vector<string> radon::Files(search_options& options)
 
 	if (values.empty())
 	{
-		return files;
+		return make_pair(files,string());
 	}
 
-	itsLogger.Trace("Found data for parameter " + options.param.Name() + " from radon geometry " + values[1]);
+	itsLogger.Trace("Found data for parameter " + options.param.Name() + " from radon geometry " + values[2]);
 
 	files.push_back(values[0]);
 
-	return files;
+	return make_pair(files,values[2]);
 }
 
 bool radon::Save(const info& resultInfo, const string& theFileName, const string& targetGeomName)
@@ -564,9 +564,12 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName, const st
 
 	if (geominfo.empty())
 	{
-		geominfo = itsRadonDB->GetGeometryDefinition(
-			resultInfo.Grid()->Ni(), resultInfo.Grid()->Nj(), firstGridPoint.Y(), firstGridPoint.X(),
-			resultInfo.Grid()->Di(), resultInfo.Grid()->Dj(), gribVersion, gridType);
+		if(resultInfo.Grid()->Class() == kRegularGrid)
+		{
+			geominfo = itsRadonDB->GetGeometryDefinition(
+				dynamic_cast<regular_grid*>(resultInfo.Grid())->Ni(), dynamic_cast<regular_grid*>(resultInfo.Grid())->Nj(), firstGridPoint.Y(), firstGridPoint.X(),
+				dynamic_cast<regular_grid*>(resultInfo.Grid())->Di(), dynamic_cast<regular_grid*>(resultInfo.Grid())->Dj(), gribVersion, gridType);
+		}
 	}
 
 	if (geominfo.empty())

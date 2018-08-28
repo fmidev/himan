@@ -13,32 +13,11 @@ grid::grid()
     : itsData(0, 0, 1, MissingDouble()),
       itsGridClass(kUnknownGridClass),
       itsGridType(kUnknownGridType),
+      itsIdentifier(),
       itsAB(),
-      itsScanningMode(kUnknownScanningMode),
       itsPackedData(),
-      itsUVRelativeToGrid(false)
-{
-}
-
-grid::grid(HPGridClass theGridClass, HPGridType theGridType)
-    : itsData(0, 0, 1, MissingDouble()),
-      itsGridClass(theGridClass),
-      itsGridType(theGridType),
-      itsAB(),
-      itsScanningMode(kUnknownScanningMode),
-      itsPackedData(),
-      itsUVRelativeToGrid(false)
-{
-}
-
-grid::grid(HPGridClass theGridClass, HPGridType theGridType, HPScanningMode theScanningMode)
-    : itsData(0, 0, 1, MissingDouble()),
-      itsGridClass(theGridClass),
-      itsGridType(theGridType),
-      itsAB(),
-      itsScanningMode(theScanningMode),
-      itsPackedData(),
-      itsUVRelativeToGrid(false)
+      itsUVRelativeToGrid(false),
+      itsEarthShape()
 {
 }
 
@@ -49,8 +28,8 @@ grid::grid(const grid& other)
     : itsData(other.itsData),
       itsGridClass(other.itsGridClass),
       itsGridType(other.itsGridType),
+      itsIdentifier(other.itsIdentifier),
       itsAB(other.itsAB),
-      itsScanningMode(other.itsScanningMode),
       itsPackedData(),
       itsUVRelativeToGrid(other.itsUVRelativeToGrid),
       itsEarthShape(other.itsEarthShape)
@@ -93,10 +72,20 @@ bool grid::EqualsTo(const grid& other) const
 
 	if (other.itsGridClass != itsGridClass)
 	{
+		itsLogger.Trace("Grid class does not match: " + HPGridClassToString.at(itsGridClass) + " vs " +
+		                HPGridClassToString.at(other.itsGridClass));
+		return false;
+	}
+
+	// Disabled for now
+	if (false && other.itsIdentifier != itsIdentifier)
+	{
+		itsLogger.Trace("Identifier does not match: " + itsIdentifier + " vs " + other.itsIdentifier);
 		return false;
 	}
 
 	// We DON'T test for AB !
+	// Why?
 
 	return true;
 }
@@ -127,13 +116,13 @@ void grid::Class(HPGridClass theGridClass)
 {
 	itsGridClass = theGridClass;
 }
-HPScanningMode grid::ScanningMode() const
+std::string grid::Identifier() const
 {
-	return itsScanningMode;
+	return itsIdentifier;
 }
-void grid::ScanningMode(HPScanningMode theScanningMode)
+void grid::Identifier(const std::string& theIdentifier)
 {
-	itsScanningMode = theScanningMode;
+	itsIdentifier = theIdentifier;
 }
 bool grid::IsPackedData() const
 {
@@ -157,7 +146,6 @@ ostream& grid::Write(std::ostream& file) const
 {
 	file << "<" << ClassName() << ">" << std::endl;
 
-	file << "__itsScanningMode__ " << HPScanningModeToString.at(itsScanningMode) << std::endl;
 	file << "__itsUVRelativeToGrid__ " << itsUVRelativeToGrid << std::endl;
 	file << "__itsAB__";
 
@@ -170,6 +158,7 @@ ostream& grid::Write(std::ostream& file) const
 
 	file << itsEarthShape;
 	file << "__IsPackedData__ " << IsPackedData() << std::endl;
+	file << "__itsIdentifier__" << itsIdentifier << std::endl;
 	file << itsData;
 
 	return file;
@@ -178,18 +167,6 @@ ostream& grid::Write(std::ostream& file) const
 size_t grid::Size() const
 {
 	throw runtime_error("grid::Size() called");
-}
-void grid::Value(size_t theLocationIndex, double theValue)
-{
-	itsData.Set(theLocationIndex, theValue);
-}
-double grid::Value(size_t theLocationIndex) const
-{
-	return double(itsData.At(theLocationIndex));
-}
-grid* grid::Clone() const
-{
-	throw runtime_error("grid::Clone() called");
 }
 vector<double> grid::AB() const
 {
@@ -228,4 +205,66 @@ earth_shape<double> grid::EarthShape() const
 void grid::EarthShape(const earth_shape<double>& theEarthShape)
 {
 	itsEarthShape = theEarthShape;
+}
+
+//--------------- regular grid
+regular_grid::regular_grid() : grid(), itsScanningMode(kUnknownScanningMode)
+{
+	Class(kRegularGrid);
+}
+
+regular_grid::~regular_grid()
+{
+}
+regular_grid::regular_grid(const regular_grid& other) : grid(other), itsScanningMode(other.itsScanningMode)
+{
+}
+
+bool regular_grid::EqualsTo(const regular_grid& other) const
+{
+	if (!grid::EqualsTo(other))
+	{
+		return false;
+	}
+
+	if (other.itsScanningMode != itsScanningMode)
+	{
+		return false;
+	}
+
+	return true;
+}
+
+HPScanningMode regular_grid::ScanningMode() const
+{
+	return itsScanningMode;
+}
+void regular_grid::ScanningMode(HPScanningMode theScanningMode)
+{
+	itsScanningMode = theScanningMode;
+}
+
+//--------------- irregular grid
+
+irregular_grid::irregular_grid() : grid()
+{
+	Class(kIrregularGrid);
+}
+
+irregular_grid::~irregular_grid()
+{
+}
+
+irregular_grid::irregular_grid(const irregular_grid& other) : grid(other)
+{
+}
+
+bool irregular_grid::EqualsTo(const irregular_grid& other) const
+{
+	if (!grid::EqualsTo(other))
+	{
+		return false;
+	}
+
+	return true;
 }

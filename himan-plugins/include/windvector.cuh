@@ -5,10 +5,6 @@
 #ifndef WINDVECTOR_CUDA_H
 #define WINDVECTOR_CUDA_H
 
-#ifdef HAVE_CUDA
-#include "info_simple.h"
-#endif
-
 namespace himan
 {
 namespace plugin

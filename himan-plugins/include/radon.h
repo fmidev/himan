@@ -64,7 +64,7 @@ class radon : public auxiliary_plugin
 	 * @brief Return filename of a field
 	 */
 
-	std::vector<std::string> Files(search_options& options);
+	std::pair<std::vector<std::string>,std::string> Files(search_options& options);
 
 	/**
 	 * @brief Return previ data in CSV format

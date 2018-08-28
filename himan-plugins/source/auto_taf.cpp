@@ -99,14 +99,6 @@ void auto_taf::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 {
-#ifdef DEBUG
-	auto pxy = myTargetInfo->Grid()->XY(point(24.975133948461, 60.363380893204));
-	auto pdebug =
-	    myTargetInfo->Data().Index(static_cast<size_t>(round(pxy.X())), static_cast<size_t>(round(pxy.Y())), 0);
-	cout << "index of debug point " << pdebug << '\n';
-
-	vector<pair<double, double>> cloud_profile;
-#endif
 	// Required source parameters
 	const params Nparam{param("N-0TO1"), param("N-PRCNT")};
 	const param TCU_CB("CBTCU-FL");
@@ -236,12 +228,7 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 					top[k].push_back(newtop);
 				}
 			}
-#ifdef DEBUG
-			if (k == pdebug)
-			{
-				cloud_profile.emplace_back(_Height / 0.3048, _N);
-			}
-#endif
+
 			// update the maximum number of cloud layers in the whole grid
 			max_num_cl = max(max_num_cl, base[k].size());
 		}
@@ -483,43 +470,6 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		if (fewbase[k] < ovcbase[k] && sct_lowest[k] > ovcbase[k])
 			ovcbase[k] = sct_lowest[k];
 	}
-
-#ifdef DEBUG
-	for (size_t k = 0; k < grd_size; ++k)
-	{
-		// Check against illegal outcomes for TAF
-		assert(!(fewbase[k] > sctbase[k]));
-		assert(!(sctbase[k] > bknbase[k]));
-		assert(!(bknbase[k] > ovcbase[k]));
-		assert(!(cbbase[k] >= ovcbase[k]));
-		assert(!(bknbase[k] >= cbbase[k]));
-		assert(!(sctbase[k] >= cbbase[k]));
-		assert(!(fewbase[k] >= cbbase[k]));
-		assert(!(bknbase[k] < TC->Data().At(k)));
-		assert(!(ovcbase[k] < TC->Data().At(k)));
-
-		if (k == pdebug)
-		{
-			auto p = myTargetInfo->Grid()->LatLon(pdebug);
-			cout << p.X() << " " << p.Y() << " " << k << '\n';
-			cout << "few " << fewbase[k] << '\n';
-			cout << "sct " << sctbase[k] << '\n';
-			cout << "bkn " << bknbase[k] << '\n';
-			cout << "ovc " << ovcbase[k] << '\n';
-			cout << "cb " << cbbase[k] << '\n';
-			cout << "tcu " << TC->Data().At(k) << '\n';
-			cout << "ceil2 " << Ceiling2->Data().At(k) << '\n';
-			for (auto& x : c_l[k])
-			{
-				cout << "base " << x.base << " top " << x.top << " amount " << x.amount << '\n';
-			}
-		}
-	}
-	for (auto& x : cloud_profile)
-	{
-		cout << "height " << x.first << " N " << x.second << '\n';
-	}
-#endif
 
 	myTargetInfo->ParamIndex(0);
 	myTargetInfo->Grid()->Data().Set(move(fewbase));

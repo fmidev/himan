@@ -7,6 +7,8 @@
 #define INTERPOLATE_H
 
 #include "plugin_configuration.h"
+#include "reduced_gaussian_grid.h"
+#include "latitude_longitude_grid.h"
 
 namespace himan
 {
@@ -32,6 +34,8 @@ void RotateVectorComponentsGPU(info& UInfo, info& VInfo, cudaStream_t& stream, d
 #endif
 
 bool IsSupportedGridForRotation(HPGridType type);
+
+std::pair<std::vector<size_t>,std::vector<double>> InterpolationWeights(reduced_gaussian_grid* source, point target);
 }
 }
 

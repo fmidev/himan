@@ -113,12 +113,14 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	string deviceType = "CPU";
 
-	double Di = myTargetInfo->Grid()->Di();
-	double Dj = myTargetInfo->Grid()->Dj();
+	ASSERT(myTargetInfo->Grid()->Class() == kRegularGrid);
+
+	double Di = dynamic_cast<regular_grid*>(myTargetInfo->Grid())->Di();
+	double Dj = dynamic_cast<regular_grid*>(myTargetInfo->Grid())->Dj();
 	point firstPoint = myTargetInfo->Grid()->FirstPoint();
 
-	size_t Ni = myTargetInfo->Grid()->Ni();
-	size_t Nj = myTargetInfo->Grid()->Nj();
+	size_t Ni = dynamic_cast<regular_grid*>(myTargetInfo->Grid())->Ni();
+	size_t Nj = dynamic_cast<regular_grid*>(myTargetInfo->Grid())->Nj();
 
 	vector<double> dx, dy;
 

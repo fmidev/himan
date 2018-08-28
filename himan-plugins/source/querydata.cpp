@@ -191,9 +191,9 @@ bool querydata::CopyData(info& theInfo, NFmiFastQueryInfo& qinfo, bool applyScal
 		base = theInfo.Param().Base();
 	}
 
-	if (theInfo.Grid()->Class() == kRegularGrid && theInfo.Grid()->ScanningMode() != kBottomLeft)
+	if (theInfo.Grid()->Class() == kRegularGrid && dynamic_cast<regular_grid*>(theInfo.Grid())->ScanningMode() != kBottomLeft)
 	{
-		ASSERT(theInfo.Grid()->ScanningMode() == kTopLeft);
+		ASSERT(dynamic_cast<regular_grid*>(theInfo.Grid())->ScanningMode() == kTopLeft);
 
 		size_t nj = theInfo.Data().SizeY();
 		size_t ni = theInfo.Data().SizeX();
@@ -419,7 +419,7 @@ NFmiHPlaceDescriptor querydata::CreateGrid(info& info) const
 	}
 #endif
 
-	NFmiGrid theGrid(theArea, info.Grid()->Ni(), info.Grid()->Nj());
+	NFmiGrid theGrid(theArea, dynamic_cast<regular_grid*>(info.Grid())->Ni(), dynamic_cast<regular_grid*>(info.Grid())->Nj());
 
 	delete theArea;
 
@@ -655,7 +655,7 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 			himan::Abort();
 	}
 
-	newGrid->ScanningMode(kBottomLeft);
+	dynamic_cast<regular_grid*>(newGrid)->ScanningMode(kBottomLeft);
 	newGrid->EarthShape(earth_shape<double>(6371220));
 
 	newInfo->Create(newGrid);

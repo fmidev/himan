@@ -19,11 +19,11 @@ class OGRSpatialReference;
 
 namespace himan
 {
-class lambert_conformal_grid : public grid
+class lambert_conformal_grid : public regular_grid
 {
    public:
 	lambert_conformal_grid();
-	lambert_conformal_grid(HPScanningMode theScanningMode, point theFirsPoint);
+	lambert_conformal_grid(HPScanningMode theScanningMode, point theFirstPoint);
 
 	virtual ~lambert_conformal_grid();
 	lambert_conformal_grid(const lambert_conformal_grid& other);
@@ -94,7 +94,7 @@ class lambert_conformal_grid : public grid
 	point XY(const point& latlon) const override;
 	point LatLon(size_t locationIndex) const override;
 
-	lambert_conformal_grid* Clone() const override;
+	std::unique_ptr<grid> Clone() const override;
 
 	void Orientation(double theOrientation);
 	double Orientation() const;
@@ -139,7 +139,7 @@ class lambert_conformal_grid : public grid
 	template <class Archive>
 	void serialize(Archive& ar)
 	{
-		ar(cereal::base_class<grid>(this), CEREAL_NVP(itsBottomLeft), CEREAL_NVP(itsTopLeft), CEREAL_NVP(itsDi),
+		ar(cereal::base_class<regular_grid>(this), CEREAL_NVP(itsBottomLeft), CEREAL_NVP(itsTopLeft), CEREAL_NVP(itsDi),
 		   CEREAL_NVP(itsDj), CEREAL_NVP(itsNi), CEREAL_NVP(itsNj), CEREAL_NVP(itsOrientation),
 		   CEREAL_NVP(itsStandardParallel1), CEREAL_NVP(itsStandardParallel2), CEREAL_NVP(itsSouthPole));
 	}

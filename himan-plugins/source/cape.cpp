@@ -564,7 +564,6 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	ASSERT(cape_.size() == elz_.size());
 	ASSERT(cin_.size() == elz_.size());
 
-
 	for (size_t i = 0; i < lfcz_.size(); i++)
 	{
 		// Check:
@@ -584,25 +583,32 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 #endif
 
 	// Do smoothening for CAPE & CIN parameters
-	mySubThreadedLogger.Trace("Smoothening");
-
 	himan::matrix<double> filter_kernel(3, 3, 1, MissingDouble(), 1. / 9.);
 
-	capeInfo->Param(CAPEParam);
-	himan::matrix<double> filtered = numerical_functions::Filter2D(capeInfo->Data(), filter_kernel);
-	capeInfo->Grid()->Data(filtered);
+	auto filter = [&](const param& par) {
 
-	capeInfo->Param(CAPE1040Param);
-	filtered = numerical_functions::Filter2D(capeInfo->Data(), filter_kernel);
-	capeInfo->Grid()->Data(filtered);
+		capeInfo->Param(par);
+		himan::matrix<double> filtered = numerical_functions::Filter2D(capeInfo->Data(), filter_kernel);
 
-	capeInfo->Param(CAPE3kmParam);
-	filtered = numerical_functions::Filter2D(capeInfo->Data(), filter_kernel);
-	capeInfo->Grid()->Data(filtered);
+		// HIMAN-224: CAPE & CIN values smaller than 0.1 are rounded to zero
 
-	capeInfo->Param(CINParam);
-	filtered = numerical_functions::Filter2D(capeInfo->Data(), filter_kernel);
-	capeInfo->Grid()->Data(filtered);
+		auto& vec = filtered.Values();
+
+		for (auto& v : vec)
+		{
+			if (fabs(v) < 0.1)
+			{
+				v = 0;
+			}
+		}
+
+		capeInfo->Grid()->Data(filtered);
+	};
+
+	filter(CAPEParam);
+	filter(CAPE1040Param);
+	filter(CAPE3kmParam);
+	filter(CINParam);
 
 	capeInfo->Param(CAPEParam);
 	mySubThreadedLogger.Debug("CAPE: " + ::PrintMean<double>(VEC(capeInfo)));

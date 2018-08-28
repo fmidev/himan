@@ -11,7 +11,7 @@
 #include "numerical_functions_impl.h"
 #include "plugin_factory.h"
 #include "radon.h"
-#include "reduced_gaussian_grid.h"
+//#include "reduced_gaussian_grid.h"
 #include "stereographic_grid.h"
 #include <boost/filesystem.hpp>
 #include <boost/thread.hpp>
@@ -294,11 +294,11 @@ namespace info_wrapper
 
 void SetValue(std::shared_ptr<info>& anInfo, int index, double value)
 {
-	anInfo->Grid()->Value(--index, value);
+	anInfo->Grid()->Data().Set(--index, value);
 }
 double GetValue(std::shared_ptr<info>& anInfo, int index)
 {
-	return anInfo->Grid()->Value(--index);
+	return anInfo->Grid()->Data().At(--index);
 }
 size_t GetLocationIndex(std::shared_ptr<info> anInfo)
 {
@@ -1009,7 +1009,7 @@ void BindLib(lua_State* L)
 	              .def("GetData", &info_wrapper::GetData),
 	          class_<grid, std::shared_ptr<grid>>("grid")
 	              .def("ClassName", &grid::ClassName)
-	              .def("GetScanningMode", LUA_CMEMFN(HPScanningMode, grid, ScanningMode, void))
+	              //.def("GetScanningMode", LUA_CMEMFN(HPScanningMode, grid, ScanningMode, void))
 	              .def("GetGridType", LUA_CMEMFN(HPGridType, grid, Type, void))
 	              .def("GetGridClass", LUA_CMEMFN(HPGridClass, grid, Class, void))
 	              .def("GetAB", LUA_CMEMFN(std::vector<double>, grid, AB, void))
@@ -1050,20 +1050,16 @@ void BindLib(lua_State* L)
 	              .def("GetLastPoint", LUA_CMEMFN(point, stereographic_grid, LastPoint, void))
 	              .def("GetOrientation", LUA_CMEMFN(double, stereographic_grid, Orientation, void))
 	              .def("SetOrientation", LUA_MEMFN(void, stereographic_grid, Orientation, double)),
+#if 0
 	          class_<reduced_gaussian_grid, grid, std::shared_ptr<reduced_gaussian_grid>>("reduced_gaussian_grid")
 	              .def(constructor<>())
 	              .def("ClassName", &reduced_gaussian_grid::ClassName)
-	              .def("GetNj", LUA_CMEMFN(size_t, reduced_gaussian_grid, Nj, void))
-	              .def("GetDj", LUA_CMEMFN(double, reduced_gaussian_grid, Dj, void))
 	              .def("GetN", LUA_CMEMFN(int, reduced_gaussian_grid, N, void))
 	              .def("SetN", LUA_MEMFN(void, reduced_gaussian_grid, N, int))
-	              .def("GetBottomLeft", LUA_CMEMFN(point, reduced_gaussian_grid, BottomLeft, void))
-	              .def("SetBottomLeft", LUA_MEMFN(void, reduced_gaussian_grid, BottomLeft, const point&))
-	              .def("GetTopRight", LUA_CMEMFN(point, reduced_gaussian_grid, TopRight, void))
-	              .def("SetTopRight", LUA_MEMFN(void, reduced_gaussian_grid, BottomLeft, const point&))
 	              .def("GetFirstPoint", LUA_CMEMFN(point, reduced_gaussian_grid, FirstPoint, void))
 	              .def("GetLastPoint", LUA_CMEMFN(point, reduced_gaussian_grid, LastPoint, void))
 	          ,
+#endif
 	          class_<matrix<double>>("matrix")
 	              .def(constructor<size_t, size_t, size_t, double>())
 	              .def("SetValues", &matrix_wrapper::SetValues)

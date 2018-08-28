@@ -55,7 +55,7 @@ const blend_producer GFS(forecast_type(kEpsPerturbation, static_cast<float>(blen
                          kGfsForecastLength, 6);
 
 blend::blend()
-    : itsCalculationMode(kCalculateNone), itsNumHours(0), itsAnalysisHour(0), itsProducer(), itsBlendProducer()
+    : itsCalculationMode(kCalculateNone), itsNumHours(0), itsAnalysisHour(0), itsBlendProducer()
 {
 	itsLogger = logger("blend");
 }
@@ -155,39 +155,39 @@ void blend::Run(unsigned short threadIndex)
 	}
 }
 
-raw_time blend::LatestOriginTimeForProducer(const string& producer) const
+raw_time blend::LatestOriginTimeForProducer(const blend_producer& producer) const
 {
 	// These are hardcoded for simplicity.
 	int producerId = -1;
 	string geom;
-	if (producer == "MOS")
+	if (producer == MOS)
 	{
 		producerId = 120;
 		geom = "MOSKRIGING2";
 	}
-	else if (producer == "ECG")
+	else if (producer == ECMWF)
 	{
 		producerId = 131;
 		geom = "ECGLO0100";
 	}
-	else if (producer == "HL2")
+	else if (producer == HIRLAM)
 	{
 		producerId = 1;
 		geom = "RCR068";
 	}
-	else if (producer == "MEPS")
+	else if (producer == MEPS)
 	{
 		producerId = 4;
 		geom = "MEPSSCAN2500";
 	}
-	else if (producer == "GFS")
+	else if (producer == GFS)
 	{
 		producerId = 53;
 		geom = "GFS0250";
 	}
 	else
 	{
-		itsLogger.Error("Invalid producer string: " + producer);
+		itsLogger.Error("Invalid producer type");
 		himan::Abort();
 	}
 
@@ -206,7 +206,7 @@ raw_time blend::LatestOriginTimeForProducer(const string& producer) const
 	// With ECMWF and MOS we only want 00 and 12 times. MOS is only calculated for 00 and 12. ECMWF forecast length is
 	// shorter for 6 and 18, and that seems to break everything.
 	const int hour = stoi(raw.String("%H"));
-	if (producer == "ECG" || producer == "MOS")
+	if (producer == ECMWF || producer == MOS)
 	{
 		if (hour == 6 || hour == 18)
 		{
@@ -285,7 +285,7 @@ void blend::Process(shared_ptr<const plugin_configuration> conf)
 		itsNumHours = stoi(hours);
 	}
 
-    // Producer for bias and mae calculation
+    // Producer for bias and mae calculation (itsProdFtype is only used with these modes)
 	const string prod = conf->Exists("producer") ? conf->GetValue("producer") : "";
 	if ((itsCalculationMode == kCalculateBias || itsCalculationMode == kCalculateMAE) && prod.empty())
 	{
@@ -294,7 +294,6 @@ void blend::Process(shared_ptr<const plugin_configuration> conf)
 
 	if (itsCalculationMode == kCalculateBias || itsCalculationMode == kCalculateMAE)
 	{
-		itsProducer = prod;
 		if (prod == "ECG")
 		{
 			itsBlendProducer = ECMWF;
@@ -378,6 +377,16 @@ void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
 	}
 }
 
+// MOS doesn't have forecast hours 0, 1, 2
+static bool IsDuringMosFirstHours(const forecast_time& currentTime)
+{
+	const int validHour = stoi(currentTime.ValidDateTime().String("%H"));
+	const int originHour = stoi(currentTime.OriginDateTime().String("%H"));
+	const bool firstHours = (originHour == 0 && validHour >= 0 && validHour <= 2) ||
+	                        (originHour == 12 && validHour >= 12 && validHour <= 14);
+	return firstHours;
+}
+
 static forecast_time MakeAnalysisFetchTime(const forecast_time& currentTime, int analysisHour)
 {
 	const int validHour = stoi(currentTime.ValidDateTime().String("%H"));
@@ -419,8 +428,7 @@ matrix<double> blend::CalculateBias(logger& log, shared_ptr<info> targetInfo, co
 
 	// MOS doesn't have hours 0, 1, 2. So we'll set this to missing. We don't want to do this with other models, since
 	// in these cases it is certainly an error that needs to be looked at and fixed manually.
-	const int validHour = stoi(currentTime.ValidDateTime().String("%H"));
-	if (itsBlendProducer == MOS && validHour >= 0 && validHour <= 2)
+	if (itsBlendProducer == MOS && IsDuringMosFirstHours(currentTime))
 	{
 		try
 		{
@@ -489,7 +497,17 @@ matrix<double> blend::CalculateBias(logger& log, shared_ptr<info> targetInfo, co
 			f = 0.0;
 			o = 0.0;
 		}
-		B[i] = (1.0 - alpha) * bc + alpha * (f - o);
+
+		// Don't output 0.0, as this will 'contaminate' all future results
+		const double result = (1.0 - alpha) * bc + alpha * (f - o);
+		if (result == 0.0)
+		{
+			B[i] = MissingDouble();
+		}
+		else
+		{
+			B[i] = result;
+		}
 	}
 
 	return currentBias;
@@ -529,8 +547,7 @@ matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info> targetInfo, con
 
 	// See note pertaining to MOS at CalculateBias.
 	vector<double> forecast;
-	const int validHour = stoi(currentTime.ValidDateTime().String("%H"));
-	if (itsBlendProducer == MOS && validHour >= 0 && validHour <= 2)
+	if (itsBlendProducer == MOS && IsDuringMosFirstHours(currentTime))
 	{
 		try
 		{
@@ -595,7 +612,17 @@ matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info> targetInfo, con
 		}
 
 		const double bcf = f - b;
-		mae[i] = (1.0 - alpha) * _prevMAE + alpha * std::abs(bcf - o);
+		const double result = (1.0 - alpha) * _prevMAE + alpha * std::abs(bcf - o);
+
+		// Don't output 0.0, as this will 'contaminate' all future results
+		if (result == 0.0)
+		{
+			mae[i] = MissingDouble();
+		}
+		else
+		{
+			mae[i] = result;
+		}
 	}
 
 	return MAE;
@@ -617,7 +644,7 @@ void blend::CalculateMember(shared_ptr<info> targetInfo, unsigned short threadId
 	level targetLevel = targetInfo->Level();
 	forecast_time current = targetInfo->Time();
 
-	raw_time latestOrigin = LatestOriginTimeForProducer(itsProducer);
+	raw_time latestOrigin = LatestOriginTimeForProducer(itsBlendProducer);
 	log.Info("Latest origin time for producer: " + latestOrigin.String());
 
 	// Used for fetching raw model output, bias, and weight for models.
@@ -801,7 +828,7 @@ info_t FetchHistorical(logger& log, shared_ptr<plugin_configuration> cnf, const 
 		ftime.ValidDateTime().Adjust(kHourResolution, currentStep);
 
 		search_options opts(ftime, parm, blendProd.lvl, prod, blendProd.type, cnf);
-		const vector<string> files = r->Files(opts);
+		const vector<string> files = r->Files(opts).first;
 		if (files.empty())
 		{
 			log.Trace("Failed to find matching files for: " + to_string(prod.Id()) + "/" +

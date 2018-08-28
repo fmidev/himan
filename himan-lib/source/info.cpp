@@ -166,12 +166,12 @@ void info::Create(const grid* baseGrid, const param& par, const level& lev, bool
 		if (Level() == lev && Param() == par)
 		{
 			Grid(shared_ptr<grid>(baseGrid->Clone()));
-
 			if (baseGrid->Class() == kRegularGrid)
 			{
+				const regular_grid* regGrid(dynamic_cast<const regular_grid*>(baseGrid));
 				if (createDataBackend)
 				{
-					Grid()->Data().Resize(Grid()->Ni(), Grid()->Nj());
+					Grid()->Data().Resize(regGrid->Ni(), regGrid->Nj());
 				}
 			}
 			else if (baseGrid->Class() == kIrregularGrid)
@@ -217,9 +217,10 @@ void info::Create(const grid* baseGrid, bool createDataBackend)
 
 					if (baseGrid->Class() == kRegularGrid)
 					{
+						const regular_grid* regGrid(dynamic_cast<const regular_grid*>(baseGrid));
 						if (createDataBackend)
 						{
-							Grid()->Data().Resize(Grid()->Ni(), Grid()->Nj());
+							Grid()->Data().Resize(regGrid->Ni(), regGrid->Nj());
 						}
 					}
 					else if (baseGrid->Class() == kIrregularGrid)
@@ -694,8 +695,16 @@ info_simple* info::ToSimple() const
 	ret->size_x = Grid()->Data().SizeX();
 	ret->size_y = Grid()->Data().SizeY();
 
-	ret->di = Grid()->Di();
-	ret->dj = Grid()->Dj();
+	if (Grid()->Class() == kRegularGrid)
+	{
+		ret->di = dynamic_cast<const regular_grid*>(Grid())->Di();
+		ret->dj = dynamic_cast<const regular_grid*>(Grid())->Dj();
+	}
+	else
+	{
+		ret->di = kHPMissingValue;
+		ret->dj = kHPMissingValue;
+	}
 
 	ret->first_lat = Grid()->FirstPoint().Y();
 	ret->first_lon = Grid()->FirstPoint().X();
@@ -718,14 +727,18 @@ info_simple* info::ToSimple() const
 
 	ret->interpolation = Param().InterpolationMethod();
 
-	if (Grid()->ScanningMode() == kTopLeft)
+	if (Grid()->Class() == kRegularGrid)
 	{
-		ret->j_scans_positive = false;
-	}
-	else if (Grid()->ScanningMode() != kBottomLeft)
-	{
-		throw runtime_error(ClassName() + ": Invalid scanning mode for Cuda: " +
-		                    string(HPScanningModeToString.at(Grid()->ScanningMode())));
+		if (dynamic_cast<const regular_grid*>(Grid())->ScanningMode() == kTopLeft)
+		{
+			ret->j_scans_positive = false;
+		}
+		else if (dynamic_cast<const regular_grid*>(Grid())->ScanningMode() != kBottomLeft)
+		{
+			throw runtime_error(
+			    ClassName() + ": Invalid scanning mode for Cuda: " +
+			    string(HPScanningModeToString.at(dynamic_cast<const regular_grid*>(Grid())->ScanningMode())));
+		}
 	}
 
 	ret->projection = Grid()->Type();
