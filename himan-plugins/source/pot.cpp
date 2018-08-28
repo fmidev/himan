@@ -439,8 +439,8 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		return;
 	}
 
-	const double smallRadius = 40;
-	const double largeRadius = 70;
+	const double smallRadius = 35;
+	const double largeRadius = 62;
 
 	int smallFilterSizeX = 3;
 	int smallFilterSizeY = 3;
