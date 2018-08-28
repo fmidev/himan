@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 18.8.20
+Version: 18.8.28
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -59,6 +59,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Tue Aug 28 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.28-1.fmi
+- Chang in grid class inheritance structure
 * Mon Aug 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.20-1.fmi
 - Visibility changes to some interpolation functions
 * Thu Aug 16 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.16-2.fmi
