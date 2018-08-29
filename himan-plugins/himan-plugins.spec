@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.8.28
+Version: 18.8.29
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -112,6 +112,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Aug 29 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.29-1.fmi
+- Changes in pot, blend
 * Tue Aug 28 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.28-1.fmi
 - Chang in grid class inheritance structure
 * Wed Aug 22 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.22-1.fmi
