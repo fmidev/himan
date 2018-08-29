@@ -439,9 +439,46 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		return;
 	}
 
+	const double smallRadius = 35;
+	const double largeRadius = 62;
+
+	int smallFilterSizeX = 3;
+	int smallFilterSizeY = 3;
+	int largeFilterSizeX = 5;
+	int largeFilterSizeY = 5;
+
+	switch (myTargetInfo->Grid()->Type())
+	{
+		case kLatitudeLongitude:
+		case kRotatedLatitudeLongitude:
+			smallFilterSizeX =
+			    static_cast<int>((smallRadius / dynamic_cast<regular_grid*>(myTargetInfo->Grid())->Di() / 111.0));
+			smallFilterSizeY =
+			    static_cast<int>((smallRadius / dynamic_cast<regular_grid*>(myTargetInfo->Grid())->Dj() / 111.0));
+			largeFilterSizeX =
+			    static_cast<int>((largeRadius / dynamic_cast<regular_grid*>(myTargetInfo->Grid())->Di() / 111.0));
+			largeFilterSizeY =
+			    static_cast<int>((largeRadius / dynamic_cast<regular_grid*>(myTargetInfo->Grid())->Dj() / 111.0));
+			break;
+		case kStereographic:
+		case kLambertConformalConic:
+			smallFilterSizeX =
+			    static_cast<int>(round(smallRadius / dynamic_cast<regular_grid*>(myTargetInfo->Grid())->Di() * 1000.0));
+			smallFilterSizeY =
+			    static_cast<int>(round(smallRadius / dynamic_cast<regular_grid*>(myTargetInfo->Grid())->Dj() * 1000.0));
+			largeFilterSizeX =
+			    static_cast<int>(round(largeRadius / dynamic_cast<regular_grid*>(myTargetInfo->Grid())->Di() * 1000.0));
+			largeFilterSizeY =
+			    static_cast<int>(round(largeRadius / dynamic_cast<regular_grid*>(myTargetInfo->Grid())->Dj() * 1000.0));
+			break;
+		default:
+			break;
+	}
+
 	// filters
-	himan::matrix<double> small_filter_kernel(3, 3, 1, MissingDouble(), 1.0);
-	himan::matrix<double> large_filter_kernel(5, 5, 1, MissingDouble(), 1.0 / 25.0);
+	himan::matrix<double> small_filter_kernel(smallFilterSizeX, smallFilterSizeY, 1, MissingDouble(), 1.0);
+	himan::matrix<double> large_filter_kernel(largeFilterSizeX, largeFilterSizeY, 1, MissingDouble(),
+	                                          1.0 / (largeFilterSizeX * largeFilterSizeY));
 
 	// Cape filtering
 	himan::matrix<double> filtered_CAPE = numerical_functions::Max2D(CAPEMaxInfo->Data(), small_filter_kernel);
