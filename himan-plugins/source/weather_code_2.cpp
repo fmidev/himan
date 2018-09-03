@@ -47,12 +47,20 @@ void weather_code_2::Calculate(shared_ptr<info> myTargetInfo, unsigned short the
 
 	// parameters to check convection
 	const param TParam("T-K");
+	param TGParam = TParam;
 	const param KParam("KINDEX-N");
 
 	level HLevel(himan::kHeight, 0, "HEIGHT");
 
 	// levels to check convection
 	level T0mLevel(himan::kHeight, 0, "HEIGHT");
+
+	if (myTargetInfo->Producer().Id() == 240)
+	{
+		TGParam = param("TG-K");
+		T0mLevel = level(himan::kGroundDepth, 0, 7);
+	}
+
 	level RH850Level(himan::kPressure, 850, "PRESSURE");
 
 	auto myThreadedLogger = logger("weather_code_2Thread #" + to_string(theThreadIndex));
@@ -72,7 +80,7 @@ void weather_code_2::Calculate(shared_ptr<info> myTargetInfo, unsigned short the
 	info_t MedCloudCoverInfo = Fetch(forecastTime, HLevel, MedCloudCoverParam, forecastType, false);
 	info_t HighCloudCoverInfo = Fetch(forecastTime, HLevel, HighCloudCoverParam, forecastType, false);
 	info_t FogInfo = Fetch(forecastTime, HLevel, FogParam, forecastType, false);
-	info_t T0mInfo = Fetch(forecastTime, T0mLevel, TParam, forecastType, false);
+	info_t T0mInfo = Fetch(forecastTime, T0mLevel, TGParam, forecastType, false);
 	info_t T850Info = Fetch(forecastTime, RH850Level, TParam, forecastType, false);
 	info_t KInfo = Fetch(forecastTime, HLevel, KParam, forecastType, false);
 
@@ -293,10 +301,10 @@ double weather_code_2::thunder_prob(double kIndex, double cloud)
 	{
 		if (kIndex >= 37)
 			thunder_prob = 60;  // heavy thunder, set thunder probability to a value over 50% (to be replaced by a more
-		                        // scientific way to determine thunder probability in the future)
+			                    // scientific way to determine thunder probability in the future)
 		else if (kIndex >= 27)
 			thunder_prob = 40;  // thunder, set thunder probability to a value between 30% and 50% (to be replaced by a
-		                        // more scientific way to determine thunder probability in the future)
+			                    // more scientific way to determine thunder probability in the future)
 	}
 
 	return thunder_prob;
