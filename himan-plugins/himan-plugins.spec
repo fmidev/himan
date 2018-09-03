@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.8.29
+Version: 18.9.3
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -112,6 +112,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Sep  3 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.9.3-1.fmi
+- Bugfix to weather_code_2
 * Wed Aug 29 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.29-1.fmi
 - Changes in pot, blend
 * Tue Aug 28 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.28-1.fmi
