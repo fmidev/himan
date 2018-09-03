@@ -639,12 +639,12 @@ raw_time GetLatestOriginDateTime(const shared_ptr<configuration> conf, const str
 
 	auto strlist = himan::util::Split(latest, "-", false);
 
-	int offset = 0;
+	unsigned int offset = 0;
 
 	if (strlist.size() == 2)
 	{
 		// will throw if origintime is not in the form "latest-X", where X : integer >= 0
-		offset = stoi(strlist[1]);
+		offset = static_cast<unsigned> (stoi(strlist[1]));
 	}
 
 	HPDatabaseType dbtype = conf->DatabaseType();

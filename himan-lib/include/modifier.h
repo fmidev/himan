@@ -417,7 +417,7 @@ class modifier_findvalue : public modifier
 class modifier_plusminusarea : public modifier
 {
    public:
-	modifier_plusminusarea() : modifier(kPlusMinusAreaModifier), itsValuesFound(0)
+	modifier_plusminusarea() : modifier(kPlusMinusAreaModifier)
 	{
 	}
 	virtual ~modifier_plusminusarea()
@@ -437,8 +437,6 @@ class modifier_plusminusarea : public modifier
 
 	mutable std::vector<double> itsPlusArea;
 	std::vector<double> itsMinusArea;
-
-	size_t itsValuesFound;
 };
 
 }  // namespace himan
