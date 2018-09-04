@@ -62,7 +62,7 @@ bool grid::EqualsTo(const grid& other) const
 	}
 
 	// Comparison of earth shape turned off for now
-	if (false && other.itsEarthShape != itsEarthShape)
+	if ((false) && other.itsEarthShape != itsEarthShape)
 	{
 		itsLogger.Trace("Earth shape does not match: A: " + to_string(other.itsEarthShape.A()) + " vs " +
 		                to_string(itsEarthShape.A()) + " and B: " + to_string(other.itsEarthShape.B()) + " vs " +
@@ -78,7 +78,7 @@ bool grid::EqualsTo(const grid& other) const
 	}
 
 	// Disabled for now
-	if (false && other.itsIdentifier != itsIdentifier)
+	if ((false) && other.itsIdentifier != itsIdentifier)
 	{
 		itsLogger.Trace("Identifier does not match: " + itsIdentifier + " vs " + other.itsIdentifier);
 		return false;

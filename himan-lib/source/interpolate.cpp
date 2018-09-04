@@ -586,8 +586,8 @@ std::pair<std::vector<size_t>, std::vector<double>> InterpolationWeights(reduced
 	auto north = south;
 	north--;
 
-	size_t y_north = std::distance(lats.begin(), north);
-	size_t y_south = std::distance(lats.begin(), south);
+	size_t y_north = static_cast<size_t> (std::distance(lats.begin(), north));
+	size_t y_south = static_cast<size_t> (std::distance(lats.begin(), south));
 
 	// find x-indices
 	size_t x_north_west = static_cast<size_t>(

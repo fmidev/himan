@@ -29,7 +29,7 @@ AddOption(
     help='no cuda build',
     default=False)
 
-env = Environment()
+env = Environment(ENV = {'PATH' : os.environ['PATH']})
 
 # Get color output from gcc / clang
 try:
@@ -148,11 +148,15 @@ cflags_extra.append('-Wwrite-strings')
 cflags_extra.append('-Wconversion')
 # cflags_extra.append('-Winline')
 cflags_extra.append('-Wnon-virtual-dtor')
-cflags_extra.append('-Wno-pmf-conversions')
 cflags_extra.append('-Wsign-promo')
 cflags_extra.append('-Wchar-subscripts')
 cflags_extra.append('-Wold-style-cast')
 cflags_extra.append('-Wunreachable-code')
+
+if env['CXX'] == 'g++':
+	cflags_extra.append('-Wno-pmf-conversions')
+elif env['CXX'] == 'clang++':
+	cflags_extra.append('-Wno-int-conversions')
 
 # Difficult flags
 

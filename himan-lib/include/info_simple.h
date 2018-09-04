@@ -44,7 +44,7 @@ namespace himan
  * 6) Unregister page-locked memory.
  */
 
-class simple_packed;
+struct simple_packed;
 
 struct info_simple
 {
