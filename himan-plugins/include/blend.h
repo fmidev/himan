@@ -34,8 +34,8 @@ struct blend_producer
 	{
 	}
 
-	blend_producer(const forecast_type& type, const level& lvl, int forecastLength, int originTimestep)
-	    : type(type), lvl(lvl), forecastLength(forecastLength), originTimestep(originTimestep)
+	blend_producer(const forecast_type& _type, const level& _lvl, int _forecastLength, int _originTimestep)
+	    : type(_type), lvl(_lvl), forecastLength(_forecastLength), originTimestep(_originTimestep)
 	{
 	}
 

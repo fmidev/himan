@@ -518,9 +518,9 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 
 	const double invstep = 1. / step;
 
-	auto& result = VEC(myTargetInfo);
+	auto& resultVec = VEC(myTargetInfo);
 
-	for (auto&& tup : zip_range(result, VEC(curSumInfo), VEC(prevSumInfo)))
+	for (auto&& tup : zip_range(resultVec, VEC(curSumInfo), VEC(prevSumInfo)))
 	{
 		double& result = tup.get<0>();
 		double currentSum = tup.get<1>();
@@ -682,7 +682,7 @@ shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTarg
 		SumInfo = make_shared<info>(*myTargetInfo);
 		vector<forecast_time> times = {wantedTime};
 		vector<level> levels = {wantedLevel};
-		vector<param> params = {sourceParameters[myTargetInfo->Param().Name()][0]};
+		params = {sourceParameters[myTargetInfo->Param().Name()][0]};
 
 		SumInfo->Params(params);
 		SumInfo->Levels(levels);

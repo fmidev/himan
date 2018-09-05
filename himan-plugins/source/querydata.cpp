@@ -596,8 +596,8 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 
 	for (qinfo.ResetParam(); qinfo.NextParam();)
 	{
-		param p(string(qinfo.Param().GetParamName()), qinfo.Param().GetParamIdent());
-		theParams.push_back(p);
+		param par(string(qinfo.Param().GetParamName()), qinfo.Param().GetParamIdent());
+		theParams.push_back(par);
 	}
 
 	newInfo->Params(theParams);

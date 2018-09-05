@@ -251,12 +251,12 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 		// out of scope and memory free'd while processing is still in progress
 
 		pool.push_back(async(launch::async,
-		                     [&](info_t myTargetInfo, info_t PInfo, info_t prevPInfo, info_t TInfo, info_t prevTInfo) {
-			                     auto& target = VEC(myTargetInfo);
-			                     const auto& PVec = VEC(PInfo);
-			                     const auto& prevPVec = VEC(prevPInfo);
-			                     const auto& TVec = VEC(TInfo);
-			                     const auto& prevTVec = VEC(prevTInfo);
+		                     [&](info_t _myTargetInfo, info_t _PInfo, info_t _prevPInfo, info_t _TInfo, info_t _prevTInfo) {
+			                     auto& target = VEC(_myTargetInfo);
+			                     const auto& PVec = VEC(_PInfo);
+			                     const auto& prevPVec = VEC(_prevPInfo);
+			                     const auto& TVec = VEC(_TInfo);
+			                     const auto& prevTVec = VEC(_prevTInfo);
 
 			                     for (auto&& tup : zip_range(target, PVec, prevPVec, TVec, prevTVec))
 			                     {
@@ -342,7 +342,7 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 
 		if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
 		{
-			writers.push_back(async(launch::async, [this](info_t myTargetInfo) { WriteToFile(myTargetInfo); },
+			writers.push_back(async(launch::async, [this](info_t _myTargetInfo) { WriteToFile(_myTargetInfo); },
 			                        make_shared<info>(*myTargetInfo)));
 		}
 		else

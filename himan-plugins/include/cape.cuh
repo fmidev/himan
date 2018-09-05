@@ -613,7 +613,7 @@ inline float CalcCIN(float Tenv, float prevTenv, float Tparcel, float prevTparce
 	}
 	else if (Tparcel >= Tenv && prevTparcel < prevTenv)
 	{
-		float cin, x1, x2, x3;
+		float x1, x2, x3;
 		CAPE::IntegrateLeavingParcel(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv, cin, x1, x2,
 		                             x3);
 	}

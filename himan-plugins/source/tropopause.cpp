@@ -83,7 +83,7 @@ void tropopause::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	}
 
 	size_t grd_size = myTargetInfo->SizeLocations();
-	vector<double> tropopause(grd_size, MissingDouble());
+	vector<double> result(grd_size, MissingDouble());
 
 	// outer loop goes horizontal direction
 	for (size_t i = 0; i < grd_size; ++i)
@@ -96,7 +96,7 @@ void tropopause::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			if (lapseRate <= 2.0)
 			{
 				// set tropopause height
-				tropopause[i] = 100. * pres[j][i];
+				result[i] = 100. * pres[j][i];
 
 				// check 2km above condition
 				size_t k = j + 1;
@@ -104,20 +104,20 @@ void tropopause::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 				{
 					if (-1000.0 * (temp[k][i] - temp[j][i]) / (height[k][i] - height[j][i]) > 2.0)
 					{
-						tropopause[i] = MissingDouble();
+						result[i] = MissingDouble();
 						break;
 					}
 					++k;
 				}
 			}
-			if (IsValid(tropopause[i]))
+			if (IsValid(result[i]))
 				break;
 		}
 	}
 
 	// convert pressure to flight level
-	transform(tropopause.begin(), tropopause.end(), tropopause.begin(), metutil::FlightLevel_);
-	myTargetInfo->Grid()->Data().Set(move(tropopause));
+	transform(result.begin(), result.end(), result.begin(), metutil::FlightLevel_);
+	myTargetInfo->Grid()->Data().Set(move(result));
 
 	string deviceType = "CPU";
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +

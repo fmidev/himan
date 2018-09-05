@@ -23,7 +23,7 @@ const double ovc = .900;  // 7/8
 struct cloud_layer
 {
 	cloud_layer() : base(MissingDouble()), amount(MissingDouble()), top(MissingDouble()){};
-	cloud_layer(double base, double amount, double top) : base(base), amount(amount), top(top){};
+	cloud_layer(double _base, double _amount, double _top) : base(_base), amount(_amount), top(_top){};
 
 	double base;
 	double amount;

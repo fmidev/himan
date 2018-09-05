@@ -21,7 +21,7 @@ struct lcl_t
 	}
 
 	CUDA_DEVICE
-	lcl_t(Type T, Type P, Type Q) : T(T), P(P), Q(Q)
+	lcl_t(Type _T, Type _P, Type _Q) : T(_T), P(_P), Q(_Q)
 	{
 	}
 };

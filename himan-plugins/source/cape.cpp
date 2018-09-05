@@ -246,8 +246,8 @@ void MoistLift(const float* Piter, const float* Titer, const float* Penv, float*
 	{
 		const size_t start = num * splitSize;
 		futures.push_back(async(launch::async,
-		                        [&](size_t start) {
-			                        for (size_t i = start; i < start + splitSize; i++)
+		                        [&](size_t _start) {
+			                        for (size_t i = _start; i < _start + splitSize; i++)
 			                        {
 				                        Tparcel[i] = himan::metutil::MoistLiftA_<float>(Piter[i], Titer[i], Penv[i]);
 			                        }
@@ -819,17 +819,17 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<float>& Tsource
 		prevPenvVec = PenvVec;
 		prevTparcelVec = TparcelVec;
 
-		for (size_t i = 0; i < Titer.size(); i++)
+		for (size_t j = 0; j < Titer.size(); j++)
 		{
-			if (!IsMissing(TparcelVec[i]) && !IsMissing(PenvVec[i]))
+			if (!IsMissing(TparcelVec[j]) && !IsMissing(PenvVec[j]))
 			{
-				Titer[i] = TparcelVec[i];
-				Piter[i] = PenvVec[i];
+				Titer[j] = TparcelVec[j];
+				Piter[j] = PenvVec[j];
 			}
 
-			if (found[i])
+			if (found[j])
 			{
-				Titer[i] = MissingFloat();  // by setting this we prevent MoistLift to integrate particle
+				Titer[j] = MissingFloat();  // by setting this we prevent MoistLift to integrate particle
 			}
 		}
 	}
@@ -1400,11 +1400,11 @@ pair<vector<float>, vector<float>> cape::GetLFCCPU(shared_ptr<info> myTargetInfo
 		prevTenvVec = TenvVec;
 		prevTparcelVec = TparcelVec;
 
-		for (size_t i = 0; i < Titer.size(); i++)
+		for (size_t j = 0; j < Titer.size(); j++)
 		{
-			if (found[i])
+			if (found[j])
 			{
-				Titer[i] = MissingFloat();  // by setting this we prevent MoistLift to integrate particle
+				Titer[j] = MissingFloat();  // by setting this we prevent MoistLift to integrate particle
 			}
 		}
 	}
@@ -1534,18 +1534,18 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info> myTargetInfo)
 		}
 	}
 
-	auto P = VEC(PInfo);
+	auto curP = VEC(PInfo);
 
 	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 500.);
 	auto P500m = h->VerticalValue(param("P-HPA"), 500.);
 
 	auto sourceData =
-	    GetSampledSourceData(itsConfiguration, myTargetInfo, Convert(P500m), Convert(P), curLevel, stopLevel.second);
+	    GetSampledSourceData(itsConfiguration, myTargetInfo, Convert(P500m), Convert(curP), curLevel, stopLevel.second);
 
 	h->HeightUnit(kHPa);
 
-	tp.LowerHeight(P);
-	mr.LowerHeight(P);
+	tp.LowerHeight(curP);
+	mr.LowerHeight(curP);
 
 	tp.UpperHeight(P500m);
 	mr.UpperHeight(P500m);
@@ -1599,56 +1599,6 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info> myTargetInfo)
 		k++;
 	}
 
-#if 0
-	vector<bool> found(myTargetInfo->Data().Size(), false);
-	size_t foundCount = 0;
-
-	while (foundCount != found.size())
-	{
-		auto T = h->VerticalValue(param("T-K"), P);
-		auto RH = h->VerticalValue(param("RH-PRCNT"), P);
-
-		vector<double> Tpot(T.size(), MissingDouble());
-		vector<double> MR(T.size(), MissingDouble());
-
-		for (size_t i = 0; i < T.size(); i++)
-		{
-			if (found[i] || IsMissingDouble(T[i]) || IsMissingDouble(P[i]) || IsMissingDouble(RH[i]))
-			{
-				continue;
-			}
-			ASSERT(T[i] > 150 && T[i] < 350);
-			ASSERT(P[i] > 100 && P[i] < 1500);
-			ASSERT(RH[i] > 0 && RH[i] < 102);
-
-			Tpot[i] = metutil::Theta_<double>(T[i], 100 * P[i]);
-			MR[i] = metutil::smarttool::MixingRatio_<double>(T[i], RH[i], 100 * P[i]);
-		}
-
-		tp.Process(Tpot, P);
-		mr.Process(MR, P);
-
-		foundCount = tp.HeightsCrossed();
-
-		ASSERT(tp.HeightsCrossed() == mr.HeightsCrossed());
-
-		itsLogger.Debug("Data read " + to_string(foundCount) + "/" + to_string(found.size()) + " gridpoints");
-
-		for (size_t i = 0; i < found.size(); i++)
-		{
-			ASSERT((P[i] > 100 && P[i] < 1500) || IsMissingDouble(P[i]));
-
-			if (found[i])
-			{
-				P[i] = MissingDouble();  // disable processing of this
-			}
-			else if (!IsMissingDouble(P[i]))
-			{
-				P[i] -= 2.0;
-			}
-		}
-	}
-#endif
 	auto Tpot = Convert(tp.Result());
 	auto MR = Convert(mr.Result());
 
@@ -1670,7 +1620,7 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info> myTargetInfo)
 
 	for (size_t i = 0; i < MR.size(); i++)
 	{
-		if (!IsMissing(T[i]) && !IsMissing(MR[i]) && !IsMissing(P[i]))
+		if (!IsMissing(T[i]) && !IsMissing(MR[i]) && !IsMissing(curP[i]))
 		{
 			const float Es = metutil::Es_<float>(T[i]);  // Saturated water vapor pressure
 			const float E = metutil::E_<float>(MR[i], 100 * PSurf[i]);
