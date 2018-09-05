@@ -159,7 +159,7 @@ cflags_difficult.append('-Wctor-dtor-privacy')
 if IS_GCC:
 	env.Append(CCFLAGS = '-std=c++11')
 else:
-	env.Append(CCFLAGS = '-std=c++17')
+	env.Append(CCFLAGS = '-std=c++11')
 
 env.Append(CCFLAGS = '-fPIC')
 env.Append(CCFLAGS = cflags_normal)
