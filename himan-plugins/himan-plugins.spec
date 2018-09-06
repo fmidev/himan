@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.9.4
+Version: 18.9.6
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -112,6 +112,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Sep  6 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.9.6-1.fmi
+- Minor fix to cape-plugin/CIN
 * Tue Sep  4 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.9.4-1.fmi
 - Minor fixes
 * Mon Sep  3 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.9.3-1.fmi
