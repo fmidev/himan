@@ -283,29 +283,32 @@ void weather_code_2::Calculate(shared_ptr<info> myTargetInfo, unsigned short the
 
 double weather_code_2::rain_type(double kIndex, double T0m, double T850)
 {
-	double rain_type;
+	double raintype;
 	if (kIndex > 15)
-		rain_type = 2;  // check for convection
+		raintype = 2;  // check for convection
 	else if (metutil::LowConvection_(T0m, T850) == 0)
-		rain_type = 1;  // check for shallow convection
+		raintype = 1;  // check for shallow convection
 	else
-		rain_type = 2;
+		raintype = 2;
 
-	return rain_type;
+	return raintype;
 }
 
 double weather_code_2::thunder_prob(double kIndex, double cloud)
 {
-	double thunder_prob = 0;  // initialize thunder probability to 0%
+	double thunderprob = 0;  // initialize thunder probability to 0%
 	if (cloud == 3309 || cloud == 2303 || cloud == 2302 || cloud == 1309 || cloud == 1303 || cloud == 1302)
 	{
 		if (kIndex >= 37)
-			thunder_prob = 60;  // heavy thunder, set thunder probability to a value over 50% (to be replaced by a more
-			                    // scientific way to determine thunder probability in the future)
+		{
+			thunderprob = 60;  // heavy thunder, set thunder probability to a value over 50% (to be replaced by a more
+		}	                    // scientific way to determine thunder probability in the future)
 		else if (kIndex >= 27)
-			thunder_prob = 40;  // thunder, set thunder probability to a value between 30% and 50% (to be replaced by a
+		{
+			thunderprob = 40;  // thunder, set thunder probability to a value between 30% and 50% (to be replaced by a
 			                    // more scientific way to determine thunder probability in the future)
+		}
 	}
 
-	return thunder_prob;
+	return thunderprob;
 }

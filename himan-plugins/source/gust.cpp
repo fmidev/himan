@@ -371,7 +371,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		double topo = TopoInfo->Value();
 		double esto = himan::MissingDouble();
 		double esto_tot = himan::MissingDouble();
-		double gust = himan::MissingDouble();
+		double result = himan::MissingDouble();
 		double turb_lisa = 0;
 		double turb_kerroin = 0;
 		double pilvikerroin = 0;
@@ -425,42 +425,42 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 		if (z_boundaryl[i] >= 200 && esto >= 0 && esto <= esto_tot)
 		{
-			gust = ((BLbottom_ws[i] - BLtop_ws[i]) / esto_tot) * esto + BLtop_ws[i];
+			result = ((BLbottom_ws[i] - BLtop_ws[i]) / esto_tot) * esto + BLtop_ws[i];
 		}
 
 		if (z_boundaryl[i] >= 200 && esto <= 0 && esto >= -200)
 		{
-			gust = ((BLtop_ws[i] - maxEstimate[i]) / 200) * esto + BLtop_ws[i];
+			result = ((BLtop_ws[i] - maxEstimate[i]) / 200) * esto + BLtop_ws[i];
 		}
 
 		if (z_boundaryl[i] >= 200 && esto < -200)
 		{
-			gust = maxEstimate[i];
+			result = maxEstimate[i];
 		}
 
 		if (z_boundaryl[i] >= 200 && esto > esto_tot)
 		{
-			gust = BLbottom_ws[i];
+			result = BLbottom_ws[i];
 		}
 
 		if (z_boundaryl[i] < 200)
 		{
-			gust = meanWind[i];
+			result = meanWind[i];
 		}
 
-		if (IsMissing(gust) || gust < 1)
+		if (IsMissing(result) || result < 1)
 		{
-			gust = 1;
+			result = 1;
 		}
 
 		if (topo > 15 && topo < 400 && t_diff[i] > 0 && t_diff[i] <= 4 && BLbottom_ws[i] < 7 && elevationAngle < 15)
 		{
-			gust = ((1 - gust) / 4) * t_diff[i] + gust;
+			result = ((1 - result) / 4) * t_diff[i] + result;
 		}
 
 		if (topo > 15 && topo < 400 && t_diff[i] > 4 && BLbottom_ws[i] < 7)
 		{
-			gust = 1;
+			result = 1;
 		}
 
 		if (cloudCover >= 30 && cloudCover <= 70)
@@ -482,25 +482,25 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				turb_lisa = 4;
 			}
 
-			if (gust > 4 && gust <= 14)
+			if (result > 4 && result <= 14)
 			{
-				turb_kerroin = -0.1 * gust + 1.4;
+				turb_kerroin = -0.1 * result + 1.4;
 			}
 
-			if (gust <= 4)
+			if (result <= 4)
 			{
 				turb_kerroin = 1;
 			}
 		}
 
-		gust = gust + turb_lisa * turb_kerroin * pilvikerroin;
+		result = result + turb_lisa * turb_kerroin * pilvikerroin;
 
 		if (topo > 400 || IsMissing(T_LowestLevelInfo->Value()) || IsMissing(BLHInfo->Value()))
 		{
-			gust = GustInfo->Value() * 0.95;
+			result = GustInfo->Value() * 0.95;
 		}
 
-		myTargetInfo->Value(gust);
+		myTargetInfo->Value(result);
 	}
 
 	himan::matrix<double> filter_kernel(3, 3, 1, himan::MissingDouble());

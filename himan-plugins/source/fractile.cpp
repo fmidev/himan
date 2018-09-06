@@ -155,9 +155,9 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 
 	params calculatedParams;
 
-	for (double fractile : itsFractiles)
+	for (double frac : itsFractiles)
 	{
-		auto name = "F" + boost::lexical_cast<std::string>(fractile) + "-" + itsParamName;
+		auto name = "F" + boost::lexical_cast<std::string>(frac) + "-" + itsParamName;
 		calculatedParams.push_back(param(name));
 	}
 

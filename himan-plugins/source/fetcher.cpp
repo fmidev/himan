@@ -769,11 +769,11 @@ pair<HPDataFoundFrom, vector<shared_ptr<himan::info>>> fetcher::FetchFromAllSour
 	if (!auxiliaryFilesRead)
 	{
 		// second ret, different from first
-		auto ret = FetchFromAuxiliaryFiles(opts, readPackedData);
+		auto _ret = FetchFromAuxiliaryFiles(opts, readPackedData);
 
-		if (!ret.second.empty())
+		if (!_ret.second.empty())
 		{
-			return ret;
+			return _ret;
 		}
 	}
 

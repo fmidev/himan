@@ -937,7 +937,6 @@ std::vector<info_t> FetchMAEGrids(shared_ptr<info> targetInfo, shared_ptr<plugin
 
 void blend::CalculateBlend(shared_ptr<info> targetInfo, unsigned short threadIdx)
 {
-	auto f = GET_PLUGIN(fetcher);
 	auto log = logger("calculateBlend#" + to_string(threadIdx));
 	const string deviceType = "CPU";
 
@@ -982,13 +981,13 @@ void blend::CalculateBlend(shared_ptr<info> targetInfo, unsigned short threadIdx
 	}
 
 	// Load all the precalculated weights from BLENDW
-	vector<info_t> weights = FetchMAEGrids(targetInfo, make_shared<plugin_configuration>(*itsConfiguration), threadIdx);
-	if (std::all_of(weights.begin(), weights.end(), [&](info_t i) { return i == nullptr; }))
+	vector<info_t> preweights = FetchMAEGrids(targetInfo, make_shared<plugin_configuration>(*itsConfiguration), threadIdx);
+	if (std::all_of(preweights.begin(), preweights.end(), [&](info_t i) { return i == nullptr; }))
 	{
 		log.Error("Failed to acquire any MAE grids");
 	}
 
-	for (auto& w : weights)
+	for (auto& w : preweights)
 	{
 		if (w)
 		{
@@ -1016,7 +1015,7 @@ void blend::CalculateBlend(shared_ptr<info> targetInfo, unsigned short threadIdx
 		double F = 0.0;
 		size_t numMissing = 0;
 
-		for (const auto& tup : zip_range(forecasts, weights, biases))
+		for (const auto& tup : zip_range(forecasts, preweights, biases))
 		{
 			info_t f = tup.get<0>();
 			info_t w = tup.get<1>();
@@ -1066,6 +1065,8 @@ void blend::CalculateBlend(shared_ptr<info> targetInfo, unsigned short threadIdx
 				// currentWeights already pruned of missing values
 				sum += 1.0 / w;  // could be zero
 			}
+
+			ASSERT(sum != 0);
 
 			weights[i] = 1.0 / sum;
 		}

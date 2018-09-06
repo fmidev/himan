@@ -149,9 +149,9 @@ void qnh::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 		double msl = altitude - topo;
 
-		double qnh = p0 * pow(1 - L * msl * inv_T0, qnh_exponent);
+		double result = p0 * pow(1 - L * msl * inv_T0, qnh_exponent);
 
-		myTargetInfo->Value(qnh);
+		myTargetInfo->Value(result);
 	}
 
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
