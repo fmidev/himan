@@ -306,15 +306,15 @@ size_t GetLocationIndex(std::shared_ptr<info> anInfo)
 }
 size_t GetTimeIndex(std::shared_ptr<info> anInfo)
 {
-	return anInfo->TimeIndex() + 1;
+	return anInfo->Index<forecast_time>() + 1;
 }
 size_t GetParamIndex(std::shared_ptr<info> anInfo)
 {
-	return anInfo->ParamIndex() + 1;
+	return anInfo->Index<param>() + 1;
 }
 size_t GetLevelIndex(std::shared_ptr<info> anInfo)
 {
-	return anInfo->LevelIndex() + 1;
+	return anInfo->Index<level>() + 1;
 }
 void SetLocationIndex(std::shared_ptr<info> anInfo, size_t theIndex)
 {
@@ -322,15 +322,15 @@ void SetLocationIndex(std::shared_ptr<info> anInfo, size_t theIndex)
 }
 void SetTimeIndex(std::shared_ptr<info> anInfo, size_t theIndex)
 {
-	anInfo->TimeIndex(--theIndex);
+	anInfo->Index<forecast_time>(--theIndex);
 }
 void SetParamIndex(std::shared_ptr<info> anInfo, size_t theIndex)
 {
-	anInfo->ParamIndex(--theIndex);
+	anInfo->Index<param>(--theIndex);
 }
 void SetLevelIndex(std::shared_ptr<info> anInfo, size_t theIndex)
 {
-	anInfo->LevelIndex(--theIndex);
+	anInfo->Index<level>(--theIndex);
 }
 void SetValues(info_t& anInfo, const object& table)
 {
@@ -378,7 +378,7 @@ void SetParam(info_t& anInfo, const param& par)
 
 	param newpar(par);
 
-	const auto lvl = anInfo->PeekLevel(0);
+	const auto lvl = anInfo->Peek<level>(0);
 	auto paramInfo =
 	    r->RadonDB().GetParameterFromDatabaseName(anInfo->Producer().Id(), par.Name(), lvl.Type(), lvl.Value());
 
@@ -392,7 +392,7 @@ void SetParam(info_t& anInfo, const param& par)
 		}
 	}
 
-	anInfo->SetParam(newpar);
+	anInfo->Set<param>(newpar);
 }
 }  // namespace info_wrapper
 
@@ -970,26 +970,26 @@ void BindLib(lua_State* L)
 	module(L)[class_<himan::info, std::shared_ptr<himan::info>>("info")
 	              .def(constructor<>())
 	              .def("ClassName", &info::ClassName)
-	              .def("First", &info::First)
-	              .def("ResetParam", &info::ResetParam)
-	              .def("FirstParam", &info::FirstParam)
-	              .def("NextParam", &info::NextParam)
-	              .def("ResetLevel", &info::ResetLevel)
-	              .def("FirstLevel", &info::FirstLevel)
-	              .def("NextLevel", &info::NextLevel)
-	              .def("ResetTime", &info::ResetTime)
-	              .def("FirstTime", &info::FirstTime)
-	              .def("NextTime", &info::NextTime)
+//	              .def("First", &info::First)
+	              .def("ResetParam", &info::Reset<param>)
+	              .def("FirstParam", &info::First<param>)
+	              .def("NextParam", &info::Next<param>)
+	              .def("ResetLevel", &info::Reset<level>)
+	              .def("FirstLevel", &info::First<level>)
+	              .def("NextLevel", &info::Next<level>)
+	              .def("ResetTime", &info::Reset<forecast_time>)
+	              .def("FirstTime", &info::First<forecast_time>)
+	              .def("NextTime", &info::Next<forecast_time>)
 	              .def("SizeLocations", LUA_CMEMFN(size_t, info, SizeLocations, void))
-	              .def("SizeTimes", LUA_CMEMFN(size_t, info, SizeTimes, void))
-	              .def("SizeParams", LUA_CMEMFN(size_t, info, SizeParams, void))
-	              .def("SizeLevels", LUA_CMEMFN(size_t, info, SizeLevels, void))
-	              .def("GetLevel", LUA_CMEMFN(level, info, Level, void))
-	              .def("GetTime", LUA_CMEMFN(forecast_time, info, Time, void))
-	              .def("GetParam", LUA_CMEMFN(param, info, Param, void))
+	              .def("SizeTimes", LUA_CMEMFN(size_t, info, Size<forecast_time>, void))
+	              .def("SizeParams", LUA_CMEMFN(size_t, info, Size<param>, void))
+	              .def("SizeLevels", LUA_CMEMFN(size_t, info, Size<level>, void))
+	              .def("GetLevel", LUA_CMEMFN(const level&, info, Level, void))
+	              .def("GetTime", LUA_CMEMFN(const forecast_time&, info, Time, void))
+	              .def("GetParam", LUA_CMEMFN(const param&, info, Param, void))
 	              .def("GetGrid", LUA_CMEMFN(std::shared_ptr<grid>, info, Grid, void))
-	              .def("SetTime", LUA_MEMFN(void, info, SetTime, const forecast_time&))
-	              .def("SetLevel", LUA_MEMFN(void, info, SetLevel, const level&))
+	              .def("SetTime", LUA_MEMFN(void, info, Set<forecast_time>, const forecast_time&))
+	              .def("SetLevel", LUA_MEMFN(void, info, Set<level>, const level&))
 	              //.def("SetParam", LUA_MEMFN(void, info, SetParam, const param&))
 	              // These are local functions to luatool
 	              .def("SetParam", &info_wrapper::SetParam)
@@ -1445,10 +1445,10 @@ void luatool::WriteToFile(const info_t targetInfo)
 	// Therefore re-create the info here which means a memory copy.
 	auto newInfo = std::make_shared<info>(*targetInfo);
 	newInfo->Create(targetInfo->Base());
-	newInfo->ForecastTypeIterator().Set(targetInfo->ForecastTypeIndex());
-	newInfo->TimeIterator().Set(targetInfo->TimeIndex());
-	newInfo->LevelIterator().Set(targetInfo->LevelIndex());
-	newInfo->ParamIterator().Set(targetInfo->ParamIndex());
+	newInfo->Iterator<forecast_type>().Index(targetInfo->Index<forecast_type>());
+	newInfo->Iterator<forecast_time>().Index(targetInfo->Index<forecast_time>());
+	newInfo->Iterator<level>().Index(targetInfo->Index<level>());
+	newInfo->Iterator<param>().Index(targetInfo->Index<param>());
 
 	compiled_plugin_base::WriteToFile(newInfo, itsWriteOptions);
 }

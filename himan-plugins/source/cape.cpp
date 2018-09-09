@@ -320,7 +320,7 @@ void cape::Process(shared_ptr<const plugin_configuration> conf)
 
 	PrimaryDimension(kTimeDimension);
 	// Discard the levels defined in json
-	itsInfo->LevelIterator().Clear();
+	itsInfo->Iterator<level>().Clear();
 
 	for (const auto& source : sourceDatas)
 	{
@@ -400,7 +400,7 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			break;
 	}
 
-	myTargetInfo->Level(sourceLevel);
+	myTargetInfo->Find(sourceLevel);
 
 	if (get<0>(sourceValues).empty())
 	{
@@ -415,16 +415,16 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	if (sourceLevel.Type() == kMaximumThetaE)
 	{
-		myTargetInfo->Param(LPLTParam);
+		myTargetInfo->Find<param>(LPLTParam);
 		myTargetInfo->Data().Set(Convert(get<0>(sourceValues)));
-		myTargetInfo->Param(LPLPParam);
+		myTargetInfo->Find<param>(LPLPParam);
 
 		const auto LPLPressure = Convert(get<2>(sourceValues));
 		myTargetInfo->Data().Set(LPLPressure);
 
 		auto height = h->VerticalValue(param("HL-M"), LPLPressure);
 
-		myTargetInfo->Param(LPLZParam);
+		myTargetInfo->Find<param>(LPLZParam);
 		myTargetInfo->Data().Set(height);
 	}
 
@@ -449,15 +449,15 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	mySubThreadedLogger.Debug("LCL temperature: " + ::PrintMean<float>(LCL.first));
 	mySubThreadedLogger.Debug("LCL pressure: " + ::PrintMean<float>(LCL.second));
 
-	myTargetInfo->Param(LCLTParam);
+	myTargetInfo->Find<param>(LCLTParam);
 	myTargetInfo->Data().Set(Convert(LCL.first));
 
-	myTargetInfo->Param(LCLPParam);
+	myTargetInfo->Find<param>(LCLPParam);
 	myTargetInfo->Data().Set(Convert(LCL.second));
 
 	auto LCLZ = h->VerticalValue(param("HL-M"), Convert(LCL.second));
 
-	myTargetInfo->Param(LCLZParam);
+	myTargetInfo->Find<param>(LCLZParam);
 	myTargetInfo->Data().Set(LCLZ);
 
 	// 3.
@@ -482,15 +482,15 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	mySubThreadedLogger.Debug("LFC temperature: " + ::PrintMean<float>(LFC.first));
 	mySubThreadedLogger.Debug("LFC pressure: " + ::PrintMean<float>(LFC.second));
 
-	myTargetInfo->Param(LFCTParam);
+	myTargetInfo->Find<param>(LFCTParam);
 	myTargetInfo->Data().Set(Convert(LFC.first));
 
-	myTargetInfo->Param(LFCPParam);
+	myTargetInfo->Find<param>(LFCPParam);
 	myTargetInfo->Data().Set(Convert(LFC.second));
 
 	auto LFCZ = h->VerticalValue(param("HL-M"), Convert(LFC.second));
 
-	myTargetInfo->Param(LFCZParam);
+	myTargetInfo->Find<param>(LFCZParam);
 	myTargetInfo->Data().Set(LFCZ);
 
 	// 4. & 5.
@@ -514,19 +514,19 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	// Sometimes CAPE area is infinitely small -- so that CAPE is zero but LFC is found. In this case set all derivative
 	// parameters missing.
 
-	capeInfo->Param(LFCZParam);
+	capeInfo->Find<param>(LFCZParam);
 	auto& lfcz_ = VEC(capeInfo);
-	capeInfo->Param(LFCPParam);
+	capeInfo->Find<param>(LFCPParam);
 	auto& lfcp_ = VEC(capeInfo);
-	capeInfo->Param(LFCTParam);
+	capeInfo->Find<param>(LFCTParam);
 	auto& lfct_ = VEC(capeInfo);
-	cinInfo->Param(CINParam);
+	cinInfo->Find<param>(CINParam);
 	auto& cin_ = VEC(cinInfo);
-	capeInfo->Param(ELZParam);
+	capeInfo->Find<param>(ELZParam);
 	auto& elz_ = VEC(capeInfo);
-	capeInfo->Param(CAPEParam);
+	capeInfo->Find<param>(CAPEParam);
 	const auto& cape_ = VEC(capeInfo);
-	capeInfo->Param(LCLZParam);
+	capeInfo->Find<param>(LCLZParam);
 	auto& lclz_ = VEC(capeInfo);
 
 	for (size_t i = 0; i < lfcz_.size(); i++)
@@ -587,7 +587,7 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	auto filter = [&](const param& par) {
 
-		capeInfo->Param(par);
+		capeInfo->Find<param>(par);
 		himan::matrix<double> filtered = numerical_functions::Filter2D(capeInfo->Data(), filter_kernel);
 
 		// HIMAN-224: CAPE & CIN values smaller than 0.1 are rounded to zero
@@ -611,13 +611,13 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	filter(CAPE3kmParam);
 	filter(CINParam);
 
-	capeInfo->Param(CAPEParam);
+	capeInfo->Find<param>(CAPEParam);
 	mySubThreadedLogger.Debug("CAPE: " + ::PrintMean<double>(VEC(capeInfo)));
-	capeInfo->Param(CAPE1040Param);
+	capeInfo->Find<param>(CAPE1040Param);
 	mySubThreadedLogger.Debug("CAPE1040: " + ::PrintMean<double>(VEC(capeInfo)));
-	capeInfo->Param(CAPE3kmParam);
+	capeInfo->Find<param>(CAPE3kmParam);
 	mySubThreadedLogger.Debug("CAPE3km: " + ::PrintMean<double>(VEC(capeInfo)));
-	cinInfo->Param(CINParam);
+	cinInfo->Find<param>(CINParam);
 	mySubThreadedLogger.Debug("CIN: " + ::PrintMean<double>(VEC(cinInfo)));
 }
 
@@ -835,7 +835,7 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<float>& Tsource
 		}
 	}
 
-	myTargetInfo->Param(CINParam);
+	myTargetInfo->Find<param>(CINParam);
 	myTargetInfo->Data().Set(Convert(cinh));
 }
 
@@ -1095,31 +1095,31 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<float>& T, con
 		ASSERT((IsMissing(ELP[i]) && IsMissing(LastELP[i])) || (ELP[i] >= LastELP[i]));
 	}
 #endif
-	myTargetInfo->Param(ELTParam);
+	myTargetInfo->Find<param>(ELTParam);
 	myTargetInfo->Data().Set(Convert(ELT));
 
-	myTargetInfo->Param(ELPParam);
+	myTargetInfo->Find<param>(ELPParam);
 	myTargetInfo->Data().Set(Convert(ELP));
 
-	myTargetInfo->Param(ELZParam);
+	myTargetInfo->Find<param>(ELZParam);
 	myTargetInfo->Data().Set(Convert(ELZ));
 
-	myTargetInfo->Param(LastELTParam);
+	myTargetInfo->Find<param>(LastELTParam);
 	myTargetInfo->Data().Set(Convert(LastELT));
 
-	myTargetInfo->Param(LastELPParam);
+	myTargetInfo->Find<param>(LastELPParam);
 	myTargetInfo->Data().Set(Convert(LastELP));
 
-	myTargetInfo->Param(LastELZParam);
+	myTargetInfo->Find<param>(LastELZParam);
 	myTargetInfo->Data().Set(Convert(LastELZ));
 
-	myTargetInfo->Param(CAPEParam);
+	myTargetInfo->Find<param>(CAPEParam);
 	myTargetInfo->Data().Set(Convert(CAPE));
 
-	myTargetInfo->Param(CAPE1040Param);
+	myTargetInfo->Find<param>(CAPE1040Param);
 	myTargetInfo->Data().Set(Convert(CAPE1040));
 
-	myTargetInfo->Param(CAPE3kmParam);
+	myTargetInfo->Find<param>(CAPE3kmParam);
 	myTargetInfo->Data().Set(Convert(CAPE3km));
 }
 

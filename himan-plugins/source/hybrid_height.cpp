@@ -138,7 +138,7 @@ himan::info_t hybrid_height::GetSurfacePressure(himan::info_t& myTargetInfo)
 				// LNSP to regular pressure
 
 				auto newInfo = make_shared<info>(*ret);
-				newInfo->SetParam(param("LNSP-HPA"));
+				newInfo->Set<param>(param("LNSP-HPA"));
 				newInfo->Create(ret->Base());
 
 				auto& target = VEC(newInfo);
@@ -184,9 +184,9 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 
 	bool topToBottom = false;
 
-	if (itsInfo->SizeLevels() > 1)
+	if (itsInfo->Size<level>() > 1)
 	{
-		auto first = itsInfo->PeekLevel(0), second = itsInfo->PeekLevel(1);
+		auto first = itsInfo->Peek<level>(0), second = itsInfo->Peek<level>(1);
 
 		if (first.Value() < second.Value())
 		{
@@ -196,11 +196,11 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 
 	if (topToBottom == false)
 	{
-		firstLevel = myTargetInfo->PeekLevel(0).Value() == itsBottomLevel;
+		firstLevel = myTargetInfo->Peek<level>(0).Value() == itsBottomLevel;
 	}
 	else
 	{
-		firstLevel = myTargetInfo->PeekLevel(myTargetInfo->SizeLevels() - 1).Value() == itsBottomLevel;
+		firstLevel = myTargetInfo->Peek<level>(myTargetInfo->Size<level>() - 1).Value() == itsBottomLevel;
 	}
 
 	if (firstLevel)
@@ -227,7 +227,7 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 
 	// First pass
 
-	topToBottom ? myTargetInfo->LastLevel() : myTargetInfo->FirstLevel();
+	topToBottom ? myTargetInfo->Last<level>() : myTargetInfo->First<level>();
 
 	while (true)
 	{
@@ -292,7 +292,7 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 		prevPInfo = PInfo;
 		prevTInfo = TInfo;
 
-		const bool levelsRemaining = topToBottom ? myTargetInfo->PreviousLevel() : myTargetInfo->NextLevel();
+		const bool levelsRemaining = topToBottom ? myTargetInfo->Previous<level>() : myTargetInfo->Next<level>();
 
 		if (levelsRemaining == false)
 		{
@@ -307,7 +307,7 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 
 	// Second pass
 
-	topToBottom ? myTargetInfo->LastLevel() : myTargetInfo->FirstLevel();
+	topToBottom ? myTargetInfo->Last<level>() : myTargetInfo->First<level>();
 
 	vector<future<void>> writers;
 
@@ -326,7 +326,7 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 		{
 			auto& cur = VEC(myTargetInfo);
 
-			bool isFirst = topToBottom ? myTargetInfo->NextLevel() : myTargetInfo->PreviousLevel();
+			bool isFirst = topToBottom ? myTargetInfo->Next<level>() : myTargetInfo->Previous<level>();
 
 			if (isFirst)
 			{
@@ -334,7 +334,7 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 
 				transform(cur.begin(), cur.end(), prev.begin(), cur.begin(), plus<double>());
 
-				topToBottom ? myTargetInfo->PreviousLevel() : myTargetInfo->NextLevel();
+				topToBottom ? myTargetInfo->Previous<level>() : myTargetInfo->Next<level>();
 			}
 			else
 			{
@@ -372,7 +372,7 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 			itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data().Size());
 		}
 
-		const bool levelsRemaining = topToBottom ? myTargetInfo->PreviousLevel() : myTargetInfo->NextLevel();
+		const bool levelsRemaining = topToBottom ? myTargetInfo->Previous<level>() : myTargetInfo->Next<level>();
 
 		if (levelsRemaining == false)
 		{
@@ -390,7 +390,7 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 
 void hybrid_height::RunTimeDimension(info_t myTargetInfo, unsigned short threadIndex)
 {
-	myTargetInfo->FirstLevel();
+	myTargetInfo->First<level>();
 
 	while (NextExcludingLevel(*myTargetInfo))
 	{

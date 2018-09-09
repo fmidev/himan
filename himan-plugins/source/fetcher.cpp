@@ -627,7 +627,7 @@ pair<HPDataFoundFrom, vector<shared_ptr<himan::info>>> fetcher::FetchFromAuxilia
 				for (const auto& info : ret)
 				{
 					info->First();
-					info->ResetParam();
+					info->Reset<param>();
 
 					while (info->Next())
 					{

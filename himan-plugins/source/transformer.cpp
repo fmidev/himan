@@ -168,7 +168,7 @@ void transformer::SetAdditionalParameters()
 	{
 		// copy levels from target
 		auto x = make_shared<info>(*itsInfo);
-		for (x->ResetLevel(); x->NextLevel();)
+		for (x->Reset<level>(); x->Next<level>();)
 		{
 			itsSourceLevels.push_back(x->Level());
 		}
@@ -222,16 +222,16 @@ void transformer::Process(std::shared_ptr<const plugin_configuration> conf)
 	// Need to set this before starting Calculate, since we don't want to fetch with 'targetForecastType'.
 	if (itsTargetForecastType.Type() != kUnknownType)
 	{
-		if (itsInfo->ForecastTypeIterator().Size() > 1)
+		if (itsInfo->Iterator<forecast_type>().Size() > 1)
 		{
 			throw std::runtime_error("Forecast type iterator can only be set when there's only 1 source forecast type");
 		}
 		else
 		{
-			itsInfo->ForecastTypeIterator().First();
+			itsInfo->Iterator<forecast_type>().First();
 			// Copy the original so that we can fetch the right data.
 			itsSourceForecastType = itsInfo->ForecastType();
-			itsInfo->ForecastTypeIterator().Replace(itsTargetForecastType);
+			itsInfo->Iterator<forecast_type>().Replace(itsTargetForecastType);
 		}
 	}
 
@@ -270,12 +270,12 @@ void transformer::Rotate(info_t myTargetInfo)
 	auto b = Fetch(myTargetInfo->Time(), myTargetInfo->Level(), param(itsSourceParam[1]), myTargetInfo->ForecastType(),
 	               false);
 
-	myTargetInfo->ParamIndex(0);
+	myTargetInfo->Index<param>(0);
 	myTargetInfo->Data().Set(VEC(a));
 	myTargetInfo->Grid()->UVRelativeToGrid(a->Grid()->UVRelativeToGrid());
 
 	auto secondInfo = make_shared<info>(*myTargetInfo);
-	secondInfo->ParamIndex(1);
+	secondInfo->Index<param>(1);
 	secondInfo->Data().Set(VEC(b));
 	secondInfo->Grid()->UVRelativeToGrid(b->Grid()->UVRelativeToGrid());
 
@@ -320,7 +320,7 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 
 	try
 	{
-		sourceInfo = f->Fetch(itsConfiguration, forecastTime, itsSourceLevels[myTargetInfo->LevelIndex()],
+		sourceInfo = f->Fetch(itsConfiguration, forecastTime, itsSourceLevels[myTargetInfo->Index<level>()],
 		                      param(itsSourceParam[0]), forecastType, itsConfiguration->UseCudaForPacking());
 	}
 	catch (HPExceptionType& e)
@@ -339,7 +339,7 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 
 		{
 			lock_guard<mutex> lock(aggregationMutex);
-			myTargetInfo->ParamIterator().Replace(p);
+			myTargetInfo->Iterator<param>().Replace(p);
 		}
 	}
 

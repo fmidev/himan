@@ -77,10 +77,10 @@ void precipitation_rate::Calculate(shared_ptr<info> myTargetInfo, unsigned short
 
 	string deviceType = "CPU";
 
-	myTargetInfo->ParamIndex(0);
+	myTargetInfo->Index<param>(0);
 	auto& targetRain = VEC(myTargetInfo);
 
-	myTargetInfo->ParamIndex(1);
+	myTargetInfo->Index<param>(1);
 	auto& targetSolid = VEC(myTargetInfo);
 
 	for (auto&& tup : zip_range(targetRain, targetSolid, VEC(RhoInfo), VEC(RainInfo), VEC(SnowInfo), VEC(GraupelInfo)))

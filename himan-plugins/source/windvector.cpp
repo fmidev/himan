@@ -196,7 +196,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 
 		ASSERT(UInfo->Grid()->AB() == VInfo->Grid()->AB());
 
-		for (myTargetInfo->ResetParam(); myTargetInfo->NextParam();)
+		for (myTargetInfo->Reset<param>(); myTargetInfo->Next<param>();)
 		{
 			SetAB(myTargetInfo, UInfo);
 		}
@@ -215,7 +215,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		c->Replace(UInfo);
 		c->Replace(VInfo);
 
-		myTargetInfo->ParamIndex(0);
+		myTargetInfo->Index<param>(0);
 
 		auto& FFVec = VEC(myTargetInfo);
 		vector<double> DDVec(FFVec.size(), MissingDouble());
@@ -248,9 +248,9 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			dir = round(fmod((dir + 360), 360));
 		}
 
-		if (myTargetInfo->SizeParams() > 1)
+		if (myTargetInfo->Size<param>() > 1)
 		{
-			myTargetInfo->ParamIndex(1);
+			myTargetInfo->Index<param>(1);
 			myTargetInfo->Data().Set(DDVec);
 		}
 	}

@@ -110,7 +110,7 @@ template <typename T>
 void Probability(std::shared_ptr<himan::info> targetInfo, const param_configuration<T>& paramConf,
                  std::unique_ptr<himan::ensemble>& ens, std::function<bool(double, T)> comp_op)
 {
-	targetInfo->Param(paramConf.output);
+	targetInfo->Find<himan::param>(paramConf.output);
 	targetInfo->ResetLocation();
 	ens->ResetLocation();
 
@@ -152,7 +152,7 @@ template <typename T>
 void ProbabilityWithGaussianSpread(std::shared_ptr<himan::info> targetInfo, const param_configuration<T>& paramConf,
                                    std::unique_ptr<himan::ensemble>& ens)
 {
-	targetInfo->Param(paramConf.output);
+	targetInfo->Find<himan::param>(paramConf.output);
 	targetInfo->ResetLocation();
 	ens->ResetLocation();
 

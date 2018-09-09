@@ -263,7 +263,7 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 			// floor x explicitly before casting to int
 			int i = static_cast<int>(std::floor(x));
 
-			myTargetInfo->ParamIndex(targetInfoIndex);
+			myTargetInfo->Index<param>(targetInfoIndex);
 
 			myTargetInfo->Value(sortedValues[i - 1] + std::fmod(x, 1.0) * (sortedValues[i] - sortedValues[i - 1]));
 			++targetInfoIndex;
@@ -281,16 +281,16 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 			var = MissingDouble();
 		}
 
-		myTargetInfo->ParamIndex(targetInfoIndex);
+		myTargetInfo->Index<param>(targetInfoIndex);
 		myTargetInfo->Value(mean);
 		++targetInfoIndex;
-		myTargetInfo->ParamIndex(targetInfoIndex);
+		myTargetInfo->Index<param>(targetInfoIndex);
 		myTargetInfo->Value(var);
 	}
 
-	threadedLogger.Info("[" + deviceType + "] Missing values: " +
-	                    boost::lexical_cast<std::string>(myTargetInfo->Data().MissingCount()) + "/" +
-	                    boost::lexical_cast<std::string>(myTargetInfo->Data().Size()));
+	threadedLogger.Info("[" + deviceType +
+	                    "] Missing values: " + boost::lexical_cast<std::string>(myTargetInfo->Data().MissingCount()) +
+	                    "/" + boost::lexical_cast<std::string>(myTargetInfo->Data().Size()));
 }
 
 }  // plugin

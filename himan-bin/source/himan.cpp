@@ -118,7 +118,7 @@ void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
 
 	const auto res = pc->Info();
 	const auto producerId = res->Producer().Id();
-	const auto analysisTime = res->PeekTime(0).OriginDateTime().String();
+	const auto analysisTime = res->Peek<forecast_time>(0).OriginDateTime().String();
 
 	logger log("himan");
 	stringstream ss;
@@ -154,7 +154,7 @@ void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
 	const auto partitionName = row[0];
 	int inserts = 0, updates = 0;
 
-	for (res->ResetForecastType(); res->NextForecastType();)
+	for (res->Reset<forecast_type>(); res->Next<forecast_type>();)
 	{
 		int forecastTypeValue = -1;  // default, deterministic/analysis
 
@@ -163,7 +163,7 @@ void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
 			forecastTypeValue = static_cast<int>(res->ForecastType().Value());
 		}
 
-		for (res->ResetTime(); res->NextTime();)
+		for (res->Reset<forecast_time>(); res->Next<forecast_time>();)
 		{
 			try
 			{

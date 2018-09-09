@@ -169,13 +169,14 @@ void plugin_configuration::WriteStatistics()
 		itsInfo->First();
 
 		cout << "Level type:\t\t" << HPLevelTypeToString.at(itsInfo->Level().Type()) << endl;
-		cout << "Level count:\t\t" << itsInfo->SizeLevels() << endl;
+		cout << "Level count:\t\t" << itsInfo->Size<level>() << endl;
 
 		// assuming even time step
 
-		cout << "Time step:\t\t" << itsInfo->Time().Step() << endl;
-		cout << "Time step unit:\t\t" << HPTimeResolutionToString.at(itsInfo->Time().StepResolution()) << endl;
-		cout << "Time count:\t\t" << itsInfo->SizeTimes() << endl;
+		cout << "Time step:\t\t" << itsInfo->Value<forecast_time>().Step() << endl;
+		cout << "Time step unit:\t\t" << HPTimeResolutionToString.at(itsInfo->Value<forecast_time>().StepResolution())
+		     << endl;
+		cout << "Time count:\t\t" << itsInfo->Size<forecast_time>() << endl;
 	}
 
 	cout << "Outfile type:\t\t" << HPFileTypeToString.at(itsOutputFileType) << endl;

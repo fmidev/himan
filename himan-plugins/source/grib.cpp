@@ -1908,29 +1908,10 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 
 	newInfo->Producer(prod);
 
-	vector<param> theParams;
-
-	theParams.push_back(p);
-
-	newInfo->Params(theParams);
-
-	vector<forecast_time> theTimes;
-
-	theTimes.push_back(t);
-
-	newInfo->Times(theTimes);
-
-	vector<level> theLevels;
-
-	theLevels.push_back(l);
-
-	newInfo->Levels(theLevels);
-
-	vector<forecast_type> theForecastTypes;
-
-	theForecastTypes.push_back(ty);
-
-	newInfo->ForecastTypes(theForecastTypes);
+	newInfo->Set<param>({p});
+	newInfo->Set<forecast_time>({t});
+	newInfo->Set<level>({l});
+	newInfo->Set<forecast_type>({ty});
 
 	unique_ptr<grid> newGrid = ReadAreaAndGrid();
 
@@ -1956,10 +1937,10 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 
 	// Set descriptors
 
-	newInfo->Param(p);
-	newInfo->Time(t);
-	newInfo->Level(l);
-	newInfo->ForecastType(ty);
+	newInfo->Find<param>(p);
+	newInfo->Find<forecast_time>(t);
+	newInfo->Find<level>(l);
+	newInfo->Find<forecast_type>(ty);
 
 	/*
 	 * Read data from grib. If interpolation is required, it's better to do the unpacking

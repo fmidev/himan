@@ -126,9 +126,9 @@ void blend::Run(unsigned short threadIndex)
 		{
 			lock_guard<mutex> lock(dimensionMutex);
 
-			if (itsInfo->NextTime())
+			if (itsInfo->Next<forecast_time>())
 			{
-				if (!targetInfo->Time(itsInfo->Time()))
+				if (!targetInfo->Find<forecast_time>(itsInfo->Time()))
 				{
 					throw std::runtime_error("invalid target time");
 				}
@@ -218,15 +218,15 @@ raw_time blend::LatestOriginTimeForProducer(const blend_producer& producer) cons
 
 void blend::Start()
 {
-	itsThreadCount = static_cast<short>(itsInfo->SizeTimes());
+	itsThreadCount = static_cast<short>(itsInfo->Size<forecast_time>());
 
 	vector<thread> threads;
 	threads.reserve(static_cast<size_t>(itsThreadCount));
 
 	itsInfo->Reset();
-	itsInfo->FirstForecastType();
-	itsInfo->FirstLevel();
-	itsInfo->FirstParam();
+	itsInfo->First<forecast_type>();
+	itsInfo->First<level>();
+	itsInfo->First<param>();
 
 	for (unsigned short i = 0; i < itsThreadCount; i++)
 	{
@@ -684,7 +684,7 @@ void blend::CalculateMember(shared_ptr<info> targetInfo, unsigned short threadId
 	}
 
 	SetupOutputForecastTimes(Info, latestOrigin, current, maxStep, originTimeStep);
-	Info->ForecastTypes(ftypes);
+	Info->Set<forecast_type>(ftypes);
 	Info->Create(targetInfo->Base(), true);
 	Info->First();
 
@@ -717,7 +717,7 @@ void blend::CalculateMember(shared_ptr<info> targetInfo, unsigned short threadId
 			d = CalculateMAE(log, targetInfo, ftime, itsBlendProducer);
 		}
 
-		if (Info->ForecastType(forecastType))
+		if (Info->Find<forecast_type>(forecastType))
 		{
 			auto b = Info->Base();
 			b->data = std::move(d);
@@ -729,7 +729,7 @@ void blend::CalculateMember(shared_ptr<info> targetInfo, unsigned short threadId
 			himan::Abort();
 		}
 
-		Info->NextTime();
+		Info->Next<forecast_time>();
 
 		ftime.OriginDateTime().Adjust(kHourResolution, originTimeStep);
 	}
@@ -1162,7 +1162,7 @@ void blend::SetupOutputForecastTimes(shared_ptr<info> Info, const raw_time& late
 {
 	vector<forecast_time> ftimes;
 
-	Info->ResetTime();
+	Info->Reset<forecast_time>();
 
 	forecast_time ftime(latestOrigin, current.ValidDateTime());
 	ftime.OriginDateTime().Adjust(kHourResolution, -itsNumHours);
@@ -1179,7 +1179,7 @@ void blend::SetupOutputForecastTimes(shared_ptr<info> Info, const raw_time& late
 	}
 	ftimes.push_back(ftime);
 
-	Info->Times(ftimes);
+	Info->Set<forecast_time>(ftimes);
 }
 
 }  // namespace plugin

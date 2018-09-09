@@ -303,7 +303,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		forecastTypes.push_back(forecast_type(kDeterministic));
 	}
 
-	baseInfo->ForecastTypes(forecastTypes);
+	baseInfo->Set<forecast_type>(forecastTypes);
 
 	/* Check dynamic_memory_allocation */
 
@@ -492,7 +492,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 		if (!forecastTypes.empty())
 		{
-			anInfo->ForecastTypes(forecastTypes);
+			anInfo->Set<forecast_type>(forecastTypes);
 		}
 
 		boost::property_tree::ptree& plugins = element.second.get_child("plugins");
@@ -643,7 +643,7 @@ raw_time GetLatestOriginDateTime(const shared_ptr<configuration> conf, const str
 	if (strlist.size() == 2)
 	{
 		// will throw if origintime is not in the form "latest-X", where X : integer >= 0
-		offset = static_cast<unsigned> (stoi(strlist[1]));
+		offset = static_cast<unsigned>(stoi(strlist[1]));
 	}
 
 	HPDatabaseType dbtype = conf->DatabaseType();
@@ -753,7 +753,7 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 			}
 		}
 
-		anInfo->Times(theTimes);
+		anInfo->Set<forecast_time>(theTimes);
 
 		return;
 	}
@@ -818,7 +818,7 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 			} while (curtime <= stop);
 		}
 
-		anInfo->Times(theTimes);
+		anInfo->Set<forecast_time>(theTimes);
 
 		return;
 	}
@@ -864,7 +864,7 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 			} while (curtime <= stop);
 		}
 
-		anInfo->Times(theTimes);
+		anInfo->Set<forecast_time>(theTimes);
 	}
 	catch (exception& e)
 	{
@@ -1280,7 +1280,7 @@ void ParseLevels(shared_ptr<info> anInfo, const boost::property_tree::ptree& pt)
 
 		vector<level> levels = LevelsFromString(levelTypeStr, levelValuesStr);
 
-		anInfo->Levels(levels);
+		anInfo->Set<level>(levels);
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{

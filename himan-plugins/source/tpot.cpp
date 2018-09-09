@@ -216,7 +216,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			{
 				double value = metutil::Theta_<double>(T, P);
 
-				myTargetInfo->Param(param("TP-K"));
+				myTargetInfo->Find<param>(param("TP-K"));
 
 				myTargetInfo->Value(value);
 			}
@@ -225,7 +225,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			{
 				double value = metutil::ThetaW_<double>(metutil::ThetaE_<double>(T, TD, P));
 
-				myTargetInfo->Param(param("TPW-K"));
+				myTargetInfo->Find<param>(param("TPW-K"));
 
 				myTargetInfo->Value(value);
 			}
@@ -234,7 +234,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			{
 				double value = metutil::ThetaE_<double>(T, TD, P);
 
-				myTargetInfo->Param(param("TPE-K"));
+				myTargetInfo->Find<param>(param("TPE-K"));
 
 				myTargetInfo->Value(value);
 			}

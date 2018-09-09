@@ -69,7 +69,7 @@ void tke::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	// ----
 
 	// Current time and level as given to this thread
-	int paramStep = 1;  // myTargetInfo->Param().Aggregation().TimeResolutionValue();
+	int paramStep = 1;  // myTargetInfo->Find<param>().Aggregation().TimeResolutionValue();
 	HPTimeResolution timeResolution = myTargetInfo->Time().StepResolution();
 
 	forecast_time forecastTime = myTargetInfo->Time();

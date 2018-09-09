@@ -1211,7 +1211,7 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration>& con
 
 	CUDA_CHECK(cudaStreamDestroy(stream));
 
-	myTargetInfo->Param(CINParam);
+	myTargetInfo->Find<param>(CINParam);
 	myTargetInfo->Data().Set(Convert(cinh));
 }
 
@@ -1439,30 +1439,30 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>& co
 	CUDA_CHECK(cudaFree(d_LastELP));
 	CUDA_CHECK(cudaFree(d_LastELZ));
 
-	myTargetInfo->Param(ELTParam);
+	myTargetInfo->Find<param>(ELTParam);
 	myTargetInfo->Data().Set(Convert(ELT));
 
-	myTargetInfo->Param(ELPParam);
+	myTargetInfo->Find<param>(ELPParam);
 	myTargetInfo->Data().Set(Convert(ELP));
 
-	myTargetInfo->Param(ELZParam);
+	myTargetInfo->Find<param>(ELZParam);
 	myTargetInfo->Data().Set(Convert(ELZ));
 
-	myTargetInfo->Param(LastELTParam);
+	myTargetInfo->Find<param>(LastELTParam);
 	myTargetInfo->Data().Set(Convert(LastELT));
 
-	myTargetInfo->Param(LastELPParam);
+	myTargetInfo->Find<param>(LastELPParam);
 	myTargetInfo->Data().Set(Convert(LastELP));
 
-	myTargetInfo->Param(LastELZParam);
+	myTargetInfo->Find<param>(LastELZParam);
 	myTargetInfo->Data().Set(Convert(LastELZ));
 
-	myTargetInfo->Param(CAPEParam);
+	myTargetInfo->Find<param>(CAPEParam);
 	myTargetInfo->Data().Set(Convert(CAPE));
 
-	myTargetInfo->Param(CAPE1040Param);
+	myTargetInfo->Find<param>(CAPE1040Param);
 	myTargetInfo->Data().Set(Convert(CAPE1040));
 
-	myTargetInfo->Param(CAPE3kmParam);
+	myTargetInfo->Find<param>(CAPE3kmParam);
 	myTargetInfo->Data().Set(Convert(CAPE3km));
 }

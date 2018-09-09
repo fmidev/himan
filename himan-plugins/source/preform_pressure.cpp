@@ -158,8 +158,6 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 		WScale = 1000;
 	}
 
-	ASSERT(W850Info->Param().Name() == W925Info->Param().Name());
-
 	// In Hirlam parameter name is RH-PRCNT but data is still 0 .. 1
 	double RHScale = 100;
 
@@ -168,7 +166,7 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 		RHScale = 1;
 	}
 
-	const bool noPotentialPrecipitationForm = (myTargetInfo->SizeParams() == 1);
+	const bool noPotentialPrecipitationForm = (myTargetInfo->Size<param>() == 1);
 
 	const int DRIZZLE = 0;
 	const int RAIN = 1;
@@ -367,19 +365,19 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 		if (RR == 0)
 		{
 			// If RR is zero, we can only have potential prec form
-			myTargetInfo->ParamIndex(1);
+			myTargetInfo->Index<param>(1);
 			myTargetInfo->Value(PreForm);
 		}
 		else
 		{
 			// If there is precipitation, we have at least regular prec form
-			myTargetInfo->ParamIndex(0);
+			myTargetInfo->Index<param>(0);
 			myTargetInfo->Value(PreForm);
 
 			if (!noPotentialPrecipitationForm)
 			{
 				// Also potential prec form
-				myTargetInfo->ParamIndex(1);
+				myTargetInfo->Index<param>(1);
 				myTargetInfo->Value(PreForm);
 			}
 		}

@@ -97,7 +97,7 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 				myThreadedLogger.Info("Transforming LNSP to HPa for step " + to_string(forecastTime.Step()));
 
 				auto newInfo = make_shared<info>(*lnspn);
-				newInfo->SetParam(param("LNSP-HPA"));
+				newInfo->Set<param>(param("LNSP-HPA"));
 				newInfo->Create(lnspn->Base());
 
 				for (auto& val : VEC(newInfo))
