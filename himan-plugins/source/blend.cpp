@@ -43,15 +43,15 @@ const string kLapsGeom = "LAPSSCANLARGE";
 // Each blend producer is composed of these original producers. We use forecast_types to distinguish them
 // from each other, and this way we don't have to create bunch of extra producers.
 const blend_producer LAPS(forecast_type(kAnalysis), level(kHeight, 2.0), 0, 1);
-const blend_producer MOS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kMos)), level(kHeight, 0.0),
+const blend_producer MOS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kMos)), level(kHeight, 2.0),
                          kMosForecastLength, 12);
 const blend_producer ECMWF(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kEcmwf)),
-                           level(kGround, 0.0), kEcmwfForecastLength, 12);
+                           level(kHeight, 2.0), kEcmwfForecastLength, 12);
 const blend_producer HIRLAM(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kHirlam)),
                             level(kHeight, 2.0), kHirlamForecastLength, 6);
 const blend_producer MEPS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kMeps)),
                           level(kHeight, 2.0), kMepsForecastLength, 6);
-const blend_producer GFS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kGfs)), level(kGround, 0.0),
+const blend_producer GFS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kGfs)), level(kHeight, 2.0),
                          kGfsForecastLength, 6);
 
 blend::blend()
