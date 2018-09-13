@@ -84,6 +84,8 @@ class matrix
 	{
 	}
 
+	matrix(matrix&&) = default;
+
 	matrix& operator=(const matrix& other)
 	{
 		itsData = other.itsData;  // Copy contents!
@@ -94,6 +96,8 @@ class matrix
 
 		return *this;
 	}
+
+	matrix& operator=(matrix&& other) = default;
 
 	bool operator==(const matrix& other) const
 	{
