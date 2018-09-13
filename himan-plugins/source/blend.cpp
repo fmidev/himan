@@ -4,9 +4,9 @@
 #include "radon.h"
 #include "writer.h"
 
+#include <algorithm>
 #include <mutex>
 #include <thread>
-#include <algorithm>
 
 //
 // Forecast blender
@@ -54,8 +54,7 @@ const blend_producer MEPS(forecast_type(kEpsPerturbation, static_cast<float>(ble
 const blend_producer GFS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kGfs)), level(kHeight, 2.0),
                          kGfsForecastLength, 6);
 
-blend::blend()
-    : itsCalculationMode(kCalculateNone), itsNumHours(0), itsAnalysisHour(0), itsBlendProducer()
+blend::blend() : itsCalculationMode(kCalculateNone), itsNumHours(0), itsAnalysisHour(0), itsBlendProducer()
 {
 	itsLogger = logger("blend");
 }
@@ -201,7 +200,7 @@ raw_time blend::LatestOriginTimeForProducer(const blend_producer& producer) cons
 		himan::Abort();
 	}
 
-	raw_time raw (latest);
+	raw_time raw(latest);
 
 	// With ECMWF and MOS we only want 00 and 12 times. MOS is only calculated for 00 and 12. ECMWF forecast length is
 	// shorter for 6 and 18, and that seems to break everything.
@@ -285,7 +284,7 @@ void blend::Process(shared_ptr<const plugin_configuration> conf)
 		itsNumHours = stoi(hours);
 	}
 
-    // Producer for bias and mae calculation (itsProdFtype is only used with these modes)
+	// Producer for bias and mae calculation (itsProdFtype is only used with these modes)
 	const string prod = conf->Exists("producer") ? conf->GetValue("producer") : "";
 	if ((itsCalculationMode == kCalculateBias || itsCalculationMode == kCalculateMAE) && prod.empty())
 	{
@@ -310,10 +309,10 @@ void blend::Process(shared_ptr<const plugin_configuration> conf)
 		{
 			itsBlendProducer = GFS;
 		}
-        else if (prod == "MOS")
-        {
+		else if (prod == "MOS")
+		{
 			itsBlendProducer = MOS;
-        }
+		}
 		else
 		{
 			throw std::runtime_error(ClassName() + ": unknown producer for bias/mae calculation");
@@ -393,7 +392,7 @@ static forecast_time MakeAnalysisFetchTime(const forecast_time& currentTime, int
 
 	forecast_time analysisFetchTime = currentTime;
 
-	analysisFetchTime.ValidDateTime().Adjust(kHourResolution, -validHour); // set to 00
+	analysisFetchTime.ValidDateTime().Adjust(kHourResolution, -validHour);  // set to 00
 	analysisFetchTime.ValidDateTime().Adjust(kHourResolution, analysisHour);
 
 	analysisFetchTime.OriginDateTime() = analysisFetchTime.ValidDateTime();
@@ -412,8 +411,7 @@ matrix<double> blend::CalculateBias(logger& log, shared_ptr<info> targetInfo, co
 
 	HPTimeResolution currentRes = currentTime.StepResolution();
 
-	info_t analysis =
-	    FetchNoExcept(cnf, analysisFetchTime, currentRes, currentParam, LAPS, kLapsProd, kLapsGeom);
+	info_t analysis = FetchNoExcept(cnf, analysisFetchTime, currentRes, currentParam, LAPS, kLapsProd, kLapsGeom);
 	if (!analysis)
 	{
 		log.Error("Analysis (LAPS) data not found");
@@ -439,7 +437,7 @@ matrix<double> blend::CalculateBias(logger& log, shared_ptr<info> targetInfo, co
 		{
 			if (e == kFileDataNotFound)
 			{
-				forecast = vector<double>(targetInfo->Data().Size(), MissingDouble());	
+				forecast = vector<double>(targetInfo->Data().Size(), MissingDouble());
 			}
 			else
 			{
@@ -525,11 +523,9 @@ matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info> targetInfo, con
 	forecast_time currentTime = targetInfo->Time();
 	forecast_time analysisFetchTime = MakeAnalysisFetchTime(currentTime, itsAnalysisHour);
 
-
 	HPTimeResolution currentRes = currentTime.StepResolution();
 
-	info_t analysis =
-	    FetchNoExcept(cnf, analysisFetchTime, currentRes, currentParam, LAPS, kLapsProd, kLapsGeom);
+	info_t analysis = FetchNoExcept(cnf, analysisFetchTime, currentRes, currentParam, LAPS, kLapsProd, kLapsGeom);
 	if (!analysis)
 	{
 		log.Error("Analysis (LAPS) data not found");
@@ -573,8 +569,7 @@ matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info> targetInfo, con
 	}
 
 	vector<double> prevMAE;
-	info_t prevMAE_Info =
-	    FetchNoExcept(cnf, prevLeadTime, currentRes, currentParam, blendProd, kBlendWeightProd, geom);
+	info_t prevMAE_Info = FetchNoExcept(cnf, prevLeadTime, currentRes, currentParam, blendProd, kBlendWeightProd, geom);
 	if (!prevMAE_Info)
 	{
 		prevMAE = vector<double>(targetInfo->Data().Size(), MissingDouble());
@@ -653,7 +648,7 @@ void blend::CalculateMember(shared_ptr<info> targetInfo, unsigned short threadId
 	{
 		// ValidDateTime can be borked on ECMWF and MOS.
 		const int validHour = stoi(current.OriginDateTime().String("%H"));
-		if (validHour == 6 ||  validHour == 18)
+		if (validHour == 6 || validHour == 18)
 		{
 			current.ValidDateTime().Adjust(kHourResolution, -6);
 		}
@@ -690,7 +685,7 @@ void blend::CalculateMember(shared_ptr<info> targetInfo, unsigned short threadId
 
 	SetupOutputForecastTimes(Info, latestOrigin, current, maxStep, originTimeStep);
 	Info->ForecastTypes(ftypes);
-	Info->Create(targetInfo->Grid(), true);
+	Info->Create(targetInfo->Base(), true);
 	Info->First();
 
 	while (true)
@@ -724,7 +719,8 @@ void blend::CalculateMember(shared_ptr<info> targetInfo, unsigned short threadId
 
 		if (Info->ForecastType(forecastType))
 		{
-			Info->Grid()->Data(d);
+			auto b = Info->Base();
+			b->data = std::move(d);
 			WriteToFile(Info);
 		}
 		else
@@ -751,7 +747,7 @@ static std::vector<info_t> FetchRawGrids(shared_ptr<info> targetInfo, shared_ptr
 	const string geom = cnf->TargetGeomName();
 
 	// Fetch previous model runs raw fields for EC and MOS when we're calculating during the 06 and 18 cycles.
-	forecast_time ecmosFetchTime  = currentTime;
+	forecast_time ecmosFetchTime = currentTime;
 	const int hour = stoi(ecmosFetchTime.OriginDateTime().String("%H"));
 	if (hour == 6 || hour == 18)
 	{
@@ -832,8 +828,8 @@ info_t FetchHistorical(logger& log, shared_ptr<plugin_configuration> cnf, const 
 		if (files.empty())
 		{
 			log.Trace("Failed to find matching files for: " + to_string(prod.Id()) + "/" +
-			         to_string(blendProd.type.Value()) + " " + ftime.OriginDateTime().String() + " " +
-			         ftime.ValidDateTime().String());
+			          to_string(blendProd.type.Value()) + " " + ftime.OriginDateTime().String() + " " +
+			          ftime.ValidDateTime().String());
 		}
 		else
 		{
@@ -847,7 +843,7 @@ info_t FetchHistorical(logger& log, shared_ptr<plugin_configuration> cnf, const 
 	{
 		Info = f->Fetch(cnf, ftime, blendProd.lvl, parm, blendProd.type, false);
 		log.Info("Found matching file: " + to_string(prod.Id()) + "/" + to_string(blendProd.type.Value()) + " " +
-				 ftime.OriginDateTime().String() + " " + ftime.ValidDateTime().String());
+		         ftime.OriginDateTime().String() + " " + ftime.ValidDateTime().String());
 	}
 	catch (HPExceptionType& e)
 	{
@@ -870,16 +866,11 @@ std::vector<info_t> FetchBiasGrids(shared_ptr<info> targetInfo, shared_ptr<plugi
 	const HPTimeResolution currentResolution = fetchTime.StepResolution();
 	const param currentParam = targetInfo->Param();
 
-	info_t mosBias =
-	    FetchHistorical(log, cnf, fetchTime, currentResolution, currentParam, MOS, kBlendBiasProd);
-	info_t ecBias =
-	    FetchHistorical(log, cnf, fetchTime, currentResolution, currentParam, ECMWF, kBlendBiasProd);
-	info_t mepsBias =
-	    FetchHistorical(log, cnf, fetchTime, currentResolution, currentParam, MEPS, kBlendBiasProd);
-	info_t hirlamBias =
-	    FetchHistorical(log, cnf, fetchTime, currentResolution, currentParam, HIRLAM, kBlendBiasProd);
-	info_t gfsBias =
-	    FetchHistorical(log, cnf, fetchTime, currentResolution, currentParam, GFS, kBlendBiasProd);
+	info_t mosBias = FetchHistorical(log, cnf, fetchTime, currentResolution, currentParam, MOS, kBlendBiasProd);
+	info_t ecBias = FetchHistorical(log, cnf, fetchTime, currentResolution, currentParam, ECMWF, kBlendBiasProd);
+	info_t mepsBias = FetchHistorical(log, cnf, fetchTime, currentResolution, currentParam, MEPS, kBlendBiasProd);
+	info_t hirlamBias = FetchHistorical(log, cnf, fetchTime, currentResolution, currentParam, HIRLAM, kBlendBiasProd);
+	info_t gfsBias = FetchHistorical(log, cnf, fetchTime, currentResolution, currentParam, GFS, kBlendBiasProd);
 
 	if (mosBias)
 		log.Info("MOS_bias missing count: " + to_string(mosBias->Data().MissingCount()));
@@ -1001,7 +992,9 @@ void blend::CalculateBlend(shared_ptr<info> targetInfo, unsigned short threadIdx
 	}
 
 	// Load all the precalculated weights from BLENDW
-	vector<info_t> preweights = FetchMAEGrids(targetInfo, make_shared<plugin_configuration>(*itsConfiguration), threadIdx);
+	vector<info_t> preweights =
+	    FetchMAEGrids(targetInfo, make_shared<plugin_configuration>(*itsConfiguration), threadIdx);
+
 	if (std::all_of(preweights.begin(), preweights.end(), [&](info_t i) { return i == nullptr; }))
 	{
 		log.Error("Failed to acquire any MAE grids");

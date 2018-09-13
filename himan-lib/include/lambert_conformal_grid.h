@@ -89,8 +89,6 @@ class lambert_conformal_grid : public regular_grid
 	void PackedData(std::unique_ptr<packed_data> thePackedData);
 	packed_data& PackedData();
 
-	bool Swap(HPScanningMode newScanningMode) override;
-
 	point XY(const point& latlon) const override;
 	point LatLon(size_t locationIndex) const override;
 

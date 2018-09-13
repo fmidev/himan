@@ -62,7 +62,8 @@ void reduced_gaussian_grid::NumberOfPointsAlongParallels(const std::vector<int>&
 	std::partial_sum(theNumberOfPointsAlongParallels.begin(), theNumberOfPointsAlongParallels.end(),
 	                 ++itsAccumulatedPointsAlongParallels.begin());
 	itsAccumulatedPointsAlongParallels.front() = 0;
-	itsData = himan::matrix<double>(itsAccumulatedPointsAlongParallels.back(), 1, 1, MissingDouble(), MissingDouble());
+	//	itsData = himan::matrix<double>(itsAccumulatedPointsAlongParallels.back(), 1, 1, MissingDouble(),
+	// MissingDouble());
 }
 
 point reduced_gaussian_grid::FirstPoint() const
@@ -118,11 +119,12 @@ point reduced_gaussian_grid::LatLon(size_t theLocationIndex) const
 	return LatLon(x, y);
 }
 
+/*
 double reduced_gaussian_grid::Value(size_t x, size_t y) const
 {
-	return itsData.At(itsAccumulatedPointsAlongParallels[y] + x);
+    return itsData.At(itsAccumulatedPointsAlongParallels[y] + x);
 }
-
+*/
 size_t reduced_gaussian_grid::LocationIndex(size_t x, size_t y) const
 {
 	return itsAccumulatedPointsAlongParallels[y] + x;

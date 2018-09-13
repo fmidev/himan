@@ -30,11 +30,11 @@ class compiled_plugin_base;
 }
 
 /**
-* @class iterator
-*
-* @brief Nested class inside info to provide iterator functions to info class
-*
-*/
+ * @class iterator
+ *
+ * @brief Nested class inside info to provide iterator functions to info class
+ *
+ */
 
 const size_t kIteratorResetValue = std::numeric_limits<size_t>::max();
 
@@ -347,6 +347,21 @@ typedef iterator<forecast_time> time_iter;
 typedef iterator<producer> producer_iter;
 typedef iterator<forecast_type> forecast_type_iter;
 
+struct base
+{
+	std::shared_ptr<himan::grid> grid;
+	matrix<double> data;
+	std::shared_ptr<packed_data> pdata;
+
+	base() : grid(), data(0, 0, 1, MissingDouble()), pdata(new packed_data)
+	{
+	}
+	base(std::shared_ptr<himan::grid> grid_, const matrix<double>& data_)
+	    : grid(grid_), data(data_), pdata(new packed_data)
+	{
+	}
+};
+
 class info
 {
    public:
@@ -449,24 +464,8 @@ class info
 	 * Will *not* preserve iterator positions.
 	 */
 
-	void Create(const grid* baseGrid, bool createDataBackend = false);
-	void Create(const grid* baseGrid, const param& par, const level& lev, bool createDataBackend = false);
-
-	/**
-	 * @brief Re-order infos in the dimension vector if dimension sizes are changed
-	 *
-	 * If existing dimensions are resized, the data in the dimension vector needs
-	 * to be reordered or the calculated iterator indices are not correct and segfault
-	 * is more than likely.
-	 *
-	 * Regridding will therefore *move* the grids from the old dimension vector to a
-	 * new one. For now regridding is only supported for level and param dimensions.
-	 *
-	 * Will *not* preserve iterator positions.
-	 */
-
-	void Regrid(const std::vector<param>& params);
-	void Regrid(const std::vector<level>& levels);
+	void Create(std::shared_ptr<base> baseGrid, bool createDataBackend = false);
+	void Create(std::shared_ptr<base> baseGrid, const param& par, const level& lev, bool createDataBackend = false);
 
 	void Producer(long theFmiProducerID);
 	void Producer(const producer& theProducer);
@@ -654,28 +653,12 @@ class info
 	station Station() const;
 
 	/**
-	 * @return Current grid
-	 */
-
-	grid* Grid() const;
-	std::shared_ptr<grid> SharedGrid() const;
-
-	/**
-	 * @brief Return data matrix from the given time/level/param indexes
-	 *
-	 * @note Function argument order is important!
-	 *
-	 * @return Data matrix pointed by the given function arguments.
-	 */
-
-	grid* Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) const;  // Always this order
-
-	/**
 	 * @brief Replace current grid with the function argument
 	 * @param d shared pointer to a grid instance
 	 */
 
-	void Grid(std::shared_ptr<grid> d);
+	void Base(std::shared_ptr<base> p);
+	std::shared_ptr<base> Base();
 
 	/**
 	 * @brief Shortcut to get the current data matrix
@@ -683,6 +666,8 @@ class info
 	 */
 
 	matrix<double>& Data();
+	std::shared_ptr<grid> Grid() const;
+	std::shared_ptr<packed_data> PackedData() const;
 
 	/**
 	 * @brief Return size of meta matrix. Is the same as times*params*levels.
@@ -714,8 +699,6 @@ class info
 	info_simple* ToSimple() const;
 
 #endif
-
-	const std::vector<std::shared_ptr<grid>>& Dimensions() const;
 
 	/**
 	 * @brief Clear info contents and iterators
@@ -757,6 +740,7 @@ class info
 
    protected:
 	std::unique_ptr<grid> itsBaseGrid;  //!< grid information from json. used as a template, never to store data
+	std::vector<std::shared_ptr<base>> Dimensions() const;
 
    private:
 	void Init();
@@ -771,7 +755,7 @@ class info
 	 *
 	 * ReIndex() moves data around but does not copy (ie allocate new memory).
 	 *
-	*/
+	 */
 
 	void ReIndex(size_t oldForecastTypeSize, size_t oldTimeSize, size_t oldLevelSize, size_t oldParamSize);
 
@@ -788,6 +772,22 @@ class info
 	size_t Index(size_t forecastTypeIndex, size_t timeIndex, size_t levelIndex, size_t paramIndex) const;
 	size_t Index() const;
 
+	/**
+	 * @brief Re-order infos in the dimension vector if dimension sizes are changed
+	 *
+	 * If existing dimensions are resized, the data in the dimension vector needs
+	 * to be reordered or the calculated iterator indices are not correct and segfault
+	 * is more than likely.
+	 *
+	 * Regridding will therefore *move* the grids from the old dimension vector to a
+	 * new one. For now regridding is only supported for level and param dimensions.
+	 *
+	 * Will *not* preserve iterator positions.
+	 */
+
+	void Regrid(const std::vector<param>& params);
+	void Regrid(const std::vector<level>& levels);
+
 	HPLevelOrder itsLevelOrder;
 
 	level_iter itsLevelIterator;
@@ -795,7 +795,7 @@ class info
 	param_iter itsParamIterator;
 	forecast_type_iter itsForecastTypeIterator;
 
-	std::vector<std::shared_ptr<grid>> itsDimensions;
+	std::vector<std::shared_ptr<base>> itsDimensions;
 
 	logger itsLogger;
 
@@ -836,26 +836,15 @@ inline size_t himan::info::Index() const
 {
 	return Index(ForecastTypeIndex(), TimeIndex(), LevelIndex(), ParamIndex());
 }
-inline grid* info::Grid() const
-{
-	ASSERT(itsDimensions.size());
-	return itsDimensions[Index()].get();
-}
-
-inline grid* info::Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) const
-{
-	ASSERT(itsDimensions.size());
-	return itsDimensions[Index(ForecastTypeIndex(), timeIndex, levelIndex, paramIndex)].get();
-}
 
 inline void info::Value(double theValue)
 {
-	Grid()->Data().Set(itsLocationIndex, theValue);
+	Data().Set(itsLocationIndex, theValue);
 }
 
 inline double info::Value() const
 {
-	return Grid()->Data().At(itsLocationIndex);
+	return itsDimensions[Index()]->data.At(itsLocationIndex);
 }
 typedef std::shared_ptr<info> info_t;
 

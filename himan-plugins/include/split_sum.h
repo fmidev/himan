@@ -63,7 +63,7 @@ class split_sum : public compiled_plugin, private compiled_plugin_base
 	 */
 
 	std::pair<std::shared_ptr<himan::info>, std::shared_ptr<himan::info>> GetSourceDataForRate(
-	    std::shared_ptr<const info> myTargetInfo, int step) const;
+	    std::shared_ptr<info> myTargetInfo, int step) const;
 
 	/**
 	 * @brief Fetching source data from cumulative parameter
@@ -74,8 +74,7 @@ class split_sum : public compiled_plugin, private compiled_plugin_base
 	 * @return himan::info contain source data, empty if no data found
 	 */
 
-	std::shared_ptr<info> FetchSourceData(std::shared_ptr<const info> myTargetInfo,
-	                                      const forecast_time& wantedTime) const;
+	std::shared_ptr<info> FetchSourceData(std::shared_ptr<info> myTargetInfo, const forecast_time& wantedTime) const;
 };
 
 // the class factory

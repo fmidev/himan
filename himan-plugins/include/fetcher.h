@@ -136,7 +136,7 @@ class fetcher : public auxiliary_plugin
 	 * @return True if masking is successful
 	 */
 
-	bool ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> config, info& theInfo,
+	bool ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> config, info_t theInfo,
 	                      const forecast_time& requestedTime, const forecast_type& requestedType);
 
 	std::vector<std::shared_ptr<info>> FromCache(search_options& options);

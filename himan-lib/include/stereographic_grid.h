@@ -83,8 +83,6 @@ class stereographic_grid : public regular_grid
 	bool operator==(const grid& other) const;
 	bool operator!=(const grid& other) const;
 
-	bool Swap(HPScanningMode newScanningMode) override;
-
 	point XY(const point& latlon) const override;
 	point LatLon(size_t locationIndex) const override;
 

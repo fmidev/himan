@@ -111,11 +111,11 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 		                 itsConfiguration->UseCudaForPacking());
 
 #ifdef HAVE_CUDA
-		if (UInfo->Grid()->IsPackedData())
+		if (UInfo->PackedData()->HasData())
 		{
-			ASSERT(UInfo->Grid()->PackedData().ClassName() == "simple_packed");
+			ASSERT(UInfo->PackedData()->ClassName() == "simple_packed");
 
-			util::Unpack({UInfo->Grid(), VInfo->Grid()});
+			util::Unpack({UInfo, VInfo}, false);
 		}
 #endif
 	}
@@ -149,10 +149,10 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 		unstaggered_UV = unstagger_cuda::Process(UInfo->Data().Values(), VInfo->Data().Values());
 
 		myTargetInfo->ParamIndex(0);
-		myTargetInfo->Grid()->Data().Set(unstaggered_UV.first);
+		myTargetInfo->Data().Set(unstaggered_UV.first);
 
 		myTargetInfo->ParamIndex(1);
-		myTargetInfo->Grid()->Data().Set(unstaggered_UV.second);
+		myTargetInfo->Data().Set(unstaggered_UV.second);
 	}
 	else
 #endif
@@ -165,7 +165,8 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 		himan::matrix<double> unstaggered_U = numerical_functions::Filter2D(UInfo->Data(), filter_kernel_U);
 
 		myTargetInfo->ParamIndex(0);
-		myTargetInfo->Grid()->Data(unstaggered_U);
+		auto b = myTargetInfo->Base();
+		b->data = move(unstaggered_U);
 
 		// calculate for V
 		himan::matrix<double> filter_kernel_V(1, 2, 1, MissingDouble());
@@ -174,7 +175,8 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 		himan::matrix<double> unstaggered_V = numerical_functions::Filter2D(VInfo->Data(), filter_kernel_V);
 
 		myTargetInfo->ParamIndex(1);
-		myTargetInfo->Grid()->Data(unstaggered_V);
+		b = myTargetInfo->Base();
+		b->data = move(unstaggered_V);
 	}
 
 	myTargetInfo->ParamIndex(0);

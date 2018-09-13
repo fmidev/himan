@@ -21,19 +21,19 @@ auto zip_range(Conts&... conts)
 	        boost::make_zip_iterator(boost::make_tuple(conts.end()...))};
 }
 
-/*
- * Really nice pre-processor macros here
- * What all this does is it'll change this
- *
- * LOCKSTEP(info1,info2,...)
- *
- * to this
- *
- * assert(info1); assert(info2);
- * for (info1->ResetLocation(), info2->ResetLocation(); info->NextLocation() && info2->NextLocation();)
- *
- * The current maximum number of infos is 14 (thanks preform_pressure).
- */
+	/*
+	 * Really nice pre-processor macros here
+	 * What all this does is it'll change this
+	 *
+	 * LOCKSTEP(info1,info2,...)
+	 *
+	 * to this
+	 *
+	 * assert(info1); assert(info2);
+	 * for (info1->ResetLocation(), info2->ResetLocation(); info->NextLocation() && info2->NextLocation();)
+	 *
+	 * The current maximum number of infos is 14 (thanks preform_pressure).
+	 */
 
 #define VA_NARGS_IMPL(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, N, ...) N
 #define VA_NARGS(...) VA_NARGS_IMPL(__VA_ARGS__, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1)
@@ -219,21 +219,6 @@ class compiled_plugin_base
 	 */
 
 	virtual void Start();
-
-#ifdef HAVE_CUDA
-	/**
-	 * @brief Unpack grib data
-	 *
-	 * This function should be called if the source data is packed but cuda cannot
-	 * be used in calculation. If the calculation is done with cuda, the unpacking
-	 * is also made there.
-	 *
-	 * @param infos List of shared_ptr<info> 's that have packed data
-	 */
-
-	void Unpack(std::initializer_list<info_t> infos);
-
-#endif
 
 	/**
 	 * @brief Compare a number of grids to see if they are equal.

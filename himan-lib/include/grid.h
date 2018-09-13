@@ -28,7 +28,7 @@ class grid
 	grid();
 	grid(const std::string& WKT);
 
-	virtual ~grid();
+	virtual ~grid() = default;
 
 	grid(const grid& other);
 	grid& operator=(const grid& other) = delete;
@@ -58,9 +58,6 @@ class grid
 	std::string Identifier() const;
 	void Identifier(const std::string& theIdentifier);
 
-	matrix<double>& Data();
-	void Data(const matrix<double>& d);
-
 	std::vector<double> AB() const;
 	void AB(const std::vector<double>& theAB);
 
@@ -83,10 +80,6 @@ class grid
 	/* Return latlon coordinates of a given grid point */
 	virtual point LatLon(size_t locationIndex) const = 0;
 
-	virtual bool IsPackedData() const;
-	void PackedData(std::unique_ptr<packed_data> thePackedData);
-	packed_data& PackedData();
-
 	bool UVRelativeToGrid() const;
 	void UVRelativeToGrid(bool theUVRelativeToGrid);
 
@@ -99,8 +92,6 @@ class grid
    protected:
 	bool EqualsTo(const grid& other) const;
 
-	matrix<double> itsData;  //<! Variable to hold unpacked data
-
 	HPGridClass itsGridClass;
 	HPGridType itsGridType;
 	std::string itsIdentifier;
@@ -108,8 +99,6 @@ class grid
 	std::vector<double> itsAB;
 
 	logger itsLogger;
-
-	std::unique_ptr<packed_data> itsPackedData;  //<! Variable to hold packed data
 
 	/**
 	 * True if parameter UV components are grid relative, false if they are earth-relative.
@@ -128,9 +117,8 @@ class grid
 	template <class Archive>
 	void serialize(Archive& ar)
 	{
-		ar(CEREAL_NVP(itsData), CEREAL_NVP(itsGridClass), CEREAL_NVP(itsGridType), CEREAL_NVP(itsAB),
-		   CEREAL_NVP(itsLogger), CEREAL_NVP(itsPackedData), CEREAL_NVP(itsIdentifier), CEREAL_NVP(itsUVRelativeToGrid),
-		   CEREAL_NVP(itsEarthShape));
+		ar(CEREAL_NVP(itsGridClass), CEREAL_NVP(itsGridType), CEREAL_NVP(itsAB), CEREAL_NVP(itsLogger),
+		   CEREAL_NVP(itsIdentifier), CEREAL_NVP(itsUVRelativeToGrid), CEREAL_NVP(itsEarthShape));
 	}
 #endif
 };
@@ -157,8 +145,6 @@ class regular_grid : public grid
 
 	virtual HPScanningMode ScanningMode() const;
 	virtual void ScanningMode(HPScanningMode theScanningMode);
-
-	virtual bool Swap(HPScanningMode newScanningMode) = 0;
 
 	virtual size_t Ni() const = 0;
 	virtual size_t Nj() const = 0;

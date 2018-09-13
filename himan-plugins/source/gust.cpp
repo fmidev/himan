@@ -507,7 +507,8 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	filter_kernel.Fill(1.0 / 9.0);
 	himan::matrix<double> gust_filtered = numerical_functions::Filter2D(myTargetInfo->Data(), filter_kernel);
 
-	myTargetInfo->Grid()->Data(gust_filtered);
+	auto b = myTargetInfo->Base();
+	b->data = move(gust_filtered);
 
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
 	                      "/" + to_string(myTargetInfo->Data().Size()));
@@ -618,8 +619,8 @@ void IntT(intT& iT, const deltaT& dT, size_t gridSize)
 	{
 		if (!IsMissing(dT.deltaT_100[i]))
 			iT.intT_100[i] = 0.5 * dT.deltaT_100[i] * 100;  // why 0.5 * here? Would make sense in case of
-		                                                    // (dT.deltaT_100[i] + dT.deltaT_0[i]) if this is
-		                                                    // integration using trapezoidal rule
+			                                                // (dT.deltaT_100[i] + dT.deltaT_0[i]) if this is
+			                                                // integration using trapezoidal rule
 		if (!IsMissing(dT.deltaT_100[i]) && !IsMissing(dT.deltaT_200[i]))
 			iT.intT_200[i] = 0.5 * (dT.deltaT_200[i] + dT.deltaT_100[i]) * 100;
 		if (!IsMissing(dT.deltaT_200[i]) && !IsMissing(dT.deltaT_300[i]))

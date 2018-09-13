@@ -463,7 +463,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	 *
 	 * o = center grid point that is under scrutiny now
 	 * x = grid point that is used in averaging
-	*/
+	 */
 
 	himan::matrix<double> filter_kernel(9, 9, 1, MissingDouble(), 1 / 81.);
 
@@ -531,7 +531,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	 * Edit data resolution = 7.5km --> 7.5km * 15 = 111km
 	 * ECMWF data resolution = 12.5km --> 12.5km * 9 = 112.5km
 	 *
-	*/
+	 */
 
 	filter_kernel = himan::matrix<double>(7, 7, 1, MissingDouble(), 1);
 
@@ -565,13 +565,14 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	/* Macro averages over 3 grid points in all directions
 	 * We need to smooth a lot more to get similar look.
-	*/
+	 */
 
 	filter_kernel = himan::matrix<double>(5, 5, 1, MissingDouble(), 1 / 25.);
 
 	auto smoothenedResult = numerical_functions::Filter2D(myTargetInfo->Data(), filter_kernel);
 
-	myTargetInfo->Grid()->Data(smoothenedResult);
+	auto b = myTargetInfo->Base();
+	b->data = move(smoothenedResult);
 
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
 	                      "/" + to_string(myTargetInfo->Data().Size()));

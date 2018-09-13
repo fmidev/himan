@@ -80,14 +80,14 @@ void cache::SplitToPool(info_t anInfo, bool pin)
 	}
 
 #ifdef HAVE_CUDA
-	if (localInfo->Grid()->IsPackedData())
+	if (localInfo->PackedData()->HasData())
 	{
 		itsLogger.Trace("Removing packed data from cached info");
-		localInfo->Grid()->PackedData().Clear();
+		localInfo->PackedData()->Clear();
 	}
 #endif
 
-	ASSERT(!localInfo->Grid()->IsPackedData());
+	ASSERT(localInfo->PackedData()->HasData() == false);
 
 	// localInfo might contain multiple grids. When adding data to cache, we need
 	// to make sure that single info contains only single grid.
@@ -96,7 +96,7 @@ void cache::SplitToPool(info_t anInfo, bool pin)
 	{
 		auto newInfo =
 		    make_shared<info>(localInfo->ForecastType(), localInfo->Time(), localInfo->Level(), localInfo->Param());
-		newInfo->Grid(localInfo->SharedGrid());
+		newInfo->Base(localInfo->Base());
 		localInfo = newInfo;
 	}
 
@@ -138,7 +138,7 @@ void cache::Replace(info_t anInfo, bool pin)
 	{
 		auto newInfo =
 		    make_shared<info>(localInfo->ForecastType(), localInfo->Time(), localInfo->Level(), localInfo->Param());
-		newInfo->Grid(localInfo->SharedGrid());
+		newInfo->Base(localInfo->Base());
 		localInfo = newInfo;
 	}
 

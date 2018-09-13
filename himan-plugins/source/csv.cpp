@@ -186,15 +186,16 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, const search_opti
 	requested->Levels(levels);
 	requested->ForecastTypes(ftypes);
 
-	auto base = unique_ptr<grid>(new point_list());  // placeholder
+	auto b = make_shared<base>();
+	b->grid = shared_ptr<grid>(new point_list());  // placeholder
 
-	requested->Create(base.get(), true);
+	requested->Create(b, true);
 	requested->First();
 	requested->ResetParam();
 
 	while (requested->Next())
 	{
-		dynamic_cast<point_list*>(requested->Grid())->Stations(stations);
+		dynamic_pointer_cast<point_list>(requested->Grid())->Stations(stations);
 	}
 
 	itsLogger.Debug("Read " + to_string(times.size()) + " times, " + to_string(levels.size()) + " levels, " +

@@ -140,32 +140,16 @@ class matrix
 	}
 	std::ostream& Write(std::ostream& file) const
 	{
-		file << "<" << ClassName() << ">" << std::endl;
-		file << "__itsWidth__ " << itsWidth << std::endl;
-		file << "__itsHeight__ " << itsHeight << std::endl;
-		file << "__itsDepth__ " << itsDepth << std::endl;
-		file << "__itsSize__ " << itsData.size() << std::endl;
+		file << "<" << ClassName() << ">" << std::endl
+		     << "__itsWidth__ " << itsWidth << std::endl
+		     << "__itsHeight__ " << itsHeight << std::endl
+		     << "__itsDepth__ " << itsDepth << std::endl
+		     << "__itsSize__ " << itsData.size() << std::endl
+		     << "__itsMissingValue__ " << itsMissingValue << std::endl;
 
-		PrintData(file, itsData);
+		util::DumpVector(itsData, "");
 
 		return file;
-	}
-
-	/**
-	 * @brief Print information on contents if T == double
-	 *
-	 */
-	void PrintData(std::ostream& file, const std::vector<double>& theValues) const
-	{
-		if (!theValues.size())
-		{
-			file << "__no-data__" << std::endl;
-			return;
-		}
-
-		ASSERT(theValues.size() > 0);
-
-		util::DumpVector(theValues, "");
 	}
 
 	size_t Size() const

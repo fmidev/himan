@@ -88,9 +88,11 @@ static std::mutex s_cachedGridMutex;
 static __host__ std::string CacheEntryName(const himan::info& Info)
 {
 	std::stringstream ss;
-	if(Info.Grid()->Class() == himan::kRegularGrid)
+	if (Info.Grid()->Class() == himan::kRegularGrid)
 	{
-		ss << himan::HPGridTypeToString.at(Info.Grid()->Type()) << "_" << dynamic_cast<himan::regular_grid*>(Info.Grid())->Ni() << "_" << dynamic_cast<himan::regular_grid*>(Info.Grid())->Nj();
+		ss << himan::HPGridTypeToString.at(Info.Grid()->Type()) << "_"
+		   << std::dynamic_pointer_cast<himan::regular_grid>(Info.Grid())->Ni() << "_"
+		   << std::dynamic_pointer_cast<himan::regular_grid>(Info.Grid())->Nj();
 	}
 	else
 	{
@@ -126,7 +128,8 @@ void CreateGrid(himan::info& sourceInfo, himan::info& targetInfo, std::vector<::
 		{
 			while (targetInfo.NextLocation())
 			{
-				himan::point gp = dynamic_cast<himan::regular_grid*>(sourceInfo.Grid())->XY(targetInfo.LatLon());
+				himan::point gp =
+				    std::dynamic_pointer_cast<himan::regular_grid>(sourceInfo.Grid())->XY(targetInfo.LatLon());
 
 				grid[i].x = gp.X();
 				grid[i].y = gp.Y();
@@ -135,13 +138,12 @@ void CreateGrid(himan::info& sourceInfo, himan::info& targetInfo, std::vector<::
 		}
 		else
 		{
-                        while (targetInfo.NextLocation())
-                        {
-                                grid[i].x = 1;
-                                grid[i].y = i+1;
-                                i++;
-                        }
-
+			while (targetInfo.NextLocation())
+			{
+				grid[i].x = 1;
+				grid[i].y = i + 1;
+				i++;
+			}
 		}
 
 		{
@@ -512,7 +514,7 @@ __global__ void InterpolateCudaKernel(const double* __restrict__ d_source, doubl
 	}
 }
 
-bool himan::interpolate::InterpolateAreaGPU(himan::info& base, himan::info& source, himan::matrix<double>& targetData)
+bool himan::interpolate::InterpolateAreaGPU(himan::info& base, himan::info_t source, himan::matrix<double>& targetData)
 {
 	cudaStream_t stream;
 	CUDA_CHECK(cudaStreamCreate(&stream));
@@ -524,7 +526,7 @@ bool himan::interpolate::InterpolateAreaGPU(himan::info& base, himan::info& sour
 	else
 	{
 		auto newMethod =
-		    himan::interpolate::InterpolationMethod(source.Param().Name(), base.Param().InterpolationMethod());
+		    himan::interpolate::InterpolationMethod(source->Param().Name(), base.Param().InterpolationMethod());
 		auto newParam = base.Param();
 		newParam.InterpolationMethod(newMethod);
 
@@ -537,7 +539,7 @@ bool himan::interpolate::InterpolateAreaGPU(himan::info& base, himan::info& sour
 	std::vector<::point> grid_(N);
 	::point* d_grid = nullptr;
 
-	CreateGrid(source, base, grid_);
+	CreateGrid(*source, base, grid_);
 
 	CUDA_CHECK(cudaMalloc((void**)&d_grid, sizeof(::point) * N));
 	CUDA_CHECK(cudaMemcpyAsync(d_grid, grid_.data(), sizeof(::point) * N, cudaMemcpyHostToDevice, stream));
@@ -545,10 +547,10 @@ bool himan::interpolate::InterpolateAreaGPU(himan::info& base, himan::info& sour
 	double* d_source = nullptr;
 	double* d_target = nullptr;
 
-	CUDA_CHECK(cudaMalloc((void**)&d_source, source.SizeLocations() * sizeof(double)));
+	CUDA_CHECK(cudaMalloc((void**)&d_source, source->SizeLocations() * sizeof(double)));
 	CUDA_CHECK(cudaMalloc((void**)&d_target, N * sizeof(double)));
 
-	auto sourceInfo = source.ToSimple();
+	auto sourceInfo = source->ToSimple();
 	auto targetInfo = base.ToSimple();
 	targetInfo->values = targetData.ValuesAsPOD();
 
@@ -725,9 +727,9 @@ void himan::interpolate::RotateVectorComponentsGPU(himan::info& UInfo, himan::in
 
 			CUDA_CHECK(cudaMemcpyAsync(d_lon, lon, memsize, cudaMemcpyHostToDevice));
 
-			const double latin1 = GetStandardParallel(UInfo.Grid(), 1);
-			const double latin2 = GetStandardParallel(UInfo.Grid(), 2);
-			const double orientation = GetOrientation(UInfo.Grid());
+			const double latin1 = GetStandardParallel(UInfo.Grid().get(), 1);
+			const double latin2 = GetStandardParallel(UInfo.Grid().get(), 2);
+			const double orientation = GetOrientation(UInfo.Grid().get());
 
 			ASSERT(!himan::IsKHPMissingValue(latin1) && !himan::IsKHPMissingValue(orientation));
 			double cone;
@@ -753,7 +755,8 @@ void himan::interpolate::RotateVectorComponentsGPU(himan::info& UInfo, himan::in
 
 		case himan::kStereographic:
 		{
-			const double orientation = dynamic_cast<himan::stereographic_grid*>(UInfo.Grid())->Orientation();
+			const double orientation =
+			    std::dynamic_pointer_cast<himan::stereographic_grid>(UInfo.Grid())->Orientation();
 			CUDA_CHECK(cudaMalloc((void**)&d_lon, memsize));
 
 			double* lon = nullptr;
@@ -803,12 +806,12 @@ void himan::interpolate::RotateVectorComponentsGPU(himan::info& UInfo, himan::in
 		CUDA_CHECK(cudaFree(d_lon));
 	}
 
-	if (UInfo.Grid()->IsPackedData())
+	if (UInfo.PackedData()->HasData())
 	{
-		UInfo.Grid()->PackedData().Clear();
+		UInfo.PackedData()->Clear();
 	}
-	if (VInfo.Grid()->IsPackedData())
+	if (VInfo.PackedData()->HasData())
 	{
-		VInfo.Grid()->PackedData().Clear();
+		VInfo.PackedData()->Clear();
 	}
 }

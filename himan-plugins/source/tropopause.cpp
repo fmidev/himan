@@ -117,7 +117,7 @@ void tropopause::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	// convert pressure to flight level
 	transform(result.begin(), result.end(), result.begin(), metutil::FlightLevel_);
-	myTargetInfo->Grid()->Data().Set(move(result));
+	myTargetInfo->Data().Set(move(result));
 
 	string deviceType = "CPU";
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +

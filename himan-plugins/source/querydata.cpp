@@ -179,7 +179,7 @@ bool querydata::CopyData(info& theInfo, NFmiFastQueryInfo& qinfo, bool applyScal
 	ASSERT(theInfo.Data().Size() == qinfo.SizeLocations());
 
 	// convert missing value to kFloatMissing
-	theInfo.Grid()->Data().MissingValue(kFloatMissing);
+	theInfo.Data().MissingValue(kFloatMissing);
 	theInfo.ResetLocation();
 	qinfo.ResetLocation();
 
@@ -191,9 +191,10 @@ bool querydata::CopyData(info& theInfo, NFmiFastQueryInfo& qinfo, bool applyScal
 		base = theInfo.Param().Base();
 	}
 
-	if (theInfo.Grid()->Class() == kRegularGrid && dynamic_cast<regular_grid*>(theInfo.Grid())->ScanningMode() != kBottomLeft)
+	if (theInfo.Grid()->Class() == kRegularGrid &&
+	    dynamic_pointer_cast<regular_grid>(theInfo.Grid())->ScanningMode() != kBottomLeft)
 	{
-		ASSERT(dynamic_cast<regular_grid*>(theInfo.Grid())->ScanningMode() == kTopLeft);
+		ASSERT(std::dynamic_pointer_cast<regular_grid>(theInfo.Grid())->ScanningMode() == kTopLeft);
 
 		size_t nj = theInfo.Data().SizeY();
 		size_t ni = theInfo.Data().SizeX();
@@ -224,7 +225,7 @@ bool querydata::CopyData(info& theInfo, NFmiFastQueryInfo& qinfo, bool applyScal
 	}
 
 	// return to original missing value
-	theInfo.Grid()->Data().MissingValue(MissingDouble());
+	theInfo.Data().MissingValue(MissingDouble());
 
 	return true;
 }
@@ -324,7 +325,7 @@ NFmiParamDescriptor querydata::CreateParamDescriptor(info& info, bool theActiveO
 
 NFmiHPlaceDescriptor querydata::CreatePoint(info& info) const
 {
-	const point_list* g = dynamic_cast<point_list*>(info.Grid());
+	const auto g = std::dynamic_pointer_cast<point_list>(info.Grid());
 	NFmiLocationBag bag;
 
 	for (const station& s : g->Stations())
@@ -351,7 +352,7 @@ NFmiHPlaceDescriptor querydata::CreateGrid(info& info) const
 	{
 		case kLatitudeLongitude:
 		{
-			latitude_longitude_grid* const g = dynamic_cast<latitude_longitude_grid*>(info.Grid());
+			auto g = std::dynamic_pointer_cast<latitude_longitude_grid>(info.Grid());
 
 			theArea = new NFmiLatLonArea(NFmiPoint(g->BottomLeft().X(), g->BottomLeft().Y()),
 			                             NFmiPoint(g->TopRight().X(), g->TopRight().Y()));
@@ -361,7 +362,7 @@ NFmiHPlaceDescriptor querydata::CreateGrid(info& info) const
 
 		case kRotatedLatitudeLongitude:
 		{
-			rotated_latitude_longitude_grid* const g = dynamic_cast<rotated_latitude_longitude_grid*>(info.Grid());
+			auto g = std::dynamic_pointer_cast<rotated_latitude_longitude_grid>(info.Grid());
 
 			theArea = new NFmiRotatedLatLonArea(
 			    NFmiPoint(g->BottomLeft().X(), g->BottomLeft().Y()), NFmiPoint(g->TopRight().X(), g->TopRight().Y()),
@@ -374,7 +375,7 @@ NFmiHPlaceDescriptor querydata::CreateGrid(info& info) const
 
 		case kStereographic:
 		{
-			stereographic_grid* const g = dynamic_cast<stereographic_grid*>(info.Grid());
+			auto g = std::dynamic_pointer_cast<stereographic_grid>(info.Grid());
 
 			theArea = new NFmiStereographicArea(NFmiPoint(g->BottomLeft().X(), g->BottomLeft().Y()),
 			                                    g->Di() * static_cast<double>((g->Ni() - 1)),
@@ -384,7 +385,7 @@ NFmiHPlaceDescriptor querydata::CreateGrid(info& info) const
 
 		case kLambertConformalConic:
 		{
-			lambert_conformal_grid* const g = dynamic_cast<lambert_conformal_grid*>(info.Grid());
+			auto g = std::dynamic_pointer_cast<lambert_conformal_grid>(info.Grid());
 
 			std::stringstream ss;
 			ss << "GEOGCS[\"MEPS\","
@@ -419,7 +420,8 @@ NFmiHPlaceDescriptor querydata::CreateGrid(info& info) const
 	}
 #endif
 
-	NFmiGrid theGrid(theArea, dynamic_cast<regular_grid*>(info.Grid())->Ni(), dynamic_cast<regular_grid*>(info.Grid())->Nj());
+	NFmiGrid theGrid(theArea, std::dynamic_pointer_cast<regular_grid>(info.Grid())->Ni(),
+	                 std::dynamic_pointer_cast<regular_grid>(info.Grid())->Nj());
 
 	delete theArea;
 
@@ -431,7 +433,7 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(info& info, bool activeOn
 	if (!activeOnly && info.SizeTimes() * info.SizeParams() * info.SizeLevels() > 1)
 	{
 		info.ResetTime();
-		const grid* firstGrid = 0;
+		std::shared_ptr<grid> firstGrid = nullptr;
 
 		while (info.NextTime())
 		{
@@ -443,7 +445,7 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(info& info, bool activeOn
 
 				while (info.NextParam())
 				{
-					grid* g = info.Grid();
+					auto g = info.Grid();
 
 					if (!g)
 					{
@@ -472,8 +474,8 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(info& info, bool activeOn
 					}
 					else
 					{
-						const point_list* fg_ = dynamic_cast<const point_list*>(firstGrid);
-						point_list* g_ = dynamic_cast<point_list*>(info.Grid());
+						const auto fg_ = std::dynamic_pointer_cast<point_list>(firstGrid);
+						auto g_ = std::dynamic_pointer_cast<point_list>(info.Grid());
 
 						if (*fg_ != *g_)
 						{
@@ -658,7 +660,10 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 	dynamic_cast<regular_grid*>(newGrid)->ScanningMode(kBottomLeft);
 	newGrid->EarthShape(earth_shape<double>(6371220));
 
-	newInfo->Create(newGrid);
+	auto b = make_shared<base>();
+	b->grid = shared_ptr<grid>(newGrid->Clone());
+
+	newInfo->Create(b);
 
 	delete newGrid;
 
@@ -688,7 +693,8 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 
 				// convert kFloatMissing to nan
 				dm.MissingValue(MissingDouble());
-				newInfo->Grid()->Data(dm);
+				b = newInfo->Base();
+				b->data = move(dm);
 			}
 		}
 	}

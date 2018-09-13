@@ -131,7 +131,7 @@ void grib::WriteAreaAndGrid(info& anInfo)
 	{
 		case kLatitudeLongitude:
 		{
-			latitude_longitude_grid* const rg = dynamic_cast<latitude_longitude_grid*>(anInfo.Grid());
+			auto rg = dynamic_pointer_cast<latitude_longitude_grid>(anInfo.Grid());
 
 			himan::point lastGridPoint = rg->LastPoint();
 
@@ -162,7 +162,7 @@ void grib::WriteAreaAndGrid(info& anInfo)
 
 		case kRotatedLatitudeLongitude:
 		{
-			rotated_latitude_longitude_grid* const rg = dynamic_cast<rotated_latitude_longitude_grid*>(anInfo.Grid());
+			auto rg = dynamic_pointer_cast<rotated_latitude_longitude_grid>(anInfo.Grid());
 
 			himan::point lastGridPoint = rg->LastPoint();
 
@@ -198,7 +198,7 @@ void grib::WriteAreaAndGrid(info& anInfo)
 
 		case kStereographic:
 		{
-			stereographic_grid* const rg = dynamic_cast<stereographic_grid*>(anInfo.Grid());
+			auto rg = dynamic_pointer_cast<stereographic_grid>(anInfo.Grid());
 
 			long gridType = 5;  // Grib 1
 
@@ -232,7 +232,7 @@ void grib::WriteAreaAndGrid(info& anInfo)
 
 		case kReducedGaussian:
 		{
-			reduced_gaussian_grid* const gg = dynamic_cast<reduced_gaussian_grid*>(anInfo.Grid());
+			auto gg = dynamic_pointer_cast<reduced_gaussian_grid>(anInfo.Grid());
 
 			long gridType = 4;  // Grib 1
 
@@ -267,7 +267,7 @@ void grib::WriteAreaAndGrid(info& anInfo)
 
 		case kLambertConformalConic:
 		{
-			lambert_conformal_grid* const lccg = dynamic_cast<lambert_conformal_grid*>(anInfo.Grid());
+			auto lccg = dynamic_pointer_cast<lambert_conformal_grid>(anInfo.Grid());
 
 			long gridType = 3;  // Grib 1
 
@@ -809,10 +809,10 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 
 #if defined GRIB_WRITE_PACKED_DATA and defined HAVE_CUDA
 
-	if (anInfo.Grid()->IsPackedData() && anInfo.Grid()->PackedData().ClassName() == "simple_packed")
+	if (anInfo.PackedData()->HasData() && anInfo.PackedData()->ClassName() == "simple_packed")
 	{
 		itsLogger.Trace("Writing packed data");
-		simple_packed* s = reinterpret_cast<simple_packed*>(&anInfo.Grid()->PackedData());
+		simple_packed* s = reinterpret_cast<simple_packed*>(anInfo.PackedData().get());
 
 		itsGrib->Message().ReferenceValue(s->coefficients.referenceValue);
 		itsGrib->Message().BinaryScaleFactor(static_cast<long>(s->coefficients.binaryScaleFactor));
@@ -829,8 +829,6 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 	else
 #endif
 	{
-		itsLogger.Trace("Writing unpacked data");
-
 		/*
 		 * Possible precipitation form value encoding must be done before determining
 		 * bits per value, as the range of values is changed.
@@ -1725,8 +1723,7 @@ void grib::ReadData(info_t newInfo, bool readPackedData) const
 		double rv = itsGrib->Message().ReferenceValue();
 		int bpv = static_cast<int>(itsGrib->Message().BitsPerValue());
 
-		auto packed =
-		    unique_ptr<simple_packed>(new simple_packed(bpv, util::ToPower(bsf, 2), util::ToPower(-dsf, 10), rv));
+		auto packed = make_shared<simple_packed>(bpv, util::ToPower(bsf, 2), util::ToPower(-dsf, 10), rv);
 
 		// Get packed values from grib
 
@@ -1770,8 +1767,8 @@ void grib::ReadData(info_t newInfo, bool readPackedData) const
 
 			delete[] bitmap;
 		}
-
-		newInfo->Grid()->PackedData(move(packed));
+		auto b = newInfo->Base();
+		b->pdata = move(packed);
 	}
 	else
 #endif
@@ -1950,8 +1947,10 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 	}
 
 	newGrid->AB(ab);
+	auto b = make_shared<base>();
+	b->grid = shared_ptr<grid>(newGrid->Clone());
 
-	newInfo->Create(newGrid.get(), true);
+	newInfo->Create(b, true);
 
 	// Set descriptors
 

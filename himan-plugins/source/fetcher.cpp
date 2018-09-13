@@ -137,7 +137,7 @@ shared_ptr<himan::info> fetcher::FetchFromProducer(search_options& opts, bool re
 
 	auto baseInfo = make_shared<info>(*opts.configuration->Info());
 
-	ASSERT(baseInfo->Dimensions().size());
+	ASSERT(baseInfo->DimensionSize());
 
 	baseInfo->First();
 
@@ -163,7 +163,7 @@ shared_ptr<himan::info> fetcher::FetchFromProducer(search_options& opts, bool re
 
 		itsApplyLandSeaMask = false;
 
-		if (!ApplyLandSeaMask(opts.configuration, *theInfos[0], opts.time, opts.ftype))
+		if (!ApplyLandSeaMask(opts.configuration, theInfos[0], opts.time, opts.ftype))
 		{
 			itsLogger.Warning("Land sea mask apply failed");
 		}
@@ -179,7 +179,7 @@ shared_ptr<himan::info> fetcher::FetchFromProducer(search_options& opts, bool re
 	 */
 
 	if (ret.first != HPDataFoundFrom::kCache && itsUseCache && opts.configuration->UseCache() &&
-	    !theInfos[0]->Grid()->IsPackedData())
+	    !theInfos[0]->PackedData()->HasData())
 	{
 		auto c = GET_PLUGIN(cache);
 		c->Insert(theInfos[0]);
@@ -480,7 +480,7 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vec
 	// Step 1. Rotate if needed
 
 	auto baseInfo = make_shared<info>(*dynamic_cast<const plugin_configuration*>(opts.configuration.get())->Info());
-	ASSERT(baseInfo->Dimensions().size());
+	ASSERT(baseInfo->DimensionSize());
 
 	baseInfo->First();
 
@@ -577,8 +577,6 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromCache(search_options& opts)
 
 		if (ret.size())
 		{
-			itsLogger.Trace("Data found from cache");
-
 			if (dynamic_pointer_cast<const plugin_configuration>(opts.configuration)->StatisticsEnabled())
 			{
 				dynamic_pointer_cast<const plugin_configuration>(opts.configuration)
@@ -610,6 +608,8 @@ pair<HPDataFoundFrom, vector<shared_ptr<himan::info>>> fetcher::FetchFromAuxilia
 				himan::Abort();
 			}
 
+			auto c = GET_PLUGIN(cache);
+
 			call_once(oflag, [&]() {
 
 				itsLogger.Debug("Start full auxiliary files read");
@@ -620,33 +620,18 @@ pair<HPDataFoundFrom, vector<shared_ptr<himan::info>>> fetcher::FetchFromAuxilia
 
 				AuxiliaryFilesRotateAndInterpolate(opts, ret);
 
-				/*
-				 * Insert interpolated data to cache if
-				 * 1. Cache is not disabled locally (itsUseCache) AND
-				 * 2. Cache is not disabled globally (config->UseCache()) AND
-				 * 3. Data is not packed
-				 */
-
-				auto c = GET_PLUGIN(cache);
-
-				for (const auto& anInfo : ret)
-				{
 #ifdef HAVE_CUDA
-					if (anInfo->Grid()->IsPackedData())
-					{
-						util::Unpack({anInfo->Grid()});
-					}
+				util::Unpack(ret, false);
 #endif
-					// Insert each grid of an info to cache. Usually one info
-					// has only one grid but in some cases this is not true.
-					for (anInfo->First(), anInfo->ResetParam(); anInfo->Next();)
-					{
-						c->Insert(anInfo);
-					}
+
+				for (const auto& info : ret)
+				{
+					c->Insert(info);
 				}
+
 				t.Stop();
 				itsLogger.Debug("Auxiliary files read finished in " + to_string(t.GetTime()) +
-				                "ms, cache size is now " + to_string(c->Size()));
+				                "ms, cache size: " + to_string(c->Size()));
 			});
 
 			auxiliaryFilesRead = true;
@@ -780,7 +765,7 @@ pair<HPDataFoundFrom, vector<shared_ptr<himan::info>>> fetcher::FetchFromAllSour
 	return make_pair(HPDataFoundFrom::kDatabase, FetchFromDatabase(opts, readPackedData));
 }
 
-bool fetcher::ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> config, info& theInfo,
+bool fetcher::ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> config, info_t theInfo,
                                const forecast_time& requestedTime, const forecast_type& requestedType)
 {
 	raw_time originTime = requestedTime.OriginDateTime();
@@ -796,30 +781,30 @@ bool fetcher::ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> confi
 
 		lsmInfo->First();
 
-		ASSERT(*lsmInfo->Grid() == *theInfo.Grid());
+		ASSERT(*lsmInfo->Grid() == *theInfo->Grid());
 
 		ASSERT(itsLandSeaMaskThreshold >= -1 && itsLandSeaMaskThreshold <= 1);
 		ASSERT(itsLandSeaMaskThreshold != 0);
 
 #ifdef HAVE_CUDA
-		if (theInfo.Grid()->IsPackedData())
+		if (theInfo->PackedData()->HasData())
 		{
 			// We need to unpack
-			util::Unpack({theInfo.Grid()});
+			util::Unpack({theInfo}, false);
 		}
 #endif
 
-		ASSERT(!theInfo.Grid()->IsPackedData());
+		ASSERT(theInfo->PackedData()->HasData() == false);
 
 		double multiplier = (itsLandSeaMaskThreshold > 0) ? 1. : -1.;
 
-		for (lsmInfo->ResetLocation(), theInfo.ResetLocation(); lsmInfo->NextLocation() && theInfo.NextLocation();)
+		for (lsmInfo->ResetLocation(), theInfo->ResetLocation(); lsmInfo->NextLocation() && theInfo->NextLocation();)
 		{
 			double lsm = lsmInfo->Value();
 
 			if (multiplier * lsm <= itsLandSeaMaskThreshold)
 			{
-				theInfo.Value(MissingDouble());
+				theInfo->Value(MissingDouble());
 			}
 		}
 	}
@@ -914,7 +899,7 @@ void fetcher::RotateVectorComponents(vector<info_t>& components, info_t target,
 
 			itsLogger.Trace("Fetching " + otherName + " for U/V rotation");
 
-			auto ret = FetchFromAllSources(opts, component->Grid()->IsPackedData());
+			auto ret = FetchFromAllSources(opts, component->PackedData()->HasData());
 
 			auto otherVec = ret.second;
 
@@ -949,7 +934,7 @@ void fetcher::RotateVectorComponents(vector<info_t>& components, info_t target,
 			std::vector<info_t> list({other});
 			if (itsDoInterpolation && interpolate::Interpolate(*target, list, config->UseCudaForInterpolation()))
 			{
-				if (itsUseCache && config->UseCache() && !other->Grid()->IsPackedData())
+				if (itsUseCache && config->UseCache() && !other->PackedData()->HasData())
 				{
 					auto c = GET_PLUGIN(cache);
 					c->Insert(other);

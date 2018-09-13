@@ -20,10 +20,7 @@ stereographic_grid::stereographic_grid()
 
 stereographic_grid::stereographic_grid(HPScanningMode theScanningMode, point theBottomLeft, point theTopLeft,
                                        double theOrientation)
-    : regular_grid(),
-      itsBottomLeft(theBottomLeft),
-      itsTopLeft(theTopLeft),
-      itsOrientation(theOrientation)
+    : regular_grid(), itsBottomLeft(theBottomLeft), itsTopLeft(theTopLeft), itsOrientation(theOrientation)
 {
 	itsLogger = logger("stereographic_grid");
 	Type(kStereographic);
@@ -358,44 +355,6 @@ point stereographic_grid::LastPoint() const
 		default:
 			throw runtime_error("Scanning mode not supported: " + HPScanningModeToString.at(itsScanningMode));
 	}
-}
-
-bool stereographic_grid::Swap(HPScanningMode newScanningMode)
-{
-	if (itsScanningMode == newScanningMode)
-	{
-		return true;
-	}
-
-	// Flip with regards to x axis
-
-	if ((itsScanningMode == kTopLeft && newScanningMode == kBottomLeft) ||
-	    (itsScanningMode == kBottomLeft && newScanningMode == kTopLeft))
-	{
-		size_t halfSize = static_cast<size_t>(floor(Nj() / 2));
-
-		for (size_t y = 0; y < halfSize; y++)
-		{
-			for (size_t x = 0; x < Ni(); x++)
-			{
-				double upper = itsData.At(x, y);
-				double lower = itsData.At(x, Nj() - 1 - y);
-
-				itsData.Set(x, y, 0, lower);
-				itsData.Set(x, Nj() - 1 - y, 0, upper);
-			}
-		}
-	}
-	else
-	{
-		itsLogger.Error("Swap from mode " + string(HPScanningModeToString.at(itsScanningMode)) + " to mode " +
-		                string(HPScanningModeToString.at(newScanningMode)) + " not implemented yet");
-		return false;
-	}
-
-	itsScanningMode = newScanningMode;
-
-	return true;
 }
 
 unique_ptr<grid> stereographic_grid::Clone() const

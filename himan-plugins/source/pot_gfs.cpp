@@ -164,9 +164,9 @@ himan::info_t Mean(InputIt begin, InputIt end)
 }
 
 /*
-*  plug-in definitions
-*
-* */
+ *  plug-in definitions
+ *
+ * */
 
 pot_gfs::pot_gfs() : itsStrictMode(false)
 {
@@ -293,12 +293,13 @@ void pot_gfs::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	himan::matrix<double> filter_kernel(3, 3, 1, MissingDouble(), 1.0 / 9.0);
 	himan::matrix<double> filtered_CAPE = numerical_functions::Filter2D(CAPEMaxInfo->Data(), filter_kernel);
 
-	CAPEMaxInfo->Grid()->Data(filtered_CAPE);
+	auto b = CAPEMaxInfo->Base();
+	b->data = move(filtered_CAPE);
 
 	// filter RR
 	himan::matrix<double> filtered_RR = numerical_functions::Filter2D(RRMeanInfo->Data(), filter_kernel);
-
-	RRMeanInfo->Grid()->Data(filtered_RR);
+	b = RRMeanInfo->Base();
+	b->data = move(filtered_RR);
 
 	string deviceType = "CPU";
 

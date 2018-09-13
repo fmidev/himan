@@ -536,13 +536,13 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 		ASSERT(isRadiationCalculation || result >= 0 || IsMissing(result));
 	}
 
-	myThreadedLogger.Info("[" + deviceType + "] Parameter " + myParamName + " missing values: " +
-	                      to_string(myTargetInfo->Data().MissingCount()) + "/" +
+	myThreadedLogger.Info("[" + deviceType + "] Parameter " + myParamName +
+	                      " missing values: " + to_string(myTargetInfo->Data().MissingCount()) + "/" +
 	                      to_string(myTargetInfo->Data().Size()));
 }
 
-pair<shared_ptr<himan::info>, shared_ptr<himan::info>> split_sum::GetSourceDataForRate(
-    shared_ptr<const info> myTargetInfo, int step) const
+pair<shared_ptr<himan::info>, shared_ptr<himan::info>> split_sum::GetSourceDataForRate(shared_ptr<info> myTargetInfo,
+                                                                                       int step) const
 {
 	shared_ptr<info> prevInfo, curInfo;
 
@@ -654,8 +654,7 @@ pair<shared_ptr<himan::info>, shared_ptr<himan::info>> split_sum::GetSourceDataF
 	return make_pair(prevInfo, curInfo);
 }
 
-shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTargetInfo,
-                                                   const forecast_time& wantedTime) const
+shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<info> myTargetInfo, const forecast_time& wantedTime) const
 {
 	level wantedLevel(kHeight, 0, "HEIGHT");
 
@@ -688,7 +687,7 @@ shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTarg
 		SumInfo->Levels(levels);
 		SumInfo->Times(times);
 
-		SumInfo->Create(myTargetInfo->Grid());
+		SumInfo->Create(myTargetInfo->Base());
 		SumInfo->Data().Fill(0);
 	}
 

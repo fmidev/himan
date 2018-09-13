@@ -472,22 +472,22 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	}
 
 	myTargetInfo->ParamIndex(0);
-	myTargetInfo->Grid()->Data().Set(move(fewbase));
+	myTargetInfo->Data().Set(move(fewbase));
 
 	myTargetInfo->ParamIndex(1);
-	myTargetInfo->Grid()->Data().Set(move(sctbase));
+	myTargetInfo->Data().Set(move(sctbase));
 
 	myTargetInfo->ParamIndex(2);
-	myTargetInfo->Grid()->Data().Set(move(bknbase));
+	myTargetInfo->Data().Set(move(bknbase));
 
 	myTargetInfo->ParamIndex(3);
-	myTargetInfo->Grid()->Data().Set(move(ovcbase));
+	myTargetInfo->Data().Set(move(ovcbase));
 
 	myTargetInfo->ParamIndex(4);
-	myTargetInfo->Grid()->Data().Set(move(cbbase));
+	myTargetInfo->Data().Set(move(cbbase));
 
 	myTargetInfo->ParamIndex(5);
-	myTargetInfo->Grid()->Data().Set(move(cbN));
+	myTargetInfo->Data().Set(move(cbN));
 
 	string deviceType = "CPU";
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +

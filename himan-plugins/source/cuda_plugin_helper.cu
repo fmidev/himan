@@ -26,23 +26,20 @@ void Unpack(std::shared_ptr<himan::info> fullInfo, cudaStream_t& stream, double*
 	ASSERT(d_arr);
 
 	// Unpack if needed, leave data to device
-	auto tempGrid = fullInfo->Grid();
-
-	if (tempGrid->IsPackedData())
+	if (fullInfo->PackedData()->HasData())
 	{
-		ASSERT(tempGrid->PackedData().ClassName() == "simple_packed" ||
-		       tempGrid->PackedData().ClassName() == "jpeg_packed");
+		ASSERT(fullInfo->PackedData()->ClassName() == "simple_packed");
 		ASSERT(N > 0);
-		ASSERT(tempGrid->Data().Size() == N);
+		ASSERT(fullInfo->Data().Size() == N);
 
-		double* arr = const_cast<double*>(tempGrid->Data().ValuesAsPOD());
+		double* arr = const_cast<double*>(fullInfo->Data().ValuesAsPOD());
 		CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(arr), sizeof(double) * N, 0));
 
 		ASSERT(arr);
 
-		tempGrid->PackedData().Unpack(d_arr, N, &stream);
+		fullInfo->PackedData()->Unpack(d_arr, N, &stream);
 
-		tempGrid->PackedData().Clear();
+		fullInfo->PackedData()->Clear();
 
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
@@ -77,7 +74,6 @@ template <>
 void PrepareInfo(std::shared_ptr<himan::info> info, float* d_ret, cudaStream_t& stream, bool copyToHost)
 {
 	const size_t N = info->SizeLocations();
-
 	double* d_arr = 0;
 	CUDA_CHECK(cudaMalloc(reinterpret_cast<double**>(&d_arr), N * sizeof(double)));
 

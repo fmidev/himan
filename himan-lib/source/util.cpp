@@ -24,6 +24,7 @@
 #include <wordexp.h>
 
 #define HIMAN_AUXILIARY_INCLUDE
+#include "cache.h"
 #include "radon.h"
 #undef HIMAN_AUXILIARY_INCLUDE
 
@@ -77,8 +78,8 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, const info& info, c
 
 		if (info.Grid()->Class() == kRegularGrid)
 		{
-			fileName << "_" << dynamic_cast<regular_grid*>(info.Grid())->Ni() << "_"
-			         << dynamic_cast<regular_grid*>(info.Grid())->Nj();
+			fileName << "_" << dynamic_pointer_cast<regular_grid>(info.Grid())->Ni() << "_"
+			         << dynamic_pointer_cast<regular_grid>(info.Grid())->Nj();
 		}
 
 		fileName << "_0_" << setw(3) << setfill('0') << info.Time().Step();
@@ -725,15 +726,16 @@ info_t util::CSVToInfo(const vector<string>& csv)
 	ret->Levels(levels);
 	ret->ForecastTypes(ftypes);
 
-	auto base = unique_ptr<grid>(new point_list());  // placeholder
-	ret->Create(base.get(), true);
+	auto b = make_shared<base>();
+	b->grid = shared_ptr<grid>(new point_list());  // placeholder
+	ret->Create(b, true);
 
 	ret->First();
 	ret->ResetParam();
 
 	while (ret->Next())
 	{
-		dynamic_cast<point_list*>(ret->Grid())->Stations(stats);
+		dynamic_pointer_cast<point_list>(ret->Grid())->Stations(stats);
 	}
 
 	for (auto line : csv)
@@ -810,7 +812,7 @@ info_t util::CSVToInfo(const vector<string>& csv)
 			if (s == stats[i])
 			{
 				// Add the data point
-				ret->Grid()->Data().Set(i, stod(elems[13]));
+				ret->Data().Set(i, stod(elems[13]));
 			}
 		}
 	}
@@ -831,13 +833,15 @@ double util::MissingPercent(const himan::info& info)
 
 	while (cp.Next())
 	{
-		const auto* g = cp.Grid();
-
-		if (g)
+		if (cp.IsValidGrid() == false)
 		{
-			missing += cp.Data().MissingCount();
-			total += cp.Data().Size();
+			continue;
 		}
+
+		const auto g = cp.Grid();
+
+		missing += cp.Data().MissingCount();
+		total += cp.Data().Size();
 	}
 
 	return (total == 0) ? himan::MissingDouble()
@@ -864,49 +868,51 @@ bool util::ParseBoolean(const string& val)
 }
 
 #ifdef HAVE_CUDA
-void util::Unpack(initializer_list<grid*> grids)
+void util::Unpack(vector<shared_ptr<info>> infos, bool addToCache)
 {
-	vector<cudaStream_t*> streams;
+	cudaStream_t stream;
+	CUDA_CHECK(cudaStreamCreate(&stream));
 
-	for (auto it = grids.begin(); it != grids.end(); ++it)
+	auto c = GET_PLUGIN(cache);
+
+	for (auto& info : infos)
 	{
-		// regular_grid* tempGrid = dynamic_cast<regular_grid*> (*it);
+		auto& data = info->Data();
+		auto pdata = info->PackedData();
 
-		if (!(*it)->IsPackedData())
+		if (pdata == nullptr || pdata->HasData() == false)
 		{
 			// Safeguard: This particular info does not have packed data
 			continue;
 		}
 
-		ASSERT((*it)->PackedData().ClassName() == "simple_packed" || (*it)->PackedData().ClassName() == "jpeg_packed");
+		ASSERT(pdata->ClassName() == "simple_packed");
 
 		double* arr = 0;
-		size_t N = (*it)->PackedData().unpackedLength;
+		const size_t N = pdata->unpackedLength;
 
 		ASSERT(N > 0);
+		ASSERT(data.Size() == N);
 
-		cudaStream_t* stream = new cudaStream_t;
-		CUDA_CHECK(cudaStreamCreate(stream));
-		streams.push_back(stream);
-
-		ASSERT((*it)->Data().Size() == N);
-		arr = const_cast<double*>((*it)->Data().ValuesAsPOD());
+		arr = const_cast<double*>(data.ValuesAsPOD());
 
 		CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(arr), sizeof(double) * N, 0));
 
 		ASSERT(arr);
 
-		(*it)->PackedData().Unpack(arr, N, stream);
+		pdata->Unpack(arr, N, &stream);
 
 		CUDA_CHECK(cudaHostUnregister(arr));
+		CUDA_CHECK(cudaStreamSynchronize(stream));
 
-		(*it)->PackedData().Clear();
-	}
+		pdata->Clear();
 
-	for (size_t i = 0; i < streams.size(); i++)
-	{
-		CUDA_CHECK(cudaStreamDestroy(*streams[i]));
+		if (addToCache)
+		{
+			c->Insert(info);
+		}
 	}
+	CUDA_CHECK(cudaStreamDestroy(stream));
 }
 #endif
 
@@ -1108,4 +1114,23 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 	}
 
 	return g;
+}
+
+void util::Flip(matrix<double>& mat)
+{
+	// Flip with regards to x axis
+
+	const size_t halfSize = static_cast<size_t>(floor(mat.SizeY() / 2));
+
+	for (size_t y = 0; y < halfSize; y++)
+	{
+		for (size_t x = 0; x < mat.SizeX(); x++)
+		{
+			double upper = mat.At(x, y);
+			double lower = mat.At(x, mat.SizeY() - 1 - y);
+
+			mat.Set(x, y, 0, lower);
+			mat.Set(x, mat.SizeY() - 1 - y, 0, upper);
+		}
+	}
 }
