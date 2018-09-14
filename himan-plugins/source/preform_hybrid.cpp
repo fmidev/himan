@@ -146,7 +146,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 	// Required source parameters
 
-	params RRParam({param("RR-1-MM"), param("RRR-KGM2")});  // one hour prec OR precipitation rate (HHsade)
+	params RRParam({param("RRR-KGM2"), param("RR-1-MM")});  // one hour prec OR precipitation rate (HHsade)
 	const param TParam("T-K");
 	const param RHParam("RH-PRCNT");
 

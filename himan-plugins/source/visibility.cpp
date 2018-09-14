@@ -30,7 +30,7 @@ const double stMaxH = 305.;
 
 const himan::params PFParams({himan::param("PRECFORM2-N"), himan::param("PRECFORM-N")});
 const himan::params RHParam({himan::param("RH-PRCNT"), himan::param("RH-0TO1")});
-const himan::params RRParam({himan::param("RR-1-MM"), himan::param("RRR-KGM2")});
+const himan::params RRParam({himan::param("RRR-KGM2"), himan::param("RR-1-MM")});
 const himan::params NParam({himan::param("N-PRCNT"), himan::param("N-0TO1")});
 
 // ..and their levels
