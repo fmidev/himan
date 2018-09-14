@@ -1,24 +1,27 @@
 #include "cuda_plugin_helper.h"
-#include "dewpoint.cuh"
 #include "moisture.h"
 
-__global__ void himan::plugin::dewpoint_cuda::Calculate(cdarr_t d_t, cdarr_t d_rh, darr_t d_td, options opts)
-{
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+using namespace himan;
 
-	if (idx < opts.N)
+template <typename T>
+__global__ void DewpointKernel(const T* __restrict__ d_t, const T* __restrict__ d_rh, T* __restrict__ d_td,
+                               double RH_scale, size_t N)
+{
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < N)
 	{
-		double RH = d_rh[idx] * opts.rh_scale;
-		d_td[idx] = metutil::DewPointFromRH_<double>(d_t[idx] + opts.t_base, RH);
+		d_td[idx] = metutil::DewPointFromRH_<double>(d_t[idx], d_rh[idx] * RH_scale);
 	}
 }
 
-void himan::plugin::dewpoint_cuda::Process(options& opts)
+void ProcessGPU(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo)
 {
 	cudaStream_t stream;
 	CUDA_CHECK(cudaStreamCreate(&stream));
 
-	size_t memsize = opts.N * sizeof(double);
+	const size_t N = myTargetInfo->SizeLocations();
+	const size_t memsize = N * sizeof(double);
 
 	// Allocate device arrays
 
@@ -26,31 +29,42 @@ void himan::plugin::dewpoint_cuda::Process(options& opts)
 	double* d_rh = 0;
 	double* d_td = 0;
 
+	auto TInfo =
+	    cuda::Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("T-K"), myTargetInfo->ForecastType());
+	auto RHInfo = cuda::Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level(), {param("RH-PRCNT"), param("RH-0TO1")},
+	                          myTargetInfo->ForecastType());
+
+	if (!TInfo || !RHInfo)
+	{
+		return;
+	}
+
 	// Allocate memory on device
 
 	CUDA_CHECK(cudaMalloc((void**)&d_t, memsize));
 	CUDA_CHECK(cudaMalloc((void**)&d_rh, memsize));
 	CUDA_CHECK(cudaMalloc((void**)&d_td, memsize));
 
-	himan::PrepareInfo(opts.t, d_t, stream);
-	himan::PrepareInfo(opts.rh, d_rh, stream);
-	himan::PrepareInfo(opts.td);
+	cuda::PrepareInfo(TInfo, d_t, stream);
+	cuda::PrepareInfo(RHInfo, d_rh, stream);
+
+	double RHScale = 1;
+
+	if (RHInfo->Param().Unit() != kPrcnt || conf->SourceProducer().Id() == 199)
+	{
+		RHScale = 100;
+	}
 
 	// dims
 
 	const int blockSize = 512;
-	const int gridSize = opts.N / blockSize + (opts.N % blockSize == 0 ? 0 : 1);
+	const int gridSize = N / blockSize + (N % blockSize == 0 ? 0 : 1);
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
-	Calculate<<<gridSize, blockSize, 0, stream>>>(d_t, d_rh, d_td, opts);
+	DewpointKernel<double><<<gridSize, blockSize, 0, stream>>>(d_t, d_rh, d_td, RHScale, N);
 
-	CUDA_CHECK(cudaStreamSynchronize(stream));
-	CUDA_CHECK_ERROR_MSG("Kernel invocation");
-
-	himan::ReleaseInfo(opts.t);
-	himan::ReleaseInfo(opts.rh);
-	himan::ReleaseInfo(opts.td, d_td, stream);
+	cuda::ReleaseInfo(myTargetInfo, d_td, stream);
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 

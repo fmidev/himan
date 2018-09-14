@@ -625,7 +625,6 @@ inline float CalcCIN(float Tenv, float prevTenv, float Tparcel, float prevTparce
 
 #ifdef HAVE_CUDA
 #include "cuda_helper.h"
-#include "info_simple.h"
 #include "plugin_configuration.h"
 
 typedef std::tuple<std::vector<float>, std::vector<float>, std::vector<float>> cape_source;

@@ -1,10 +1,10 @@
 #include "cuda_plugin_helper.h"
-#include "info_simple.h"
 #include "interpolate.h"
 #include "numerical_functions.h"
 #include <thrust/sort.h>
 
 #include "himan_common.h"
+#include "latitude_longitude_grid.h"
 #include "stereographic_grid.h"
 
 // these functions are defined in lambert_conformal_grid.cpp
@@ -23,6 +23,10 @@ struct point
 	{
 	}
 	__host__ __device__ point(double _x, double _y) : x(_x), y(_y)
+	{
+	}
+
+	__host__ point(const himan::point& hp) : x(hp.X()), y(hp.Y())
 	{
 	}
 };
@@ -234,16 +238,16 @@ __device__ bool IsInsideGrid(point& gp, size_t size_x, size_t size_y)
 	return false;
 }
 
-__device__ double NearestPointInterpolation(const double* __restrict__ d_source, himan::info_simple& sourceInfo,
+__device__ double NearestPointInterpolation(const double* __restrict__ d_source, size_t size_x, size_t size_y,
                                             const point& gp)
 {
 	int rx = rint(gp.x);
 	int ry = rint(gp.y);
 
-	ASSERT(rx >= 0 && rx <= sourceInfo.size_x);
-	ASSERT(ry >= 0 && ry <= sourceInfo.size_y);
+	ASSERT(rx >= 0 && rx <= size_x);
+	ASSERT(ry >= 0 && ry <= size_y);
 
-	double npValue = d_source[Index(rx, ry, sourceInfo.size_x)];
+	double npValue = d_source[Index(rx, ry, size_x)];
 
 	// Sometimes nearest point value is missing, but there is another point almost as close that
 	// is not missing. Should we try to use that instead? This would mean that the interpolation
@@ -253,7 +257,7 @@ __device__ double NearestPointInterpolation(const double* __restrict__ d_source,
 	return npValue;
 }
 
-__device__ double BiLinearInterpolation(const double* __restrict__ d_source, himan::info_simple& sourceInfo,
+__device__ double BiLinearInterpolation(const double* __restrict__ d_source, size_t size_x, size_t size_y,
                                         const point& gp)
 {
 	double ret = himan::MissingDouble();
@@ -266,9 +270,6 @@ __device__ double BiLinearInterpolation(const double* __restrict__ d_source, him
 	point d(ceil(gp.x), floor(gp.y));
 
 	// Assure neighboring points are inside grid and get values
-
-	size_t size_x = sourceInfo.size_x;
-	size_t size_y = sourceInfo.size_y;
 
 	double av = himan::MissingDouble(), bv = himan::MissingDouble(), cv = himan::MissingDouble(),
 	       dv = himan::MissingDouble();
@@ -308,7 +309,7 @@ __device__ double BiLinearInterpolation(const double* __restrict__ d_source, him
 
 	if ((dist.x < kEpsilon || fabs(dist.x - 1) < kEpsilon) && (dist.y < kEpsilon || fabs(dist.y - 1) < kEpsilon))
 	{
-		ret = NearestPointInterpolation(d_source, sourceInfo, gp);
+		ret = NearestPointInterpolation(d_source, size_x, size_y, gp);
 	}
 
 	// All values present, regular bilinear interpolation
@@ -388,7 +389,7 @@ __device__ double BiLinearInterpolation(const double* __restrict__ d_source, him
 	return ret;
 }
 
-__device__ double NearestPointValueInterpolation(const double* __restrict__ d_source, himan::info_simple& sourceInfo,
+__device__ double NearestPointValueInterpolation(const double* __restrict__ d_source, size_t size_x, size_t size_y,
                                                  const point& gp)
 {
 	double ret = himan::MissingDouble();
@@ -401,9 +402,6 @@ __device__ double NearestPointValueInterpolation(const double* __restrict__ d_so
 	point d(ceil(gp.x), floor(gp.y));
 
 	// Assure neighboring points are inside grid
-
-	size_t size_x = sourceInfo.size_x;
-	size_t size_y = sourceInfo.size_y;
 
 	if (!IsInsideGrid(a, size_x, size_y) || !IsInsideGrid(b, size_x, size_y) || !IsInsideGrid(c, size_x, size_y) ||
 	    !IsInsideGrid(d, size_x, size_y))
@@ -428,7 +426,7 @@ __device__ double NearestPointValueInterpolation(const double* __restrict__ d_so
 		return mode;
 	}
 
-	double bilin = BiLinearInterpolation(d_source, sourceInfo, gp);
+	double bilin = BiLinearInterpolation(d_source, size_x, size_y, gp);
 
 	arr[0] = fabs(av - bilin);
 	arr[1] = fabs(bv - bilin);
@@ -461,50 +459,48 @@ __device__ double NearestPointValueInterpolation(const double* __restrict__ d_so
 }
 
 __global__ void InterpolateCudaKernel(const double* __restrict__ d_source, double* __restrict__ d_target,
-                                      const point* __restrict__ d_grid, himan::info_simple sourceInfo,
-                                      himan::info_simple targetInfo)
+                                      const point* __restrict__ d_grid, size_t size_x, size_t size_y,
+                                      size_t target_size_x, size_t target_size_y, himan::HPInterpolationMethod method)
 {
 	// idx is our pointer to the TARGET data in linear format
 
 	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	if (idx < targetInfo.size_x * targetInfo.size_y)
+	if (idx < target_size_x * target_size_y)
 	{
 		// next we need to get x and y of the 'idx' in the source grid coordinates
 		// to do that we first determine the i and j of the target grid coordinates
 
-		const int i = fmod(static_cast<double>(idx), static_cast<double>(targetInfo.size_x));
-		const int j = floor(static_cast<double>(idx / targetInfo.size_x));
+		const int i = fmod(static_cast<double>(idx), static_cast<double>(target_size_x));
+		const int j = floor(static_cast<double>(idx / target_size_x));
 
 		// with i and j we can get the grid point coordinates in the source grid
 
-		point gp = d_grid[Index(i, j, targetInfo.size_x)];
+		point gp = d_grid[Index(i, j, target_size_x)];
 
 		double interp = himan::MissingDouble();
 
-		if (IsInsideGrid(gp, sourceInfo.size_x, sourceInfo.size_y))
+		if (IsInsideGrid(gp, size_x, size_y))
 		{
-			// targetInfo.interpolation = himan::kNearestPointValue;
-
-			switch (targetInfo.interpolation)
+			switch (method)
 			{
 				case himan::kBiLinear:
-					interp = BiLinearInterpolation(d_source, sourceInfo, gp);
+					interp = BiLinearInterpolation(d_source, size_x, size_y, gp);
 					break;
 
 				case himan::kNearestPoint:
-					interp = NearestPointInterpolation(d_source, sourceInfo, gp);
+					interp = NearestPointInterpolation(d_source, size_x, size_y, gp);
 					break;
 
 				case himan::kNearestPointValue:
-					interp = NearestPointValueInterpolation(d_source, sourceInfo, gp);
+					interp = NearestPointValueInterpolation(d_source, size_x, size_y, gp);
 					break;
 			}
 		}
 #ifdef EXTRADEBUG
 		else
 		{
-			printf("grid point x:%f y:%f discarded [%ld,%ld]\n", gp.x, gp.y, sourceInfo.size_x, sourceInfo.size_y);
+			printf("grid point x:%f y:%f discarded [%ld,%ld]\n", gp.x, gp.y, size_x, size_y);
 		}
 #endif
 		d_target[idx] = interp;
@@ -550,24 +546,27 @@ bool himan::interpolate::InterpolateAreaGPU(himan::info& base, himan::info_t sou
 	CUDA_CHECK(cudaMalloc((void**)&d_source, source->SizeLocations() * sizeof(double)));
 	CUDA_CHECK(cudaMalloc((void**)&d_target, N * sizeof(double)));
 
-	auto sourceInfo = source->ToSimple();
-	auto targetInfo = base.ToSimple();
-	targetInfo->values = targetData.ValuesAsPOD();
-
-	ASSERT(targetInfo->values);
-
-	PrepareInfo(sourceInfo, d_source, stream);
-	PrepareInfo(targetInfo);
+	if (source->PackedData()->HasData())
+	{
+		// need to unpack before interpolation
+		source->PackedData()->Unpack(d_source, source->SizeLocations(), &stream);
+		source->PackedData()->Clear();
+	}
+	else
+	{
+		CUDA_CHECK(cudaMemcpyAsync(d_source, source->Data().ValuesAsPOD(), sizeof(double) * source->SizeLocations(),
+		                           cudaMemcpyHostToDevice, stream));
+	}
 
 	const int bs = 256;
 	const int gs = N / bs + (N % bs == 0 ? 0 : 1);
 
-	InterpolateCudaKernel<<<gs, bs, 0, stream>>>(d_source, d_target, d_grid, *sourceInfo, *targetInfo);
+	InterpolateCudaKernel<<<gs, bs, 0, stream>>>(d_source, d_target, d_grid, source->Data().SizeX(),
+	                                             source->Data().SizeY(), base.Data().SizeX(), base.Data().SizeY(),
+	                                             base.Param().InterpolationMethod());
 
+	CUDA_CHECK(cudaMemcpyAsync(targetData.ValuesAsPOD(), d_target, sizeof(double) * N, cudaMemcpyDeviceToHost, stream));
 	CUDA_CHECK(cudaStreamSynchronize(stream));
-
-	himan::ReleaseInfo(sourceInfo);
-	himan::ReleaseInfo(targetInfo, d_target, stream);
 
 	CUDA_CHECK(cudaFree(d_source));
 	CUDA_CHECK(cudaFree(d_target));
@@ -579,17 +578,17 @@ bool himan::interpolate::InterpolateAreaGPU(himan::info& base, himan::info_t sou
 }
 
 __global__ void RotateLambert(double* __restrict__ d_u, double* __restrict__ d_v, const double* __restrict__ d_lon,
-                              double cone, double orientation, himan::info_simple opts)
+                              double cone, double orientation, size_t size_x, size_t size_y)
 {
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	if (idx < opts.size_x * opts.size_y)
+	if (idx < size_x * size_y)
 	{
 		double U = d_u[idx];
 		double V = d_v[idx];
 
-		int i = fmod(static_cast<double>(idx), static_cast<double>(opts.size_x));
-		int j = floor(static_cast<double>(idx / opts.size_x));
+		int i = fmod(static_cast<double>(idx), static_cast<double>(size_x));
+		int j = floor(static_cast<double>(idx / size_x));
 
 		double londiff = d_lon[idx] - orientation;
 		const double angle = cone * londiff * himan::constants::kDeg;
@@ -600,36 +599,37 @@ __global__ void RotateLambert(double* __restrict__ d_u, double* __restrict__ d_v
 	}
 }
 
-__global__ void RotateRotatedLatitudeLongitude(double* __restrict__ d_u, double* __restrict__ d_v,
-                                               himan::info_simple opts)
+__global__ void RotateRotatedLatitudeLongitude(double* __restrict__ d_u, double* __restrict__ d_v, size_t size_x,
+                                               size_t size_y, point first, point south_pole, double di, double dj,
+                                               himan::HPScanningMode mode)
 {
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	if (idx < opts.size_x * opts.size_y)
+	if (idx < size_x * size_y)
 	{
 		double U = d_u[idx];
 		double V = d_v[idx];
 
 		// Rotated to regular coordinates
 
-		int i = fmod(static_cast<double>(idx), static_cast<double>(opts.size_x));  // idx - j * opts.size_x;
-		int j = floor(static_cast<double>(idx / opts.size_x));
+		int i = fmod(static_cast<double>(idx), static_cast<double>(size_x));  // idx - j * opts.size_x;
+		int j = floor(static_cast<double>(idx / size_x));
 
-		double lon = opts.first_lon + i * opts.di;
+		double lon = first.x + i * di;
 
 		double lat = himan::MissingDouble();
 
-		if (opts.j_scans_positive)
+		if (mode == himan::kBottomLeft)
 		{
-			lat = opts.first_lat + j * opts.dj;
+			lat = first.y + j * dj;
 		}
 		else
 		{
-			lat = opts.first_lat - j * opts.dj;
+			lat = first.y - j * dj;
 		}
 
-		double SinYPole = sin((opts.south_pole_lat + 90.) * himan::constants::kDeg);
-		double CosYPole = cos((opts.south_pole_lat + 90.) * himan::constants::kDeg);
+		double SinYPole = sin((south_pole.y + 90.) * himan::constants::kDeg);
+		double CosYPole = cos((south_pole.y + 90.) * himan::constants::kDeg);
 
 		double SinXRot, CosXRot, SinYRot, CosYRot;
 
@@ -655,11 +655,11 @@ __global__ void RotateRotatedLatitudeLongitude(double* __restrict__ d_u, double*
 		{
 			XReg = -XReg;
 		}
-		XReg += opts.south_pole_lon;
+		XReg += south_pole.x;
 
 		// UV to earth relative
 
-		double zxmxc = himan::constants::kDeg * (XReg - opts.south_pole_lon);
+		double zxmxc = himan::constants::kDeg * (XReg - south_pole.x);
 
 		double sinxmxc, cosxmxc;
 
@@ -691,26 +691,33 @@ void himan::interpolate::RotateVectorComponentsGPU(himan::info& UInfo, himan::in
 
 	bool release = false;
 
-	himan::info_simple* USimple = UInfo.ToSimple();
-	himan::info_simple* VSimple = nullptr;
-
 	if (d_u == nullptr && d_v == nullptr)
 	{
+		if (UInfo.PackedData()->HasData())
+		{
+			throw std::runtime_error("Packed data neeeds to be unpacked first");
+		}
 		release = true;
 		CUDA_CHECK(cudaMalloc((void**)&d_u, memsize));
 		CUDA_CHECK(cudaMalloc((void**)&d_v, memsize));
 
-		VSimple = VInfo.ToSimple();
+		CUDA_CHECK(cudaMemcpyAsync(d_u, UInfo.Data().ValuesAsPOD(), memsize, cudaMemcpyHostToDevice));
+		CUDA_CHECK(cudaMemcpyAsync(d_v, VInfo.Data().ValuesAsPOD(), memsize, cudaMemcpyHostToDevice));
 
-		PrepareInfo(USimple, d_u, stream);
-		PrepareInfo(VSimple, d_v, stream);
+		//		cuda::PrepareInfo(UInfo, d_u, stream);
+		//		cuda::PrepareInfo(VInfo, d_v, stream);
 	}
 
 	switch (UInfo.Grid()->Type())
 	{
 		case himan::kRotatedLatitudeLongitude:
-			RotateRotatedLatitudeLongitude<<<gs, bs, 0, stream>>>(d_u, d_v, *USimple);
-			break;
+		{
+			const auto rg = std::dynamic_pointer_cast<rotated_latitude_longitude_grid>(UInfo.Grid());
+			RotateRotatedLatitudeLongitude<<<gs, bs, 0, stream>>>(d_u, d_v, UInfo.Data().SizeX(), UInfo.Data().SizeY(),
+			                                                      ::point(rg->FirstPoint()), ::point(rg->SouthPole()),
+			                                                      rg->Di(), rg->Dj(), rg->ScanningMode());
+		}
+		break;
 
 		case himan::kLambertConformalConic:
 		{
@@ -746,7 +753,8 @@ void himan::interpolate::RotateVectorComponentsGPU(himan::info& UInfo, himan::in
 				       (log(tan((90 - fabs(latin1)) * kDeg * 0.5)) - log(tan(90 - fabs(latin2)) * kDeg * 0.5));
 			}
 
-			RotateLambert<<<gs, bs, 0, stream>>>(d_u, d_v, d_lon, cone, orientation, *USimple);
+			RotateLambert<<<gs, bs, 0, stream>>>(d_u, d_v, d_lon, cone, orientation, UInfo.Data().SizeX(),
+			                                     UInfo.Data().SizeY());
 
 			CUDA_CHECK(cudaStreamSynchronize(stream));
 			CUDA_CHECK(cudaFreeHost(lon));
@@ -770,7 +778,8 @@ void himan::interpolate::RotateVectorComponentsGPU(himan::info& UInfo, himan::in
 
 			CUDA_CHECK(cudaMemcpyAsync(d_lon, lon, memsize, cudaMemcpyHostToDevice));
 
-			RotateLambert<<<gs, bs, 0, stream>>>(d_u, d_v, d_lon, 1, orientation, *USimple);
+			RotateLambert<<<gs, bs, 0, stream>>>(d_u, d_v, d_lon, 1, orientation, UInfo.Data().SizeX(),
+			                                     UInfo.Data().SizeY());
 
 			CUDA_CHECK(cudaStreamSynchronize(stream));
 			CUDA_CHECK(cudaFreeHost(lon));
@@ -780,38 +789,20 @@ void himan::interpolate::RotateVectorComponentsGPU(himan::info& UInfo, himan::in
 		default:
 			break;
 	}
+
+	CUDA_CHECK(cudaMemcpy(UInfo.Data().ValuesAsPOD(), d_u, memsize, cudaMemcpyDeviceToHost));
+	CUDA_CHECK(cudaMemcpy(VInfo.Data().ValuesAsPOD(), d_v, memsize, cudaMemcpyDeviceToHost));
+
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
 	if (release)
 	{
-		himan::ReleaseInfo(USimple, d_u, stream);
-		himan::ReleaseInfo(VSimple, d_v, stream);
-
 		CUDA_CHECK(cudaFree(d_u));
 		CUDA_CHECK(cudaFree(d_v));
-	}
-
-	if (USimple)
-	{
-		delete USimple;
-	}
-
-	if (VSimple)
-	{
-		delete VSimple;
 	}
 
 	if (d_lon)
 	{
 		CUDA_CHECK(cudaFree(d_lon));
-	}
-
-	if (UInfo.PackedData()->HasData())
-	{
-		UInfo.PackedData()->Clear();
-	}
-	if (VInfo.PackedData()->HasData())
-	{
-		VInfo.PackedData()->Clear();
 	}
 }

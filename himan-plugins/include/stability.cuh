@@ -25,6 +25,7 @@ const himan::param UParam("U-MS");
 const himan::param VParam("V-MS");
 const himan::param RHParam("RH-PRCNT");
 const himan::param QParam("Q-KGKG");
+const himan::param HLParam("HL-M");
 const himan::param CAPESParam("CAPES-JKG");
 
 const himan::level P850Level(himan::kPressure, 850);
@@ -81,7 +82,6 @@ inline double BRN(double CAPE, double U6, double V6, double U05, double V05)
 }  // namespace STABILITY
 
 #ifdef HAVE_CUDA
-#include "info_simple.h"
 
 namespace himan
 {
@@ -91,52 +91,6 @@ class hitool;
 
 namespace stability_cuda
 {
-extern level itsBottomLevel;
-
-struct options
-{
-	info_simple* si;
-	info_simple* li;
-	info_simple* bs01;
-	info_simple* bs03;
-	info_simple* bs06;
-	info_simple* ebs;
-	info_simple* capes;
-	info_simple* srh01;
-	info_simple* srh03;
-	info_simple* ehi;
-	info_simple* brn;
-	info_simple* thetae3;
-
-	size_t N;
-
-	std::shared_ptr<himan::plugin::hitool> h;
-	std::shared_ptr<const himan::plugin_configuration> conf;
-	std::shared_ptr<himan::info> myTargetInfo;
-
-	options()
-	    : si(0),
-	      li(0),
-	      bs01(0),
-	      bs03(0),
-	      bs06(0),
-	      ebs(0),
-	      capes(0),
-	      srh01(0),
-	      srh03(0),
-	      ehi(0),
-	      brn(0),
-	      thetae3(0),
-	      N(0),
-	      h(),
-	      conf(),
-	      myTargetInfo()
-	{
-	}
-};
-
-void Process(options& opts);
-
 extern himan::level itsBottomLevel;
 
 }  // namespace stability_cuda
