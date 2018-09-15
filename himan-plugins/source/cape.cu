@@ -770,6 +770,10 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	std::vector<float> RH(N, MissingFloat());
 	std::vector<float> P(N, MissingFloat());
 
+        CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(T.data()), sizeof(float) * N, 0));
+        CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(P.data()), sizeof(float) * N, 0));
+        CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(RH.data()), sizeof(float) * N, 0));
+
 	unsigned int k = 0;
 
 	while (true)
@@ -811,6 +815,9 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	}
 
 	CUDA_CHECK(cudaHostUnregister(Tpot.data()));
+	CUDA_CHECK(cudaHostUnregister(T.data()));
+	CUDA_CHECK(cudaHostUnregister(P.data()));
+	CUDA_CHECK(cudaHostUnregister(RH.data()));
 	CUDA_CHECK(cudaHostUnregister(MR.data()));
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
