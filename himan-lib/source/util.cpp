@@ -726,16 +726,17 @@ info_t util::CSVToInfo(const vector<string>& csv)
 	ret->Levels(levels);
 	ret->ForecastTypes(ftypes);
 
-	auto b = make_shared<base>();
-	b->grid = shared_ptr<grid>(new point_list());  // placeholder
-	ret->Create(b, true);
-
-	ret->First();
+	ret->FirstForecastType();
+	ret->FirstTime();
+	ret->FirstLevel();
 	ret->ResetParam();
 
+	// Each forecast_type/time/level/param gets their own 'base'
 	while (ret->Next())
 	{
-		dynamic_pointer_cast<point_list>(ret->Grid())->Stations(stats);
+		auto b = make_shared<base>();
+		b->grid = shared_ptr<grid>(new point_list(stats));
+		ret->Create(b, true);
 	}
 
 	for (auto line : csv)
