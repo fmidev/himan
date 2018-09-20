@@ -99,7 +99,6 @@ CUDA_KERNEL void Filter2DCuda(cdarr_t A, cdarr_t B, darr_t C, filter_opts opts)
 
 	if (i < M && j < N)
 	{
-		size_t kernelMissingCount = 0;
 		double convolutionValue = 0.0;
 		double kernelWeightSum = 0.0;
 
@@ -123,7 +122,6 @@ CUDA_KERNEL void Filter2DCuda(cdarr_t A, cdarr_t B, darr_t C, filter_opts opts)
 
 					if (aVal == missing || IsMissing(aVal))
 					{
-						kernelMissingCount++;
 						continue;
 					}
 					convolutionValue += aVal * bVal;

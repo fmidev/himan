@@ -98,7 +98,7 @@ inline float IntegrateEnteringParcel(float Tenv, float prevTenv, float Tparcel, 
 	 * going
 	 *     to be the new prevZenv.
 	 *  2. Calculate integral using dz = Zenv - prevZenv, for temperatures use the values from Hybrid level n.
-	*/
+	 */
 
 	using himan::point;
 
@@ -636,18 +636,18 @@ namespace plugin
 {
 namespace cape_cuda
 {
-cape_source GetHighestThetaEValuesGPU(const std::shared_ptr<const plugin_configuration> conf,
+cape_source GetHighestThetaEValuesGPU(const std::shared_ptr<const plugin_configuration>& conf,
                                       std::shared_ptr<info> myTargetInfo);
-std::pair<std::vector<float>, std::vector<float>> GetLFCGPU(const std::shared_ptr<const plugin_configuration> conf,
+std::pair<std::vector<float>, std::vector<float>> GetLFCGPU(const std::shared_ptr<const plugin_configuration>& conf,
                                                             std::shared_ptr<info> myTargetInfo, std::vector<float>& T,
                                                             std::vector<float>& P, std::vector<float>& TenvLCL);
-cape_source Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_configuration> conf,
+cape_source Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_configuration>& conf,
                                         std::shared_ptr<info> myTargetInfo);
-void GetCINGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo,
+void GetCINGPU(const std::shared_ptr<const plugin_configuration>& conf, std::shared_ptr<info> myTargetInfo,
                const std::vector<float>& Tsource, const std::vector<float>& Psource, const std::vector<float>& TLCL,
                const std::vector<float>& PLCL, const std::vector<float>& ZLCL, const std::vector<float>& PLFC,
                const std::vector<float>& ZLFC);
-void GetCAPEGPU(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo,
+void GetCAPEGPU(const std::shared_ptr<const plugin_configuration>& conf, std::shared_ptr<info> myTargetInfo,
                 const std::vector<float>& T, const std::vector<float>& P);
 
 extern bool itsUseVirtualTemperature;
