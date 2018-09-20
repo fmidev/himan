@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.9.14
+Version: 18.9.20
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -112,6 +112,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Sep 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.9.20-1.fmi
+- Moving data away from grid
 * Fri Sep 14 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.9.14-1.fmi
 - Minor fix to visibility,preform_hybrid
 * Mon Sep 10 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.9.10-1.fmi
