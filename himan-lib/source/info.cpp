@@ -203,8 +203,8 @@ void info::Create(shared_ptr<base> baseGrid, bool createDataBackend)
 {
 	ASSERT(baseGrid);
 
-	itsDimensions.resize(itsForecastTypeIterator.Size() * itsTimeIterator.Size() *
-	                                       itsLevelIterator.Size() * itsParamIterator.Size());
+	itsDimensions.resize(itsForecastTypeIterator.Size() * itsTimeIterator.Size() * itsLevelIterator.Size() *
+	                     itsParamIterator.Size());
 
 	ResetForecastType();
 
@@ -934,36 +934,6 @@ bool info::IsValidGrid() const
 {
 	return (itsDimensions[Index()] != nullptr && Grid());
 }
-
-/*
-info info::Clone()
-{
-    auto ret = info(*this);
-
-    ret.FirstForecastType();
-    ret.FirstTime();
-    ret.FirstLevel();
-    ret.ResetParam();
-
-    while (Next())
-    {
-        const auto g = Grid();
-
-        if (g)
-        {
-            Grid(shared_ptr<grid>(g->Clone()));
-        }
-    }
-
-    // Return indices
-    ret.ForecastTypeIterator().Set(ForecastTypeIndex());
-    ret.TimeIterator().Set(TimeIndex());
-    ret.LevelIterator().Set(LevelIndex());
-    ret.ParamIterator().Set(ParamIndex());
-
-    return ret;
-}
-*/
 
 void info::FirstValidGrid()
 {

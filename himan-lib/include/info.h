@@ -719,20 +719,6 @@ class info
 	 */
 	void FirstValidGrid();
 
-	/**
-	 * @brief Clone an info
-	 *
-	 * Simply put we create a copy of the current instance
-	 * and copy all data so that the matrices are not shared
-	 * anymore.
-	 *
-	 * This function used to be called ReGrid.
-	 *
-	 * Does retain iterator positions.
-	 */
-
-	info Clone();
-
 	time_iter& TimeIterator();
 	param_iter& ParamIterator();
 	level_iter& LevelIterator();

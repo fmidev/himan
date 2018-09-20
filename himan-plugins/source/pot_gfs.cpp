@@ -83,7 +83,10 @@ himan::info_t Max(InputIt begin, InputIt end)
 	}
 
 	// Set first field as first set of maximum values
-	auto maxInfo = make_shared<himan::info>((*begin)->Clone());
+	auto maxInfo = make_shared<himan::info>(**begin);
+	maxInfo->Base(make_shared<himan::base>(shared_ptr<himan::grid>(maxInfo->Grid()->Clone()),
+	                                       himan::matrix<double>(maxInfo->Data())));
+
 	++begin;
 
 	for (; begin != end; ++begin)
@@ -123,7 +126,10 @@ himan::info_t Mean(InputIt begin, InputIt end)
 	}
 
 	// Set first field as first set of mean values
-	auto meanInfo = make_shared<himan::info>((*begin)->Clone());
+	auto meanInfo = make_shared<himan::info>(**begin);
+	meanInfo->Base(make_shared<himan::base>(shared_ptr<himan::grid>(meanInfo->Grid()->Clone()),
+	                                        himan::matrix<double>(meanInfo->Data())));
+
 	++begin;
 
 	size_t count = 1;
