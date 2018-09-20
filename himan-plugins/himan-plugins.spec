@@ -4,7 +4,7 @@
 Summary: himan-plugins library
 Name: %{LIBNAME}
 Version: 18.9.20
-Release: 1.el7.fmi
+Release: 2.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -112,6 +112,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Sep 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.9.20-2.fmi
+- Fixing MNWC visibility
 * Thu Sep 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.9.20-1.fmi
 - Moving data away from grid
 * Fri Sep 14 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.9.14-1.fmi
