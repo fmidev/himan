@@ -33,7 +33,6 @@ class time_series
 	{
 		return itsParam;
 	};
-	void Param(param theParam);
 
 	size_t Size() const
 	{

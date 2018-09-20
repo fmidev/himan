@@ -1709,7 +1709,8 @@ void grib::ReadData(info_t newInfo, bool readPackedData) const
 	long producerId = newInfo->Producer().Id();
 
 	if (itsGrib->Message().Edition() == 2 && (paramName == "PRECFORM-N" || paramName == "PRECFORM2-N") &&
-	    (producerId == 230 || producerId == 240 || producerId == 243 || producerId == 250 || producerId == 260))
+	    (producerId == 230 || producerId == 240 || producerId == 243 || producerId == 250 || producerId == 260 ||
+	     producerId == 270))
 	{
 		decodePrecipitationForm = true;
 	}

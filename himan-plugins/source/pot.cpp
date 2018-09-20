@@ -57,10 +57,6 @@ void time_series::Fetch(std::shared_ptr<const plugin_configuration> config, fore
 	}
 }
 
-void time_series::Param(param theParam)
-{
-	itsParam = theParam;
-}
 /*
  *
  * function definitions for "modifier" functions
@@ -509,7 +505,7 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			return;
 		}
 
-		throw e;
+		throw;
 	}
 
 	string deviceType = "CPU";
