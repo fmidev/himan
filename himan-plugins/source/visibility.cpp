@@ -82,13 +82,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		return;
 	}
 
-	double RHScale = 1;
-
-	if (itsConfiguration->SourceProducer().Id() == 1 || itsConfiguration->SourceProducer().Id() == 199 ||
-	    itsConfiguration->SourceProducer().Id() == 4)
-	{
-		RHScale = 100;
-	}
+	const double RHScale = (RHInfo->Param().Name() == "RH-PRCNT" ? 1. : 100.);
 
 	auto h = GET_PLUGIN(hitool);
 
