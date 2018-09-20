@@ -294,11 +294,11 @@ namespace info_wrapper
 
 void SetValue(std::shared_ptr<info>& anInfo, int index, double value)
 {
-	anInfo->Grid()->Data().Set(--index, value);
+	anInfo->Data().Set(--index, value);
 }
 double GetValue(std::shared_ptr<info>& anInfo, int index)
 {
-	return anInfo->Grid()->Data().At(--index);
+	return anInfo->Data().At(--index);
 }
 size_t GetLocationIndex(std::shared_ptr<info> anInfo)
 {
@@ -987,7 +987,7 @@ void BindLib(lua_State* L)
 	              .def("GetLevel", LUA_CMEMFN(level, info, Level, void))
 	              .def("GetTime", LUA_CMEMFN(forecast_time, info, Time, void))
 	              .def("GetParam", LUA_CMEMFN(param, info, Param, void))
-	              .def("GetGrid", LUA_CMEMFN(grid*, info, Grid, void))
+	              .def("GetGrid", LUA_CMEMFN(std::shared_ptr<grid>, info, Grid, void))
 	              .def("SetTime", LUA_MEMFN(void, info, SetTime, const forecast_time&))
 	              .def("SetLevel", LUA_MEMFN(void, info, SetLevel, const level&))
 	              //.def("SetParam", LUA_MEMFN(void, info, SetParam, const param&))
@@ -1381,7 +1381,6 @@ luabind::object luatool::Fetch(const forecast_time& theTime, const level& theLev
 	{
 		return object();
 	}
-
 	return VectorToTable(x->Data().Values());
 }
 
@@ -1445,7 +1444,7 @@ void luatool::WriteToFile(const info_t targetInfo)
 	// cache as the data in the cache might be overwritten by another script.
 	// Therefore re-create the info here which means a memory copy.
 	auto newInfo = std::make_shared<info>(*targetInfo);
-	newInfo->Create(targetInfo->Grid());
+	newInfo->Create(targetInfo->Base());
 	newInfo->ForecastTypeIterator().Set(targetInfo->ForecastTypeIndex());
 	newInfo->TimeIterator().Set(targetInfo->TimeIndex());
 	newInfo->LevelIterator().Set(targetInfo->LevelIndex());

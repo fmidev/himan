@@ -602,7 +602,8 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			}
 		}
 
-		capeInfo->Grid()->Data(filtered);
+		auto b = capeInfo->Base();
+		b->data = move(filtered);
 	};
 
 	filter(CAPEParam);

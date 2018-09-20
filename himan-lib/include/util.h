@@ -138,10 +138,10 @@ double ToPower(double value, double power);
  * This function can be called on CPU to unpack the data on CUDA and return
  * the results to CPU memory.
  *
- * @param grids List of grids that are unpacked.
+ * @param grids List of infos that are unpacked.
  */
 
-void Unpack(std::initializer_list<grid*> grids);
+void Unpack(std::vector<std::shared_ptr<info>> infos, bool addToCache = true);
 
 /**
  * @brief Compute the x/y-derivative of input A
@@ -245,6 +245,14 @@ bool ParseBoolean(const std::string& val);
  */
 
 std::unique_ptr<grid> GridFromDatabase(const std::string& geom_name);
+
+/**
+ * @brief Flip matrix value around x-axis
+ *
+ * Used to be class function in grids called Swap().
+ */
+
+void Flip(matrix<double>& mat);
 
 template <class... Conts>
 inline auto zip_range(Conts&... conts)

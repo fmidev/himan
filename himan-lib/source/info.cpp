@@ -30,7 +30,8 @@ info::info()
 }
 
 info::info(const vector<forecast_type>& ftypes, const vector<forecast_time>& times, const vector<level>& levels,
-           const vector<param>& params) : info()
+           const vector<param>& params)
+    : info()
 {
 	ForecastTypes(ftypes);
 	Times(times);
@@ -87,8 +88,11 @@ std::ostream& info::Write(std::ostream& file) const
 
 	for (size_t i = 0; i < itsDimensions.size(); i++)
 	{
-		if (itsDimensions[i])
-			file << *itsDimensions[i];
+		if (itsDimensions[i]->grid)
+		{
+			file << *itsDimensions[i]->grid;
+		}
+		file << itsDimensions[i]->data;
 	}
 
 	return file;
@@ -96,8 +100,8 @@ std::ostream& info::Write(std::ostream& file) const
 
 void info::Regrid(const vector<param>& newParams)
 {
-	auto newDimensions = vector<shared_ptr<grid>>(itsForecastTypeIterator.Size() * itsTimeIterator.Size() *
-	                                              itsLevelIterator.Size() * newParams.size());
+	vector<shared_ptr<base>> newDimensions(itsForecastTypeIterator.Size() * itsTimeIterator.Size() *
+	                                       itsLevelIterator.Size() * newParams.size());
 
 	FirstForecastType();
 	FirstTime();
@@ -106,14 +110,16 @@ void info::Regrid(const vector<param>& newParams)
 
 	while (Next())
 	{
-		if (!Grid())
+		if (IsValidGrid() == false)
+		{
 			continue;
+		}
 
 		size_t newI = (ParamIndex() * SizeForecastTypes() * SizeTimes() * SizeLevels() +
 		               LevelIndex() * SizeForecastTypes() * SizeTimes() + TimeIndex() * SizeForecastTypes() +
 		               ForecastTypeIndex());
 
-		newDimensions[newI] = shared_ptr<grid>(Grid()->Clone());
+		newDimensions[newI] = make_shared<base>(shared_ptr<grid>(Grid()->Clone()), Data());
 	}
 
 	itsDimensions = move(newDimensions);
@@ -122,8 +128,8 @@ void info::Regrid(const vector<param>& newParams)
 
 void info::Regrid(const vector<level>& newLevels)
 {
-	auto newDimensions = vector<shared_ptr<grid>>(itsForecastTypeIterator.Size() * itsTimeIterator.Size() *
-	                                              newLevels.size() * itsParamIterator.Size());
+	vector<shared_ptr<base>> newDimensions(itsForecastTypeIterator.Size() * itsTimeIterator.Size() * newLevels.size() *
+	                                       itsParamIterator.Size());
 
 	FirstForecastType();
 	FirstTime();
@@ -132,21 +138,22 @@ void info::Regrid(const vector<level>& newLevels)
 
 	while (Next())
 	{
-		if (!Grid())
+		if (IsValidGrid() == false)
+		{
 			continue;
-
+		}
 		size_t newI = (ParamIndex() * SizeForecastTypes() * SizeTimes() * newLevels.size() +
 		               LevelIndex() * SizeForecastTypes() * SizeTimes() + TimeIndex() * SizeForecastTypes() +
 		               ForecastTypeIndex());
 
-		newDimensions[newI] = shared_ptr<grid>(Grid()->Clone());
+		newDimensions[newI] = make_shared<base>(shared_ptr<grid>(Grid()->Clone()), Data());
 	}
 
 	itsDimensions = move(newDimensions);
 	First();  // "Factory setting"
 }
 
-void info::Create(const grid* baseGrid, const param& par, const level& lev, bool createDataBackend)
+void info::Create(shared_ptr<base> baseGrid, const param& par, const level& lev, bool createDataBackend)
 {
 	ASSERT(baseGrid);
 
@@ -165,21 +172,24 @@ void info::Create(const grid* baseGrid, const param& par, const level& lev, bool
 	{
 		if (Level() == lev && Param() == par)
 		{
-			Grid(shared_ptr<grid>(baseGrid->Clone()));
-			if (baseGrid->Class() == kRegularGrid)
+			auto g = shared_ptr<grid>(baseGrid->grid->Clone());
+			auto d = matrix<double>(baseGrid->data);
+
+			auto b = make_shared<base>(g, d);
+
+			Base(b);
+
+			if (baseGrid->grid->Class() == kRegularGrid)
 			{
-				const regular_grid* regGrid(dynamic_cast<const regular_grid*>(baseGrid));
+				const regular_grid* regGrid(dynamic_cast<const regular_grid*>(baseGrid->grid.get()));
 				if (createDataBackend)
 				{
-					Grid()->Data().Resize(regGrid->Ni(), regGrid->Nj());
+					Data().Resize(regGrid->Ni(), regGrid->Nj());
 				}
 			}
-			else if (baseGrid->Class() == kIrregularGrid)
+			else if (baseGrid->grid->Class() == kIrregularGrid)
 			{
-				if (baseGrid->Type() == kReducedGaussian)
-				{
-					Grid()->Data().Resize(Grid()->Size(), 1, 1);
-				}
+				Data().Resize(Grid()->Size(), 1, 1);
 			}
 			else
 			{
@@ -189,12 +199,12 @@ void info::Create(const grid* baseGrid, const param& par, const level& lev, bool
 	}
 }
 
-void info::Create(const grid* baseGrid, bool createDataBackend)
+void info::Create(shared_ptr<base> baseGrid, bool createDataBackend)
 {
 	ASSERT(baseGrid);
 
-	itsDimensions = vector<shared_ptr<grid>>(itsForecastTypeIterator.Size() * itsTimeIterator.Size() *
-	                                         itsLevelIterator.Size() * itsParamIterator.Size());
+	itsDimensions.resize(itsForecastTypeIterator.Size() * itsTimeIterator.Size() *
+	                                       itsLevelIterator.Size() * itsParamIterator.Size());
 
 	ResetForecastType();
 
@@ -213,22 +223,24 @@ void info::Create(const grid* baseGrid, bool createDataBackend)
 				while (NextParam())
 				// Create empty placeholders
 				{
-					Grid(shared_ptr<grid>(baseGrid->Clone()));
+					auto g = shared_ptr<grid>(baseGrid->grid->Clone());
+					auto d = matrix<double>(baseGrid->data);
 
-					if (baseGrid->Class() == kRegularGrid)
+					auto b = make_shared<base>(g, d);
+
+					Base(b);
+
+					if (baseGrid->grid->Class() == kRegularGrid)
 					{
-						const regular_grid* regGrid(dynamic_cast<const regular_grid*>(baseGrid));
 						if (createDataBackend)
 						{
-							Grid()->Data().Resize(regGrid->Ni(), regGrid->Nj());
+							const regular_grid* regGrid(dynamic_cast<const regular_grid*>(baseGrid->grid.get()));
+							Data().Resize(regGrid->Ni(), regGrid->Nj());
 						}
 					}
-					else if (baseGrid->Class() == kIrregularGrid)
+					else if (baseGrid->grid->Class() == kIrregularGrid)
 					{
-						if (baseGrid->Type() == kReducedGaussian)
-						{
-							Grid()->Data().Resize(Grid()->Size(), 1, 1);
-						}
+						Data().Resize(Grid()->Size(), 1, 1);
 					}
 					else
 					{
@@ -311,7 +323,7 @@ void info::Merge(shared_ptr<info> otherInfo)
 						himan::Abort();
 					}
 
-					Grid(shared_ptr<grid>(otherInfo->Grid()->Clone()));
+					Base(make_shared<base>(shared_ptr<grid>(otherInfo->Grid()->Clone()), otherInfo->Data()));
 				}
 			}
 		}
@@ -665,23 +677,30 @@ size_t info::LocationIndex()
 }
 size_t info::SizeLocations() const
 {
-	return Grid()->Data().Size();
+	return itsDimensions[Index()]->data.Size();
 }
 matrix<double>& info::Data()
 {
-	return Grid()->Data();
+	return itsDimensions[Index()]->data;
 }
-shared_ptr<grid> info::SharedGrid() const
+shared_ptr<grid> info::Grid() const
 {
 	ASSERT(itsDimensions.size());
+	return itsDimensions[Index()]->grid;
+}
+std::shared_ptr<base> info::Base()
+{
 	return itsDimensions[Index()];
 }
-void info::Grid(shared_ptr<grid> d)
+void info::Base(shared_ptr<base> b)
 {
 	ASSERT(itsDimensions.size() > Index());
-	itsDimensions[Index()] = d;
+	itsDimensions[Index()] = b;
 }
-
+shared_ptr<packed_data> info::PackedData() const
+{
+	return itsDimensions[Index()]->pdata;
+}
 size_t info::DimensionSize() const
 {
 	return itsDimensions.size();
@@ -692,13 +711,13 @@ info_simple* info::ToSimple() const
 {
 	info_simple* ret = new info_simple();
 
-	ret->size_x = Grid()->Data().SizeX();
-	ret->size_y = Grid()->Data().SizeY();
+	ret->size_x = itsDimensions[Index()]->data.SizeX();
+	ret->size_y = itsDimensions[Index()]->data.SizeY();
 
 	if (Grid()->Class() == kRegularGrid)
 	{
-		ret->di = dynamic_cast<const regular_grid*>(Grid())->Di();
-		ret->dj = dynamic_cast<const regular_grid*>(Grid())->Dj();
+		ret->di = dynamic_pointer_cast<regular_grid>(Grid())->Di();
+		ret->dj = dynamic_pointer_cast<regular_grid>(Grid())->Dj();
 	}
 	else
 	{
@@ -711,65 +730,67 @@ info_simple* info::ToSimple() const
 
 	if (Grid()->Type() == kRotatedLatitudeLongitude)
 	{
-		ret->south_pole_lat = dynamic_cast<rotated_latitude_longitude_grid*>(Grid())->SouthPole().Y();
-		ret->south_pole_lon = dynamic_cast<rotated_latitude_longitude_grid*>(Grid())->SouthPole().X();
+		ret->south_pole_lat = dynamic_pointer_cast<rotated_latitude_longitude_grid>(Grid())->SouthPole().Y();
+		ret->south_pole_lon = dynamic_pointer_cast<rotated_latitude_longitude_grid>(Grid())->SouthPole().X();
 	}
 	else if (Grid()->Type() == kStereographic)
 	{
-		ret->orientation = dynamic_cast<stereographic_grid*>(Grid())->Orientation();
+		ret->orientation = dynamic_pointer_cast<stereographic_grid>(Grid())->Orientation();
 	}
 	else if (Grid()->Type() == kLambertConformalConic)
 	{
-		ret->orientation = dynamic_cast<lambert_conformal_grid*>(Grid())->Orientation();
-		ret->latin1 = dynamic_cast<lambert_conformal_grid*>(Grid())->StandardParallel1();
-		ret->latin2 = dynamic_cast<lambert_conformal_grid*>(Grid())->StandardParallel2();
+		auto llc = dynamic_pointer_cast<lambert_conformal_grid>(Grid());
+		ret->orientation = llc->Orientation();
+		ret->latin1 = llc->StandardParallel1();
+		ret->latin2 = llc->StandardParallel2();
 	}
 
 	ret->interpolation = Param().InterpolationMethod();
 
 	if (Grid()->Class() == kRegularGrid)
 	{
-		if (dynamic_cast<const regular_grid*>(Grid())->ScanningMode() == kTopLeft)
+		auto gr = dynamic_pointer_cast<regular_grid>(Grid());
+
+		if (gr->ScanningMode() == kTopLeft)
 		{
 			ret->j_scans_positive = false;
 		}
-		else if (dynamic_cast<const regular_grid*>(Grid())->ScanningMode() != kBottomLeft)
+		else if (gr->ScanningMode() != kBottomLeft)
 		{
-			throw runtime_error(
-			    ClassName() + ": Invalid scanning mode for Cuda: " +
-			    string(HPScanningModeToString.at(dynamic_cast<const regular_grid*>(Grid())->ScanningMode())));
+			throw runtime_error(ClassName() + ": Invalid scanning mode for Cuda: " +
+			                    string(HPScanningModeToString.at(gr->ScanningMode())));
 		}
 	}
 
 	ret->projection = Grid()->Type();
 
-	if (Grid()->IsPackedData())
+	if (PackedData()->HasData())
 	{
 		/*
-		 * If grid has packed data, shallow-copy a pointer to that data to 'ret'.
+		 * If info has packed data, shallow-copy a pointer to that data to 'ret'.
 		 * Also allocate page-locked memory for the unpacked data.
 		 */
 
-		ASSERT(Grid()->PackedData().ClassName() == "simple_packed");
+		ASSERT(PackedData()->ClassName() == "simple_packed");
 
-		ret->packed_values = reinterpret_cast<simple_packed*>(&Grid()->PackedData());
+		ret->packed_values = reinterpret_cast<simple_packed*>(PackedData().get());
 	}
 
 	// Reserve a place for the unpacked data
-	ret->values = const_cast<double*>(Grid()->Data().ValuesAsPOD());
+	ret->values = const_cast<double*>(itsDimensions[Index()]->data.ValuesAsPOD());
 
 	return ret;
 }
 
 #endif
 
-const vector<shared_ptr<grid>>& info::Dimensions() const
+vector<shared_ptr<base>> info::Dimensions() const
 {
 	return itsDimensions;
 }
 void info::ReIndex(size_t oldForecastTypeSize, size_t oldTimeSize, size_t oldLevelSize, size_t oldParamSize)
 {
-	vector<shared_ptr<grid>> theDimensions(SizeForecastTypes() * SizeTimes() * SizeLevels() * SizeParams());
+	vector<shared_ptr<base>> theDimensions(SizeForecastTypes() * SizeTimes() * SizeLevels() * SizeParams());
 
 	for (size_t a = 0; a < oldForecastTypeSize; a++)
 	{
@@ -816,7 +837,7 @@ station info::Station() const
 		return station();
 	}
 
-	return dynamic_cast<point_list*>(Grid())->Station(itsLocationIndex);
+	return dynamic_pointer_cast<point_list>(Grid())->Station(itsLocationIndex);
 }
 
 void info::ForecastTypes(const std::vector<forecast_type>& theTypes)
@@ -911,35 +932,38 @@ bool info::Next()
 
 bool info::IsValidGrid() const
 {
-	return (Grid());
+	return (itsDimensions[Index()] != nullptr && Grid());
 }
+
+/*
 info info::Clone()
 {
-	auto ret = info(*this);
+    auto ret = info(*this);
 
-	ret.FirstForecastType();
-	ret.FirstTime();
-	ret.FirstLevel();
-	ret.ResetParam();
+    ret.FirstForecastType();
+    ret.FirstTime();
+    ret.FirstLevel();
+    ret.ResetParam();
 
-	while (Next())
-	{
-		const grid* g = Grid();
+    while (Next())
+    {
+        const auto g = Grid();
 
-		if (g)
-		{
-			Grid(shared_ptr<grid>(g->Clone()));
-		}
-	}
+        if (g)
+        {
+            Grid(shared_ptr<grid>(g->Clone()));
+        }
+    }
 
-	// Return indices
-	ret.ForecastTypeIterator().Set(ForecastTypeIndex());
-	ret.TimeIterator().Set(TimeIndex());
-	ret.LevelIterator().Set(LevelIndex());
-	ret.ParamIterator().Set(ParamIndex());
+    // Return indices
+    ret.ForecastTypeIterator().Set(ForecastTypeIndex());
+    ret.TimeIterator().Set(TimeIndex());
+    ret.LevelIterator().Set(LevelIndex());
+    ret.ParamIterator().Set(ParamIndex());
 
-	return ret;
+    return ret;
 }
+*/
 
 void info::FirstValidGrid()
 {

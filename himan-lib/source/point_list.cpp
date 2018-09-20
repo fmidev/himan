@@ -25,9 +25,6 @@ point_list::point_list(const vector<station>& theStations) : irregular_grid(), i
 	itsLogger = logger("point_list");
 
 	Type(kPointList);
-	itsData.Resize(theStations.size(), 1, 1);
-
-	ASSERT(itsData.Size() == theStations.size());
 }
 
 point_list::point_list(const point_list& other) : irregular_grid(other), itsStations(other.itsStations)
@@ -37,7 +34,7 @@ point_list::point_list(const point_list& other) : irregular_grid(other), itsStat
 
 size_t point_list::Size() const
 {
-	return itsData.Size();
+	return itsStations.size();
 }
 bool point_list::EqualsTo(const point_list& other) const
 {
@@ -122,7 +119,7 @@ const vector<station>& point_list::Stations() const
 void point_list::Stations(const vector<station>& theStations)
 {
 	itsStations = theStations;
-	itsData.Resize(theStations.size(), 1, 1);
+	// itsData.Resize(theStations.size(), 1, 1);
 }
 bool point_list::operator!=(const point_list& other) const
 {

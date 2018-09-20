@@ -63,14 +63,14 @@ class preform_hybrid : public compiled_plugin, private compiled_plugin_base
 	 */
 
 	void Stratus(std::shared_ptr<const plugin_configuration> conf, const forecast_time& ftime,
-	             const forecast_type& ftype, std::shared_ptr<info>& result, const grid* baseGrid);
+	             const forecast_type& ftype, std::shared_ptr<info>& result, std::shared_ptr<base> baseGrid);
 
 	/**
 	 * @brief Calculate freezing area information (number of zero level etc)
 	 */
 
 	void FreezingArea(std::shared_ptr<const plugin_configuration> conf, const forecast_time& ftime,
-	                  const forecast_type& ftype, std::shared_ptr<info>& result, const grid* baseGrid);
+	                  const forecast_type& ftype, std::shared_ptr<info>& result, std::shared_ptr<base> baseGrid);
 };
 
 // the class factory

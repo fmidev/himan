@@ -4,52 +4,28 @@
  */
 
 #include "grid.h"
-#include "simple_packed.h"
 
 using namespace himan;
 using namespace std;
 
 grid::grid()
-    : itsData(0, 0, 1, MissingDouble()),
-      itsGridClass(kUnknownGridClass),
+    : itsGridClass(kUnknownGridClass),
       itsGridType(kUnknownGridType),
       itsIdentifier(),
       itsAB(),
-      itsPackedData(),
       itsUVRelativeToGrid(false),
       itsEarthShape()
 {
 }
 
-grid::~grid()
-{
-}
 grid::grid(const grid& other)
-    : itsData(other.itsData),
-      itsGridClass(other.itsGridClass),
+    : itsGridClass(other.itsGridClass),
       itsGridType(other.itsGridType),
       itsIdentifier(other.itsIdentifier),
       itsAB(other.itsAB),
-      itsPackedData(),
       itsUVRelativeToGrid(other.itsUVRelativeToGrid),
       itsEarthShape(other.itsEarthShape)
 {
-#ifdef HAVE_CUDA
-	if (other.itsPackedData)
-	{
-		switch (other.itsPackedData->packingType)
-		{
-			case kSimplePacking:
-				itsPackedData = unique_ptr<simple_packed>(
-				    new simple_packed(*dynamic_cast<simple_packed*>(other.itsPackedData.get())));
-				break;
-
-			default:
-				itsPackedData = unique_ptr<packed_data>(new packed_data(*itsPackedData));
-				break;
-		}
-	}
-#endif
 }
 
 bool grid::EqualsTo(const grid& other) const
@@ -90,16 +66,6 @@ bool grid::EqualsTo(const grid& other) const
 	return true;
 }
 
-packed_data& grid::PackedData()
-{
-	ASSERT(itsPackedData);
-	return *itsPackedData;
-}
-
-void grid::PackedData(unique_ptr<packed_data> thePackedData)
-{
-	itsPackedData = move(thePackedData);
-}
 HPGridType grid::Type() const
 {
 	return itsGridType;
@@ -124,24 +90,7 @@ void grid::Identifier(const std::string& theIdentifier)
 {
 	itsIdentifier = theIdentifier;
 }
-bool grid::IsPackedData() const
-{
-	if (itsPackedData && itsPackedData->HasData())
-	{
-		return true;
-	}
 
-	return false;
-}
-
-matrix<double>& grid::Data()
-{
-	return itsData;
-}
-void grid::Data(const matrix<double>& theData)
-{
-	itsData = theData;
-}
 ostream& grid::Write(std::ostream& file) const
 {
 	file << "<" << ClassName() << ">" << std::endl;
@@ -157,9 +106,7 @@ ostream& grid::Write(std::ostream& file) const
 	file << std::endl;
 
 	file << itsEarthShape;
-	file << "__IsPackedData__ " << IsPackedData() << std::endl;
 	file << "__itsIdentifier__" << itsIdentifier << std::endl;
-	file << itsData;
 
 	return file;
 }

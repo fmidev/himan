@@ -115,12 +115,14 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	ASSERT(myTargetInfo->Grid()->Class() == kRegularGrid);
 
-	double Di = dynamic_cast<regular_grid*>(myTargetInfo->Grid())->Di();
-	double Dj = dynamic_cast<regular_grid*>(myTargetInfo->Grid())->Dj();
+	auto gr = dynamic_pointer_cast<regular_grid>(myTargetInfo->Grid());
+
+	const double Di = gr->Di();
+	const double Dj = gr->Dj();
 	point firstPoint = myTargetInfo->Grid()->FirstPoint();
 
-	size_t Ni = dynamic_cast<regular_grid*>(myTargetInfo->Grid())->Ni();
-	size_t Nj = dynamic_cast<regular_grid*>(myTargetInfo->Grid())->Nj();
+	const size_t Ni = gr->Ni();
+	const size_t Nj = gr->Nj();
 
 	vector<double> dx, dy;
 

@@ -70,7 +70,8 @@ bool ToReducedGaussianCPU(info& base, info& source, matrix<double>& targetData)
 
 bool FromReducedGaussianCPU(info& base, info& source, matrix<double>& targetData)
 {
-	reduced_gaussian_grid* const gg = dynamic_cast<reduced_gaussian_grid*>(source.Grid());
+	auto gg = std::dynamic_pointer_cast<reduced_gaussian_grid>(source.Grid());
+	const matrix<double>& ggdata = source.Data();
 
 	for (size_t i = 0; i < source.Grid()->Size(); i++)
 	{
@@ -80,7 +81,7 @@ bool FromReducedGaussianCPU(info& base, info& source, matrix<double>& targetData
 		double sum = 0;
 		for (size_t j = 0; j < w.first.size(); ++j)
 		{
-			sum += w.second[j] * gg->Data().At(w.first[j]);
+			sum += w.second[j] * ggdata.At(w.first[j]);
 		}
 		targetData.Set(i, sum);
 	}
@@ -88,14 +89,14 @@ bool FromReducedGaussianCPU(info& base, info& source, matrix<double>& targetData
 	return true;
 }
 
-bool InterpolateAreaCPU(info& base, info& source, matrix<double>& targetData)
+bool InterpolateAreaCPU(info& base, info_t source, matrix<double>& targetData)
 {
 #ifdef HAVE_CUDA
 
-	if (source.Grid()->IsPackedData())
+	if (source->PackedData()->HasData())
 	{
 		// We need to unpack
-		util::Unpack({source.Grid()});
+		util::Unpack({source});
 	}
 #endif
 	// switch to old MissingDouble() for compatibility with QD stuff
@@ -104,7 +105,7 @@ bool InterpolateAreaCPU(info& base, info& source, matrix<double>& targetData)
 	auto q = GET_PLUGIN(querydata);
 
 	std::shared_ptr<NFmiQueryData> baseData = q->CreateQueryData(base, true);
-	std::shared_ptr<NFmiQueryData> sourceData = q->CreateQueryData(source, true);
+	std::shared_ptr<NFmiQueryData> sourceData = q->CreateQueryData(*source, true);
 
 	ASSERT(baseData);
 
@@ -128,7 +129,7 @@ bool InterpolateAreaCPU(info& base, info& source, matrix<double>& targetData)
 	}
 	else
 	{
-		HPScanningMode mode = dynamic_cast<const regular_grid*>(base.Grid())->ScanningMode();
+		HPScanningMode mode = std::dynamic_pointer_cast<regular_grid>(base.Grid())->ScanningMode();
 
 		if (mode == kBottomLeft)
 		{
@@ -183,7 +184,6 @@ bool InterpolateArea(info& target, info_t source, bool useCudaForInterpolation)
 
 	matrix<double> targetData(target.Data().SizeX(), target.Data().SizeY(), target.Data().SizeZ(),
 	                          target.Data().MissingValue(), target.Data().MissingValue());
-
 	switch (sourceType)
 	{
 		case kLatitudeLongitude:
@@ -199,9 +199,9 @@ bool InterpolateArea(info& target, info_t source, bool useCudaForInterpolation)
 				case kLambertConformalConic:
 				case kPointList:
 #ifdef HAVE_CUDA
-					useCudaForInterpolation ? InterpolateAreaGPU(target, *source, targetData) :
+					useCudaForInterpolation ? InterpolateAreaGPU(target, source, targetData) :
 #endif
-					                        InterpolateAreaCPU(target, *source, targetData);
+					                        InterpolateAreaCPU(target, source, targetData);
 					break;
 
 				case kReducedGaussian:
@@ -237,9 +237,7 @@ bool InterpolateArea(info& target, info_t source, bool useCudaForInterpolation)
 	interpGrid->AB(source->Grid()->AB());
 	interpGrid->UVRelativeToGrid(source->Grid()->UVRelativeToGrid());
 
-	interpGrid->Data(targetData);
-
-	source->Grid(interpGrid);
+	source->Base(std::make_shared<base>(interpGrid, targetData));
 
 	return true;
 }
@@ -253,13 +251,15 @@ bool ReorderPoints(info& base, info_t info)
 
 	// Worst case: cartesian product ie O(mn) ~ O(n^2)
 
-	auto targetStations = dynamic_cast<point_list*>(base.Grid())->Stations();
-	auto sourceStations = dynamic_cast<point_list*>(info->Grid())->Stations();
-	auto sourceData = info->Grid()->Data();
-	auto newData = matrix<double>(targetStations.size(), 1, 1, MissingDouble());
+	auto targetStations = std::dynamic_pointer_cast<point_list>(base.Grid())->Stations();
+	auto sourceStations = std::dynamic_pointer_cast<point_list>(info->Grid())->Stations();
+	const auto& sourceData = info->Data();
+	matrix<double> newData(targetStations.size(), 1, 1, MissingDouble());
 
 	if (targetStations.size() == 0 || sourceStations.size() == 0)
+	{
 		return false;
+	}
 
 	std::vector<station> newStations;
 
@@ -289,8 +289,10 @@ bool ReorderPoints(info& base, info_t info)
 		}
 	}
 
-	dynamic_cast<point_list*>(info->Grid())->Stations(newStations);
-	info->Grid()->Data(newData);
+	std::dynamic_pointer_cast<point_list>(info->Grid())->Stations(newStations);
+
+	auto b = info->Base();
+	b->data = std::move(newData);
 
 	return true;
 }
@@ -321,19 +323,20 @@ bool Interpolate(info& base, std::vector<info_t>& infos, bool useCudaForInterpol
 
 			// == operator does not test scanning mode !
 
-			else if (dynamic_cast<const regular_grid*>(base.Grid())->ScanningMode() !=
-			         dynamic_cast<const regular_grid*>(info->Grid())->ScanningMode())
+			else if (std::dynamic_pointer_cast<regular_grid>(base.Grid())->ScanningMode() !=
+			         std::dynamic_pointer_cast<regular_grid>(info->Grid())->ScanningMode())
 			{
 #ifdef HAVE_CUDA
-				if (info->Grid()->IsPackedData())
+				if (info->PackedData()->HasData())
 				{
 					// must unpack before swapping
 					// itsLogger->Trace("Unpacking before swapping");
-					util::Unpack({info->Grid()});
+					util::Unpack({info});
 				}
 #endif
-				dynamic_cast<regular_grid*>(info->Grid())
-				    ->Swap(dynamic_cast<const regular_grid*>(base.Grid())->ScanningMode());
+				util::Flip(info->Data());
+				std::dynamic_pointer_cast<regular_grid>(info->Grid())
+				    ->ScanningMode(std::dynamic_pointer_cast<regular_grid>(base.Grid())->ScanningMode());
 			}
 		}
 
@@ -431,7 +434,7 @@ void RotateVectorComponentsCPU(info& UInfo, info& VInfo)
 	{
 		case kRotatedLatitudeLongitude:
 		{
-			rotated_latitude_longitude_grid* const rll = dynamic_cast<rotated_latitude_longitude_grid*>(UInfo.Grid());
+			auto rll = std::dynamic_pointer_cast<rotated_latitude_longitude_grid>(UInfo.Grid());
 
 			const point southPole = rll->SouthPole();
 
@@ -455,7 +458,7 @@ void RotateVectorComponentsCPU(info& UInfo, info& VInfo)
 
 		case kLambertConformalConic:
 		{
-			lambert_conformal_grid* const lcc = dynamic_cast<lambert_conformal_grid*>(UInfo.Grid());
+			auto lcc = std::dynamic_pointer_cast<lambert_conformal_grid>(UInfo.Grid());
 
 			if (!lcc->UVRelativeToGrid())
 			{
@@ -506,7 +509,7 @@ void RotateVectorComponentsCPU(info& UInfo, info& VInfo)
 		{
 			// The same as lambert but with cone = 1
 
-			const stereographic_grid* sc = dynamic_cast<stereographic_grid*>(UInfo.Grid());
+			auto sc = std::dynamic_pointer_cast<stereographic_grid>(UInfo.Grid());
 			const double orientation = sc->Orientation();
 
 			for (UInfo.ResetLocation(); UInfo.NextLocation();)
@@ -558,7 +561,8 @@ void RotateVectorComponents(info& UInfo, info& VInfo, bool useCuda)
 	VInfo.Grid()->UVRelativeToGrid(false);
 }
 
-std::pair<std::vector<size_t>, std::vector<double>> InterpolationWeights(reduced_gaussian_grid* source, point target)
+std::pair<std::vector<size_t>, std::vector<double>> InterpolationWeights(std::shared_ptr<reduced_gaussian_grid> source,
+                                                                         point target)
 {
 	// target lon 0 <= lon < 360
 	if (target.X() < 0.0)
@@ -586,8 +590,8 @@ std::pair<std::vector<size_t>, std::vector<double>> InterpolationWeights(reduced
 	auto north = south;
 	north--;
 
-	size_t y_north = static_cast<size_t> (std::distance(lats.begin(), north));
-	size_t y_south = static_cast<size_t> (std::distance(lats.begin(), south));
+	size_t y_north = static_cast<size_t>(std::distance(lats.begin(), north));
+	size_t y_south = static_cast<size_t>(std::distance(lats.begin(), south));
 
 	// find x-indices
 	size_t x_north_west = static_cast<size_t>(

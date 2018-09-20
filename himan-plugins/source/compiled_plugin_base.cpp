@@ -470,9 +470,13 @@ void compiled_plugin_base::SetParams(std::vector<param>& params, const vector<le
 	 */
 	for (const auto& lvl : levels)
 	{
+		const auto g = itsInfo->itsBaseGrid.get();
+
 		for (const auto& par : params)
 		{
-			itsInfo->Create(itsInfo->itsBaseGrid.get(), par, lvl, !itsConfiguration->UseDynamicMemoryAllocation());
+			auto b = make_shared<base>();
+			b->grid = shared_ptr<grid>(g->Clone());
+			itsInfo->Create(b, par, lvl, !itsConfiguration->UseDynamicMemoryAllocation());
 		}
 	}
 	if (!itsConfiguration->UseDynamicMemoryAllocation())
@@ -536,33 +540,6 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 
 	SetParams(params, levels);
 }
-
-#ifdef HAVE_CUDA
-void compiled_plugin_base::Unpack(initializer_list<info_t> infos)
-{
-	auto c = GET_PLUGIN(cache);
-
-	for (auto it = infos.begin(); it != infos.end(); ++it)
-	{
-		info_t tempInfo = *it;
-
-		if (!tempInfo->Grid()->IsPackedData() || tempInfo->Grid()->PackedData().packedLength == 0)
-		{
-			// Safeguard: This particular info does not have packed data
-			continue;
-		}
-
-		ASSERT(tempInfo->Grid()->PackedData().ClassName() == "simple_packed");
-
-		util::Unpack({tempInfo->Grid()});
-
-		if (itsConfiguration->UseCache())
-		{
-			c->Insert(tempInfo);
-		}
-	}
-}
-#endif
 
 /*
 bool compiled_plugin_base::CompareGrids(initializer_list<shared_ptr<grid>> grids) const
@@ -630,15 +607,9 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 		ret = f->Fetch(itsConfiguration, theTime, theLevel, theParams, theType, itsConfiguration->UseCudaForPacking());
 
 #ifdef HAVE_CUDA
-		if (!returnPacked && ret->Grid()->IsPackedData())
+		if (!returnPacked && ret->PackedData()->HasData())
 		{
-			ASSERT(ret->Grid()->PackedData().ClassName() == "simple_packed");
-
-			util::Unpack({ret->Grid()});
-
-			auto c = GET_PLUGIN(cache);
-
-			c->Insert(ret);
+			util::Unpack({ret}, itsConfiguration->UseCache());
 		}
 #endif
 	}
@@ -665,15 +636,9 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 		ret = f->Fetch(itsConfiguration, theTime, theLevel, theParam, theType, itsConfiguration->UseCudaForPacking());
 
 #ifdef HAVE_CUDA
-		if (!returnPacked && ret->Grid()->IsPackedData())
+		if (!returnPacked && ret->PackedData()->HasData())
 		{
-			ASSERT(ret->Grid()->PackedData().ClassName() == "simple_packed");
-
-			util::Unpack({ret->Grid()});
-
-			auto c = GET_PLUGIN(cache);
-
-			c->Insert(ret);
+			util::Unpack({ret}, itsConfiguration->UseCache());
 		}
 #endif
 	}
@@ -713,7 +678,8 @@ void compiled_plugin_base::AllocateMemory(info myTargetInfo)
 		{
 			if (myTargetInfo.Grid()->Class() == kRegularGrid)
 			{
-				myTargetInfo.Data().Resize(dynamic_cast<regular_grid*>(myTargetInfo.Grid())->Ni(), dynamic_cast<regular_grid*>(myTargetInfo.Grid())->Nj());
+				myTargetInfo.Data().Resize(dynamic_pointer_cast<regular_grid>(myTargetInfo.Grid())->Ni(),
+				                           dynamic_pointer_cast<regular_grid>(myTargetInfo.Grid())->Nj());
 			}
 			else
 			{
@@ -733,7 +699,7 @@ void compiled_plugin_base::DeallocateMemory(info myTargetInfo)
 	{
 		if (myTargetInfo.IsValidGrid())
 		{
-			myTargetInfo.Grid()->Data().Clear();
+			myTargetInfo.Data().Clear();
 		}
 	}
 

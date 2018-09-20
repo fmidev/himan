@@ -98,7 +98,7 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 
 				auto newInfo = make_shared<info>(*lnspn);
 				newInfo->SetParam(param("LNSP-HPA"));
-				newInfo->Create(lnspn->Grid());
+				newInfo->Create(lnspn->Base());
 
 				for (auto& val : VEC(newInfo))
 				{

@@ -307,44 +307,6 @@ point lambert_conformal_grid::LatLon(size_t locationIndex) const
 	return point(x, y);
 }
 
-bool lambert_conformal_grid::Swap(HPScanningMode newScanningMode)
-{
-	if (itsScanningMode == newScanningMode)
-	{
-		return true;
-	}
-
-	// Flip with regards to x axis
-
-	if ((itsScanningMode == kTopLeft && newScanningMode == kBottomLeft) ||
-	    (itsScanningMode == kBottomLeft && newScanningMode == kTopLeft))
-	{
-		size_t halfSize = static_cast<size_t>(floor(Nj() / 2));
-
-		for (size_t y = 0; y < halfSize; y++)
-		{
-			for (size_t x = 0; x < Ni(); x++)
-			{
-				double upper = itsData.At(x, y);
-				double lower = itsData.At(x, Nj() - 1 - y);
-
-				itsData.Set(x, y, 0, lower);
-				itsData.Set(x, Nj() - 1 - y, 0, upper);
-			}
-		}
-	}
-	else
-	{
-		itsLogger.Error("Swap from mode " + string(HPScanningModeToString.at(itsScanningMode)) + " to mode " +
-		                string(HPScanningModeToString.at(newScanningMode)) + " not implemented yet");
-		return false;
-	}
-
-	itsScanningMode = newScanningMode;
-
-	return true;
-}
-
 void lambert_conformal_grid::SouthPole(const point& theSouthPole)
 {
 	itsSouthPole = theSouthPole;

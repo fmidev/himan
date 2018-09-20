@@ -335,7 +335,7 @@ string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<v
 	return query.str();
 }
 
-pair<vector<string>,string> radon::Files(search_options& options)
+pair<vector<string>, string> radon::Files(search_options& options)
 {
 	Init();
 
@@ -345,14 +345,14 @@ pair<vector<string>,string> radon::Files(search_options& options)
 
 	if (gridgeoms.empty())
 	{
-		return make_pair(files,string());
+		return make_pair(files, string());
 	}
 
 	const auto query = CreateFileSQLQuery(options, gridgeoms);
 
 	if (query.empty())
 	{
-		return make_pair(files,string());
+		return make_pair(files, string());
 	}
 
 	try
@@ -378,14 +378,14 @@ pair<vector<string>,string> radon::Files(search_options& options)
 
 	if (values.empty())
 	{
-		return make_pair(files,string());
+		return make_pair(files, string());
 	}
 
 	itsLogger.Trace("Found data for parameter " + options.param.Name() + " from radon geometry " + values[2]);
 
 	files.push_back(values[0]);
 
-	return make_pair(files,values[2]);
+	return make_pair(files, values[2]);
 }
 
 bool radon::Save(const info& resultInfo, const string& theFileName, const string& targetGeomName)
@@ -461,9 +461,10 @@ bool radon::SavePrevi(const info& resultInfo)
 	{
 		query.str("");
 
-		query << "INSERT INTO data." << table_name << " (producer_id, station_id, analysis_time, param_id, level_id, "
-		                                              "level_value, level_value2, forecast_period, "
-		                                              "forecast_type_id, forecast_type_value, value) VALUES ("
+		query << "INSERT INTO data." << table_name
+		      << " (producer_id, station_id, analysis_time, param_id, level_id, "
+		         "level_value, level_value2, forecast_period, "
+		         "forecast_type_id, forecast_type_value, value) VALUES ("
 		      << localInfo.Producer().Id() << ", " << localInfo.Station().Id() << ", "
 		      << "'" << analysisTime << "', " << paraminfo["id"] << ", " << levelinfo["id"] << ", "
 		      << localInfo.Level().Value() << ", " << levelValue2 << ", "
@@ -564,11 +565,12 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName, const st
 
 	if (geominfo.empty())
 	{
-		if(resultInfo.Grid()->Class() == kRegularGrid)
+		if (resultInfo.Grid()->Class() == kRegularGrid)
 		{
-			geominfo = itsRadonDB->GetGeometryDefinition(
-				dynamic_cast<regular_grid*>(resultInfo.Grid())->Ni(), dynamic_cast<regular_grid*>(resultInfo.Grid())->Nj(), firstGridPoint.Y(), firstGridPoint.X(),
-				dynamic_cast<regular_grid*>(resultInfo.Grid())->Di(), dynamic_cast<regular_grid*>(resultInfo.Grid())->Dj(), gribVersion, gridType);
+			auto gr = dynamic_pointer_cast<regular_grid>(resultInfo.Grid());
+
+			geominfo = itsRadonDB->GetGeometryDefinition(gr->Ni(), gr->Nj(), firstGridPoint.Y(), firstGridPoint.X(),
+			                                             gr->Di(), gr->Dj(), gribVersion, gridType);
 		}
 	}
 

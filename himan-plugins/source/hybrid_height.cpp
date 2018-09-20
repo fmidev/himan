@@ -153,7 +153,7 @@ himan::info_t hybrid_height::GetSurfacePressure(himan::info_t& myTargetInfo)
 
 				auto newInfo = make_shared<info>(*ret);
 				newInfo->SetParam(param("LNSP-HPA"));
-				newInfo->Create(ret->Grid());
+				newInfo->Create(ret->Base());
 
 				auto& target = VEC(newInfo);
 				for (double& val : target)
@@ -250,29 +250,30 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 		// We have to give shared_ptr's as arguments to make sure they don't go
 		// out of scope and memory free'd while processing is still in progress
 
-		pool.push_back(async(launch::async,
-		                     [&](info_t _myTargetInfo, info_t _PInfo, info_t _prevPInfo, info_t _TInfo, info_t _prevTInfo) {
-			                     auto& target = VEC(_myTargetInfo);
-			                     const auto& PVec = VEC(_PInfo);
-			                     const auto& prevPVec = VEC(_prevPInfo);
-			                     const auto& TVec = VEC(_TInfo);
-			                     const auto& prevTVec = VEC(_prevTInfo);
+		pool.push_back(
+		    async(launch::async,
+		          [&](info_t _myTargetInfo, info_t _PInfo, info_t _prevPInfo, info_t _TInfo, info_t _prevTInfo) {
+			          auto& target = VEC(_myTargetInfo);
+			          const auto& PVec = VEC(_PInfo);
+			          const auto& prevPVec = VEC(_prevPInfo);
+			          const auto& TVec = VEC(_TInfo);
+			          const auto& prevTVec = VEC(_prevTInfo);
 
-			                     for (auto&& tup : zip_range(target, PVec, prevPVec, TVec, prevTVec))
-			                     {
-				                     double& result = tup.get<0>();
+			          for (auto&& tup : zip_range(target, PVec, prevPVec, TVec, prevTVec))
+			          {
+				          double& result = tup.get<0>();
 
-				                     const double P = tup.get<1>();
-				                     const double prevP = tup.get<2>();
-				                     const double T = tup.get<3>();
-				                     const double prevT = tup.get<4>();
+				          const double P = tup.get<1>();
+				          const double prevP = tup.get<2>();
+				          const double T = tup.get<3>();
+				          const double prevT = tup.get<4>();
 
-				                     result = 14.628 * (prevT + T) * log(prevP / P);
+				          result = 14.628 * (prevT + T) * log(prevP / P);
 
-				                     ASSERT(isfinite(result));
-			                     }
-			                 },
-		                     make_shared<info>(*myTargetInfo), PInfo, prevPInfo, TInfo, prevTInfo));
+				          ASSERT(isfinite(result));
+			          }
+		          },
+		          make_shared<info>(*myTargetInfo), PInfo, prevPInfo, TInfo, prevTInfo));
 
 		if (pool.size() == 8)
 		{

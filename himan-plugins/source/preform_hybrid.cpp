@@ -186,9 +186,9 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	 */
 
 	boost::thread t(&preform_hybrid::FreezingArea, this, itsConfiguration, forecastTime, forecastType,
-	                boost::ref(freezingArea), myTargetInfo->Grid());
+	                boost::ref(freezingArea), myTargetInfo->Base());
 
-	Stratus(itsConfiguration, forecastTime, forecastType, stratus, myTargetInfo->Grid());
+	Stratus(itsConfiguration, forecastTime, forecastType, stratus, myTargetInfo->Base());
 
 	t.join();
 
@@ -414,7 +414,7 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 }
 
 void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime,
-                                  const forecast_type& ftype, shared_ptr<info>& result, const grid* baseGrid)
+                                  const forecast_type& ftype, shared_ptr<info>& result, shared_ptr<base> baseGrid)
 {
 	auto h = GET_PLUGIN(hitool);
 
@@ -754,7 +754,7 @@ vector<double> Add(vector<double> vec, double a)
 }
 
 void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime,
-                             const forecast_type& ftype, shared_ptr<info>& result, const grid* baseGrid)
+                             const forecast_type& ftype, shared_ptr<info>& result, shared_ptr<base> baseGrid)
 {
 	auto h = GET_PLUGIN(hitool);
 

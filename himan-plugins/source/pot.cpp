@@ -447,29 +447,24 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	int largeFilterSizeX = 5;
 	int largeFilterSizeY = 5;
 
+	const double di = dynamic_pointer_cast<regular_grid>(myTargetInfo->Grid())->Di();
+	const double dj = dynamic_pointer_cast<regular_grid>(myTargetInfo->Grid())->Dj();
+
 	switch (myTargetInfo->Grid()->Type())
 	{
 		case kLatitudeLongitude:
 		case kRotatedLatitudeLongitude:
-			smallFilterSizeX =
-			    static_cast<int>((smallRadius / dynamic_cast<regular_grid*>(myTargetInfo->Grid())->Di() / 111.0));
-			smallFilterSizeY =
-			    static_cast<int>((smallRadius / dynamic_cast<regular_grid*>(myTargetInfo->Grid())->Dj() / 111.0));
-			largeFilterSizeX =
-			    static_cast<int>((largeRadius / dynamic_cast<regular_grid*>(myTargetInfo->Grid())->Di() / 111.0));
-			largeFilterSizeY =
-			    static_cast<int>((largeRadius / dynamic_cast<regular_grid*>(myTargetInfo->Grid())->Dj() / 111.0));
+			smallFilterSizeX = static_cast<int>((smallRadius / di / 111.0));
+			smallFilterSizeY = static_cast<int>((smallRadius / dj / 111.0));
+			largeFilterSizeX = static_cast<int>((largeRadius / di / 111.0));
+			largeFilterSizeY = static_cast<int>((largeRadius / dj / 111.0));
 			break;
 		case kStereographic:
 		case kLambertConformalConic:
-			smallFilterSizeX =
-			    static_cast<int>(round(smallRadius / dynamic_cast<regular_grid*>(myTargetInfo->Grid())->Di() * 1000.0));
-			smallFilterSizeY =
-			    static_cast<int>(round(smallRadius / dynamic_cast<regular_grid*>(myTargetInfo->Grid())->Dj() * 1000.0));
-			largeFilterSizeX =
-			    static_cast<int>(round(largeRadius / dynamic_cast<regular_grid*>(myTargetInfo->Grid())->Di() * 1000.0));
-			largeFilterSizeY =
-			    static_cast<int>(round(largeRadius / dynamic_cast<regular_grid*>(myTargetInfo->Grid())->Dj() * 1000.0));
+			smallFilterSizeX = static_cast<int>(round(smallRadius / di * 1000.0));
+			smallFilterSizeY = static_cast<int>(round(smallRadius / dj * 1000.0));
+			largeFilterSizeX = static_cast<int>(round(largeRadius / di * 1000.0));
+			largeFilterSizeY = static_cast<int>(round(largeRadius / dj * 1000.0));
 			break;
 		default:
 			break;
@@ -482,7 +477,8 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	// Cape filtering
 	himan::matrix<double> filtered_CAPE = numerical_functions::Max2D(CAPEMaxInfo->Data(), small_filter_kernel);
-	CAPEMaxInfo->Grid()->Data(filtered_CAPE);
+	auto b = CAPEMaxInfo->Base();
+	b->data = move(filtered_CAPE);
 
 	// Cb_top filtering
 	himan::matrix<double> filtered_CbTop = numerical_functions::Max2D(CbTopMaxInfo->Data(), small_filter_kernel);

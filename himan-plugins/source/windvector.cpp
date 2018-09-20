@@ -204,7 +204,7 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		ASSERT(UInfo->Grid()->Type() == VInfo->Grid()->Type());
 
 #ifdef HAVE_CUDA
-		Unpack({UInfo, VInfo});
+		util::Unpack({UInfo, VInfo}, false);
 #endif
 
 		interpolate::RotateVectorComponents(*UInfo, *VInfo,
@@ -272,11 +272,9 @@ shared_ptr<himan::info> windvector::Fetch(const forecast_time& theTime, const le
 		ret = f->Fetch(itsConfiguration, theTime, theLevel, theParam, theType, itsConfiguration->UseCudaForPacking());
 
 #ifdef HAVE_CUDA
-		if (!returnPacked && ret->Grid()->IsPackedData())
+		if (!returnPacked && ret->PackedData()->HasData())
 		{
-			ASSERT(ret->Grid()->PackedData().ClassName() == "simple_packed");
-
-			util::Unpack({ret->Grid()});
+			util::Unpack({ret}, false);
 
 			auto c = GET_PLUGIN(cache);
 

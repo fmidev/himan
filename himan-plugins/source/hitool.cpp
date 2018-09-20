@@ -408,7 +408,7 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 		values->First();
 		heights->First();
 
-		mod->Process(values->Grid()->Data().Values(), heights->Grid()->Data().Values());
+		mod->Process(values->Data().Values(), heights->Data().Values());
 
 #ifdef DEBUG
 		size_t heightsCrossed = mod->HeightsCrossed();
