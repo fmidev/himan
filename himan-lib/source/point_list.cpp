@@ -73,7 +73,8 @@ ostream& point_list::Write(std::ostream& file) const
 
 	for (size_t i = 0; i < itsStations.size(); i++)
 	{
-		file << "__itsPoint__[" << i << "] " << itsStations[i].X() << "," << itsStations[i].Y() << endl;
+		file << "__itsStation__[" << i << "] " << itsStations[i].X() << "," << itsStations[i].Y() << " "
+		     << itsStations[i].Id() << endl;
 	}
 
 	return file;
