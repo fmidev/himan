@@ -61,8 +61,9 @@ class grib : public io_plugin
 	 * @return A vector of shared_ptr'd infos.
 	 */
 
-	std::vector<std::shared_ptr<info>> FromFile(const std::string& inputFile, const search_options& options,
-	                                            bool readContents, bool readPackedData, bool forceCaching) const;
+	std::vector<std::shared_ptr<info<double>>> FromFile(const std::string& inputFile, const search_options& options,
+	                                                    bool readContents, bool readPackedData,
+	                                                    bool forceCaching) const;
 
 	/**
 	 * @brief Return selected data from a grib index file.
@@ -79,18 +80,19 @@ class grib : public io_plugin
 	 * @return A vector of shared_ptr'd infos.
 	 */
 
-	std::vector<std::shared_ptr<info>> FromIndexFile(const std::string& inputFile, const search_options& options,
-	                                                 bool readContents, bool readPackedData, bool forceCaching) const;
+	std::vector<std::shared_ptr<info<double>>> FromIndexFile(const std::string& inputFile,
+	                                                         const search_options& options, bool readContents,
+	                                                         bool readPackedData, bool forceCaching) const;
 
-	bool ToFile(info& anInfo, std::string& outputFile, bool appendToFile = false);
+	bool ToFile(info<double>& anInfo, std::string& outputFile, bool appendToFile = false);
 
    private:
-	void WriteAreaAndGrid(info& anInfo);
-	void WriteTime(info& anInfo);
-	void WriteParameter(info& anInfo);
-	void WriteLevel(info& anInfo);
+	void WriteAreaAndGrid(info<double>& anInfo);
+	void WriteTime(info<double>& anInfo);
+	void WriteParameter(info<double>& anInfo);
+	void WriteLevel(info<double>& anInfo);
 	bool CreateInfoFromGrib(const search_options& options, bool readPackedData, bool forceCaching,
-	                        std::shared_ptr<info> newInfo) const;
+	                        std::shared_ptr<info<double>> newInfo) const;
 
 	/**
 	 * @brief OptionsToKeys

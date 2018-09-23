@@ -22,7 +22,8 @@ writer::writer() : itsWriteOptions()
 {
 	itsLogger = logger("writer");
 }
-bool writer::CreateFile(info& theInfo, std::shared_ptr<const plugin_configuration> conf, std::string& theOutputFile)
+bool writer::CreateFile(info<double>& theInfo, std::shared_ptr<const plugin_configuration> conf,
+                        std::string& theOutputFile)
 {
 	namespace fs = boost::filesystem;
 

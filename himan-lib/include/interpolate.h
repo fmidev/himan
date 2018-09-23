@@ -49,7 +49,7 @@ class area_interpolation
    public:
 	area_interpolation() = default;
 	area_interpolation(grid& source, grid& target, HPInterpolationMethod method);
-	void Interpolate(base& source, base& target);
+	void Interpolate(base<double>& source, base<double>& target);
 	size_t SourceSize() const;
 	size_t TargetSize() const;
 
@@ -67,8 +67,8 @@ class area_interpolation
 class interpolator
 {
    public:
-	static bool Insert(const base& source, const base& target, HPInterpolationMethod method);
-	bool Interpolate(base& source, base& target, HPInterpolationMethod method);
+	static bool Insert(const base<double>& source, const base<double>& target, HPInterpolationMethod method);
+	bool Interpolate(base<double>& source, base<double>& target, HPInterpolationMethod method);
 
    private:
 	static std::mutex interpolatorAccessMutex;
@@ -84,12 +84,13 @@ bool IsVectorComponent(const std::string& paramName);
 
 HPInterpolationMethod InterpolationMethod(const std::string& paramName, HPInterpolationMethod interpolationMethod);
 
-void RotateVectorComponents(info& UInfo, info& VInfo, bool useCuda);
+void RotateVectorComponents(info<double>& UInfo, info<double>& VInfo, bool useCuda);
 
-void RotateVectorComponentsCPU(info& UInfo, info& VInfo);
+void RotateVectorComponentsCPU(info<double>& UInfo, info<double>& VInfo);
 
 #ifdef HAVE_CUDA
-void RotateVectorComponentsGPU(info& UInfo, info& VInfo, cudaStream_t& stream, double* d_u, double* d_v);
+void RotateVectorComponentsGPU(info<double>& UInfo, info<double>& VInfo, cudaStream_t& stream, double* d_u,
+                               double* d_v);
 #endif
 
 bool IsSupportedGridForRotation(HPGridType type);

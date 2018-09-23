@@ -36,8 +36,8 @@ class point_list : public irregular_grid
 	point FirstPoint() const override;
 	point LastPoint() const override;
 
-	bool operator==(const point_list& other) const;
-	bool operator!=(const point_list& other) const;
+	bool operator==(const grid& other) const;
+	bool operator!=(const grid& other) const;
 
 	point LatLon(size_t locationIndex) const;
 

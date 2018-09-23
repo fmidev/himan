@@ -8,7 +8,6 @@ namespace himan
 {
 namespace plugin
 {
-
 enum blend_mode
 {
 	kCalculateNone,
@@ -79,19 +78,19 @@ class blend : public compiled_plugin, private compiled_plugin_base
 	void Run(unsigned short threadIndex);
 
    protected:
-	virtual void Calculate(std::shared_ptr<info> targetInfo, unsigned short threadIndex);
+	virtual void Calculate(std::shared_ptr<info<double>> targetInfo, unsigned short threadIndex);
 	virtual void WriteToFile(const info_t targetInfo, write_options opts = write_options()) override;
 
    private:
-	void CalculateBlend(std::shared_ptr<info> targetInfo, unsigned short threadIndex);
-	void CalculateMember(std::shared_ptr<info> targetInfo, unsigned short threadIndex, blend_mode mode);
+	void CalculateBlend(std::shared_ptr<info<double>> targetInfo, unsigned short threadIndex);
+	void CalculateMember(std::shared_ptr<info<double>> targetInfo, unsigned short threadIndex, blend_mode mode);
 
-	matrix<double> CalculateMAE(logger& log, std::shared_ptr<info> targetInfo, const forecast_time& calcTime,
+	matrix<double> CalculateMAE(logger& log, std::shared_ptr<info<double>> targetInfo, const forecast_time& calcTime,
 	                            const blend_producer& blendProd);
-	matrix<double> CalculateBias(logger& log, std::shared_ptr<info> targetInfo, const forecast_time& calcTime,
+	matrix<double> CalculateBias(logger& log, std::shared_ptr<info<double>> targetInfo, const forecast_time& calcTime,
 	                             const blend_producer& blendProd);
 
-	void SetupOutputForecastTimes(std::shared_ptr<info> Info, const raw_time& latestOrigin,
+	void SetupOutputForecastTimes(std::shared_ptr<info<double>> Info, const raw_time& latestOrigin,
 	                              const forecast_time& current, int maxStep, int originTimeStep);
 	raw_time LatestOriginTimeForProducer(const blend_producer& producer) const;
 

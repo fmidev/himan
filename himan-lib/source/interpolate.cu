@@ -37,10 +37,11 @@ __host__ __device__ unsigned int Index(unsigned int x, unsigned int y, unsigned 
 }
 __host__ __device__ unsigned int Index(point p, unsigned int sx)
 {
-	if(himan::IsMissing(p.x) || himan::IsMissing(p.x))
+	if (himan::IsMissing(p.x) || himan::IsMissing(p.x))
 		return 0;
 
-	return Index(static_cast<unsigned int>(p.x) == sx ? 0 : static_cast<unsigned int>(p.x), static_cast<unsigned int>(p.y), sx);
+	return Index(static_cast<unsigned int>(p.x) == sx ? 0 : static_cast<unsigned int>(p.x),
+	             static_cast<unsigned int>(p.y), sx);
 }
 
 __global__ void Swap(double* __restrict__ arr, size_t ni, size_t nj)
@@ -92,7 +93,7 @@ static std::mutex s_cachedGridMutex;
 
 // This results in (for example): 'lcc_889_949', 'rll_1030_816'.
 // Should be enough for uniquely determining a grid during one run.
-static __host__ std::string CacheEntryName(const himan::info& Info)
+static __host__ std::string CacheEntryName(const himan::info<double>& Info)
 {
 	std::stringstream ss;
 	if (Info.Grid()->Class() == himan::kRegularGrid)
@@ -108,7 +109,7 @@ static __host__ std::string CacheEntryName(const himan::info& Info)
 	return ss.str();
 }
 
-void CreateGrid(himan::info& sourceInfo, himan::info& targetInfo, std::vector<::point>& grid)
+void CreateGrid(himan::info<double>& sourceInfo, himan::info<double>& targetInfo, std::vector<::point>& grid)
 {
 	int i = 0;
 	targetInfo.ResetLocation();
@@ -222,8 +223,8 @@ __device__ bool IsInsideGrid(point& gp, size_t size_x, size_t size_y)
 	    // if interpolated grid points are larger than source grid in x or y
 	    // direction, it means again that we are outside of the area
 
-	    ((fabs(gp.x - (size_x-1)) < kEpsilon || __double2uint_ru(gp.x) < size_x) &&
-	     (fabs(gp.y - (size_y-1)) < kEpsilon || __double2uint_ru(gp.y) < size_y)))
+	    ((fabs(gp.x - (size_x - 1)) < kEpsilon || __double2uint_ru(gp.x) < size_x) &&
+	     (fabs(gp.y - (size_y - 1)) < kEpsilon || __double2uint_ru(gp.y) < size_y)))
 	{
 		return true;
 	}
@@ -342,8 +343,8 @@ __global__ void RotateRotatedLatitudeLongitude(double* __restrict__ d_u, double*
 	}
 }
 
-void himan::interpolate::RotateVectorComponentsGPU(himan::info& UInfo, himan::info& VInfo, cudaStream_t& stream,
-                                                   double* d_u, double* d_v)
+void himan::interpolate::RotateVectorComponentsGPU(himan::info<double>& UInfo, himan::info<double>& VInfo,
+                                                   cudaStream_t& stream, double* d_u, double* d_v)
 {
 	const size_t N = UInfo.SizeLocations();
 	const size_t memsize = N * sizeof(double);

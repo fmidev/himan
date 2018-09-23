@@ -332,7 +332,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void split_sum::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	boost::thread_group threads;
 	vector<info_t> infos;
@@ -341,7 +341,7 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 	for (myTargetInfo->Reset<param>(); myTargetInfo->Next<param>(); ++subThreadIndex)
 	{
-		auto newInfo = make_shared<info>(*myTargetInfo);
+		auto newInfo = make_shared<info<double>>(*myTargetInfo);
 
 		infos.push_back(newInfo);  // extend lifetime over this loop
 
@@ -541,10 +541,10 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 	                      to_string(myTargetInfo->Data().Size()));
 }
 
-pair<shared_ptr<himan::info>, shared_ptr<himan::info>> split_sum::GetSourceDataForRate(shared_ptr<info> myTargetInfo,
-                                                                                       int step) const
+pair<shared_ptr<himan::info<double>>, shared_ptr<himan::info<double>>> split_sum::GetSourceDataForRate(
+    shared_ptr<info<double>> myTargetInfo, int step) const
 {
-	shared_ptr<info> prevInfo, curInfo;
+	shared_ptr<info<double>> prevInfo, curInfo;
 
 	HPTimeResolution timeResolution = myTargetInfo->Time().StepResolution();
 
@@ -654,7 +654,8 @@ pair<shared_ptr<himan::info>, shared_ptr<himan::info>> split_sum::GetSourceDataF
 	return make_pair(prevInfo, curInfo);
 }
 
-shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<info> myTargetInfo, const forecast_time& wantedTime) const
+shared_ptr<himan::info<double>> split_sum::FetchSourceData(shared_ptr<info<double>> myTargetInfo,
+                                                           const forecast_time& wantedTime) const
 {
 	level wantedLevel(kHeight, 0, "HEIGHT");
 
@@ -671,14 +672,14 @@ shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<info> myTargetInfo
 		wantedLevel = level(kTopOfAtmosphere, 0, "TOP");
 	}
 
-	shared_ptr<info> SumInfo = Fetch(wantedTime, wantedLevel, params, myTargetInfo->ForecastType());
+	shared_ptr<info<double>> SumInfo = Fetch(wantedTime, wantedLevel, params, myTargetInfo->ForecastType());
 
 	// If model does not provide data for timestep 0, emulate it
 	// by providing a zero-grid
 
 	if (!SumInfo && wantedTime.Step() == 0)
 	{
-		SumInfo = make_shared<info>(*myTargetInfo);
+		SumInfo = make_shared<info<double>>(*myTargetInfo);
 		vector<forecast_time> times = {wantedTime};
 		vector<level> levels = {wantedLevel};
 		params = {sourceParameters[myTargetInfo->Param().Name()][0]};

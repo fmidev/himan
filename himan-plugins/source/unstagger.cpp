@@ -76,7 +76,7 @@ void unstagger::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void unstagger::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	auto myThreadedLogger = logger("unstagger Thread #" + to_string(threadIndex));
 

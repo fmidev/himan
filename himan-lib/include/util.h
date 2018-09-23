@@ -36,7 +36,7 @@ HPFileType FileType(const std::string& theFile);
  * @brief Creates a neons-style filename with path, but without file extension
  */
 
-std::string MakeFileName(HPFileWriteOption fileWriteOption, const info& info, const configuration& conf);
+std::string MakeFileName(HPFileWriteOption fileWriteOption, const info<double>& info, const configuration& conf);
 
 /**
  * @brief Splits a string and fills the gaps if requested
@@ -141,7 +141,7 @@ double ToPower(double value, double power);
  * @param grids List of infos that are unpacked.
  */
 
-void Unpack(std::vector<std::shared_ptr<info>> infos, bool addToCache = true);
+void Unpack(std::vector<std::shared_ptr<info<double>>> infos, bool addToCache = true);
 
 /**
  * @brief Compute the x/y-derivative of input A
@@ -232,7 +232,7 @@ info_t CSVToInfo(const std::vector<std::string>& csv);
  * @brief Return the percentage of missing values in info for all grids.
  */
 
-double MissingPercent(const himan::info& info);
+double MissingPercent(const himan::info<double>& info);
 
 /**
  * @brief Parse boolean value from string

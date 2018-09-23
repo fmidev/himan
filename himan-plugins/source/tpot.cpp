@@ -19,7 +19,7 @@ using namespace himan::plugin;
 #ifdef HAVE_CUDA
 namespace tpotgpu
 {
-void Process(std::shared_ptr<const himan::plugin_configuration> conf, std::shared_ptr<himan::info> myTargetInfo,
+void Process(std::shared_ptr<const himan::plugin_configuration> conf, std::shared_ptr<himan::info<double>> myTargetInfo,
              bool theta, bool thetaw, bool thetae);
 }
 #endif
@@ -100,7 +100,7 @@ void tpot::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void tpot::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	auto myThreadedLogger = logger("tpotThread #" + to_string(threadIndex));
 

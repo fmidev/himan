@@ -53,7 +53,7 @@ bool InterpolateArea(const grid* baseGrid, info_t source)
 	}
 #endif
 
-	base target;
+	base<double> target;
 	target.grid = std::shared_ptr<himan::grid>(baseGrid->Clone());
 
 	if (baseGrid->Class() == kRegularGrid)
@@ -78,6 +78,7 @@ bool InterpolateArea(const grid* baseGrid, info_t source)
 
 		return true;
 	}
+
 	return false;
 }
 
@@ -261,7 +262,7 @@ HPInterpolationMethod InterpolationMethod(const std::string& paramName, HPInterp
 	return interpolationMethod;
 }
 
-void RotateVectorComponentsCPU(info& UInfo, info& VInfo)
+void RotateVectorComponentsCPU(info<double>& UInfo, info<double>& VInfo)
 {
 	ASSERT(UInfo.Grid()->Type() == VInfo.Grid()->Type());
 
@@ -373,7 +374,7 @@ void RotateVectorComponentsCPU(info& UInfo, info& VInfo)
 	}
 }
 
-void RotateVectorComponents(info& UInfo, info& VInfo, bool useCuda)
+void RotateVectorComponents(info<double>& UInfo, info<double>& VInfo, bool useCuda)
 {
 	ASSERT(UInfo.Grid()->UVRelativeToGrid() == VInfo.Grid()->UVRelativeToGrid());
 
@@ -669,7 +670,7 @@ area_interpolation::area_interpolation(grid& source, grid& target, HPInterpolati
 	itsInterpolation.setFromTriplets(coefficients.begin(), coefficients.end());
 }
 
-void area_interpolation::Interpolate(base& source, base& target)
+void area_interpolation::Interpolate(base<double>& source, base<double>& target)
 {
 	Map<Matrix<double, Dynamic, Dynamic>> srcValues(source.data.ValuesAsPOD(), source.data.Size(), 1);
 	Map<Matrix<double, Dynamic, Dynamic>> trgValues(target.data.ValuesAsPOD(), target.data.Size(), 1);
@@ -691,7 +692,7 @@ size_t area_interpolation::TargetSize() const
 std::map<size_t, himan::interpolate::area_interpolation> interpolator::cache;
 std::mutex interpolator::interpolatorAccessMutex;
 
-bool interpolator::Insert(const base& source, const base& target, HPInterpolationMethod method)
+bool interpolator::Insert(const base<double>& source, const base<double>& target, HPInterpolationMethod method)
 {
 	std::lock_guard<std::mutex> guard(interpolatorAccessMutex);
 
@@ -716,7 +717,7 @@ bool interpolator::Insert(const base& source, const base& target, HPInterpolatio
 	return cache.insert(std::move(insertValue)).second;
 }
 
-bool interpolator::Interpolate(base& source, base& target, HPInterpolationMethod method)
+bool interpolator::Interpolate(base<double>& source, base<double>& target, HPInterpolationMethod method)
 {
 	std::vector<size_t> hashes{method, source.grid->Hash(), target.grid->Hash()};
 	auto it = cache.find(boost::hash_range(hashes.begin(), hashes.end()));

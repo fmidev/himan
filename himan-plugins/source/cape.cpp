@@ -344,7 +344,7 @@ void cape::Process(shared_ptr<const plugin_configuration> conf)
 	Start();
 }
 
-void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void cape::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	/*
 	 * Algorithm:
@@ -497,10 +497,10 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	aTimer.Start();
 
-	auto capeInfo = make_shared<info>(*myTargetInfo);
+	auto capeInfo = make_shared<info<double>>(*myTargetInfo);
 	boost::thread t1(&cape::GetCAPE, this, boost::ref(capeInfo), LFC);
 
-	auto cinInfo = make_shared<info>(*myTargetInfo);
+	auto cinInfo = make_shared<info<double>>(*myTargetInfo);
 	boost::thread t2(&cape::GetCIN, this, boost::ref(cinInfo), get<0>(sourceValues), get<2>(sourceValues), LCL.first,
 	                 LCL.second, Convert(LCLZ), LFC.second, Convert(LFCZ));
 
@@ -621,7 +621,7 @@ void cape::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	mySubThreadedLogger.Debug("CIN: " + ::PrintMean<double>(VEC(cinInfo)));
 }
 
-void cape::GetCIN(shared_ptr<info> myTargetInfo, const vector<float>& Tsource, const vector<float>& Psource,
+void cape::GetCIN(shared_ptr<info<double>> myTargetInfo, const vector<float>& Tsource, const vector<float>& Psource,
                   const vector<float>& TLCL, const vector<float>& PLCL, const vector<float>& ZLCL,
                   const vector<float>& PLFC, const vector<float>& ZLFC)
 {
@@ -637,7 +637,7 @@ void cape::GetCIN(shared_ptr<info> myTargetInfo, const vector<float>& Tsource, c
 	}
 }
 
-void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<float>& Tsource, const vector<float>& Psource,
+void cape::GetCINCPU(shared_ptr<info<double>> myTargetInfo, const vector<float>& Tsource, const vector<float>& Psource,
                      const vector<float>& TLCL, const vector<float>& PLCL, const vector<float>& ZLCL,
                      const vector<float>& PLFC, const vector<float>& ZLFC)
 {
@@ -839,7 +839,7 @@ void cape::GetCINCPU(shared_ptr<info> myTargetInfo, const vector<float>& Tsource
 	myTargetInfo->Data().Set(Convert(cinh));
 }
 
-void cape::GetCAPE(shared_ptr<info> myTargetInfo, const pair<vector<float>, vector<float>>& LFC)
+void cape::GetCAPE(shared_ptr<info<double>> myTargetInfo, const pair<vector<float>, vector<float>>& LFC)
 {
 #ifdef HAVE_CUDA
 	if (itsConfiguration->UseCuda())
@@ -853,7 +853,7 @@ void cape::GetCAPE(shared_ptr<info> myTargetInfo, const pair<vector<float>, vect
 	}
 }
 
-void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<float>& T, const vector<float>& P)
+void cape::GetCAPECPU(shared_ptr<info<double>> myTargetInfo, const vector<float>& T, const vector<float>& P)
 {
 	ASSERT(T.size() == P.size());
 
@@ -1123,7 +1123,8 @@ void cape::GetCAPECPU(shared_ptr<info> myTargetInfo, const vector<float>& T, con
 	myTargetInfo->Data().Set(Convert(CAPE3km));
 }
 
-pair<vector<float>, vector<float>> cape::GetLFC(shared_ptr<info> myTargetInfo, vector<float>& T, vector<float>& P)
+pair<vector<float>, vector<float>> cape::GetLFC(shared_ptr<info<double>> myTargetInfo, vector<float>& T,
+                                                vector<float>& P)
 {
 	auto h = GET_PLUGIN(hitool);
 
@@ -1179,8 +1180,8 @@ pair<vector<float>, vector<float>> cape::GetLFC(shared_ptr<info> myTargetInfo, v
 	}
 }
 
-pair<vector<float>, vector<float>> cape::GetLFCCPU(shared_ptr<info> myTargetInfo, vector<float>& T, vector<float>& P,
-                                                   vector<float>& TenvLCL)
+pair<vector<float>, vector<float>> cape::GetLFCCPU(shared_ptr<info<double>> myTargetInfo, vector<float>& T,
+                                                   vector<float>& P, vector<float>& TenvLCL)
 {
 	auto h = GET_PLUGIN(hitool);
 
@@ -1413,7 +1414,7 @@ pair<vector<float>, vector<float>> cape::GetLFCCPU(shared_ptr<info> myTargetInfo
 	return make_pair(LFCT, LFCP);
 }
 
-pair<vector<float>, vector<float>> cape::GetLCL(shared_ptr<info> myTargetInfo, const cape_source& sourceValues)
+pair<vector<float>, vector<float>> cape::GetLCL(shared_ptr<info<double>> myTargetInfo, const cape_source& sourceValues)
 {
 	vector<float> TLCL(get<0>(sourceValues).size(), MissingFloat());
 	vector<float> PLCL = TLCL;
@@ -1442,7 +1443,7 @@ pair<vector<float>, vector<float>> cape::GetLCL(shared_ptr<info> myTargetInfo, c
 	return make_pair(TLCL, PLCL);
 }
 
-cape_source cape::GetSurfaceValues(shared_ptr<info> myTargetInfo)
+cape_source cape::GetSurfaceValues(shared_ptr<info<double>> myTargetInfo)
 {
 	/*
 	 * 1. Get temperature and relative humidity from lowest hybrid level.
@@ -1472,7 +1473,7 @@ cape_source cape::GetSurfaceValues(shared_ptr<info> myTargetInfo)
 	return make_tuple(T, TD, Convert(VEC(PInfo)));
 }
 
-cape_source cape::Get500mMixingRatioValues(shared_ptr<info> myTargetInfo)
+cape_source cape::Get500mMixingRatioValues(shared_ptr<info<double>> myTargetInfo)
 {
 /*
  * 1. Calculate potential temperature and mixing ratio for vertical profile
@@ -1495,7 +1496,7 @@ cape_source cape::Get500mMixingRatioValues(shared_ptr<info> myTargetInfo)
 	}
 }
 
-cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info> myTargetInfo)
+cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info<double>> myTargetInfo)
 {
 	modifier_mean tp, mr;
 	level curLevel = itsBottomLevel;
@@ -1635,7 +1636,7 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info> myTargetInfo)
 	return make_tuple(T, TD, PSurf);
 }
 
-cape_source cape::GetHighestThetaEValues(shared_ptr<info> myTargetInfo)
+cape_source cape::GetHighestThetaEValues(shared_ptr<info<double>> myTargetInfo)
 {
 /*
  * 1. Calculate equivalent potential temperature for all hybrid levels
@@ -1658,7 +1659,7 @@ cape_source cape::GetHighestThetaEValues(shared_ptr<info> myTargetInfo)
 	}
 }
 
-cape_source cape::GetHighestThetaEValuesCPU(shared_ptr<info> myTargetInfo)
+cape_source cape::GetHighestThetaEValuesCPU(shared_ptr<info<double>> myTargetInfo)
 {
 	vector<bool> found(myTargetInfo->Data().Size(), false);
 

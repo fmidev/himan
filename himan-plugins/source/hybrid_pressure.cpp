@@ -42,7 +42,7 @@ void hybrid_pressure::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadIndex)
+void hybrid_pressure::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short theThreadIndex)
 {
 	params PParam{param("P-PA"), param("P-HPA")};
 	const param TParam("T-K");
@@ -96,7 +96,7 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 
 				myThreadedLogger.Info("Transforming LNSP to HPa for step " + to_string(forecastTime.Step()));
 
-				auto newInfo = make_shared<info>(*lnspn);
+				auto newInfo = make_shared<info<double>>(*lnspn);
 				newInfo->Set<param>(param("LNSP-HPA"));
 				newInfo->Create(lnspn->Base());
 

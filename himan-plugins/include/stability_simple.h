@@ -41,7 +41,7 @@ class stability_simple : public compiled_plugin, private compiled_plugin_base
 	}
 
    private:
-	void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
+	void Calculate(std::shared_ptr<info<double>> theTargetInfo, unsigned short theThreadIndex);
 };
 
 // the class factory

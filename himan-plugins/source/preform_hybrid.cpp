@@ -140,7 +140,7 @@ void preform_hybrid::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void preform_hybrid::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	ASSERT(fzStLimit >= stLimit);
 
@@ -414,7 +414,8 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 }
 
 void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime,
-                                  const forecast_type& ftype, shared_ptr<info>& result, shared_ptr<base> baseGrid)
+                                  const forecast_type& ftype, shared_ptr<info<double>>& result,
+                                  shared_ptr<base<double>> baseGrid)
 {
 	auto h = GET_PLUGIN(hitool);
 
@@ -427,7 +428,8 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 	vector<forecast_time> times = {ftime};
 	vector<level> levels = {level(kHeight, 0, "HEIGHT")};
 
-	auto ret = make_shared<info>();
+	auto ret = make_shared<info<double>>();
+
 	ret->Set<param>(params);
 	ret->Set<level>(levels);
 	ret->Set<forecast_time>(times);
@@ -755,7 +757,8 @@ vector<double> Add(vector<double> vec, double a)
 }
 
 void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const forecast_time& ftime,
-                             const forecast_type& ftype, shared_ptr<info>& result, shared_ptr<base> baseGrid)
+                             const forecast_type& ftype, shared_ptr<info<double>>& result,
+                             shared_ptr<base<double>> baseGrid)
 {
 	auto h = GET_PLUGIN(hitool);
 
@@ -777,7 +780,8 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 	vector<forecast_time> times = {ftime};
 	vector<level> levels = {level(kHeight, 0, "HEIGHT")};
 
-	auto ret = make_shared<info>();
+	auto ret = make_shared<info<double>>();
+
 	ret->Set<param>(params);
 	ret->Set<level>(levels);
 	ret->Set<forecast_time>(times);

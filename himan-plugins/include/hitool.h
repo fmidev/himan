@@ -11,16 +11,15 @@
 #include "forecast_time.h"
 #include "forecast_type.h"
 #include "himan_common.h"
+#include "info.h"
 #include "modifier.h"
 #include "plugin_configuration.h"
 
 namespace himan
 {
-class info;
-
 namespace plugin
 {
-typedef std::pair<std::shared_ptr<info>, std::shared_ptr<info>> valueheight;
+typedef std::pair<std::shared_ptr<info<double>>, std::shared_ptr<info<double>>> valueheight;
 
 class hitool : public auxiliary_plugin
 {

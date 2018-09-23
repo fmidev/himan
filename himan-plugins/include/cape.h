@@ -43,34 +43,36 @@ class cape : public compiled_plugin, private compiled_plugin_base
 	}
 
    private:
-	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short threadIndex);
+	virtual void Calculate(std::shared_ptr<info<double>> theTargetInfo, unsigned short threadIndex);
 
-	std::pair<std::vector<float>, std::vector<float>> GetLCL(std::shared_ptr<info> myTargetInfo,
+	std::pair<std::vector<float>, std::vector<float>> GetLCL(std::shared_ptr<info<double>> myTargetInfo,
 	                                                         const cape_source& source);
 
-	std::pair<std::vector<float>, std::vector<float>> GetLFC(std::shared_ptr<info> myTargetInfo, std::vector<float>& T,
-	                                                         std::vector<float>& P);
-	std::pair<std::vector<float>, std::vector<float>> GetLFCCPU(std::shared_ptr<info> myTargetInfo,
+	std::pair<std::vector<float>, std::vector<float>> GetLFC(std::shared_ptr<info<double>> myTargetInfo,
+	                                                         std::vector<float>& T, std::vector<float>& P);
+	std::pair<std::vector<float>, std::vector<float>> GetLFCCPU(std::shared_ptr<info<double>> myTargetInfo,
 	                                                            std::vector<float>& T, std::vector<float>& P,
 	                                                            std::vector<float>& TenvLCL);
 
 	// Functions to fetch different kinds of source data
 
-	cape_source GetSurfaceValues(std::shared_ptr<info> myTargetInfo);
+	cape_source GetSurfaceValues(std::shared_ptr<info<double>> myTargetInfo);
 
-	cape_source Get500mMixingRatioValues(std::shared_ptr<info> myTargetInfo);
-	cape_source Get500mMixingRatioValuesCPU(std::shared_ptr<info> myTargetInfo);
+	cape_source Get500mMixingRatioValues(std::shared_ptr<info<double>> myTargetInfo);
+	cape_source Get500mMixingRatioValuesCPU(std::shared_ptr<info<double>> myTargetInfo);
 
-	cape_source GetHighestThetaEValues(std::shared_ptr<info> myTargetInfo);
-	cape_source GetHighestThetaEValuesCPU(std::shared_ptr<info> myTargetInfo);
+	cape_source GetHighestThetaEValues(std::shared_ptr<info<double>> myTargetInfo);
+	cape_source GetHighestThetaEValuesCPU(std::shared_ptr<info<double>> myTargetInfo);
 
-	void GetCAPE(std::shared_ptr<info> myTargetInfo, const std::pair<std::vector<float>, std::vector<float>>& LFC);
-	void GetCAPECPU(std::shared_ptr<info> myTargetInfo, const std::vector<float>& T, const std::vector<float>& P);
+	void GetCAPE(std::shared_ptr<info<double>> myTargetInfo,
+	             const std::pair<std::vector<float>, std::vector<float>>& LFC);
+	void GetCAPECPU(std::shared_ptr<info<double>> myTargetInfo, const std::vector<float>& T,
+	                const std::vector<float>& P);
 
-	void GetCIN(std::shared_ptr<info> myTargetInfo, const std::vector<float>& Tsource,
+	void GetCIN(std::shared_ptr<info<double>> myTargetInfo, const std::vector<float>& Tsource,
 	            const std::vector<float>& Psource, const std::vector<float>& TLCL, const std::vector<float>& PLCL,
 	            const std::vector<float>& ZLCL, const std::vector<float>& PLFC, const std::vector<float>& ZLFC);
-	void GetCINCPU(std::shared_ptr<info> myTargetInfo, const std::vector<float>& Tsource,
+	void GetCINCPU(std::shared_ptr<info<double>> myTargetInfo, const std::vector<float>& Tsource,
 	               const std::vector<float>& Psource, const std::vector<float>& TLCL, const std::vector<float>& PLCL,
 	               const std::vector<float>& ZLCL, const std::vector<float>& PLFC, const std::vector<float>& ZLFC);
 

@@ -40,7 +40,7 @@ class tpot : public compiled_plugin, private compiled_plugin_base
 	}
 
    private:
-	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short theThreadIndex);
+	virtual void Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned short theThreadIndex);
 
 	bool itsThetaCalculation;
 	bool itsThetaWCalculation;

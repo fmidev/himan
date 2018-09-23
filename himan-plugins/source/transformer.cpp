@@ -167,7 +167,7 @@ void transformer::SetAdditionalParameters()
 	else
 	{
 		// copy levels from target
-		auto x = make_shared<info>(*itsInfo);
+		auto x = make_shared<info<double>>(*itsInfo);
 		for (x->Reset<level>(); x->Next<level>();)
 		{
 			itsSourceLevels.push_back(x->Level());
@@ -274,7 +274,7 @@ void transformer::Rotate(info_t myTargetInfo)
 	myTargetInfo->Data().Set(VEC(a));
 	myTargetInfo->Grid()->UVRelativeToGrid(a->Grid()->UVRelativeToGrid());
 
-	auto secondInfo = make_shared<info>(*myTargetInfo);
+	auto secondInfo = make_shared<info<double>>(*myTargetInfo);
 	secondInfo->Index<param>(1);
 	secondInfo->Data().Set(VEC(b));
 	secondInfo->Grid()->UVRelativeToGrid(b->Grid()->UVRelativeToGrid());
@@ -282,7 +282,7 @@ void transformer::Rotate(info_t myTargetInfo)
 	interpolate::RotateVectorComponents(*myTargetInfo, *secondInfo, false);
 }
 
-void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	auto myThreadedLogger = logger("transformerThread #" + to_string(threadIndex));
 

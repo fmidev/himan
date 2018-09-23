@@ -45,7 +45,7 @@ querydata::querydata()
 {
 	itsLogger = logger("querydata");
 }
-bool querydata::ToFile(info& theInfo, string& theOutputFile)
+bool querydata::ToFile(info<double>& theInfo, string& theOutputFile)
 {
 	ofstream out(theOutputFile.c_str());
 
@@ -70,7 +70,8 @@ bool querydata::ToFile(info& theInfo, string& theOutputFile)
 	return true;
 }
 
-shared_ptr<NFmiQueryData> querydata::CreateQueryData(const info& originalInfo, bool activeOnly, bool applyScaleAndBase)
+shared_ptr<NFmiQueryData> querydata::CreateQueryData(const info<double>& originalInfo, bool activeOnly,
+                                                     bool applyScaleAndBase)
 {
 	auto localInfo(originalInfo);
 
@@ -174,7 +175,7 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(const info& originalInfo, b
 	return qdata;
 }
 
-bool querydata::CopyData(info& theInfo, NFmiFastQueryInfo& qinfo, bool applyScaleAndBase) const
+bool querydata::CopyData(info<double>& theInfo, NFmiFastQueryInfo& qinfo, bool applyScaleAndBase) const
 {
 	ASSERT(theInfo.Data().Size() == qinfo.SizeLocations());
 
@@ -230,7 +231,7 @@ bool querydata::CopyData(info& theInfo, NFmiFastQueryInfo& qinfo, bool applyScal
 	return true;
 }
 
-NFmiTimeDescriptor querydata::CreateTimeDescriptor(info& info, bool theActiveOnly)
+NFmiTimeDescriptor querydata::CreateTimeDescriptor(info<double>& info, bool theActiveOnly)
 {
 	/*
 	 * Create time descriptor
@@ -278,7 +279,7 @@ NFmiTimeDescriptor querydata::CreateTimeDescriptor(info& info, bool theActiveOnl
 	return NFmiTimeDescriptor(originTime, tlist);
 }
 
-void AddToParamBag(himan::info& info, NFmiParamBag& pbag)
+void AddToParamBag(himan::info<double>& info, NFmiParamBag& pbag)
 {
 	string precision;
 
@@ -298,7 +299,7 @@ void AddToParamBag(himan::info& info, NFmiParamBag& pbag)
 	pbag.Add(NFmiDataIdent(nbParam));
 }
 
-NFmiParamDescriptor querydata::CreateParamDescriptor(info& info, bool theActiveOnly)
+NFmiParamDescriptor querydata::CreateParamDescriptor(info<double>& info, bool theActiveOnly)
 {
 	/*
 	 * Create parameter descriptor
@@ -323,7 +324,7 @@ NFmiParamDescriptor querydata::CreateParamDescriptor(info& info, bool theActiveO
 	return NFmiParamDescriptor(pbag);
 }
 
-NFmiHPlaceDescriptor querydata::CreatePoint(info& info) const
+NFmiHPlaceDescriptor querydata::CreatePoint(info<double>& info) const
 {
 	const auto g = std::dynamic_pointer_cast<point_list>(info.Grid());
 	NFmiLocationBag bag;
@@ -337,7 +338,7 @@ NFmiHPlaceDescriptor querydata::CreatePoint(info& info) const
 	return NFmiHPlaceDescriptor(bag);
 }
 
-NFmiHPlaceDescriptor querydata::CreateGrid(info& info) const
+NFmiHPlaceDescriptor querydata::CreateGrid(info<double>& info) const
 {
 	/*
 	 * If whole info is converted to querydata, we need to check that if info contains
@@ -428,7 +429,7 @@ NFmiHPlaceDescriptor querydata::CreateGrid(info& info) const
 	return NFmiHPlaceDescriptor(theGrid);
 }
 
-NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(info& info, bool activeOnly)
+NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(info<double>& info, bool activeOnly)
 {
 	if (!activeOnly && info.Size<forecast_time>() * info.Size<param>() * info.Size<level>() > 1)
 	{
@@ -498,7 +499,7 @@ NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(info& info, bool activeOn
 	}
 }
 
-NFmiVPlaceDescriptor querydata::CreateVPlaceDescriptor(info& info, bool theActiveOnly)
+NFmiVPlaceDescriptor querydata::CreateVPlaceDescriptor(info<double>& info, bool theActiveOnly)
 {
 	NFmiLevelBag lbag;
 
@@ -521,14 +522,14 @@ NFmiVPlaceDescriptor querydata::CreateVPlaceDescriptor(info& info, bool theActiv
 	return NFmiVPlaceDescriptor(lbag);
 }
 
-shared_ptr<himan::info> querydata::FromFile(const string& inputFile, const search_options& options) const
+shared_ptr<himan::info<double>> querydata::FromFile(const string& inputFile, const search_options& options) const
 {
 	throw runtime_error(ClassName() + ": Function FromFile() not implemented yet");
 }
 
-shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData) const
+shared_ptr<himan::info<double>> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData) const
 {
-	auto newInfo = make_shared<info>();
+	auto newInfo = make_shared<info<double>>();
 	grid* newGrid = 0;
 
 	NFmiQueryInfo qinfo = theData.get();
@@ -660,7 +661,7 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 	dynamic_cast<regular_grid*>(newGrid)->ScanningMode(kBottomLeft);
 	newGrid->EarthShape(earth_shape<double>(6371220));
 
-	auto b = make_shared<base>();
+	auto b = make_shared<base<double>>();
 	b->grid = shared_ptr<grid>(newGrid->Clone());
 
 	newInfo->Create(b);

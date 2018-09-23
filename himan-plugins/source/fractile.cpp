@@ -170,7 +170,7 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 	Start();
 }
 
-void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadIndex)
+void fractile::Calculate(std::shared_ptr<info<double>> myTargetInfo, uint16_t threadIndex)
 {
 	const std::string deviceType = "CPU";
 

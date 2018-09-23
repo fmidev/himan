@@ -112,7 +112,7 @@ void gust::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void gust::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	NFmiMetTime theTime(static_cast<short>(stoi(myTargetInfo->Time().ValidDateTime().String("%Y"))),
 	                    static_cast<short>(stoi(myTargetInfo->Time().ValidDateTime().String("%m"))),

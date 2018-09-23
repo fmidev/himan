@@ -395,7 +395,7 @@ pair<vector<string>, string> radon::Files(search_options& options)
 	return make_pair(files, values[2]);
 }
 
-bool radon::Save(const info& resultInfo, const string& theFileName, const string& targetGeomName)
+bool radon::Save(const info<double>& resultInfo, const string& theFileName, const string& targetGeomName)
 {
 	Init();
 
@@ -411,7 +411,7 @@ bool radon::Save(const info& resultInfo, const string& theFileName, const string
 	return false;
 }
 
-bool radon::SavePrevi(const info& resultInfo)
+bool radon::SavePrevi(const info<double>& resultInfo)
 {
 	stringstream query;
 
@@ -511,7 +511,7 @@ bool radon::SavePrevi(const info& resultInfo)
 	return true;
 }
 
-bool radon::SaveGrid(const info& resultInfo, const string& theFileName, const string& targetGeomName)
+bool radon::SaveGrid(const info<double>& resultInfo, const string& theFileName, const string& targetGeomName)
 {
 	stringstream query;
 

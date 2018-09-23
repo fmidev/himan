@@ -45,7 +45,7 @@ __global__ void ThetaEKernel(const T* __restrict__ d_t, const T* __restrict__ d_
 
 namespace tpotgpu
 {
-void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo, bool theta,
+void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info<double>> myTargetInfo, bool theta,
              bool thetaw, bool thetae)
 {
 	cudaStream_t stream;

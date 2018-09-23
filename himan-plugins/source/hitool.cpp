@@ -434,7 +434,7 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 valueheight hitool::GetData(const level& wantedLevel, const param& wantedParam, const forecast_time& wantedTime,
                             const forecast_type& wantedType) const
 {
-	shared_ptr<info> values, heights;
+	shared_ptr<info<double>> values, heights;
 	auto f = GET_PLUGIN(fetcher);
 
 	param heightParam;

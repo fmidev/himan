@@ -35,7 +35,7 @@ void absolute_humidity::Process(std::shared_ptr<const plugin_configuration> conf
  * This function does the actual calculation.
  */
 
-void absolute_humidity::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void absolute_humidity::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	// Required source parameters (Density from plug-in density; rain, snow and graupel from Harmonie model output)
 

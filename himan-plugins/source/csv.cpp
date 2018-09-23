@@ -13,7 +13,7 @@ csv::csv()
 {
 	itsLogger = logger("csv");
 }
-bool csv::ToFile(info& theInfo, string& theOutputFile)
+bool csv::ToFile(info<double>& theInfo, string& theOutputFile)
 {
 	if (theInfo.Grid()->Class() != kIrregularGrid)
 	{
@@ -72,8 +72,8 @@ bool csv::ToFile(info& theInfo, string& theOutputFile)
 	return true;
 }
 
-shared_ptr<himan::info> csv::FromFile(const string& inputFile, const search_options& options,
-                                      bool readIfNotMatching) const
+shared_ptr<himan::info<double>> csv::FromFile(const string& inputFile, const search_options& options,
+                                              bool readIfNotMatching) const
 {
 	info_t all, requested;
 
@@ -178,7 +178,7 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, const search_opti
 		throw kFileDataNotFound;
 	}
 
-	requested = make_shared<info>();
+	requested = make_shared<info<double>>();
 	requested->Producer(options.prod);
 
 	requested->Set<forecast_time>(times);
@@ -186,7 +186,7 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, const search_opti
 	requested->Set<level>(levels);
 	requested->Set<forecast_type>(ftypes);
 
-	auto b = make_shared<base>();
+	auto b = make_shared<base<double>>();
 	b->grid = shared_ptr<grid>(new point_list());  // placeholder
 
 	requested->Create(b, true);

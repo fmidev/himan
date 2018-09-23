@@ -7,8 +7,8 @@
 #define QUERYDATA_H
 
 #include "auxiliary_plugin.h"
-#include "search_options.h"
 #include "info.h"
+#include "search_options.h"
 
 class NFmiFastQueryInfo;
 class NFmiQueryData;
@@ -59,7 +59,7 @@ class querydata : public io_plugin
 	 * @return A vector of shared_ptr'd infos. Vector size is always 0 or 1.
 	 */
 
-	std::shared_ptr<info> FromFile(const std::string& inputFile, const search_options& options) const;
+	std::shared_ptr<info<double>> FromFile(const std::string& inputFile, const search_options& options) const;
 
 	/**
 	 * @brief Write info contents to a querydata file
@@ -70,7 +70,7 @@ class querydata : public io_plugin
 	 * @return True if writing succeeds
 	 */
 
-	bool ToFile(info& theInfo, std::string& outputFile);
+	bool ToFile(info<double>& theInfo, std::string& outputFile);
 
 	/**
 	 * @brief Create in-memory querydata from given info-instance
@@ -87,7 +87,7 @@ class querydata : public io_plugin
 	 * @return shared pointer to querydata instance
 	 */
 
-	std::shared_ptr<NFmiQueryData> CreateQueryData(const info& theInfo, bool activeOnly,
+	std::shared_ptr<NFmiQueryData> CreateQueryData(const info<double>& theInfo, bool activeOnly,
 	                                               bool applyScaleAndBase = false);
 
 	/**
@@ -96,12 +96,12 @@ class querydata : public io_plugin
 	 * @return shared_ptr to info instance
 	 */
 
-	std::shared_ptr<info> CreateInfo(std::shared_ptr<NFmiQueryData> theData) const;
+	std::shared_ptr<info<double>> CreateInfo(std::shared_ptr<NFmiQueryData> theData) const;
 
-	NFmiTimeDescriptor CreateTimeDescriptor(info& info, bool activeOnly);
-	NFmiParamDescriptor CreateParamDescriptor(info& info, bool activeOnly);
-	NFmiHPlaceDescriptor CreateHPlaceDescriptor(info& info, bool activeOnly);
-	NFmiVPlaceDescriptor CreateVPlaceDescriptor(info& info, bool activeOnly);
+	NFmiTimeDescriptor CreateTimeDescriptor(info<double>& info, bool activeOnly);
+	NFmiParamDescriptor CreateParamDescriptor(info<double>& info, bool activeOnly);
+	NFmiHPlaceDescriptor CreateHPlaceDescriptor(info<double>& info, bool activeOnly);
+	NFmiVPlaceDescriptor CreateVPlaceDescriptor(info<double>& info, bool activeOnly);
 
 	void UseDatabase(bool theUseDatabase);
 	bool UseDatabase() const;
@@ -114,10 +114,10 @@ class querydata : public io_plugin
 	 * @param theQueryData
 	 * @return
 	 */
-	bool CopyData(info& theInfo, NFmiFastQueryInfo& qinfo, bool applyScaleAndBase) const;
+	bool CopyData(info<double>& theInfo, NFmiFastQueryInfo& qinfo, bool applyScaleAndBase) const;
 
-	NFmiHPlaceDescriptor CreateGrid(info& info) const;
-	NFmiHPlaceDescriptor CreatePoint(info& info) const;
+	NFmiHPlaceDescriptor CreateGrid(info<double>& info) const;
+	NFmiHPlaceDescriptor CreatePoint(info<double>& info) const;
 };
 
 #ifndef HIMAN_AUXILIARY_INCLUDE

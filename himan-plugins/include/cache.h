@@ -17,7 +17,7 @@ namespace plugin
 {
 struct cache_item
 {
-	std::shared_ptr<himan::info> info;
+	std::shared_ptr<himan::info<double>> info;
 	time_t access_time;
 	bool pinned;
 
@@ -45,7 +45,7 @@ class cache : public auxiliary_plugin
 	 */
 
 	void Insert(info_t anInfo, bool pin = false);
-	std::vector<std::shared_ptr<himan::info>> GetInfo(search_options& options);
+	std::vector<info_t> GetInfo(search_options& options);
 	void Clean();
 
 	virtual std::string ClassName() const
@@ -66,7 +66,7 @@ class cache : public auxiliary_plugin
 
    private:
 	void SplitToPool(info_t anInfo, bool pin);
-	std::string UniqueName(const info& anInfo);
+	std::string UniqueName(const info<double>& anInfo);
 	std::string UniqueNameFromOptions(search_options& options);
 };
 
@@ -82,8 +82,8 @@ class cache_pool : public auxiliary_plugin
 
 	static cache_pool* Instance();
 	bool Exists(const std::string& uniqueName);
-	void Insert(const std::string& uniqueName, std::shared_ptr<himan::info> info, bool pin);
-	std::shared_ptr<himan::info> GetInfo(const std::string& uniqueName);
+	void Insert(const std::string& uniqueName, info_t info, bool pin);
+	info_t GetInfo(const std::string& uniqueName);
 	void Clean();
 
 	virtual std::string ClassName() const
@@ -113,7 +113,7 @@ class cache_pool : public auxiliary_plugin
 	 * If element is not found, insert is made.
 	 */
 
-	void Replace(const std::string& uniqueName, std::shared_ptr<himan::info> info, bool pin);
+	void Replace(const std::string& uniqueName, info_t info, bool pin);
 
    private:
 	cache_pool();

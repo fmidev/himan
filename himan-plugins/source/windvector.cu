@@ -65,7 +65,7 @@ __global__ void Calculate(cdarr_t d_u, cdarr_t d_v, darr_t d_speed, darr_t d_dir
 }
 
 void himan::plugin::windvector_cuda::RunCuda(std::shared_ptr<const plugin_configuration> conf,
-                                             std::shared_ptr<info> myTargetInfo, const param& UParam,
+                                             std::shared_ptr<info<double>> myTargetInfo, const param& UParam,
                                              const param& VParam, HPWindVectorTargetType itsTargetType)
 {
 	cudaStream_t stream;

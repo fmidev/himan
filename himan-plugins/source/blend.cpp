@@ -119,7 +119,7 @@ static mutex dimensionMutex;
 void blend::Run(unsigned short threadIndex)
 {
 	// Iterate through timesteps
-	auto targetInfo = make_shared<info>(*itsInfo);
+	auto targetInfo = make_shared<info<double>>(*itsInfo);
 
 	while (itsDimensionsRemaining)
 	{
@@ -345,7 +345,7 @@ void blend::Process(shared_ptr<const plugin_configuration> conf)
 	Start();
 }
 
-void blend::Calculate(shared_ptr<info> targetInfo, unsigned short threadIndex)
+void blend::Calculate(shared_ptr<info<double>> targetInfo, unsigned short threadIndex)
 {
 	auto f = GET_PLUGIN(fetcher);
 	auto log = logger("blendThread#" + to_string(threadIndex));
@@ -400,7 +400,7 @@ static forecast_time MakeAnalysisFetchTime(const forecast_time& currentTime, int
 	return analysisFetchTime;
 }
 
-matrix<double> blend::CalculateBias(logger& log, shared_ptr<info> targetInfo, const forecast_time& calcTime,
+matrix<double> blend::CalculateBias(logger& log, shared_ptr<info<double>> targetInfo, const forecast_time& calcTime,
                                     const blend_producer& blendProd)
 {
 	shared_ptr<plugin_configuration> cnf = make_shared<plugin_configuration>(*itsConfiguration);
@@ -512,7 +512,7 @@ matrix<double> blend::CalculateBias(logger& log, shared_ptr<info> targetInfo, co
 }
 
 // Follows largely the same format as CalculateBias
-matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info> targetInfo, const forecast_time& calcTime,
+matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info<double>> targetInfo, const forecast_time& calcTime,
                                    const blend_producer& blendProd)
 {
 	shared_ptr<plugin_configuration> cnf = make_shared<plugin_configuration>(*itsConfiguration);
@@ -623,7 +623,7 @@ matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info> targetInfo, con
 	return MAE;
 }
 
-void blend::CalculateMember(shared_ptr<info> targetInfo, unsigned short threadIdx, blend_mode mode)
+void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short threadIdx, blend_mode mode)
 {
 	logger log;
 	if (mode == kCalculateBias)
@@ -671,7 +671,7 @@ void blend::CalculateMember(shared_ptr<info> targetInfo, unsigned short threadId
 	// Problem: targetInfo has information for the data that we want to fetch, but because of the convoluted way of
 	// calculating everything, this doesn't match with the data we want to write out.
 	// Solution: Create a new info and write that out.
-	info_t Info = make_shared<info>(*targetInfo);
+	info_t Info = make_shared<info<double>>(*targetInfo);
 	vector<forecast_type> ftypes{itsBlendProducer.type};
 
 	if (mode == kCalculateBias)
@@ -735,7 +735,7 @@ void blend::CalculateMember(shared_ptr<info> targetInfo, unsigned short threadId
 	}
 }
 
-static std::vector<info_t> FetchRawGrids(shared_ptr<info> targetInfo, shared_ptr<plugin_configuration> cnf,
+static std::vector<info_t> FetchRawGrids(shared_ptr<info<double>> targetInfo, shared_ptr<plugin_configuration> cnf,
                                          unsigned short threadIdx)
 {
 	auto f = GET_PLUGIN(fetcher);
@@ -856,7 +856,7 @@ info_t FetchHistorical(logger& log, shared_ptr<plugin_configuration> cnf, const 
 	return Info;
 }
 
-std::vector<info_t> FetchBiasGrids(shared_ptr<info> targetInfo, shared_ptr<plugin_configuration> cnf,
+std::vector<info_t> FetchBiasGrids(shared_ptr<info<double>> targetInfo, shared_ptr<plugin_configuration> cnf,
                                    unsigned short threadIdx)
 {
 	auto f = GET_PLUGIN(fetcher);
@@ -900,7 +900,7 @@ std::vector<info_t> FetchBiasGrids(shared_ptr<info> targetInfo, shared_ptr<plugi
 	return std::vector<info_t>{mosBias, ecBias, mepsBias, hirlamBias, gfsBias};
 }
 
-std::vector<info_t> FetchMAEGrids(shared_ptr<info> targetInfo, shared_ptr<plugin_configuration> cnf,
+std::vector<info_t> FetchMAEGrids(shared_ptr<info<double>> targetInfo, shared_ptr<plugin_configuration> cnf,
                                   unsigned short threadIdx)
 {
 	auto f = GET_PLUGIN(fetcher);
@@ -946,7 +946,7 @@ std::vector<info_t> FetchMAEGrids(shared_ptr<info> targetInfo, shared_ptr<plugin
 
 }  // namespace
 
-void blend::CalculateBlend(shared_ptr<info> targetInfo, unsigned short threadIdx)
+void blend::CalculateBlend(shared_ptr<info<double>> targetInfo, unsigned short threadIdx)
 {
 	auto log = logger("calculateBlend#" + to_string(threadIdx));
 	const string deviceType = "CPU";
@@ -1137,7 +1137,7 @@ void blend::WriteToFile(const info_t targetInfo, write_options writeOptions)
 	auto aWriter = GET_PLUGIN(writer);
 
 	aWriter->WriteOptions(writeOptions);
-	auto tempInfo = make_shared<info>(*targetInfo);
+	auto tempInfo = make_shared<info<double>>(*targetInfo);
 
 	if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
 	{
@@ -1157,8 +1157,8 @@ void blend::WriteToFile(const info_t targetInfo, write_options writeOptions)
 }
 
 // Sets the forecast times for |Info| to the times we want to calculate for Bias and MAE (we need to go back in time).
-void blend::SetupOutputForecastTimes(shared_ptr<info> Info, const raw_time& latestOrigin, const forecast_time& current,
-                                     int maxStep, int originTimeStep)
+void blend::SetupOutputForecastTimes(shared_ptr<info<double>> Info, const raw_time& latestOrigin,
+                                     const forecast_time& current, int maxStep, int originTimeStep)
 {
 	vector<forecast_time> ftimes;
 

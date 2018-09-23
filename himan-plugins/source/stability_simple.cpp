@@ -98,7 +98,7 @@ void stability_simple::Process(std::shared_ptr<const plugin_configuration> conf)
 	Start();
 }
 
-void stability_simple::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadIndex)
+void stability_simple::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short theThreadIndex)
 {
 	auto myThreadedLogger = logger("stability_simpleThread #" + to_string(theThreadIndex));
 

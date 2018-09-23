@@ -111,7 +111,7 @@ shared_ptr<NFmiGrib> grib::Reader()
 {
 	return itsGrib;
 }
-void grib::WriteAreaAndGrid(info& anInfo)
+void grib::WriteAreaAndGrid(info<double>& anInfo)
 {
 	const long edition = itsGrib->Message().Edition();
 	HPScanningMode scmode = kUnknownScanningMode;
@@ -391,7 +391,7 @@ void grib::WriteAreaAndGrid(info& anInfo)
 	itsGrib->Message().JScansPositively(jPositive);
 }
 
-void grib::WriteTime(info& anInfo)
+void grib::WriteTime(info<double>& anInfo)
 {
 	itsGrib->Message().DataDate(stol(anInfo.Time().OriginDateTime().String("%Y%m%d")));
 	itsGrib->Message().DataTime(stol(anInfo.Time().OriginDateTime().String("%H%M")));
@@ -564,7 +564,7 @@ void grib::WriteTime(info& anInfo)
 	}
 }
 
-void grib::WriteParameter(info& anInfo)
+void grib::WriteParameter(info<double>& anInfo)
 {
 	if (itsGrib->Message().Edition() == 1)
 	{
@@ -637,7 +637,7 @@ void grib::WriteParameter(info& anInfo)
 	}
 }
 
-void grib::WriteLevel(info& anInfo)
+void grib::WriteLevel(info<double>& anInfo)
 {
 	auto lev = anInfo.Level();
 
@@ -688,7 +688,7 @@ void grib::WriteLevel(info& anInfo)
 	}
 }
 
-bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
+bool grib::ToFile(info<double>& anInfo, string& outputFile, bool appendToFile)
 {
 	// Write only that data which is currently set at descriptors
 
@@ -1796,7 +1796,7 @@ void grib::ReadData(info_t newInfo, bool readPackedData) const
 }
 
 bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData, bool readIfNotMatching,
-                              shared_ptr<info> newInfo) const
+                              shared_ptr<info<double>> newInfo) const
 {
 	shared_ptr<radon> r;
 
@@ -1935,7 +1935,7 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 	}
 
 	newGrid->AB(ab);
-	auto b = make_shared<base>();
+	auto b = make_shared<base<double>>();
 	b->grid = shared_ptr<grid>(newGrid->Clone());
 
 	newInfo->Create(b, true);
@@ -1963,10 +1963,11 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 	return true;
 }
 
-vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const search_options& options,
-                                               bool readContents, bool readPackedData, bool readIfNotMatching) const
+vector<shared_ptr<himan::info<double>>> grib::FromFile(const string& theInputFile, const search_options& options,
+                                                       bool readContents, bool readPackedData,
+                                                       bool readIfNotMatching) const
 {
-	vector<shared_ptr<himan::info>> infos;
+	vector<shared_ptr<himan::info<double>>> infos;
 
 	if (!itsGrib->Open(theInputFile))
 	{
@@ -1989,7 +1990,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 	while (itsGrib->NextMessage())
 	{
 		foundMessageNo++;
-		auto newInfo = make_shared<info>();
+		auto newInfo = make_shared<info<double>>();
 
 		if (CreateInfoFromGrib(options, readPackedData, readIfNotMatching, newInfo) || readIfNotMatching)
 		{
@@ -2014,11 +2015,11 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 	return infos;
 }
 
-vector<shared_ptr<himan::info>> grib::FromIndexFile(const string& theInputFile, const search_options& options,
-                                                    bool readContents, bool readPackedData,
-                                                    bool readIfNotMatching) const
+vector<shared_ptr<himan::info<double>>> grib::FromIndexFile(const string& theInputFile, const search_options& options,
+                                                            bool readContents, bool readPackedData,
+                                                            bool readIfNotMatching) const
 {
-	vector<shared_ptr<himan::info>> infos;
+	vector<shared_ptr<himan::info<double>>> infos;
 
 	if (!itsGrib->Open(theInputFile))
 	{
@@ -2039,7 +2040,7 @@ vector<shared_ptr<himan::info>> grib::FromIndexFile(const string& theInputFile, 
 	// TODO need to check what happens when multiple idx files or idx + grib files are provided as input.
 	if (itsGrib->Message(OptionsToKeys(options)))
 	{
-		auto newInfo = make_shared<info>();
+		auto newInfo = make_shared<info<double>>();
 		if (CreateInfoFromGrib(options, readPackedData, readIfNotMatching, newInfo))
 		{
 			infos.push_back(newInfo);

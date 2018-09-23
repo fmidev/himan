@@ -30,7 +30,7 @@ void monin_obukhov::Process(std::shared_ptr<const plugin_configuration> conf)
 	Start();
 }
 
-void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void monin_obukhov::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	const param TParam("T-K");          // ground Temperature
 	const param SHFParam("FLSEN-JM2");  // accumulated surface sensible heat flux

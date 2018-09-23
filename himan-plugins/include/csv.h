@@ -51,8 +51,8 @@ class csv : public io_plugin
 	 * @return A vector of shared_ptr'd infos. Vector size is always 0 or 1.
 	 */
 
-	std::shared_ptr<info> FromFile(const std::string& inputFile, const search_options& options,
-	                               bool readifNotMatching = false) const;
+	std::shared_ptr<info<double>> FromFile(const std::string& inputFile, const search_options& options,
+	                                       bool readifNotMatching = false) const;
 
 	/**
 	 * @brief Write info contents to a csv file
@@ -63,7 +63,7 @@ class csv : public io_plugin
 	 * @return True if writing succeeds
 	 */
 
-	bool ToFile(info& theInfo, std::string& outputFile);
+	bool ToFile(info<double>& theInfo, std::string& outputFile);
 };
 
 #ifndef HIMAN_AUXILIARY_INCLUDE

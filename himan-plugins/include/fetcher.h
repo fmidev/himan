@@ -72,10 +72,11 @@ class fetcher : public auxiliary_plugin
 	 * @return Data for first param found.
 	 */
 
-	std::shared_ptr<info> Fetch(std::shared_ptr<const plugin_configuration> config, forecast_time requestedValidTime,
-	                            level requestedLevel, const params& requestedParams,
-	                            forecast_type requestedType = forecast_type(kDeterministic),
-	                            bool readPackedData = false);
+	std::shared_ptr<info<double>> Fetch(std::shared_ptr<const plugin_configuration> config,
+	                                    forecast_time requestedValidTime, level requestedLevel,
+	                                    const params& requestedParams,
+	                                    forecast_type requestedType = forecast_type(kDeterministic),
+	                                    bool readPackedData = false);
 
 	/**
 	 * @brief Fetch data based on given arguments.
@@ -93,10 +94,10 @@ class fetcher : public auxiliary_plugin
 	 * @return shared_ptr to info-instance
 	 */
 
-	std::shared_ptr<info> Fetch(std::shared_ptr<const plugin_configuration> config, forecast_time requestedValidTime,
-	                            level requestedLevel, param requestedParam,
-	                            forecast_type requestedType = forecast_type(kDeterministic),
-	                            bool readPackedData = false, bool suppressLogging = false);
+	std::shared_ptr<info<double>> Fetch(std::shared_ptr<const plugin_configuration> config,
+	                                    forecast_time requestedValidTime, level requestedLevel, param requestedParam,
+	                                    forecast_type requestedType = forecast_type(kDeterministic),
+	                                    bool readPackedData = false, bool suppressLogging = false);
 
 	/**
 	 * @brief Set flag for level transform
@@ -140,7 +141,7 @@ class fetcher : public auxiliary_plugin
 	bool ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> config, info_t theInfo,
 	                      const forecast_time& requestedTime, const forecast_type& requestedType);
 
-	std::vector<std::shared_ptr<info>> FromCache(search_options& options);
+	std::vector<std::shared_ptr<info<double>>> FromCache(search_options& options);
 
 	/**
 	 * @brief Get data and metadata from a file.
@@ -160,9 +161,9 @@ class fetcher : public auxiliary_plugin
 	 * @return A vector of shared_ptr'd infos.
 	 */
 
-	std::vector<std::shared_ptr<info>> FromFile(const std::vector<std::string>& files, search_options& options,
-	                                            bool readContents = true, bool readPackedData = false,
-	                                            bool forceCaching = false);
+	std::vector<std::shared_ptr<info<double>>> FromFile(const std::vector<std::string>& files, search_options& options,
+	                                                    bool readContents = true, bool readPackedData = false,
+	                                                    bool forceCaching = false);
 
 	/**
 	 * @brief Return all data from a grib file, overcoat for himan::plugin::grib::FromFile().
@@ -177,9 +178,9 @@ class fetcher : public auxiliary_plugin
 	 * @return A vector of shared_ptr'd infos.
 	 */
 
-	std::vector<std::shared_ptr<info>> FromGrib(const std::string& inputFile, search_options& options,
-	                                            bool readContents = true, bool readPackedData = false,
-	                                            bool forceCaching = false);
+	std::vector<std::shared_ptr<info<double>>> FromGrib(const std::string& inputFile, search_options& options,
+	                                                    bool readContents = true, bool readPackedData = false,
+	                                                    bool forceCaching = false);
 
 	/**
 	 * @brief Return selected data from a grib index file, overcoat for himan::plugin::grib::FromIndexFile().
@@ -194,9 +195,9 @@ class fetcher : public auxiliary_plugin
 	 * @return A vector of shared_ptr'd infos.
 	 */
 
-	std::vector<std::shared_ptr<info>> FromGribIndex(const std::string& inputFile, search_options& options,
-	                                                 bool readContents = true, bool readPackedData = false,
-	                                                 bool forceCaching = false);
+	std::vector<std::shared_ptr<info<double>>> FromGribIndex(const std::string& inputFile, search_options& options,
+	                                                         bool readContents = true, bool readPackedData = false,
+	                                                         bool forceCaching = false);
 
 	/**
 	 * @brief Return all data from a querydata file, overcoat for himan::plugin::querydata::FromFile().
@@ -209,8 +210,8 @@ class fetcher : public auxiliary_plugin
 	 * @return A vector of shared_ptr'd infos. Vector size is always 0 or 1.
 	 */
 
-	std::vector<std::shared_ptr<info>> FromQueryData(const std::string& inputFile, search_options& options,
-	                                                 bool readContents = true);
+	std::vector<std::shared_ptr<info<double>>> FromQueryData(const std::string& inputFile, search_options& options,
+	                                                         bool readContents = true);
 
 	/**
 	 * @brief Return all data from a CSV file, overcoat for himan::plugin::csv::FromFile().
@@ -223,8 +224,8 @@ class fetcher : public auxiliary_plugin
 	 * @return A vector of shared_ptr'd infos. Vector size is always 0 or 1.
 	 */
 
-	std::vector<std::shared_ptr<info>> FromCSV(const std::string& inputFile, search_options& options,
-	                                           bool readIfNotMatching = false);
+	std::vector<std::shared_ptr<info<double>>> FromCSV(const std::string& inputFile, search_options& options,
+	                                                   bool readIfNotMatching = false);
 
 	/**
 	 * @brief Map level definitions between models and our expected levels.
@@ -250,13 +251,13 @@ class fetcher : public auxiliary_plugin
 	 * @return Vector of infos, zero sized if none found
 	 */
 
-	std::pair<HPDataFoundFrom, std::vector<std::shared_ptr<info>>> FetchFromAllSources(search_options& opts,
-	                                                                                   bool readPackedData);
+	std::pair<HPDataFoundFrom, std::vector<std::shared_ptr<info<double>>>> FetchFromAllSources(search_options& opts,
+	                                                                                           bool readPackedData);
 
-	std::vector<std::shared_ptr<info>> FetchFromCache(search_options& opts);
-	std::pair<HPDataFoundFrom, std::vector<std::shared_ptr<info>>> FetchFromAuxiliaryFiles(search_options& opts,
-	                                                                                       bool readPackedData);
-	std::vector<std::shared_ptr<info>> FetchFromDatabase(search_options& opts, bool readPackedData);
+	std::vector<std::shared_ptr<info<double>>> FetchFromCache(search_options& opts);
+	std::pair<HPDataFoundFrom, std::vector<std::shared_ptr<info<double>>>> FetchFromAuxiliaryFiles(search_options& opts,
+	                                                                                               bool readPackedData);
+	std::vector<std::shared_ptr<info<double>>> FetchFromDatabase(search_options& opts, bool readPackedData);
 
 	/**
 	 * @brief Rotate and interpolate infos. Function is called when auxiliary files
@@ -267,7 +268,8 @@ class fetcher : public auxiliary_plugin
 
 	void AuxiliaryFilesRotateAndInterpolate(const search_options& opts, std::vector<info_t>& infos);
 
-	std::shared_ptr<himan::info> FetchFromProducer(search_options& opts, bool readPackedData, bool suppressLogging);
+	std::shared_ptr<himan::info<double>> FetchFromProducer(search_options& opts, bool readPackedData,
+	                                                       bool suppressLogging);
 
 	HPFileType FileType(const std::string& theInputFile);
 	bool itsDoLevelTransform;           //<! Default true

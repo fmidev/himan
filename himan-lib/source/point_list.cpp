@@ -124,16 +124,15 @@ size_t point_list::Hash() const
 {
 	size_t hash = Type();
 	for (const auto& station : Stations())
-		boost::hash_combine(hash,station.Hash());
+		boost::hash_combine(hash, station.Hash());
 	return hash;
 }
 
-bool point_list::operator!=(const point_list& other) const
+bool point_list::operator!=(const grid& other) const
 {
 	return !(other == *this);
 }
-
-bool point_list::operator==(const point_list& other) const
+bool point_list::operator==(const grid& other) const
 {
 	const point_list* g = dynamic_cast<const point_list*>(&other);
 

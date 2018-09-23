@@ -19,6 +19,7 @@
 #include "querydata.h"
 #include "radon.h"
 
+using namespace himan;
 using namespace himan::plugin;
 using namespace std;
 
@@ -55,11 +56,11 @@ fetcher::fetcher()
 	itsLogger = logger("fetcher");
 }
 
-shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> config, forecast_time requestedTime,
-                                       level requestedLevel, const params& requestedParams, forecast_type requestedType,
-                                       bool readPackedData)
+shared_ptr<info<double>> fetcher::Fetch(shared_ptr<const plugin_configuration> config, forecast_time requestedTime,
+                                        level requestedLevel, const params& requestedParams,
+                                        forecast_type requestedType, bool readPackedData)
 {
-	shared_ptr<info> ret;
+	shared_ptr<info<double>> ret;
 
 	for (size_t i = 0; i < requestedParams.size(); i++)
 	{
@@ -107,7 +108,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	throw kFileDataNotFound;
 }
 
-shared_ptr<himan::info> fetcher::FetchFromProducer(search_options& opts, bool readPackedData, bool suppressLogging)
+shared_ptr<info<double>> fetcher::FetchFromProducer(search_options& opts, bool readPackedData, bool suppressLogging)
 {
 	level newLevel = opts.level;
 
@@ -132,7 +133,7 @@ shared_ptr<himan::info> fetcher::FetchFromProducer(search_options& opts, bool re
 
 	if (theInfos.empty())
 	{
-		return shared_ptr<info>();
+		return shared_ptr<info<double>>();
 	}
 
 	RotateVectorComponents(theInfos, opts.configuration->BaseGrid(), opts.configuration, opts.prod);
@@ -188,15 +189,15 @@ shared_ptr<himan::info> fetcher::FetchFromProducer(search_options& opts, bool re
 	return theInfos[0];
 }
 
-shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> config, forecast_time requestedTime,
-                                       level requestedLevel, param requestedParam, forecast_type requestedType,
-                                       bool readPackedData, bool suppressLogging)
+shared_ptr<info<double>> fetcher::Fetch(shared_ptr<const plugin_configuration> config, forecast_time requestedTime,
+                                        level requestedLevel, param requestedParam, forecast_type requestedType,
+                                        bool readPackedData, bool suppressLogging)
 {
 	timer t(true);
 
 	// Check sticky param cache first
 
-	shared_ptr<info> ret;
+	shared_ptr<info<double>> ret;
 
 	for (const auto& prod : config->SourceProducers())
 	{
@@ -286,10 +287,10 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 	return ret;
 }
 
-vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, search_options& options,
-                                                  bool readContents, bool readPackedData, bool readIfNotMatching)
+vector<shared_ptr<info<double>>> fetcher::FromFile(const vector<string>& files, search_options& options,
+                                                   bool readContents, bool readPackedData, bool readIfNotMatching)
 {
-	vector<shared_ptr<himan::info>> allInfos;
+	vector<shared_ptr<info<double>>> allInfos;
 
 	set<string> fileset(files.begin(), files.end());
 
@@ -301,7 +302,7 @@ vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, s
 			continue;
 		}
 
-		vector<shared_ptr<himan::info>> curInfos;
+		vector<shared_ptr<info<double>>> curInfos;
 
 		switch (util::FileType(inputFile))
 		{
@@ -346,54 +347,54 @@ vector<shared_ptr<himan::info>> fetcher::FromFile(const vector<string>& files, s
 	return allInfos;
 }
 
-vector<shared_ptr<himan::info>> fetcher::FromCache(search_options& options)
+vector<shared_ptr<info<double>>> fetcher::FromCache(search_options& options)
 {
 	auto c = GET_PLUGIN(cache);
 
-	vector<shared_ptr<himan::info>> infos = c->GetInfo(options);
+	vector<shared_ptr<info<double>>> infos = c->GetInfo(options);
 
 	return infos;
 }
 
-vector<shared_ptr<himan::info>> fetcher::FromGrib(const string& inputFile, search_options& options, bool readContents,
-                                                  bool readPackedData, bool readIfNotMatching)
+vector<shared_ptr<info<double>>> fetcher::FromGrib(const string& inputFile, search_options& options, bool readContents,
+                                                   bool readPackedData, bool readIfNotMatching)
 {
 	auto g = GET_PLUGIN(grib);
 
 	return g->FromFile(inputFile, options, readContents, readPackedData, readIfNotMatching);
 }
 
-vector<shared_ptr<himan::info>> fetcher::FromGribIndex(const string& inputFile, search_options& options,
-                                                       bool readContents, bool readPackedData, bool readIfNotMatching)
+vector<shared_ptr<info<double>>> fetcher::FromGribIndex(const string& inputFile, search_options& options,
+                                                        bool readContents, bool readPackedData, bool readIfNotMatching)
 {
 	auto g = GET_PLUGIN(grib);
 
 	return g->FromIndexFile(inputFile, options, readContents, readPackedData, readIfNotMatching);
 }
 
-vector<shared_ptr<himan::info>> fetcher::FromQueryData(const string& inputFile, search_options& options,
-                                                       bool readContents)
+vector<shared_ptr<info<double>>> fetcher::FromQueryData(const string& inputFile, search_options& options,
+                                                        bool readContents)
 {
 	auto q = GET_PLUGIN(querydata);
 
-	shared_ptr<info> i = q->FromFile(inputFile, options);
+	shared_ptr<info<double>> i = q->FromFile(inputFile, options);
 
-	vector<shared_ptr<info>> theInfos;
+	vector<shared_ptr<info<double>>> theInfos;
 
 	theInfos.push_back(i);
 
 	return theInfos;
 }
 
-vector<shared_ptr<himan::info>> fetcher::FromCSV(const string& inputFile, search_options& options,
-                                                 bool readIfNotMatching)
+vector<shared_ptr<info<double>>> fetcher::FromCSV(const string& inputFile, search_options& options,
+                                                  bool readIfNotMatching)
 {
 	auto c = GET_PLUGIN(csv);
 
-	auto info = c->FromFile(inputFile, options, readIfNotMatching);
+	auto anInfo = c->FromFile(inputFile, options, readIfNotMatching);
 
 	vector<info_t> infos;
-	infos.push_back(info);
+	infos.push_back(anInfo);
 
 	return infos;
 }
@@ -561,9 +562,9 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vec
 	}
 }
 
-vector<shared_ptr<himan::info>> fetcher::FetchFromCache(search_options& opts)
+vector<shared_ptr<info<double>>> fetcher::FetchFromCache(search_options& opts)
 {
-	vector<shared_ptr<info>> ret;
+	vector<shared_ptr<info<double>>> ret;
 
 	if (itsUseCache && opts.configuration->UseCache())
 	{
@@ -584,8 +585,8 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromCache(search_options& opts)
 	return ret;
 }
 
-pair<HPDataFoundFrom, vector<shared_ptr<himan::info>>> fetcher::FetchFromAuxiliaryFiles(search_options& opts,
-                                                                                        bool readPackedData)
+pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAuxiliaryFiles(search_options& opts,
+                                                                                         bool readPackedData)
 {
 	vector<info_t> ret;
 	HPDataFoundFrom source = HPDataFoundFrom::kAuxFile;
@@ -665,7 +666,7 @@ pair<HPDataFoundFrom, vector<shared_ptr<himan::info>>> fetcher::FetchFromAuxilia
 	return make_pair(source, ret);
 }
 
-vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts, bool readPackedData)
+vector<shared_ptr<info<double>>> fetcher::FetchFromDatabase(search_options& opts, bool readPackedData)
 {
 	vector<info_t> ret;
 
@@ -737,8 +738,8 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts,
 	return ret;
 }
 
-pair<HPDataFoundFrom, vector<shared_ptr<himan::info>>> fetcher::FetchFromAllSources(search_options& opts,
-                                                                                    bool readPackedData)
+pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAllSources(search_options& opts,
+                                                                                     bool readPackedData)
 {
 	auto ret = FetchFromCache(opts);
 

@@ -111,7 +111,7 @@ void example_plugin::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		myTargetInfo->Value(y);
 	}
 
-	myThreadedLogger.Info("[" + deviceType + "] Missing values: " +
-	                      boost::lexical_cast<string>(myTargetInfo->Data()->MissingCount()) + "/" +
-	                      boost::lexical_cast<string>(myTargetInfo->Data()->Size()));
+	myThreadedLogger.Info("[" + deviceType +
+	                      "] Missing values: " + boost::lexical_cast<string>(myTargetInfo->Data()->MissingCount()) +
+	                      "/" + boost::lexical_cast<string>(myTargetInfo->Data()->Size()));
 }

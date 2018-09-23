@@ -15,7 +15,8 @@ using namespace himan::plugin;
 #ifdef HAVE_CUDA
 namespace dewpointgpu
 {
-extern void Process(std::shared_ptr<const himan::plugin_configuration> conf, std::shared_ptr<himan::info> myTargetInfo);
+extern void Process(std::shared_ptr<const himan::plugin_configuration> conf,
+                    std::shared_ptr<himan::info<double>> myTargetInfo);
 }
 #endif
 
@@ -49,7 +50,7 @@ void dewpoint::Process(shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void dewpoint::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	const param TParam("T-K");
 	const params RHParam = {param("RH-PRCNT"), param("RH-0TO1")};

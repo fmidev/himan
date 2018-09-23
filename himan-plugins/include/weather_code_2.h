@@ -48,7 +48,7 @@ class weather_code_2 : public compiled_plugin, private compiled_plugin_base
 	}
 
    private:
-	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
+	virtual void Calculate(std::shared_ptr<info<double>> theTargetInfo, unsigned short theThreadIndex);
 	double rain_type(double kIndex, double T0m, double T850);
 	double thunder_prob(double kIndex, double cloud);
 };
