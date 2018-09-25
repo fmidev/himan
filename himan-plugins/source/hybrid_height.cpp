@@ -49,20 +49,6 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 		// a ~30% increase in total calculation speed.
 
 		PrimaryDimension(kTimeDimension);
-
-		/*
-		 * With iteration method, we must start from the lowest level.
-		 */
-
-		if (itsInfo->SizeLevels() > 1)
-		{
-			auto first = itsInfo->PeekLevel(0), second = itsInfo->PeekLevel(1);
-
-			if (first.Value() < second.Value())
-			{
-				itsInfo->LevelOrder(kBottomToTop);
-			}
-		}
 	}
 
 	SetParams({param(HParam)});
@@ -192,7 +178,23 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 
 	bool firstLevel;
 
-	if (myTargetInfo->LevelOrder() == kTopToBottom)
+	/*
+	 * With iteration method, we must start from the lowest level.
+	 */
+
+	bool topToBottom = false;
+
+	if (itsInfo->SizeLevels() > 1)
+	{
+		auto first = itsInfo->PeekLevel(0), second = itsInfo->PeekLevel(1);
+
+		if (first.Value() < second.Value())
+		{
+			topToBottom = true;
+		}
+	}
+
+	if (topToBottom == false)
 	{
 		firstLevel = myTargetInfo->PeekLevel(0).Value() == itsBottomLevel;
 	}
@@ -225,7 +227,9 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 
 	// First pass
 
-	for (myTargetInfo->ResetLevel(); myTargetInfo->NextLevel();)
+	topToBottom ? myTargetInfo->LastLevel() : myTargetInfo->FirstLevel();
+
+	while (true)
 	{
 		if (itsConfiguration->UseDynamicMemoryAllocation())
 		{
@@ -287,6 +291,13 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 
 		prevPInfo = PInfo;
 		prevTInfo = TInfo;
+
+		const bool levelsRemaining = topToBottom ? myTargetInfo->PreviousLevel() : myTargetInfo->NextLevel();
+
+		if (levelsRemaining == false)
+		{
+			break;
+		}
 	}
 
 	for (auto& f : pool)
@@ -296,9 +307,11 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 
 	// Second pass
 
+	topToBottom ? myTargetInfo->LastLevel() : myTargetInfo->FirstLevel();
+
 	vector<future<void>> writers;
 
-	for (myTargetInfo->ResetLevel(); myTargetInfo->NextLevel();)
+	while (true)
 	{
 		// Check if we have data in grid. If all values are missing, it is impossible to continue
 		// processing any level above this one.
@@ -313,13 +326,15 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 		{
 			auto& cur = VEC(myTargetInfo);
 
-			if (myTargetInfo->PreviousLevel())
+			bool isFirst = topToBottom ? myTargetInfo->NextLevel() : myTargetInfo->PreviousLevel();
+
+			if (isFirst)
 			{
 				const auto& prev = VEC(myTargetInfo);
 
 				transform(cur.begin(), cur.end(), prev.begin(), cur.begin(), plus<double>());
 
-				myTargetInfo->NextLevel();
+				topToBottom ? myTargetInfo->PreviousLevel() : myTargetInfo->NextLevel();
 			}
 			else
 			{
@@ -355,6 +370,13 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 		{
 			itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Data().MissingCount());
 			itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data().Size());
+		}
+
+		const bool levelsRemaining = topToBottom ? myTargetInfo->PreviousLevel() : myTargetInfo->NextLevel();
+
+		if (levelsRemaining == false)
+		{
+			break;
 		}
 	}
 

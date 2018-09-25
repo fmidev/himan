@@ -18,7 +18,6 @@ using namespace himan;
 
 info::info()
     : itsBaseGrid(),
-      itsLevelOrder(kTopToBottom),
       itsLevelIterator(),
       itsTimeIterator(),
       itsParamIterator(),
@@ -56,8 +55,7 @@ info::~info()
 }
 info::info(const info& other)
     // Iterators are COPIED
-    : itsLevelOrder(other.itsLevelOrder),
-      itsLevelIterator(other.itsLevelIterator),
+    : itsLevelIterator(other.itsLevelIterator),
       itsTimeIterator(other.itsTimeIterator),
       itsParamIterator(other.itsParamIterator),
       itsForecastTypeIterator(other.itsForecastTypeIterator),
@@ -76,8 +74,6 @@ info::info(const info& other)
 std::ostream& info::Write(std::ostream& file) const
 {
 	file << "<" << ClassName() << ">" << endl;
-
-	file << "__itsLevelOrder__ " << HPLevelOrderToString.at(itsLevelOrder) << endl;
 
 	file << itsProducer;
 
@@ -381,48 +377,19 @@ void info::SetParam(const param& theParam)
 {
 	itsParamIterator.Replace(theParam);
 }
-HPLevelOrder info::LevelOrder() const
-{
-	return itsLevelOrder;
-}
-void info::LevelOrder(HPLevelOrder levelOrder)
-{
-	itsLevelOrder = levelOrder;
-}
 bool info::NextLevel()
 {
-	if (itsLevelOrder == kBottomToTop)
-	{
-		return itsLevelIterator.Previous();
-	}
-	else
-	{
-		return itsLevelIterator.Next();
-	}
+	return itsLevelIterator.Next();
 }
 
 bool info::PreviousLevel()
 {
-	if (itsLevelOrder == kBottomToTop)
-	{
-		return itsLevelIterator.Next();
-	}
-	else
-	{
-		return itsLevelIterator.Previous();
-	}
+	return itsLevelIterator.Previous();
 }
 
 bool info::LastLevel()
 {
-	if (itsLevelOrder == kBottomToTop)
-	{
-		return itsLevelIterator.First();
-	}
-	else
-	{
-		return itsLevelIterator.Last();
-	}
+	return itsLevelIterator.Last();
 }
 
 void info::First()
@@ -449,15 +416,7 @@ void info::ResetLevel()
 }
 bool info::FirstLevel()
 {
-	ASSERT(itsLevelOrder != kUnknownLevelOrder);
-	if (itsLevelOrder == kBottomToTop)
-	{
-		return itsLevelIterator.Last();
-	}
-	else
-	{
-		return itsLevelIterator.First();
-	}
+	return itsLevelIterator.First();
 }
 
 size_t info::LevelIndex() const

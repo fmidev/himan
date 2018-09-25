@@ -170,7 +170,6 @@ void plugin_configuration::WriteStatistics()
 
 		cout << "Level type:\t\t" << HPLevelTypeToString.at(itsInfo->Level().Type()) << endl;
 		cout << "Level count:\t\t" << itsInfo->SizeLevels() << endl;
-		cout << "Level order:\t\t" << HPLevelOrderToString.at(itsInfo->LevelOrder()) << endl;
 
 		// assuming even time step
 

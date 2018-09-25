@@ -558,9 +558,6 @@ class info
 	const level& PeekLevel(size_t theIndex) const;
 	void SetLevel(const level& theLevel);
 
-	HPLevelOrder LevelOrder() const;
-	void LevelOrder(HPLevelOrder levelOrder);
-
 	size_t SizeLevels() const;
 
 	/**
@@ -763,8 +760,6 @@ class info
 	void Regrid(const std::vector<param>& params);
 	void Regrid(const std::vector<level>& levels);
 
-	HPLevelOrder itsLevelOrder;
-
 	level_iter itsLevelIterator;
 	time_iter itsTimeIterator;
 	param_iter itsParamIterator;
@@ -784,9 +779,9 @@ class info
 	template <class Archive>
 	void serialize(Archive& ar)
 	{
-		ar(CEREAL_NVP(itsLevelOrder), CEREAL_NVP(itsLevelIterator), CEREAL_NVP(itsTimeIterator),
-		   CEREAL_NVP(itsParamIterator), CEREAL_NVP(itsForecastTypeIterator), CEREAL_NVP(itsDimensions),
-		   CEREAL_NVP(itsBaseGrid), CEREAL_NVP(itsLogger), CEREAL_NVP(itsProducer), CEREAL_NVP(itsLocationIndex));
+		ar(CEREAL_NVP(itsLevelIterator), CEREAL_NVP(itsTimeIterator), CEREAL_NVP(itsParamIterator),
+		   CEREAL_NVP(itsForecastTypeIterator), CEREAL_NVP(itsDimensions), CEREAL_NVP(itsBaseGrid),
+		   CEREAL_NVP(itsLogger), CEREAL_NVP(itsProducer), CEREAL_NVP(itsLocationIndex));
 	}
 #endif
 };
