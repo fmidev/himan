@@ -468,15 +468,47 @@ void compiled_plugin_base::SetParams(std::vector<param>& params, const vector<le
 	/*
 	 * Create data structures.
 	 */
+
+	if (itsInfo->DimensionSize() == 0)
+	{
+		itsInfo->Dimensions().resize(itsInfo->SizeForecastTypes() * itsInfo->SizeTimes() * itsInfo->SizeLevels() *
+		                             itsInfo->SizeParams());
+	}
+
 	for (const auto& lvl : levels)
 	{
 		const auto g = itsInfo->itsBaseGrid.get();
 
 		for (const auto& par : params)
 		{
-			auto b = make_shared<base>();
-			b->grid = shared_ptr<grid>(g->Clone());
-			itsInfo->Create(b, par, lvl, !itsConfiguration->UseDynamicMemoryAllocation());
+			itsInfo->FirstForecastType();
+			itsInfo->FirstTime();
+			itsInfo->FirstLevel();
+			itsInfo->ResetParam();
+
+			while (itsInfo->Next())
+			{
+				if (itsInfo->Param() == par && itsInfo->Level() == lvl)
+				{
+					auto b = make_shared<base>();
+					b->grid = shared_ptr<grid>(g->Clone());
+
+					if (itsConfiguration->UseDynamicMemoryAllocation() == false)
+					{
+						if (b->grid->Class() == kRegularGrid)
+						{
+							const regular_grid* regGrid(dynamic_cast<const regular_grid*>(b->grid.get()));
+							b->data.Resize(regGrid->Ni(), regGrid->Nj());
+						}
+						else if (b->grid->Class() == kIrregularGrid)
+						{
+							b->data.Resize(b->grid->Size(), 1, 1);
+						}
+					}
+
+					itsInfo->Base(b);
+				}
+			}
 		}
 	}
 	if (!itsConfiguration->UseDynamicMemoryAllocation())
@@ -593,11 +625,9 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 		/*
 		 * Fetching of packed data is quite convoluted:
 		 *
-		 * 1) Fetch packed data iff cuda unpacking is enabled (UseCudaForPacking() == true): it makes no sense to
-		 * unpack
-		 * the data in himan with CPU.
-		 *    If we allow fetcher to return packed data, it will implicitly disable cache integration of fetched
-		 * data.
+		 * 1) Fetch packed data iff cuda unpacking is enabled (UseCudaForPacking() == true): it makes no sense
+		 * to unpack the data in himan with CPU. If we allow fetcher to return packed data, it will implicitly
+		 * disable cache integration of fetched data.
 		 *
 		 * 2a) If caller does not want packed data (returnPacked == false), unpack it here and insert to cache.
 		 *

@@ -464,7 +464,6 @@ class info
 	 */
 
 	void Create(std::shared_ptr<base> baseGrid, bool createDataBackend = false);
-	void Create(std::shared_ptr<base> baseGrid, const param& par, const level& lev, bool createDataBackend = false);
 
 	void Producer(long theFmiProducerID);
 	void Producer(const producer& theProducer);
@@ -713,7 +712,10 @@ class info
 
    protected:
 	std::unique_ptr<grid> itsBaseGrid;  //!< grid information from json. used as a template, never to store data
-	std::vector<std::shared_ptr<base>> Dimensions() const;
+	std::vector<std::shared_ptr<base>>& Dimensions()
+	{
+		return itsDimensions;
+	}
 
    private:
 	void Init();

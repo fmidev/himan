@@ -153,52 +153,6 @@ void info::Regrid(const vector<level>& newLevels)
 	First();  // "Factory setting"
 }
 
-void info::Create(shared_ptr<base> baseGrid, const param& par, const level& lev, bool createDataBackend)
-{
-	ASSERT(baseGrid);
-
-	if (itsDimensions.size() == 0)
-	{
-		itsDimensions.resize(itsForecastTypeIterator.Size() * itsTimeIterator.Size() * itsLevelIterator.Size() *
-		                     itsParamIterator.Size());
-	}
-
-	FirstForecastType();
-	FirstTime();
-	FirstLevel();
-	ResetParam();
-
-	while (Next())
-	{
-		if (Level() == lev && Param() == par)
-		{
-			auto g = shared_ptr<grid>(baseGrid->grid->Clone());
-			auto d = matrix<double>(baseGrid->data);
-
-			auto b = make_shared<base>(g, d);
-
-			Base(b);
-
-			if (baseGrid->grid->Class() == kRegularGrid)
-			{
-				const regular_grid* regGrid(dynamic_cast<const regular_grid*>(baseGrid->grid.get()));
-				if (createDataBackend)
-				{
-					Data().Resize(regGrid->Ni(), regGrid->Nj());
-				}
-			}
-			else if (baseGrid->grid->Class() == kIrregularGrid)
-			{
-				Data().Resize(Grid()->Size(), 1, 1);
-			}
-			else
-			{
-				throw runtime_error(ClassName() + ": Invalid grid type");
-			}
-		}
-	}
-}
-
 void info::Create(shared_ptr<base> baseGrid, bool createDataBackend)
 {
 	ASSERT(baseGrid);
@@ -704,10 +658,6 @@ shared_ptr<packed_data> info::PackedData() const
 size_t info::DimensionSize() const
 {
 	return itsDimensions.size();
-}
-vector<shared_ptr<base>> info::Dimensions() const
-{
-	return itsDimensions;
 }
 void info::ReIndex(size_t oldForecastTypeSize, size_t oldTimeSize, size_t oldLevelSize, size_t oldParamSize)
 {
