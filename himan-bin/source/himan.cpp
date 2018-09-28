@@ -53,7 +53,7 @@ void UploadRunStatisticsToDatabase(shared_ptr<configuration> conf, const vector<
 			name += " #" + to_string(t.order_number);
 		}
 
-		json << "\n        { 'name' : '" << name << "' : 'elapsed_ms' : '" << (t.time_elapsed) << "' },";
+		json << "\n        { 'name' : '" << name << "', 'elapsed_ms' : '" << (t.time_elapsed) << "' },";
 	}
 
 	json.seekp(-1, json.cur);  // remove comma from last element
