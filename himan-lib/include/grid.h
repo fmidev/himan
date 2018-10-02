@@ -55,9 +55,6 @@ class grid
 	HPGridClass Class() const;
 	void Class(HPGridClass theGridClass);
 
-	std::string Identifier() const;
-	void Identifier(const std::string& theIdentifier);
-
 	std::vector<double> AB() const;
 	void AB(const std::vector<double>& theAB);
 
@@ -80,6 +77,9 @@ class grid
 	/* Return latlon coordinates of a given grid point */
 	virtual point LatLon(size_t locationIndex) const = 0;
 
+	/* Return a unique key */
+        virtual size_t Hash() const = 0;
+
 	bool UVRelativeToGrid() const;
 	void UVRelativeToGrid(bool theUVRelativeToGrid);
 
@@ -94,7 +94,6 @@ class grid
 
 	HPGridClass itsGridClass;
 	HPGridType itsGridType;
-	std::string itsIdentifier;
 
 	std::vector<double> itsAB;
 
@@ -193,6 +192,7 @@ inline std::ostream& operator<<(std::ostream& file, const grid& ob)
 {
 	return ob.Write(file);
 }
+
 }  // namespace himan
 
 #endif /* GRID_H */

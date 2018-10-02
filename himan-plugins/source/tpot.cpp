@@ -14,9 +14,12 @@
 using namespace std;
 using namespace himan::plugin;
 
-#include "cuda_helper.h"
 #include "moisture.h"
-#include "tpot.cuh"
+
+#ifdef HAVE_CUDA
+void ProcessGPU(std::shared_ptr<const himan::plugin_configuration> conf, std::shared_ptr<himan::info> myTargetInfo,
+                bool theta, bool thetaw, bool thetae);
+#endif
 
 tpot::tpot() : itsThetaCalculation(false), itsThetaWCalculation(false), itsThetaECalculation(false)
 {
@@ -165,9 +168,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	{
 		deviceType = "GPU";
 
-		auto opts = CudaPrepare(myTargetInfo, TInfo, PInfo, TDInfo);
-
-		tpot_cuda::Process(*opts);
+		ProcessGPU(itsConfiguration, myTargetInfo, itsThetaCalculation, itsThetaWCalculation, itsThetaECalculation);
 	}
 	else
 #endif
@@ -238,73 +239,3 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
 	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
-
-#ifdef HAVE_CUDA
-
-unique_ptr<tpot_cuda::options> tpot::CudaPrepare(shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo,
-                                                 shared_ptr<info> PInfo, shared_ptr<info> TDInfo)
-{
-	unique_ptr<tpot_cuda::options> opts(new tpot_cuda::options);
-
-	opts->is_constant_pressure = (myTargetInfo->Level().Type() == kPressure);
-
-	opts->t = TInfo->ToSimple();
-	opts->theta = itsThetaCalculation;
-
-	if (opts->theta)
-	{
-		myTargetInfo->Param(param("TP-K"));
-		opts->tp = myTargetInfo->ToSimple();
-	}
-
-	opts->thetaw = itsThetaWCalculation;
-
-	if (opts->thetaw)
-	{
-		myTargetInfo->Param(param("TPW-K"));
-		opts->tpw = myTargetInfo->ToSimple();
-	}
-
-	opts->thetae = itsThetaECalculation;
-
-	if (opts->thetae)
-	{
-		myTargetInfo->Param(param("TPE-K"));
-		opts->tpe = myTargetInfo->ToSimple();
-	}
-
-	if (!opts->is_constant_pressure)
-	{
-		opts->p = PInfo->ToSimple();
-
-		if (PInfo->Param().Unit() == kHPa || PInfo->Param().Name() == "P-HPA")
-		{
-			opts->p_scale = 100;
-		}
-	}
-	else
-	{
-		opts->p_const = myTargetInfo->Level().Value() * 100;  // Pa
-	}
-
-	if (TDInfo)
-	{
-		opts->td = TDInfo->ToSimple();
-
-		if (TDInfo->Param().Unit() == kC)
-		{
-			opts->td_base = himan::constants::kKelvin;
-		}
-	}
-
-	opts->N = opts->t->size_x * opts->t->size_y;
-
-	if (TInfo->Param().Unit() == kC)
-	{
-		opts->t_base = himan::constants::kKelvin;
-	}
-
-	return opts;
-}
-
-#endif

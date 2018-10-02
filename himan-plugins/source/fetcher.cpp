@@ -721,11 +721,6 @@ vector<shared_ptr<himan::info>> fetcher::FetchFromDatabase(search_options& opts,
 				stickyParamCache.push_back(uName);
 			}
 
-			if (ret.empty() == false)
-			{
-				ret.front()->Grid()->Identifier(files.second);
-			}
-
 			return ret;
 		}
 	}

@@ -11,7 +11,6 @@ using namespace std;
 grid::grid()
     : itsGridClass(kUnknownGridClass),
       itsGridType(kUnknownGridType),
-      itsIdentifier(),
       itsAB(),
       itsUVRelativeToGrid(false),
       itsEarthShape()
@@ -21,7 +20,6 @@ grid::grid()
 grid::grid(const grid& other)
     : itsGridClass(other.itsGridClass),
       itsGridType(other.itsGridType),
-      itsIdentifier(other.itsIdentifier),
       itsAB(other.itsAB),
       itsUVRelativeToGrid(other.itsUVRelativeToGrid),
       itsEarthShape(other.itsEarthShape)
@@ -53,13 +51,6 @@ bool grid::EqualsTo(const grid& other) const
 		return false;
 	}
 
-	// Disabled for now
-	if ((false) && other.itsIdentifier != itsIdentifier)
-	{
-		itsLogger.Trace("Identifier does not match: " + itsIdentifier + " vs " + other.itsIdentifier);
-		return false;
-	}
-
 	// We DON'T test for AB !
 	// Why?
 
@@ -82,14 +73,6 @@ void grid::Class(HPGridClass theGridClass)
 {
 	itsGridClass = theGridClass;
 }
-std::string grid::Identifier() const
-{
-	return itsIdentifier;
-}
-void grid::Identifier(const std::string& theIdentifier)
-{
-	itsIdentifier = theIdentifier;
-}
 
 ostream& grid::Write(std::ostream& file) const
 {
@@ -106,7 +89,6 @@ ostream& grid::Write(std::ostream& file) const
 	file << std::endl;
 
 	file << itsEarthShape;
-	file << "__itsIdentifier__" << itsIdentifier << std::endl;
 
 	return file;
 }

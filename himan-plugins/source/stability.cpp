@@ -25,7 +25,7 @@ typedef vector<double> vec;
 pair<vec, vec> GetSRHSourceData(const shared_ptr<info>& myTargetInfo, shared_ptr<hitool> h);
 
 #ifdef HAVE_CUDA
-void RunCuda(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo, shared_ptr<hitool>& h);
+void ProcessGPU(shared_ptr<const plugin_configuration> conf, info_t myTargetInfo);
 #endif
 
 namespace STABILITY
@@ -113,7 +113,7 @@ vec CalculateStormRelativeHelicity(shared_ptr<const plugin_configuration> conf, 
 
 	auto prevUInfo = STABILITY::Fetch(conf, myTargetInfo, itsBottomLevel, UParam);
 	auto prevVInfo = STABILITY::Fetch(conf, myTargetInfo, itsBottomLevel, VParam);
-	auto prevZInfo = STABILITY::Fetch(conf, myTargetInfo, itsBottomLevel, param("HL-M"));
+	auto prevZInfo = STABILITY::Fetch(conf, myTargetInfo, itsBottomLevel, HLParam);
 
 	vector<bool> found(SRH.size(), false);
 
@@ -125,7 +125,7 @@ vec CalculateStormRelativeHelicity(shared_ptr<const plugin_configuration> conf, 
 
 		auto UInfo = STABILITY::Fetch(conf, myTargetInfo, curLevel, UParam);
 		auto VInfo = STABILITY::Fetch(conf, myTargetInfo, curLevel, VParam);
-		auto ZInfo = STABILITY::Fetch(conf, myTargetInfo, curLevel, param("HL-M"));
+		auto ZInfo = STABILITY::Fetch(conf, myTargetInfo, curLevel, HLParam);
 
 		const auto& U = VEC(UInfo);
 		const auto& V = VEC(VInfo);
@@ -504,7 +504,7 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 	{
 		deviceType = "GPU";
 
-		RunCuda(itsConfiguration, myTargetInfo, h);
+		ProcessGPU(itsConfiguration, myTargetInfo);
 	}
 	else
 #endif
@@ -625,63 +625,6 @@ pair<vec, vec> GetSRHSourceData(const shared_ptr<info>& myTargetInfo, shared_ptr
 
 	return make_pair(Uid, Vid);
 }
-
-#ifdef HAVE_CUDA
-void RunCuda(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo, shared_ptr<hitool>& h)
-{
-	unique_ptr<stability_cuda::options> opts(new stability_cuda::options);
-
-	myTargetInfo->Level(Height0Level);
-
-	myTargetInfo->Param(LIParam);
-	opts->li = myTargetInfo->ToSimple();
-
-	myTargetInfo->Param(SIParam);
-	opts->si = myTargetInfo->ToSimple();
-
-	myTargetInfo->Param(BSParam);
-	myTargetInfo->Level(OneKMLevel);
-	opts->bs01 = myTargetInfo->ToSimple();
-
-	myTargetInfo->Level(ThreeKMLevel);
-	opts->bs03 = myTargetInfo->ToSimple();
-
-	myTargetInfo->Level(SixKMLevel);
-	opts->bs06 = myTargetInfo->ToSimple();
-
-	myTargetInfo->Param(EBSParam);
-	myTargetInfo->Level(Height0Level);
-	opts->ebs = myTargetInfo->ToSimple();
-
-	myTargetInfo->Param(CAPESParam);
-	opts->capes = myTargetInfo->ToSimple();
-
-	myTargetInfo->Param(SRHParam);
-	myTargetInfo->Level(OneKMLevel);
-	opts->srh01 = myTargetInfo->ToSimple();
-
-	myTargetInfo->Level(ThreeKMLevel);
-	opts->srh03 = myTargetInfo->ToSimple();
-
-	myTargetInfo->Param(TPEParam);
-	opts->thetae3 = myTargetInfo->ToSimple();
-
-	myTargetInfo->Param(EHIParam);
-	myTargetInfo->Level(OneKMLevel);
-	opts->ehi = myTargetInfo->ToSimple();
-
-	myTargetInfo->Param(BRNParam);
-	myTargetInfo->Level(SixKMLevel);
-	opts->brn = myTargetInfo->ToSimple();
-
-	opts->N = myTargetInfo->SizeLocations();
-	opts->h = h;
-	opts->conf = conf;
-	opts->myTargetInfo = make_shared<info>(*myTargetInfo);
-
-	stability_cuda::Process(*opts);
-}
-#endif
 
 void stability::RunTimeDimension(info_t myTargetInfo, unsigned short threadIndex)
 {

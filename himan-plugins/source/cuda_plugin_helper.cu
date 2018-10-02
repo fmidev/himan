@@ -158,7 +158,7 @@ std::shared_ptr<himan::info> Fetch(const std::shared_ptr<const plugin_configurat
 			throw std::runtime_error("cape_cuda::Fetch(): Unable to proceed");
 		}
 
-		return std::shared_ptr<info>();
+		return nullptr;
 	}
 }
 }  // namespace cuda

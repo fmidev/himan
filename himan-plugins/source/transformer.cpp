@@ -17,7 +17,9 @@ using namespace himan::plugin;
 
 mutex aggregationMutex;
 
-#include "cuda_helper.h"
+#ifdef HAVE_CUDA
+void ProcessGPU(himan::info_t myTargetInfo, himan::info_t sourceInfo, double scale, double base);
+#endif
 
 transformer::transformer()
     : itsBase(0.0),
@@ -349,9 +351,7 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 	{
 		deviceType = "GPU";
 
-		auto opts = CudaPrepare(myTargetInfo, sourceInfo);
-
-		transformer_cuda::Process(*opts);
+		ProcessGPU(myTargetInfo, sourceInfo, itsScale, itsBase);
 	}
 	else
 #endif
@@ -368,22 +368,3 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
 	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
-
-#ifdef HAVE_CUDA
-
-unique_ptr<transformer_cuda::options> transformer::CudaPrepare(shared_ptr<info> myTargetInfo,
-                                                               shared_ptr<info> sourceInfo)
-{
-	unique_ptr<transformer_cuda::options> opts(new transformer_cuda::options);
-
-	opts->N = sourceInfo->Data().Size();
-
-	opts->base = itsBase;
-	opts->scale = itsScale;
-
-	opts->source = sourceInfo->ToSimple();
-	opts->dest = myTargetInfo->ToSimple();
-
-	return opts;
-}
-#endif

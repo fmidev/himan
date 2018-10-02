@@ -117,15 +117,26 @@ const vector<station>& point_list::Stations() const
 {
 	return itsStations;
 }
+
 void point_list::Stations(const vector<station>& theStations)
 {
 	itsStations = theStations;
 	// itsData.Resize(theStations.size(), 1, 1);
 }
+
+size_t point_list::Hash() const
+{
+	size_t hash = Type();
+	for (const auto& station : Stations())
+		boost::hash_combine(hash,station.Hash());
+	return hash;
+}
+
 bool point_list::operator!=(const point_list& other) const
 {
 	return !(other == *this);
 }
+
 bool point_list::operator==(const point_list& other) const
 {
 	const point_list* g = dynamic_cast<const point_list*>(&other);

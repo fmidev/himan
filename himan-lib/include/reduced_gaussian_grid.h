@@ -54,6 +54,8 @@ class reduced_gaussian_grid : public irregular_grid
 
 	point LatLon(size_t locationIndex) const override;
 
+	size_t Hash() const override;
+
 	point LatLon(size_t x, size_t y) const;
 	size_t LocationIndex(size_t x, size_t y) const;
 

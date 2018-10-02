@@ -41,6 +41,10 @@ class point
 	CUDA_HOST CUDA_DEVICE void X(double theX);
 	CUDA_HOST CUDA_DEVICE void Y(double theY);
 
+#ifndef __CUDACC__
+	size_t Hash() const;
+#endif
+
 	std::ostream& Write(std::ostream& file) const;
 
    protected:
@@ -103,6 +107,15 @@ CUDA_HOST CUDA_DEVICE inline void point::Y(double theY)
 {
 	itsY = theY;
 }
+#ifndef __CUDACC__
+inline size_t point::Hash() const
+{
+	size_t ret = 0;
+	boost::hash_combine(ret, std::hash<double>{}(itsX));
+	boost::hash_combine(ret, std::hash<double>{}(itsY));
+	return ret;
+}
+#endif
 inline std::ostream& operator<<(std::ostream& file, const point& ob)
 {
 	return ob.Write(file);

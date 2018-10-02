@@ -67,7 +67,7 @@ info::info(const info& other)
 {
 	if (other.itsBaseGrid)
 	{
-		itsBaseGrid = unique_ptr<grid>(other.itsBaseGrid->Clone());
+		itsBaseGrid = other.itsBaseGrid->Clone();
 	}
 
 	itsLogger = logger("info");
@@ -705,85 +705,6 @@ size_t info::DimensionSize() const
 {
 	return itsDimensions.size();
 }
-#ifdef HAVE_CUDA
-
-info_simple* info::ToSimple() const
-{
-	info_simple* ret = new info_simple();
-
-	ret->size_x = itsDimensions[Index()]->data.SizeX();
-	ret->size_y = itsDimensions[Index()]->data.SizeY();
-
-	if (Grid()->Class() == kRegularGrid)
-	{
-		ret->di = dynamic_pointer_cast<regular_grid>(Grid())->Di();
-		ret->dj = dynamic_pointer_cast<regular_grid>(Grid())->Dj();
-	}
-	else
-	{
-		ret->di = kHPMissingValue;
-		ret->dj = kHPMissingValue;
-	}
-
-	ret->first_lat = Grid()->FirstPoint().Y();
-	ret->first_lon = Grid()->FirstPoint().X();
-
-	if (Grid()->Type() == kRotatedLatitudeLongitude)
-	{
-		ret->south_pole_lat = dynamic_pointer_cast<rotated_latitude_longitude_grid>(Grid())->SouthPole().Y();
-		ret->south_pole_lon = dynamic_pointer_cast<rotated_latitude_longitude_grid>(Grid())->SouthPole().X();
-	}
-	else if (Grid()->Type() == kStereographic)
-	{
-		ret->orientation = dynamic_pointer_cast<stereographic_grid>(Grid())->Orientation();
-	}
-	else if (Grid()->Type() == kLambertConformalConic)
-	{
-		auto llc = dynamic_pointer_cast<lambert_conformal_grid>(Grid());
-		ret->orientation = llc->Orientation();
-		ret->latin1 = llc->StandardParallel1();
-		ret->latin2 = llc->StandardParallel2();
-	}
-
-	ret->interpolation = Param().InterpolationMethod();
-
-	if (Grid()->Class() == kRegularGrid)
-	{
-		auto gr = dynamic_pointer_cast<regular_grid>(Grid());
-
-		if (gr->ScanningMode() == kTopLeft)
-		{
-			ret->j_scans_positive = false;
-		}
-		else if (gr->ScanningMode() != kBottomLeft)
-		{
-			throw runtime_error(ClassName() + ": Invalid scanning mode for Cuda: " +
-			                    string(HPScanningModeToString.at(gr->ScanningMode())));
-		}
-	}
-
-	ret->projection = Grid()->Type();
-
-	if (PackedData()->HasData())
-	{
-		/*
-		 * If info has packed data, shallow-copy a pointer to that data to 'ret'.
-		 * Also allocate page-locked memory for the unpacked data.
-		 */
-
-		ASSERT(PackedData()->ClassName() == "simple_packed");
-
-		ret->packed_values = reinterpret_cast<simple_packed*>(PackedData().get());
-	}
-
-	// Reserve a place for the unpacked data
-	ret->values = const_cast<double*>(itsDimensions[Index()]->data.ValuesAsPOD());
-
-	return ret;
-}
-
-#endif
-
 vector<shared_ptr<base>> info::Dimensions() const
 {
 	return itsDimensions;

@@ -95,6 +95,8 @@ class latitude_longitude_grid : public regular_grid
 	point FirstPoint() const;
 	point LastPoint() const;
 
+	bool IsGlobal() const;
+
 	bool operator==(const grid& other) const;
 	bool operator!=(const grid& other) const;
 
@@ -103,6 +105,8 @@ class latitude_longitude_grid : public regular_grid
 
 	point XY(const point& latlon) const override;
 	point LatLon(size_t locationIndex) const override;
+
+	size_t Hash() const override;
 
 	std::unique_ptr<grid> Clone() const override;
 
@@ -122,7 +126,6 @@ class latitude_longitude_grid : public regular_grid
 	size_t itsNj;
 
    private:
-	mutable bool itsIsGlobal;
 
 #ifdef SERIALIZATION
 	friend class cereal::access;
@@ -169,6 +172,8 @@ class rotated_latitude_longitude_grid : public latitude_longitude_grid
 	point XY(const point& latlon) const override;
 	point LatLon(size_t locationIndex) const override;
 	point RotatedLatLon(size_t locationIndex) const;
+
+        size_t Hash() const override;
 
    private:
 	bool EqualsTo(const rotated_latitude_longitude_grid& other) const;

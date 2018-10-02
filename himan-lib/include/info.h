@@ -12,7 +12,6 @@
 #include "forecast_type.h"
 #include "grid.h"
 #include "himan_common.h"
-#include "info_simple.h"
 #include "level.h"
 #include "param.h"
 #include "producer.h"
@@ -687,18 +686,6 @@ class info
 	 */
 
 	double Value() const;
-
-#ifdef HAVE_CUDA
-
-	/**
-	 * @brief Stupify this info to a C-style struct
-	 *
-	 * @return
-	 */
-
-	info_simple* ToSimple() const;
-
-#endif
 
 	/**
 	 * @brief Clear info contents and iterators
