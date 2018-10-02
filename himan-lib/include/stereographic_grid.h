@@ -86,6 +86,8 @@ class stereographic_grid : public regular_grid
 	point XY(const point& latlon) const override;
 	point LatLon(size_t locationIndex) const override;
 
+	size_t Hash() const override;
+
 	std::unique_ptr<grid> Clone() const override;
 
    private:

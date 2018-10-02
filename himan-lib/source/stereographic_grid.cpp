@@ -1,5 +1,6 @@
 #include "stereographic_grid.h"
 #include <ogr_spatialref.h>
+#include <functional>
 
 using namespace himan;
 using namespace std;
@@ -199,6 +200,9 @@ point stereographic_grid::XY(const point& latlon) const
 	const double x = (projX / itsDi);
 	const double y = (projY / itsDj);
 
+	if( x < 0 || x > static_cast<double>(Ni()-1) || y < 0 || y > static_cast<double>(Nj()-1))
+		return point(MissingDouble(),MissingDouble());
+
 	return point(x, y);
 }
 
@@ -355,6 +359,20 @@ point stereographic_grid::LastPoint() const
 		default:
 			throw runtime_error("Scanning mode not supported: " + HPScanningModeToString.at(itsScanningMode));
 	}
+}
+
+size_t stereographic_grid::Hash() const
+{
+        vector<size_t> hashes;
+        hashes.push_back(Type());
+        hashes.push_back(FirstPoint().Hash());
+        hashes.push_back(Ni());
+        hashes.push_back(Nj());
+        hashes.push_back(hash<double>{}(Di()));
+        hashes.push_back(hash<double>{}(Dj()));
+	hashes.push_back(ScanningMode());
+	hashes.push_back(hash<double>{}(Orientation()));
+        return boost::hash_range(hashes.begin(),hashes.end());
 }
 
 unique_ptr<grid> stereographic_grid::Clone() const

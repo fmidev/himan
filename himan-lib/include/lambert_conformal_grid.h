@@ -108,6 +108,8 @@ class lambert_conformal_grid : public regular_grid
 	point SouthPole() const;
 	void SouthPole(const point& theSouthPole);
 
+	size_t Hash() const override;
+
    private:
 	bool EqualsTo(const lambert_conformal_grid& other) const;
 	void SetCoordinates() const;

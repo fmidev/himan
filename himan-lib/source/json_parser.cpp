@@ -2,6 +2,7 @@
  * @file json_parser.cpp
  *
  */
+#include "interpolate.h"
 #include "json_parser.h"
 #include "lambert_conformal_grid.h"
 #include "latitude_longitude_grid.h"
@@ -37,8 +38,6 @@ void ParseTargetProducer(shared_ptr<configuration> conf, shared_ptr<info> anInfo
 vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt);
 
 vector<level> LevelsFromString(const string& levelType, const string& levelValues);
-
-// void BuildInterpolationCache(shared_ptr<configuration> conf);
 
 static logger itsLogger;
 
@@ -1406,42 +1405,3 @@ vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt)
 
 	return forecastTypes;
 }
-#if 0
-void BuildInterpolationCache(shared_ptr<configuration> conf)
-{
-	std::unique_ptr<grid> target_geom;
-	try
-	{
-		target_geom = util::GridFromDatabase(conf->TargetGeomName());
-	}
-	catch (exception& e)
-	{
-		itsLogger.Warning(e.what());
-		return;
-	}
-
-	target_geom->Identifier(conf->TargetGeomName());
-
-	for (const auto& source_geom_name : conf->SourceGeomNames())
-	{
-		if (source_geom_name == conf->TargetGeomName())
-			continue;
-
-		std::unique_ptr<grid> source_geom;
-		try
-		{
-			source_geom = util::GridFromDatabase(source_geom_name);
-			source_geom->Identifier(source_geom_name);
-		}
-		catch (exception& e)
-		{
-			itsLogger.Warning(e.what());
-			continue;
-		}
-		source_geom->Identifier(source_geom_name);
-		if (himan::interpolate::interpolator().Insert(source_geom.get(), target_geom.get()))
-			itsLogger.Info("Interpolation from " + source_geom_name + " to " + conf->TargetGeomName() +
-			               " added to interpolation cache.");
-	}
-}
-#endif

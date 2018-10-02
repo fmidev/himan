@@ -9,8 +9,6 @@
 #include "util.h"
 
 #include "plugin_factory.h"
-
-#include "position.h"
 #include <Eigen/Dense>
 
 #define HIMAN_AUXILIARY_INCLUDE
@@ -22,6 +20,7 @@
 #include "NFmiFastQueryInfo.h"
 
 using namespace himan;
+using namespace Eigen;
 
 // bool InsideTriangle(point a, point b, point c, point p);
 
@@ -42,204 +41,36 @@ bool IsSupportedGridForRotation(HPGridType type)
 	}
 }
 
-bool ToReducedGaussianCPU(info& base, info& source, matrix<double>& targetData)
-{
-	// switch to old MissingDouble() for compatibility with QD stuff
-	targetData.MissingValue(kFloatMissing);
-
-	auto q = GET_PLUGIN(querydata);
-
-	std::shared_ptr<NFmiQueryData> sourceData = q->CreateQueryData(source, true);
-	NFmiFastQueryInfo sourceInfo(sourceData.get());
-
-	for (base.ResetLocation(); base.NextLocation();)
-	{
-		const point llpoint = base.LatLon();
-		ASSERT(llpoint != point());
-
-		const double value = sourceInfo.InterpolatedValue(NFmiPoint(llpoint.X(), llpoint.Y()));
-
-		targetData.Set(base.LocationIndex(), value);
-	}
-
-	// back to himan
-	targetData.MissingValue(MissingDouble());
-
-	return true;
-}
-
-bool FromReducedGaussianCPU(info& base, info& source, matrix<double>& targetData)
-{
-	auto gg = std::dynamic_pointer_cast<reduced_gaussian_grid>(source.Grid());
-	const matrix<double>& ggdata = source.Data();
-
-	for (size_t i = 0; i < source.Grid()->Size(); i++)
-	{
-		const point p = source.Grid()->LatLon(i);
-		auto w = InterpolationWeights(gg, p);
-
-		double sum = 0;
-		for (size_t j = 0; j < w.first.size(); ++j)
-		{
-			sum += w.second[j] * ggdata.At(w.first[j]);
-		}
-		targetData.Set(i, sum);
-	}
-
-	return true;
-}
-
-bool InterpolateAreaCPU(info& base, info_t source, matrix<double>& targetData)
-{
-#ifdef HAVE_CUDA
-
-	if (source->PackedData()->HasData())
-	{
-		// We need to unpack
-		util::Unpack({source});
-	}
-#endif
-	// switch to old MissingDouble() for compatibility with QD stuff
-	targetData.MissingValue(kFloatMissing);
-
-	auto q = GET_PLUGIN(querydata);
-
-	std::shared_ptr<NFmiQueryData> baseData = q->CreateQueryData(base, true);
-	std::shared_ptr<NFmiQueryData> sourceData = q->CreateQueryData(*source, true);
-
-	ASSERT(baseData);
-
-	NFmiFastQueryInfo baseInfo = NFmiFastQueryInfo(baseData.get());
-	NFmiFastQueryInfo sourceInfo(sourceData.get());
-
-	auto param = std::string(sourceInfo.Param().GetParam()->GetName());
-
-	int method = InterpolationMethod(param, base.Param().InterpolationMethod());
-	sourceInfo.Param().GetParam()->InterpolationMethod(static_cast<FmiInterpolationMethod>(method));
-
-	size_t i = 0;
-
-	if (base.Grid()->Class() == kIrregularGrid)
-	{
-		for (baseInfo.ResetLocation(), i = 0; baseInfo.NextLocation(); i++)
-		{
-			double value = sourceInfo.InterpolatedValue(baseInfo.LatLon());
-			targetData.Set(i, value);
-		}
-	}
-	else
-	{
-		HPScanningMode mode = std::dynamic_pointer_cast<regular_grid>(base.Grid())->ScanningMode();
-
-		if (mode == kBottomLeft)
-		{
-			baseInfo.Bottom();
-
-			do
-			{
-				baseInfo.Left();
-
-				do
-				{
-					double value = sourceInfo.InterpolatedValue(baseInfo.LatLon());
-
-					targetData.Set(i, value);
-					i++;
-				} while (baseInfo.MoveRight());
-			} while (baseInfo.MoveUp());
-		}
-		else if (mode == kTopLeft)
-		{
-			baseInfo.Top();
-
-			do
-			{
-				baseInfo.Left();
-
-				do
-				{
-					double value = sourceInfo.InterpolatedValue(baseInfo.LatLon());
-					targetData.Set(i, value);
-					i++;
-				} while (baseInfo.MoveRight());
-			} while (baseInfo.MoveDown());
-		}
-	}
-
-	// back to Himan
-	targetData.MissingValue(MissingDouble());
-
-	return true;
-}
-
-bool InterpolateArea(info& target, info_t source, bool useCudaForInterpolation)
+bool InterpolateArea(info& target, info_t source)
 {
 	if (!source)
 	{
 		return false;
 	}
 
-	HPGridType targetType = target.Grid()->Type();
-	HPGridType sourceType = source->Grid()->Type();
-
-	matrix<double> targetData(target.Data().SizeX(), target.Data().SizeY(), target.Data().SizeZ(),
-	                          target.Data().MissingValue(), target.Data().MissingValue());
-	switch (sourceType)
-	{
-		case kLatitudeLongitude:
-		case kRotatedLatitudeLongitude:
-		case kStereographic:
-		case kLambertConformalConic:
-		{
-			switch (targetType)
-			{
-				case kLatitudeLongitude:
-				case kRotatedLatitudeLongitude:
-				case kStereographic:
-				case kLambertConformalConic:
-				case kPointList:
 #ifdef HAVE_CUDA
-					useCudaForInterpolation ? InterpolateAreaGPU(target, source, targetData) :
-#endif
-					                        InterpolateAreaCPU(target, source, targetData);
-					break;
-
-				case kReducedGaussian:
-					ToReducedGaussianCPU(target, *source, targetData);
-					break;
-
-				default:
-					throw std::runtime_error("Unsupported source grid type: " + HPGridTypeToString.at(targetType));
-			}
-
-			break;
-		}
-
-		case kReducedGaussian:
-			switch (targetType)
-			{
-				case kLatitudeLongitude:
-				case kRotatedLatitudeLongitude:
-				case kStereographic:
-					FromReducedGaussianCPU(target, *source, targetData);
-					break;
-
-				default:
-					throw std::runtime_error("Unsupported target grid type for reduced gaussian: " +
-					                         HPGridTypeToString.at(targetType));
-			}
-			break;
-		default:
-			throw std::runtime_error("Unsupported target grid type: " + HPGridTypeToString.at(sourceType));
+	if (source->PackedData()->HasData())
+	{
+		util::Unpack({source});
 	}
+#endif
 
-	auto interpGrid = std::shared_ptr<grid>(target.Grid()->Clone());
-	interpGrid->AB(source->Grid()->AB());
-	interpGrid->UVRelativeToGrid(source->Grid()->UVRelativeToGrid());
+	// make a copy of target base to use as a temporary interpolation target
+	base tmp = *target.Base();
 
-	source->Base(std::make_shared<base>(interpGrid, targetData));
+	if(interpolate::interpolator().Interpolate(*source->Base(), tmp, source->Param().InterpolationMethod()))
+	{
+	        auto interpGrid = std::shared_ptr<grid>(target.Grid()->Clone());
 
-	return true;
+        	interpGrid->AB(source->Grid()->AB());
+        	interpGrid->UVRelativeToGrid(source->Grid()->UVRelativeToGrid());
+
+        	source->Base()->grid = interpGrid;
+		source->Base()->data = std::move(tmp.data);
+
+		return true;
+	}
+	return false;
 }
 
 bool ReorderPoints(info& base, info_t info)
@@ -316,6 +147,7 @@ bool Interpolate(info& base, std::vector<info_t>& infos, bool useCudaForInterpol
 
 		if (base.Grid()->Class() == kRegularGrid && info->Grid()->Class() == kRegularGrid)
 		{
+			
 			if (*(base).Grid() != *info->Grid())
 			{
 				needInterpolation = true;
@@ -371,7 +203,7 @@ bool Interpolate(info& base, std::vector<info_t>& infos, bool useCudaForInterpol
 			}
 		}
 
-		if (needInterpolation && InterpolateArea(base, info, useCudaForInterpolation) == false)
+		if (needInterpolation && InterpolateArea(base, info) == false)
 		{
 			return false;
 		}
@@ -561,7 +393,7 @@ void RotateVectorComponents(info& UInfo, info& VInfo, bool useCuda)
 	VInfo.Grid()->UVRelativeToGrid(false);
 }
 
-std::pair<std::vector<size_t>, std::vector<double>> InterpolationWeights(std::shared_ptr<reduced_gaussian_grid> source,
+std::pair<std::vector<size_t>, std::vector<double>> InterpolationWeights(reduced_gaussian_grid& source,
                                                                          point target)
 {
 	// target lon 0 <= lon < 360
@@ -570,7 +402,7 @@ std::pair<std::vector<size_t>, std::vector<double>> InterpolationWeights(std::sh
 	else if (target.X() >= 360.0)
 		target.X(target.X() - 360.0);
 
-	const auto lats = source->Latitudes();
+	const auto lats = source.Latitudes();
 
 	// check if point is inside domain
 	if (target.Y() >= lats.front())
@@ -595,13 +427,13 @@ std::pair<std::vector<size_t>, std::vector<double>> InterpolationWeights(std::sh
 
 	// find x-indices
 	size_t x_north_west = static_cast<size_t>(
-	    std::floor(static_cast<double>(source->NumberOfPointsAlongParallels()[y_north]) * target.X() / 360.));
+	    std::floor(static_cast<double>(source.NumberOfPointsAlongParallels()[y_north]) * target.X() / 360.));
 	size_t x_north_east =
-	    x_north_west < static_cast<size_t>(source->NumberOfPointsAlongParallels()[y_north] - 1) ? x_north_west + 1 : 0;
+	    x_north_west < static_cast<size_t>(source.NumberOfPointsAlongParallels()[y_north] - 1) ? x_north_west + 1 : 0;
 	size_t x_south_west = static_cast<size_t>(
-	    std::floor(static_cast<double>(source->NumberOfPointsAlongParallels()[y_south]) * target.X() / 360.));
+	    std::floor(static_cast<double>(source.NumberOfPointsAlongParallels()[y_south]) * target.X() / 360.));
 	size_t x_south_east =
-	    x_south_west < static_cast<size_t>(source->NumberOfPointsAlongParallels()[y_south] - 1) ? x_south_west + 1 : 0;
+	    x_south_west < static_cast<size_t>(source.NumberOfPointsAlongParallels()[y_south] - 1) ? x_south_west + 1 : 0;
 
 	/*
 	 *
@@ -616,17 +448,17 @@ std::pair<std::vector<size_t>, std::vector<double>> InterpolationWeights(std::sh
 
 	std::vector<size_t> idxs;
 	idxs.reserve(4);
-	idxs.push_back(source->LocationIndex(x_north_west, y_north));
-	idxs.push_back(source->LocationIndex(x_north_east, y_north));
-	idxs.push_back(source->LocationIndex(x_south_west, y_south));
-	idxs.push_back(source->LocationIndex(x_south_east, y_south));
+	idxs.push_back(source.LocationIndex(x_north_west, y_north));
+	idxs.push_back(source.LocationIndex(x_north_east, y_north));
+	idxs.push_back(source.LocationIndex(x_south_west, y_south));
+	idxs.push_back(source.LocationIndex(x_south_east, y_south));
 
 	// calculate weights by bilinear interpolation to point target (p) surrounded by points A|B|C|D
 	const point& p = target;
-	const point a = source->LatLon(idxs[0]);
-	const point b = source->LatLon(idxs[1]);
-	const point c = source->LatLon(idxs[2]);
-	const point d = source->LatLon(idxs[3]);
+	const point a = source.LatLon(idxs[0]);
+	const point b = source.LatLon(idxs[1]);
+	const point c = source.LatLon(idxs[2]);
+	const point d = source.LatLon(idxs[3]);
 
 	std::vector<double> weights(4);
 
@@ -682,6 +514,217 @@ std::pair<std::vector<size_t>, std::vector<double>> InterpolationWeights(std::sh
 	weights[3] = phi[0] * (1 - phi[1]);
 
 	return std::make_pair(idxs, weights);
+}
+
+std::pair<std::vector<size_t>, std::vector<double>> InterpolationWeights(regular_grid& source, point target)
+{
+	auto xy = source.XY(target);
+
+	if(IsMissing(xy.X()) || IsMissing(xy.Y()))
+		return std::make_pair(std::vector<size_t>{0},std::vector<double>{MissingDouble()});
+
+	std::vector<size_t> idxs{static_cast<size_t>(xy.X()) + source.Ni() * static_cast<size_t>(xy.Y()),
+                                 static_cast<size_t>(xy.X()) + source.Ni() * static_cast<size_t>(xy.Y()) + 1
+				 - (static_cast<size_t>(xy.X()) == source.Ni()-1 ? source.Ni() : 0),
+                                 static_cast<size_t>(xy.X()) + source.Ni() * static_cast<size_t>(xy.Y() + 1),
+                                 static_cast<size_t>(xy.X()) + source.Ni() * static_cast<size_t>(xy.Y() + 1) + 1
+				 - (static_cast<size_t>(xy.X()) == source.Ni()-1 ? source.Ni() : 0)};
+
+	std::vector<double> weights(4);
+
+	weights[0] = (1 - std::fmod(xy.X(),1)) * (1 - std::fmod(xy.Y(),1));
+	weights[1] = std::fmod(xy.X(),1) * (1 - std::fmod(xy.Y(),1));
+        weights[2] = (1 - std::fmod(xy.X(),1)) * std::fmod(xy.Y(),1);
+        weights[3] = std::fmod(xy.X(),1) * std::fmod(xy.Y(),1);
+
+	// Index is outside grid. This happens when target point is located on bottom edge
+	// Set index to first grid point
+	for(auto& idx : idxs)
+	{
+		if(idx>source.Size()-1)
+		{
+			idx = 0;
+		}
+	}
+
+	return std::make_pair(idxs, weights);
+}
+
+std::pair<size_t,double> NearestPoint(reduced_gaussian_grid& source, point target)
+{
+        // target lon 0 <= lon < 360
+        if (target.X() < 0.0)
+                target.X(target.X() + 360.0);
+        else if (target.X() >= 360.0)
+                target.X(target.X() - 360.0);
+
+        const auto lats = source.Latitudes();
+
+        // find y-indices
+        auto south = std::lower_bound(lats.begin(), lats.end(), target.Y(), std::greater_equal<double>());
+        auto north = south;
+        north--;
+
+        size_t y_north = std::distance(lats.begin(), north);
+        size_t y_south = std::distance(lats.begin(), south);
+
+        // find x-indices
+        size_t x_north_west = static_cast<size_t>(
+            std::floor(static_cast<double>(source.NumberOfPointsAlongParallels()[y_north]) * target.X() / 360.));
+        size_t x_north_east =
+            x_north_west < static_cast<size_t>(source.NumberOfPointsAlongParallels()[y_north] - 1) ? x_north_west + 1 : 0;
+        size_t x_south_west = static_cast<size_t>(
+            std::floor(static_cast<double>(source.NumberOfPointsAlongParallels()[y_south]) * target.X() / 360.));
+        size_t x_south_east =
+            x_south_west < static_cast<size_t>(source.NumberOfPointsAlongParallels()[y_south] - 1) ? x_south_west + 1 : 0;
+
+	size_t nearest = x_north_west;
+	for (auto p : {x_north_east,x_south_west,x_south_east})
+	{
+		if(geoutil::Distance(source.LatLon(p), target) < geoutil::Distance(source.LatLon(nearest), target)) 
+			nearest = p; 
+	}
+
+	return std::make_pair<size_t,double>(std::move(nearest),1.0);
+}
+
+std::pair<size_t,double> NearestPoint(regular_grid& source, point target)
+{
+	auto xy = source.XY(target);
+        if(IsMissing(xy.X()) || IsMissing(xy.Y()))
+		return std::make_pair<size_t,double>(0,MissingDouble());
+
+	// In case of point in wrap-around region on global grid
+	if(std::round(xy.X()) == source.Ni())
+		return std::make_pair<size_t,double>(source.Ni() * static_cast<size_t>(std::round(xy.Y())),1.0);
+
+	return std::make_pair<size_t,double>(static_cast<size_t>(std::round(xy.X())) + source.Ni() * static_cast<size_t>(std::round(xy.Y())),1.0);
+}
+
+// area_interpolation class member functions definitions
+area_interpolation::area_interpolation(grid& source, grid& target, HPInterpolationMethod method)
+    : itsInterpolation(target.Size(), source.Size())
+{
+        std::vector<Triplet<double>> coefficients;
+        // compute weights in the interpolation matrix line by line, i.e. point by point on target grid
+        for (size_t i = 0; i < target.Size(); ++i)
+        {
+                std::pair<std::vector<size_t>, std::vector<double>> w;
+                switch (source.Type())
+                {
+                        case kLatitudeLongitude:
+                        case kRotatedLatitudeLongitude:
+                        case kStereographic:
+                        case kLambertConformalConic:
+				if (method == kBiLinear)
+				{
+					w = InterpolationWeights(dynamic_cast<regular_grid&>(source), target.LatLon(i));
+				}
+				else if (method == kNearestPoint)
+				{
+					auto np = NearestPoint(dynamic_cast<regular_grid&>(source), target.LatLon(i));
+					w.first.push_back(np.first);
+					w.second.push_back(np.second);
+				}
+				else
+				{
+					throw std::bad_typeid();
+				}
+				break;
+                        case kReducedGaussian:
+				if (method == kBiLinear)
+                                {
+	                                w = InterpolationWeights(dynamic_cast<reduced_gaussian_grid&>(source), target.LatLon(i));
+				}
+				else if (method == kNearestPoint)
+				{
+					auto np = NearestPoint(dynamic_cast<reduced_gaussian_grid&>(source), target.LatLon(i));
+					w.first.push_back(np.first);
+                                        w.second.push_back(np.second);
+				}
+				else
+				{
+					throw std::bad_typeid();
+				}
+                                break;
+                        default:
+				// what to throw?
+                                throw std::bad_typeid();
+                                break;
+                }
+
+                for (size_t j = 0; j < w.first.size(); ++j)
+                {
+                        coefficients.push_back(Triplet<double>(static_cast<int>(i), static_cast<int>(w.first[j]), w.second[j]));
+                }
+        }
+
+        itsInterpolation.setFromTriplets(coefficients.begin(), coefficients.end());
+}
+
+void area_interpolation::Interpolate(base& source, base& target)
+{
+        Map<Matrix<double, Dynamic, Dynamic>> srcValues(source.data.ValuesAsPOD(), source.data.Size(), 1);
+        Map<Matrix<double, Dynamic, Dynamic>> trgValues(target.data.ValuesAsPOD(), target.data.Size(), 1);
+
+        trgValues = itsInterpolation * srcValues;
+}
+
+size_t area_interpolation::SourceSize() const
+{
+        return itsInterpolation.cols();
+}
+
+size_t area_interpolation::TargetSize() const
+{
+        return itsInterpolation.rows();
+}
+
+// Interpolator member functions
+std::map<size_t, himan::interpolate::area_interpolation> interpolator::cache;
+std::mutex interpolator::interpolatorAccessMutex;
+
+bool interpolator::Insert(const base& source, const base& target, HPInterpolationMethod method)
+{
+        std::lock_guard<std::mutex> guard(interpolatorAccessMutex);
+
+        std::pair<size_t, himan::interpolate::area_interpolation> insertValue;
+
+        try
+        {
+		std::vector<size_t> hashes{method, source.grid->Hash(), target.grid->Hash()};
+                insertValue.first = boost::hash_range(hashes.begin(), hashes.end());
+
+		// area_interpolation is already present in cache
+		if(cache.count(insertValue.first) > 0)
+			return true;
+
+                insertValue.second = himan::interpolate::area_interpolation(*source.grid, *target.grid, method);
+        }
+        catch (const std::exception& e)
+        {
+                return false;
+        }
+
+        return cache.insert(std::move(insertValue)).second;
+}
+
+bool interpolator::Interpolate(base& source, base& target, HPInterpolationMethod method)
+{
+	std::vector<size_t> hashes{method, source.grid->Hash(), target.grid->Hash()};
+        auto it = cache.find(boost::hash_range(hashes.begin(), hashes.end()));
+
+        if (it != cache.end())
+        {
+                it->second.Interpolate(source, target);
+                return true;
+        }
+	
+	else
+	{
+		Insert(source, target, method);
+		return Interpolate(source, target, method);
+	}
 }
 
 }  // namespace interpolate
