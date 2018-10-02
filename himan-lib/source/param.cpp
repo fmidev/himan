@@ -23,7 +23,8 @@ param::param()
       itsInterpolationMethod(kBiLinear),
       itsUnit(kUnknownUnit),
       itsAggregation(),
-      itsPrecision(kHPMissingInt)
+      itsPrecision(kHPMissingInt),
+      itsProcessingType()
 {
 }
 
@@ -42,7 +43,8 @@ param::param(const string& theName, unsigned long theUnivId)
       itsInterpolationMethod(kBiLinear),
       itsUnit(kUnknownUnit),
       itsAggregation(),
-      itsPrecision(kHPMissingInt)
+      itsPrecision(kHPMissingInt),
+      itsProcessingType()
 {
 }
 
@@ -61,7 +63,8 @@ param::param(const string& theName, unsigned long theUnivId, HPParameterUnit the
       itsInterpolationMethod(kBiLinear),
       itsUnit(theUnit),
       itsAggregation(),
-      itsPrecision(kHPMissingInt)
+      itsPrecision(kHPMissingInt),
+      itsProcessingType()
 {
 }
 
@@ -80,7 +83,8 @@ param::param(const string& theName)
       itsInterpolationMethod(kBiLinear),
       itsUnit(kUnknownUnit),
       itsAggregation(),
-      itsPrecision(kHPMissingInt)
+      itsPrecision(kHPMissingInt),
+      itsProcessingType()
 {
 }
 
@@ -100,7 +104,8 @@ param::param(const string& theName, unsigned long theUnivId, double theScale, do
       itsInterpolationMethod(theInterpolationMethod),
       itsUnit(kUnknownUnit),
       itsAggregation(),
-      itsPrecision(kHPMissingInt)
+      itsPrecision(kHPMissingInt),
+      itsProcessingType()
 {
 }
 
@@ -120,7 +125,8 @@ param::param(const string& theName, unsigned long theUnivId, long theGribDiscipl
       itsInterpolationMethod(kBiLinear),
       itsUnit(kUnknownUnit),
       itsAggregation(),
-      itsPrecision(kHPMissingInt)
+      itsPrecision(kHPMissingInt),
+      itsProcessingType()
 {
 }
 
@@ -206,6 +212,11 @@ bool param::operator==(const param& other) const
 		return false;
 	}
 
+	if (itsProcessingType != other.itsProcessingType)
+	{
+		return false;
+	}
+
 	return true;
 }
 
@@ -278,6 +289,10 @@ long param::GribTableVersion() const
 {
 	return itsGribTableVersion;
 }
+aggregation& param::Aggregation()
+{
+	return itsAggregation;
+}
 const aggregation& param::Aggregation() const
 {
 	return itsAggregation;
@@ -286,6 +301,19 @@ void param::Aggregation(const aggregation& theAggregation)
 {
 	itsAggregation = theAggregation;
 }
+processing_type& param::ProcessingType()
+{
+	return itsProcessingType;
+}
+const processing_type& param::ProcessingType() const
+{
+	return itsProcessingType;
+}
+void param::ProcessingType(const processing_type& theProcessingType)
+{
+	itsProcessingType = theProcessingType;
+}
+
 double param::Base() const
 {
 	return itsBase;
@@ -343,6 +371,7 @@ ostream& param::Write(ostream& file) const
 	file << "__itsInterpolationMethod__ " << HPInterpolationMethodToString.at(itsInterpolationMethod) << endl;
 	file << "__itsPrecision__" << itsPrecision << endl;
 	file << itsAggregation;
+	file << itsProcessingType;
 
 	return file;
 }

@@ -18,6 +18,7 @@
 #include "aggregation.h"
 #include "himan_common.h"
 #include "serialization.h"
+#include "processing_type.h"
 
 namespace himan
 {
@@ -104,8 +105,13 @@ class param
 	HPParameterUnit Unit() const;
 	void Unit(HPParameterUnit theUnit);
 
+	aggregation& Aggregation();
 	const aggregation& Aggregation() const;
 	void Aggregation(const aggregation& theAggregation);
+
+	processing_type& ProcessingType();
+	const processing_type& ProcessingType() const;
+	void ProcessingType(const processing_type& theProcessingType);
 
 	double Base() const;
 	void Base(double theBase);
@@ -148,6 +154,7 @@ class param
 
 	aggregation itsAggregation;
 	int itsPrecision;
+	processing_type itsProcessingType;
 
 #ifdef SERIALIZATION
 	friend class cereal::access;
@@ -159,7 +166,7 @@ class param
 		   CEREAL_NVP(itsGribParameter), CEREAL_NVP(itsGribCategory), CEREAL_NVP(itsGribDiscipline),
 		   CEREAL_NVP(itsGribTableVersion), CEREAL_NVP(itsGribIndicatorOfParameter), CEREAL_NVP(itsUnit),
 		   CEREAL_NVP(itsVersion), CEREAL_NVP(itsInterpolationMethod), CEREAL_NVP(itsAggregation),
-		   CEREAL_NVP(itsPrecision));
+		   CEREAL_NVP(itsPrecision), CEREAL_NVP(itsProcessingType));
 	}
 #endif
 };

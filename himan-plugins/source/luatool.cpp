@@ -168,6 +168,7 @@ void luatool::ResetVariables(info_t myTargetInfo)
 	globals(L)["current_forecast_type"] = forecast_type(myTargetInfo->ForecastType());
 	globals(L)["missing"] = MissingDouble();
 	globals(L)["missingf"] = MissingFloat();
+	globals(L)["kHPMissingValue"] = kHPMissingValue;  // todo: remove this constant altogether
 
 	globals(L)["kKelvin"] = constants::kKelvin;
 
@@ -285,6 +286,20 @@ void BindEnum(lua_State* L)
 				 value("kMaximum", kMaximum),
 				 value("kMinimum", kMinimum),
 				 value("kDifference", kDifference)],
+	     class_<HPProcessingType>("HPProcessingType")
+	         .enum_("constants")[
+				 value("kUnknownProcessingType", kUnknownProcessingType),
+				 value("kProbabilityGreaterThan", kProbabilityGreaterThan),
+				 value("kProbabilityLessThan", kProbabilityLessThan),
+				 value("kProbabilityBetween", kProbabilityBetween),
+				 value("kProbabilityEquals", kProbabilityEquals),
+				 value("kProbabilityNotEquals", kProbabilityNotEquals),
+				 value("kProbabilityEqualsIn", kProbabilityEqualsIn),
+				 value("kFractile", kFractile),
+				 value("kEnsembleMean", kEnsembleMean),
+				 value("kSpread", kSpread),
+				 value("kStandardDeviation", kStandardDeviation),
+				 value("kEFI", kEFI)],
 	     class_<HPModifierType>("HPModifierType")
 	         .enum_("constants")
 	             [
@@ -466,6 +481,10 @@ void SetParam(std::shared_ptr<info<T>>& anInfo, const param& par)
 		if (par.Aggregation().Type() != kUnknownAggregationType)
 		{
 			newpar.Aggregation(par.Aggregation());
+		}
+		if (par.ProcessingType().Type() != kUnknownProcessingType)
+		{
+			newpar.ProcessingType(par.ProcessingType());
 		}
 	}
 
@@ -1227,7 +1246,9 @@ void BindLib(lua_State* L)
 	              .def("GetUnivId", LUA_CMEMFN(unsigned long, param, UnivId, void))
 	              .def("SetUnivId", LUA_MEMFN(void, param, UnivId, unsigned long))
 	              .def("GetAggregation", LUA_CMEMFN(const aggregation&, param, Aggregation, void))
-	              .def("SetAggregation", LUA_MEMFN(void, param, Aggregation, const aggregation&)),
+	              .def("SetAggregation", LUA_MEMFN(void, param, Aggregation, const aggregation&))
+	              .def("GetProcessingType", LUA_CMEMFN(const processing_type&, param, ProcessingType, void))
+	              .def("SetProcessingType", LUA_MEMFN(void, param, ProcessingType, const processing_type&)),
 	          class_<level>("level")
 	              .def(constructor<HPLevelType, double>())
 	              .def(constructor<HPLevelType, double, double>())
@@ -1304,6 +1325,17 @@ void BindLib(lua_State* L)
 	              .def("SetType", LUA_MEMFN(void, aggregation, Type, HPAggregationType))
 	              .def("GetTimeDuration", LUA_CMEMFN(time_duration, aggregation, TimeDuration, void))
 	              .def("SetTimeDuration", LUA_MEMFN(void, aggregation, TimeDuration, const time_duration&)),
+	          class_<processing_type>("processing_type")
+	              .def(constructor<HPProcessingType, double, double>())
+	              .def("ClassName", &processing_type::ClassName)
+	              .def("GetType", LUA_CMEMFN(HPProcessingType, processing_type, Type, void))
+	              .def("SetType", LUA_MEMFN(void, processing_type, Type, HPProcessingType))
+	              .def("GetValue", LUA_CMEMFN(double, processing_type, Value, void))
+	              .def("SetValue", LUA_MEMFN(void, processing_type, Value, double))
+	              .def("GetValue2", LUA_CMEMFN(double, processing_type, Value2, void))
+	              .def("SetValue2", LUA_MEMFN(void, processing_type, Value2, double))
+	              .def("GetNumberOfEnsembleMembers", LUA_CMEMFN(int, processing_type, NumberOfEnsembleMembers, void))
+	              .def("SetNumberOfEnsembleMembers", LUA_MEMFN(void, processing_type, NumberOfEnsembleMembers, int)),
 	          class_<configuration, std::shared_ptr<configuration>>("configuration")
 	              .def(constructor<>())
 	              .def("ClassName", &configuration::ClassName)

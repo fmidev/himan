@@ -21,7 +21,6 @@ param_configuration<float> ToParamConfiguration(const partial_param_configuratio
 {
 	param_configuration<float> pc;
 
-	pc.comparison = partial.comparison;
 	pc.output = partial.output;
 	pc.parameter = partial.parameter;
 
@@ -42,7 +41,6 @@ param_configuration<std::vector<float>> ToParamConfiguration(const partial_param
 {
 	param_configuration<std::vector<float>> pc;
 
-	pc.comparison = partial.comparison;
 	pc.output = partial.output;
 	pc.parameter = partial.parameter;
 
@@ -177,7 +175,7 @@ void ProbabilityWithGaussianSpread(std::shared_ptr<himan::info<T>> targetInfo, c
 		                                                       // https://www.johndcook.com/erf_and_normal_cdf.pdf
 		                                                       // probability is now -∞ -> threshold
 
-		if (paramConf.comparison == comparison_op::GTEQ)
+		if (paramConf.output.ProcessingType().Type() == himan::kProbabilityGreaterThan)
 		{
 			probability = 1 - probability;
 		}

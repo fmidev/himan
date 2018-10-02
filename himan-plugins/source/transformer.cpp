@@ -16,7 +16,7 @@
 using namespace std;
 using namespace himan::plugin;
 
-mutex aggregationMutex;
+mutex paramMutex;
 
 #ifdef HAVE_CUDA
 namespace transformergpu
@@ -430,16 +430,19 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 		}
 	}
 
-	if (itsSourceParam[0] == itsTargetParam[0] && sourceInfo->Param().Aggregation().Type() != kUnknownAggregationType)
+	if (itsSourceParam[0] == itsTargetParam[0] &&
+	    (sourceInfo->Param().Aggregation().Type() != kUnknownAggregationType ||
+	     sourceInfo->Param().ProcessingType().Type() != kUnknownProcessingType))
 	{
-		// If source parameter is an aggregation, copy that to target param
+		// If source parameter is an aggregation or processed somehow, copy that
+		// informatio to target param
 		param p = myTargetInfo->Param();
-		aggregation a = sourceInfo->Param().Aggregation();
-		p.Aggregation(a);
+		p.Aggregation(sourceInfo->Param().Aggregation());
+		p.ProcessingType(sourceInfo->Param().ProcessingType());
 
 		{
-			lock_guard<mutex> lock(aggregationMutex);
-			myTargetInfo->Iterator<param>().Replace(p);
+			lock_guard<mutex> lock(paramMutex);
+			myTargetInfo->Set<param>(p);
 		}
 	}
 

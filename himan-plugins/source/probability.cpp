@@ -43,8 +43,7 @@ param GetParamFromDatabase(const std::string& paramName, const std::shared_ptr<c
 
 	if (paraminfo.empty())
 	{
-		p.Name(paramName);
-		return p;
+		throw std::runtime_error("probability: key 'input_param' not specified");
 	}
 
 	return param(paraminfo);
@@ -54,25 +53,27 @@ param GetParamFromDatabase(const std::string& paramName, const std::shared_ptr<c
 /// @param outParamConfig is modified to have information about the threshold value and input parameters
 /// @returns param to be pushed in the calculatedParams vector in Process()
 
-static param GetConfigurationParameter(const std::string& name, const std::shared_ptr<const plugin_configuration> conf,
-                                       partial_param_configuration* outParamConfig)
+static void GetConfigurationParameter(const std::string& name, const std::shared_ptr<const plugin_configuration> conf,
+                                      partial_param_configuration* outParamConfig)
 {
+	himan::logger log("probability");
+
 	if (!conf->ParameterExists(name))
 	{
-		throw std::runtime_error(
-		    "probability : configuration error:: requested parameter doesn't exist in the configuration file '" + name +
-		    "'");
+		log.Fatal("configuration error: requested parameter doesn't exist in the configuration file '" + name + "'");
+		himan::Abort();
 	}
 
 	const auto paramOpts = conf->GetParameterOptions(name);
 
-	param param;
+	param param, output = GetParamFromDatabase(name, conf);
 
 	// NOTE These are plugin dependent
 	for (auto&& p : paramOpts)
 	{
 		if (p.first == "threshold")
 		{
+			output.ProcessingType().Value(stod(p.second));
 			outParamConfig->thresholds.push_back(p.second);
 		}
 		else if (p.first == "input_param1" || p.first == "input_param")
@@ -88,32 +89,32 @@ static param GetConfigurationParameter(const std::string& name, const std::share
 		{
 			if (p.second == "<=")
 			{
-				outParamConfig->comparison = comparison_op::LTEQ;
+				output.ProcessingType().Type(kProbabilityLessThan);
 			}
 			else if (p.second == ">=")
 			{
-				outParamConfig->comparison = comparison_op::GTEQ;
+				output.ProcessingType().Type(kProbabilityGreaterThan);
 			}
 			else if (p.second == "=")
 			{
-				outParamConfig->comparison = comparison_op::EQ;
+				output.ProcessingType().Type(kProbabilityEquals);
 			}
 			else if (p.second == "=[]")
 			{
-				outParamConfig->comparison = comparison_op::EQIN;
+				output.ProcessingType().Type(kProbabilityEqualsIn);
 			}
 			else if (p.second == "!=" || p.second == "<>")
 			{
-				outParamConfig->comparison = comparison_op::NEQ;
+				output.ProcessingType().Type(kProbabilityNotEquals);
 			}
 			else if (p.second == "[]")
 			{
-				outParamConfig->comparison = comparison_op::BTWN;
+				output.ProcessingType(processing_type(kProbabilityBetween));
 			}
 			else
 			{
-				throw std::runtime_error("probability : configuration error:: invalid comparison operator '" +
-				                         p.second + "'");
+				log.Fatal("configuration error: invalid comparison operator '" + p.second + "'");
+				himan::Abort();
 			}
 		}
 		else
@@ -128,23 +129,27 @@ static param GetConfigurationParameter(const std::string& name, const std::share
 		}
 	}
 
-	if (name == "XX-X")
+	if (output.ProcessingType().Type() == kUnknownProcessingType)
 	{
-		throw std::runtime_error("probability : configuration error:: input parameter not specified for '" + name +
-		                         "'");
+		output.ProcessingType().Type(kProbabilityGreaterThan);
 	}
 
 	const auto iname = param.Name();
 
-	bool spread =
-	    (iname == "T-K" || iname == "T-C" || iname == "WATLEV-CM" || iname == "TD-K" || iname == "P-PA" ||
-	     iname == "P-HPA") &&
-	    (outParamConfig->comparison == comparison_op::LTEQ || outParamConfig->comparison == comparison_op::GTEQ);
+	if (iname == "XX-X")
+	{
+		log.Fatal("configuration error:: input parameter not specified for '" + name + "'");
+		himan::Abort();
+	}
+
+	const bool spread = (iname == "T-K" || iname == "T-C" || iname == "WATLEV-CM" || iname == "TD-K" ||
+	                     iname == "P-PA" || iname == "P-HPA") &&
+	                    (output.ProcessingType().Type() == kProbabilityLessThan ||
+	                     output.ProcessingType().Type() == kProbabilityGreaterThan);
 
 	outParamConfig->useGaussianSpread = spread;
 	outParamConfig->parameter = param;
-
-	return himan::param(name);
+	outParamConfig->output = output;
 }
 
 static void FetchRemainingLimitsForStations(const grid* targetGrid,
@@ -319,19 +324,12 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 	{
 		partial_param_configuration config;
 
-		config.output.Name(name);
-		config.comparison = comparison_op::GTEQ;
 		config.useGaussianSpread = false;
 
-		param p = GetConfigurationParameter(name, conf, &config);
-
-		if (p.Name() == "")
-		{
-			throw std::runtime_error(ClassName() + "Misconfigured parameter definition in JSON");
-		}
+		GetConfigurationParameter(name, conf, &config);
 
 		itsParamConfigurations.push_back(config);
-		calculatedParams.push_back(p);
+		calculatedParams.push_back(config.output);
 	}
 
 	SetParams(calculatedParams);
@@ -392,30 +390,31 @@ void probability::Calculate(std::shared_ptr<info<float>> myTargetInfo, unsigned 
 		else
 		{
 			threadedLogger.Trace("Gaussian spread is disabled");
-			switch (pc.comparison)
+			switch (pc.output.ProcessingType().Type())
 			{
-				case comparison_op::LTEQ:
+				case kProbabilityLessThan:
 					Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::less_equal<float>());
 					break;
-				case comparison_op::GTEQ:
+				case kProbabilityGreaterThan:
 					Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::greater_equal<float>());
 					break;
-				case comparison_op::EQ:
+				case kProbabilityEquals:
 					Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::equal_to<float>());
 					break;
-				case comparison_op::NEQ:
+				case kProbabilityNotEquals:
 					Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::not_equal_to<float>());
 					break;
-				case comparison_op::EQIN:
+				case kProbabilityEqualsIn:
 					Probability<std::vector<float>>(myTargetInfo, ToParamConfiguration<std::vector<float>>(pc), ens,
 					                                EQINCompare());
 					break;
-				case comparison_op::BTWN:
+				case kProbabilityBetween:
 					Probability<std::vector<float>>(myTargetInfo, ToParamConfiguration<std::vector<float>>(pc), ens,
 					                                BTWNCompare());
 					break;
 				default:
-					threadedLogger.Error("Unsupported comparison operator");
+					threadedLogger.Error("Unsupported comparison operator: " +
+					                     std::to_string(pc.output.ProcessingType().Type()));
 					break;
 			}
 		}
