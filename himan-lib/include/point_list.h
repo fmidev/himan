@@ -47,6 +47,8 @@ class point_list : public irregular_grid
 	station Station(size_t locationIndex) const;
 	void Station(size_t locationIndex, const station& theStation);
 
+	size_t Hash() const override;
+
 	std::unique_ptr<grid> Clone() const override;
 
    private:

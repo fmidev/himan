@@ -1,6 +1,7 @@
 #include "lambert_conformal_grid.h"
 #include "info.h"
 #include <ogr_spatialref.h>
+#include <functional>
 
 using namespace himan;
 using namespace std;
@@ -273,6 +274,11 @@ point lambert_conformal_grid::XY(const point& latlon) const
 	const double x = (projX / itsDi);
 	const double y = (projY / itsDj);
 
+	if(x<0 || x>Ni()-1 || y<0 || y>Nj()-1)
+	{
+		return point(MissingDouble(),MissingDouble());
+	}
+
 	return point(x, y);
 }
 
@@ -305,6 +311,22 @@ point lambert_conformal_grid::LatLon(size_t locationIndex) const
 	}
 
 	return point(x, y);
+}
+
+size_t lambert_conformal_grid::Hash() const
+{
+        vector<size_t> hashes;
+        hashes.push_back(Type());
+        hashes.push_back(FirstPoint().Hash());
+        hashes.push_back(Ni());
+        hashes.push_back(Nj());
+        hashes.push_back(hash<double>{}(Di()));
+        hashes.push_back(hash<double>{}(Dj()));
+	hashes.push_back(ScanningMode());
+	hashes.push_back(hash<double>{}(Orientation()));
+        hashes.push_back(hash<double>{}(StandardParallel1()));
+	hashes.push_back(hash<double>{}(StandardParallel2()));
+        return boost::hash_range(hashes.begin(),hashes.end());
 }
 
 void lambert_conformal_grid::SouthPole(const point& theSouthPole)

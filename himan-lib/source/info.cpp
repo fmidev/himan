@@ -67,7 +67,7 @@ info::info(const info& other)
 {
 	if (other.itsBaseGrid)
 	{
-		itsBaseGrid = unique_ptr<grid>(other.itsBaseGrid->Clone());
+		itsBaseGrid = other.itsBaseGrid->Clone();
 	}
 
 	itsLogger = logger("info");

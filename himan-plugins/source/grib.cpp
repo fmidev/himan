@@ -1961,10 +1961,16 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 	newInfo->ForecastType(ty);
 
 	/*
-	 * Read data from grib *
+	 * Read data from grib. If interpolation is required, it's better to do the unpacking
+	 * at host to avoid unnecessary copying between CPU and GPU.
 	 */
 
-	ReadData(newInfo, readPackedData);
+	info tmp(*options.configuration->Info());
+
+	tmp.First();
+	tmp.FirstValidGrid();
+
+	ReadData(newInfo, readPackedData && (*tmp.Grid() == *newInfo->Grid()));
 
 	if (!dataIsValid)
 	{
