@@ -6,10 +6,6 @@
 #include "point_list.h"
 #include "info.h"
 #include "logger.h"
-#include <NFmiGrid.h>
-#include <NFmiLatLonArea.h>
-#include <NFmiRotatedLatLonArea.h>
-#include <NFmiStereographicArea.h>
 
 using namespace himan;
 using namespace std;

@@ -17,8 +17,6 @@
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
-#include "NFmiFastQueryInfo.h"
-
 using namespace himan;
 using namespace Eigen;
 

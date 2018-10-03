@@ -3,7 +3,6 @@
  */
 
 #include "modifier.h"
-#include "NFmiInterpolation.h"
 #include "numerical_functions.h"
 
 using namespace himan;
