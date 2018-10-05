@@ -4,6 +4,7 @@
  */
 
 #include "grib.h"
+#include "NFmiGrib.h"
 #include "grid.h"
 #include "lambert_conformal_grid.h"
 #include "latitude_longitude_grid.h"
@@ -15,7 +16,6 @@
 #include "util.h"
 #include <algorithm>
 #include <boost/filesystem.hpp>
-#include "NFmiGrib.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -1367,13 +1367,17 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 
 		string parmName = "";
 
+		const long tosp = (itsGrib->Message().TypeOfStatisticalProcessing() == -999)
+		                      ? -1
+		                      : itsGrib->Message().TypeOfStatisticalProcessing();
+
 		if (dbtype == kRadon)
 		{
 			r = GET_PLUGIN(radon);
 
-			auto parminfo = r->RadonDB().GetParameterFromGrib2(prod.Id(), discipline, category, number,
-			                                                   itsGrib->Message().NormalizedLevelType(),
-			                                                   static_cast<double>(itsGrib->Message().LevelValue()));
+			auto parminfo = r->RadonDB().GetParameterFromGrib2(
+			    prod.Id(), discipline, category, number, itsGrib->Message().NormalizedLevelType(),
+			    static_cast<double>(itsGrib->Message().LevelValue()), tosp);
 
 			if (parminfo.size())
 			{
@@ -1390,7 +1394,8 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 		if (parmName.empty())
 		{
 			itsLogger.Warning("Parameter name not found from database for discipline: " + to_string(discipline) +
-			                  ", category: " + to_string(category) + ", number: " + to_string(number));
+			                  ", category: " + to_string(category) + ", number: " + to_string(number) +
+			                  ", statistical processing: " + to_string(tosp));
 		}
 		else
 		{
