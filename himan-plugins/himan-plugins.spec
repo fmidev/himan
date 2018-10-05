@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.10.3
+Version: 18.10.5
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -112,6 +112,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Fri Oct  5 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.5-1.fmi
+- Minor cleanup
+- Fix for strange case where wrong GPU processing function was called
 * Wed Oct  3 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.3-1.fmi
 - New interpolation scheme
 * Thu Sep 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.9.20-3.fmi
