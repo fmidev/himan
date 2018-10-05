@@ -673,15 +673,15 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 
 	for (newInfo->Reset<forecast_time>(), qinfo.ResetTime(); newInfo->Next<forecast_time>() && qinfo.NextTime();)
 	{
-		ASSERT(newInfo->TimeIndex() == qinfo.TimeIndex());
+		ASSERT(newInfo->Index<forecast_time>() == qinfo.TimeIndex());
 
 		for (newInfo->Reset<level>(), qinfo.ResetLevel(); newInfo->Next<level>() && qinfo.NextLevel();)
 		{
-			ASSERT(newInfo->LevelIndex() == qinfo.LevelIndex());
+			ASSERT(newInfo->Index<level>() == qinfo.LevelIndex());
 
 			for (newInfo->Reset<param>(), qinfo.ResetParam(); newInfo->Next<param>() && qinfo.NextParam();)
 			{
-				ASSERT(newInfo->Index<param>() == qinfo.Index<param>());
+				ASSERT(newInfo->Index<param>() == qinfo.ParamIndex());
 
 				matrix<double> dm(ni, nj, 1, static_cast<double>(32700.f));
 				size_t i;
