@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.9.20
-Release: 3.el7.fmi
+Version: 18.10.3
+Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 18.9.4
+Requires: himan-lib >= 18.10.2
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 18.2.12
@@ -112,6 +112,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Oct  3 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.3-1.fmi
+- New interpolation scheme
 * Thu Sep 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.9.20-3.fmi
 - Fixing pot_gfs
 * Thu Sep 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.9.20-2.fmi
