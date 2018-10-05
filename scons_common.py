@@ -108,7 +108,7 @@ env.Append(LIBPATH = librarypaths)
 
 # Libraries
 
-env.Append(LIBPATH = ['z', 'bz2'])
+env.Append(LIBS = ['z', 'bz2'])
 
 if env['HAVE_CUDA']:
         env.Append(LIBS=env.File(cuda_toolkit_path + '/lib64/libcudart_static.a'))

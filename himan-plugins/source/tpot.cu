@@ -43,8 +43,10 @@ __global__ void ThetaEKernel(const T* __restrict__ d_t, const T* __restrict__ d_
 	}
 }
 
-void ProcessGPU(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo, bool theta,
-                bool thetaw, bool thetae)
+namespace tpotgpu
+{
+void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo, bool theta,
+             bool thetaw, bool thetae)
 {
 	cudaStream_t stream;
 	CUDA_CHECK(cudaStreamCreate(&stream));
@@ -88,7 +90,7 @@ void ProcessGPU(std::shared_ptr<const plugin_configuration> conf, std::shared_pt
 	if (myTargetInfo->Level().Type() != kPressure)
 	{
 		auto PInfo = cuda::Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("P-HPA"),
-		                    myTargetInfo->ForecastType());
+		                         myTargetInfo->ForecastType());
 
 		if (!PInfo)
 		{
@@ -182,4 +184,5 @@ void ProcessGPU(std::shared_ptr<const plugin_configuration> conf, std::shared_pt
 		CUDA_CHECK(cudaFree(d_td));
 
 	CUDA_CHECK(cudaStreamDestroy(stream));
+}
 }

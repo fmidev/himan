@@ -15,7 +15,6 @@
 #include "point_list.h"
 #include "reduced_gaussian_grid.h"
 #include "stereographic_grid.h"
-#include <NFmiStereographicArea.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/math/constants/constants.hpp>

@@ -18,7 +18,10 @@ using namespace himan::plugin;
 mutex aggregationMutex;
 
 #ifdef HAVE_CUDA
-void ProcessGPU(himan::info_t myTargetInfo, himan::info_t sourceInfo, double scale, double base);
+namespace transformergpu
+{
+void Process(himan::info_t myTargetInfo, himan::info_t sourceInfo, double scale, double base);
+}
 #endif
 
 transformer::transformer()
@@ -351,7 +354,7 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 	{
 		deviceType = "GPU";
 
-		ProcessGPU(myTargetInfo, sourceInfo, itsScale, itsBase);
+		transformergpu::Process(myTargetInfo, sourceInfo, itsScale, itsBase);
 	}
 	else
 #endif

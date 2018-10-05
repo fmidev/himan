@@ -7,8 +7,9 @@
 #ifndef GRIB_H
 #define GRIB_H
 
-#include "NFmiGrib.h"
 #include "auxiliary_plugin.h"
+
+class NFmiGrib;
 
 namespace himan
 {

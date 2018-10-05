@@ -11,8 +11,6 @@
 
 #include "windvector.cuh"  // need to have this here because of HPTargetType
 
-class NFmiArea;
-
 namespace himan
 {
 namespace plugin

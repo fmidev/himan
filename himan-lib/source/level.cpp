@@ -4,7 +4,6 @@
  */
 
 #include "level.h"
-#include "NFmiLevel.h"
 
 #include <ostream>
 

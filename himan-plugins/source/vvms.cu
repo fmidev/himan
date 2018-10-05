@@ -33,7 +33,9 @@ __global__ void VVMSKernel(const T* __restrict__ d_t, const T* __restrict__ d_vv
 	}
 }
 
-void ProcessGPU(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo)
+namespace vvmsgpu
+{
+void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo)
 {
 	cudaStream_t stream;
 	CUDA_CHECK(cudaStreamCreate(&stream));
@@ -100,8 +102,8 @@ void ProcessGPU(std::shared_ptr<const plugin_configuration> conf, std::shared_pt
 	}
 	else
 	{
-		VVMSKernel<float><<<gridSize, blockSize, 0, stream>>>(d_t, d_vv, myTargetInfo->Level().Value(), d_vv_ms,
-		                                                      vv_scale, N);
+		VVMSKernel<float>
+		    <<<gridSize, blockSize, 0, stream>>>(d_t, d_vv, myTargetInfo->Level().Value(), d_vv_ms, vv_scale, N);
 	}
 
 	cuda::ReleaseInfo(myTargetInfo, d_vv_ms, stream);
@@ -119,4 +121,5 @@ void ProcessGPU(std::shared_ptr<const plugin_configuration> conf, std::shared_pt
 	}
 
 	CUDA_CHECK(cudaStreamDestroy(stream));
+}
 }

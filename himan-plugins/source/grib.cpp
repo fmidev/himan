@@ -15,6 +15,7 @@
 #include "util.h"
 #include <algorithm>
 #include <boost/filesystem.hpp>
+#include "NFmiGrib.h"
 
 using namespace std;
 using namespace himan::plugin;

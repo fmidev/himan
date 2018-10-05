@@ -13,8 +13,10 @@ using namespace std;
 using namespace himan::plugin;
 
 #ifdef HAVE_CUDA
-extern void ProcessGPU(std::shared_ptr<const himan::plugin_configuration> conf,
-                       std::shared_ptr<himan::info> myTargetInfo);
+namespace dewpointgpu
+{
+extern void Process(std::shared_ptr<const himan::plugin_configuration> conf, std::shared_ptr<himan::info> myTargetInfo);
+}
 #endif
 
 dewpoint::dewpoint()
@@ -100,7 +102,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 	{
 		deviceType = "GPU";
 
-		ProcessGPU(itsConfiguration, myTargetInfo);
+		dewpointgpu::Process(itsConfiguration, myTargetInfo);
 	}
 	else
 #endif
@@ -117,7 +119,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 			const double T = tup.get<1>();
 			const double RH = tup.get<2>();
 
-			result = metutil::DewPointFromRH_<double>(T+TBase, RH*RHScale);
+			result = metutil::DewPointFromRH_<double>(T + TBase, RH * RHScale);
 		}
 	}
 

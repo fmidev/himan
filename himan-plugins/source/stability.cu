@@ -790,7 +790,9 @@ void CalculateThetaEIndices(std::shared_ptr<info> myTargetInfo, std::shared_ptr<
 	}
 }
 
-void ProcessGPU(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo)
+namespace stabilitygpu
+{
+void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo)
 {
 	cudaStream_t stream;
 
@@ -855,4 +857,5 @@ void ProcessGPU(std::shared_ptr<const plugin_configuration> conf, std::shared_pt
 	// FINISHED
 
 	CUDA_CHECK(cudaStreamDestroy(stream));
+}
 }

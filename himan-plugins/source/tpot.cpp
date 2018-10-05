@@ -17,8 +17,11 @@ using namespace himan::plugin;
 #include "moisture.h"
 
 #ifdef HAVE_CUDA
-void ProcessGPU(std::shared_ptr<const himan::plugin_configuration> conf, std::shared_ptr<himan::info> myTargetInfo,
-                bool theta, bool thetaw, bool thetae);
+namespace tpotgpu
+{
+void Process(std::shared_ptr<const himan::plugin_configuration> conf, std::shared_ptr<himan::info> myTargetInfo,
+             bool theta, bool thetaw, bool thetae);
+}
 #endif
 
 tpot::tpot() : itsThetaCalculation(false), itsThetaWCalculation(false), itsThetaECalculation(false)
@@ -168,7 +171,8 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	{
 		deviceType = "GPU";
 
-		ProcessGPU(itsConfiguration, myTargetInfo, itsThetaCalculation, itsThetaWCalculation, itsThetaECalculation);
+		tpotgpu::Process(itsConfiguration, myTargetInfo, itsThetaCalculation, itsThetaWCalculation,
+		                 itsThetaECalculation);
 	}
 	else
 #endif
@@ -205,6 +209,7 @@ void tpot::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 			{
 				TDInfo->NextLocation();
 				TD = TDInfo->Value() + TDBase;  // to Kelvin
+				ASSERT(TD >= 80. || IsMissing(TD));
 			}
 
 			if (itsThetaCalculation)
