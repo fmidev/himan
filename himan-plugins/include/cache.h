@@ -7,8 +7,8 @@
 #define CACHE_H
 
 #include "auxiliary_plugin.h"
+#include "info.h"
 #include "search_options.h"
-
 #include <mutex>
 
 namespace himan

@@ -196,11 +196,6 @@ void compiled_plugin_base::Start()
 		return;
 	}
 
-	if (itsInfo->itsBaseGrid)
-	{
-		itsInfo->itsBaseGrid.reset();
-	}
-
 	if (itsPrimaryDimension == kTimeDimension)
 	{
 		itsInfo->First<forecast_type>();
@@ -250,7 +245,9 @@ void compiled_plugin_base::Init(const shared_ptr<const plugin_configuration> con
 		itsThreadCount = coreCount;
 	}
 
-	itsInfo = itsConfiguration->Info();
+	itsInfo = make_shared<info>(itsConfiguration->ForecastTypes(), itsConfiguration->Times(),
+	                            itsConfiguration->Levels(), vector<param>());
+	itsInfo->Producer(itsConfiguration->TargetProducer());
 
 	itsPluginIsInitialized = true;
 }
@@ -477,7 +474,7 @@ void compiled_plugin_base::SetParams(std::vector<param>& params, const vector<le
 
 	for (const auto& lvl : levels)
 	{
-		const auto g = itsInfo->itsBaseGrid.get();
+		const auto g = itsConfiguration->BaseGrid();
 
 		for (const auto& par : params)
 		{

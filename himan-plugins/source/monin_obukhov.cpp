@@ -39,7 +39,7 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 
 	param PParam("P-PA");
 
-	if (itsConfiguration->Info()->Producer().Id() == 240 || itsConfiguration->Info()->Producer().Id() == 243)
+	if (itsConfiguration->TargetProducer().Id() == 240 || itsConfiguration->TargetProducer().Id() == 243)
 	{
 		PParam = param("PGR-PA");
 	}
@@ -71,7 +71,7 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 	// determine length of forecast step to calculate surface heat flux in W/m2
 	double forecastStepSize;
 
-	if (itsConfiguration->SourceProducer().Id() != 199)
+	if (forecastTime.StepResolution() == kHourResolution)
 	{
 		forecastStepSize = itsConfiguration->ForecastStep() * 3600;  // step size in seconds
 	}
@@ -121,7 +121,7 @@ void monin_obukhov::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 		myTargetInfo->Value(mol);
 	}
 
-	myThreadedLogger.Info("[" + deviceType + "] Missing values: " +
-	                      std::to_string(myTargetInfo->Data().MissingCount()) + "/" +
+	myThreadedLogger.Info("[" + deviceType +
+	                      "] Missing values: " + std::to_string(myTargetInfo->Data().MissingCount()) + "/" +
 	                      std::to_string(myTargetInfo->Data().Size()));
 }

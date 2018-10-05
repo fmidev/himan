@@ -1952,12 +1952,7 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 	 * at host to avoid unnecessary copying between CPU and GPU.
 	 */
 
-	info tmp(*options.configuration->Info());
-
-	tmp.First();
-	tmp.FirstValidGrid();
-
-	ReadData(newInfo, readPackedData && (*tmp.Grid() == *newInfo->Grid()));
+	ReadData(newInfo, readPackedData && (*options.configuration->BaseGrid() == *newInfo->Grid()));
 
 	if (!dataIsValid)
 	{

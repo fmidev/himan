@@ -278,7 +278,7 @@ void cape::Process(shared_ptr<const plugin_configuration> conf)
 
 	itsLogger.Info("Virtual temperature correction is " + string(itsUseVirtualTemperature ? "enabled" : "disabled"));
 
-	itsBottomLevel = level(kHybrid, stoi(r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer().Id(),
+	itsBottomLevel = level(kHybrid, stoi(r->RadonDB().GetProducerMetaData(itsConfiguration->TargetProducer().Id(),
 	                                                                      "last hybrid level number")));
 
 #ifdef HAVE_CUDA

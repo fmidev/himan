@@ -427,10 +427,11 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 	vector<forecast_time> times = {ftime};
 	vector<level> levels = {level(kHeight, 0, "HEIGHT")};
 
-	auto ret = make_shared<info>(*conf->Info());
+	auto ret = make_shared<info>();
 	ret->Set<param>(params);
 	ret->Set<level>(levels);
 	ret->Set<forecast_time>(times);
+	ret->Set<forecast_type>({forecast_type()});
 	ret->Create(baseGrid);
 
 	vector<double> zerom(ret->Data().Size(), 0);
@@ -776,10 +777,11 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 	vector<forecast_time> times = {ftime};
 	vector<level> levels = {level(kHeight, 0, "HEIGHT")};
 
-	auto ret = make_shared<info>(*conf->Info());
+	auto ret = make_shared<info>();
 	ret->Set<param>(params);
 	ret->Set<level>(levels);
 	ret->Set<forecast_time>(times);
+	ret->Set<forecast_type>({forecast_type()});  // doesn't matter what we put here
 	ret->Create(baseGrid);
 
 	const vector<double> layerVec(ret->Data().Size(), layer);

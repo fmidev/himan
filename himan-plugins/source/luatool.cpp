@@ -1165,7 +1165,7 @@ void BindLib(lua_State* L)
 	              .def("GetOutputFileType", LUA_CMEMFN(HPFileType, configuration, OutputFileType, void))
 	              .def("GetSourceProducer", LUA_CMEMFN(const producer&, configuration, SourceProducer, size_t))
 	              .def("GetTargetProducer", LUA_CMEMFN(const producer&, configuration, TargetProducer, void))
-	              .def("GetForecastStep", &configuration::ForecastStep)
+	              .def("GetForecastStep", LUA_CMEMFN(int, configuration, ForecastStep, void))
 	              ,
 	          class_<plugin_configuration, configuration, std::shared_ptr<plugin_configuration>>("plugin_configuration")
 	              .def(constructor<>())

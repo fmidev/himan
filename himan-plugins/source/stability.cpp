@@ -83,7 +83,7 @@ void stability::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	auto r = GET_PLUGIN(radon);
 
-	itsBottomLevel = level(kHybrid, stoi(r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer().Id(),
+	itsBottomLevel = level(kHybrid, stoi(r->RadonDB().GetProducerMetaData(itsConfiguration->TargetProducer().Id(),
 	                                                                      "last hybrid level number")));
 
 #ifdef HAVE_CUDA

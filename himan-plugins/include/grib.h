@@ -8,6 +8,7 @@
 #define GRIB_H
 
 #include "auxiliary_plugin.h"
+#include "info.h"
 
 class NFmiGrib;
 

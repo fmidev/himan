@@ -108,7 +108,7 @@ void tke::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	// determine length of forecast step to calculate surface heat flux in W/m2
 	double forecastStepSize;
 
-	if (itsConfiguration->SourceProducer().Id() != 199)
+	if (forecastTime.StepResolution() == kHourResolution)
 	{
 		forecastStepSize = itsConfiguration->ForecastStep() * 3600;  // step size in seconds
 	}

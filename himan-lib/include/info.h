@@ -369,7 +369,6 @@ struct base
 class info
 {
    public:
-	friend class json_parser;
 	friend class himan::plugin::compiled_plugin_base;
 
 	info();
@@ -735,7 +734,7 @@ class info
 	}
 
    protected:
-	std::unique_ptr<grid> itsBaseGrid;  //!< grid information from json. used as a template, never to store data
+	//	std::unique_ptr<grid> itsBaseGrid;  //!< grid information from json. used as a template, never to store data
 	std::vector<std::shared_ptr<base>>& Dimensions()
 	{
 		return itsDimensions;

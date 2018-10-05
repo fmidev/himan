@@ -36,10 +36,10 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 		auto r = GET_PLUGIN(radon);
 
 		itsBottomLevel =
-		    stoi(r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer().Id(), "last hybrid level number"));
+		    stoi(r->RadonDB().GetProducerMetaData(itsConfiguration->TargetProducer().Id(), "last hybrid level number"));
 	}
 
-	if (itsConfiguration->Info()->Producer().Id() == 240 || itsConfiguration->Info()->Producer().Id() == 243)
+	if (itsConfiguration->TargetProducer().Id() == 240 || itsConfiguration->TargetProducer().Id() == 243)
 	{
 		itsUseGeopotential = false;
 

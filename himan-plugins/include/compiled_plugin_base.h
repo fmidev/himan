@@ -7,6 +7,7 @@
 #define COMPILED_PLUGIN_BASE_H
 
 #include "compiled_plugin.h"
+#include "info.h"
 #include "plugin_configuration.h"
 #include <boost/iterator/zip_iterator.hpp>
 #include <mutex>

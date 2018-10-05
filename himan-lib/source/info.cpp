@@ -17,8 +17,7 @@ using namespace std;
 using namespace himan;
 
 info::info()
-    : itsBaseGrid(),
-      itsLevelIterator(),
+    : itsLevelIterator(),
       itsTimeIterator(),
       itsParamIterator(),
       itsForecastTypeIterator(),
@@ -60,11 +59,6 @@ info::info(const info& other)
       itsProducer(other.itsProducer),
       itsLocationIndex(other.itsLocationIndex)
 {
-	if (other.itsBaseGrid)
-	{
-		itsBaseGrid = other.itsBaseGrid->Clone();
-	}
-
 	itsLogger = logger("info");
 }
 

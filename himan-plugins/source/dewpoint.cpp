@@ -80,8 +80,7 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 
 	SetAB(myTargetInfo, TInfo);
 
-	// Special case for harmonie & MEPS
-	if (RHInfo->Param().Unit() != kPrcnt || itsConfiguration->SourceProducer().Id() == 199)
+	if (RHInfo->Param().Unit() != kPrcnt)
 	{
 		itsLogger.Warning("Unable to determine RH unit, assuming 0 .. 1");
 		RHScale = 100.0;

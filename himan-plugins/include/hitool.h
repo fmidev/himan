@@ -16,6 +16,8 @@
 
 namespace himan
 {
+class info;
+
 namespace plugin
 {
 typedef std::pair<std::shared_ptr<info>, std::shared_ptr<info>> valueheight;
@@ -46,7 +48,7 @@ class hitool : public auxiliary_plugin
 	 * Overcoat for VerticalMaximum(params, vector<double>, vector<double>)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
-	*/
+	 */
 
 	std::vector<double> VerticalMaximum(const std::vector<param>& wantedParamList, double firstLevelValue,
 	                                    double lastLevelValue) const;
@@ -57,7 +59,7 @@ class hitool : public auxiliary_plugin
 	 * Overcoat for VerticalMaximum(param, vector<double>, vector<double>)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
-	*/
+	 */
 
 	std::vector<double> VerticalMaximum(const std::vector<param>& wantedParamList,
 	                                    const std::vector<double>& firstLevelValue,
@@ -96,7 +98,7 @@ class hitool : public auxiliary_plugin
 	 * Overcoat for VerticalMinimum(params, vector<double>, vector<double>)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
-	*/
+	 */
 
 	std::vector<double> VerticalMinimum(const std::vector<param>& wantedParamList, double firstLevelValue,
 	                                    double lastLevelValue) const;
@@ -107,7 +109,7 @@ class hitool : public auxiliary_plugin
 	 * Overcoat for VerticalMinimum(param, vector<double>, vector<double>)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
-	*/
+	 */
 
 	std::vector<double> VerticalMinimum(const std::vector<param>& wantedParamList,
 	                                    const std::vector<double>& firstLevelValue,
@@ -142,7 +144,7 @@ class hitool : public auxiliary_plugin
 	 * Overcoat for VerticalSum(param, vector<double>, vector<double>)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
-	*/
+	 */
 
 	std::vector<double> VerticalSum(const std::vector<param>& wantedParamList, double firstLevelValue,
 	                                double lastLevelValue) const;
@@ -153,7 +155,7 @@ class hitool : public auxiliary_plugin
 	 * Overcoat for VerticalSum(param, vector<double>, vector<double>)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
-	*/
+	 */
 
 	std::vector<double> VerticalSum(const std::vector<param>& wantedParamList,
 	                                const std::vector<double>& firstLevelValue,
@@ -164,7 +166,7 @@ class hitool : public auxiliary_plugin
 	 *
 	 * Overcoat for VerticalSum(param, vector<double>, vector<double>)
 	 *
-	*/
+	 */
 
 	std::vector<double> VerticalSum(const param& wantedParam, double firstLevelValue, double lastLevelValue) const;
 
@@ -186,7 +188,7 @@ class hitool : public auxiliary_plugin
 	 * Overcoat for VerticalAverage(params, double, double)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
-	*/
+	 */
 
 	std::vector<double> VerticalAverage(const std::vector<param>& wantedParamList, double lowerHeight,
 	                                    double upperHeight) const;
@@ -197,7 +199,7 @@ class hitool : public auxiliary_plugin
 	 * Overcoat for VerticalAverage(param, vector<double>, vector<double>)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
-	*/
+	 */
 
 	std::vector<double> VerticalAverage(const std::vector<param>& wantedParamList,
 	                                    const std::vector<double>& firstLevelValue,
@@ -232,7 +234,7 @@ class hitool : public auxiliary_plugin
 	 * Overcoat for VerticalHeight(params, vector<double>, vector<double>, vector<double>, size_t)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
-	*/
+	 */
 
 	std::vector<double> VerticalHeight(const std::vector<param>& wantedParamList, double firstLevelValue,
 	                                   double lastLevelValue, const std::vector<double>& findValue,
@@ -244,7 +246,7 @@ class hitool : public auxiliary_plugin
 	 * Overcoat for VerticalHeight(param, vector<double>, vector<double>, vector<double>, size_t)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
-	*/
+	 */
 
 	std::vector<double> VerticalHeight(const std::vector<param>& wantedParamList,
 	                                   const std::vector<double>& firstLevelValue,
@@ -363,7 +365,7 @@ class hitool : public auxiliary_plugin
 	 * Overcoat for VerticalValue(params, double, double)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
-	*/
+	 */
 
 	std::vector<double> VerticalValue(const std::vector<param>& wantedParamList, double findValue) const;
 
@@ -462,7 +464,7 @@ class hitool : public auxiliary_plugin
 	 * Overcoat for PlusMinusArea(params, double, double)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
-	*/
+	 */
 
 	std::vector<double> PlusMinusArea(const std::vector<param>& wantedParamList, double lowerHeight,
 	                                  double upperHeight) const;
@@ -474,7 +476,7 @@ class hitool : public auxiliary_plugin
 	 * Overcoat for PlusMinusArea(param, vector<double>, vector<double>)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
-	*/
+	 */
 
 	std::vector<double> PlusMinusArea(const std::vector<param>& wantedParamList,
 	                                  const std::vector<double>& firstLevelValue,

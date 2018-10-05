@@ -21,6 +21,7 @@
 #define FETCHER_H
 
 #include "auxiliary_plugin.h"
+#include "info.h"
 #include "plugin_configuration.h"
 #include "search_options.h"
 
@@ -121,7 +122,7 @@ class fetcher : public auxiliary_plugin
 	bool DoVectorComponentRotation() const;
 
    private:
-	void RotateVectorComponents(std::vector<info_t>& components, info_t target,
+	void RotateVectorComponents(std::vector<info_t>& components, const grid* target,
 	                            std::shared_ptr<const plugin_configuration> conf, const producer& sourceProd);
 
 	/**

@@ -2,8 +2,8 @@
  * @file json_parser.cpp
  *
  */
-#include "interpolate.h"
 #include "json_parser.h"
+#include "interpolate.h"
 #include "lambert_conformal_grid.h"
 #include "latitude_longitude_grid.h"
 #include "plugin_factory.h"
@@ -30,12 +30,12 @@ using namespace std;
 
 unique_ptr<grid> ParseAreaAndGridFromPoints(configuration& conf, const boost::property_tree::ptree& pt);
 unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::property_tree::ptree& pt);
-void ParseLevels(shared_ptr<info> anInfo, const boost::property_tree::ptree& pt);
-void ParseSourceProducer(shared_ptr<configuration> conf, shared_ptr<info> anInfo,
-                         const boost::property_tree::ptree& pt);
-void ParseTargetProducer(shared_ptr<configuration> conf, shared_ptr<info> anInfo,
-                         const boost::property_tree::ptree& pt);
+vector<level> ParseLevels(const boost::property_tree::ptree& pt);
+vector<producer> ParseSourceProducer(shared_ptr<configuration> conf, const boost::property_tree::ptree& pt);
+producer ParseTargetProducer(shared_ptr<configuration> conf, const boost::property_tree::ptree& pt);
 vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt);
+unique_ptr<grid> ParseAreaAndGrid(std::shared_ptr<configuration> conf, const boost::property_tree::ptree& pt);
+vector<forecast_time> ParseTime(std::shared_ptr<configuration> conf, const boost::property_tree::ptree& pt);
 
 vector<level> LevelsFromString(const string& levelType, const string& levelValues);
 
@@ -97,29 +97,19 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	}
 
 	vector<shared_ptr<plugin_configuration>> pluginContainer;
-	/* Create our base info */
-
-	auto baseInfo = make_shared<info>();
 
 	/* Check producers */
 
-	ParseSourceProducer(conf, baseInfo, pt);
-	ParseTargetProducer(conf, baseInfo, pt);
+	conf->SourceProducers(ParseSourceProducer(conf, pt));
+	conf->TargetProducer(ParseTargetProducer(conf, pt));
 
 	/* Check area definitions */
 
-	auto g = ParseAreaAndGrid(conf, pt);
-
-	baseInfo->itsBaseGrid = move(g);
+	auto g_targetGrid = ParseAreaAndGrid(conf, pt);
 
 	/* Check time definitions */
 
-	conf->FirstSourceProducer();
-	ParseTime(conf, baseInfo, pt);
-
-	/* Check levels */
-
-	// ParseLevels(baseInfo, pt);
+	const auto g_times = ParseTime(conf, pt);
 
 	/* Check file_write */
 
@@ -295,15 +285,13 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 	// Check global forecast_type option
 
-	auto forecastTypes = ParseForecastTypes(pt);
+	auto g_forecastTypes = ParseForecastTypes(pt);
 
-	if (forecastTypes.empty())
+	if (g_forecastTypes.empty())
 	{
 		// Default to deterministic
-		forecastTypes.push_back(forecast_type(kDeterministic));
+		g_forecastTypes.push_back(forecast_type(kDeterministic));
 	}
-
-	baseInfo->Set<forecast_type>(forecastTypes);
 
 	/* Check dynamic_memory_allocation */
 
@@ -341,11 +329,12 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 	for (boost::property_tree::ptree::value_type& element : pq)
 	{
-		auto anInfo = make_shared<info>(*baseInfo);
+		auto times = g_times;
+		auto targetGrid = unique_ptr<grid>(g_targetGrid->Clone());
 
 		try
 		{
-			ParseTime(conf, anInfo, element.second);
+			times = ParseTime(conf, element.second);
 		}
 		catch (...)
 		{
@@ -354,18 +343,18 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 		try
 		{
-			g = ParseAreaAndGrid(conf, element.second);
-
-			anInfo->itsBaseGrid = move(g);
+			targetGrid = ParseAreaAndGrid(conf, element.second);
 		}
 		catch (...)
 		{
 			// do nothing
 		}
 
+		vector<level> g_levels;
+
 		try
 		{
-			ParseLevels(anInfo, element.second);
+			g_levels = ParseLevels(element.second);
 		}
 		catch (exception& e)
 		{
@@ -488,11 +477,11 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 		// Check local forecast_type option
 
-		forecastTypes = ParseForecastTypes(element.second);
+		auto forecastTypes = ParseForecastTypes(element.second);
 
-		if (!forecastTypes.empty())
+		if (forecastTypes.empty())
 		{
-			anInfo->Set<forecast_type>(forecastTypes);
+			forecastTypes = g_forecastTypes;
 		}
 
 		boost::property_tree::ptree& plugins = element.second.get_child("plugins");
@@ -501,7 +490,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 		try
 		{
-			ParseSourceProducer(conf, anInfo, element.second);
+			conf->SourceProducers(ParseSourceProducer(conf, element.second));
 		}
 		catch (...)
 		{
@@ -509,7 +498,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 		try
 		{
-			ParseTargetProducer(conf, anInfo, element.second);
+			conf->TargetProducer(ParseTargetProducer(conf, element.second));
 		}
 		catch (...)
 		{
@@ -524,6 +513,11 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		{
 			shared_ptr<plugin_configuration> pc = make_shared<plugin_configuration>(*conf);
 
+			pc->itsTimes = times;
+			pc->itsForecastTypes = forecastTypes;
+			pc->itsLevels = g_levels;
+
+			pc->itsBaseGrid = unique_ptr<grid>(targetGrid->Clone());
 			pc->UseCache(delayedUseCache);
 			pc->itsOutputFileType = delayedFileType;
 			pc->FileWriteOption(delayedFileWrite);
@@ -619,9 +613,6 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 				throw runtime_error(ClassName() + ": plugin name not found from configuration");
 			}
 
-			pc->Info(make_shared<info>(*anInfo));  // We have to have a copy for all configs.
-			                                       // Each plugin will later on create a data backend.
-
 			ASSERT(pc.unique());
 
 			pluginContainer.push_back(pc);
@@ -646,8 +637,10 @@ raw_time GetLatestOriginDateTime(const shared_ptr<configuration> conf, const str
 		offset = static_cast<unsigned>(stoi(strlist[1]));
 	}
 
-	HPDatabaseType dbtype = conf->DatabaseType();
-	producer sourceProducer = conf->SourceProducer();
+	ASSERT(conf->SourceProducers().empty() == false);
+
+	const HPDatabaseType dbtype = conf->DatabaseType();
+	const producer sourceProducer = conf->SourceProducer(0);
 
 	raw_time latestOriginDateTime;
 
@@ -664,9 +657,10 @@ raw_time GetLatestOriginDateTime(const shared_ptr<configuration> conf, const str
 	                    to_string(sourceProducer.Id()));
 }
 
-void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info> anInfo,
-                            const boost::property_tree::ptree& pt)
+vector<forecast_time> ParseTime(shared_ptr<configuration> conf, const boost::property_tree::ptree& pt)
 {
+	vector<forecast_time> theTimes;
+
 	/* Check origin time */
 	const string mask = "%Y-%m-%d %H:%M:%S";
 
@@ -709,7 +703,7 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 	}
 	catch (exception& e)
 	{
-		throw runtime_error(ClassName() + ": " + string("Error parsing origin time information: ") + e.what());
+		throw runtime_error(string("Error parsing origin time information: ") + e.what());
 	}
 
 	ASSERT(!originDateTimes.empty());
@@ -737,8 +731,6 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 
 		sort(times.begin(), times.end());
 
-		vector<forecast_time> theTimes;
-
 		// Create forecast_time with both times origintime, then adjust the validtime
 
 		for (const auto& originDateTime : originDateTimes)
@@ -753,16 +745,14 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 			}
 		}
 
-		anInfo->Set<forecast_time>(theTimes);
-
-		return;
+		return theTimes;
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
 	}
 	catch (exception& e)
 	{
-		throw runtime_error(ClassName() + ": " + string("Error parsing time information from 'times': ") + e.what());
+		throw runtime_error(string("Error parsing time information from 'times': ") + e.what());
 	}
 
 	// hours was not specified
@@ -793,11 +783,9 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 			throw runtime_error("step size must be > 0");
 		}
 
-		conf->itsForecastStep = step;
+		conf->ForecastStep(step);
 
 		HPTimeResolution stepResolution = kHourResolution;
-
-		vector<forecast_time> theTimes;
 
 		for (const auto& originDateTime : originDateTimes)
 		{
@@ -818,17 +806,14 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 			} while (curtime <= stop);
 		}
 
-		anInfo->Set<forecast_time>(theTimes);
-
-		return;
+		return theTimes;
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
 	}
 	catch (exception& e)
 	{
-		throw runtime_error(ClassName() + ": " + string("Error parsing time information from 'start_hour': ") +
-		                    e.what());
+		throw runtime_error(string("Error parsing time information from 'start_hour': ") + e.what());
 	}
 
 	try
@@ -839,13 +824,11 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 		int stop = pt.get<int>("stop_minute");
 		int step = pt.get<int>("step");
 
-		conf->itsForecastStep = step;
+		conf->ForecastStep(step);
 
 		HPTimeResolution stepResolution = kMinuteResolution;
 
 		int curtime = start;
-
-		vector<forecast_time> theTimes;
 
 		for (const auto& originDateTime : originDateTimes)
 		{
@@ -863,13 +846,13 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 
 			} while (curtime <= stop);
 		}
-
-		anInfo->Set<forecast_time>(theTimes);
 	}
 	catch (exception& e)
 	{
-		throw runtime_error(ClassName() + ": " + string("Error parsing time information: ") + e.what());
+		throw runtime_error(string("Error parsing time information: ") + e.what());
 	}
+
+	return theTimes;
 }
 
 unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::property_tree::ptree& pt)
@@ -878,8 +861,6 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 	using himan::kTopLeft;
 
 	unique_ptr<grid> g;
-
-	logger log("json_parser");
 
 	try
 	{
@@ -895,7 +876,7 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 	}
 	catch (exception& e)
 	{
-		log.Fatal(string("Error parsing area information: ") + e.what());
+		itsLogger.Fatal(string("Error parsing area information: ") + e.what());
 		himan::Abort();
 	}
 
@@ -1011,7 +992,7 @@ unique_ptr<grid> ParseAreaAndGridFromPoints(configuration& conf, const boost::pr
 	return g;
 }
 
-unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, const boost::property_tree::ptree& pt)
+unique_ptr<grid> ParseAreaAndGrid(shared_ptr<configuration> conf, const boost::property_tree::ptree& pt)
 {
 	/*
 	 * Parse area and grid from different possible options.
@@ -1105,8 +1086,7 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 
 		if (mode != kTopLeft && mode != kBottomLeft)
 		{
-			throw runtime_error(ClassName() + ": scanning mode " + HPScanningModeToString.at(mode) +
-			                    " not supported (ever)");
+			throw runtime_error("scanning mode " + HPScanningModeToString.at(mode) + " not supported (ever)");
 		}
 
 		string projection = pt.get<string>("projection");
@@ -1152,7 +1132,7 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 		}
 		else
 		{
-			throw runtime_error(ClassName() + ": Unknown type: " + projection);
+			throw runtime_error("Unknown type: " + projection);
 		}
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
@@ -1169,7 +1149,7 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 	return rg;
 }
 
-void ParseSourceProducer(shared_ptr<configuration> conf, shared_ptr<info> anInfo, const boost::property_tree::ptree& pt)
+std::vector<producer> ParseSourceProducer(shared_ptr<configuration> conf, const boost::property_tree::ptree& pt)
 {
 	std::vector<producer> sourceProducers;
 	vector<string> sourceProducersStr = himan::util::Split(pt.get<string>("source_producer"), ",", false);
@@ -1221,10 +1201,10 @@ void ParseSourceProducer(shared_ptr<configuration> conf, shared_ptr<info> anInfo
 		}
 	}
 
-	conf->SourceProducers(sourceProducers);
+	return sourceProducers;
 }
 
-void ParseTargetProducer(shared_ptr<configuration> conf, shared_ptr<info> anInfo, const boost::property_tree::ptree& pt)
+producer ParseTargetProducer(shared_ptr<configuration> conf, const boost::property_tree::ptree& pt)
 {
 	const HPDatabaseType dbtype = conf->DatabaseType();
 
@@ -1267,20 +1247,17 @@ void ParseTargetProducer(shared_ptr<configuration> conf, shared_ptr<info> anInfo
 		itsLogger.Warning("Unknown target producer: " + pt.get<string>("target_producer"));
 	}
 
-	conf->TargetProducer(prod);
-	anInfo->Producer(prod);
+	return prod;
 }
 
-void ParseLevels(shared_ptr<info> anInfo, const boost::property_tree::ptree& pt)
+vector<level> ParseLevels(const boost::property_tree::ptree& pt)
 {
 	try
 	{
 		string levelTypeStr = pt.get<string>("leveltype");
 		string levelValuesStr = pt.get<string>("levels");
 
-		vector<level> levels = LevelsFromString(levelTypeStr, levelValuesStr);
-
-		anInfo->Set<level>(levels);
+		return LevelsFromString(levelTypeStr, levelValuesStr);
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{

@@ -6,6 +6,7 @@
 #include "radon.h"
 #include "logger.h"
 #include "plugin_factory.h"
+#include "point_list.h"
 #include "util.h"
 #include <sstream>
 #include <thread>
@@ -152,11 +153,17 @@ vector<std::string> radon::CSV(search_options& options)
 	      << "AND t.forecast_type_value = " << options.ftype.Value() << " "
 	      << "AND t.station_id IN (";
 
-	auto localInfo = make_shared<info>(*options.configuration->Info());
+	const point_list* list = dynamic_cast<const point_list*>(options.configuration->BaseGrid());
 
-	for (localInfo->ResetLocation(); localInfo->NextLocation();)
+	if (!list)
 	{
-		const auto station = localInfo->Station();
+		throw std::runtime_error("Input grid type is not point_list");
+	}
+
+	const auto stations = list->Stations();
+
+	for (const auto& station : stations)
+	{
 		query << station.Id() << ",";
 	}
 

@@ -8,6 +8,7 @@
 
 #include "auxiliary_plugin.h"
 #include "search_options.h"
+#include "info.h"
 
 class NFmiFastQueryInfo;
 class NFmiQueryData;
