@@ -25,7 +25,10 @@ typedef vector<double> vec;
 pair<vec, vec> GetSRHSourceData(const shared_ptr<info>& myTargetInfo, shared_ptr<hitool> h);
 
 #ifdef HAVE_CUDA
-void ProcessGPU(shared_ptr<const plugin_configuration> conf, info_t myTargetInfo);
+namespace stabilitygpu
+{
+void Process(shared_ptr<const plugin_configuration> conf, info_t myTargetInfo);
+}
 #endif
 
 namespace STABILITY
@@ -504,7 +507,7 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 	{
 		deviceType = "GPU";
 
-		ProcessGPU(itsConfiguration, myTargetInfo);
+		stabilitygpu::Process(itsConfiguration, myTargetInfo);
 	}
 	else
 #endif

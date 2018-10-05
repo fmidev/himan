@@ -3,7 +3,8 @@
 using namespace himan;
 
 template <typename T>
-__global__ void TransformerKernel(const T* __restrict__ d_source, T* __restrict__ d_dest, double scale, double base, size_t N)
+__global__ void TransformerKernel(const T* __restrict__ d_source, T* __restrict__ d_dest, double scale, double base,
+                                  size_t N)
 {
 	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -13,7 +14,9 @@ __global__ void TransformerKernel(const T* __restrict__ d_source, T* __restrict_
 	}
 }
 
-void ProcessGPU(info_t myTargetInfo, info_t sourceInfo, double scale, double base)
+namespace transformergpu
+{
+void Process(info_t myTargetInfo, info_t sourceInfo, double scale, double base)
 {
 	cudaStream_t stream;
 
@@ -33,7 +36,7 @@ void ProcessGPU(info_t myTargetInfo, info_t sourceInfo, double scale, double bas
 
 	// Copy data to device
 
-        cuda::PrepareInfo(sourceInfo, d_source, stream);
+	cuda::PrepareInfo(sourceInfo, d_source, stream);
 
 	// dims
 
@@ -52,4 +55,5 @@ void ProcessGPU(info_t myTargetInfo, info_t sourceInfo, double scale, double bas
 	CUDA_CHECK(cudaFree(d_dest));
 
 	cudaStreamDestroy(stream);
+}
 }

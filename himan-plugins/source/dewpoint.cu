@@ -11,11 +11,15 @@ __global__ void DewpointKernel(const T* __restrict__ d_t, const T* __restrict__ 
 
 	if (idx < N)
 	{
+		ASSERT(d_t[idx] > 80. || IsMissing(d_t[idx]));
+
 		d_td[idx] = metutil::DewPointFromRH_<double>(d_t[idx], d_rh[idx] * RH_scale);
 	}
 }
 
-void ProcessGPU(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo)
+namespace dewpointgpu
+{
+void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo)
 {
 	cudaStream_t stream;
 	CUDA_CHECK(cudaStreamCreate(&stream));
@@ -75,4 +79,5 @@ void ProcessGPU(std::shared_ptr<const plugin_configuration> conf, std::shared_pt
 	CUDA_CHECK(cudaFree(d_rh));
 
 	CUDA_CHECK(cudaStreamDestroy(stream));
+}
 }
