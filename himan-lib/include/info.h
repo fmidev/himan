@@ -724,9 +724,8 @@ class info
 				continue;
 			}
 
-			size_t newI = (Index<param>() * Size<forecast_type>() * Size<forecast_time>() * Size<level>() +
-			               Index<level>() * Size<forecast_type>() * Size<forecast_time>() +
-			               Index<forecast_time>() * Size<forecast_type>() + Index<forecast_type>());
+			size_t newI = (Index<param>() * ftypesize * timesize * lvlsize + Index<level>() * ftypesize * timesize +
+			               Index<forecast_time>() * ftypesize + Index<forecast_type>());
 
 			newDimensions[newI] = std::make_shared<base>(std::shared_ptr<grid>(Grid()->Clone()), Data());
 		}
