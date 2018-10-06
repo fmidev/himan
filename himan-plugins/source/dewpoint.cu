@@ -54,7 +54,7 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 
 	double RHScale = 1;
 
-	if (RHInfo->Param().Unit() != kPrcnt)
+	if (RHInfo->Param().Name() == "RH-0TO1")
 	{
 		RHScale = 100;
 	}

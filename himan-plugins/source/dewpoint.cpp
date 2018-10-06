@@ -80,9 +80,8 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 
 	SetAB(myTargetInfo, TInfo);
 
-	if (RHInfo->Param().Unit() != kPrcnt)
+	if (RHInfo->Param().Name() == "RH-0TO1")
 	{
-		itsLogger.Warning("Unable to determine RH unit, assuming 0 .. 1");
 		RHScale = 100.0;
 	}
 
