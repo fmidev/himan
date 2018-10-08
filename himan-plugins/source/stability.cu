@@ -509,6 +509,11 @@ void EnergyHelicityIndex(std::shared_ptr<const plugin_configuration> conf, std::
 		auto CAPEInfo = cuda::Fetch(conf, myTargetInfo->Time(), himan::level(himan::kHeightLayer, 500, 0),
 		                            himan::param("CAPE-JKG"), myTargetInfo->ForecastType());
 
+		if (!CAPEInfo)
+		{
+			return;
+		}
+
 		CUDA_CHECK(cudaMalloc((void**)&d_cape, memsize));
 
 		cuda::PrepareInfo(CAPEInfo, d_cape, stream);
@@ -568,6 +573,11 @@ void CalculateBulkRichardsonNumber(std::shared_ptr<const plugin_configuration> c
 	{
 		auto CAPEInfo = cuda::Fetch(conf, myTargetInfo->Time(), himan::level(himan::kHeightLayer, 500, 0),
 		                            himan::param("CAPE-JKG"), myTargetInfo->ForecastType());
+
+		if (!CAPEInfo)
+		{
+			return;
+		}
 
 		CUDA_CHECK(cudaMalloc((void**)&d_cape, memsize));
 		CUDA_CHECK(cudaMalloc((void**)&d_u6, memsize));
