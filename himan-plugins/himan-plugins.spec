@@ -4,7 +4,7 @@
 Summary: himan-plugins library
 Name: %{LIBNAME}
 Version: 18.10.8
-Release: 1.el7.fmi
+Release: 2.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -17,7 +17,7 @@ Requires: himan-lib >= 18.10.2
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 18.2.12
-Requires: libfmidb >= 18.2.8
+Requires: libfmidb >= 18.10.5
 Requires: smartmet-library-newbase >= 17.12.1
 Requires: libpqxx
 
@@ -34,7 +34,7 @@ BuildRequires: cuda-cusp-9-1 >= 0.5.1
 Requires: jasper-libs
 Requires: eccodes
 %endif
-BuildRequires: libfmidb-devel >= 17.9.18
+BuildRequires: libfmidb-devel >= 18.10.5
 BuildRequires: libfmigrib-devel >= 18.2.12
 BuildRequires: smartmet-library-newbase-devel >= 17.12.1
 BuildRequires: scons
@@ -112,6 +112,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Oct  8 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.8-2.fmi
+- Use typeOfStatisticalProcessing to determine param_id in GRIB2
 * Mon Oct  8 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.8-1.fmi
 - Fixing missing data lookup
 * Fri Oct  5 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.5-1.fmi
