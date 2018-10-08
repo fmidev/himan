@@ -139,7 +139,7 @@ std::shared_ptr<himan::info> Fetch(const std::shared_ptr<const plugin_configurat
 			return ret;
 		}
 	}
-	return std::shared_ptr<info>();
+	return nullptr;
 }
 
 std::shared_ptr<himan::info> Fetch(const std::shared_ptr<const plugin_configuration> conf,
