@@ -30,9 +30,7 @@ class cache : public auxiliary_plugin
 {
    public:
 	cache();
-	~cache()
-	{
-	}
+	~cache() = default;
 	cache(const cache& other) = delete;
 	cache& operator=(const cache& other) = delete;
 
@@ -44,8 +42,16 @@ class cache : public auxiliary_plugin
 	 * to cache
 	 */
 
-	void Insert(info_t anInfo, bool pin = false);
-	std::vector<info_t> GetInfo(search_options& options);
+	template <typename T>
+	void Insert(std::shared_ptr<info<T>> anInfo, bool pin = false);
+
+	void Insert(std::shared_ptr<info<double>> anInfo, bool pin = false);
+
+	template <typename T>
+	std::vector<std::shared_ptr<info<T>>> GetInfo(search_options& options);
+
+	std::vector<std::shared_ptr<info<double>>> GetInfo(search_options& options);
+
 	void Clean();
 
 	virtual std::string ClassName() const
@@ -62,10 +68,12 @@ class cache : public auxiliary_plugin
 	}
 	size_t Size() const;
 
-	void Replace(info_t anInfo, bool pin = false);
+	template <typename T>
+	void Replace(std::shared_ptr<info<T>> anInfo, bool pin = false);
+
+	void Replace(std::shared_ptr<info<double>> anInfo, bool pin = false);
 
    private:
-	void SplitToPool(info_t anInfo, bool pin);
 	std::string UniqueName(const info<double>& anInfo);
 	std::string UniqueNameFromOptions(search_options& options);
 };

@@ -45,7 +45,14 @@ querydata::querydata()
 {
 	itsLogger = logger("querydata");
 }
+
 bool querydata::ToFile(info<double>& theInfo, string& theOutputFile)
+{
+	return ToFile<double>(theInfo, theOutputFile);
+}
+
+template <typename T>
+bool querydata::ToFile(info<T>& theInfo, string& theOutputFile)
 {
 	ofstream out(theOutputFile.c_str());
 
@@ -56,7 +63,7 @@ bool querydata::ToFile(info<double>& theInfo, string& theOutputFile)
 		activeOnly = false;
 	}
 
-	auto qdata = CreateQueryData(theInfo, activeOnly, true);
+	auto qdata = CreateQueryData<double>(theInfo, activeOnly, true);
 
 	if (!qdata)
 	{
@@ -70,7 +77,10 @@ bool querydata::ToFile(info<double>& theInfo, string& theOutputFile)
 	return true;
 }
 
-shared_ptr<NFmiQueryData> querydata::CreateQueryData(const info<double>& originalInfo, bool activeOnly,
+template bool querydata::ToFile<double>(info<double>&, string&);
+
+template <typename T>
+shared_ptr<NFmiQueryData> querydata::CreateQueryData(const info<T>& originalInfo, bool activeOnly,
                                                      bool applyScaleAndBase)
 {
 	auto localInfo(originalInfo);
@@ -142,20 +152,20 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(const info<double>& origina
 		 * before writing querydata.
 		 */
 
-		localInfo.Reset<forecast_time>();
+		localInfo.template Reset<forecast_time>();
 		qinfo.ResetTime();
 
-		while (localInfo.Next<forecast_time>() && qinfo.NextTime())
+		while (localInfo.template Next<forecast_time>() && qinfo.NextTime())
 		{
-			localInfo.Reset<level>();
+			localInfo.template Reset<level>();
 			qinfo.ResetLevel();
 
-			while (localInfo.Next<level>() && qinfo.NextLevel())
+			while (localInfo.template Next<level>() && qinfo.NextLevel())
 			{
-				localInfo.Reset<param>();
+				localInfo.template Reset<param>();
 				qinfo.ResetParam();
 
-				while (localInfo.Next<param>() && qinfo.NextParam())
+				while (localInfo.template Next<param>() && qinfo.NextParam())
 				{
 					if (!localInfo.Grid())
 					{
@@ -174,6 +184,8 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(const info<double>& origina
 
 	return qdata;
 }
+
+template shared_ptr<NFmiQueryData> querydata::CreateQueryData<double>(const info<double>&, bool, bool);
 
 bool querydata::CopyData(info<double>& theInfo, NFmiFastQueryInfo& qinfo, bool applyScaleAndBase) const
 {
@@ -522,14 +534,10 @@ NFmiVPlaceDescriptor querydata::CreateVPlaceDescriptor(info<double>& info, bool 
 	return NFmiVPlaceDescriptor(lbag);
 }
 
-shared_ptr<himan::info<double>> querydata::FromFile(const string& inputFile, const search_options& options) const
+template <typename T>
+shared_ptr<himan::info<T>> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData) const
 {
-	throw runtime_error(ClassName() + ": Function FromFile() not implemented yet");
-}
-
-shared_ptr<himan::info<double>> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData) const
-{
-	auto newInfo = make_shared<info<double>>();
+	auto newInfo = make_shared<info<T>>();
 	grid* newGrid = 0;
 
 	NFmiQueryInfo qinfo = theData.get();
@@ -553,7 +561,7 @@ shared_ptr<himan::info<double>> querydata::CreateInfo(shared_ptr<NFmiQueryData> 
 		theTimes.push_back(t);
 	}
 
-	newInfo->Set<forecast_time>(theTimes);
+	newInfo->template Set<forecast_time>(theTimes);
 
 	// Levels
 
@@ -591,7 +599,7 @@ shared_ptr<himan::info<double>> querydata::CreateInfo(shared_ptr<NFmiQueryData> 
 		theLevels.push_back(l);
 	}
 
-	newInfo->Set<level>(theLevels);
+	newInfo->template Set<level>(theLevels);
 
 	// Parameters
 
@@ -603,12 +611,12 @@ shared_ptr<himan::info<double>> querydata::CreateInfo(shared_ptr<NFmiQueryData> 
 		theParams.push_back(par);
 	}
 
-	newInfo->Set<param>(theParams);
+	newInfo->template Set<param>(theParams);
 
 	vector<forecast_type> ftypes;
 	ftypes.push_back(forecast_type(kDeterministic));
 
-	newInfo->Set<forecast_type>(ftypes);
+	newInfo->template Set<forecast_type>(ftypes);
 
 	// Grid
 
@@ -661,7 +669,7 @@ shared_ptr<himan::info<double>> querydata::CreateInfo(shared_ptr<NFmiQueryData> 
 	dynamic_cast<regular_grid*>(newGrid)->ScanningMode(kBottomLeft);
 	newGrid->EarthShape(earth_shape<double>(6371220));
 
-	auto b = make_shared<base<double>>();
+	auto b = make_shared<base<T>>();
 	b->grid = shared_ptr<grid>(newGrid->Clone());
 
 	newInfo->Create(b);
@@ -670,26 +678,29 @@ shared_ptr<himan::info<double>> querydata::CreateInfo(shared_ptr<NFmiQueryData> 
 
 	// Copy data
 
-	newInfo->First<forecast_type>();
+	newInfo->template First<forecast_type>();
 
-	for (newInfo->Reset<forecast_time>(), qinfo.ResetTime(); newInfo->Next<forecast_time>() && qinfo.NextTime();)
+	for (newInfo->template Reset<forecast_time>(), qinfo.ResetTime();
+	     newInfo->template Next<forecast_time>() && qinfo.NextTime();)
 	{
-		ASSERT(newInfo->Index<forecast_time>() == qinfo.TimeIndex());
+		ASSERT(newInfo->template Index<forecast_time>() == qinfo.TimeIndex());
 
-		for (newInfo->Reset<level>(), qinfo.ResetLevel(); newInfo->Next<level>() && qinfo.NextLevel();)
+		for (newInfo->template Reset<level>(), qinfo.ResetLevel();
+		     newInfo->template Next<level>() && qinfo.NextLevel();)
 		{
-			ASSERT(newInfo->Index<level>() == qinfo.LevelIndex());
+			ASSERT(newInfo->template Index<level>() == qinfo.LevelIndex());
 
-			for (newInfo->Reset<param>(), qinfo.ResetParam(); newInfo->Next<param>() && qinfo.NextParam();)
+			for (newInfo->template Reset<param>(), qinfo.ResetParam();
+			     newInfo->template Next<param>() && qinfo.NextParam();)
 			{
-				ASSERT(newInfo->Index<param>() == qinfo.ParamIndex());
+				ASSERT(newInfo->template Index<param>() == qinfo.ParamIndex());
 
-				matrix<double> dm(ni, nj, 1, static_cast<double>(32700.f));
+				matrix<T> dm(ni, nj, 1, static_cast<double>(32700.f));
 				size_t i;
 
 				for (qinfo.ResetLocation(), i = 0; qinfo.NextLocation() && i < ni * nj; i++)
 				{
-					dm.Set(i, static_cast<double>(qinfo.FloatValue()));
+					dm.Set(i, static_cast<T>(qinfo.FloatValue()));
 				}
 
 				// convert kFloatMissing to nan
@@ -702,3 +713,5 @@ shared_ptr<himan::info<double>> querydata::CreateInfo(shared_ptr<NFmiQueryData> 
 
 	return newInfo;
 }
+
+template shared_ptr<himan::info<double>> querydata::CreateInfo<double>(shared_ptr<NFmiQueryData>) const;

@@ -200,20 +200,6 @@ class fetcher : public auxiliary_plugin
 	                                                         bool forceCaching = false);
 
 	/**
-	 * @brief Return all data from a querydata file, overcoat for himan::plugin::querydata::FromFile().
-	 * @see himan::plugin::querydata::FromFile()
-	 *
-	 * @param inputFile Input file name
-	 * @param options Search options (param, level, time, prod, config)
-	 * @param readContents Specify if data should also be read (and not only metadata)
-	 *
-	 * @return A vector of shared_ptr'd infos. Vector size is always 0 or 1.
-	 */
-
-	std::vector<std::shared_ptr<info<double>>> FromQueryData(const std::string& inputFile, search_options& options,
-	                                                         bool readContents = true);
-
-	/**
 	 * @brief Return all data from a CSV file, overcoat for himan::plugin::csv::FromFile().
 	 * @see himan::plugin::csv::FromFile()
 	 *

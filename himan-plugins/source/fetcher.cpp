@@ -321,8 +321,7 @@ vector<shared_ptr<info<double>>> fetcher::FromFile(const vector<string>& files, 
 
 			case kQueryData:
 			{
-				curInfos = FromQueryData(inputFile, options, readContents);
-				break;
+				throw runtime_error("QueryData as input is not supported");
 			}
 
 			case kNetCDF:
@@ -370,20 +369,6 @@ vector<shared_ptr<info<double>>> fetcher::FromGribIndex(const string& inputFile,
 	auto g = GET_PLUGIN(grib);
 
 	return g->FromIndexFile(inputFile, options, readContents, readPackedData, readIfNotMatching);
-}
-
-vector<shared_ptr<info<double>>> fetcher::FromQueryData(const string& inputFile, search_options& options,
-                                                        bool readContents)
-{
-	auto q = GET_PLUGIN(querydata);
-
-	shared_ptr<info<double>> i = q->FromFile(inputFile, options);
-
-	vector<shared_ptr<info<double>>> theInfos;
-
-	theInfos.push_back(i);
-
-	return theInfos;
 }
 
 vector<shared_ptr<info<double>>> fetcher::FromCSV(const string& inputFile, search_options& options,

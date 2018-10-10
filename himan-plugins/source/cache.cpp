@@ -57,11 +57,13 @@ string cache::UniqueNameFromOptions(search_options& options)
 	return ss.str();
 }
 
-void cache::Insert(info_t anInfo, bool pin)
+void cache::Insert(shared_ptr<info<double>> anInfo, bool pin)
 {
-	SplitToPool(anInfo, pin);
+	return Insert<double>(anInfo, pin);
 }
-void cache::SplitToPool(info_t anInfo, bool pin)
+
+template <typename T>
+void cache::Insert(shared_ptr<info<T>> anInfo, bool pin)
 {
 	auto localInfo = make_shared<info<double>>(*anInfo);
 
@@ -104,11 +106,19 @@ void cache::SplitToPool(info_t anInfo, bool pin)
 	cache_pool::Instance()->Insert(uniqueName, localInfo, pin);
 }
 
+template void cache::Insert<double>(shared_ptr<info<double>> anInfo, bool pin);
+
 vector<shared_ptr<himan::info<double>>> cache::GetInfo(search_options& options)
+{
+	return GetInfo<double>(options);
+}
+
+template <typename T>
+vector<shared_ptr<himan::info<T>>> cache::GetInfo(search_options& options)
 {
 	string uniqueName = UniqueNameFromOptions(options);
 
-	vector<shared_ptr<himan::info<double>>> infos;
+	vector<shared_ptr<himan::info<T>>> infos;
 
 	auto foundInfo = cache_pool::Instance()->GetInfo(uniqueName);
 	if (foundInfo)
@@ -120,6 +130,8 @@ vector<shared_ptr<himan::info<double>>> cache::GetInfo(search_options& options)
 
 	return infos;
 }
+
+template vector<shared_ptr<himan::info<double>>> cache::GetInfo<double>(search_options& options);
 
 void cache::Clean()
 {

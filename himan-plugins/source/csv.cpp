@@ -13,7 +13,14 @@ csv::csv()
 {
 	itsLogger = logger("csv");
 }
+
 bool csv::ToFile(info<double>& theInfo, string& theOutputFile)
+{
+	return ToFile<double>(theInfo, theOutputFile);
+}
+
+template <typename T>
+bool csv::ToFile(info<T>& theInfo, string& theOutputFile)
 {
 	if (theInfo.Grid()->Class() != kIrregularGrid)
 	{
@@ -34,7 +41,7 @@ bool csv::ToFile(info<double>& theInfo, string& theOutputFile)
 	    << endl;
 
 	theInfo.First();
-	theInfo.Reset<param>();
+	theInfo.template Reset<param>();
 
 	const auto originTime = theInfo.Time().OriginDateTime().String();
 	while (theInfo.Next())
@@ -72,10 +79,19 @@ bool csv::ToFile(info<double>& theInfo, string& theOutputFile)
 	return true;
 }
 
+template bool csv::ToFile<double>(info<double>&, string&);
+
 shared_ptr<himan::info<double>> csv::FromFile(const string& inputFile, const search_options& options,
                                               bool readIfNotMatching) const
 {
-	info_t all, requested;
+	return FromFile<double>(inputFile, options, readIfNotMatching);
+}
+
+template <typename T>
+shared_ptr<himan::info<T>> csv::FromFile(const string& inputFile, const search_options& options,
+                                         bool readIfNotMatching) const
+{
+	shared_ptr<info<T>> all, requested;
 
 	vector<string> lines;
 	string line;
@@ -95,7 +111,7 @@ shared_ptr<himan::info<double>> csv::FromFile(const string& inputFile, const sea
 		// We just have to trust that it came from the producer that was requested.
 
 		all->First();
-		all->Reset<param>();
+		all->template Reset<param>();
 
 		while (all->Next())
 		{
@@ -114,7 +130,7 @@ shared_ptr<himan::info<double>> csv::FromFile(const string& inputFile, const sea
 	forecast_time optsTime(options.time);
 
 	all->First();
-	all->Reset<param>();
+	all->template Reset<param>();
 
 	// Remove those dimensions that are not requested
 	while (all->Next())
@@ -181,17 +197,17 @@ shared_ptr<himan::info<double>> csv::FromFile(const string& inputFile, const sea
 	requested = make_shared<info<double>>();
 	requested->Producer(options.prod);
 
-	requested->Set<forecast_time>(times);
-	requested->Set<param>(params);
-	requested->Set<level>(levels);
-	requested->Set<forecast_type>(ftypes);
+	requested->template Set<forecast_time>(times);
+	requested->template Set<param>(params);
+	requested->template Set<level>(levels);
+	requested->template Set<forecast_type>(ftypes);
 
 	auto b = make_shared<base<double>>();
 	b->grid = shared_ptr<grid>(new point_list());  // placeholder
 
 	requested->Create(b, true);
 	requested->First();
-	requested->Reset<param>();
+	requested->template Reset<param>();
 
 	while (requested->Next())
 	{
@@ -203,17 +219,17 @@ shared_ptr<himan::info<double>> csv::FromFile(const string& inputFile, const sea
 	                " params from file '" + inputFile + "'");
 
 	requested->First();
-	requested->Reset<param>();
+	requested->template Reset<param>();
 
 	while (requested->Next())
 	{
-		if (!all->Find<param>(requested->Param()))
+		if (!all->template Find<param>(requested->Param()))
 			throw runtime_error("Impossible error occurred");
-		if (!all->Find<level>(requested->Level()))
+		if (!all->template Find<level>(requested->Level()))
 			throw runtime_error("Impossible error occurred");
-		if (!all->Find<forecast_time>(requested->Time()))
+		if (!all->template Find<forecast_time>(requested->Time()))
 			throw runtime_error("Impossible error occurred");
-		if (!all->Find<forecast_type>(requested->ForecastType()))
+		if (!all->template Find<forecast_type>(requested->ForecastType()))
 			throw runtime_error("Impossible error occurred");
 
 		for (requested->ResetLocation(); requested->NextLocation();)
@@ -231,3 +247,5 @@ shared_ptr<himan::info<double>> csv::FromFile(const string& inputFile, const sea
 
 	return requested;
 }
+
+template shared_ptr<himan::info<double>> csv::FromFile<double>(const string&, const search_options&, bool) const;

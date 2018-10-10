@@ -18,10 +18,8 @@ class csv : public io_plugin
 {
    public:
 	csv();
+	virtual ~csv() = default;
 
-	virtual ~csv()
-	{
-	}
 	csv(const csv& other) = delete;
 	csv& operator=(const csv& other) = delete;
 
@@ -51,6 +49,10 @@ class csv : public io_plugin
 	 * @return A vector of shared_ptr'd infos. Vector size is always 0 or 1.
 	 */
 
+	template <typename T>
+	std::shared_ptr<info<T>> FromFile(const std::string& inputFile, const search_options& options,
+	                                  bool readifNotMatching = false) const;
+
 	std::shared_ptr<info<double>> FromFile(const std::string& inputFile, const search_options& options,
 	                                       bool readifNotMatching = false) const;
 
@@ -62,6 +64,9 @@ class csv : public io_plugin
 	 * @param fileWriteOption Determine whether to write whole contents or just the active part
 	 * @return True if writing succeeds
 	 */
+
+	template <typename T>
+	bool ToFile(info<T>& theInfo, std::string& outputFile);
 
 	bool ToFile(info<double>& theInfo, std::string& outputFile);
 };
