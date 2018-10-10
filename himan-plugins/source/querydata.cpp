@@ -141,20 +141,20 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(const info& originalInfo, b
 		 * before writing querydata.
 		 */
 
-		localInfo.ResetTime();
+		localInfo.Reset<forecast_time>();
 		qinfo.ResetTime();
 
-		while (localInfo.NextTime() && qinfo.NextTime())
+		while (localInfo.Next<forecast_time>() && qinfo.NextTime())
 		{
-			localInfo.ResetLevel();
+			localInfo.Reset<level>();
 			qinfo.ResetLevel();
 
-			while (localInfo.NextLevel() && qinfo.NextLevel())
+			while (localInfo.Next<level>() && qinfo.NextLevel())
 			{
-				localInfo.ResetParam();
+				localInfo.Reset<param>();
 				qinfo.ResetParam();
 
-				while (localInfo.NextParam() && qinfo.NextParam())
+				while (localInfo.Next<param>() && qinfo.NextParam())
 				{
 					if (!localInfo.Grid())
 					{
@@ -250,11 +250,11 @@ NFmiTimeDescriptor querydata::CreateTimeDescriptor(info& info, bool theActiveOnl
 	}
 	else
 	{
-		info.ResetTime();
+		info.Reset<forecast_time>();
 
 		raw_time firstOriginTime;
 
-		while (info.NextTime())
+		while (info.Next<forecast_time>())
 		{
 			if (firstOriginTime.Empty())
 			{
@@ -312,9 +312,9 @@ NFmiParamDescriptor querydata::CreateParamDescriptor(info& info, bool theActiveO
 	}
 	else
 	{
-		info.ResetParam();
+		info.Reset<param>();
 
-		while (info.NextParam())
+		while (info.Next<param>())
 		{
 			AddToParamBag(info, pbag);
 		}
@@ -430,20 +430,20 @@ NFmiHPlaceDescriptor querydata::CreateGrid(info& info) const
 
 NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(info& info, bool activeOnly)
 {
-	if (!activeOnly && info.SizeTimes() * info.SizeParams() * info.SizeLevels() > 1)
+	if (!activeOnly && info.Size<forecast_time>() * info.Size<param>() * info.Size<level>() > 1)
 	{
-		info.ResetTime();
+		info.Reset<forecast_time>();
 		std::shared_ptr<grid> firstGrid = nullptr;
 
-		while (info.NextTime())
+		while (info.Next<forecast_time>())
 		{
-			info.ResetLevel();
+			info.Reset<level>();
 
-			while (info.NextLevel())
+			while (info.Next<level>())
 			{
-				info.ResetParam();
+				info.Reset<param>();
 
-				while (info.NextParam())
+				while (info.Next<param>())
 				{
 					auto g = info.Grid();
 
@@ -509,9 +509,9 @@ NFmiVPlaceDescriptor querydata::CreateVPlaceDescriptor(info& info, bool theActiv
 	}
 	else
 	{
-		info.ResetLevel();
+		info.Reset<level>();
 
-		while (info.NextLevel())
+		while (info.Next<level>())
 		{
 			lbag.AddLevel(NFmiLevel(info.Level().Type(), HPLevelTypeToString.at(info.Level().Type()),
 			                        static_cast<float>(info.Level().Value())));
@@ -552,7 +552,7 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 		theTimes.push_back(t);
 	}
 
-	newInfo->Times(theTimes);
+	newInfo->Set<forecast_time>(theTimes);
 
 	// Levels
 
@@ -590,7 +590,7 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 		theLevels.push_back(l);
 	}
 
-	newInfo->Levels(theLevels);
+	newInfo->Set<level>(theLevels);
 
 	// Parameters
 
@@ -602,12 +602,12 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 		theParams.push_back(par);
 	}
 
-	newInfo->Params(theParams);
+	newInfo->Set<param>(theParams);
 
 	vector<forecast_type> ftypes;
 	ftypes.push_back(forecast_type(kDeterministic));
 
-	newInfo->ForecastTypes(ftypes);
+	newInfo->Set<forecast_type>(ftypes);
 
 	// Grid
 
@@ -669,19 +669,19 @@ shared_ptr<himan::info> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData)
 
 	// Copy data
 
-	newInfo->FirstForecastType();
+	newInfo->First<forecast_type>();
 
-	for (newInfo->ResetTime(), qinfo.ResetTime(); newInfo->NextTime() && qinfo.NextTime();)
+	for (newInfo->Reset<forecast_time>(), qinfo.ResetTime(); newInfo->Next<forecast_time>() && qinfo.NextTime();)
 	{
-		ASSERT(newInfo->TimeIndex() == qinfo.TimeIndex());
+		ASSERT(newInfo->Index<forecast_time>() == qinfo.TimeIndex());
 
-		for (newInfo->ResetLevel(), qinfo.ResetLevel(); newInfo->NextLevel() && qinfo.NextLevel();)
+		for (newInfo->Reset<level>(), qinfo.ResetLevel(); newInfo->Next<level>() && qinfo.NextLevel();)
 		{
-			ASSERT(newInfo->LevelIndex() == qinfo.LevelIndex());
+			ASSERT(newInfo->Index<level>() == qinfo.LevelIndex());
 
-			for (newInfo->ResetParam(), qinfo.ResetParam(); newInfo->NextParam() && qinfo.NextParam();)
+			for (newInfo->Reset<param>(), qinfo.ResetParam(); newInfo->Next<param>() && qinfo.NextParam();)
 			{
-				ASSERT(newInfo->ParamIndex() == qinfo.ParamIndex());
+				ASSERT(newInfo->Index<param>() == qinfo.ParamIndex());
 
 				matrix<double> dm(ni, nj, 1, static_cast<double>(32700.f));
 				size_t i;

@@ -152,19 +152,19 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 
 	if (theta)
 	{
-		myTargetInfo->Param(param("TP-K"));
+		myTargetInfo->Find<param>(param("TP-K"));
 		cuda::ReleaseInfo(myTargetInfo, d_tp, stream);
 	}
 
 	if (thetaw)
 	{
-		myTargetInfo->Param(param("TPW-K"));
+		myTargetInfo->Find<param>(param("TPW-K"));
 		cuda::ReleaseInfo(myTargetInfo, d_tpw, stream);
 	}
 
 	if (thetae)
 	{
-		myTargetInfo->Param(param("TPE-K"));
+		myTargetInfo->Find<param>(param("TPE-K"));
 		cuda::ReleaseInfo(myTargetInfo, d_tpe, stream);
 	}
 

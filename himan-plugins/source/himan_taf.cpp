@@ -82,28 +82,28 @@ void himan_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	// end find height of cb base
 
-	myTargetInfo->ParamIndex(0);
+	myTargetInfo->Index<param>(0);
 	myTargetInfo->Grid()->Data().Set(move(cl1b));
 
-	myTargetInfo->ParamIndex(1);
+	myTargetInfo->Index<param>(1);
 	myTargetInfo->Grid()->Data().Set(move(N1));
 
-	myTargetInfo->ParamIndex(2);
+	myTargetInfo->Index<param>(2);
 	myTargetInfo->Grid()->Data().Set(move(cl2b));
 
-	myTargetInfo->ParamIndex(3);
+	myTargetInfo->Index<param>(3);
 	myTargetInfo->Grid()->Data().Set(move(N2));
 
-	myTargetInfo->ParamIndex(4);
+	myTargetInfo->Index<param>(4);
 	myTargetInfo->Grid()->Data().Set(move(cl3b));
 
-	myTargetInfo->ParamIndex(5);
+	myTargetInfo->Index<param>(5);
 	myTargetInfo->Grid()->Data().Set(move(N3));
 
-	myTargetInfo->ParamIndex(6);
+	myTargetInfo->Index<param>(6);
 	myTargetInfo->Grid()->Data().Set(move(cl4b));
 
-	myTargetInfo->ParamIndex(7);
+	myTargetInfo->Index<param>(7);
 	myTargetInfo->Grid()->Data().Set(move(N4));
 
 	string deviceType = "CPU";

@@ -36,7 +36,7 @@ const himan::level P500Level(himan::kPressure, 500);
 
 inline double CTI(double T500, double TD850)
 {
-        return TD850 - T500;
+	return TD850 - T500;
 }
 
 /**
@@ -51,7 +51,7 @@ inline double CTI(double T500, double TD850)
 
 inline double VTI(double T850, double T500)
 {
-        return T850 - T500;
+	return T850 - T500;
 }
 /**
  * @brief Total Totals Index
@@ -66,7 +66,7 @@ inline double VTI(double T850, double T500)
 
 inline double TTI(double T850, double T500, double TD850)
 {
-        return CTI(T500, TD850) + VTI(T850, T500);
+	return CTI(T500, TD850) + VTI(T850, T500);
 }
 
 /**
@@ -82,9 +82,8 @@ inline double TTI(double T850, double T500, double TD850)
 
 inline double KI(double T850, double T700, double T500, double TD850, double TD700)
 {
-        return (T850 - T500 + TD850 - (T700 - TD700)) - himan::constants::kKelvin;
+	return (T850 - T500 + TD850 - (T700 - TD700)) - himan::constants::kKelvin;
 }
-
 
 stability_simple::stability_simple()
 {
@@ -103,12 +102,12 @@ void stability_simple::Calculate(shared_ptr<info> myTargetInfo, unsigned short t
 {
 	auto myThreadedLogger = logger("stability_simpleThread #" + to_string(theThreadIndex));
 
-        const forecast_time forecastTime = myTargetInfo->Time();
-        const level forecastLevel = myTargetInfo->Level();
-        const forecast_type forecastType = myTargetInfo->ForecastType();
+	const forecast_time forecastTime = myTargetInfo->Time();
+	const level forecastLevel = myTargetInfo->Level();
+	const forecast_type forecastType = myTargetInfo->ForecastType();
 
-        myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-                              static_cast<string>(forecastLevel));
+	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
+	                      static_cast<string>(forecastLevel));
 
 	string deviceType = "CPU";
 
@@ -123,16 +122,16 @@ void stability_simple::Calculate(shared_ptr<info> myTargetInfo, unsigned short t
 		return;
 	}
 
-	myTargetInfo->Param(KIParam);
+	myTargetInfo->Find<param>(KIParam);
 	auto& KI = VEC(myTargetInfo);
 
-	myTargetInfo->Param(CTIParam);
+	myTargetInfo->Find<param>(CTIParam);
 	auto& CTI = VEC(myTargetInfo);
 
-	myTargetInfo->Param(VTIParam);
+	myTargetInfo->Find<param>(VTIParam);
 	auto& VTI = VEC(myTargetInfo);
 
-	myTargetInfo->Param(TTIParam);
+	myTargetInfo->Find<param>(TTIParam);
 	auto& TTI = VEC(myTargetInfo);
 
 	const auto& t850 = VEC(T850Info);

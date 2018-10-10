@@ -229,6 +229,11 @@ class iterator
 	 * @todo Should return bool like Set(const T theElement) ?
 	 */
 
+	void Index(size_t theIndex)
+	{
+		itsIndex = theIndex;
+	}
+	// DEPRECATED
 	void Set(size_t theIndex)
 	{
 		itsIndex = theIndex;
@@ -364,11 +369,10 @@ struct base
 class info
 {
    public:
-	friend class json_parser;
 	friend class himan::plugin::compiled_plugin_base;
 
 	info();
-	~info();
+	~info() = default;
 
 	/**
 	 * @brief Copy constructor for info class. Will preserve data backend.
@@ -407,51 +411,6 @@ class info
 	void Merge(std::vector<std::shared_ptr<info>>& otherInfos);
 
 	/**
-	 * @brief Initialize parameter iterator with new parameters
-	 * @param theParams A vector containing new parameter information for this info
-	 */
-
-	void Params(const std::vector<param>& theParams);
-
-	/**
-	 * @brief Replace current parameter iterator with a new one
-	 * @param theParamIterator New parameter iterator
-	 */
-
-	void ParamIterator(const param_iter& theParamIterator);
-
-	/**
-	 * @brief Initialize level iterator with new levels
-	 * @param theLevels A vector containing new level information for this info
-	 */
-
-	void Levels(const std::vector<level>& theLevels);
-
-	/**
-	 * @brief Replace current level iterator with a new one
-	 * @param theLevelIterator New level iterator
-	 */
-
-	void LevelIterator(const level_iter& theLevelIterator);
-
-	/**
-	 * @brief Initialize time iterator with new times
-	 * @param theTimes A vector containing new time information for this info
-	 */
-
-	void Times(const std::vector<forecast_time>& theTimes);
-
-	/**
-	 * @brief Replace current time iterator with a new one
-	 * @param theTimeIterator New time iterator
-	 */
-
-	void TimeIterator(const time_iter& theTimeIterator);
-
-	void ForecastTypes(const std::vector<forecast_type>& theTypes);
-	void ForecastTypeIterator(const forecast_type_iter& theForecastTypeIterator);
-
-	/**
 	 * @brief Initialize data backend with correct number of matrices
 	 *
 	 * Function will create a number of matrices to
@@ -469,12 +428,10 @@ class info
 	void Producer(const producer& theProducer);
 	const producer& Producer() const;
 
+	//! Set all iterators to first position
 	void First();
 
-	/**
-	 * @brief Reset all descriptors
-	 */
-
+	//! Reset all iterators
 	void Reset();
 
 	/**
@@ -486,125 +443,6 @@ class info
 	bool Next();
 
 	/**
-	 * @see iterator#Reset
-	 */
-
-	void ResetParam();
-
-	/**
-	 * @see iterator#Next
-	 */
-
-	bool NextParam();
-
-	/**
-	 * @see iterator#First
-	 */
-
-	bool FirstParam();
-
-	/**
-	 * @brief Set parameter iterator to position indicated by the function argument
-	 * @see iterator#Set
-	 */
-
-	bool Param(const param& theRequiredParam);
-	void ParamIndex(size_t theParamIndex);
-	size_t ParamIndex() const;
-	param Param() const;
-	const param& PeekParam(size_t theIndex) const;
-	void SetParam(const param& theParam);
-
-	size_t SizeParams() const;
-
-	/**
-	 * @see iterator#Reset
-	 */
-
-	void ResetLevel();
-
-	/**
-	 * @see iterator#Next
-	 */
-
-	bool NextLevel();
-
-	/**
-	 * @see iterator#Previous
-	 */
-
-	bool PreviousLevel();
-
-	/**
-	 * @see iterator#First
-	 */
-
-	bool FirstLevel();
-
-	/**
-	 * @see iterator#Last
-	 */
-
-	bool LastLevel();
-	/**
-	 * @brief Set level iterator to position indicated by the function argument
-	 * @see iterator#Set
-	 */
-
-	bool Level(const level& theLevel);
-	void LevelIndex(size_t theLevelIndex);
-	size_t LevelIndex() const;
-	level Level() const;
-	const level& PeekLevel(size_t theIndex) const;
-	void SetLevel(const level& theLevel);
-
-	size_t SizeLevels() const;
-
-	/**
-	 * @see iterator#Reset
-	 */
-
-	void ResetTime();
-
-	/**
-	 * @see iterator#Next
-	 */
-
-	bool NextTime();
-
-	/**
-	 * @see iterator#Previous
-	 */
-
-	bool PreviousTime();
-
-	/**
-	 * @see iterator#First
-	 */
-
-	bool FirstTime();
-
-	/**
-	 * @see iterator#Last
-	 */
-
-	bool LastTime();
-
-	/**
-	 * @brief Set time iterator to position indicated by the function argument
-	 * @see iterator#Set
-	 */
-
-	bool Time(const forecast_time& theTime);
-	void TimeIndex(size_t theTimeIndex);
-	size_t TimeIndex() const;
-	forecast_time Time() const;
-	const forecast_time& PeekTime(size_t theIndex) const;
-	void SetTime(const forecast_time& theTime);
-
-	size_t SizeTimes() const;
-
-	/**
 	 * @brief Set location iterator to given index value. No limit-checking is made.
 	 */
 
@@ -613,19 +451,9 @@ class info
 	void ResetLocation();
 	bool NextLocation();
 	bool FirstLocation();
-	bool PreviousLocation();
-	bool LastLocation();
 	size_t LocationIndex();
 
 	size_t SizeLocations() const;
-
-	bool NextForecastType();
-	void ResetForecastType();
-	bool FirstForecastType();
-	size_t ForecastTypeIndex() const;
-	size_t SizeForecastTypes() const;
-	bool ForecastType(const forecast_type& theType);
-	forecast_type ForecastType() const;
 
 	/**
 	 * @brief Return current latlon coordinates
@@ -675,13 +503,19 @@ class info
 	 * @brief Set the data value pointed by the iterators with a new one
 	 */
 
-	void Value(double theValue);
+	void Value(double theValue)
+	{
+		Data().Set(itsLocationIndex, theValue);
+	}
 
 	/**
 	 * @return Data value pointed by the iterators
 	 */
 
-	double Value() const;
+	double Value() const
+	{
+		return itsDimensions[Index()]->data.At(itsLocationIndex);
+	}
 
 	/**
 	 * @brief Clear info contents and iterators
@@ -701,22 +535,212 @@ class info
 	 * (parameter).
 	 */
 	void FirstValidGrid();
+	info Clone();
 
-	time_iter& TimeIterator();
-	param_iter& ParamIterator();
-	level_iter& LevelIterator();
-	forecast_type_iter& ForecastTypeIterator();
+	// The following four functions are for convenience and backwards
+	// compatibility only
+
+	const param& Param() const
+	{
+		return itsParamIterator.At();
+	}
+
+	const level& Level() const
+	{
+		return itsLevelIterator.At();
+	}
+
+	const forecast_time& Time() const
+	{
+		return itsTimeIterator.At();
+	}
+
+	const forecast_type& ForecastType() const
+	{
+		return itsForecastTypeIterator.At();
+	}
+
+	template <typename T>
+	himan::iterator<T>& Iterator();
+
+	template <typename T>
+	const himan::iterator<T>& Iterator() const;
+
+	//! Set iterator position to first element
+	template <typename T>
+	bool First()
+	{
+		return Iterator<T>().First();
+	}
+
+	//! Set iterator position to last element
+	template <typename T>
+	bool Last()
+	{
+		return Iterator<T>().Last();
+	}
+
+	//! Advance iterator by one
+	template <typename T>
+	bool Next()
+	{
+		return Iterator<T>().Next();
+	}
+
+	//! Retreat iterator by one
+	template <typename T>
+	bool Previous()
+	{
+		return Iterator<T>().Previous();
+	}
+
+	//! Reset iterator position (not pointing to any element)
+	template <typename T>
+	void Reset()
+	{
+		Iterator<T>().Reset();
+	}
+
+	//! Replace iterator with a new one
+	template <typename T>
+	void Iterator(const himan::iterator<T>& theIter)
+	{
+		Iterator<T>() = theIter;
+	}
+
+	//! Set iterator values from a vector replacing old values
+	template <typename T>
+	void Set(const std::vector<T>& values)
+	{
+		auto& iter = Iterator<T>();
+
+		if (!itsDimensions.empty() && iter.Size() && iter.Size() < values.size())
+		{
+			Regrid(values);
+		}
+
+		iter = iterator<T>(values);
+	}
+
+	//! Replace a single value in iterator
+	template <typename T>
+	void Set(const T& value)
+	{
+		Iterator<T>().Replace(value);
+	}
+
+	//! Return iteraror value with given index without moving the position
+	template <typename T>
+	const T& Peek(size_t index) const
+	{
+		return Iterator<T>().At(index);
+	}
+
+	//! Find if a given value is in the iterator range
+	template <typename T>
+	bool Find(const T& value)
+	{
+		return Iterator<T>().Set(value);
+	}
+
+	//! Return current iterator index number
+	template <typename T>
+	size_t Index() const
+	{
+		return Iterator<T>().Index();
+	}
+
+	//! Set current iterator index number
+	template <typename T>
+	void Index(size_t theIndex)
+	{
+		Iterator<T>().Index(theIndex);
+	}
+
+	//! Return iterator size
+	template <typename T>
+	size_t Size() const
+	{
+		return Iterator<T>().Size();
+	}
+
+	//! Return iterator value from current position
+	template <typename T>
+	T Value() const
+	{
+		return Iterator<T>().At();
+	}
+
+	/**
+	 * @brief Re-order infos in the dimension vector if dimension sizes are changed
+	 *
+	 * If existing dimensions are resized, the data in the dimension vector needs
+	 * to be reordered or the calculated iterator indices are not correct and segfault
+	 * is more than likely.
+	 *
+	 * Regridding will therefore *move* the grids from the old dimension vector to a
+	 * new one.
+	 *
+	 * Will *not* preserve iterator positions.
+	 */
+
+	template <typename T>
+	void Regrid(const std::vector<T>& values)
+	{
+		size_t ftypesize = Size<forecast_type>();
+		size_t timesize = Size<forecast_time>();
+		size_t lvlsize = Size<level>();
+		size_t parsize = Size<param>();
+
+		if (std::is_same<T, forecast_type>::value)
+		{
+			ftypesize = values.size();
+		}
+		else if (std::is_same<T, forecast_time>::value)
+		{
+			timesize = values.size();
+		}
+		else if (std::is_same<T, level>::value)
+		{
+			lvlsize = values.size();
+		}
+		else if (std::is_same<T, param>::value)
+		{
+			parsize = values.size();
+		}
+
+		std::vector<std::shared_ptr<base>> newDimensions(ftypesize * timesize * lvlsize * parsize);
+
+		First<forecast_type>();
+		First<forecast_time>();
+		First<level>();
+		Reset<param>();
+
+		while (Next())
+		{
+			if (IsValidGrid() == false)
+			{
+				continue;
+			}
+
+			size_t newI = (Index<param>() * ftypesize * timesize * lvlsize + Index<level>() * ftypesize * timesize +
+			               Index<forecast_time>() * ftypesize + Index<forecast_type>());
+
+			newDimensions[newI] = std::make_shared<base>(std::shared_ptr<grid>(Grid()->Clone()), Data());
+		}
+
+		itsDimensions = move(newDimensions);
+		First();  // "Factory setting"
+	}
 
    protected:
-	std::unique_ptr<grid> itsBaseGrid;  //!< grid information from json. used as a template, never to store data
+	//	std::unique_ptr<grid> itsBaseGrid;  //!< grid information from json. used as a template, never to store data
 	std::vector<std::shared_ptr<base>>& Dimensions()
 	{
 		return itsDimensions;
 	}
 
    private:
-	void Init();
-
 	/**
 	 * @brief Re-create indexing of elements in meta-matrix if the dimensions
 	 * have changed.
@@ -742,23 +766,11 @@ class info
 	 */
 
 	size_t Index(size_t forecastTypeIndex, size_t timeIndex, size_t levelIndex, size_t paramIndex) const;
-	size_t Index() const;
 
-	/**
-	 * @brief Re-order infos in the dimension vector if dimension sizes are changed
-	 *
-	 * If existing dimensions are resized, the data in the dimension vector needs
-	 * to be reordered or the calculated iterator indices are not correct and segfault
-	 * is more than likely.
-	 *
-	 * Regridding will therefore *move* the grids from the old dimension vector to a
-	 * new one. For now regridding is only supported for level and param dimensions.
-	 *
-	 * Will *not* preserve iterator positions.
-	 */
-
-	void Regrid(const std::vector<param>& params);
-	void Regrid(const std::vector<level>& levels);
+	size_t Index() const
+	{
+		return Index(Index<forecast_type>(), Index<forecast_time>(), Index<level>(), Index<param>());
+	}
 
 	level_iter itsLevelIterator;
 	time_iter itsTimeIterator;
@@ -802,20 +814,6 @@ inline size_t himan::info::Index(size_t forecastTypeIndex, size_t timeIndex, siz
 	        timeIndex * itsForecastTypeIterator.Size() + forecastTypeIndex);
 }
 
-inline size_t himan::info::Index() const
-{
-	return Index(ForecastTypeIndex(), TimeIndex(), LevelIndex(), ParamIndex());
-}
-
-inline void info::Value(double theValue)
-{
-	Data().Set(itsLocationIndex, theValue);
-}
-
-inline double info::Value() const
-{
-	return itsDimensions[Index()]->data.At(itsLocationIndex);
-}
 typedef std::shared_ptr<info> info_t;
 
 }  // namespace himan

@@ -494,8 +494,8 @@ valueheight hitool::GetData(const level& wantedLevel, const param& wantedParam, 
 vector<double> hitool::VerticalHeight(const vector<param>& wantedParamList, double lowerHeight, double upperHeight,
                                       const vector<double>& findValue, size_t findNth) const
 {
-	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
-	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+	vector<double> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
 
 	return VerticalHeight(wantedParamList, firstLevelValue, lastLevelValue, findValue, findNth);
 }
@@ -545,9 +545,9 @@ vector<double> hitool::VerticalHeight(const vector<param>& wantedParamList, cons
 vector<double> hitool::VerticalHeight(const param& wantedParam, double lowerHeight, double upperHeight,
                                       double findValue, size_t findNth) const
 {
-	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
-	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
-	vector<double> findValueVector(itsConfiguration->Info()->Grid()->Size(), findValue);
+	vector<double> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
+	vector<double> findValueVector(itsConfiguration->BaseGrid()->Size(), findValue);
 
 	return VerticalHeight(wantedParam, firstLevelValue, lastLevelValue, findValueVector, findNth);
 }
@@ -555,9 +555,9 @@ vector<double> hitool::VerticalHeight(const param& wantedParam, double lowerHeig
 vector<double> hitool::VerticalHeight(const params& wantedParamList, double lowerHeight, double upperHeight,
                                       double findValue, size_t findNth) const
 {
-	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
-	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
-	vector<double> findValueVector(itsConfiguration->Info()->Grid()->Size(), findValue);
+	vector<double> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
+	vector<double> findValueVector(itsConfiguration->BaseGrid()->Size(), findValue);
 
 	return VerticalHeight(wantedParamList, firstLevelValue, lastLevelValue, findValueVector, findNth);
 }
@@ -565,8 +565,8 @@ vector<double> hitool::VerticalHeight(const params& wantedParamList, double lowe
 vector<double> hitool::VerticalHeight(const param& wantedParam, double lowerHeight, double upperHeight,
                                       const vector<double>& findValue, size_t findNth) const
 {
-	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
-	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+	vector<double> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
 
 	return VerticalHeight(wantedParam, firstLevelValue, lastLevelValue, findValue, findNth);
 }
@@ -584,9 +584,9 @@ vector<double> hitool::VerticalHeight(const param& wantedParam, const vector<dou
 vector<double> hitool::VerticalHeightGreaterThan(const param& wantedParam, double lowerHeight, double upperHeight,
                                                  double findValue, size_t findNth) const
 {
-	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
-	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
-	vector<double> findValueVector(itsConfiguration->Info()->Grid()->Size(), findValue);
+	vector<double> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
+	vector<double> findValueVector(itsConfiguration->BaseGrid()->Size(), findValue);
 
 	return VerticalHeightGreaterThan(wantedParam, firstLevelValue, lastLevelValue, findValueVector, findNth);
 }
@@ -594,9 +594,9 @@ vector<double> hitool::VerticalHeightGreaterThan(const param& wantedParam, doubl
 vector<double> hitool::VerticalHeightGreaterThan(const params& wantedParamList, double lowerHeight, double upperHeight,
                                                  double findValue, size_t findNth) const
 {
-	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
-	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
-	vector<double> findValueVector(itsConfiguration->Info()->Grid()->Size(), findValue);
+	vector<double> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
+	vector<double> findValueVector(itsConfiguration->BaseGrid()->Size(), findValue);
 
 	return VerticalHeightGreaterThan(wantedParamList, firstLevelValue, lastLevelValue, findValueVector, findNth);
 }
@@ -604,8 +604,8 @@ vector<double> hitool::VerticalHeightGreaterThan(const params& wantedParamList, 
 vector<double> hitool::VerticalHeightGreaterThan(const param& wantedParam, double lowerHeight, double upperHeight,
                                                  const vector<double>& findValue, size_t findNth) const
 {
-	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
-	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+	vector<double> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
 
 	return VerticalHeightGreaterThan(wantedParam, firstLevelValue, lastLevelValue, findValue, findNth);
 }
@@ -614,8 +614,8 @@ vector<double> hitool::VerticalHeightGreaterThan(const vector<param>& wantedPara
                                                  double upperHeight, const vector<double>& findValue,
                                                  size_t findNth) const
 {
-	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
-	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+	vector<double> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
 
 	return VerticalHeightGreaterThan(wantedParamList, firstLevelValue, lastLevelValue, findValue, findNth);
 }
@@ -676,9 +676,9 @@ vector<double> hitool::VerticalHeightGreaterThan(const param& wantedParam, const
 vector<double> hitool::VerticalHeightLessThan(const param& wantedParam, double lowerHeight, double upperHeight,
                                               double findValue, size_t findNth) const
 {
-	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
-	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
-	vector<double> findValueVector(itsConfiguration->Info()->Grid()->Size(), findValue);
+	vector<double> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
+	vector<double> findValueVector(itsConfiguration->BaseGrid()->Size(), findValue);
 
 	return VerticalHeightLessThan(wantedParam, firstLevelValue, lastLevelValue, findValueVector, findNth);
 }
@@ -686,9 +686,9 @@ vector<double> hitool::VerticalHeightLessThan(const param& wantedParam, double l
 vector<double> hitool::VerticalHeightLessThan(const params& wantedParamList, double lowerHeight, double upperHeight,
                                               double findValue, size_t findNth) const
 {
-	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
-	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
-	vector<double> findValueVector(itsConfiguration->Info()->Grid()->Size(), findValue);
+	vector<double> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
+	vector<double> findValueVector(itsConfiguration->BaseGrid()->Size(), findValue);
 
 	return VerticalHeightLessThan(wantedParamList, firstLevelValue, lastLevelValue, findValueVector, findNth);
 }
@@ -696,8 +696,8 @@ vector<double> hitool::VerticalHeightLessThan(const params& wantedParamList, dou
 vector<double> hitool::VerticalHeightLessThan(const param& wantedParam, double lowerHeight, double upperHeight,
                                               const vector<double>& findValue, size_t findNth) const
 {
-	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
-	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+	vector<double> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
 
 	return VerticalHeightLessThan(wantedParam, firstLevelValue, lastLevelValue, findValue, findNth);
 }
@@ -705,8 +705,8 @@ vector<double> hitool::VerticalHeightLessThan(const param& wantedParam, double l
 vector<double> hitool::VerticalHeightLessThan(const vector<param>& wantedParamList, double lowerHeight,
                                               double upperHeight, const vector<double>& findValue, size_t findNth) const
 {
-	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
-	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+	vector<double> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
 
 	return VerticalHeightLessThan(wantedParamList, firstLevelValue, lastLevelValue, findValue, findNth);
 }
@@ -769,8 +769,8 @@ vector<double> hitool::VerticalMinimum(const vector<param>& wantedParamList, dou
 {
 	ASSERT(!wantedParamList.empty());
 
-	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
-	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+	vector<double> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
 
 	return VerticalMinimum(wantedParamList, firstLevelValue, lastLevelValue);
 }
@@ -818,8 +818,8 @@ vector<double> hitool::VerticalMinimum(const vector<param>& wantedParamList, con
 
 vector<double> hitool::VerticalMinimum(const param& wantedParam, double lowerHeight, double upperHeight) const
 {
-	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
-	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+	vector<double> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
 
 	return VerticalExtremeValue(CreateModifier(kMinimumModifier), kHybrid, wantedParam, firstLevelValue,
 	                            lastLevelValue);
@@ -837,8 +837,8 @@ vector<double> hitool::VerticalMaximum(const vector<param>& wantedParamList, dou
 {
 	ASSERT(!wantedParamList.empty());
 
-	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
-	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+	vector<double> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
 
 	return VerticalMaximum(wantedParamList, firstLevelValue, lastLevelValue);
 }
@@ -886,8 +886,8 @@ vector<double> hitool::VerticalMaximum(const vector<param>& wantedParamList, con
 
 vector<double> hitool::VerticalMaximum(const param& wantedParam, double lowerHeight, double upperHeight) const
 {
-	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
-	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+	vector<double> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
 
 	return VerticalExtremeValue(CreateModifier(kMaximumModifier), kHybrid, wantedParam, firstLevelValue,
 	                            lastLevelValue);
@@ -902,8 +902,8 @@ vector<double> hitool::VerticalMaximum(const param& wantedParam, const vector<do
 
 vector<double> hitool::VerticalAverage(const params& wantedParamList, double lowerHeight, double upperHeight) const
 {
-	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
-	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+	vector<double> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
 
 	return VerticalAverage(wantedParamList, firstLevelValue, lastLevelValue);
 }
@@ -951,8 +951,8 @@ vector<double> hitool::VerticalAverage(const vector<param>& wantedParamList, con
 
 vector<double> hitool::VerticalAverage(const param& wantedParam, double lowerHeight, double upperHeight) const
 {
-	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
-	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+	vector<double> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
 
 	return VerticalExtremeValue(CreateModifier(kAverageModifier), kHybrid, wantedParam, firstLevelValue,
 	                            lastLevelValue);
@@ -1008,8 +1008,8 @@ vector<double> hitool::VerticalSum(const vector<param>& wantedParamList, const v
 
 vector<double> hitool::VerticalSum(const param& wantedParam, double firstLevelValue, double lastLevelValue) const
 {
-	vector<double> firstLevelValueVector(itsConfiguration->Info()->Grid()->Size(), firstLevelValue);
-	vector<double> lastLevelValueVector(itsConfiguration->Info()->Grid()->Size(), lastLevelValue);
+	vector<double> firstLevelValueVector(itsConfiguration->BaseGrid()->Size(), firstLevelValue);
+	vector<double> lastLevelValueVector(itsConfiguration->BaseGrid()->Size(), lastLevelValue);
 
 	return VerticalExtremeValue(CreateModifier(kAccumulationModifier), kHybrid, wantedParam, firstLevelValueVector,
 	                            lastLevelValueVector);
@@ -1017,8 +1017,8 @@ vector<double> hitool::VerticalSum(const param& wantedParam, double firstLevelVa
 
 vector<double> hitool::VerticalSum(const params& wantedParamList, double firstLevelValue, double lastLevelValue) const
 {
-	vector<double> firstLevelValueVector(itsConfiguration->Info()->Grid()->Size(), firstLevelValue);
-	vector<double> lastLevelValueVector(itsConfiguration->Info()->Grid()->Size(), lastLevelValue);
+	vector<double> firstLevelValueVector(itsConfiguration->BaseGrid()->Size(), firstLevelValue);
+	vector<double> lastLevelValueVector(itsConfiguration->BaseGrid()->Size(), lastLevelValue);
 
 	return VerticalSum(wantedParamList, firstLevelValueVector, lastLevelValueVector);
 }
@@ -1081,9 +1081,9 @@ vector<double> hitool::VerticalCount(const param& wantedParam, const vector<doub
 vector<double> hitool::VerticalCount(const param& wantedParam, double firstLevelValue, double lastLevelValue,
                                      double findValue) const
 {
-	vector<double> firstLevelValueVector(itsConfiguration->Info()->Grid()->Size(), firstLevelValue);
-	vector<double> lastLevelValueVector(itsConfiguration->Info()->Grid()->Size(), lastLevelValue);
-	vector<double> findValueVector(itsConfiguration->Info()->Grid()->Size(), findValue);
+	vector<double> firstLevelValueVector(itsConfiguration->BaseGrid()->Size(), firstLevelValue);
+	vector<double> lastLevelValueVector(itsConfiguration->BaseGrid()->Size(), lastLevelValue);
+	vector<double> findValueVector(itsConfiguration->BaseGrid()->Size(), findValue);
 
 	return VerticalExtremeValue(CreateModifier(kCountModifier), kHybrid, wantedParam, firstLevelValueVector,
 	                            lastLevelValueVector, findValueVector);
@@ -1092,9 +1092,9 @@ vector<double> hitool::VerticalCount(const param& wantedParam, double firstLevel
 vector<double> hitool::VerticalCount(const params& wantedParamList, double firstLevelValue, double lastLevelValue,
                                      double findValue) const
 {
-	vector<double> firstLevelValueVector(itsConfiguration->Info()->Grid()->Size(), firstLevelValue);
-	vector<double> lastLevelValueVector(itsConfiguration->Info()->Grid()->Size(), lastLevelValue);
-	vector<double> findValueVector(itsConfiguration->Info()->Grid()->Size(), findValue);
+	vector<double> firstLevelValueVector(itsConfiguration->BaseGrid()->Size(), firstLevelValue);
+	vector<double> lastLevelValueVector(itsConfiguration->BaseGrid()->Size(), lastLevelValue);
+	vector<double> findValueVector(itsConfiguration->BaseGrid()->Size(), findValue);
 
 	return VerticalCount(wantedParamList, firstLevelValueVector, lastLevelValueVector, findValueVector);
 }
@@ -1103,7 +1103,7 @@ vector<double> hitool::VerticalValue(const vector<param>& wantedParamList, doubl
 {
 	ASSERT(!wantedParamList.empty());
 
-	vector<double> heightInfo(itsConfiguration->Info()->Grid()->Size(), wantedHeight);
+	vector<double> heightInfo(itsConfiguration->BaseGrid()->Size(), wantedHeight);
 
 	return VerticalValue(wantedParamList, heightInfo);
 }
@@ -1150,7 +1150,7 @@ vector<double> hitool::VerticalValue(const vector<param>& wantedParamList, const
 
 vector<double> hitool::VerticalValue(const param& wantedParam, double height) const
 {
-	vector<double> heightInfo(itsConfiguration->Info()->Grid()->Size(), height);
+	vector<double> heightInfo(itsConfiguration->BaseGrid()->Size(), height);
 
 	return VerticalExtremeValue(CreateModifier(kFindValueModifier), kHybrid, wantedParam, vector<double>(),
 	                            vector<double>(), heightInfo);
@@ -1164,8 +1164,8 @@ vector<double> hitool::VerticalValue(const param& wantedParam, const vector<doub
 
 vector<double> hitool::PlusMinusArea(const params& wantedParamList, double lowerHeight, double upperHeight) const
 {
-	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
-	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+	vector<double> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
 
 	return PlusMinusArea(wantedParamList, firstLevelValue, lastLevelValue);
 }
@@ -1213,8 +1213,8 @@ vector<double> hitool::PlusMinusArea(const vector<param>& wantedParamList, const
 
 vector<double> hitool::PlusMinusArea(const param& wantedParam, double lowerHeight, double upperHeight) const
 {
-	vector<double> firstLevelValue(itsConfiguration->Info()->Grid()->Size(), lowerHeight);
-	vector<double> lastLevelValue(itsConfiguration->Info()->Grid()->Size(), upperHeight);
+	vector<double> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
+	vector<double> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
 
 	return VerticalExtremeValue(CreateModifier(kPlusMinusAreaModifier), kHybrid, wantedParam, firstLevelValue,
 	                            lastLevelValue);
@@ -1237,9 +1237,7 @@ void hitool::ForecastType(const forecast_type& theForecastType)
 }
 void hitool::Configuration(shared_ptr<const plugin_configuration> conf)
 {
-	itsConfiguration = make_shared<plugin_configuration>(
-	    *conf);  // not an ideal solution but the next line changes iterator positions so we need a local copy
-	itsConfiguration->Info()->First();
+	itsConfiguration = conf;
 }
 
 HPParameterUnit hitool::HeightUnit() const

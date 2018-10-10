@@ -25,6 +25,7 @@
 
 #include "NFmiRadonDB.h"
 #include "auxiliary_plugin.h"
+#include "info.h"
 #include "search_options.h"
 
 namespace himan
@@ -64,7 +65,7 @@ class radon : public auxiliary_plugin
 	 * @brief Return filename of a field
 	 */
 
-	std::pair<std::vector<std::string>,std::string> Files(search_options& options);
+	std::pair<std::vector<std::string>, std::string> Files(search_options& options);
 
 	/**
 	 * @brief Return previ data in CSV format
@@ -76,7 +77,7 @@ class radon : public auxiliary_plugin
 	 * @brief Save either file metadata or previ information to database.
 	 */
 
-	bool Save(const info& resultInfo, const std::string& theFileName,  const std::string& targetGeomName);
+	bool Save(const info& resultInfo, const std::string& theFileName, const std::string& targetGeomName);
 
 	/**
 	 * @brief Function to expose the NFmiRadonDB interface

@@ -79,9 +79,9 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 	string optsStr = "producer(s): ";
 
-	for (size_t prodNum = 0; prodNum < config->SizeSourceProducers(); prodNum++)
+	for (const auto& prod : config->SourceProducers())
 	{
-		optsStr += to_string(config->SourceProducer(prodNum).Id()) + ",";
+		optsStr += to_string(prod.Id()) + ",";
 	}
 
 	optsStr = optsStr.substr(0, optsStr.size() - 1);
@@ -135,18 +135,12 @@ shared_ptr<himan::info> fetcher::FetchFromProducer(search_options& opts, bool re
 		return shared_ptr<info>();
 	}
 
-	auto baseInfo = make_shared<info>(*opts.configuration->Info());
-
-	ASSERT(baseInfo->DimensionSize());
-
-	baseInfo->First();
-
-	RotateVectorComponents(theInfos, baseInfo, opts.configuration, opts.prod);
+	RotateVectorComponents(theInfos, opts.configuration->BaseGrid(), opts.configuration, opts.prod);
 
 	if (itsDoInterpolation)
 	{
-		// fall back to standard interpolation if no cached interpolation exist
-		if (!interpolate::Interpolate(*baseInfo, theInfos, opts.configuration->UseCudaForInterpolation()))
+		if (!interpolate::Interpolate(opts.configuration->BaseGrid(), theInfos,
+		                              opts.configuration->UseCudaForInterpolation()))
 		{
 			// interpolation failed
 			throw kFileDataNotFound;
@@ -185,8 +179,6 @@ shared_ptr<himan::info> fetcher::FetchFromProducer(search_options& opts, bool re
 		c->Insert(theInfos[0]);
 	}
 
-	baseInfo.reset();
-
 	ASSERT((theInfos[0]->Level()) == opts.level);
 
 	ASSERT((theInfos[0]->Time()) == opts.time);
@@ -206,7 +198,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 	shared_ptr<info> ret;
 
-	for (size_t prodNum = 0; prodNum < config->SizeSourceProducers(); prodNum++)
+	for (const auto& prod : config->SourceProducers())
 	{
 		bool found = false;
 
@@ -215,8 +207,7 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 			// Linear search, size of stickyParamCache should be relatively small
 			if (find(stickyParamCache.begin(), stickyParamCache.end(),
-			         UniqueName(config->SourceProducer(prodNum), requestedParam, requestedLevel)) !=
-			    stickyParamCache.end())
+			         UniqueName(prod, requestedParam, requestedLevel)) != stickyParamCache.end())
 			{
 				// oh,goody
 				found = true;
@@ -225,23 +216,29 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 
 		if (found)
 		{
-			search_options opts(requestedTime, requestedParam, requestedLevel, config->SourceProducer(prodNum),
-			                    requestedType, config);
+			search_options opts(requestedTime, requestedParam, requestedLevel, prod, requestedType, config);
 
 			ret = FetchFromProducer(opts, readPackedData, suppressLogging);
+
 			if (ret)
+			{
 				break;
+			}
 
 			itsLogger.Trace("Sticky cache failed, trying all producers just to be sure");
 		}
 	}
 
-	for (size_t prodNum = 0; (ret == nullptr) && prodNum < config->SizeSourceProducers(); prodNum++)
+	for (const auto& prod : config->SourceProducers())
 	{
-		search_options opts(requestedTime, requestedParam, requestedLevel, config->SourceProducer(prodNum),
-		                    requestedType, config);
+		search_options opts(requestedTime, requestedParam, requestedLevel, prod, requestedType, config);
 
 		ret = FetchFromProducer(opts, readPackedData, suppressLogging);
+
+		if (ret)
+		{
+			break;
+		}
 	}
 
 	if (config->StatisticsEnabled())
@@ -262,9 +259,9 @@ shared_ptr<himan::info> fetcher::Fetch(shared_ptr<const plugin_configuration> co
 		{
 			string optsStr = "producer(s): ";
 
-			for (size_t prodNum = 0; prodNum < config->SizeSourceProducers(); prodNum++)
+			for (const auto& prod : config->SourceProducers())
 			{
-				optsStr += to_string(config->SourceProducer(prodNum).Id()) + ",";
+				optsStr += to_string(prod.Id()) + ",";
 			}
 
 			optsStr = optsStr.substr(0, optsStr.size() - 1);
@@ -479,10 +476,7 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vec
 {
 	// Step 1. Rotate if needed
 
-	auto baseInfo = make_shared<info>(*dynamic_cast<const plugin_configuration*>(opts.configuration.get())->Info());
-	ASSERT(baseInfo->DimensionSize());
-
-	baseInfo->First();
+	const grid* baseGrid = opts.configuration->BaseGrid();
 
 	auto eq = [](const info_t& a, const info_t& b) {
 		return a->Param() == b->Param() && a->Level() == b->Level() && a->Time() == b->Time() &&
@@ -493,8 +487,8 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vec
 
 	for (const auto& component : infos)
 	{
-		HPGridType from = component->Grid()->Type();
-		HPGridType to = baseInfo->Grid()->Type();
+		const HPGridType from = component->Grid()->Type();
+		const HPGridType to = baseGrid->Type();
 		const auto name = component->Param().Name();
 
 		if (interpolate::IsVectorComponent(name) &&
@@ -558,7 +552,8 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vec
 
 	if (itsDoInterpolation)
 	{
-		if (!interpolate::Interpolate(*baseInfo, infos, opts.configuration->UseCudaForInterpolation()))
+		if (!interpolate::Interpolate(opts.configuration->BaseGrid(), infos,
+		                              opts.configuration->UseCudaForInterpolation()))
 		{
 			itsLogger.Fatal("Interpolation failed");
 			himan::Abort();
@@ -627,7 +622,7 @@ pair<HPDataFoundFrom, vector<shared_ptr<himan::info>>> fetcher::FetchFromAuxilia
 				for (const auto& info : ret)
 				{
 					info->First();
-					info->ResetParam();
+					info->Reset<param>();
 
 					while (info->Next())
 					{
@@ -876,13 +871,13 @@ string GetOtherVectorComponentName(const string& name)
 	throw runtime_error("Unable to find component pair for " + name);
 }
 
-void fetcher::RotateVectorComponents(vector<info_t>& components, info_t target,
+void fetcher::RotateVectorComponents(vector<info_t>& components, const grid* target,
                                      shared_ptr<const plugin_configuration> config, const producer& sourceProd)
 {
 	for (auto& component : components)
 	{
-		HPGridType from = component->Grid()->Type();
-		HPGridType to = target->Grid()->Type();
+		const HPGridType from = component->Grid()->Type();
+		const HPGridType to = target->Type();
 		const auto name = component->Param().Name();
 
 		if (interpolate::IsVectorComponent(name) && itsDoVectorComponentRotation && to != from &&
@@ -933,7 +928,7 @@ void fetcher::RotateVectorComponents(vector<info_t>& components, info_t target,
 			// and put it to cache.
 
 			std::vector<info_t> list({other});
-			if (itsDoInterpolation && interpolate::Interpolate(*target, list, config->UseCudaForInterpolation()))
+			if (itsDoInterpolation && interpolate::Interpolate(target, list, config->UseCudaForInterpolation()))
 			{
 				if (itsUseCache && config->UseCache() && !other->PackedData()->HasData())
 				{

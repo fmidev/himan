@@ -211,7 +211,7 @@ void pot_gfs::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		// himan was mabe started with configuration option "hours"
 		// so step is not readily available
 
-		if (myTargetInfo->SizeTimes() > 1)
+		if (myTargetInfo->Size<forecast_time>() > 1)
 		{
 			// More than one time is calculated - check the difference to previous
 			// or next time
@@ -219,16 +219,16 @@ void pot_gfs::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			int leadtime = myTargetInfo->Time().Step();
 			int otherLeadtime;
 
-			if (myTargetInfo->PreviousTime())
+			if (myTargetInfo->Previous<forecast_time>())
 			{
 				otherLeadtime = myTargetInfo->Time().Step();
-				myTargetInfo->NextTime();  // return
+				myTargetInfo->Next<forecast_time>();  // return
 			}
 			else
 			{
-				myTargetInfo->NextTime();
+				myTargetInfo->Next<forecast_time>();
 				otherLeadtime = myTargetInfo->Time().Step();
-				myTargetInfo->PreviousTime();  // return
+				myTargetInfo->Previous<forecast_time>();  // return
 			}
 
 			step = abs(otherLeadtime - leadtime);

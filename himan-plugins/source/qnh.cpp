@@ -96,7 +96,7 @@ void qnh::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	level groundLevel(kHeight, 0);
 
-	if (itsConfiguration->SourceProducer().Id() == 131 || itsConfiguration->SourceProducer().Id() == 134)  // EC
+	if (itsConfiguration->TargetProducer().Id() == 240 || itsConfiguration->TargetProducer().Id() == 243)  // EC
 	{
 		groundLevel = level(himan::kGround, 0);
 	}

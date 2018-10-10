@@ -41,13 +41,13 @@ bool compiled_plugin_base::Next(info& myTargetInfo)
 		return false;
 	}
 
-	if (itsInfo->NextLevel())
+	if (itsInfo->Next<level>())
 	{
-		bool ret = myTargetInfo.Level(itsInfo->Level());
+		bool ret = myTargetInfo.Find<level>(itsInfo->Level());
 		ASSERT(ret);
-		ret = myTargetInfo.Time(itsInfo->Time());
+		ret = myTargetInfo.Find<forecast_time>(itsInfo->Time());
 		ASSERT(ret);
-		ret = myTargetInfo.ForecastType(itsInfo->ForecastType());
+		ret = myTargetInfo.Find<forecast_type>(itsInfo->ForecastType());
 		ASSERT(ret);
 
 		return ret;
@@ -55,15 +55,15 @@ bool compiled_plugin_base::Next(info& myTargetInfo)
 
 	// No more levels at this forecast type/time combination; rewind level iterator
 
-	itsInfo->FirstLevel();
+	itsInfo->First<level>();
 
-	if (itsInfo->NextTime())
+	if (itsInfo->Next<forecast_time>())
 	{
-		bool ret = myTargetInfo.Time(itsInfo->Time());
+		bool ret = myTargetInfo.Find<forecast_time>(itsInfo->Time());
 		ASSERT(ret);
-		ret = myTargetInfo.Level(itsInfo->Level());
+		ret = myTargetInfo.Find<level>(itsInfo->Level());
 		ASSERT(ret);
-		ret = myTargetInfo.ForecastType(itsInfo->ForecastType());
+		ret = myTargetInfo.Find<forecast_type>(itsInfo->ForecastType());
 		ASSERT(ret);
 
 		return ret;
@@ -72,15 +72,15 @@ bool compiled_plugin_base::Next(info& myTargetInfo)
 	// No more times at this forecast type; rewind time iterator, level iterator is
 	// already at first place
 
-	itsInfo->FirstTime();
+	itsInfo->First<forecast_time>();
 
-	if (itsInfo->NextForecastType())
+	if (itsInfo->Next<forecast_type>())
 	{
-		bool ret = myTargetInfo.Time(itsInfo->Time());
+		bool ret = myTargetInfo.Find<forecast_time>(itsInfo->Time());
 		ASSERT(ret);
-		ret = myTargetInfo.Level(itsInfo->Level());
+		ret = myTargetInfo.Find<level>(itsInfo->Level());
 		ASSERT(ret);
-		ret = myTargetInfo.ForecastType(itsInfo->ForecastType());
+		ret = myTargetInfo.Find<forecast_type>(itsInfo->ForecastType());
 		ASSERT(ret);
 
 		return ret;
@@ -102,11 +102,11 @@ bool compiled_plugin_base::NextExcludingLevel(info& myTargetInfo)
 		return false;
 	}
 
-	if (itsInfo->NextTime())
+	if (itsInfo->Next<forecast_time>())
 	{
-		bool ret = myTargetInfo.Time(itsInfo->Time());
+		bool ret = myTargetInfo.Find<forecast_time>(itsInfo->Time());
 		ASSERT(ret);
-		ret = myTargetInfo.ForecastType(itsInfo->ForecastType());
+		ret = myTargetInfo.Find<forecast_type>(itsInfo->ForecastType());
 		ASSERT(ret);
 
 		return ret;
@@ -115,13 +115,13 @@ bool compiled_plugin_base::NextExcludingLevel(info& myTargetInfo)
 	// No more times at this forecast type; rewind time iterator, level iterator is
 	// already at first place
 
-	itsInfo->FirstTime();
+	itsInfo->First<forecast_time>();
 
-	if (itsInfo->NextForecastType())
+	if (itsInfo->Next<forecast_type>())
 	{
-		bool ret = myTargetInfo.Time(itsInfo->Time());
+		bool ret = myTargetInfo.Find<forecast_time>(itsInfo->Time());
 		ASSERT(ret);
-		ret = myTargetInfo.ForecastType(itsInfo->ForecastType());
+		ret = myTargetInfo.Find<forecast_type>(itsInfo->ForecastType());
 		ASSERT(ret);
 
 		return ret;
@@ -138,14 +138,14 @@ bool compiled_plugin_base::SetAB(const info_t& myTargetInfo, const info_t& sourc
 {
 	if (myTargetInfo->Level().Type() == kHybrid)
 	{
-		const size_t paramIndex = myTargetInfo->ParamIndex();
+		const size_t paramIndex = myTargetInfo->Index<param>();
 
-		for (myTargetInfo->ResetParam(); myTargetInfo->NextParam();)
+		for (myTargetInfo->Reset<param>(); myTargetInfo->Next<param>();)
 		{
 			myTargetInfo->Grid()->AB(sourceInfo->Grid()->AB());
 		}
 
-		myTargetInfo->ParamIndex(paramIndex);
+		myTargetInfo->Index<param>(paramIndex);
 	}
 
 	return true;
@@ -161,9 +161,9 @@ void compiled_plugin_base::WriteToFile(const info_t targetInfo, write_options wr
 
 	auto tempInfo = make_shared<info>(*targetInfo);
 
-	tempInfo->ResetParam();
+	tempInfo->Reset<param>();
 
-	while (tempInfo->NextParam())
+	while (tempInfo->Next<param>())
 	{
 		if (!tempInfo->IsValidGrid())
 		{
@@ -196,14 +196,9 @@ void compiled_plugin_base::Start()
 		return;
 	}
 
-	if (itsInfo->itsBaseGrid)
-	{
-		itsInfo->itsBaseGrid.reset();
-	}
-
 	if (itsPrimaryDimension == kTimeDimension)
 	{
-		itsInfo->FirstForecastType();
+		itsInfo->First<forecast_type>();
 	}
 
 	boost::thread_group g;
@@ -250,7 +245,9 @@ void compiled_plugin_base::Init(const shared_ptr<const plugin_configuration> con
 		itsThreadCount = coreCount;
 	}
 
-	itsInfo = itsConfiguration->Info();
+	itsInfo = make_shared<info>(itsConfiguration->ForecastTypes(), itsConfiguration->Times(),
+	                            itsConfiguration->Levels(), vector<param>());
+	itsInfo->Producer(itsConfiguration->TargetProducer());
 
 	itsPluginIsInitialized = true;
 }
@@ -284,7 +281,7 @@ void compiled_plugin_base::RunTimeDimension(info_t myTargetInfo, unsigned short 
 {
 	while (NextExcludingLevel(*myTargetInfo))
 	{
-		for (myTargetInfo->ResetLevel(); myTargetInfo->NextLevel();)
+		for (myTargetInfo->Reset<level>(); myTargetInfo->Next<level>();)
 		{
 			myTargetInfo->FirstValidGrid();
 
@@ -426,7 +423,7 @@ void compiled_plugin_base::SetParams(std::vector<param>& params, const vector<le
 	// Create a vector that contains a union of current levels and new levels
 	vector<level> alllevels;
 
-	for (itsInfo->ResetLevel(); itsInfo->NextLevel();)
+	for (itsInfo->Reset<level>(); itsInfo->Next<level>();)
 	{
 		alllevels.push_back(itsInfo->Level());
 	}
@@ -442,7 +439,7 @@ void compiled_plugin_base::SetParams(std::vector<param>& params, const vector<le
 	// Create a vector that contains a union of current params and new params
 	vector<param> allparams;
 
-	for (itsInfo->ResetParam(); itsInfo->NextParam();)
+	for (itsInfo->Reset<param>(); itsInfo->Next<param>();)
 	{
 		allparams.push_back(itsInfo->Param());
 	}
@@ -455,14 +452,14 @@ void compiled_plugin_base::SetParams(std::vector<param>& params, const vector<le
 		}
 	}
 
-	if (itsInfo->SizeLevels() < alllevels.size())
+	if (itsInfo->Size<level>() < alllevels.size())
 	{
-		itsInfo->Levels(alllevels);
+		itsInfo->Set<level>(alllevels);
 	}
 
-	if (itsInfo->SizeParams() < allparams.size())
+	if (itsInfo->Size<param>() < allparams.size())
 	{
-		itsInfo->Params(allparams);
+		itsInfo->Set<param>(allparams);
 	}
 
 	/*
@@ -471,20 +468,20 @@ void compiled_plugin_base::SetParams(std::vector<param>& params, const vector<le
 
 	if (itsInfo->DimensionSize() == 0)
 	{
-		itsInfo->Dimensions().resize(itsInfo->SizeForecastTypes() * itsInfo->SizeTimes() * itsInfo->SizeLevels() *
-		                             itsInfo->SizeParams());
+		itsInfo->Dimensions().resize(itsInfo->Size<forecast_type>() * itsInfo->Size<forecast_time>() *
+		                             itsInfo->Size<level>() * itsInfo->Size<param>());
 	}
 
 	for (const auto& lvl : levels)
 	{
-		const auto g = itsInfo->itsBaseGrid.get();
+		const auto g = itsConfiguration->BaseGrid();
 
 		for (const auto& par : params)
 		{
-			itsInfo->FirstForecastType();
-			itsInfo->FirstTime();
-			itsInfo->FirstLevel();
-			itsInfo->ResetParam();
+			itsInfo->First<forecast_type>();
+			itsInfo->First<forecast_time>();
+			itsInfo->First<level>();
+			itsInfo->Reset<param>();
 
 			while (itsInfo->Next())
 			{
@@ -521,24 +518,24 @@ void compiled_plugin_base::SetParams(std::vector<param>& params, const vector<le
 	}
 
 	itsInfo->Reset();
-	itsInfo->FirstParam();
+	itsInfo->First<param>();
 
 	if (itsPrimaryDimension == kUnknownDimension)
 	{
-		itsInfo->FirstTime();
-		itsInfo->FirstForecastType();
-		itsInfo->ResetLevel();
+		itsInfo->First<forecast_time>();
+		itsInfo->First<forecast_type>();
+		itsInfo->Reset<level>();
 	}
 
 	/*
 	 * Do not launch more threads than there are things to calculate.
 	 */
 
-	size_t dims = itsInfo->SizeForecastTypes() * itsInfo->SizeTimes() * itsInfo->SizeLevels();
+	size_t dims = itsInfo->Size<forecast_type>() * itsInfo->Size<forecast_time>() * itsInfo->Size<level>();
 
 	if (itsPrimaryDimension == kTimeDimension)
 	{
-		dims = itsInfo->SizeTimes() * itsInfo->SizeForecastTypes();
+		dims = itsInfo->Size<forecast_time>() * itsInfo->Size<forecast_type>();
 	}
 
 	if (dims < static_cast<size_t>(itsThreadCount))
@@ -565,9 +562,9 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 {
 	vector<level> levels;
 
-	for (size_t i = 0; i < itsInfo->SizeLevels(); i++)
+	for (size_t i = 0; i < itsInfo->Size<level>(); i++)
 	{
-		levels.push_back(itsInfo->PeekLevel(i));
+		levels.push_back(itsInfo->Peek<level>(i));
 	}
 
 	SetParams(params, levels);
@@ -689,7 +686,7 @@ HPDimensionType compiled_plugin_base::PrimaryDimension() const
 }
 void compiled_plugin_base::PrimaryDimension(HPDimensionType thePrimaryDimension)
 {
-	if (itsInfo->SizeParams() > 0)
+	if (itsInfo->Size<param>() > 0)
 	{
 		itsBaseLogger.Fatal("PrimaryDimension() must be called before plugin initialization is finished");
 		exit(1);
@@ -700,9 +697,9 @@ void compiled_plugin_base::PrimaryDimension(HPDimensionType thePrimaryDimension)
 
 void compiled_plugin_base::AllocateMemory(info myTargetInfo)
 {
-	size_t paramIndex = myTargetInfo.ParamIndex();
+	size_t paramIndex = myTargetInfo.Index<param>();
 
-	for (myTargetInfo.ResetParam(); myTargetInfo.NextParam();)
+	for (myTargetInfo.Reset<param>(); myTargetInfo.Next<param>();)
 	{
 		if (myTargetInfo.IsValidGrid())
 		{
@@ -718,14 +715,14 @@ void compiled_plugin_base::AllocateMemory(info myTargetInfo)
 		}
 	}
 
-	myTargetInfo.ParamIndex(paramIndex);
+	myTargetInfo.Index<param>(paramIndex);
 }
 
 void compiled_plugin_base::DeallocateMemory(info myTargetInfo)
 {
-	size_t paramIndex = myTargetInfo.ParamIndex();
+	size_t paramIndex = myTargetInfo.Index<param>();
 
-	for (myTargetInfo.ResetParam(); myTargetInfo.NextParam();)
+	for (myTargetInfo.Reset<param>(); myTargetInfo.Next<param>();)
 	{
 		if (myTargetInfo.IsValidGrid())
 		{
@@ -733,5 +730,5 @@ void compiled_plugin_base::DeallocateMemory(info myTargetInfo)
 		}
 	}
 
-	myTargetInfo.ParamIndex(paramIndex);
+	myTargetInfo.Index<param>(paramIndex);
 }

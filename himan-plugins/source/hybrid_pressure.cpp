@@ -48,7 +48,7 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 	const param TParam("T-K");
 	level PLevel(himan::kHeight, 0, "HEIGHT");
 
-	bool isECMWF = (itsConfiguration->SourceProducer().Id() == 131 || itsConfiguration->SourceProducer().Id() == 134);
+	bool isECMWF = (itsConfiguration->TargetProducer().Id() == 240 || itsConfiguration->TargetProducer().Id() == 243);
 
 	auto myThreadedLogger = logger("hybrid_pressureThread #" + to_string(theThreadIndex));
 
@@ -97,7 +97,7 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 				myThreadedLogger.Info("Transforming LNSP to HPa for step " + to_string(forecastTime.Step()));
 
 				auto newInfo = make_shared<info>(*lnspn);
-				newInfo->SetParam(param("LNSP-HPA"));
+				newInfo->Set<param>(param("LNSP-HPA"));
 				newInfo->Create(lnspn->Base());
 
 				for (auto& val : VEC(newInfo))

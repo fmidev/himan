@@ -48,7 +48,7 @@ void fog::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	level ground;
 
 	// this will come back to us
-	if (itsConfiguration->SourceProducer().Id() == 131)
+	if (itsConfiguration->TargetProducer().Id() == 240)
 	{
 		ground = level(himan::kGroundDepth, 0, 7);
 	}

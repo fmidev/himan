@@ -80,14 +80,14 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 
 	if (myTargetInfo->Level().Type() == kHybrid)
 	{
-		const size_t paramIndex = myTargetInfo->ParamIndex();
+		const size_t paramIndex = myTargetInfo->Index<param>();
 
-		for (myTargetInfo->ResetParam(); myTargetInfo->NextParam();)
+		for (myTargetInfo->Reset<param>(); myTargetInfo->Next<param>();)
 		{
 			myTargetInfo->Grid()->AB(TInfo->Grid()->AB());
 		}
 
-		myTargetInfo->ParamIndex(paramIndex);
+		myTargetInfo->Index<param>(paramIndex);
 	}
 
 	if (isPressureLevel == false)

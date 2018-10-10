@@ -34,7 +34,7 @@ bool csv::ToFile(info& theInfo, string& theOutputFile)
 	    << endl;
 
 	theInfo.First();
-	theInfo.ResetParam();
+	theInfo.Reset<param>();
 
 	const auto originTime = theInfo.Time().OriginDateTime().String();
 	while (theInfo.Next())
@@ -95,7 +95,7 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, const search_opti
 		// We just have to trust that it came from the producer that was requested.
 
 		all->First();
-		all->ResetParam();
+		all->Reset<param>();
 
 		while (all->Next())
 		{
@@ -114,7 +114,7 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, const search_opti
 	forecast_time optsTime(options.time);
 
 	all->First();
-	all->ResetParam();
+	all->Reset<param>();
 
 	// Remove those dimensions that are not requested
 	while (all->Next())
@@ -181,17 +181,17 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, const search_opti
 	requested = make_shared<info>();
 	requested->Producer(options.prod);
 
-	requested->Times(times);
-	requested->Params(params);
-	requested->Levels(levels);
-	requested->ForecastTypes(ftypes);
+	requested->Set<forecast_time>(times);
+	requested->Set<param>(params);
+	requested->Set<level>(levels);
+	requested->Set<forecast_type>(ftypes);
 
 	auto b = make_shared<base>();
 	b->grid = shared_ptr<grid>(new point_list());  // placeholder
 
 	requested->Create(b, true);
 	requested->First();
-	requested->ResetParam();
+	requested->Reset<param>();
 
 	while (requested->Next())
 	{
@@ -203,17 +203,17 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, const search_opti
 	                " params from file '" + inputFile + "'");
 
 	requested->First();
-	requested->ResetParam();
+	requested->Reset<param>();
 
 	while (requested->Next())
 	{
-		if (!all->Param(requested->Param()))
+		if (!all->Find<param>(requested->Param()))
 			throw runtime_error("Impossible error occurred");
-		if (!all->Level(requested->Level()))
+		if (!all->Find<level>(requested->Level()))
 			throw runtime_error("Impossible error occurred");
-		if (!all->Time(requested->Time()))
+		if (!all->Find<forecast_time>(requested->Time()))
 			throw runtime_error("Impossible error occurred");
-		if (!all->ForecastType(requested->ForecastType()))
+		if (!all->Find<forecast_type>(requested->ForecastType()))
 			throw runtime_error("Impossible error occurred");
 
 		for (requested->ResetLocation(); requested->NextLocation();)

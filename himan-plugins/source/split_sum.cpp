@@ -339,7 +339,7 @@ void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 	int subThreadIndex = 0;
 
-	for (myTargetInfo->ResetParam(); myTargetInfo->NextParam(); ++subThreadIndex)
+	for (myTargetInfo->Reset<param>(); myTargetInfo->Next<param>(); ++subThreadIndex)
 	{
 		auto newInfo = make_shared<info>(*myTargetInfo);
 
@@ -683,9 +683,9 @@ shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<info> myTargetInfo
 		vector<level> levels = {wantedLevel};
 		params = {sourceParameters[myTargetInfo->Param().Name()][0]};
 
-		SumInfo->Params(params);
-		SumInfo->Levels(levels);
-		SumInfo->Times(times);
+		SumInfo->Set<param>(params);
+		SumInfo->Set<level>(levels);
+		SumInfo->Set<forecast_time>(times);
 
 		SumInfo->Create(myTargetInfo->Base());
 		SumInfo->Data().Fill(0);

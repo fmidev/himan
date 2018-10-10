@@ -7,6 +7,7 @@
 #define WRITER_H
 
 #include "auxiliary_plugin.h"
+#include "info.h"
 #include "plugin_configuration.h"
 #include "write_options.h"
 

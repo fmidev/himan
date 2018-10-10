@@ -127,7 +127,7 @@ void himan::plugin::windvector_cuda::RunCuda(std::shared_ptr<const plugin_config
 	c->Insert(UInfo);
 	c->Insert(VInfo);
 
-	for (myTargetInfo->ResetParam(); myTargetInfo->NextParam();)
+	for (myTargetInfo->Reset<param>(); myTargetInfo->Next<param>();)
 	{
 		myTargetInfo->Grid()->AB(UInfo->Grid()->AB());
 	}
@@ -146,13 +146,13 @@ void himan::plugin::windvector_cuda::RunCuda(std::shared_ptr<const plugin_config
 
 	CUDA_CHECK_ERROR_MSG("Kernel invocation");
 
-	myTargetInfo->ParamIndex(0);
+	myTargetInfo->Index<param>(0);
 
 	cuda::ReleaseInfo(myTargetInfo, d_speed, stream);
 
 	if (itsTargetType != kGust)
 	{
-		myTargetInfo->ParamIndex(1);
+		myTargetInfo->Index<param>(1);
 		cuda::ReleaseInfo(myTargetInfo, d_dir, stream);
 	}
 

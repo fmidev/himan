@@ -116,9 +116,8 @@ void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
 {
 	auto r = GET_PLUGIN(radon);
 
-	const auto res = pc->Info();
-	const auto producerId = res->Producer().Id();
-	const auto analysisTime = res->PeekTime(0).OriginDateTime().String();
+	const auto producerId = pc->TargetProducer().Id();
+	const auto analysisTime = pc->Times()[0].OriginDateTime().String();
 
 	logger log("himan");
 	stringstream ss;
@@ -154,16 +153,16 @@ void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
 	const auto partitionName = row[0];
 	int inserts = 0, updates = 0;
 
-	for (res->ResetForecastType(); res->NextForecastType();)
+	for (const auto& ftype : pc->ForecastTypes())
 	{
 		int forecastTypeValue = -1;  // default, deterministic/analysis
 
-		if (res->ForecastType().Type() > 2)
+		if (ftype.Type() > 2)
 		{
-			forecastTypeValue = static_cast<int>(res->ForecastType().Value());
+			forecastTypeValue = static_cast<int>(ftype.Value());
 		}
 
-		for (res->ResetTime(); res->NextTime();)
+		for (const auto& ftime : pc->Times())
 		{
 			try
 			{
@@ -171,8 +170,8 @@ void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
 				ss << "INSERT INTO ss_state (producer_id, geometry_id, analysis_time, forecast_period, "
 				      "forecast_type_id, forecast_type_value, table_name) VALUES ("
 				   << producerId << ", " << geometryId << ", "
-				   << "'" << analysisTime << "', '" << util::MakeSQLInterval(res->Time()) << "', "
-				   << static_cast<int>(res->ForecastType().Type()) << ", " << forecastTypeValue << ", "
+				   << "'" << analysisTime << "', '" << util::MakeSQLInterval(ftime) << "', "
+				   << static_cast<int>(ftype.Type()) << ", " << forecastTypeValue << ", "
 				   << "'" << partitionName << "')";
 
 				r->RadonDB().Execute(ss.str());
@@ -185,8 +184,8 @@ void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
 				   << "producer_id = " << producerId << " AND "
 				   << "geometry_id = " << geometryId << " AND "
 				   << "analysis_time = '" << analysisTime << "' AND "
-				   << "forecast_period = '" << util::MakeSQLInterval(res->Time()) << "' AND "
-				   << "forecast_type_id = " << static_cast<int>(res->ForecastType().Type()) << " AND "
+				   << "forecast_period = '" << util::MakeSQLInterval(ftime) << "' AND "
+				   << "forecast_type_id = " << static_cast<int>(ftype.Type()) << " AND "
 				   << "forecast_type_value = " << forecastTypeValue;
 
 				r->RadonDB().Execute(ss.str());
@@ -257,8 +256,6 @@ void ExecutePlugin(shared_ptr<plugin_configuration> pc, vector<plugin_timing>& p
 		UpdateSSState(pc);
 	}
 
-	// Remove all data from info and release memory
-	pc->Info()->Clear();
 #if defined DEBUG and defined HAVE_CUDA
 	// For 'cuda-memcheck --leak-check full'
 	CUDA_CHECK(cudaDeviceReset());

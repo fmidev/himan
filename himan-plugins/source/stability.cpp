@@ -83,7 +83,7 @@ void stability::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	auto r = GET_PLUGIN(radon);
 
-	itsBottomLevel = level(kHybrid, stoi(r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer().Id(),
+	itsBottomLevel = level(kHybrid, stoi(r->RadonDB().GetProducerMetaData(itsConfiguration->TargetProducer().Id(),
 	                                                                      "last hybrid level number")));
 
 #ifdef HAVE_CUDA
@@ -92,7 +92,7 @@ void stability::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	PrimaryDimension(kTimeDimension);
 
-	itsInfo->LevelIterator().Clear();
+	itsInfo->Iterator<level>().Clear();
 
 	SetParams({EBSParam, LIParam, SIParam, CAPESParam}, {Height0Level});
 	SetParams({BSParam}, {OneKMLevel, ThreeKMLevel, SixKMLevel});
@@ -234,22 +234,22 @@ void CalculateHelicityIndices(shared_ptr<const plugin_configuration> conf, info_
 {
 	auto UVId = GetSRHSourceData(myTargetInfo, h);
 
-	myTargetInfo->Param(SRHParam);
+	myTargetInfo->Find<param>(SRHParam);
 
-	myTargetInfo->Level(ThreeKMLevel);
+	myTargetInfo->Find<level>(ThreeKMLevel);
 	const auto SRH03 = CalculateStormRelativeHelicity(conf, myTargetInfo, h, 3000, UVId);
 	myTargetInfo->Data().Set(SRH03);
 
-	myTargetInfo->Level(OneKMLevel);
+	myTargetInfo->Find<level>(OneKMLevel);
 	const auto SRH01 = CalculateStormRelativeHelicity(conf, myTargetInfo, h, 1000, UVId);
 	myTargetInfo->Data().Set(SRH01);
 
 	const auto EHI01 = CalculateEnergyHelicityIndex(conf, myTargetInfo);
-	myTargetInfo->Param(EHIParam);
+	myTargetInfo->Find<param>(EHIParam);
 	myTargetInfo->Data().Set(EHI01);
 
-	myTargetInfo->Level(SixKMLevel);
-	myTargetInfo->Param(BRNParam);
+	myTargetInfo->Find<level>(SixKMLevel);
+	myTargetInfo->Find<param>(BRNParam);
 	const auto BRN = CalculateBulkRichardsonNumber(conf, myTargetInfo, h);
 	myTargetInfo->Data().Set(BRN);
 }
@@ -321,8 +321,8 @@ void CalculateThetaEIndices(shared_ptr<const plugin_configuration>& conf, info_t
 {
 	vec thetae = CalculateThetaE(h, 2, 3000);
 
-	myTargetInfo->Level(ThreeKMLevel);
-	myTargetInfo->Param(TPEParam);
+	myTargetInfo->Find<level>(ThreeKMLevel);
+	myTargetInfo->Find<param>(TPEParam);
 	myTargetInfo->Data().Set(thetae);
 }
 
@@ -330,12 +330,12 @@ void CalculateLiftedIndices(shared_ptr<const plugin_configuration>& conf, info_t
 {
 	auto src = GetLiftedIndicesSourceData(conf, myTargetInfo, h);
 
-	myTargetInfo->Level(Height0Level);
+	myTargetInfo->Find<level>(Height0Level);
 
-	myTargetInfo->Param(LIParam);
+	myTargetInfo->Find<param>(LIParam);
 	auto& LI = VEC(myTargetInfo);
 
-	myTargetInfo->Param(SIParam);
+	myTargetInfo->Find<param>(SIParam);
 	auto& SI = VEC(myTargetInfo);
 
 	const auto& t500m = get<0>(src);
@@ -428,26 +428,26 @@ vec CalculateCapeShear(shared_ptr<const plugin_configuration>& conf, info_t& myT
 void CalculateBulkShearIndices(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo,
                                shared_ptr<hitool>& h)
 {
-	myTargetInfo->Param(BSParam);
+	myTargetInfo->Find<param>(BSParam);
 
-	myTargetInfo->Level(OneKMLevel);
+	myTargetInfo->Find<level>(OneKMLevel);
 	const auto BS01 = CalculateBulkShear(myTargetInfo, h, 1000);
 	myTargetInfo->Data().Set(BS01);
 
-	myTargetInfo->Level(ThreeKMLevel);
+	myTargetInfo->Find<level>(ThreeKMLevel);
 	const auto BS03 = CalculateBulkShear(myTargetInfo, h, 3000);
 	myTargetInfo->Data().Set(BS03);
 
-	myTargetInfo->Level(SixKMLevel);
+	myTargetInfo->Find<level>(SixKMLevel);
 	const auto BS06 = CalculateBulkShear(myTargetInfo, h, 6000);
 	myTargetInfo->Data().Set(BS06);
 
-	myTargetInfo->Param(EBSParam);
-	myTargetInfo->Level(Height0Level);
+	myTargetInfo->Find<param>(EBSParam);
+	myTargetInfo->Find<level>(Height0Level);
 	const auto EBS = CalculateEffectiveBulkShear(conf, myTargetInfo, h);
 	myTargetInfo->Data().Set(EBS);
 
-	myTargetInfo->Param(CAPESParam);
+	myTargetInfo->Find<param>(CAPESParam);
 	const auto CAPES = CalculateCapeShear(conf, myTargetInfo, EBS);
 	myTargetInfo->Data().Set(CAPES);
 }
@@ -473,8 +473,8 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 	{
 		vec FF1500 = h->VerticalValue(FFParam, 1500);
 
-		myTargetInfo->Param(FFParam);
-		myTargetInfo->Level(EuropeanMileLevel);
+		myTargetInfo->Find<param>(FFParam);
+		myTargetInfo->Find<level>(EuropeanMileLevel);
 		myTargetInfo->Data().Set(FF1500);
 	}
 	catch (const HPExceptionType& e)
@@ -488,8 +488,8 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 	{
 		vec Q500 = h->VerticalAverage(QParam, 0, 500);
 
-		myTargetInfo->Param(QParam);
-		myTargetInfo->Level(HalfKMLevel);
+		myTargetInfo->Find<param>(QParam);
+		myTargetInfo->Find<level>(HalfKMLevel);
 		myTargetInfo->Data().Set(Q500);
 	}
 	catch (const HPExceptionType& e)
@@ -631,7 +631,7 @@ pair<vec, vec> GetSRHSourceData(const shared_ptr<info>& myTargetInfo, shared_ptr
 
 void stability::RunTimeDimension(info_t myTargetInfo, unsigned short threadIndex)
 {
-	myTargetInfo->FirstLevel();
+	myTargetInfo->First<level>();
 	while (NextExcludingLevel(*myTargetInfo))
 	{
 		if (itsConfiguration->UseDynamicMemoryAllocation())
@@ -662,11 +662,11 @@ void stability::WriteToFile(const info_t targetInfo, write_options writeOptions)
 
 	auto tempInfo = make_shared<info>(*targetInfo);
 
-	tempInfo->ResetLevel();
+	tempInfo->Reset<level>();
 
-	while (tempInfo->NextLevel())
+	while (tempInfo->Next<level>())
 	{
-		for (tempInfo->ResetParam(); tempInfo->NextParam();)
+		for (tempInfo->Reset<param>(); tempInfo->Next<param>();)
 		{
 			if (!tempInfo->IsValidGrid())
 			{

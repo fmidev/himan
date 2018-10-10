@@ -35,6 +35,11 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, const info& info, c
 	ostringstream fileName;
 	ostringstream base;
 
+	const auto ftype = info.Value<forecast_type>();
+	const auto ftime = info.Value<forecast_time>();
+	const auto lvl = info.Value<level>();
+	const auto par = info.Value<param>();
+
 	base.str(".");
 
 	// For neons get base directory
@@ -56,21 +61,18 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, const info& info, c
 		}
 
 		base << "/" << info.Producer().Centre() << "_" << info.Producer().Process() << "/"
-		     << info.Time().OriginDateTime().String("%Y%m%d%H%M") << "/" << conf.TargetGeomName() << "/"
-
-		     << info.Time().Step();
+		     << ftime.OriginDateTime().String("%Y%m%d%H%M") << "/" << conf.TargetGeomName() << "/" << ftime.Step();
 	}
 
 	// Create a unique file name when creating multiple files from one info
 
 	if (fileWriteOption == kDatabase || fileWriteOption == kMultipleFiles)
 	{
-		fileName << base.str() << "/" << info.Param().Name() << "_" << HPLevelTypeToString.at(info.Level().Type())
-		         << "_" << info.Level().Value();
+		fileName << base.str() << "/" << par.Name() << "_" << HPLevelTypeToString.at(lvl.Type()) << "_" << lvl.Value();
 
-		if (!IsKHPMissingValue(info.Level().Value2()))
+		if (!IsKHPMissingValue(lvl.Value2()))
 		{
-			fileName << "-" << info.Level().Value2();
+			fileName << "-" << lvl.Value2();
 		}
 
 		fileName << "_" << HPGridTypeToString.at(info.Grid()->Type());
@@ -81,10 +83,10 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, const info& info, c
 			         << dynamic_pointer_cast<regular_grid>(info.Grid())->Nj();
 		}
 
-		fileName << "_0_" << setw(3) << setfill('0') << info.Time().Step();
-		if (static_cast<int>(info.ForecastType().Type()) > 2)
+		fileName << "_0_" << setw(3) << setfill('0') << ftime.Step();
+		if (static_cast<int>(ftype.Type()) > 2)
 		{
-			fileName << "_" << static_cast<int>(info.ForecastType().Type()) << "_" << info.ForecastType().Value();
+			fileName << "_" << static_cast<int>(ftype.Type()) << "_" << ftype.Value();
 		}
 	}
 	else
@@ -720,10 +722,10 @@ info_t util::CSVToInfo(const vector<string>& csv)
 	ret = make_shared<info>();
 
 	ret->Producer(prod);
-	ret->Times(times);
-	ret->Params(params);
-	ret->Levels(levels);
-	ret->ForecastTypes(ftypes);
+	ret->Set<forecast_time>(times);
+	ret->Set<param>(params);
+	ret->Set<level>(levels);
+	ret->Set<forecast_type>(ftypes);
 
 	auto b = make_shared<base>();
 	b->grid = shared_ptr<grid>(new point_list(stats));
@@ -789,13 +791,13 @@ info_t util::CSVToInfo(const vector<string>& csv)
 
 		const station s(stationId, elems[3], longitude, latitude);
 
-		if (!ret->Param(p))
+		if (!ret->Find<param>(p))
 			continue;
-		if (!ret->Time(f))
+		if (!ret->Find<forecast_time>(f))
 			continue;
-		if (!ret->Level(l))
+		if (!ret->Find<level>(l))
 			continue;
-		if (!ret->ForecastType(ftype))
+		if (!ret->Find<forecast_type>(ftype))
 			continue;
 
 		for (size_t i = 0; i < stats.size(); i++)
@@ -815,10 +817,10 @@ double util::MissingPercent(const himan::info& info)
 {
 	auto cp = info;
 
-	cp.FirstForecastType();
-	cp.FirstTime();
-	cp.FirstLevel();
-	cp.ResetParam();
+	cp.First<forecast_type>();
+	cp.First<forecast_time>();
+	cp.First<level>();
+	cp.Reset<param>();
 
 	size_t missing = 0, total = 0;
 

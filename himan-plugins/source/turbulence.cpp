@@ -105,10 +105,10 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	// If calculating for hybrid levels, A/B vertical coordinates must be set
 	// (copied from source)
-	myTargetInfo->ParamIndex(0);
+	myTargetInfo->Index<param>(0);
 	SetAB(myTargetInfo, HInfo);
 
-	myTargetInfo->ParamIndex(1);
+	myTargetInfo->Index<param>(1);
 	SetAB(myTargetInfo, HInfo);
 
 	string deviceType = "CPU";
@@ -208,10 +208,10 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		double TI2 = S * VWS * (DEF + CVG);
 
 		// return result
-		myTargetInfo->ParamIndex(0);
+		myTargetInfo->Index<param>(0);
 		myTargetInfo->Value(TI);
 
-		myTargetInfo->ParamIndex(1);
+		myTargetInfo->Index<param>(1);
 		myTargetInfo->Value(TI2);
 	}
 

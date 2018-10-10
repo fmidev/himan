@@ -30,9 +30,6 @@ class json_parser
 
    private:
 	std::vector<std::shared_ptr<plugin_configuration>> ParseConfigurationFile(std::shared_ptr<configuration> conf);
-	std::unique_ptr<grid> ParseAreaAndGrid(std::shared_ptr<configuration> conf, const boost::property_tree::ptree& pt);
-	void ParseTime(std::shared_ptr<configuration> conf, std::shared_ptr<info> baseInfo,
-	               const boost::property_tree::ptree& pt);
 };
 
 }  // namespace himan

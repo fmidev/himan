@@ -471,22 +471,22 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			ovcbase[k] = sct_lowest[k];
 	}
 
-	myTargetInfo->ParamIndex(0);
+	myTargetInfo->Index<param>(0);
 	myTargetInfo->Data().Set(move(fewbase));
 
-	myTargetInfo->ParamIndex(1);
+	myTargetInfo->Index<param>(1);
 	myTargetInfo->Data().Set(move(sctbase));
 
-	myTargetInfo->ParamIndex(2);
+	myTargetInfo->Index<param>(2);
 	myTargetInfo->Data().Set(move(bknbase));
 
-	myTargetInfo->ParamIndex(3);
+	myTargetInfo->Index<param>(3);
 	myTargetInfo->Data().Set(move(ovcbase));
 
-	myTargetInfo->ParamIndex(4);
+	myTargetInfo->Index<param>(4);
 	myTargetInfo->Data().Set(move(cbbase));
 
-	myTargetInfo->ParamIndex(5);
+	myTargetInfo->Index<param>(5);
 	myTargetInfo->Data().Set(move(cbN));
 
 	string deviceType = "CPU";

@@ -6,6 +6,7 @@
 #ifndef INTERPOLATE_H
 #define INTERPOLATE_H
 
+#include "info.h"
 #include "latitude_longitude_grid.h"
 #include "plugin_configuration.h"
 #include "reduced_gaussian_grid.h"
@@ -19,16 +20,15 @@ namespace himan
 {
 namespace interpolate
 {
-
 #ifndef __NVCC__
 
 /**
  * @brief area_interpolation provides grid to grid interpolation
- * through solving linear equations A*x = y 
+ * through solving linear equations A*x = y
  * where:
  *   source data => x
  *   target data => y
- * and A containing the linear coefficients to interpolate data 
+ * and A containing the linear coefficients to interpolate data
  * from source grid to target grid.
  *
  * @example (using Einstein convention)
@@ -47,14 +47,14 @@ namespace interpolate
 class area_interpolation
 {
    public:
-        area_interpolation() = default;
-        area_interpolation(grid& source, grid& target, HPInterpolationMethod method);
-        void Interpolate(base& source, base& target);
-        size_t SourceSize() const;
-        size_t TargetSize() const;
+	area_interpolation() = default;
+	area_interpolation(grid& source, grid& target, HPInterpolationMethod method);
+	void Interpolate(base& source, base& target);
+	size_t SourceSize() const;
+	size_t TargetSize() const;
 
    private:
-        Eigen::SparseMatrix<double, Eigen::RowMajor> itsInterpolation;
+	Eigen::SparseMatrix<double, Eigen::RowMajor> itsInterpolation;
 };
 
 /**
@@ -67,18 +67,18 @@ class area_interpolation
 class interpolator
 {
    public:
-        static bool Insert(const base& source, const base& target, HPInterpolationMethod method);
-        bool Interpolate(base& source, base& target, HPInterpolationMethod method);
+	static bool Insert(const base& source, const base& target, HPInterpolationMethod method);
+	bool Interpolate(base& source, base& target, HPInterpolationMethod method);
 
    private:
-        static std::mutex interpolatorAccessMutex;
-        static std::map<size_t, interpolate::area_interpolation> cache;
+	static std::mutex interpolatorAccessMutex;
+	static std::map<size_t, interpolate::area_interpolation> cache;
 };
 #endif
 
-bool InterpolateArea(info& base, info_t source);
+bool InterpolateArea(const grid* baseGrid, info_t source);
 
-bool Interpolate(info& base, std::vector<info_t>& infos, bool useCudaForInterpolation = true);
+bool Interpolate(const grid* baseGrid, std::vector<info_t>& infos, bool useCudaForInterpolation = true);
 
 bool IsVectorComponent(const std::string& paramName);
 
@@ -95,24 +95,23 @@ void RotateVectorComponentsGPU(info& UInfo, info& VInfo, cudaStream_t& stream, d
 bool IsSupportedGridForRotation(HPGridType type);
 
 /**
- * @brief Provide the non-zero weights and corresponding indices for a 
+ * @brief Provide the non-zero weights and corresponding indices for a
  * single target point from a source grid using bilinear interpolation
  *
- * If point lies outside grid weight will be Missing Value 
+ * If point lies outside grid weight will be Missing Value
  */
 
-std::pair<std::vector<size_t>,std::vector<double>> InterpolationWeights(reduced_gaussian_grid& source, point target);
-std::pair<std::vector<size_t>,std::vector<double>> InterpolationWeights(regular_grid& source, point target);
+std::pair<std::vector<size_t>, std::vector<double>> InterpolationWeights(reduced_gaussian_grid& source, point target);
+std::pair<std::vector<size_t>, std::vector<double>> InterpolationWeights(regular_grid& source, point target);
 
 /**
  * @brief Provide the nearest point index for a single target point with weight 1.0
- * 
+ *
  * If point lies outside grid weight will be MissingValue
  */
 
-std::pair<size_t,double> NearestPoint(reduced_gaussian_grid& source, point target);
-std::pair<size_t,double> NearestPoint(regular_grid& source, point target);
-
+std::pair<size_t, double> NearestPoint(reduced_gaussian_grid& source, point target);
+std::pair<size_t, double> NearestPoint(regular_grid& source, point target);
 }
 }
 

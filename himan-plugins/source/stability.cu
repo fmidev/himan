@@ -235,8 +235,8 @@ void CalculateBulkShear(std::shared_ptr<const plugin_configuration> conf, std::s
 
 		BulkShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u, d_v, d_bs, N);
 
-		myTargetInfo->Param(BSParam);
-		myTargetInfo->Level(OneKMLevel);
+		myTargetInfo->Find<param>(BSParam);
+		myTargetInfo->Find<level>(OneKMLevel);
 		cuda::ReleaseInfo(myTargetInfo, d_bs, stream);
 
 		u = STABILITY::Shear(h, UParam, 10, 3000, N);
@@ -247,7 +247,7 @@ void CalculateBulkShear(std::shared_ptr<const plugin_configuration> conf, std::s
 
 		BulkShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u, d_v, d_bs, N);
 
-		myTargetInfo->Level(ThreeKMLevel);
+		myTargetInfo->Find<level>(ThreeKMLevel);
 		cuda::ReleaseInfo(myTargetInfo, d_bs, stream);
 
 		u = STABILITY::Shear(h, UParam, 10, 6000, N);
@@ -258,7 +258,7 @@ void CalculateBulkShear(std::shared_ptr<const plugin_configuration> conf, std::s
 
 		BulkShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u, d_v, d_bs, N);
 
-		myTargetInfo->Level(SixKMLevel);
+		myTargetInfo->Find<level>(SixKMLevel);
 		cuda::ReleaseInfo(myTargetInfo, d_bs, stream);
 
 		// Effective bulk shear
@@ -291,8 +291,8 @@ void CalculateBulkShear(std::shared_ptr<const plugin_configuration> conf, std::s
 
 		BulkShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u, d_v, d_bs, N);
 
-		myTargetInfo->Level(Height0Level);
-		myTargetInfo->Param(EBSParam);
+		myTargetInfo->Find<level>(Height0Level);
+		myTargetInfo->Find<param>(EBSParam);
 		cuda::ReleaseInfo(myTargetInfo, d_bs, stream);
 
 		// CAPE shear
@@ -309,7 +309,7 @@ void CalculateBulkShear(std::shared_ptr<const plugin_configuration> conf, std::s
 
 		CAPEShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u, d_bs, d_capes, N);
 
-		myTargetInfo->Param(CAPESParam);
+		myTargetInfo->Find<param>(CAPESParam);
 		cuda::ReleaseInfo(myTargetInfo, d_capes, stream);
 	}
 	catch (HPExceptionType& e)
@@ -539,18 +539,18 @@ void CalculateHelicity(std::shared_ptr<const plugin_configuration> conf, std::sh
 	CUDA_CHECK(cudaMalloc((void**)&d_srh, memsize));
 	CUDA_CHECK(cudaMalloc((void**)&d_ehi, memsize));
 
-	myTargetInfo->Param(SRHParam);
-	myTargetInfo->Level(ThreeKMLevel);
+	myTargetInfo->Find<param>(SRHParam);
+	myTargetInfo->Find<level>(ThreeKMLevel);
 
 	StormRelativeHelicity(conf, myTargetInfo, h, d_srh, 3000, stream);
 	cuda::ReleaseInfo(myTargetInfo, d_srh, stream);
 
-	myTargetInfo->Level(OneKMLevel);
+	myTargetInfo->Find<level>(OneKMLevel);
 
 	StormRelativeHelicity(conf, myTargetInfo, h, d_srh, 1000, stream);
 	cuda::ReleaseInfo(myTargetInfo, d_srh, stream);
 
-	myTargetInfo->Param(EHIParam);
+	myTargetInfo->Find<param>(EHIParam);
 
 	EnergyHelicityIndex(conf, myTargetInfo, d_srh, d_ehi, stream);
 	cuda::ReleaseInfo(myTargetInfo, d_ehi, stream);
@@ -604,8 +604,8 @@ void CalculateBulkRichardsonNumber(std::shared_ptr<const plugin_configuration> c
 		BRNKernel<<<gridSize, blockSize, 0, stream>>>(d_cape, d_u6, d_v6, d_u05, d_v05, d_brn,
 		                                              myTargetInfo->SizeLocations());
 
-		myTargetInfo->Param(BRNParam);
-		myTargetInfo->Level(SixKMLevel);
+		myTargetInfo->Find<param>(BRNParam);
+		myTargetInfo->Find<level>(SixKMLevel);
 
 		cuda::ReleaseInfo(myTargetInfo, d_brn, stream);
 
@@ -716,11 +716,11 @@ void CalculateLiftedIndices(std::shared_ptr<const plugin_configuration> conf, st
 	LiftedIndicesKernel<<<gridSize, blockSize, 0, stream>>>(d_t850, d_t500, d_t500m, d_td850, d_td500m, d_p500m, d_si,
 	                                                        d_li, N);
 
-	myTargetInfo->Level(Height0Level);
-	myTargetInfo->Param(LIParam);
+	myTargetInfo->Find<level>(Height0Level);
+	myTargetInfo->Find<param>(LIParam);
 	cuda::ReleaseInfo(myTargetInfo, d_li, stream);
 
-	myTargetInfo->Param(SIParam);
+	myTargetInfo->Find<param>(SIParam);
 	cuda::ReleaseInfo(myTargetInfo, d_si, stream);
 
 	CUDA_CHECK(cudaFree(d_t850));
@@ -778,8 +778,8 @@ void CalculateThetaEIndices(std::shared_ptr<info> myTargetInfo, std::shared_ptr<
 		ThetaEKernel<<<gridSize, blockSize, 0, stream>>>(d_tstart, d_rhstart, d_pstart, d_tstop, d_rhstop, d_pstop,
 		                                                 d_thetaediff, myTargetInfo->SizeLocations());
 
-		myTargetInfo->Level(ThreeKMLevel);
-		myTargetInfo->Param(TPEParam);
+		myTargetInfo->Find<level>(ThreeKMLevel);
+		myTargetInfo->Find<param>(TPEParam);
 		cuda::ReleaseInfo(myTargetInfo, d_thetaediff, stream);
 
 		CUDA_CHECK(cudaFree(d_tstop));

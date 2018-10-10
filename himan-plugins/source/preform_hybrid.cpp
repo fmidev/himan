@@ -216,9 +216,9 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 	ASSERT(myTargetInfo->SizeLocations() == TInfo->SizeLocations());
 	ASSERT(myTargetInfo->SizeLocations() == RRInfo->SizeLocations());
 
-	myTargetInfo->FirstParam();
+	myTargetInfo->First<param>();
 
-	const bool noPotentialPrecipitationForm = (myTargetInfo->SizeParams() == 1);
+	const bool noPotentialPrecipitationForm = (myTargetInfo->Size<param>() == 1);
 
 	const int DRIZZLE = 0;
 	const int RAIN = 1;
@@ -229,46 +229,46 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 
 	LOCKSTEP(myTargetInfo, stratus, freezingArea, TInfo, RRInfo)
 	{
-		stratus->Param(stratusBaseParam);
+		stratus->Find<param>(stratusBaseParam);
 		double base = stratus->Value();
 
-		stratus->Param(stratusTopParam);
+		stratus->Find<param>(stratusTopParam);
 		double top = stratus->Value();
 
-		stratus->Param(stratusUpperLayerNParam);
+		stratus->Find<param>(stratusUpperLayerNParam);
 		double upperLayerN = stratus->Value();
 
-		stratus->Param(stratusVerticalVelocityParam);
+		stratus->Find<param>(stratusVerticalVelocityParam);
 		double wAvg = stratus->Value();
 
-		stratus->Param(stratusMeanTempParam);
+		stratus->Find<param>(stratusMeanTempParam);
 		double stTavg = stratus->Value();
 
-		stratus->Param(stratusTopTempParam);
+		stratus->Find<param>(stratusTopTempParam);
 		double Ttop = stratus->Value();
 
-		freezingArea->Param(plusAreaParam);
+		freezingArea->Find<param>(plusAreaParam);
 		double plusArea = freezingArea->Value();
 
-		freezingArea->Param(plusAreaSfcParam);
+		freezingArea->Find<param>(plusAreaSfcParam);
 		double plusAreaSfc = freezingArea->Value();
 
-		freezingArea->Param(minusAreaParam);
+		freezingArea->Find<param>(minusAreaParam);
 		double minusArea = freezingArea->Value();
 
-		freezingArea->Param(numZeroLevelsParam);
+		freezingArea->Find<param>(numZeroLevelsParam);
 		double nZeroLevel = freezingArea->Value();
 
-		freezingArea->Param(rhAvgParam);
+		freezingArea->Find<param>(rhAvgParam);
 		double rhAvg = freezingArea->Value();
 
-		freezingArea->Param(rhAvgUpperParam);
+		freezingArea->Find<param>(rhAvgUpperParam);
 		double rhAvgUpper = freezingArea->Value();
 
-		freezingArea->Param(rhMeltParam);
+		freezingArea->Find<param>(rhMeltParam);
 		double rhMelt = freezingArea->Value();
 
-		freezingArea->Param(rhMeltUpperParam);
+		freezingArea->Find<param>(rhMeltUpperParam);
 		double rhMeltUpper = freezingArea->Value();
 
 		double RR = RRInfo->Value();
@@ -391,19 +391,19 @@ void preform_hybrid::Calculate(shared_ptr<info> myTargetInfo, unsigned short thr
 		if (RR == 0)
 		{
 			// If RR is zero, we can only have potential prec form
-			myTargetInfo->ParamIndex(1);
+			myTargetInfo->Index<param>(1);
 			myTargetInfo->Value(PreForm);
 		}
 		else
 		{
 			// If there is precipitation, we have at least regular prec form
-			myTargetInfo->ParamIndex(0);
+			myTargetInfo->Index<param>(0);
 			myTargetInfo->Value(PreForm);
 
 			if (!noPotentialPrecipitationForm)
 			{
 				// Also potential prec form
-				myTargetInfo->ParamIndex(1);
+				myTargetInfo->Index<param>(1);
 				myTargetInfo->Value(PreForm);
 			}
 		}
@@ -427,10 +427,11 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 	vector<forecast_time> times = {ftime};
 	vector<level> levels = {level(kHeight, 0, "HEIGHT")};
 
-	auto ret = make_shared<info>(*conf->Info());
-	ret->Params(params);
-	ret->Levels(levels);
-	ret->Times(times);
+	auto ret = make_shared<info>();
+	ret->Set<param>(params);
+	ret->Set<level>(levels);
+	ret->Set<forecast_time>(times);
+	ret->Set<forecast_type>({forecast_type()});
 	ret->Create(baseGrid);
 
 	vector<double> zerom(ret->Data().Size(), 0);
@@ -454,7 +455,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 		numZeroLevels = h->VerticalCount(wantedParam, zerom, tenkm, zerodeg);
 
-		ret->Param(numZeroLevelsParam);
+		ret->Find<param>(numZeroLevelsParam);
 		ret->Data().Set(numZeroLevels);
 
 #ifdef DEBUG
@@ -721,25 +722,25 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 	util::DumpVector(rhMeltUpper);
 #endif
 
-	ret->Param(minusAreaParam);
+	ret->Find<param>(minusAreaParam);
 	ret->Data().Set(minusArea);
 
-	ret->Param(plusAreaParam);
+	ret->Find<param>(plusAreaParam);
 	ret->Data().Set(plusArea);
 
-	ret->Param(plusAreaSfcParam);
+	ret->Find<param>(plusAreaSfcParam);
 	ret->Data().Set(plusAreaSfc);
 
-	ret->Param(rhAvgParam);
+	ret->Find<param>(rhAvgParam);
 	ret->Data().Set(rhAvg);
 
-	ret->Param(rhAvgUpperParam);
+	ret->Find<param>(rhAvgUpperParam);
 	ret->Data().Set(rhAvgUpper);
 
-	ret->Param(rhMeltParam);
+	ret->Find<param>(rhMeltParam);
 	ret->Data().Set(rhMelt);
 
-	ret->Param(rhMeltUpperParam);
+	ret->Find<param>(rhMeltUpperParam);
 	ret->Data().Set(rhMeltUpper);
 
 	result = ret;
@@ -776,10 +777,11 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 	vector<forecast_time> times = {ftime};
 	vector<level> levels = {level(kHeight, 0, "HEIGHT")};
 
-	auto ret = make_shared<info>(*conf->Info());
-	ret->Params(params);
-	ret->Levels(levels);
-	ret->Times(times);
+	auto ret = make_shared<info>();
+	ret->Set<param>(params);
+	ret->Set<level>(levels);
+	ret->Set<forecast_time>(times);
+	ret->Set<forecast_type>({forecast_type()});  // doesn't matter what we put here
 	ret->Create(baseGrid);
 
 	const vector<double> layerVec(ret->Data().Size(), layer);
@@ -794,7 +796,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 
 		const auto base = h->VerticalHeightGreaterThan(wantedParamList, 0, baseLimit, stCover);
 
-		ret->Param(stratusBaseParam);
+		ret->Find<param>(stratusBaseParam);
 		ret->Data().Set(base);
 
 		const auto basePlus10 = Add(base, 10.);
@@ -826,13 +828,13 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 			}
 		}
 
-		ret->Param(stratusTopParam);
+		ret->Find<param>(stratusTopParam);
 		ret->Data().Set(top);
 
 		// Stratuksen Topin lämpötila (jäätävä tihku)
 		auto Ttop = h->VerticalValue(param("T-K"), top);
 
-		ret->Param(stratusTopTempParam);
+		ret->Find<param>(stratusTopTempParam);
 		ret->Data().Set(Ttop);
 
 		// Stratuksen keskimääräinen lämpötila (poissulkemaan
@@ -840,7 +842,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		auto topMinus10 = Add(top, -10);
 		auto stTavg = h->VerticalAverage(param("T-K"), basePlus10, topMinus10);
 
-		ret->Param(stratusMeanTempParam);
+		ret->Find<param>(stratusMeanTempParam);
 		ret->Data().Set(stTavg);
 
 		// Keskimääräinen pilven määrä [%] stratuksen yläpuolisessa kerroksessa
@@ -848,7 +850,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		auto topPlusDrydz = Add(top, drydz);
 		auto upperLayerN = h->VerticalAverage(wantedParamList, topPlus30, topPlusDrydz);
 
-		ret->Param(stratusUpperLayerNParam);
+		ret->Find<param>(stratusUpperLayerNParam);
 		ret->Data().Set(upperLayerN);
 
 		// Keskimääräinen vertikaalinopeus st:ssa [mm/s]
@@ -871,7 +873,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 			}
 		}
 
-		ret->Param(stratusVerticalVelocityParam);
+		ret->Find<param>(stratusVerticalVelocityParam);
 		ret->Data().Set(wAvg);
 	}
 	catch (const HPExceptionType& e)

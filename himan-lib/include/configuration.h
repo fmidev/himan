@@ -11,7 +11,7 @@
 #ifndef CONFIGURATION_H
 #define CONFIGURATION_H
 
-#include "info.h"
+#include "producer.h"
 
 namespace himan
 {
@@ -23,9 +23,8 @@ class configuration
 	friend class json_parser;
 
 	configuration();
-	virtual ~configuration()
-	{
-	}
+	virtual ~configuration() = default;
+
 	configuration(const configuration& other);
 	configuration& operator=(const configuration& other) = delete;
 
@@ -62,7 +61,8 @@ class configuration
 	 * @param theSourceProducers Vector of producers
 	 */
 
-	void SourceProducers(std::vector<producer> theSourceProducers);
+	void SourceProducers(const std::vector<producer>& theSourceProducers);
+	const std::vector<producer>& SourceProducers() const;
 
 	/**
 	 * @brief Get current source producer
@@ -70,60 +70,7 @@ class configuration
 	 * @return const reference to the current source producer
 	 */
 
-	const producer& SourceProducer(size_t theIndexNumber = kHPMissingInt) const;
-
-	/**
-	 * @brief Search for source producer given as argument, if found set iterator
-	 * position to that and return true
-	 *
-	 * This function is not thread safe as configuration class is in effect
-	 * a global variable.
-	 *
-	 * @param theSourceProducer
-	 * @return True if found, false if not
-	 */
-
-	bool SourceProducer(const producer& theSourceProducer);
-
-	/**
-	 * @brief Advance iterator by one
-	 *
-	 * This function is not thread safe as configuration class is in effect
-	 * a global variable.
-	 *
-	 * @return True if not at last source producer
-	 */
-
-	bool NextSourceProducer();
-
-	/**
-	 * @brief Goto first source producer
-	 *
-	 * This function is not thread safe as configuration class is in effect
-	 * a global variable.
-	 *
-	 * @return True if iterator has at least one source producer
-	 */
-
-	bool FirstSourceProducer();
-
-	/**
-	 * @brief Reset source producer iterator
-	 *
-	 * This function is not thread safe as configuration class is in effect
-	 * a global variable.
-	 *
-	 */
-
-	void ResetSourceProducer();
-
-	/**
-	 * @brief Return number of source producers
-	 *
-	 * @return Number of source producers
-	 */
-
-	size_t SizeSourceProducers() const;
+	const producer& SourceProducer(size_t theIndexNumber) const;
 
 	/**
 	 * @brief Get target producer
@@ -238,6 +185,7 @@ class configuration
 	 */
 
 	int ForecastStep() const;
+	void ForecastStep(int theForecastStep);
 
 	HPDatabaseType DatabaseType() const;
 	void DatabaseType(HPDatabaseType theDatabaseType);
@@ -267,7 +215,7 @@ class configuration
 	void UploadStatistics(bool theUploadStatistics);
 
    protected:
-	std::unique_ptr<producer_iter> itsSourceProducerIterator;
+	std::vector<producer> itsSourceProducers;
 
 	HPFileType itsOutputFileType;
 	HPFileWriteOption itsFileWriteOption;
