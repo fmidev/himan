@@ -204,7 +204,10 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		ASSERT(UInfo->Grid()->Type() == VInfo->Grid()->Type());
 
 #ifdef HAVE_CUDA
-		util::Unpack({UInfo, VInfo}, false);
+		if (UInfo->PackedData()->HasData())
+		{
+			util::Unpack({UInfo, VInfo}, false);
+		}
 #endif
 
 		interpolate::RotateVectorComponents(*UInfo, *VInfo,

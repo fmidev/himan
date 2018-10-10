@@ -60,8 +60,8 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, const info& info, c
 			cout << "Warning::util MASALA_PROCESSED_DATA_BASE not set" << endl;
 		}
 
-		base << "/" << info.Producer().Centre() << "_" << info.Producer().Process() << "/"
-		     << ftime.OriginDateTime().String("%Y%m%d%H%M") << "/" << conf.TargetGeomName() << "/" << ftime.Step();
+		base << "/" << info.Producer().Id() << "/" << ftime.OriginDateTime().String("%Y%m%d%H%M") << "/"
+		     << conf.TargetGeomName() << "/" << ftime.Step();
 	}
 
 	// Create a unique file name when creating multiple files from one info
