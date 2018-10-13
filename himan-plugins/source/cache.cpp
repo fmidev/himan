@@ -18,7 +18,9 @@ cache::cache()
 {
 	itsLogger = logger("cache");
 }
-string cache::UniqueName(const info<double>& info)
+
+template <typename T>
+string cache::UniqueName(const info<T>& info)
 {
 	stringstream ss;
 
@@ -36,6 +38,8 @@ string cache::UniqueName(const info<double>& info)
 
 	return ss.str();
 }
+
+template string cache::UniqueName(const info<double>&);
 
 string cache::UniqueNameFromOptions(search_options& options)
 {
@@ -65,7 +69,7 @@ void cache::Insert(shared_ptr<info<double>> anInfo, bool pin)
 template <typename T>
 void cache::Insert(shared_ptr<info<T>> anInfo, bool pin)
 {
-	auto localInfo = make_shared<info<double>>(*anInfo);
+	auto localInfo = make_shared<info<T>>(*anInfo);
 
 	// Cached data is never replaced by another data that has
 	// the same uniqueName
@@ -96,17 +100,19 @@ void cache::Insert(shared_ptr<info<T>> anInfo, bool pin)
 
 	if (localInfo->DimensionSize() > 1)
 	{
-		auto newInfo = make_shared<info<double>>(localInfo->ForecastType(), localInfo->Time(), localInfo->Level(),
-		                                         localInfo->Param());
+		auto newInfo =
+		    make_shared<info<T>>(localInfo->ForecastType(), localInfo->Time(), localInfo->Level(), localInfo->Param());
+		newInfo->Producer(localInfo->Producer());
 		newInfo->Base(localInfo->Base());
 		localInfo = newInfo;
 	}
 
 	ASSERT(localInfo->DimensionSize() == 1);
-	cache_pool::Instance()->Insert(uniqueName, localInfo, pin);
+	cache_pool::Instance()->Insert<T>(uniqueName, localInfo, pin);
 }
 
 template void cache::Insert<double>(shared_ptr<info<double>> anInfo, bool pin);
+template void cache::Insert<float>(shared_ptr<info<float>> anInfo, bool pin);
 
 vector<shared_ptr<himan::info<double>>> cache::GetInfo(search_options& options)
 {
@@ -120,7 +126,7 @@ vector<shared_ptr<himan::info<T>>> cache::GetInfo(search_options& options)
 
 	vector<shared_ptr<himan::info<T>>> infos;
 
-	auto foundInfo = cache_pool::Instance()->GetInfo(uniqueName);
+	auto foundInfo = cache_pool::Instance()->GetInfo<T>(uniqueName);
 	if (foundInfo)
 	{
 		infos.push_back(foundInfo);
@@ -131,7 +137,8 @@ vector<shared_ptr<himan::info<T>>> cache::GetInfo(search_options& options)
 	return infos;
 }
 
-template vector<shared_ptr<himan::info<double>>> cache::GetInfo<double>(search_options& options);
+template vector<shared_ptr<himan::info<double>>> cache::GetInfo<double>(search_options&);
+template vector<shared_ptr<himan::info<float>>> cache::GetInfo<float>(search_options&);
 
 void cache::Clean()
 {
@@ -183,7 +190,9 @@ bool cache_pool::Exists(const string& uniqueName)
 	Lock lock(itsAccessMutex);
 	return itsCache.count(uniqueName) > 0;
 }
-void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info<double>> anInfo, bool pin)
+
+template <typename T>
+void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info<T>> anInfo, bool pin)
 {
 	cache_item item;
 	item.info = anInfo;
@@ -203,7 +212,12 @@ void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info<double>
 		Clean();
 	}
 }
-void cache_pool::Replace(const string& uniqueName, shared_ptr<himan::info<double>> anInfo, bool pin)
+
+template void cache_pool::Insert<double>(const string&, shared_ptr<himan::info<double>>, bool);
+template void cache_pool::Insert<float>(const string&, shared_ptr<himan::info<float>>, bool);
+
+template <typename T>
+void cache_pool::Replace(const string& uniqueName, shared_ptr<himan::info<T>> anInfo, bool pin)
 {
 	cache_item item;
 	item.info = anInfo;
@@ -224,9 +238,11 @@ void cache_pool::Replace(const string& uniqueName, shared_ptr<himan::info<double
 	}
 	else
 	{
-		Insert(uniqueName, anInfo, pin);
+		Insert<T>(uniqueName, anInfo, pin);
 	}
 }
+
+template void cache_pool::Replace<double>(const string&, shared_ptr<himan::info<double>>, bool);
 
 void cache_pool::UpdateTime(const std::string& uniqueName)
 {
@@ -265,17 +281,80 @@ void cache_pool::Clean()
 	itsLogger.Trace("Cache size: " + to_string(itsCache.size()));
 }
 
-shared_ptr<himan::info<double>> cache_pool::GetInfo(const string& uniqueName)
+namespace
 {
-	Lock lock(itsAccessMutex);
+template <typename T, typename U>
+shared_ptr<himan::info<U>> Convert(const shared_ptr<himan::info<T>>& fnd)
+{
+	// Since data type needs to be changed, we have to create new info
+	auto ret = make_shared<himan::info<U>>(fnd->ForecastType(), fnd->Time(), fnd->Level(), fnd->Param());
+	ret->Producer(fnd->Producer());
 
-	auto it = itsCache.find(uniqueName);
-	if (it != itsCache.end())
+	auto b = make_shared<himan::base<U>>();
+	b->grid = shared_ptr<himan::grid>(fnd->Grid()->Clone());
+	b->data.Resize(fnd->Data().SizeX(), fnd->Data().SizeY());
+
+	const auto& src = VEC(fnd);
+	auto& dst = b->data.Values();
+
+	copy(src.begin(), src.end(), dst.begin());
+
+	replace_if(dst.begin(), dst.end(), [](const U& val) { return ::isnan(val); }, himan::MissingValue<U>());
+	ret->Create(b);
+
+	return ret;
+}
+
+template <typename T>
+struct cache_visitor : public boost::static_visitor<std::shared_ptr<himan::info<T>>>
+{
+   public:
+	shared_ptr<himan::info<T>> operator()(shared_ptr<himan::info<double>>& fnd) const
 	{
-		return make_shared<info<double>>(*it->second.info);
+		return Convert<double, T>(fnd);
 	}
+	shared_ptr<himan::info<T>> operator()(shared_ptr<himan::info<float>>& fnd) const
+	{
+		return Convert<float, T>(fnd);
+	}
+};
+}  // namespace
+
+template <typename T>
+shared_ptr<himan::info<T>> cache_pool::GetInfo(const string& uniqueName)
+{
+	std::map<std::string, cache_item>::iterator it;
+
+	{
+		Lock lock(itsAccessMutex);
+		it = itsCache.find(uniqueName);
+	}
+
+	if (it == itsCache.end())
+	{
+		return nullptr;
+	}
+
+	try
+	{
+		return boost::get<std::shared_ptr<info<T>>>(it->second.info);
+	}
+	catch (boost::bad_get& e)
+	{
+		itsLogger.Info("Found data from cache with different datatype, conversion imminent");
+
+		return boost::apply_visitor(cache_visitor<T>(), it->second.info);
+	}
+	catch (exception& e)
+	{
+		itsLogger.Error(e.what());
+	}
+
 	return nullptr;
 }
+
+template shared_ptr<himan::info<double>> cache_pool::GetInfo<double>(const string&);
+template shared_ptr<himan::info<float>> cache_pool::GetInfo<float>(const string&);
 
 size_t cache_pool::Size() const
 {

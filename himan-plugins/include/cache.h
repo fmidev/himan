@@ -9,6 +9,7 @@
 #include "auxiliary_plugin.h"
 #include "info.h"
 #include "search_options.h"
+#include <boost/variant.hpp>
 #include <mutex>
 
 namespace himan
@@ -17,7 +18,7 @@ namespace plugin
 {
 struct cache_item
 {
-	std::shared_ptr<himan::info<double>> info;
+	boost::variant<std::shared_ptr<himan::info<double>>, std::shared_ptr<himan::info<float>>> info;
 	time_t access_time;
 	bool pinned;
 
@@ -74,7 +75,8 @@ class cache : public auxiliary_plugin
 	void Replace(std::shared_ptr<info<double>> anInfo, bool pin = false);
 
    private:
-	std::string UniqueName(const info<double>& anInfo);
+	template <typename T>
+	std::string UniqueName(const info<T>& anInfo);
 	std::string UniqueNameFromOptions(search_options& options);
 };
 
@@ -83,15 +85,23 @@ class cache_pool : public auxiliary_plugin
    public:
 	~cache_pool()
 	{
-		delete itsInstance;
+		if (itsInstance)
+		{
+			delete itsInstance;
+		}
 	}
 	cache_pool(const cache_pool& other) = delete;
 	cache_pool& operator=(const cache_pool& other) = delete;
 
 	static cache_pool* Instance();
 	bool Exists(const std::string& uniqueName);
-	void Insert(const std::string& uniqueName, info_t info, bool pin);
-	info_t GetInfo(const std::string& uniqueName);
+
+	template <typename T>
+	void Insert(const std::string& uniqueName, std::shared_ptr<info<T>> info, bool pin);
+
+	template <typename T>
+	std::shared_ptr<info<T>> GetInfo(const std::string& uniqueName);
+
 	void Clean();
 
 	virtual std::string ClassName() const
@@ -121,7 +131,8 @@ class cache_pool : public auxiliary_plugin
 	 * If element is not found, insert is made.
 	 */
 
-	void Replace(const std::string& uniqueName, info_t info, bool pin);
+	template <typename T>
+	void Replace(const std::string& uniqueName, std::shared_ptr<info<T>> info, bool pin);
 
    private:
 	cache_pool();
@@ -143,7 +154,7 @@ class cache_pool : public auxiliary_plugin
 // the class factory
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-	return std::shared_ptr<cache>(new cache());
+	return std::make_shared<cache>();
 }
 #define HIMAN_AUXILIARY_INCLUDE
 #endif /* HIMAN_AUXILIARY_INCLUDE */
