@@ -592,20 +592,20 @@ std::pair<size_t, double> NearestPoint(reduced_gaussian_grid& source, point targ
 			nearest = p;
 	}
 
-	return std::make_pair<size_t, double>(std::move(nearest), 1.0);
+	return std::make_pair(nearest, 1.0);
 }
 
 std::pair<size_t, double> NearestPoint(regular_grid& source, point target)
 {
 	auto xy = source.XY(target);
 	if (IsMissing(xy.X()) || IsMissing(xy.Y()))
-		return std::make_pair<size_t, double>(0, MissingDouble());
+		return std::make_pair(0, MissingDouble());
 
 	// In case of point in wrap-around region on global grid
 	if (std::round(xy.X()) == source.Ni())
-		return std::make_pair<size_t, double>(source.Ni() * static_cast<size_t>(std::round(xy.Y())), 1.0);
+		return std::make_pair(source.Ni() * static_cast<size_t>(std::round(xy.Y())), 1.0);
 
-	return std::make_pair<size_t, double>(
+	return std::make_pair(
 	    static_cast<size_t>(std::round(xy.X())) + source.Ni() * static_cast<size_t>(std::round(xy.Y())), 1.0);
 }
 

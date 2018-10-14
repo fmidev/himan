@@ -28,13 +28,13 @@
 using namespace himan;
 using namespace std;
 
-unique_ptr<grid> ParseAreaAndGridFromPoints(configuration& conf, const boost::property_tree::ptree& pt);
+unique_ptr<grid> ParseAreaAndGridFromPoints(const boost::property_tree::ptree& pt);
 unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::property_tree::ptree& pt);
 vector<level> ParseLevels(const boost::property_tree::ptree& pt);
-vector<producer> ParseSourceProducer(shared_ptr<configuration> conf, const boost::property_tree::ptree& pt);
-producer ParseTargetProducer(shared_ptr<configuration> conf, const boost::property_tree::ptree& pt);
+vector<producer> ParseSourceProducer(const shared_ptr<configuration>& conf, const boost::property_tree::ptree& pt);
+producer ParseTargetProducer(const shared_ptr<configuration>& conf, const boost::property_tree::ptree& pt);
 vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt);
-unique_ptr<grid> ParseAreaAndGrid(std::shared_ptr<configuration> conf, const boost::property_tree::ptree& pt);
+unique_ptr<grid> ParseAreaAndGrid(const std::shared_ptr<configuration>& conf, const boost::property_tree::ptree& pt);
 vector<forecast_time> ParseTime(std::shared_ptr<configuration> conf, const boost::property_tree::ptree& pt);
 
 vector<level> LevelsFromString(const string& levelType, const string& levelValues);
@@ -883,7 +883,7 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 	return g;
 }
 
-unique_ptr<grid> ParseAreaAndGridFromPoints(configuration& conf, const boost::property_tree::ptree& pt)
+unique_ptr<grid> ParseAreaAndGridFromPoints(const boost::property_tree::ptree& pt)
 {
 	unique_ptr<grid> g;
 
@@ -992,7 +992,7 @@ unique_ptr<grid> ParseAreaAndGridFromPoints(configuration& conf, const boost::pr
 	return g;
 }
 
-unique_ptr<grid> ParseAreaAndGrid(shared_ptr<configuration> conf, const boost::property_tree::ptree& pt)
+unique_ptr<grid> ParseAreaAndGrid(const shared_ptr<configuration>& conf, const boost::property_tree::ptree& pt)
 {
 	/*
 	 * Parse area and grid from different possible options.
@@ -1039,7 +1039,7 @@ unique_ptr<grid> ParseAreaAndGrid(shared_ptr<configuration> conf, const boost::p
 
 	// 3. Points
 
-	auto ig = ParseAreaAndGridFromPoints(*conf, pt);
+	auto ig = ParseAreaAndGridFromPoints(pt);
 
 	if (ig)
 	{
@@ -1149,7 +1149,7 @@ unique_ptr<grid> ParseAreaAndGrid(shared_ptr<configuration> conf, const boost::p
 	return rg;
 }
 
-std::vector<producer> ParseSourceProducer(shared_ptr<configuration> conf, const boost::property_tree::ptree& pt)
+std::vector<producer> ParseSourceProducer(const shared_ptr<configuration>& conf, const boost::property_tree::ptree& pt)
 {
 	std::vector<producer> sourceProducers;
 	vector<string> sourceProducersStr = himan::util::Split(pt.get<string>("source_producer"), ",", false);
@@ -1204,7 +1204,7 @@ std::vector<producer> ParseSourceProducer(shared_ptr<configuration> conf, const 
 	return sourceProducers;
 }
 
-producer ParseTargetProducer(shared_ptr<configuration> conf, const boost::property_tree::ptree& pt)
+producer ParseTargetProducer(const shared_ptr<configuration>& conf, const boost::property_tree::ptree& pt)
 {
 	const HPDatabaseType dbtype = conf->DatabaseType();
 

@@ -473,8 +473,6 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	// Cape filtering
 	himan::matrix<double> filtered_CAPE = numerical_functions::Max2D(CAPEMaxInfo->Data(), small_filter_kernel);
-	auto b = CAPEMaxInfo->Base();
-	b->data = move(filtered_CAPE);
 
 	// Cb_top filtering
 	himan::matrix<double> filtered_CbTop = numerical_functions::Max2D(CbTopMaxInfo->Data(), small_filter_kernel);

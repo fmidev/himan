@@ -17,15 +17,6 @@ grid::grid()
 {
 }
 
-grid::grid(const grid& other)
-    : itsGridClass(other.itsGridClass),
-      itsGridType(other.itsGridType),
-      itsAB(other.itsAB),
-      itsUVRelativeToGrid(other.itsUVRelativeToGrid),
-      itsEarthShape(other.itsEarthShape)
-{
-}
-
 bool grid::EqualsTo(const grid& other) const
 {
 	if (other.itsGridType != itsGridType)

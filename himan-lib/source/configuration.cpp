@@ -41,39 +41,6 @@ configuration::configuration()
 {
 }
 
-configuration::configuration(const configuration& other)
-    : itsSourceProducers(other.itsSourceProducers),
-      itsOutputFileType(other.itsOutputFileType),
-      itsFileWriteOption(other.itsFileWriteOption),
-      itsFileCompression(other.itsFileCompression),
-      itsDatabaseType(other.itsDatabaseType),
-      itsConfigurationFile(other.itsConfigurationFile),
-      itsAuxiliaryFiles(other.itsAuxiliaryFiles),
-      itsOriginTime(other.itsOriginTime),
-      itsReadDataFromDatabase(other.itsReadDataFromDatabase),
-      itsThreadCount(other.itsThreadCount),
-      itsTargetGeomName(other.itsTargetGeomName),
-      itsSourceGeomNames(other.itsSourceGeomNames),
-      itsStatisticsLabel(other.itsStatisticsLabel),
-      itsTargetProducer(other.itsTargetProducer),
-      itsUseCuda(other.itsUseCuda),
-      itsUseCudaForPacking(other.itsUseCudaForPacking),
-      itsUseCudaForUnpacking(other.itsUseCudaForUnpacking),
-      itsUseCudaForInterpolation(other.itsUseCudaForInterpolation),
-      itsUseCache(other.itsUseCache),
-      itsUseDynamicMemoryAllocation(other.itsUseDynamicMemoryAllocation),
-      itsReadAllAuxiliaryFilesToCache(other.itsReadAllAuxiliaryFilesToCache),
-      itsCudaDeviceCount(other.itsCudaDeviceCount),
-      itsCudaDeviceId(other.itsCudaDeviceId),
-      itsForecastStep(other.itsForecastStep),
-      itsCacheLimit(other.itsCacheLimit),
-      itsParamFile(other.itsParamFile),
-      itsAsyncExecution(other.itsAsyncExecution),
-      itsUpdateSSStateTable(other.itsUpdateSSStateTable),
-      itsUploadStatistics(other.itsUploadStatistics)
-{
-}
-
 std::ostream& configuration::Write(std::ostream& file) const
 {
 	file << "<" << ClassName() << ">" << std::endl;

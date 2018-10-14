@@ -20,7 +20,7 @@ class fractile : public compiled_plugin, private compiled_plugin_base
    public:
 	fractile();
 
-	virtual ~fractile();
+	virtual ~fractile() = default;
 
 	fractile(const fractile& other) = delete;
 	fractile& operator=(const fractile& other) = delete;

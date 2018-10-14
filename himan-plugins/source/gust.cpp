@@ -31,9 +31,7 @@ struct deltaT
 	vector<double> deltaT_600;
 	vector<double> deltaT_700;
 
-	deltaT()
-	{
-	}
+	deltaT() = default;
 };
 
 struct deltaTot
@@ -46,9 +44,7 @@ struct deltaTot
 	vector<double> deltaTot_600;
 	vector<double> deltaTot_700;
 
-	deltaTot()
-	{
-	}
+	deltaTot() = default;
 };
 
 struct intT
@@ -61,9 +57,7 @@ struct intT
 	vector<double> intT_600;
 	vector<double> intT_700;
 
-	intT()
-	{
-	}
+	intT() = default;
 };
 
 struct intTot
@@ -76,18 +70,16 @@ struct intTot
 	vector<double> intTot_600;
 	vector<double> intTot_700;
 
-	intTot()
-	{
-	}
+	intTot() = default;
 };
 
-void DeltaT(shared_ptr<const plugin_configuration> conf, info_t T_lowestLevel, const forecast_time& ftime,
+void DeltaT(const shared_ptr<const plugin_configuration>& conf, info_t T_lowestLevel, const forecast_time& ftime,
             const forecast_type& ftype, size_t gridSize, deltaT& dT);
-void DeltaTot(deltaTot& dTot, info_t T_lowestLevel, size_t gridSize);
+void DeltaTot(deltaTot& dTot, const info_t& T_lowestLevel, size_t gridSize);
 void IntT(intT& iT, const deltaT& dT, size_t gridSize);
 void IntTot(intTot& iTot, const deltaTot& dTot, size_t gridSize);
-void LowAndMiddleClouds(vector<double>& lowAndMiddleClouds, info_t lowClouds, info_t middleClouds, info_t highClouds,
-                        info_t totalClouds);
+void LowAndMiddleClouds(vector<double>& lowAndMiddleClouds, const info_t& lowClouds, const info_t& middleClouds,
+                        const info_t& highClouds, const info_t& totalClouds);
 
 gust::gust()
 {
@@ -514,7 +506,7 @@ void gust::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threa
 	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
 
-void DeltaT(shared_ptr<const plugin_configuration> conf, info_t T_lowestLevel, const forecast_time& ftime,
+void DeltaT(const shared_ptr<const plugin_configuration>& conf, info_t T_lowestLevel, const forecast_time& ftime,
             const forecast_type& ftype, size_t gridSize, deltaT& dT)
 {
 	auto h = GET_PLUGIN(hitool);
@@ -574,7 +566,7 @@ void DeltaT(shared_ptr<const plugin_configuration> conf, info_t T_lowestLevel, c
 	}
 }
 
-void DeltaTot(deltaTot& dTot, info_t T_lowestLevel, size_t gridSize)
+void DeltaTot(deltaTot& dTot, const info_t& T_lowestLevel, size_t gridSize)
 {
 	dTot.deltaTot_100 = vector<double>(gridSize, 0);
 	dTot.deltaTot_200 = vector<double>(gridSize, 0);
@@ -658,8 +650,8 @@ void IntTot(intTot& iTot, const deltaTot& dTot, size_t gridSize)
 	}
 }
 
-void LowAndMiddleClouds(vector<double>& lowAndMiddleClouds, info_t lowClouds, info_t middleClouds, info_t highClouds,
-                        info_t totalClouds)
+void LowAndMiddleClouds(vector<double>& lowAndMiddleClouds, const info_t& lowClouds, const info_t& middleClouds,
+                        const info_t& highClouds, const info_t& totalClouds)
 {
 	for (size_t i = 0; i < lowAndMiddleClouds.size(); ++i)
 	{

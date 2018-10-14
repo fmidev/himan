@@ -581,7 +581,7 @@ shared_ptr<himan::info<T>> querydata::CreateInfo(shared_ptr<NFmiQueryData> theDa
 				lt = kHeight;
 				break;
 
-			case kFmiPressure:
+			case kFmiPressureLevel:
 				lt = kPressure;
 				break;
 
