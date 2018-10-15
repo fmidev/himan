@@ -21,6 +21,7 @@ env.Append(LIBPATH = librarypaths)
 libraries = []
 
 libraries.append('himan')
+libraries.append('fmidb')
 libraries.append('rt')
 libraries.append('jasper')
 libraries.append('odbc')
