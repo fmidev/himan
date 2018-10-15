@@ -17,6 +17,7 @@ Requires: himan-lib >= 18.8.7
 Requires: himan-plugins
 Requires: gdal >= 1.11.0
 Requires: zlib
+Requires: libfmidb
 BuildRequires: boost-devel >= 1.66
 
 %if %{defined suse_version}
