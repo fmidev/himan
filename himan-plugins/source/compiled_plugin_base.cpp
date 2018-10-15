@@ -142,7 +142,7 @@ bool compiled_plugin_base::SetAB(const info_t& myTargetInfo, const info_t& sourc
 
 		for (myTargetInfo->Reset<param>(); myTargetInfo->Next<param>();)
 		{
-			myTargetInfo->Grid()->AB(sourceInfo->Grid()->AB());
+        	        myTargetInfo->Set<level>(sourceInfo->Level());
 		}
 
 		myTargetInfo->Index<param>(paramIndex);

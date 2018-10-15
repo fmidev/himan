@@ -182,8 +182,9 @@ size_t reduced_gaussian_grid::Hash() const
 	vector<size_t> hashes;
 	hashes.push_back(Type());
 	hashes.push_back(N());
-	hashes.push_back(boost::hash_range(itsAccumulatedPointsAlongParallels.begin(),itsAccumulatedPointsAlongParallels.end()));
-	return boost::hash_range(hashes.begin(),hashes.end());
+	hashes.push_back(
+	    boost::hash_range(itsAccumulatedPointsAlongParallels.begin(), itsAccumulatedPointsAlongParallels.end()));
+	return boost::hash_range(hashes.begin(), hashes.end());
 }
 
 std::map<int, std::vector<double>> reduced_gaussian_grid::cachedLatitudes;

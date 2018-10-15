@@ -709,7 +709,7 @@ bool grib::ToFile(info<T>& anInfo, string& outputFile, bool appendToFile)
 	HPForecastType forecastType = anInfo.ForecastType().Type();
 
 	if (edition == 1 &&
-	    (anInfo.Grid()->AB().size() > 255 || (forecastType == kEpsControl || forecastType == kEpsPerturbation)))
+	    (anInfo.Level().AB().size() > 255 || (forecastType == kEpsControl || forecastType == kEpsPerturbation)))
 	{
 		itsLogger.Trace("File type forced to GRIB2 (level value: " + to_string(anInfo.Level().Value()) +
 		                ", forecast type: " + HPForecastTypeToString.at(forecastType) + ")");
@@ -922,7 +922,7 @@ bool grib::ToFile(info<T>& anInfo, string& outputFile, bool appendToFile)
 		}
 	}
 
-	vector<double> AB = anInfo.Grid()->AB();
+	vector<double> AB = anInfo.Level().AB();
 
 	if (!AB.empty())
 	{
@@ -1910,6 +1910,20 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 
 	newInfo->Producer(prod);
 
+        std::vector<double> ab;
+
+        if (l.Type() == himan::kHybrid)
+        {
+                long nv = itsGrib->Message().NV();
+
+                if (nv > 0)
+                {
+                        ab = itsGrib->Message().PV();
+                }
+        }
+
+        l.AB(ab);
+
 	newInfo->template Set<param>({p});
 	newInfo->template Set<forecast_time>({t});
 	newInfo->template Set<level>({l});
@@ -1918,20 +1932,7 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 	unique_ptr<grid> newGrid = ReadAreaAndGrid();
 
 	ASSERT(newGrid);
-
-	std::vector<double> ab;
-
-	if (l.Type() == himan::kHybrid)
-	{
-		long nv = itsGrib->Message().NV();
-
-		if (nv > 0)
-		{
-			ab = itsGrib->Message().PV();
-		}
-	}
-
-	newGrid->AB(ab);
+	
 	auto b = make_shared<base<T>>();
 	b->grid = shared_ptr<grid>(newGrid->Clone());
 
