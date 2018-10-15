@@ -126,7 +126,7 @@ void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
 		return;
 	}
 
-	const int geometryId = stoi(geomInfo["geom_id"]);
+	const int geometryId = stoi(geomInfo["id"]);
 
 	auto tableInfo = r->RadonDB().GetTableName(producerId, analysisTime, pc->TargetGeomName());
 
