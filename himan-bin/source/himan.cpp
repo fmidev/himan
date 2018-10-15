@@ -117,37 +117,25 @@ void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
 	const auto analysisTime = pc->Times()[0].OriginDateTime().String();
 
 	logger log("himan");
-	stringstream ss;
 
-	ss << "SELECT id FROM geom WHERE name = '" << pc->TargetGeomName() << "'";
+	auto geomInfo = r->RadonDB().GetGeometryDefinition(pc->TargetGeomName());
 
-	r->RadonDB().Query(ss.str());
-
-	auto row = r->RadonDB().FetchRow();
-
-	if (row.empty())
+	if (geomInfo.empty())
 	{
-		log.Error("ss_state update failed: geometry id not found for name: " + pc->TargetGeomName());
+		log.Error("ss_state update failed: geomery information not found");
 		return;
 	}
 
-	const auto geometryId = stoi(row[0]);
+	const int geometryId = stoi(geomInfo["geom_id"]);
 
-	ss.str("");
-	ss << "SELECT partition_name FROM as_grid WHERE producer_id = " << producerId << " AND analysis_time = '"
-	   << analysisTime << "' AND geometry_id = " << geometryId;
+	auto tableInfo = r->RadonDB().GetTableName(producerId, analysisTime, pc->TargetGeomName());
 
-	r->RadonDB().Query(ss.str());
-
-	row = r->RadonDB().FetchRow();
-
-	if (row.empty())
+	if (tableInfo.empty())
 	{
 		log.Error("ss_state update failed: table not found from as_grid");
 		return;
 	}
 
-	const auto partitionName = row[0];
 	int inserts = 0, updates = 0;
 
 	for (const auto& ftype : pc->ForecastTypes())
@@ -159,6 +147,8 @@ void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
 			forecastTypeValue = static_cast<int>(ftype.Value());
 		}
 
+		stringstream ss;
+
 		for (const auto& ftime : pc->Times())
 		{
 			try
@@ -169,7 +159,7 @@ void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
 				   << producerId << ", " << geometryId << ", "
 				   << "'" << analysisTime << "', '" << util::MakeSQLInterval(ftime) << "', "
 				   << static_cast<int>(ftype.Type()) << ", " << forecastTypeValue << ", "
-				   << "'" << partitionName << "')";
+				   << "'" << tableInfo["table_name"] << "')";
 
 				r->RadonDB().Execute(ss.str());
 				inserts++;
