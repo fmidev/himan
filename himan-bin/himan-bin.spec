@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 18.10.10
+Version: 18.10.15
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -63,6 +63,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Mon Oct 15 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.15-1.fmi
+- ss_state table changes
 * Wed Oct 10 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.10-1.fmi
 - Refactoring plugin_configuration
 * Fri Oct  5 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.5-1.fmi
