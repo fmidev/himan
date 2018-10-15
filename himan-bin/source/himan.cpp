@@ -159,7 +159,7 @@ void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
 				   << producerId << ", " << geometryId << ", "
 				   << "'" << analysisTime << "', '" << util::MakeSQLInterval(ftime) << "', "
 				   << static_cast<int>(ftype.Type()) << ", " << forecastTypeValue << ", "
-				   << "'" << tableInfo["table_name"] << "')";
+				   << "'" << tableInfo["schema_name"] << "." << tableInfo["table_name"] << "')";
 
 				r->RadonDB().Execute(ss.str());
 				inserts++;
