@@ -30,8 +30,8 @@ class grid
 
 	virtual ~grid() = default;
 
-	grid(const grid& other);
-	grid& operator=(const grid& other) = delete;
+	grid(const grid& other) = default;
+	grid& operator=(const grid& other) = default;
 
 	virtual std::string ClassName() const
 	{
@@ -78,7 +78,7 @@ class grid
 	virtual point LatLon(size_t locationIndex) const = 0;
 
 	/* Return a unique key */
-        virtual size_t Hash() const = 0;
+	virtual size_t Hash() const = 0;
 
 	bool UVRelativeToGrid() const;
 	void UVRelativeToGrid(bool theUVRelativeToGrid);

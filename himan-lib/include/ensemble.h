@@ -29,7 +29,7 @@ class ensemble
 
 	ensemble();
 
-	virtual ~ensemble();
+	virtual ~ensemble() = default;
 
 	ensemble(const ensemble& other);
 

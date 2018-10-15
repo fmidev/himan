@@ -8,9 +8,6 @@
 using namespace himan;
 using namespace std;
 
-param::~param()
-{
-}
 param::param()
     : itsId(kHPMissingInt),
       itsName("XX-X"),
@@ -184,46 +181,6 @@ param::param(const map<string, string>& databaseInfo) : param()
 		{
 		}
 	}
-}
-
-param::param(const param& other)
-    : itsId(other.itsId),
-      itsName(other.itsName),
-      itsScale(other.itsScale),
-      itsBase(other.itsBase),
-      itsUnivId(other.itsUnivId),
-      itsGribParameter(other.itsGribParameter),
-      itsGribCategory(other.itsGribCategory),
-      itsGribDiscipline(other.itsGribDiscipline),
-      itsGribTableVersion(other.itsGribTableVersion),
-      itsGribIndicatorOfParameter(other.itsGribIndicatorOfParameter),
-      itsVersion(other.itsVersion),
-      itsInterpolationMethod(other.itsInterpolationMethod),
-      itsUnit(other.itsUnit),
-      itsAggregation(other.itsAggregation),
-      itsPrecision(other.itsPrecision)
-{
-}
-
-param& param::operator=(const param& other)
-{
-	itsId = other.itsId;
-	itsName = other.itsName;
-	itsScale = other.itsScale;
-	itsBase = other.itsBase;
-	itsUnivId = other.itsUnivId;
-	itsGribParameter = other.itsGribParameter;
-	itsGribCategory = other.itsGribCategory;
-	itsGribDiscipline = other.itsGribDiscipline;
-	itsGribTableVersion = other.itsGribTableVersion;
-	itsGribIndicatorOfParameter = other.itsGribIndicatorOfParameter;
-	itsVersion = other.itsVersion;
-	itsInterpolationMethod = other.itsInterpolationMethod;
-	itsUnit = other.itsUnit;
-	itsAggregation = other.itsAggregation;
-	itsPrecision = other.itsPrecision;
-
-	return *this;
 }
 
 bool param::operator==(const param& other) const

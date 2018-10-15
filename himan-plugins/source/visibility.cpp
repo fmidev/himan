@@ -60,7 +60,7 @@ void visibility::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void visibility::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	auto myThreadedLogger = logger("visibilityThread #" + to_string(threadIndex));
 

@@ -22,7 +22,7 @@ static level itsBottomLevel;
 
 typedef vector<double> vec;
 
-pair<vec, vec> GetSRHSourceData(const shared_ptr<info>& myTargetInfo, shared_ptr<hitool> h);
+pair<vec, vec> GetSRHSourceData(const shared_ptr<info<double>>& myTargetInfo, shared_ptr<hitool> h);
 
 #ifdef HAVE_CUDA
 namespace stabilitygpu
@@ -33,8 +33,9 @@ void Process(shared_ptr<const plugin_configuration> conf, info_t myTargetInfo);
 
 namespace STABILITY
 {
-himan::info_t Fetch(std::shared_ptr<const plugin_configuration>& conf, std::shared_ptr<himan::info>& myTargetInfo,
-                    const himan::level& lev, const himan::param& par, bool returnPacked = false);
+himan::info_t Fetch(std::shared_ptr<const plugin_configuration>& conf,
+                    std::shared_ptr<himan::info<double>>& myTargetInfo, const himan::level& lev,
+                    const himan::param& par, bool returnPacked = false);
 
 vec Shear(std::shared_ptr<himan::plugin::hitool>& h, const himan::param& par, const vec& lowerHeight,
           const vec& upperHeight)
@@ -61,8 +62,9 @@ vec Shear(std::shared_ptr<himan::plugin::hitool>& h, const himan::param& par, do
 	return Shear(h, par, lower, upper);
 }
 
-himan::info_t Fetch(std::shared_ptr<const plugin_configuration>& conf, std::shared_ptr<himan::info>& myTargetInfo,
-                    const himan::level& lev, const himan::param& par, bool useCuda)
+himan::info_t Fetch(std::shared_ptr<const plugin_configuration>& conf,
+                    std::shared_ptr<himan::info<double>>& myTargetInfo, const himan::level& lev,
+                    const himan::param& par, bool useCuda)
 {
 	const forecast_time forecastTime = myTargetInfo->Time();
 	const forecast_type forecastType = myTargetInfo->ForecastType();
@@ -452,7 +454,7 @@ void CalculateBulkShearIndices(shared_ptr<const plugin_configuration>& conf, inf
 	myTargetInfo->Data().Set(CAPES);
 }
 
-void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadIndex)
+void stability::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short theThreadIndex)
 {
 	auto myThreadedLogger = logger("stabilityThread #" + to_string(theThreadIndex));
 
@@ -570,7 +572,7 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 	myThreadedLogger.Info("[" + deviceType + "] Missing: " + to_string(util::MissingPercent(*myTargetInfo)) + "%");
 }
 
-pair<vec, vec> GetSRHSourceData(const shared_ptr<info>& myTargetInfo, shared_ptr<hitool> h)
+pair<vec, vec> GetSRHSourceData(const shared_ptr<info<double>>& myTargetInfo, shared_ptr<hitool> h)
 {
 	// NOTES COPIED FROM SMARTTOOLS-LIBRARY
 
@@ -660,7 +662,7 @@ void stability::WriteToFile(const info_t targetInfo, write_options writeOptions)
 
 	// writing might modify iterator positions --> create a copy
 
-	auto tempInfo = make_shared<info>(*targetInfo);
+	auto tempInfo = make_shared<info<double>>(*targetInfo);
 
 	tempInfo->Reset<level>();
 

@@ -76,7 +76,7 @@ __global__ void CalculateTQ(const Type* __restrict__ d_T, const Type* __restrict
 	}
 }
 
-void ProcessHumidityGPU(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo)
+void ProcessHumidityGPU(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info<double>> myTargetInfo)
 {
 	cudaStream_t stream;
 

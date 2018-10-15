@@ -47,8 +47,8 @@ class ncl : public compiled_plugin, private compiled_plugin_base
 	}
 
    private:
-	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
-	bool CountValues(const std::shared_ptr<himan::info> values);
+	virtual void Calculate(std::shared_ptr<info<double>> theTargetInfo, unsigned short theThreadIndex);
+	bool CountValues(const std::shared_ptr<himan::info<double>> values);
 	int itsBottomLevel;
 	int itsTopLevel;
 	int itsTargetTemperature;

@@ -122,7 +122,7 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void windvector::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	// Required source parameters
 
@@ -262,8 +262,9 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
 
-shared_ptr<himan::info> windvector::Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam,
-                                          const forecast_type& theType, bool returnPacked) const
+shared_ptr<himan::info<double>> windvector::Fetch(const forecast_time& theTime, const level& theLevel,
+                                                  const param& theParam, const forecast_type& theType,
+                                                  bool returnPacked) const
 {
 	auto f = GET_PLUGIN(fetcher);
 	f->DoVectorComponentRotation(true);

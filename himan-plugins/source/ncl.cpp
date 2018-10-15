@@ -64,7 +64,7 @@ void ncl::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void ncl::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	const param HParam("HL-M");
 	const param TParam("T-K");
@@ -258,7 +258,7 @@ void ncl::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
 
-bool ncl::CountValues(const shared_ptr<himan::info> values)
+bool ncl::CountValues(const shared_ptr<himan::info<double>> values)
 {
 	size_t s = values->Data().Size();
 

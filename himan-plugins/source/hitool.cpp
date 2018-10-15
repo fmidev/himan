@@ -115,7 +115,7 @@ shared_ptr<modifier> hitool::CreateModifier(HPModifierType modifierType) const
 			break;
 
 		default:
-			itsLogger.Fatal("Unknown modifier type: " + boost::lexical_cast<string>(modifierType));
+			itsLogger.Fatal("Unknown modifier type: " + to_string(modifierType));
 			himan::Abort();
 			break;
 	}
@@ -126,8 +126,6 @@ shared_ptr<modifier> hitool::CreateModifier(HPModifierType modifierType) const
 pair<level, level> hitool::LevelForHeight(const producer& prod, double height) const
 {
 	ASSERT(itsConfiguration);
-
-	using boost::lexical_cast;
 
 	long producerId = 0;
 
@@ -167,7 +165,7 @@ pair<level, level> hitool::LevelForHeight(const producer& prod, double height) c
 			break;
 
 		default:
-			itsLogger.Error("Unsupported producer for hitool::LevelForHeight(): " + lexical_cast<string>(prod.Id()));
+			itsLogger.Error("Unsupported producer for hitool::LevelForHeight(): " + to_string(prod.Id()));
 			break;
 	}
 
@@ -212,8 +210,8 @@ pair<level, level> hitool::LevelForHeight(const producer& prod, double height) c
 
 		row = r->RadonDB().FetchRow();
 
-		absolutelowest = lexical_cast<long>(r->RadonDB().GetProducerMetaData(prod.Id(), "last hybrid level number"));
-		absolutehighest = lexical_cast<long>(r->RadonDB().GetProducerMetaData(prod.Id(), "first hybrid level number"));
+		absolutelowest = stol(r->RadonDB().GetProducerMetaData(prod.Id(), "last hybrid level number"));
+		absolutehighest = stol(r->RadonDB().GetProducerMetaData(prod.Id(), "first hybrid level number"));
 	}
 
 	long newlowest = absolutelowest, newhighest = absolutehighest;
@@ -230,7 +228,7 @@ pair<level, level> hitool::LevelForHeight(const producer& prod, double height) c
 			// For last hybrid level (the lowest ie min), get one level below the min level if possible
 			// This means that we have a buffer of three levels for both directions!
 
-			newlowest = lexical_cast<long>(row[0]) + 1;
+			newlowest = stol(row[0]) + 1;
 
 			if (newlowest > absolutelowest)
 			{
@@ -240,7 +238,7 @@ pair<level, level> hitool::LevelForHeight(const producer& prod, double height) c
 
 		if (row[1] != "")
 		{
-			newhighest = lexical_cast<long>(row[1]) - 1;
+			newhighest = stol(row[1]) - 1;
 
 			if (newhighest < absolutehighest)
 			{
@@ -256,8 +254,7 @@ pair<level, level> hitool::LevelForHeight(const producer& prod, double height) c
 
 	ASSERT(newlowest >= newhighest);
 
-	return make_pair<level, level>(level(kHybrid, static_cast<double>(newlowest)),
-	                               level(kHybrid, static_cast<double>(newhighest)));
+	return make_pair(level(kHybrid, static_cast<double>(newlowest)), level(kHybrid, static_cast<double>(newhighest)));
 }
 
 vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelType wantedLevelType,
@@ -302,12 +299,10 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 
 		try
 		{
-			highestHybridLevel =
-			    boost::lexical_cast<long>(r->RadonDB().GetProducerMetaData(prod.Id(), "first hybrid level number"));
-			lowestHybridLevel =
-			    boost::lexical_cast<long>(r->RadonDB().GetProducerMetaData(prod.Id(), "last hybrid level number"));
+			highestHybridLevel = stol(r->RadonDB().GetProducerMetaData(prod.Id(), "first hybrid level number"));
+			lowestHybridLevel = stol(r->RadonDB().GetProducerMetaData(prod.Id(), "last hybrid level number"));
 		}
-		catch (const boost::bad_lexical_cast& e)
+		catch (const invalid_argument& e)
 		{
 			itsLogger.Error("Unable to get hybrid level information from database");
 			throw;
@@ -342,8 +337,8 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 
 			ASSERT(lowestHybridLevel >= highestHybridLevel);
 
-			itsLogger.Debug("Adjusting level range to " + boost::lexical_cast<string>(lowestHybridLevel) + " .. " +
-			                boost::lexical_cast<string>(highestHybridLevel) + " for height range " +
+			itsLogger.Debug("Adjusting level range to " + to_string(lowestHybridLevel) + " .. " +
+			                to_string(highestHybridLevel) + " for height range " +
 			                boost::str(boost::format("%.2f") % min_value) + " .. " +
 			                boost::str(boost::format("%.2f") % max_value) + " " + heightUnit);
 		}
@@ -382,8 +377,8 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 
 			ASSERT(lowestHybridLevel >= highestHybridLevel);
 
-			itsLogger.Debug("Adjusting level range to " + boost::lexical_cast<string>(lowestHybridLevel) + " .. " +
-			                boost::lexical_cast<string>(highestHybridLevel) + " for height range " +
+			itsLogger.Debug("Adjusting level range to " + to_string(lowestHybridLevel) + " .. " +
+			                to_string(highestHybridLevel) + " for height range " +
 			                boost::str(boost::format("%.2f") % min_value) + " .. " +
 			                boost::str(boost::format("%.2f") % max_value) + " " + heightUnit);
 		}
@@ -434,7 +429,7 @@ vector<double> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelTyp
 valueheight hitool::GetData(const level& wantedLevel, const param& wantedParam, const forecast_time& wantedTime,
                             const forecast_type& wantedType) const
 {
-	shared_ptr<info> values, heights;
+	shared_ptr<info<double>> values, heights;
 	auto f = GET_PLUGIN(fetcher);
 
 	param heightParam;
@@ -449,7 +444,7 @@ valueheight hitool::GetData(const level& wantedLevel, const param& wantedParam, 
 	}
 	else
 	{
-		itsLogger.Fatal("Invalid height unit: " + boost::lexical_cast<string>(itsHeightUnit));
+		itsLogger.Fatal("Invalid height unit: " + to_string(itsHeightUnit));
 	}
 
 	try
@@ -1248,7 +1243,7 @@ void hitool::HeightUnit(HPParameterUnit theHeightUnit)
 {
 	if (theHeightUnit != kM && theHeightUnit != kHPa)
 	{
-		itsLogger.Error("Invalid height unit: " + boost::lexical_cast<string>(theHeightUnit));
+		itsLogger.Error("Invalid height unit: " + to_string(theHeightUnit));
 		return;
 	}
 

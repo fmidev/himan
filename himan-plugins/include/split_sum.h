@@ -48,8 +48,8 @@ class split_sum : public compiled_plugin, private compiled_plugin_base
 	}
 
    private:
-	void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
-	void DoParam(std::shared_ptr<info> myTargetInfo, std::string myParamName, std::string threadIndex) const;
+	void Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex);
+	void DoParam(std::shared_ptr<info<double>> myTargetInfo, std::string myParamName, std::string threadIndex) const;
 
 	/**
 	 * @brief Fetch source data for a rate calculation.
@@ -62,8 +62,8 @@ class split_sum : public compiled_plugin, private compiled_plugin_base
 	 * @return Requested data, previous and current
 	 */
 
-	std::pair<std::shared_ptr<himan::info>, std::shared_ptr<himan::info>> GetSourceDataForRate(
-	    std::shared_ptr<info> myTargetInfo, int step) const;
+	std::pair<std::shared_ptr<himan::info<double>>, std::shared_ptr<himan::info<double>>> GetSourceDataForRate(
+	    std::shared_ptr<info<double>> myTargetInfo, int step) const;
 
 	/**
 	 * @brief Fetching source data from cumulative parameter
@@ -74,7 +74,8 @@ class split_sum : public compiled_plugin, private compiled_plugin_base
 	 * @return himan::info contain source data, empty if no data found
 	 */
 
-	std::shared_ptr<info> FetchSourceData(std::shared_ptr<info> myTargetInfo, const forecast_time& wantedTime) const;
+	std::shared_ptr<info<double>> FetchSourceData(std::shared_ptr<info<double>> myTargetInfo,
+	                                              const forecast_time& wantedTime) const;
 };
 
 // the class factory

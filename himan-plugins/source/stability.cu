@@ -208,7 +208,7 @@ __global__ void BRNKernel(cdarr_t d_cape, cdarr_t d_u6, cdarr_t d_v6, cdarr_t d_
 	}
 }
 
-void CalculateBulkShear(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo,
+void CalculateBulkShear(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info<double>> myTargetInfo,
                         std::shared_ptr<himan::plugin::hitool> h, cudaStream_t& stream)
 {
 	using namespace himan;
@@ -326,7 +326,7 @@ void CalculateBulkShear(std::shared_ptr<const plugin_configuration> conf, std::s
 		CUDA_CHECK(cudaFree(d_v));
 }
 
-void StormRelativeHelicity(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo,
+void StormRelativeHelicity(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info<double>> myTargetInfo,
                            std::shared_ptr<himan::plugin::hitool> h, double* d_srh, double stopHeight,
                            cudaStream_t& stream)
 {
@@ -499,7 +499,7 @@ void StormRelativeHelicity(std::shared_ptr<const plugin_configuration> conf, std
 	thrust::replace(dt_srh, dt_srh + N, 0., himan::MissingDouble());
 }
 
-void EnergyHelicityIndex(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo,
+void EnergyHelicityIndex(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info<double>> myTargetInfo,
                          double* d_srh, double* d_ehi, cudaStream_t& stream)
 {
 	double* d_cape = 0;
@@ -530,7 +530,7 @@ void EnergyHelicityIndex(std::shared_ptr<const plugin_configuration> conf, std::
 	}
 }
 
-void CalculateHelicity(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo,
+void CalculateHelicity(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info<double>> myTargetInfo,
                        std::shared_ptr<himan::plugin::hitool> h, cudaStream_t& stream)
 {
 	double* d_srh = 0;
@@ -559,8 +559,9 @@ void CalculateHelicity(std::shared_ptr<const plugin_configuration> conf, std::sh
 	CUDA_CHECK(cudaFree(d_ehi));
 }
 
-void CalculateBulkRichardsonNumber(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo,
-                                   std::shared_ptr<himan::plugin::hitool> h, cudaStream_t& stream)
+void CalculateBulkRichardsonNumber(std::shared_ptr<const plugin_configuration> conf,
+                                   std::shared_ptr<info<double>> myTargetInfo, std::shared_ptr<himan::plugin::hitool> h,
+                                   cudaStream_t& stream)
 {
 	double* d_brn = 0;
 	double* d_cape = 0;
@@ -634,8 +635,9 @@ void CalculateBulkRichardsonNumber(std::shared_ptr<const plugin_configuration> c
 	}
 }
 
-void CalculateLiftedIndices(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo,
-                            std::shared_ptr<himan::plugin::hitool> h, cudaStream_t& stream)
+void CalculateLiftedIndices(std::shared_ptr<const plugin_configuration> conf,
+                            std::shared_ptr<info<double>> myTargetInfo, std::shared_ptr<himan::plugin::hitool> h,
+                            cudaStream_t& stream)
 {
 	double* d_si = 0;
 	double* d_li = 0;
@@ -733,7 +735,7 @@ void CalculateLiftedIndices(std::shared_ptr<const plugin_configuration> conf, st
 	CUDA_CHECK(cudaFree(d_p500m));
 }
 
-void CalculateThetaEIndices(std::shared_ptr<info> myTargetInfo, std::shared_ptr<himan::plugin::hitool> h,
+void CalculateThetaEIndices(std::shared_ptr<info<double>> myTargetInfo, std::shared_ptr<himan::plugin::hitool> h,
                             cudaStream_t& stream)
 {
 	double* d_tstart = 0;
@@ -802,7 +804,7 @@ void CalculateThetaEIndices(std::shared_ptr<info> myTargetInfo, std::shared_ptr<
 
 namespace stabilitygpu
 {
-void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo)
+void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info<double>> myTargetInfo)
 {
 	cudaStream_t stream;
 

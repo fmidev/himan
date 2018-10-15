@@ -18,7 +18,7 @@ cache::cache()
 {
 	itsLogger = logger("cache");
 }
-string cache::UniqueName(const info& info)
+string cache::UniqueName(const info<double>& info)
 {
 	stringstream ss;
 
@@ -57,13 +57,15 @@ string cache::UniqueNameFromOptions(search_options& options)
 	return ss.str();
 }
 
-void cache::Insert(info_t anInfo, bool pin)
+void cache::Insert(shared_ptr<info<double>> anInfo, bool pin)
 {
-	SplitToPool(anInfo, pin);
+	return Insert<double>(anInfo, pin);
 }
-void cache::SplitToPool(info_t anInfo, bool pin)
+
+template <typename T>
+void cache::Insert(shared_ptr<info<T>> anInfo, bool pin)
 {
-	auto localInfo = make_shared<info>(*anInfo);
+	auto localInfo = make_shared<info<double>>(*anInfo);
 
 	// Cached data is never replaced by another data that has
 	// the same uniqueName
@@ -94,8 +96,8 @@ void cache::SplitToPool(info_t anInfo, bool pin)
 
 	if (localInfo->DimensionSize() > 1)
 	{
-		auto newInfo =
-		    make_shared<info>(localInfo->ForecastType(), localInfo->Time(), localInfo->Level(), localInfo->Param());
+		auto newInfo = make_shared<info<double>>(localInfo->ForecastType(), localInfo->Time(), localInfo->Level(),
+		                                         localInfo->Param());
 		newInfo->Base(localInfo->Base());
 		localInfo = newInfo;
 	}
@@ -104,22 +106,32 @@ void cache::SplitToPool(info_t anInfo, bool pin)
 	cache_pool::Instance()->Insert(uniqueName, localInfo, pin);
 }
 
-vector<shared_ptr<himan::info>> cache::GetInfo(search_options& options)
+template void cache::Insert<double>(shared_ptr<info<double>> anInfo, bool pin);
+
+vector<shared_ptr<himan::info<double>>> cache::GetInfo(search_options& options)
+{
+	return GetInfo<double>(options);
+}
+
+template <typename T>
+vector<shared_ptr<himan::info<T>>> cache::GetInfo(search_options& options)
 {
 	string uniqueName = UniqueNameFromOptions(options);
 
-	vector<shared_ptr<himan::info>> info;
+	vector<shared_ptr<himan::info<T>>> infos;
 
 	auto foundInfo = cache_pool::Instance()->GetInfo(uniqueName);
 	if (foundInfo)
 	{
-		info.push_back(foundInfo);
+		infos.push_back(foundInfo);
 	}
 
 	itsLogger.Trace("Data " + string(foundInfo ? "found" : "not found") + " for " + uniqueName);
 
-	return info;
+	return infos;
 }
+
+template vector<shared_ptr<himan::info<double>>> cache::GetInfo<double>(search_options& options);
 
 void cache::Clean()
 {
@@ -132,12 +144,12 @@ size_t cache::Size() const
 
 void cache::Replace(info_t anInfo, bool pin)
 {
-	auto localInfo = make_shared<info>(*anInfo);
+	auto localInfo = make_shared<info<double>>(*anInfo);
 
 	if (localInfo->DimensionSize() > 1)
 	{
-		auto newInfo =
-		    make_shared<info>(localInfo->ForecastType(), localInfo->Time(), localInfo->Level(), localInfo->Param());
+		auto newInfo = make_shared<info<double>>(localInfo->ForecastType(), localInfo->Time(), localInfo->Level(),
+		                                         localInfo->Param());
 		newInfo->Base(localInfo->Base());
 		localInfo = newInfo;
 	}
@@ -171,7 +183,7 @@ bool cache_pool::Exists(const string& uniqueName)
 	Lock lock(itsAccessMutex);
 	return itsCache.count(uniqueName) > 0;
 }
-void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info> anInfo, bool pin)
+void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info<double>> anInfo, bool pin)
 {
 	cache_item item;
 	item.info = anInfo;
@@ -191,7 +203,7 @@ void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info> anInfo
 		Clean();
 	}
 }
-void cache_pool::Replace(const string& uniqueName, shared_ptr<himan::info> anInfo, bool pin)
+void cache_pool::Replace(const string& uniqueName, shared_ptr<himan::info<double>> anInfo, bool pin)
 {
 	cache_item item;
 	item.info = anInfo;
@@ -253,14 +265,14 @@ void cache_pool::Clean()
 	itsLogger.Trace("Cache size: " + to_string(itsCache.size()));
 }
 
-shared_ptr<himan::info> cache_pool::GetInfo(const string& uniqueName)
+shared_ptr<himan::info<double>> cache_pool::GetInfo(const string& uniqueName)
 {
 	Lock lock(itsAccessMutex);
 
 	auto it = itsCache.find(uniqueName);
 	if (it != itsCache.end())
 	{
-		return make_shared<info>(*it->second.info);
+		return make_shared<info<double>>(*it->second.info);
 	}
 	return nullptr;
 }

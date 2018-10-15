@@ -23,7 +23,7 @@ void icing::Process(std::shared_ptr<const plugin_configuration> conf)
 	Start();
 }
 
-void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadIndex)
+void icing::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short theThreadIndex)
 {
 	// Required source parameters
 

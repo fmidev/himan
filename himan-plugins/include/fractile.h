@@ -20,7 +20,7 @@ class fractile : public compiled_plugin, private compiled_plugin_base
    public:
 	fractile();
 
-	virtual ~fractile();
+	virtual ~fractile() = default;
 
 	fractile(const fractile& other) = delete;
 	fractile& operator=(const fractile& other) = delete;
@@ -41,7 +41,7 @@ class fractile : public compiled_plugin, private compiled_plugin_base
 	}
 
    private:
-	virtual void Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadIndex);
+	virtual void Calculate(std::shared_ptr<info<double>> myTargetInfo, uint16_t threadIndex);
 	std::string itsParamName;
 	int itsEnsembleSize;
 	HPEnsembleType itsEnsembleType;

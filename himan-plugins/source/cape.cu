@@ -577,7 +577,7 @@ __global__ void MixingRatioFinalizeKernel(float* __restrict__ d_T, float* __rest
 }
 
 cape_source cape_cuda::GetHighestThetaEValuesGPU(const std::shared_ptr<const plugin_configuration>& conf,
-                                                 std::shared_ptr<info> myTargetInfo)
+                                                 std::shared_ptr<info<double>> myTargetInfo)
 {
 	himan::level curLevel = itsBottomLevel;
 
@@ -689,7 +689,7 @@ cape_source cape_cuda::GetHighestThetaEValuesGPU(const std::shared_ptr<const plu
 }
 
 cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_configuration>& conf,
-                                                   std::shared_ptr<info> myTargetInfo)
+                                                   std::shared_ptr<info<double>> myTargetInfo)
 {
 	myTargetInfo->FirstValidGrid();
 	const size_t N = myTargetInfo->Data().Size();
@@ -863,8 +863,8 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 }
 
 std::pair<std::vector<float>, std::vector<float>> cape_cuda::GetLFCGPU(
-    const std::shared_ptr<const plugin_configuration>& conf, std::shared_ptr<info> myTargetInfo, std::vector<float>& T,
-    std::vector<float>& P, std::vector<float>& TenvLCL)
+    const std::shared_ptr<const plugin_configuration>& conf, std::shared_ptr<info<double>> myTargetInfo,
+    std::vector<float>& T, std::vector<float>& P, std::vector<float>& TenvLCL)
 {
 	auto h = GET_PLUGIN(hitool);
 	h->Configuration(conf);
@@ -1035,11 +1035,11 @@ std::pair<std::vector<float>, std::vector<float>> cape_cuda::GetLFCGPU(
 	return std::make_pair(LFCT, LFCP);
 }
 
-void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration>& conf, std::shared_ptr<info> myTargetInfo,
-                          const std::vector<float>& Tsource, const std::vector<float>& Psource,
-                          const std::vector<float>& TLCL, const std::vector<float>& PLCL,
-                          const std::vector<float>& ZLCL, const std::vector<float>& PLFC,
-                          const std::vector<float>& ZLFC)
+void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration>& conf,
+                          std::shared_ptr<info<double>> myTargetInfo, const std::vector<float>& Tsource,
+                          const std::vector<float>& Psource, const std::vector<float>& TLCL,
+                          const std::vector<float>& PLCL, const std::vector<float>& ZLCL,
+                          const std::vector<float>& PLFC, const std::vector<float>& ZLFC)
 {
 	const params PParams({param("PGR-PA"), param("P-PA")});
 
@@ -1215,8 +1215,9 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration>& con
 	myTargetInfo->Data().Set(Convert(cinh));
 }
 
-void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>& conf, std::shared_ptr<info> myTargetInfo,
-                           const std::vector<float>& T, const std::vector<float>& P)
+void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>& conf,
+                           std::shared_ptr<info<double>> myTargetInfo, const std::vector<float>& T,
+                           const std::vector<float>& P)
 {
 	ASSERT(T.size() == P.size());
 

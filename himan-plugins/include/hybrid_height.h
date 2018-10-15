@@ -43,10 +43,10 @@ class hybrid_height : public compiled_plugin, private compiled_plugin_base
 	void RunTimeDimension(himan::info_t myTargetInfo, unsigned short threadIndex) override;
 
    private:
-	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
+	virtual void Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex);
 	bool WithHypsometricEquation(info_t& myTargetInfo);
 	bool WithGeopotential(info_t& myTargetInfo);
-	std::shared_ptr<himan::info> GetSurfacePressure(std::shared_ptr<himan::info>& myTargetInfo);
+	std::shared_ptr<himan::info<double>> GetSurfacePressure(std::shared_ptr<himan::info<double>>& myTargetInfo);
 
 	int itsBottomLevel;
 	bool itsUseGeopotential;

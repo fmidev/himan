@@ -1,40 +1,14 @@
-/**
- * @file info.cpp
- *
- * @date Nov 22, 2012
- * @author partio
- */
+#pragma once
 
-#include "info.h"
-#include "grid.h"
-#include "lambert_conformal_grid.h"
-#include "latitude_longitude_grid.h"
-#include "point_list.h"
-#include "stereographic_grid.h"
-#include <limits>  // for std::numeric_limits<size_t>::max();
-
-using namespace std;
-using namespace himan;
-
-info::info()
-    : itsLevelIterator(),
-      itsTimeIterator(),
-      itsParamIterator(),
-      itsForecastTypeIterator(),
-      itsDimensions(),
-      itsLogger(logger("info")),
-      itsLocationIndex(kIteratorResetValue)
-{
-}
-
-info::info(const vector<forecast_type>& ftypes, const vector<forecast_time>& times, const vector<level>& levels,
-           const vector<param>& params)
-    : info()
+template <typename T>
+info<T>::info(const std::vector<forecast_type>& ftypes, const std::vector<forecast_time>& times,
+              const std::vector<level>& levels, const std::vector<param>& pars)
+    : info<T>()
 {
 	Set<forecast_type>(ftypes);
 	Set<forecast_time>(times);
 	Set<level>(levels);
-	Set<param>(params);
+	Set<param>(pars);
 
 	itsDimensions.resize(Size<forecast_type>() * Size<forecast_time>() * Size<level>() * Size<param>());
 
@@ -44,12 +18,16 @@ info::info(const vector<forecast_type>& ftypes, const vector<forecast_time>& tim
 	First<forecast_type>();
 }
 
-info::info(const forecast_type& ftype, const forecast_time& time, const level& lvl, const param& par)
-    : info(vector<forecast_type>({ftype}), vector<forecast_time>({time}), vector<level>({lvl}), vector<param>({par}))
+template <typename T>
+info<T>::info(const forecast_type& ftype, const forecast_time& time, const level& lvl, const param& par)
+    : info(std::vector<forecast_type>({ftype}), std::vector<forecast_time>({time}), std::vector<level>({lvl}),
+           std::vector<param>({par}))
+
 {
 }
 
-info::info(const info& other)
+template <typename T>
+info<T>::info(const info& other)
     // Iterators are COPIED
     : itsLevelIterator(other.itsLevelIterator),
       itsTimeIterator(other.itsTimeIterator),
@@ -62,9 +40,29 @@ info::info(const info& other)
 	itsLogger = logger("info");
 }
 
-std::ostream& info::Write(std::ostream& file) const
+template <typename T>
+inline std::ostream& operator<<(std::ostream& file, const info<T>& ob)
 {
-	file << "<" << ClassName() << ">" << endl;
+	return ob.Write(file);
+}
+
+template <typename T>
+inline size_t info<T>::Index(size_t forecastTypeIndex, size_t timeIndex, size_t levelIndex, size_t paramIndex) const
+{
+	ASSERT(forecastTypeIndex != kIteratorResetValue);
+	ASSERT(timeIndex != kIteratorResetValue);
+	ASSERT(levelIndex != kIteratorResetValue);
+	ASSERT(paramIndex != kIteratorResetValue);
+
+	return (paramIndex * itsForecastTypeIterator.Size() * itsTimeIterator.Size() * itsLevelIterator.Size() +
+	        levelIndex * itsForecastTypeIterator.Size() * itsTimeIterator.Size() +
+	        timeIndex * itsForecastTypeIterator.Size() + forecastTypeIndex);
+}
+
+template <typename T>
+std::ostream& info<T>::Write(std::ostream& file) const
+{
+	file << "<" << ClassName() << ">" << std::endl;
 
 	file << itsProducer;
 
@@ -85,7 +83,58 @@ std::ostream& info::Write(std::ostream& file) const
 	return file;
 }
 
-void info::Create(shared_ptr<base> baseGrid, bool createDataBackend)
+template <typename T>
+template <typename U>
+void info<T>::Regrid(const std::vector<U>& newDim)
+{
+	size_t ftypesize = Size<forecast_type>();
+	size_t timesize = Size<forecast_time>();
+	size_t lvlsize = Size<level>();
+	size_t parsize = Size<param>();
+
+	if (std::is_same<U, forecast_type>::value)
+	{
+		ftypesize = newDim.size();
+	}
+	else if (std::is_same<U, forecast_time>::value)
+	{
+		timesize = newDim.size();
+	}
+	else if (std::is_same<U, level>::value)
+	{
+		lvlsize = newDim.size();
+	}
+	else if (std::is_same<U, param>::value)
+	{
+		parsize = newDim.size();
+	}
+
+	std::vector<std::shared_ptr<base<T>>> newDimensions(ftypesize * timesize * lvlsize * parsize);
+
+	First<forecast_type>();
+	First<forecast_time>();
+	First<level>();
+	Reset<param>();
+
+	while (Next())
+	{
+		if (IsValidGrid() == false)
+		{
+			continue;
+		}
+
+		size_t newI = (Index<param>() * ftypesize * timesize * lvlsize + Index<level>() * ftypesize * timesize +
+		               Index<forecast_time>() * ftypesize + Index<forecast_type>());
+
+		newDimensions[newI] = std::make_shared<base<T>>(std::shared_ptr<grid>(Grid()->Clone()), Data());
+	}
+
+	itsDimensions = move(newDimensions);
+	First();  // "Factory setting"
+}
+
+template <typename T>
+void info<T>::Create(std::shared_ptr<base<T>> baseGrid, bool createDataBackend)
 {
 	ASSERT(baseGrid);
 
@@ -109,10 +158,10 @@ void info::Create(shared_ptr<base> baseGrid, bool createDataBackend)
 				while (Next<param>())
 				// Create empty placeholders
 				{
-					auto g = shared_ptr<grid>(baseGrid->grid->Clone());
-					auto d = matrix<double>(baseGrid->data);
+					auto g = std::shared_ptr<grid>(baseGrid->grid->Clone());
+					auto d = matrix<T>(baseGrid->data);
 
-					auto b = make_shared<base>(g, d);
+					auto b = std::make_shared<base<T>>(g, d);
 
 					Base(b);
 
@@ -130,7 +179,8 @@ void info::Create(shared_ptr<base> baseGrid, bool createDataBackend)
 					}
 					else
 					{
-						throw runtime_error(ClassName() + ": Invalid grid type");
+						itsLogger.Fatal("Invalid grid type");
+						Abort();
 					}
 				}
 			}
@@ -140,83 +190,86 @@ void info::Create(shared_ptr<base> baseGrid, bool createDataBackend)
 	First();
 }
 
-void info::Merge(shared_ptr<info> otherInfo)
+template <typename T>
+void info<T>::Merge(std::shared_ptr<info> otherInfo)
 {
 	Reset();
 
-	otherInfo->Reset<forecast_type>();
+	otherInfo->template Reset<forecast_type>();
 
 	// X = forecast type
 	// Y = time
 	// Z = level
 	// Å = param
 
-	while (otherInfo->Next<forecast_type>())
+	while (otherInfo->template Next<forecast_type>())
 	{
-		if (itsForecastTypeIterator.Add(otherInfo->Value<forecast_type>()))  // no duplicates
+		if (itsForecastTypeIterator.Add(otherInfo->template Value<forecast_type>()))  // no duplicates
 		{
 			ReIndex(Size<forecast_type>() - 1, Size<forecast_time>(), Size<level>(), Size<param>());
 		}
 
-		if (!Find<forecast_type>(otherInfo->Value<forecast_type>()))
+		if (!Find<forecast_type>(otherInfo->template Value<forecast_type>()))
 		{
 			itsLogger.Fatal("Unable to set forecast type, merge failed");
-			himan::Abort();
+			Abort();
 		}
 
-		otherInfo->Reset<forecast_time>();
+		otherInfo->template Reset<forecast_time>();
 
-		while (otherInfo->Next<forecast_time>())
+		while (otherInfo->template Next<forecast_time>())
 		{
-			if (itsTimeIterator.Add(otherInfo->Value<forecast_time>()))  // no duplicates
+			if (itsTimeIterator.Add(otherInfo->template Value<forecast_time>()))  // no duplicates
 			{
 				ReIndex(Size<forecast_type>(), Size<forecast_time>() - 1, Size<level>(), Size<param>());
 			}
 
-			if (!Find<forecast_time>(otherInfo->Value<forecast_time>()))
+			if (!Find<forecast_time>(otherInfo->template Value<forecast_time>()))
 			{
 				itsLogger.Fatal("Unable to set time, merge failed");
-				himan::Abort();
+				Abort();
 			}
 
-			otherInfo->Reset<level>();
+			otherInfo->template Reset<level>();
 
-			while (otherInfo->Next<level>())
+			while (otherInfo->template Next<level>())
 			{
-				if (itsLevelIterator.Add(otherInfo->Value<level>()))  // no duplicates
+				if (itsLevelIterator.Add(otherInfo->template Value<level>()))  // no duplicates
 				{
 					ReIndex(Size<forecast_type>(), Size<forecast_time>(), Size<level>() - 1, Size<param>());
 				}
 
-				if (!Find<level>(otherInfo->Value<level>()))
+				if (!Find<level>(otherInfo->template Value<level>()))
 				{
 					itsLogger.Fatal("Unable to set level, merge failed");
-					himan::Abort();
+					Abort();
 				}
 
-				otherInfo->Reset<param>();
+				otherInfo->template Reset<param>();
 
-				while (otherInfo->Next<param>())
+				while (otherInfo->template Next<param>())
 				{
-					if (itsParamIterator.Add(otherInfo->Value<param>()))  // no duplicates
+					if (itsParamIterator.Add(otherInfo->template Value<param>()))  // no duplicates
 					{
 						ReIndex(Size<forecast_type>(), Size<forecast_time>(), Size<level>(), Size<param>() - 1);
 					}
 
-					if (!Find<param>(otherInfo->Value<param>()))
+					if (!Find<param>(otherInfo->template Value<param>()))
 					{
 						itsLogger.Fatal("Unable to set param, merge failed");
-						himan::Abort();
+						Abort();
 					}
 
-					Base(make_shared<base>(shared_ptr<grid>(otherInfo->Grid()->Clone()), otherInfo->Data()));
+					Base(std::make_shared<base<T>>(std::shared_ptr<grid>(otherInfo->Grid()->Clone()),
+					                               otherInfo->Data()));
 				}
 			}
 		}
 	}
 }
 
-void info::Merge(vector<shared_ptr<info>>& otherInfos)
+template <typename T>
+void info<T>::Merge(std::vector<std::shared_ptr<info>>& otherInfos)
 {
 	for (size_t i = 0; i < otherInfos.size(); i++)
 	{
@@ -224,20 +277,8 @@ void info::Merge(vector<shared_ptr<info>>& otherInfos)
 	}
 }
 
-const producer& info::Producer() const
-{
-	return itsProducer;
-}
-void info::Producer(long theFmiProducerId)
-{
-	itsProducer = producer(theFmiProducerId);
-}
-void info::Producer(const producer& theProducer)
-{
-	itsProducer = theProducer;
-}
-
-void info::First()
+template <typename T>
+void info<T>::First()
 {
 	First<level>();
 	First<param>();
@@ -246,7 +287,8 @@ void info::First()
 	FirstLocation();
 }
 
-void info::Reset()
+template <typename T>
+void info<T>::Reset()
 {
 	Reset<level>();
 	Reset<param>();
@@ -255,7 +297,8 @@ void info::Reset()
 	ResetLocation();
 }
 
-bool info::NextLocation()
+template <typename T>
+bool info<T>::NextLocation()
 {
 	if (itsLocationIndex == kIteratorResetValue)
 	{
@@ -279,63 +322,11 @@ bool info::NextLocation()
 	return true;
 }
 
-void info::ResetLocation()
+template <typename T>
+void info<T>::ReIndex(size_t oldForecastTypeSize, size_t oldTimeSize, size_t oldLevelSize, size_t oldParamSize)
 {
-	itsLocationIndex = kIteratorResetValue;
-}
-bool info::FirstLocation()
-{
-	ResetLocation();
-
-	return NextLocation();
-}
-
-size_t info::LocationIndex() const
-{
-	return itsLocationIndex;
-}
-void info::LocationIndex(size_t theLocationIndex)
-{
-	itsLocationIndex = theLocationIndex;
-}
-size_t info::LocationIndex()
-{
-	return itsLocationIndex;
-}
-size_t info::SizeLocations() const
-{
-	return itsDimensions[Index()]->data.Size();
-}
-matrix<double>& info::Data()
-{
-	return itsDimensions[Index()]->data;
-}
-shared_ptr<grid> info::Grid() const
-{
-	ASSERT(itsDimensions.size());
-	return itsDimensions[Index()]->grid;
-}
-std::shared_ptr<base> info::Base()
-{
-	return itsDimensions[Index()];
-}
-void info::Base(shared_ptr<base> b)
-{
-	ASSERT(itsDimensions.size() > Index());
-	itsDimensions[Index()] = b;
-}
-shared_ptr<packed_data> info::PackedData() const
-{
-	return itsDimensions[Index()]->pdata;
-}
-size_t info::DimensionSize() const
-{
-	return itsDimensions.size();
-}
-void info::ReIndex(size_t oldForecastTypeSize, size_t oldTimeSize, size_t oldLevelSize, size_t oldParamSize)
-{
-	vector<shared_ptr<base>> theDimensions(Size<forecast_type>() * Size<forecast_time>() * Size<level>() *
-	                                       Size<param>());
+	std::vector<std::shared_ptr<base<T>>> theDimensions(Size<forecast_type>() * Size<forecast_time>() * Size<level>() *
+	                                                    Size<param>());
 
 	for (size_t a = 0; a < oldForecastTypeSize; a++)
 	{
@@ -358,7 +349,8 @@ void info::ReIndex(size_t oldForecastTypeSize, size_t oldTimeSize, size_t oldLev
 	itsDimensions = theDimensions;
 }
 
-point info::LatLon() const
+template <typename T>
+point info<T>::LatLon() const
 {
 	if (itsLocationIndex == kIteratorResetValue)
 	{
@@ -369,7 +361,8 @@ point info::LatLon() const
 	return Grid()->LatLon(itsLocationIndex);
 }
 
-station info::Station() const
+template <typename T>
+station info<T>::Station() const
 {
 	if (itsLocationIndex == kIteratorResetValue)
 	{
@@ -382,10 +375,11 @@ station info::Station() const
 		return station();
 	}
 
-	return dynamic_pointer_cast<point_list>(Grid())->Station(itsLocationIndex);
+	return std::dynamic_pointer_cast<himan::point_list>(Grid())->Station(itsLocationIndex);
 }
 
-void info::Clear()
+template <typename T>
+void info<T>::Clear()
 {
 	itsDimensions.clear();
 
@@ -395,7 +389,8 @@ void info::Clear()
 	itsForecastTypeIterator.Clear();
 }
 
-bool info::Next()
+template <typename T>
+bool info<T>::Next()
 {
 	// Innermost
 
@@ -435,12 +430,8 @@ bool info::Next()
 	return false;
 }
 
-bool info::IsValidGrid() const
-{
-	return (itsDimensions[Index()] != nullptr && Grid());
-}
-
-void info::FirstValidGrid()
+template <typename T>
+void info<T>::FirstValidGrid()
 {
 	for (Reset<param>(); Next<param>();)
 	{
@@ -451,49 +442,5 @@ void info::FirstValidGrid()
 	}
 
 	itsLogger.Fatal("A dimension with no valid infos? Madness!");
-	himan::Abort();
+	Abort();
 }
-
-namespace himan
-{
-template <>
-iterator<param>& info::Iterator<param>()
-{
-	return itsParamIterator;
-}
-template <>
-const iterator<param>& info::Iterator<param>() const
-{
-	return itsParamIterator;
-}
-template <>
-iterator<level>& info::Iterator<level>()
-{
-	return itsLevelIterator;
-}
-template <>
-const iterator<level>& info::Iterator<level>() const
-{
-	return itsLevelIterator;
-}
-template <>
-iterator<forecast_time>& info::Iterator<forecast_time>()
-{
-	return itsTimeIterator;
-}
-template <>
-const iterator<forecast_time>& info::Iterator<forecast_time>() const
-{
-	return itsTimeIterator;
-}
-template <>
-iterator<forecast_type>& info::Iterator<forecast_type>()
-{
-	return itsForecastTypeIterator;
-}
-template <>
-const iterator<forecast_type>& info::Iterator<forecast_type>() const
-{
-	return itsForecastTypeIterator;
-}
-}  // namespace himan

@@ -32,7 +32,7 @@ void weather_code_2::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void weather_code_2::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadIndex)
+void weather_code_2::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short theThreadIndex)
 {
 	// Required source parameters
 	// new parameters used...
@@ -302,11 +302,11 @@ double weather_code_2::thunder_prob(double kIndex, double cloud)
 		if (kIndex >= 37)
 		{
 			thunderprob = 60;  // heavy thunder, set thunder probability to a value over 50% (to be replaced by a more
-		}	                    // scientific way to determine thunder probability in the future)
+		}                      // scientific way to determine thunder probability in the future)
 		else if (kIndex >= 27)
 		{
 			thunderprob = 40;  // thunder, set thunder probability to a value between 30% and 50% (to be replaced by a
-			                    // more scientific way to determine thunder probability in the future)
+			                   // more scientific way to determine thunder probability in the future)
 		}
 	}
 

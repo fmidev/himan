@@ -56,7 +56,7 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 	Start();
 }
 
-void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void hybrid_height::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	auto myThreadedLogger = logger(itsName + "Thread #" + to_string(threadIndex));
 
@@ -137,7 +137,7 @@ himan::info_t hybrid_height::GetSurfacePressure(himan::info_t& myTargetInfo)
 			{
 				// LNSP to regular pressure
 
-				auto newInfo = make_shared<info>(*ret);
+				auto newInfo = make_shared<info<double>>(*ret);
 				newInfo->Set<param>(param("LNSP-HPA"));
 				newInfo->Create(ret->Base());
 
@@ -177,10 +177,6 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 	info_t prevPInfo, prevTInfo;
 
 	bool firstLevel;
-
-	/*
-	 * With iteration method, we must start from the lowest level.
-	 */
 
 	bool topToBottom = false;
 
@@ -277,7 +273,7 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 				          ASSERT(isfinite(result));
 			          }
 		          },
-		          make_shared<info>(*myTargetInfo), PInfo, prevPInfo, TInfo, prevTInfo));
+		          make_shared<info<double>>(*myTargetInfo), PInfo, prevPInfo, TInfo, prevTInfo));
 
 		if (pool.size() == 8)
 		{
@@ -359,7 +355,7 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 		if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
 		{
 			writers.push_back(async(launch::async, [this](info_t _myTargetInfo) { WriteToFile(_myTargetInfo); },
-			                        make_shared<info>(*myTargetInfo)));
+			                        make_shared<info<double>>(*myTargetInfo)));
 		}
 		else
 		{

@@ -33,7 +33,7 @@ struct plugin_timing
 	int64_t time_elapsed;  // elapsed time in ms
 };
 
-void UploadRunStatisticsToDatabase(shared_ptr<configuration> conf, const vector<plugin_timing>& pluginTimes)
+void UploadRunStatisticsToDatabase(const shared_ptr<configuration>& conf, const vector<plugin_timing>& pluginTimes)
 {
 	stringstream json, query;
 
@@ -98,14 +98,11 @@ int HighestOrderNumber(const vector<plugin_timing>& timingList, const std::strin
 {
 	int highest = 1;
 
-	for (size_t i = 0; i < timingList.size(); i++)
+	for (const auto& timing : timingList)
 	{
-		if (timingList[i].plugin_name == pluginName)
+		if (timing.plugin_name == pluginName && timing.order_number >= highest)
 		{
-			if (timingList[i].order_number >= highest)
-			{
-				highest = timingList[i].order_number + 1;
-			}
+			highest = timing.order_number + 1;
 		}
 	}
 
@@ -120,37 +117,25 @@ void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
 	const auto analysisTime = pc->Times()[0].OriginDateTime().String();
 
 	logger log("himan");
-	stringstream ss;
 
-	ss << "SELECT id FROM geom WHERE name = '" << pc->TargetGeomName() << "'";
+	auto geomInfo = r->RadonDB().GetGeometryDefinition(pc->TargetGeomName());
 
-	r->RadonDB().Query(ss.str());
-
-	auto row = r->RadonDB().FetchRow();
-
-	if (row.empty())
+	if (geomInfo.empty())
 	{
-		log.Error("ss_state update failed: geometry id not found for name: " + pc->TargetGeomName());
+		log.Error("ss_state update failed: geomery information not found");
 		return;
 	}
 
-	const auto geometryId = stoi(row[0]);
+	const int geometryId = stoi(geomInfo["geom_id"]);
 
-	ss.str("");
-	ss << "SELECT partition_name FROM as_grid WHERE producer_id = " << producerId << " AND analysis_time = '"
-	   << analysisTime << "' AND geometry_id = " << geometryId;
+	auto tableInfo = r->RadonDB().GetTableName(producerId, analysisTime, pc->TargetGeomName());
 
-	r->RadonDB().Query(ss.str());
-
-	row = r->RadonDB().FetchRow();
-
-	if (row.empty())
+	if (tableInfo.empty())
 	{
 		log.Error("ss_state update failed: table not found from as_grid");
 		return;
 	}
 
-	const auto partitionName = row[0];
 	int inserts = 0, updates = 0;
 
 	for (const auto& ftype : pc->ForecastTypes())
@@ -162,6 +147,8 @@ void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
 			forecastTypeValue = static_cast<int>(ftype.Value());
 		}
 
+		stringstream ss;
+
 		for (const auto& ftime : pc->Times())
 		{
 			try
@@ -172,7 +159,7 @@ void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
 				   << producerId << ", " << geometryId << ", "
 				   << "'" << analysisTime << "', '" << util::MakeSQLInterval(ftime) << "', "
 				   << static_cast<int>(ftype.Type()) << ", " << forecastTypeValue << ", "
-				   << "'" << partitionName << "')";
+				   << "'" << tableInfo["table_name"] << "')";
 
 				r->RadonDB().Execute(ss.str());
 				inserts++;
@@ -204,7 +191,7 @@ void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
 	log.Debug("Update of ss_state: " + to_string(inserts) + " inserts, " + to_string(updates) + " updates");
 }
 
-void ExecutePlugin(shared_ptr<plugin_configuration> pc, vector<plugin_timing>& pluginTimes)
+void ExecutePlugin(const shared_ptr<plugin_configuration>& pc, vector<plugin_timing>& pluginTimes)
 {
 	timer aTimer;
 	logger aLogger("himan");
@@ -570,6 +557,9 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	{
 		switch (logLevel)
 		{
+			default:
+				cerr << "Invalid debug level: " << logLevel << endl;
+				exit(1);
 			case 0:
 				debugState = kFatalMsg;
 				break;
@@ -739,15 +729,14 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	{
 		vector<shared_ptr<plugin::himan_plugin>> thePlugins = plugin_factory::Instance()->Plugins();
 
-		for (size_t i = 0; i < thePlugins.size(); i++)
+		for (const auto& plugin : thePlugins)
 		{
-			cout << "Plugin '" << thePlugins[i]->ClassName() << "'" << endl
-			     << "\tversion " << thePlugins[i]->Version() << endl;
+			cout << "Plugin '" << plugin->ClassName() << "'" << endl << "\tversion " << plugin->Version() << endl;
 
-			switch (thePlugins[i]->PluginClass())
+			switch (plugin->PluginClass())
 			{
 				case kCompiled:
-					if (dynamic_pointer_cast<plugin::compiled_plugin>(thePlugins[i])->CudaEnabledCalculation())
+					if (dynamic_pointer_cast<plugin::compiled_plugin>(plugin)->CudaEnabledCalculation())
 					{
 						cout << "\tcuda-enabled\n";
 					}

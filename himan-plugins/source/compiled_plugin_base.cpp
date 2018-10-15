@@ -32,7 +32,7 @@ compiled_plugin_base::compiled_plugin_base()
 {
 }
 
-bool compiled_plugin_base::Next(info& myTargetInfo)
+bool compiled_plugin_base::Next(info<double>& myTargetInfo)
 {
 	lock_guard<mutex> lock(dimensionMutex);
 
@@ -93,7 +93,7 @@ bool compiled_plugin_base::Next(info& myTargetInfo)
 	return false;
 }
 
-bool compiled_plugin_base::NextExcludingLevel(info& myTargetInfo)
+bool compiled_plugin_base::NextExcludingLevel(info<double>& myTargetInfo)
 {
 	lock_guard<mutex> lock(dimensionMutex);
 
@@ -159,7 +159,7 @@ void compiled_plugin_base::WriteToFile(const info_t targetInfo, write_options wr
 
 	// writing might modify iterator positions --> create a copy
 
-	auto tempInfo = make_shared<info>(*targetInfo);
+	auto tempInfo = make_shared<info<double>>(*targetInfo);
 
 	tempInfo->Reset<param>();
 
@@ -245,8 +245,8 @@ void compiled_plugin_base::Init(const shared_ptr<const plugin_configuration> con
 		itsThreadCount = coreCount;
 	}
 
-	itsInfo = make_shared<info>(itsConfiguration->ForecastTypes(), itsConfiguration->Times(),
-	                            itsConfiguration->Levels(), vector<param>());
+	itsInfo = make_shared<info<double>>(itsConfiguration->ForecastTypes(), itsConfiguration->Times(),
+	                                    itsConfiguration->Levels(), vector<param>());
 	itsInfo->Producer(itsConfiguration->TargetProducer());
 
 	itsPluginIsInitialized = true;
@@ -305,7 +305,7 @@ void compiled_plugin_base::RunTimeDimension(info_t myTargetInfo, unsigned short 
 
 void compiled_plugin_base::Run(unsigned short threadIndex)
 {
-	auto myTargetInfo = make_shared<info>(*itsInfo);
+	auto myTargetInfo = make_shared<info<double>>(*itsInfo);
 	if (itsPrimaryDimension == kUnknownDimension)
 	{
 		// The general case: all elements are distributed to all threads in an
@@ -487,7 +487,7 @@ void compiled_plugin_base::SetParams(std::vector<param>& params, const vector<le
 			{
 				if (itsInfo->Param() == par && itsInfo->Level() == lvl)
 				{
-					auto b = make_shared<base>();
+					auto b = make_shared<base<double>>();
 					b->grid = shared_ptr<grid>(g->Clone());
 
 					if (itsConfiguration->UseDynamicMemoryAllocation() == false)
@@ -695,7 +695,7 @@ void compiled_plugin_base::PrimaryDimension(HPDimensionType thePrimaryDimension)
 	itsPrimaryDimension = thePrimaryDimension;
 }
 
-void compiled_plugin_base::AllocateMemory(info myTargetInfo)
+void compiled_plugin_base::AllocateMemory(info<double> myTargetInfo)
 {
 	size_t paramIndex = myTargetInfo.Index<param>();
 
@@ -718,7 +718,7 @@ void compiled_plugin_base::AllocateMemory(info myTargetInfo)
 	myTargetInfo.Index<param>(paramIndex);
 }
 
-void compiled_plugin_base::DeallocateMemory(info myTargetInfo)
+void compiled_plugin_base::DeallocateMemory(info<double> myTargetInfo)
 {
 	size_t paramIndex = myTargetInfo.Index<param>();
 

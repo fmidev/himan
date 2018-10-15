@@ -34,7 +34,8 @@ void DecodePrecipitationFormFromGrib2(vector<double>& arr);
 
 const double gribMissing = 32700.;
 
-long DetermineBitsPerValue(const vector<double>& values, double precision)
+template <typename T>
+long DetermineBitsPerValue(const vector<T>& values, double precision)
 {
 	/*
 	 * Calculate the minimum amount of bits required to represent the data in the precision specified.
@@ -57,7 +58,7 @@ long DetermineBitsPerValue(const vector<double>& values, double precision)
 
 	// define manual minmax search as std::minmax_element uses std::less
 	// for comparison which does not work well with nan
-	double min = himan::MissingDouble(), max = himan::MissingDouble();
+	T min = himan::MissingDouble(), max = himan::MissingDouble();
 
 	for (const auto& v : values)
 	{
@@ -68,12 +69,12 @@ long DetermineBitsPerValue(const vector<double>& values, double precision)
 	}
 
 	// Required scale value to reach wanted precision
-	const double D = pow(10, precision);
+	const T D = std::pow(10, precision);
 
 	// Range of scaled data, ie the largest value we must be able to write
 	const int range = static_cast<int>(ceil(D * max - D * min));
 
-	if (himan::IsMissingDouble(min) || himan::IsMissingDouble(max) || range == 0)
+	if (himan::IsMissing(min) || himan::IsMissing(max) || range == 0)
 	{
 		// static grid (max == min)
 		bitsPerValue = 0;
@@ -111,12 +112,13 @@ shared_ptr<NFmiGrib> grib::Reader()
 {
 	return itsGrib;
 }
-void grib::WriteAreaAndGrid(info& anInfo)
+
+void grib::WriteAreaAndGrid(const shared_ptr<himan::grid>& grid, const producer& prod)
 {
 	const long edition = itsGrib->Message().Edition();
 	HPScanningMode scmode = kUnknownScanningMode;
 
-	auto firstGridPoint = anInfo.Grid()->FirstPoint();
+	auto firstGridPoint = grid->FirstPoint();
 
 	if (edition == 2)
 	{
@@ -128,11 +130,11 @@ void grib::WriteAreaAndGrid(info& anInfo)
 
 	// UVRelativeToGrid is set in ToFile()
 
-	switch (anInfo.Grid()->Type())
+	switch (grid->Type())
 	{
 		case kLatitudeLongitude:
 		{
-			auto rg = dynamic_pointer_cast<latitude_longitude_grid>(anInfo.Grid());
+			auto rg = dynamic_pointer_cast<latitude_longitude_grid>(grid);
 
 			himan::point lastGridPoint = rg->LastPoint();
 
@@ -163,7 +165,7 @@ void grib::WriteAreaAndGrid(info& anInfo)
 
 		case kRotatedLatitudeLongitude:
 		{
-			auto rg = dynamic_pointer_cast<rotated_latitude_longitude_grid>(anInfo.Grid());
+			auto rg = dynamic_pointer_cast<rotated_latitude_longitude_grid>(grid);
 
 			himan::point lastGridPoint = rg->LastPoint();
 
@@ -199,7 +201,7 @@ void grib::WriteAreaAndGrid(info& anInfo)
 
 		case kStereographic:
 		{
-			auto rg = dynamic_pointer_cast<stereographic_grid>(anInfo.Grid());
+			auto rg = dynamic_pointer_cast<stereographic_grid>(grid);
 
 			long gridType = 5;  // Grib 1
 
@@ -233,7 +235,7 @@ void grib::WriteAreaAndGrid(info& anInfo)
 
 		case kReducedGaussian:
 		{
-			auto gg = dynamic_pointer_cast<reduced_gaussian_grid>(anInfo.Grid());
+			auto gg = dynamic_pointer_cast<reduced_gaussian_grid>(grid);
 
 			long gridType = 4;  // Grib 1
 
@@ -268,7 +270,7 @@ void grib::WriteAreaAndGrid(info& anInfo)
 
 		case kLambertConformalConic:
 		{
-			auto lccg = dynamic_pointer_cast<lambert_conformal_grid>(anInfo.Grid());
+			auto lccg = dynamic_pointer_cast<lambert_conformal_grid>(grid);
 
 			long gridType = 3;  // Grib 1
 
@@ -308,7 +310,7 @@ void grib::WriteAreaAndGrid(info& anInfo)
 		}
 
 		default:
-			itsLogger.Fatal("Invalid projection while writing grib: " + to_string(anInfo.Grid()->Type()));
+			itsLogger.Fatal("Invalid projection while writing grib: " + to_string(grid->Type()));
 			himan::Abort();
 	}
 
@@ -320,7 +322,7 @@ void grib::WriteAreaAndGrid(info& anInfo)
 
 	// Set earth shape
 
-	const double a = anInfo.Grid()->EarthShape().A(), b = anInfo.Grid()->EarthShape().B();
+	const double a = grid->EarthShape().A(), b = grid->EarthShape().B();
 
 	if (a == b)
 	{
@@ -355,8 +357,8 @@ void grib::WriteAreaAndGrid(info& anInfo)
 		himan::Abort();
 	}
 #endif
-	itsGrib->Message().Centre(anInfo.Producer().Centre() == kHPMissingInt ? 86 : anInfo.Producer().Centre());
-	itsGrib->Message().Process(anInfo.Producer().Process() == kHPMissingInt ? 255 : anInfo.Producer().Process());
+	itsGrib->Message().Centre(prod.Centre() == kHPMissingInt ? 86 : prod.Centre());
+	itsGrib->Message().Process(prod.Process() == kHPMissingInt ? 255 : prod.Process());
 
 	bool iNegative, jPositive;
 
@@ -391,23 +393,22 @@ void grib::WriteAreaAndGrid(info& anInfo)
 	itsGrib->Message().JScansPositively(jPositive);
 }
 
-void grib::WriteTime(info& anInfo)
+void grib::WriteTime(const forecast_time& ftime, const producer& prod, const param& par)
 {
-	itsGrib->Message().DataDate(stol(anInfo.Time().OriginDateTime().String("%Y%m%d")));
-	itsGrib->Message().DataTime(stol(anInfo.Time().OriginDateTime().String("%H%M")));
+	itsGrib->Message().DataDate(stol(ftime.OriginDateTime().String("%Y%m%d")));
+	itsGrib->Message().DataTime(stol(ftime.OriginDateTime().String("%H%M")));
 
 	double divisor = 1;
 	long unitOfTimeRange = 1;
 
-	if (anInfo.Producer().Id() == 210 || anInfo.Producer().Id() == 270)
+	if (prod.Id() == 210 || prod.Id() == 270)
 	{
-		// Harmonie
 		unitOfTimeRange = 13;  // 15 minutes
 		divisor = 15;
 	}
-	else if (anInfo.Time().Step() > 255)  // Forecast with stepvalues that don't fit in one byte
+	else if (ftime.Step() > 255)  // Forecast with stepvalues that don't fit in one byte
 	{
-		long step = anInfo.Time().Step();
+		const long step = ftime.Step();
 
 		if (step % 3 == 0 && step / 3 < 255)
 		{
@@ -433,13 +434,12 @@ void grib::WriteTime(info& anInfo)
 
 	long period = itsWriteOptions.configuration->ForecastStep();
 
-	if (anInfo.Param().Aggregation().TimeResolution() != kUnknownTimeResolution)
+	if (par.Aggregation().TimeResolution() != kUnknownTimeResolution)
 	{
-		period = anInfo.Param().Aggregation().TimeResolutionValue();
+		period = par.Aggregation().TimeResolutionValue();
 
 		// Time range and aggregation need to share a common time unit
-		if (anInfo.Param().Aggregation().TimeResolution() == kHourResolution &&
-		    (unitOfTimeRange == 0 || unitOfTimeRange == 13))
+		if (par.Aggregation().TimeResolution() == kHourResolution && (unitOfTimeRange == 0 || unitOfTimeRange == 13))
 		{
 			period *= 60;
 		}
@@ -451,22 +451,22 @@ void grib::WriteTime(info& anInfo)
 
 		long p1;
 
-		if (anInfo.Param().Aggregation().FirstTimeValue() != kHPMissingInt)
+		if (par.Aggregation().FirstTimeValue() != kHPMissingInt)
 		{
-			p1 = anInfo.Param().Aggregation().FirstTimeValue();
+			p1 = par.Aggregation().FirstTimeValue();
 		}
 		else
 		{
-			p1 = static_cast<long>(static_cast<double>(anInfo.Time().Step() - period) / divisor);
+			p1 = static_cast<long>(static_cast<double>(ftime.Step() - period) / divisor);
 		}
 
-		switch (anInfo.Param().Aggregation().Type())
+		switch (par.Aggregation().Type())
 		{
 			default:
 			case kUnknownAggregationType:
 				// Forecast product valid for reference time + P1 (P1 > 0)
 				itsGrib->Message().TimeRangeIndicator(0);
-				itsGrib->Message().P1(static_cast<int>(anInfo.Time().Step() / divisor));
+				itsGrib->Message().P1(static_cast<int>(ftime.Step() / divisor));
 				break;
 			case kAverage:
 				// Average (reference time + P1 to reference time + P2)
@@ -479,7 +479,7 @@ void grib::WriteTime(info& anInfo)
 				}
 
 				itsGrib->Message().P1(p1);
-				itsGrib->Message().P2(static_cast<long>(anInfo.Time().Step() / divisor));
+				itsGrib->Message().P2(static_cast<long>(ftime.Step() / divisor));
 				break;
 			case kAccumulation:
 				// Accumulation (reference time + P1 to reference time + P2) product considered valid at reference time
@@ -493,7 +493,7 @@ void grib::WriteTime(info& anInfo)
 				}
 
 				itsGrib->Message().P1(p1);
-				itsGrib->Message().P2(static_cast<long>(anInfo.Time().Step() / divisor));
+				itsGrib->Message().P2(static_cast<long>(ftime.Step() / divisor));
 				break;
 			case kDifference:
 				// Difference (reference time + P2 minus reference time + P1) product considered valid at reference time
@@ -507,7 +507,7 @@ void grib::WriteTime(info& anInfo)
 				}
 
 				itsGrib->Message().P1(p1);
-				itsGrib->Message().P2(static_cast<long>(anInfo.Time().Step() / divisor));
+				itsGrib->Message().P2(static_cast<long>(ftime.Step() / divisor));
 				break;
 		}
 
@@ -523,89 +523,76 @@ void grib::WriteTime(info& anInfo)
 
 		itsGrib->Message().UnitOfTimeRange(unitOfTimeRange);
 		// Statistical processing is set in WriteParameter()
-		switch (anInfo.Param().Aggregation().Type())
+		switch (par.Aggregation().Type())
 		{
 			default:
 			case kUnknownAggregationType:
-				itsGrib->Message().ForecastTime(static_cast<int>(static_cast<double>(anInfo.Time().Step()) / divisor));
+				itsGrib->Message().ForecastTime(static_cast<int>(static_cast<double>(ftime.Step()) / divisor));
 				break;
 			case kAverage:
 			case kAccumulation:
 			case kDifference:
 				itsGrib->Message().SetLongKey("indicatorOfUnitForTimeRange", unitOfTimeRange);
 
-				long firstTime = static_cast<long>(anInfo.Param().Aggregation().FirstTimeValue());
+				long firstTime = static_cast<long>(par.Aggregation().FirstTimeValue());
 
 				if (firstTime == kHPMissingInt)
 				{
-					firstTime = static_cast<long>(static_cast<double>(anInfo.Time().Step() - period) / divisor);
+					firstTime = static_cast<long>(static_cast<double>(ftime.Step() - period) / divisor);
 				}
 
 				itsGrib->Message().ForecastTime(firstTime);  // start step
-
-#if 0
-				if (anInfo.Param().Aggregation().TimeResolution() == kUnknownTimeResolution)
-				{
-					// Although parameter is an accumulation, the period is unknown
-					// eg. RRR
-					itsGrib->Message().LengthOfTimeRange(
-					    static_cast<long>(itsWriteOptions.configuration->ForecastStep() / divisor));  // step length
-				}
-				else
-#endif
 				{
 					// Accumulation period is known
 					// eg. RR-1-MM
-					itsGrib->Message().LengthOfTimeRange(
-					    static_cast<long>(anInfo.Param().Aggregation().TimeResolutionValue()));
+					itsGrib->Message().LengthOfTimeRange(static_cast<long>(par.Aggregation().TimeResolutionValue()));
 				}
 				break;
 		}
 	}
 }
 
-void grib::WriteParameter(info& anInfo)
+void grib::WriteParameter(const param& par, const producer& prod, const forecast_type& ftype)
 {
 	if (itsGrib->Message().Edition() == 1)
 	{
-		if (anInfo.Param().GribTableVersion() != kHPMissingInt &&
-		    anInfo.Param().GribIndicatorOfParameter() != kHPMissingInt)
+		if (par.GribTableVersion() != kHPMissingInt && par.GribIndicatorOfParameter() != kHPMissingInt)
 		{
 			// In radon table version is a parameter property, not a
 			// producer property
 
-			itsGrib->Message().Table2Version(anInfo.Param().GribTableVersion());
-			itsGrib->Message().ParameterNumber(anInfo.Param().GribIndicatorOfParameter());
+			itsGrib->Message().Table2Version(par.GribTableVersion());
+			itsGrib->Message().ParameterNumber(par.GribIndicatorOfParameter());
 		}
-		else if (anInfo.Producer().Id() != kHPMissingInt)  // no-database example has 999999 as producer
+		else if (prod.Id() != kHPMissingInt)  // no-database example has 999999 as producer
 		{
-			itsLogger.Warning("Parameter " + anInfo.Param().Name() + " does not have mapping for producer " +
-			                  to_string(anInfo.Producer().Id()) + " in radon, setting table2version to 203");
+			itsLogger.Warning("Parameter " + par.Name() + " does not have mapping for producer " +
+			                  to_string(prod.Id()) + " in radon, setting table2version to 203");
 			itsGrib->Message().ParameterNumber(0);
 			itsGrib->Message().Table2Version(203);
 		}
 	}
 	else if (itsGrib->Message().Edition() == 2)
 	{
-		if (anInfo.Param().GribParameter() == kHPMissingInt)
+		if (par.GribParameter() == kHPMissingInt)
 		{
-			itsLogger.Warning("Parameter information not found from radon for producer " +
-			                  to_string(anInfo.Producer().Id()) + ", name " + anInfo.Param().Name());
+			itsLogger.Warning("Parameter information not found from radon for producer " + to_string(prod.Id()) +
+			                  ", name " + par.Name());
 		}
 		else
 		{
-			itsGrib->Message().ParameterNumber(anInfo.Param().GribParameter());
-			itsGrib->Message().ParameterCategory(anInfo.Param().GribCategory());
-			itsGrib->Message().ParameterDiscipline(anInfo.Param().GribDiscipline());
+			itsGrib->Message().ParameterNumber(par.GribParameter());
+			itsGrib->Message().ParameterCategory(par.GribCategory());
+			itsGrib->Message().ParameterDiscipline(par.GribDiscipline());
 		}
 
-		if (anInfo.Param().Aggregation().Type() != kUnknownAggregationType)
+		if (par.Aggregation().Type() != kUnknownAggregationType)
 		{
 			long templateNumber = 8;  // Average, accumulation, extreme values or other statistically processed values
 			                          // at a horizontal level or in a horizontal layer in a continuous or
 			                          // non-continuous time interval
 
-			if (anInfo.ForecastType().Type() == kEpsPerturbation || anInfo.ForecastType().Type() == kEpsControl)
+			if (ftype.Type() == kEpsPerturbation || ftype.Type() == kEpsControl)
 			{
 				templateNumber = 11;  // Individual ensemble forecast, control and perturbed, at a horizontal level or
 				                      // in a horizontal layer, in a continuous or non-continuous time interval.
@@ -615,7 +602,7 @@ void grib::WriteParameter(info& anInfo)
 
 			long type;
 
-			switch (anInfo.Param().Aggregation().Type())
+			switch (par.Aggregation().Type())
 			{
 				default:
 				case kAverage:
@@ -637,10 +624,8 @@ void grib::WriteParameter(info& anInfo)
 	}
 }
 
-void grib::WriteLevel(info& anInfo)
+void grib::WriteLevel(const level& lev)
 {
-	auto lev = anInfo.Level();
-
 	const long edition = itsGrib->Message().Edition();
 
 	// Himan levels equal to grib 1
@@ -688,7 +673,13 @@ void grib::WriteLevel(info& anInfo)
 	}
 }
 
-bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
+bool grib::ToFile(info<double>& anInfo, string& outputFile, bool appendToFile)
+{
+	return ToFile<double>(anInfo, outputFile, appendToFile);
+}
+
+template <typename T>
+bool grib::ToFile(info<T>& anInfo, string& outputFile, bool appendToFile)
 {
 	// Write only that data which is currently set at descriptors
 
@@ -784,19 +775,19 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 
 	// Parameter
 
-	WriteParameter(anInfo);
+	WriteParameter(anInfo.Param(), anInfo.Producer(), anInfo.ForecastType());
 
 	// Area and Grid
 
-	WriteAreaAndGrid(anInfo);
+	WriteAreaAndGrid(anInfo.Grid(), anInfo.Producer());
 
 	// Time information
 
-	WriteTime(anInfo);
+	WriteTime(anInfo.Time(), anInfo.Producer(), anInfo.Param());
 
 	// Level
 
-	WriteLevel(anInfo);
+	WriteLevel(anInfo.Level());
 
 	// set to missing value to a large value to prevent it from mixing up with valid
 	// values in the data
@@ -961,6 +952,8 @@ bool grib::ToFile(info& anInfo, string& outputFile, bool appendToFile)
 
 	return true;
 }
+
+template bool grib::ToFile<double>(info<double>&, string&, bool);
 
 // ---------------------------------------------------------------------------
 
@@ -1703,7 +1696,8 @@ himan::producer grib::ReadProducer(const search_options& options) const
 	return prod;
 }
 
-void grib::ReadData(info_t newInfo, bool readPackedData) const
+template <typename T>
+void grib::ReadData(shared_ptr<info<T>> newInfo, bool readPackedData) const
 {
 	auto& dm = newInfo->Data();
 
@@ -1795,8 +1789,11 @@ void grib::ReadData(info_t newInfo, bool readPackedData) const
 	}
 }
 
+template void grib::ReadData<double>(shared_ptr<info<double>>, bool) const;
+
+template <typename T>
 bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData, bool readIfNotMatching,
-                              shared_ptr<info> newInfo) const
+                              shared_ptr<info<T>> newInfo) const
 {
 	shared_ptr<radon> r;
 
@@ -1913,10 +1910,10 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 
 	newInfo->Producer(prod);
 
-	newInfo->Set<param>({p});
-	newInfo->Set<forecast_time>({t});
-	newInfo->Set<level>({l});
-	newInfo->Set<forecast_type>({ty});
+	newInfo->template Set<param>({p});
+	newInfo->template Set<forecast_time>({t});
+	newInfo->template Set<level>({l});
+	newInfo->template Set<forecast_type>({ty});
 
 	unique_ptr<grid> newGrid = ReadAreaAndGrid();
 
@@ -1935,17 +1932,17 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 	}
 
 	newGrid->AB(ab);
-	auto b = make_shared<base>();
+	auto b = make_shared<base<T>>();
 	b->grid = shared_ptr<grid>(newGrid->Clone());
 
 	newInfo->Create(b, true);
 
 	// Set descriptors
 
-	newInfo->Find<param>(p);
-	newInfo->Find<forecast_time>(t);
-	newInfo->Find<level>(l);
-	newInfo->Find<forecast_type>(ty);
+	newInfo->template Find<param>(p);
+	newInfo->template Find<forecast_time>(t);
+	newInfo->template Find<level>(l);
+	newInfo->template Find<forecast_type>(ty);
 
 	/*
 	 * Read data from grib. If interpolation is required, it's better to do the unpacking
@@ -1963,10 +1960,20 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 	return true;
 }
 
-vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const search_options& options,
-                                               bool readContents, bool readPackedData, bool readIfNotMatching) const
+template bool grib::CreateInfoFromGrib<double>(const search_options&, bool, bool, shared_ptr<info<double>>) const;
+
+vector<shared_ptr<himan::info<double>>> grib::FromFile(const string& theInputFile, const search_options& options,
+                                                       bool readContents, bool readPackedData,
+                                                       bool readIfNotMatching) const
 {
-	vector<shared_ptr<himan::info>> infos;
+	return FromFile<double>(theInputFile, options, readContents, readPackedData, readIfNotMatching);
+}
+
+template <typename T>
+vector<shared_ptr<himan::info<T>>> grib::FromFile(const string& theInputFile, const search_options& options,
+                                                  bool readContents, bool readPackedData, bool readIfNotMatching) const
+{
+	vector<shared_ptr<himan::info<T>>> infos;
 
 	if (!itsGrib->Open(theInputFile))
 	{
@@ -1989,7 +1996,7 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 	while (itsGrib->NextMessage())
 	{
 		foundMessageNo++;
-		auto newInfo = make_shared<info>();
+		auto newInfo = make_shared<info<T>>();
 
 		if (CreateInfoFromGrib(options, readPackedData, readIfNotMatching, newInfo) || readIfNotMatching)
 		{
@@ -2014,11 +2021,22 @@ vector<shared_ptr<himan::info>> grib::FromFile(const string& theInputFile, const
 	return infos;
 }
 
-vector<shared_ptr<himan::info>> grib::FromIndexFile(const string& theInputFile, const search_options& options,
-                                                    bool readContents, bool readPackedData,
-                                                    bool readIfNotMatching) const
+template vector<shared_ptr<himan::info<double>>> grib::FromFile<double>(const string&, const search_options&, bool,
+                                                                        bool, bool) const;
+
+vector<shared_ptr<himan::info<double>>> grib::FromIndexFile(const string& theInputFile, const search_options& options,
+                                                            bool readContents, bool readPackedData,
+                                                            bool readIfNotMatching) const
 {
-	vector<shared_ptr<himan::info>> infos;
+	return FromIndexFile<double>(theInputFile, options, readContents, readPackedData, readIfNotMatching);
+}
+
+template <typename T>
+vector<shared_ptr<himan::info<T>>> grib::FromIndexFile(const string& theInputFile, const search_options& options,
+                                                       bool readContents, bool readPackedData,
+                                                       bool readIfNotMatching) const
+{
+	vector<shared_ptr<himan::info<T>>> infos;
 
 	if (!itsGrib->Open(theInputFile))
 	{
@@ -2039,7 +2057,7 @@ vector<shared_ptr<himan::info>> grib::FromIndexFile(const string& theInputFile, 
 	// TODO need to check what happens when multiple idx files or idx + grib files are provided as input.
 	if (itsGrib->Message(OptionsToKeys(options)))
 	{
-		auto newInfo = make_shared<info>();
+		auto newInfo = make_shared<info<T>>();
 		if (CreateInfoFromGrib(options, readPackedData, readIfNotMatching, newInfo))
 		{
 			infos.push_back(newInfo);
@@ -2054,6 +2072,9 @@ vector<shared_ptr<himan::info>> grib::FromIndexFile(const string& theInputFile, 
 
 	return infos;
 }
+
+template vector<shared_ptr<himan::info<double>>> grib::FromIndexFile<double>(const string&, const search_options&, bool,
+                                                                             bool, bool) const;
 
 void grib::UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restrict__ unpacked, size_t len,
                         size_t unpackedLen) const

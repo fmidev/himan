@@ -152,7 +152,7 @@ class compiled_plugin_base
 	 * @return
 	 */
 
-	virtual bool Next(info& myTargetInfo);
+	virtual bool Next(info<double>& myTargetInfo);
 
 	/**
 	 * @brief Distribute work equally to all threads so that each calling
@@ -162,7 +162,7 @@ class compiled_plugin_base
 	 * @return
 	 */
 
-	virtual bool NextExcludingLevel(info& myTargetInfo);
+	virtual bool NextExcludingLevel(info<double>& myTargetInfo);
 
 	/**
 	 * @brief Entry point for threads.
@@ -325,8 +325,8 @@ class compiled_plugin_base
 
 	virtual void RunTimeDimension(info_t myTargetInfo, unsigned short threadIndex);
 
-	virtual void AllocateMemory(info myTargetInfo);
-	virtual void DeallocateMemory(info myTargetInfo);
+	virtual void AllocateMemory(info<double> myTargetInfo);
+	virtual void DeallocateMemory(info<double> myTargetInfo);
 
    protected:
 	info_t itsInfo;

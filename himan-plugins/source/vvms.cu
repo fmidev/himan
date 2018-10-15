@@ -35,7 +35,7 @@ __global__ void VVMSKernel(const T* __restrict__ d_t, const T* __restrict__ d_vv
 
 namespace vvmsgpu
 {
-void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo)
+void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info<double>> myTargetInfo)
 {
 	cudaStream_t stream;
 	CUDA_CHECK(cudaStreamCreate(&stream));

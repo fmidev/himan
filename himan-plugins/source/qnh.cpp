@@ -71,7 +71,7 @@ void qnh::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void qnh::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void qnh::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	/*
 	 * Required source parameters

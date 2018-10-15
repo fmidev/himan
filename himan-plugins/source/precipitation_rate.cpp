@@ -37,7 +37,7 @@ void precipitation_rate::Process(std::shared_ptr<const plugin_configuration> con
  * This function does the actual calculation.
  */
 
-void precipitation_rate::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void precipitation_rate::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	// define quotients in formulas for rain rate and solid precipitation rate as constants
 	const double rain_rate_factor = 1000.0 / 0.072;

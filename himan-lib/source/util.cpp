@@ -30,7 +30,7 @@
 using namespace himan;
 using namespace std;
 
-string util::MakeFileName(HPFileWriteOption fileWriteOption, const info& info, const configuration& conf)
+string util::MakeFileName(HPFileWriteOption fileWriteOption, const info<double>& info, const configuration& conf)
 {
 	ostringstream fileName;
 	ostringstream base;
@@ -719,7 +719,7 @@ info_t util::CSVToInfo(const vector<string>& csv)
 		return ret;
 	}
 
-	ret = make_shared<info>();
+	ret = make_shared<info<double>>();
 
 	ret->Producer(prod);
 	ret->Set<forecast_time>(times);
@@ -727,7 +727,7 @@ info_t util::CSVToInfo(const vector<string>& csv)
 	ret->Set<level>(levels);
 	ret->Set<forecast_type>(ftypes);
 
-	auto b = make_shared<base>();
+	auto b = make_shared<base<double>>();
 	b->grid = shared_ptr<grid>(new point_list(stats));
 	ret->Create(b, true);
 
@@ -813,7 +813,7 @@ info_t util::CSVToInfo(const vector<string>& csv)
 	return ret;
 }
 
-double util::MissingPercent(const himan::info& info)
+double util::MissingPercent(const himan::info<double>& info)
 {
 	auto cp = info;
 
@@ -861,7 +861,7 @@ bool util::ParseBoolean(const string& val)
 }
 
 #ifdef HAVE_CUDA
-void util::Unpack(vector<shared_ptr<info>> infos, bool addToCache)
+void util::Unpack(vector<shared_ptr<info<double>>> infos, bool addToCache)
 {
 	cudaStream_t stream;
 	CUDA_CHECK(cudaStreamCreate(&stream));

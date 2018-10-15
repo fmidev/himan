@@ -7,9 +7,6 @@
 
 using namespace himan;
 
-forecast_time::forecast_time()
-{
-}
 forecast_time::forecast_time(const raw_time& theOriginDateTime, const raw_time& theValidDateTime)
     : itsOriginDateTime(theOriginDateTime), itsValidDateTime(theValidDateTime), itsStepResolution(kHourResolution)
 {
@@ -21,22 +18,6 @@ forecast_time::forecast_time(const std::string& theOriginDateTime, const std::st
 {
 	itsOriginDateTime = raw_time(theOriginDateTime, theDateMask);
 	itsValidDateTime = raw_time(theValidDateTime, theDateMask);
-}
-
-forecast_time::forecast_time(const forecast_time& other)
-    : itsOriginDateTime(other.itsOriginDateTime),
-      itsValidDateTime(other.itsValidDateTime),
-      itsStepResolution(other.itsStepResolution)
-{
-}
-
-forecast_time& forecast_time::operator=(const forecast_time& other)
-{
-	itsOriginDateTime = other.itsOriginDateTime;
-	itsValidDateTime = other.itsValidDateTime;
-	itsStepResolution = other.itsStepResolution;
-
-	return *this;
 }
 
 std::ostream& forecast_time::Write(std::ostream& file) const

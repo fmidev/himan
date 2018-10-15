@@ -15,7 +15,7 @@ namespace himan
 {
 namespace cuda
 {
-void Unpack(std::shared_ptr<himan::info> fullInfo, cudaStream_t& stream, double* d_arr)
+void Unpack(std::shared_ptr<himan::info<double>> fullInfo, cudaStream_t& stream, double* d_arr)
 {
 	using namespace himan;
 	using namespace himan::plugin;
@@ -55,7 +55,7 @@ void Unpack(std::shared_ptr<himan::info> fullInfo, cudaStream_t& stream, double*
 }
 
 template <>
-void PrepareInfo(std::shared_ptr<himan::info> info, double* d_ret, cudaStream_t& stream, bool copyToHost)
+void PrepareInfo(std::shared_ptr<himan::info<double>> info, double* d_ret, cudaStream_t& stream, bool copyToHost)
 {
 	Unpack(info, stream, d_ret);
 
@@ -71,7 +71,7 @@ void PrepareInfo(std::shared_ptr<himan::info> info, double* d_ret, cudaStream_t&
 }
 
 template <>
-void PrepareInfo(std::shared_ptr<himan::info> info, float* d_ret, cudaStream_t& stream, bool copyToHost)
+void PrepareInfo(std::shared_ptr<himan::info<double>> info, float* d_ret, cudaStream_t& stream, bool copyToHost)
 {
 	const size_t N = info->SizeLocations();
 	double* d_arr = 0;
@@ -101,7 +101,7 @@ void PrepareInfo(std::shared_ptr<himan::info> info, float* d_ret, cudaStream_t& 
 }
 
 template <>
-void ReleaseInfo(std::shared_ptr<himan::info> info, double* d_arr, cudaStream_t& stream)
+void ReleaseInfo(std::shared_ptr<himan::info<double>> info, double* d_arr, cudaStream_t& stream)
 {
 	CUDA_CHECK(cudaMemcpyAsync(info->Data().ValuesAsPOD(), d_arr, info->SizeLocations() * sizeof(double),
 	                           cudaMemcpyDeviceToHost, stream));
@@ -109,7 +109,7 @@ void ReleaseInfo(std::shared_ptr<himan::info> info, double* d_arr, cudaStream_t&
 }
 
 template <>
-void ReleaseInfo(std::shared_ptr<himan::info> info, float* d_arr, cudaStream_t& stream)
+void ReleaseInfo(std::shared_ptr<himan::info<double>> info, float* d_arr, cudaStream_t& stream)
 {
 	const size_t N = info->SizeLocations();
 
@@ -125,10 +125,10 @@ void ReleaseInfo(std::shared_ptr<himan::info> info, float* d_arr, cudaStream_t& 
 	delete[] h_arr;
 }
 
-std::shared_ptr<himan::info> Fetch(const std::shared_ptr<const plugin_configuration> conf,
-                                   const himan::forecast_time& theTime, const himan::level& theLevel,
-                                   const himan::params& theParams, const himan::forecast_type& theType,
-                                   bool returnPacked)
+std::shared_ptr<himan::info<double>> Fetch(const std::shared_ptr<const plugin_configuration> conf,
+                                           const himan::forecast_time& theTime, const himan::level& theLevel,
+                                           const himan::params& theParams, const himan::forecast_type& theType,
+                                           bool returnPacked)
 {
 	for (const auto& p : theParams)
 	{
@@ -142,9 +142,10 @@ std::shared_ptr<himan::info> Fetch(const std::shared_ptr<const plugin_configurat
 	return nullptr;
 }
 
-std::shared_ptr<himan::info> Fetch(const std::shared_ptr<const plugin_configuration> conf,
-                                   const himan::forecast_time& theTime, const himan::level& theLevel,
-                                   const himan::param& theParam, const himan::forecast_type& theType, bool returnPacked)
+std::shared_ptr<himan::info<double>> Fetch(const std::shared_ptr<const plugin_configuration> conf,
+                                           const himan::forecast_time& theTime, const himan::level& theLevel,
+                                           const himan::param& theParam, const himan::forecast_type& theType,
+                                           bool returnPacked)
 {
 	try
 	{

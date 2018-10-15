@@ -35,9 +35,6 @@ fractile::fractile()
 	itsLogger = logger("fractile");
 }
 
-fractile::~fractile()
-{
-}
 void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
@@ -63,14 +60,14 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 
 	if (!ensSize.empty())
 	{
-		itsEnsembleSize = boost::lexical_cast<int>(ensSize);
+		itsEnsembleSize = std::stoi(ensSize);
 	}
 
 	auto maximumMissing = itsConfiguration->GetValue("max_missing_forecasts");
 
 	if (!maximumMissing.empty())
 	{
-		itsMaximumMissingForecasts = boost::lexical_cast<int>(maximumMissing);
+		itsMaximumMissingForecasts = std::stoi(maximumMissing);
 	}
 
 	if (itsEnsembleType == kLaggedEnsemble)
@@ -127,7 +124,7 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 			return;
 		}
 
-		itsEnsembleSize = boost::lexical_cast<int>(ensembleSizeStr);
+		itsEnsembleSize = std::stoi(ensembleSizeStr);
 	}
 
 	auto fractiles = itsConfiguration->GetValue("fractiles");
@@ -143,9 +140,9 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 			boost::trim(val);
 			try
 			{
-				itsFractiles.push_back(boost::lexical_cast<double>(val));
+				itsFractiles.push_back(std::stod(val));
 			}
-			catch (const boost::bad_lexical_cast& e)
+			catch (const std::invalid_argument& e)
 			{
 				itsLogger.Fatal("Invalid fractile value: '" + val + "'");
 				himan::Abort();
@@ -170,11 +167,11 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 	Start();
 }
 
-void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadIndex)
+void fractile::Calculate(std::shared_ptr<info<double>> myTargetInfo, uint16_t threadIndex)
 {
 	const std::string deviceType = "CPU";
 
-	auto threadedLogger = logger("fractileThread # " + boost::lexical_cast<std::string>(threadIndex));
+	auto threadedLogger = logger("fractileThread # " + std::to_string(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
@@ -288,9 +285,8 @@ void fractile::Calculate(std::shared_ptr<info> myTargetInfo, uint16_t threadInde
 		myTargetInfo->Value(var);
 	}
 
-	threadedLogger.Info("[" + deviceType +
-	                    "] Missing values: " + boost::lexical_cast<std::string>(myTargetInfo->Data().MissingCount()) +
-	                    "/" + boost::lexical_cast<std::string>(myTargetInfo->Data().Size()));
+	threadedLogger.Info("[" + deviceType + "] Missing values: " + std::to_string(myTargetInfo->Data().MissingCount()) +
+	                    "/" + std::to_string(myTargetInfo->Data().Size()));
 }
 
 }  // plugin

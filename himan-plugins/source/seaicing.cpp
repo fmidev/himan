@@ -41,7 +41,7 @@ void seaicing::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadIndex)
+void seaicing::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short theThreadIndex)
 {
 	const params TParam = {param("T-K"), param("TG-K")};
 	const level TLevel(himan::kHeight, 2, "HEIGHT");
