@@ -42,7 +42,7 @@ void UploadRunStatisticsToDatabase(const shared_ptr<configuration>& conf, const 
 	string content((istreambuf_iterator<char>(ifs)), (istreambuf_iterator<char>()));
 
 	// create json out of timings
-	json << "{\n    'plugins' : [";
+	json << "{ \"plugins\" : [";
 
 	for (const auto& t : pluginTimes)
 	{
@@ -53,11 +53,11 @@ void UploadRunStatisticsToDatabase(const shared_ptr<configuration>& conf, const 
 			name += " #" + to_string(t.order_number);
 		}
 
-		json << "\n        { 'name' : '" << name << "', 'elapsed_ms' : '" << (t.time_elapsed) << "' },";
+		json << " { \"name\" : \"" << name << "\", \"elapsed_ms\" : \"" << (t.time_elapsed) << "\" },";
 	}
 
 	json.seekp(-1, json.cur);  // remove comma from last element
-	json << "\n    ]\n}";
+	json << " ] }";
 
 	char* host = getenv("HOSTNAME");
 
@@ -71,8 +71,8 @@ void UploadRunStatisticsToDatabase(const shared_ptr<configuration>& conf, const 
 	      << "'" << host << "', "
 	      << "'" << timestr << "', "
 	      << "'" << conf->ConfigurationFile() << "', "
-	      << "to_json($$" << content << "$$::text), "
-	      << "to_json($$" << json.str() << "$$::text))";
+	      << "'" << content << "'::json, "
+	      << "'" << json.str() << "'::json)";
 
 	// clang-format on
 
