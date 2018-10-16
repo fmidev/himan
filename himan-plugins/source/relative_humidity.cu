@@ -139,6 +139,11 @@ void ProcessHumidityGPU(std::shared_ptr<const plugin_configuration> conf, std::s
 		info_t TDInfo =
 		    cuda::Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("TD-K"), myTargetInfo->ForecastType());
 
+		if (!TDInfo)
+		{
+			return;
+		}
+
 		// Copy data to device
 
 		cuda::PrepareInfo(TDInfo, d_TD, stream);
