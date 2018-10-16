@@ -180,8 +180,6 @@ shared_ptr<info<double>> fetcher::FetchFromProducer(search_options& opts, bool r
 		c->Insert(theInfos[0]);
 	}
 
-	ASSERT((theInfos[0]->Level()) == opts.level);
-
 	ASSERT((theInfos[0]->Time()) == opts.time);
 
 	ASSERT((theInfos[0]->Param()) == opts.param);
