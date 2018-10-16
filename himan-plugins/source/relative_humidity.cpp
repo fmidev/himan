@@ -85,8 +85,6 @@ void relative_humidity::Calculate(shared_ptr<info<double>> myTargetInfo, unsigne
 			return;
 		}
 
-		SetAB(myTargetInfo, TInfo);
-
 		// First try to calculate using Q and P
 
 		info_t QInfo = Fetch(forecastTime, forecastLevel, QParam, forecastType, itsConfiguration->UseCudaForPacking());
@@ -133,6 +131,8 @@ void relative_humidity::Calculate(shared_ptr<info<double>> myTargetInfo, unsigne
 
 			WithQ(myTargetInfo, TInfo, QInfo, PInfo, PScale);
 		}
+
+		SetAB(myTargetInfo, TInfo);
 	}
 
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
