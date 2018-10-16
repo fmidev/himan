@@ -106,18 +106,6 @@ void ProcessHumidityGPU(std::shared_ptr<const plugin_configuration> conf, std::s
 
 	cuda::PrepareInfo(TInfo, d_T, stream);
 
-	if (myTargetInfo->Level().Type() == kHybrid)
-	{
-		const size_t paramIndex = myTargetInfo->Index<param>();
-
-		for (myTargetInfo->Reset<param>(); myTargetInfo->Next<param>();)
-		{
-			myTargetInfo->Set<level>(TInfo->Level());
-		}
-
-		myTargetInfo->Index<param>(paramIndex);
-	}
-
 	// First try to calculate using Q and P
 
 	info_t QInfo =
@@ -231,4 +219,16 @@ void ProcessHumidityGPU(std::shared_ptr<const plugin_configuration> conf, std::s
 	CUDA_CHECK(cudaFree(d_RH));
 
 	cudaStreamDestroy(stream);
+
+	if (myTargetInfo->Level().Type() == kHybrid)
+	{
+		const size_t paramIndex = myTargetInfo->Index<param>();
+
+		for (myTargetInfo->Reset<param>(); myTargetInfo->Next<param>();)
+		{
+			myTargetInfo->Set<level>(TInfo->Level());
+		}
+
+		myTargetInfo->Index<param>(paramIndex);
+	}
 }
