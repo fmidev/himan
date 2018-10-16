@@ -58,6 +58,8 @@ level::operator std::string() const
 		out += "/" + std::to_string(itsValue2);
 	}
 
+	out += " ab " + std::to_string(itsAB.size());
+
 	return out;
 }
 
@@ -117,6 +119,7 @@ std::ostream& level::Write(std::ostream& file) const
 	file << "__itsValue__ " << itsValue << std::endl;
 	file << "__itsValue2__ " << itsValue2 << std::endl;
 	file << "__itsName__ " << itsName << std::endl;
+	file << "__itsAB__ " << itsAB.size() << std::endl;
 
 	return file;
 }
