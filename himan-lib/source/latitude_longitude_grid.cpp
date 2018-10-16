@@ -134,7 +134,7 @@ point latitude_longitude_grid::LastPoint() const
 
 bool latitude_longitude_grid::IsGlobal() const
 {
-	if(static_cast<double>(Ni()) * Di() == 360.0)
+	if (static_cast<double>(Ni()) * Di() == 360.0)
 		return true;
 	return false;
 }
@@ -143,9 +143,9 @@ point latitude_longitude_grid::XY(const himan::point& latlon) const
 {
 	double x = (latlon.X() - itsBottomLeft.X()) / Di();
 
-	if (x < 0 || x > static_cast<double>(Ni()-1))
+	if (x < 0 || x > static_cast<double>(Ni() - 1))
 	{
-		if(IsGlobal())
+		if (IsGlobal())
 		{
 			// wrap x if necessary
 			// this might happen f.ex. with EC where grid start at 0 meridian and
@@ -217,8 +217,10 @@ point latitude_longitude_grid::LatLon(size_t locationIndex) const
 			throw runtime_error("Scanning mode not supported: " + HPScanningModeToString.at(itsScanningMode));
 	}
 
-	while (ret.X() >= 360.) ret.X(ret.X() - 360.);
-	if (itsNj == 1) ret.Y(firstPoint.Y());
+	while (ret.X() >= 360.)
+		ret.X(ret.X() - 360.);
+	if (itsNj == 1)
+		ret.Y(firstPoint.Y());
 
 	return ret;
 }
@@ -233,7 +235,7 @@ size_t latitude_longitude_grid::Hash() const
 	hashes.push_back(hash<double>{}(Di()));
 	hashes.push_back(hash<double>{}(Dj()));
 	hashes.push_back(ScanningMode());
-	return boost::hash_range(hashes.begin(),hashes.end());
+	return boost::hash_range(hashes.begin(), hashes.end());
 }
 
 void latitude_longitude_grid::Ni(size_t theNi)
@@ -553,16 +555,16 @@ ostream& rotated_latitude_longitude_grid::Write(std::ostream& file) const
 
 size_t rotated_latitude_longitude_grid::Hash() const
 {
-        vector<size_t> hashes;
-        hashes.push_back(Type());
-        hashes.push_back(FirstPoint().Hash());
-        hashes.push_back(Ni());
-        hashes.push_back(Nj());
-        hashes.push_back(hash<double>{}(Di()));
-        hashes.push_back(hash<double>{}(Dj()));
+	vector<size_t> hashes;
+	hashes.push_back(Type());
+	hashes.push_back(FirstPoint().Hash());
+	hashes.push_back(Ni());
+	hashes.push_back(Nj());
+	hashes.push_back(hash<double>{}(Di()));
+	hashes.push_back(hash<double>{}(Dj()));
 	hashes.push_back(ScanningMode());
 	hashes.push_back(SouthPole().Hash());
-        return boost::hash_range(hashes.begin(),hashes.end());
+	return boost::hash_range(hashes.begin(), hashes.end());
 }
 
 void rotated_latitude_longitude_grid::InitNewbaseArea() const

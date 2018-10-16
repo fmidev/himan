@@ -135,7 +135,7 @@ void hybrid_pressure::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned 
 	 * For Harmonie and ECMWF interpolation is done, when reading data from the grib-file. (NFmiGribMessage::PV)
 	 */
 
-	vector<double> ab = TInfo->Grid()->AB();
+	vector<double> ab = TInfo->Level().AB();
 
 	double A, B;
 

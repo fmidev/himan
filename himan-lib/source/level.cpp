@@ -10,22 +10,27 @@
 using namespace himan;
 
 level::level()
-    : itsType(kUnknownLevel), itsValue(kHPMissingValue), itsValue2(kHPMissingValue), itsIndex(kHPMissingInt), itsName()
+    : itsType(kUnknownLevel),
+      itsValue(kHPMissingValue),
+      itsValue2(kHPMissingValue),
+      itsIndex(kHPMissingInt),
+      itsName(),
+      itsAB()
 {
 }
 
 level::level(HPLevelType theType, double theValue)
-    : itsType(theType), itsValue(theValue), itsValue2(kHPMissingValue), itsIndex(kHPMissingInt), itsName()
+    : itsType(theType), itsValue(theValue), itsValue2(kHPMissingValue), itsIndex(kHPMissingInt), itsName(), itsAB()
 {
 }
 
 level::level(HPLevelType theType, double theValue, const std::string& theName)
-    : itsType(theType), itsValue(theValue), itsValue2(kHPMissingValue), itsIndex(kHPMissingInt), itsName()
+    : itsType(theType), itsValue(theValue), itsValue2(kHPMissingValue), itsIndex(kHPMissingInt), itsName(), itsAB()
 {
 }
 
 level::level(HPLevelType theType, double theValue, double theValue2)
-    : itsType(theType), itsValue(theValue), itsValue2(theValue2), itsIndex(kHPMissingInt), itsName()
+    : itsType(theType), itsValue(theValue), itsValue2(theValue2), itsIndex(kHPMissingInt), itsName(), itsAB()
 {
 }
 
@@ -36,7 +41,8 @@ bool level::operator==(const level& other) const
 		return true;
 	}
 
-	return (itsType == other.itsType && itsValue == other.itsValue && itsValue2 == other.itsValue2);
+	return (itsType == other.itsType && itsValue == other.itsValue && itsValue2 == other.itsValue2 &&
+	        itsAB == other.itsAB);
 }
 
 bool level::operator!=(const level& other) const
@@ -94,6 +100,14 @@ std::string level::Name() const
 void level::Name(const std::string& theName)
 {
 	itsName = theName;
+}
+std::vector<double> level::AB() const
+{
+	return itsAB;
+}
+void level::AB(const std::vector<double>& theAB)
+{
+	itsAB = theAB;
 }
 std::ostream& level::Write(std::ostream& file) const
 {
