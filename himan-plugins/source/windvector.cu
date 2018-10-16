@@ -127,10 +127,17 @@ void himan::plugin::windvector_cuda::RunCuda(std::shared_ptr<const plugin_config
 	c->Insert(UInfo);
 	c->Insert(VInfo);
 
-	for (myTargetInfo->Reset<param>(); myTargetInfo->Next<param>();)
-	{
-		myTargetInfo->Grid()->AB(UInfo->Grid()->AB());
-	}
+        if (myTargetInfo->Level().Type() == kHybrid)
+        {
+                const size_t paramIndex = myTargetInfo->Index<param>();
+
+                for (myTargetInfo->Reset<param>(); myTargetInfo->Next<param>();)
+                {
+                        myTargetInfo->Set<level>(UInfo->Level());
+                }
+
+                myTargetInfo->Index<param>(paramIndex);
+        }
 
 	// dims
 

@@ -84,7 +84,7 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 
 		for (myTargetInfo->Reset<param>(); myTargetInfo->Next<param>();)
 		{
-			myTargetInfo->Grid()->AB(TInfo->Grid()->AB());
+			myTargetInfo->Set<level>(TInfo->Level());
 		}
 
 		myTargetInfo->Index<param>(paramIndex);

@@ -112,7 +112,7 @@ void ProcessHumidityGPU(std::shared_ptr<const plugin_configuration> conf, std::s
 
 		for (myTargetInfo->Reset<param>(); myTargetInfo->Next<param>();)
 		{
-			myTargetInfo->Grid()->AB(TInfo->Grid()->AB());
+			myTargetInfo->Set<level>(TInfo->Level());
 		}
 
 		myTargetInfo->Index<param>(paramIndex);

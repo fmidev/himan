@@ -76,7 +76,6 @@ void density::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short th
 	}
 
 	SetAB(myTargetInfo, TInfo);
-
 	string deviceType = "CPU";
 
 	if (PInfo)
