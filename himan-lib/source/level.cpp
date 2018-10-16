@@ -58,8 +58,6 @@ level::operator std::string() const
 		out += "/" + std::to_string(itsValue2);
 	}
 
-	out += " ab " + std::to_string(itsAB.size());
-
 	return out;
 }
 
