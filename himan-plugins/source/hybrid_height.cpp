@@ -48,7 +48,7 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 		// In those conditions spawning a separate thread to write the results should give according to initial tests
 		// a ~30% increase in total calculation speed.
 
-		PrimaryDimension(kTimeDimension);
+		itsThreadDistribution = ThreadDistribution::kThreadForForecastTypeAndTime;
 	}
 
 	SetParams({param(HParam)});
@@ -180,9 +180,9 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 
 	bool topToBottom = false;
 
-	if (itsInfo->Size<level>() > 1)
+	if (myTargetInfo->Size<level>() > 1)
 	{
-		auto first = itsInfo->Peek<level>(0), second = itsInfo->Peek<level>(1);
+		auto first = itsLevelIterator.At(0), second = itsLevelIterator.At(1);
 
 		if (first.Value() < second.Value())
 		{
@@ -305,8 +305,6 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 
 	topToBottom ? myTargetInfo->Last<level>() : myTargetInfo->First<level>();
 
-	vector<future<void>> writers;
-
 	while (true)
 	{
 		// Check if we have data in grid. If all values are missing, it is impossible to continue
@@ -352,16 +350,6 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 			}
 		}
 
-		if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
-		{
-			writers.push_back(async(launch::async, [this](info_t _myTargetInfo) { WriteToFile(_myTargetInfo); },
-			                        make_shared<info<double>>(*myTargetInfo)));
-		}
-		else
-		{
-			WriteToFile(myTargetInfo);
-		}
-
 		if (itsConfiguration->StatisticsEnabled())
 		{
 			itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Data().MissingCount());
@@ -376,20 +364,5 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 		}
 	}
 
-	for (auto& f : writers)
-	{
-		f.get();
-	}
-
 	return true;
-}
-
-void hybrid_height::RunTimeDimension(info_t myTargetInfo, unsigned short threadIndex)
-{
-	myTargetInfo->First<level>();
-
-	while (NextExcludingLevel(*myTargetInfo))
-	{
-		Calculate(myTargetInfo, threadIndex);
-	}
 }

@@ -39,9 +39,6 @@ class hybrid_height : public compiled_plugin, private compiled_plugin_base
 		return HPVersionNumber(1, 2);
 	}
 
-   protected:
-	void RunTimeDimension(himan::info_t myTargetInfo, unsigned short threadIndex) override;
-
    private:
 	virtual void Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex);
 	bool WithHypsometricEquation(info_t& myTargetInfo);

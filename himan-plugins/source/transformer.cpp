@@ -167,11 +167,7 @@ void transformer::SetAdditionalParameters()
 	else
 	{
 		// copy levels from target
-		auto x = make_shared<info<double>>(*itsInfo);
-		for (x->Reset<level>(); x->Next<level>();)
-		{
-			itsSourceLevels.push_back(x->Level());
-		}
+		itsSourceLevels = itsLevelIterator.Values();
 	}
 
 	if (!targetForecastType.empty())
@@ -222,16 +218,16 @@ void transformer::Process(std::shared_ptr<const plugin_configuration> conf)
 	// Need to set this before starting Calculate, since we don't want to fetch with 'targetForecastType'.
 	if (itsTargetForecastType.Type() != kUnknownType)
 	{
-		if (itsInfo->Iterator<forecast_type>().Size() > 1)
+		if (itsForecastTypeIterator.Size() > 1)
 		{
 			throw std::runtime_error("Forecast type iterator can only be set when there's only 1 source forecast type");
 		}
 		else
 		{
-			itsInfo->Iterator<forecast_type>().First();
+			itsForecastTypeIterator.First();
 			// Copy the original so that we can fetch the right data.
-			itsSourceForecastType = itsInfo->ForecastType();
-			itsInfo->Iterator<forecast_type>().Replace(itsTargetForecastType);
+			itsSourceForecastType = itsForecastTypeIterator.At();
+			itsForecastTypeIterator.Set(itsTargetForecastType);
 		}
 	}
 

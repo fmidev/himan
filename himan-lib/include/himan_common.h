@@ -319,41 +319,6 @@ enum HPExceptionType
 	kFunctionNotImplemented
 };
 
-/**
- * @enum HPDimensionType
- *
- * @brief Define all dimension types
- *
- * When looping over data, we can choose between a few dimensions.
- */
-enum HPDimensionType
-{
-	kUnknownDimension = 0,
-	kTimeDimension,
-	kLevelDimension,
-	kParamDimension,
-	kLocationDimension,
-	kForecastTypeDimension
-};
-
-const boost::unordered_map<HPDimensionType, std::string> HPDimensionTypeToString =
-    ba::map_list_of
-	(kUnknownDimension, "unknown")
-	(kTimeDimension, "time dimension")
-	(kLevelDimension, "level dimension")
-	(kParamDimension, "param dimension")
-	(kLocationDimension, "location dimension")
-	(kForecastTypeDimension, "forecast type dimension");
-
-const boost::unordered_map<std::string, HPDimensionType> HPStringToDimensionType =
-    ba::map_list_of
-	("unknown", kUnknownDimension)
-	("time", kTimeDimension)
-	("level", kLevelDimension)
-	("param", kParamDimension)
-	("location", kLocationDimension)
-	("forecast_type", kForecastTypeDimension);
-
 enum HPTimeResolution
 {
 	kUnknownTimeResolution = 0,

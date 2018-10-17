@@ -197,7 +197,6 @@ bool Interpolate(const grid* baseGrid, std::vector<std::shared_ptr<info<T>>>& in
 				if (info->PackedData()->HasData())
 				{
 					// must unpack before swapping
-					// itsLogger->Trace("Unpacking before swapping");
 					util::Unpack<T>({info});
 				}
 #endif

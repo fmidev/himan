@@ -9,7 +9,7 @@
 #include "logger.h"
 #include "plugin_factory.h"
 #include "util.h"
-#include <boost/thread.hpp>
+#include <thread>
 
 #include "cache.h"
 #include "fetcher.h"
@@ -22,17 +22,8 @@ using namespace himan::plugin;
 
 mutex dimensionMutex, singleFileWriteMutex;
 
-compiled_plugin_base::compiled_plugin_base()
-    : itsTimer(),
-      itsThreadCount(-1),
-      itsDimensionsRemaining(true),
-      itsBaseLogger(logger("compiled_plugin_base")),
-      itsPluginIsInitialized(false),
-      itsPrimaryDimension(kUnknownDimension)
-{
-}
-
-bool compiled_plugin_base::Next(info<double>& myTargetInfo)
+template <typename T>
+bool compiled_plugin_base::Next(info<T>& myTargetInfo)
 {
 	lock_guard<mutex> lock(dimensionMutex);
 
@@ -41,117 +32,111 @@ bool compiled_plugin_base::Next(info<double>& myTargetInfo)
 		return false;
 	}
 
-	if (itsInfo->Next<level>())
+	if (itsThreadDistribution == ThreadDistribution::kThreadForAny ||
+	    itsThreadDistribution == ThreadDistribution::kThreadForForecastTypeAndLevel ||
+	    itsThreadDistribution == ThreadDistribution::kThreadForTimeAndLevel ||
+	    itsThreadDistribution == ThreadDistribution::kThreadForLevel)
 	{
-		bool ret = myTargetInfo.Find<level>(itsInfo->Level());
-		ASSERT(ret);
-		ret = myTargetInfo.Find<forecast_time>(itsInfo->Time());
-		ASSERT(ret);
-		ret = myTargetInfo.Find<forecast_type>(itsInfo->ForecastType());
-		ASSERT(ret);
-
-		return ret;
-	}
-
-	// No more levels at this forecast type/time combination; rewind level iterator
-
-	itsInfo->First<level>();
-
-	if (itsInfo->Next<forecast_time>())
-	{
-		bool ret = myTargetInfo.Find<forecast_time>(itsInfo->Time());
-		ASSERT(ret);
-		ret = myTargetInfo.Find<level>(itsInfo->Level());
-		ASSERT(ret);
-		ret = myTargetInfo.Find<forecast_type>(itsInfo->ForecastType());
-		ASSERT(ret);
-
-		return ret;
-	}
-
-	// No more times at this forecast type; rewind time iterator, level iterator is
-	// already at first place
-
-	itsInfo->First<forecast_time>();
-
-	if (itsInfo->Next<forecast_type>())
-	{
-		bool ret = myTargetInfo.Find<forecast_time>(itsInfo->Time());
-		ASSERT(ret);
-		ret = myTargetInfo.Find<level>(itsInfo->Level());
-		ASSERT(ret);
-		ret = myTargetInfo.Find<forecast_type>(itsInfo->ForecastType());
-		ASSERT(ret);
-
-		return ret;
-	}
-
-	// future threads calling for new dimensions aren't getting any
-
-	itsDimensionsRemaining = false;
-
-	return false;
-}
-
-bool compiled_plugin_base::NextExcludingLevel(info<double>& myTargetInfo)
-{
-	lock_guard<mutex> lock(dimensionMutex);
-
-	if (!itsDimensionsRemaining)
-	{
-		return false;
-	}
-
-	if (itsInfo->Next<forecast_time>())
-	{
-		bool ret = myTargetInfo.Find<forecast_time>(itsInfo->Time());
-		ASSERT(ret);
-		ret = myTargetInfo.Find<forecast_type>(itsInfo->ForecastType());
-		ASSERT(ret);
-
-		return ret;
-	}
-
-	// No more times at this forecast type; rewind time iterator, level iterator is
-	// already at first place
-
-	itsInfo->First<forecast_time>();
-
-	if (itsInfo->Next<forecast_type>())
-	{
-		bool ret = myTargetInfo.Find<forecast_time>(itsInfo->Time());
-		ASSERT(ret);
-		ret = myTargetInfo.Find<forecast_type>(itsInfo->ForecastType());
-		ASSERT(ret);
-
-		return ret;
-	}
-
-	// future threads calling for new dimensions aren't getting any
-
-	itsDimensionsRemaining = false;
-
-	return false;
-}
-
-bool compiled_plugin_base::SetAB(const info_t& myTargetInfo, const info_t& sourceInfo)
-{
-	if (myTargetInfo->Level().Type() == kHybrid)
-	{
-		const size_t paramIndex = myTargetInfo->Index<param>();
-
-		for (myTargetInfo->Reset<param>(); myTargetInfo->Next<param>();)
+		if (itsLevelIterator.Next())
 		{
-			myTargetInfo->Set<level>(sourceInfo->Level());
+			bool ret = myTargetInfo.template Find<level>(itsLevelIterator.At());
+			ASSERT(ret);
+			ret = myTargetInfo.template Find<forecast_time>(itsTimeIterator.At());
+			ASSERT(ret);
+			ret = myTargetInfo.template Find<forecast_type>(itsForecastTypeIterator.At());
+			ASSERT(ret);
+
+			return ret;
 		}
 
-		myTargetInfo->Index<param>(paramIndex);
+		// No more levels at this forecast type/time combination; rewind level iterator
+
+		itsLevelIterator.First();
+	}
+
+	if (itsThreadDistribution == ThreadDistribution::kThreadForAny ||
+	    itsThreadDistribution == ThreadDistribution::kThreadForForecastTypeAndTime ||
+	    itsThreadDistribution == ThreadDistribution::kThreadForTimeAndLevel ||
+	    itsThreadDistribution == ThreadDistribution::kThreadForTime)
+	{
+		if (itsTimeIterator.Next())
+		{
+			bool ret = myTargetInfo.template Find<forecast_time>(itsTimeIterator.At());
+			ASSERT(ret);
+			ret = myTargetInfo.template Find<level>(itsLevelIterator.At());
+			ASSERT(ret);
+			ret = myTargetInfo.template Find<forecast_type>(itsForecastTypeIterator.At());
+			ASSERT(ret);
+
+			return ret;
+		}
+
+		// No more times at this forecast type; rewind time iterator, level iterator is
+		// already at first place
+
+		itsTimeIterator.First();
+	}
+
+	if (itsThreadDistribution == ThreadDistribution::kThreadForAny ||
+	    itsThreadDistribution == ThreadDistribution::kThreadForForecastTypeAndTime ||
+	    itsThreadDistribution == ThreadDistribution::kThreadForForecastTypeAndLevel ||
+	    itsThreadDistribution == ThreadDistribution::kThreadForForecastType)
+	{
+		if (itsForecastTypeIterator.Next())
+		{
+			bool ret = myTargetInfo.template Find<forecast_time>(itsTimeIterator.At());
+			ASSERT(ret);
+			ret = myTargetInfo.template Find<level>(itsLevelIterator.At());
+			ASSERT(ret);
+			ret = myTargetInfo.template Find<forecast_type>(itsForecastTypeIterator.At());
+			ASSERT(ret);
+
+			return ret;
+		}
+	}
+	// future threads calling for new dimensions aren't getting any
+
+	itsDimensionsRemaining = false;
+
+	return false;
+}
+
+template bool compiled_plugin_base::Next<double>(info<double>&);
+
+bool compiled_plugin_base::SetAB(const shared_ptr<info<double>>& myTargetInfo,
+                                 const shared_ptr<info<double>>& sourceInfo)
+{
+	return SetAB<double>(myTargetInfo, sourceInfo);
+}
+
+template <typename T>
+bool compiled_plugin_base::SetAB(const shared_ptr<info<T>>& myTargetInfo, const shared_ptr<info<T>>& sourceInfo)
+{
+	if (myTargetInfo->template Level().Type() == kHybrid)
+	{
+		const size_t paramIndex = myTargetInfo->template Index<param>();
+
+		for (myTargetInfo->template Reset<param>(); myTargetInfo->template Next<param>();)
+		{
+			myTargetInfo->Level().AB(sourceInfo->Level().AB());
+		}
+
+		myTargetInfo->template Index<param>(paramIndex);
 	}
 
 	return true;
 }
 
-void compiled_plugin_base::WriteToFile(const info_t targetInfo, write_options writeOptions)
+template bool compiled_plugin_base::SetAB<double>(const shared_ptr<info<double>>&, const shared_ptr<info<double>>&);
+template bool compiled_plugin_base::SetAB<float>(const shared_ptr<info<float>>&, const shared_ptr<info<float>>&);
+
+void compiled_plugin_base::WriteToFile(const shared_ptr<info<double>> targetInfo, write_options writeOptions)
+{
+	return WriteToFile<double>(targetInfo, writeOptions);
+}
+
+template <typename T>
+void compiled_plugin_base::WriteToFile(const shared_ptr<info<T>> targetInfo, write_options writeOptions)
 {
 	auto aWriter = GET_PLUGIN(writer);
 
@@ -159,11 +144,11 @@ void compiled_plugin_base::WriteToFile(const info_t targetInfo, write_options wr
 
 	// writing might modify iterator positions --> create a copy
 
-	auto tempInfo = make_shared<info<double>>(*targetInfo);
+	auto tempInfo = make_shared<info<T>>(*targetInfo);
 
-	tempInfo->Reset<param>();
+	tempInfo->template Reset<param>();
 
-	while (tempInfo->Next<param>())
+	while (tempInfo->template Next<param>())
 	{
 		if (!tempInfo->IsValidGrid())
 		{
@@ -188,6 +173,90 @@ void compiled_plugin_base::WriteToFile(const info_t targetInfo, write_options wr
 	}
 }
 
+template void compiled_plugin_base::WriteToFile<double>(const shared_ptr<info<double>>, write_options);
+
+void compiled_plugin_base::Start()
+{
+	return Start<double>();
+}
+
+void compiled_plugin_base::SetInitialIteratorPositions()
+{
+	itsParamIterator.First();
+
+	switch (itsThreadDistribution)
+	{
+		case ThreadDistribution::kThreadForAny:
+			itsLevelIterator.Reset();
+			itsTimeIterator.First();
+			itsForecastTypeIterator.First();
+			break;
+		case ThreadDistribution::kThreadForForecastTypeAndTime:
+			itsLevelIterator.First();  // dimension ignored by Next(), set for convenience
+			itsTimeIterator.Reset();
+			itsForecastTypeIterator.First();
+			break;
+		case ThreadDistribution::kThreadForForecastTypeAndLevel:
+		case ThreadDistribution::kThreadForTimeAndLevel:
+			itsLevelIterator.Reset();
+			itsTimeIterator.First();
+			itsForecastTypeIterator.First();
+			break;
+		case ThreadDistribution::kThreadForLevel:
+			itsLevelIterator.Reset();
+			itsTimeIterator.First();
+			itsForecastTypeIterator.First();
+			break;
+		case ThreadDistribution::kThreadForForecastType:
+			itsLevelIterator.First();
+			itsTimeIterator.First();
+			itsForecastTypeIterator.Reset();
+			break;
+		case ThreadDistribution::kThreadForTime:
+			itsLevelIterator.First();
+			itsTimeIterator.Reset();
+			itsForecastTypeIterator.First();
+			break;
+	}
+}
+
+void compiled_plugin_base::SetThreadCount()
+{
+	const auto ftypes = itsForecastTypeIterator.Size();
+	const auto times = itsTimeIterator.Size();
+	const auto lvls = itsLevelIterator.Size();
+
+	size_t dims = 12;
+
+	switch (itsThreadDistribution)
+	{
+		case ThreadDistribution::kThreadForAny:
+			dims = ftypes * times * lvls;
+			break;
+		case ThreadDistribution::kThreadForForecastTypeAndTime:
+			dims = ftypes * times;
+			break;
+		case ThreadDistribution::kThreadForForecastTypeAndLevel:
+			dims = ftypes * lvls;
+			break;
+		case ThreadDistribution::kThreadForTimeAndLevel:
+			dims = times * lvls;
+			break;
+		case ThreadDistribution::kThreadForLevel:
+			dims = lvls;
+			break;
+		case ThreadDistribution::kThreadForForecastType:
+			dims = ftypes;
+			break;
+		case ThreadDistribution::kThreadForTime:
+			dims = times;
+			break;
+	}
+
+	itsThreadCount = static_cast<short>(std::min(12, static_cast<int>(dims)));
+}
+
+template <typename T>
 void compiled_plugin_base::Start()
 {
 	if (!itsPluginIsInitialized)
@@ -196,30 +265,67 @@ void compiled_plugin_base::Start()
 		return;
 	}
 
-	if (itsPrimaryDimension == kTimeDimension)
+	auto baseInfo = make_shared<info<T>>(itsForecastTypeIterator.Values(), itsTimeIterator.Values(),
+	                                     itsLevelIterator.Values(), itsParamIterator.Values());
+	baseInfo->Producer(itsConfiguration->TargetProducer());
+
+	baseInfo->template First<forecast_type>();
+	baseInfo->template First<forecast_time>();
+	baseInfo->template First<level>();
+	baseInfo->template Reset<param>();
+
+	const auto gr = itsConfiguration->BaseGrid();
+
+	while (baseInfo->Next())
 	{
-		itsInfo->First<forecast_type>();
+		for (const auto& both : itsLevelParams)
+		{
+			if (baseInfo->Param() == both.second && baseInfo->Level() == both.first)
+			{
+				auto b = make_shared<base<T>>();
+				b->grid = shared_ptr<grid>(gr->Clone());
+
+				if (itsConfiguration->UseDynamicMemoryAllocation() == false)
+				{
+					if (b->grid->Class() == kRegularGrid)
+					{
+						const regular_grid* regGrid(dynamic_cast<const regular_grid*>(b->grid.get()));
+						b->data.Resize(regGrid->Ni(), regGrid->Nj());
+					}
+					else if (b->grid->Class() == kIrregularGrid)
+					{
+						b->data.Resize(b->grid->Size(), 1, 1);
+					}
+				}
+				baseInfo->Base(b);
+			}
+		}
 	}
 
-	boost::thread_group g;
+	SetThreadCount();
+	SetInitialIteratorPositions();
+
+	vector<thread> threads;
 
 	for (short i = 0; i < itsThreadCount; i++)
 	{
-		printf("Info::compiled_plugin: Thread %d starting\n", (i + 1));  // Printf is thread safe
-		boost::thread* t = new boost::thread(&compiled_plugin_base::Run, this, i + 1);
-
-		g.add_thread(t);
+		itsBaseLogger.Info("Thread " + to_string(i) + " starting");
+		threads.emplace_back(
+		    thread(&compiled_plugin_base::Run<T>, this, make_shared<info<T>>(*baseInfo), i + 1));
 	}
 
-	g.join_all();
+	for (auto& t : threads)
+	{
+		t.join();
+	}
 
 	Finish();
 }
 
+template void compiled_plugin_base::Start<double>();
+
 void compiled_plugin_base::Init(const shared_ptr<const plugin_configuration> conf)
 {
-	const short MAX_THREADS = 12;  //<! Max number of threads we allow
-
 	itsConfiguration = conf;
 
 	if (itsConfiguration->StatisticsEnabled())
@@ -228,31 +334,15 @@ void compiled_plugin_base::Init(const shared_ptr<const plugin_configuration> con
 		itsConfiguration->Statistics()->UsedGPUCount(static_cast<short>(conf->CudaDeviceCount()));
 	}
 
-	// Determine thread count
-
-	short coreCount = static_cast<short>(boost::thread::hardware_concurrency());  // Number of cores
-
-	itsThreadCount = MAX_THREADS;
-
-	// If user has specified thread count, always use that
-	if (conf->ThreadCount() > 0)
-	{
-		itsThreadCount = conf->ThreadCount();
-	}
-	// we don't want to use all cores in a server by default
-	else if (MAX_THREADS > coreCount)
-	{
-		itsThreadCount = coreCount;
-	}
-
-	itsInfo = make_shared<info<double>>(itsConfiguration->ForecastTypes(), itsConfiguration->Times(),
-	                                    itsConfiguration->Levels(), vector<param>());
-	itsInfo->Producer(itsConfiguration->TargetProducer());
+	itsForecastTypeIterator = forecast_type_iter(itsConfiguration->ForecastTypes());
+	itsTimeIterator = time_iter(itsConfiguration->Times());
+	itsLevelIterator = level_iter(itsConfiguration->Levels());
 
 	itsPluginIsInitialized = true;
 }
 
-void compiled_plugin_base::RunAll(info_t myTargetInfo, unsigned short threadIndex)
+template <typename T>
+void compiled_plugin_base::Run(shared_ptr<info<T>> myTargetInfo, unsigned short threadIndex)
 {
 	while (Next(*myTargetInfo))
 	{
@@ -277,58 +367,7 @@ void compiled_plugin_base::RunAll(info_t myTargetInfo, unsigned short threadInde
 	}
 }
 
-void compiled_plugin_base::RunTimeDimension(info_t myTargetInfo, unsigned short threadIndex)
-{
-	while (NextExcludingLevel(*myTargetInfo))
-	{
-		for (myTargetInfo->Reset<level>(); myTargetInfo->Next<level>();)
-		{
-			myTargetInfo->FirstValidGrid();
-
-			if (itsConfiguration->UseDynamicMemoryAllocation())
-			{
-				AllocateMemory(*myTargetInfo);
-			}
-
-			Calculate(myTargetInfo, threadIndex);
-
-			if (itsConfiguration->StatisticsEnabled())
-			{
-				itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Data().MissingCount());
-				itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data().Size());
-			}
-
-			WriteToFile(myTargetInfo);
-		}
-	}
-}
-
-void compiled_plugin_base::Run(unsigned short threadIndex)
-{
-	auto myTargetInfo = make_shared<info<double>>(*itsInfo);
-	if (itsPrimaryDimension == kUnknownDimension)
-	{
-		// The general case: all elements are distributed to all threads in an
-		// equal fashion with no dependencies.
-
-		// This method is faster than any of the dimension variations or Run()
-
-		RunAll(myTargetInfo, threadIndex);
-	}
-	else if (itsPrimaryDimension == kTimeDimension)
-	{
-		// Each thread will get one time and process that.
-		// This is used when f.ex. levels need to be processed
-		// in sequential order.
-
-		RunTimeDimension(myTargetInfo, threadIndex);
-	}
-	else
-	{
-		itsBaseLogger.Fatal("Invalid primary dimension: " + HPDimensionTypeToString.at(itsPrimaryDimension));
-		exit(1);
-	}
-}
+template void compiled_plugin_base::Run<double>(shared_ptr<info<double>>, unsigned short);
 
 void compiled_plugin_base::Finish()
 {
@@ -339,9 +378,15 @@ void compiled_plugin_base::Finish()
 	}
 }
 
-void compiled_plugin_base::Calculate(info_t myTargetInfo, unsigned short threadIndex)
+void compiled_plugin_base::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
-	itsBaseLogger.Fatal("Top level calculate called");
+	itsBaseLogger.Fatal("Top level Calculate<double>() called");
+	exit(1);
+}
+
+void compiled_plugin_base::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short threadIndex)
+{
+	itsBaseLogger.Fatal("Top level Calculate<float>() called");
 	exit(1);
 }
 
@@ -403,8 +448,8 @@ void compiled_plugin_base::SetParams(std::vector<param>& params, const vector<le
 					continue;
 				}
 
-				auto paraminfo = r->RadonDB().GetParameterFromDatabaseName(itsInfo->Producer().Id(), par.Name(),
-				                                                           lvl.Type(), lvl.Value());
+				auto paraminfo = r->RadonDB().GetParameterFromDatabaseName(itsConfiguration->TargetProducer().Id(),
+				                                                           par.Name(), lvl.Type(), lvl.Value());
 
 				if (paraminfo.empty())
 				{
@@ -423,9 +468,9 @@ void compiled_plugin_base::SetParams(std::vector<param>& params, const vector<le
 	// Create a vector that contains a union of current levels and new levels
 	vector<level> alllevels;
 
-	for (itsInfo->Reset<level>(); itsInfo->Next<level>();)
+	for (itsLevelIterator.Reset(); itsLevelIterator.Next();)
 	{
-		alllevels.push_back(itsInfo->Level());
+		alllevels.push_back(itsLevelIterator.At());
 	}
 
 	for (const auto& lvl : levels)
@@ -439,9 +484,9 @@ void compiled_plugin_base::SetParams(std::vector<param>& params, const vector<le
 	// Create a vector that contains a union of current params and new params
 	vector<param> allparams;
 
-	for (itsInfo->Reset<param>(); itsInfo->Next<param>();)
+	for (itsParamIterator.Reset(); itsParamIterator.Next();)
 	{
-		allparams.push_back(itsInfo->Param());
+		allparams.push_back(itsParamIterator.At());
 	}
 
 	for (const auto p : params)
@@ -452,62 +497,16 @@ void compiled_plugin_base::SetParams(std::vector<param>& params, const vector<le
 		}
 	}
 
-	if (itsInfo->Size<level>() < alllevels.size())
+	if (itsLevelIterator.Size() < alllevels.size())
 	{
-		itsInfo->Set<level>(alllevels);
+		itsLevelIterator = level_iter(alllevels);
 	}
 
-	if (itsInfo->Size<param>() < allparams.size())
+	if (itsParamIterator.Size() < allparams.size())
 	{
-		itsInfo->Set<param>(allparams);
+		itsParamIterator = param_iter(allparams);
 	}
 
-	/*
-	 * Create data structures.
-	 */
-
-	if (itsInfo->DimensionSize() == 0)
-	{
-		itsInfo->Dimensions().resize(itsInfo->Size<forecast_type>() * itsInfo->Size<forecast_time>() *
-		                             itsInfo->Size<level>() * itsInfo->Size<param>());
-	}
-
-	for (const auto& lvl : levels)
-	{
-		const auto g = itsConfiguration->BaseGrid();
-
-		for (const auto& par : params)
-		{
-			itsInfo->First<forecast_type>();
-			itsInfo->First<forecast_time>();
-			itsInfo->First<level>();
-			itsInfo->Reset<param>();
-
-			while (itsInfo->Next())
-			{
-				if (itsInfo->Param() == par && itsInfo->Level() == lvl)
-				{
-					auto b = make_shared<base<double>>();
-					b->grid = shared_ptr<grid>(g->Clone());
-
-					if (itsConfiguration->UseDynamicMemoryAllocation() == false)
-					{
-						if (b->grid->Class() == kRegularGrid)
-						{
-							const regular_grid* regGrid(dynamic_cast<const regular_grid*>(b->grid.get()));
-							b->data.Resize(regGrid->Ni(), regGrid->Nj());
-						}
-						else if (b->grid->Class() == kIrregularGrid)
-						{
-							b->data.Resize(b->grid->Size(), 1, 1);
-						}
-					}
-
-					itsInfo->Base(b);
-				}
-			}
-		}
-	}
 	if (!itsConfiguration->UseDynamicMemoryAllocation())
 	{
 		itsBaseLogger.Trace("Using static memory allocation");
@@ -517,30 +516,12 @@ void compiled_plugin_base::SetParams(std::vector<param>& params, const vector<le
 		itsBaseLogger.Trace("Using dynamic memory allocation");
 	}
 
-	itsInfo->Reset();
-	itsInfo->First<param>();
-
-	if (itsPrimaryDimension == kUnknownDimension)
+	for (const auto& l : levels)
 	{
-		itsInfo->First<forecast_time>();
-		itsInfo->First<forecast_type>();
-		itsInfo->Reset<level>();
-	}
-
-	/*
-	 * Do not launch more threads than there are things to calculate.
-	 */
-
-	size_t dims = itsInfo->Size<forecast_type>() * itsInfo->Size<forecast_time>() * itsInfo->Size<level>();
-
-	if (itsPrimaryDimension == kTimeDimension)
-	{
-		dims = itsInfo->Size<forecast_time>() * itsInfo->Size<forecast_type>();
-	}
-
-	if (dims < static_cast<size_t>(itsThreadCount))
-	{
-		itsThreadCount = static_cast<short>(dims);
+		for (const auto& p : params)
+		{
+			itsLevelParams.push_back(make_pair(l, p));
+		}
 	}
 
 	/*
@@ -562,42 +543,21 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 {
 	vector<level> levels;
 
-	for (size_t i = 0; i < itsInfo->Size<level>(); i++)
+	for (size_t i = 0; i < itsLevelIterator.Size(); i++)
 	{
-		levels.push_back(itsInfo->Peek<level>(i));
+		levels.push_back(itsLevelIterator.At(i));
 	}
 
 	SetParams(params, levels);
 }
 
-/*
-bool compiled_plugin_base::CompareGrids(initializer_list<shared_ptr<grid>> grids) const
-{
-    if (grids.size() <= 1)
-    {
-        throw kUnknownException;
-    }
-
-    auto it = grids.begin();
-    auto first = *it;
-
-    for (++it; it != grids.end(); ++it)
-    {
-        if (!*it)
-        {
-            continue;
-        }
-
-        if (*first != **it)
-        {
-            return false;
-        }
-    }
-
-    return true;
-}*/
-
 bool compiled_plugin_base::IsMissingValue(initializer_list<double> values) const
+{
+	return IsMissingValue<double>(values);
+}
+
+template <typename T>
+bool compiled_plugin_base::IsMissingValue(initializer_list<T> values) const
 {
 	for (auto it = values.begin(); it != values.end(); ++it)
 	{
@@ -610,12 +570,23 @@ bool compiled_plugin_base::IsMissingValue(initializer_list<double> values) const
 	return false;
 }
 
-info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& theLevel, const params& theParams,
-                                   const forecast_type& theType, bool returnPacked) const
+template bool compiled_plugin_base::IsMissingValue<double>(initializer_list<double>) const;
+
+shared_ptr<info<double>> compiled_plugin_base::Fetch(const forecast_time& theTime, const level& theLevel,
+                                                     const params& theParams, const forecast_type& theType,
+                                                     bool returnPacked) const
+{
+	return Fetch<double>(theTime, theLevel, theParams, theType, returnPacked);
+}
+
+template <typename T>
+shared_ptr<info<T>> compiled_plugin_base::Fetch(const forecast_time& theTime, const level& theLevel,
+                                                const params& theParams, const forecast_type& theType,
+                                                bool returnPacked) const
 {
 	auto f = GET_PLUGIN(fetcher);
 
-	info_t ret;
+	shared_ptr<info<T>> ret;
 
 	try
 	{
@@ -631,12 +602,13 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 		 * 2b) If caller wants packed data, return data as-is and leave cache integration to caller.
 		 */
 
-		ret = f->Fetch(itsConfiguration, theTime, theLevel, theParams, theType, itsConfiguration->UseCudaForPacking());
+		ret =
+		    f->Fetch<T>(itsConfiguration, theTime, theLevel, theParams, theType, itsConfiguration->UseCudaForPacking());
 
 #ifdef HAVE_CUDA
 		if (!returnPacked && ret->PackedData()->HasData())
 		{
-			util::Unpack<double>({ret}, itsConfiguration->UseCache());
+			util::Unpack<T>({ret}, itsConfiguration->UseCache());
 		}
 #endif
 	}
@@ -651,12 +623,24 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 	return ret;
 }
 
-info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam,
-                                   const forecast_type& theType, bool returnPacked) const
+template shared_ptr<info<double>> compiled_plugin_base::Fetch<double>(const forecast_time&, const level&, const params&,
+                                                                      const forecast_type&, bool) const;
+
+shared_ptr<info<double>> compiled_plugin_base::Fetch(const forecast_time& theTime, const level& theLevel,
+                                                     const param& theParam, const forecast_type& theType,
+                                                     bool returnPacked) const
+{
+	return Fetch<double>(theTime, theLevel, theParam, theType, returnPacked);
+}
+
+template <typename T>
+shared_ptr<info<T>> compiled_plugin_base::Fetch(const forecast_time& theTime, const level& theLevel,
+                                                const param& theParam, const forecast_type& theType,
+                                                bool returnPacked) const
 {
 	auto f = GET_PLUGIN(fetcher);
 
-	info_t ret;
+	shared_ptr<info<T>> ret;
 
 	try
 	{
@@ -665,7 +649,7 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 #ifdef HAVE_CUDA
 		if (!returnPacked && ret->PackedData()->HasData())
 		{
-			util::Unpack<double>({ret}, itsConfiguration->UseCache());
+			util::Unpack<T>({ret}, itsConfiguration->UseCache());
 		}
 #endif
 	}
@@ -680,26 +664,15 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 	return ret;
 }
 
-HPDimensionType compiled_plugin_base::PrimaryDimension() const
-{
-	return itsPrimaryDimension;
-}
-void compiled_plugin_base::PrimaryDimension(HPDimensionType thePrimaryDimension)
-{
-	if (itsInfo->Size<param>() > 0)
-	{
-		itsBaseLogger.Fatal("PrimaryDimension() must be called before plugin initialization is finished");
-		exit(1);
-	}
+template shared_ptr<info<double>> compiled_plugin_base::Fetch<double>(const forecast_time&, const level&, const param&,
+                                                                      const forecast_type&, bool) const;
 
-	itsPrimaryDimension = thePrimaryDimension;
-}
-
-void compiled_plugin_base::AllocateMemory(info<double> myTargetInfo)
+template <typename T>
+void compiled_plugin_base::AllocateMemory(info<T> myTargetInfo)
 {
-	size_t paramIndex = myTargetInfo.Index<param>();
+	size_t paramIndex = myTargetInfo.template Index<param>();
 
-	for (myTargetInfo.Reset<param>(); myTargetInfo.Next<param>();)
+	for (myTargetInfo.template Reset<param>(); myTargetInfo.template Next<param>();)
 	{
 		if (myTargetInfo.IsValidGrid())
 		{
@@ -715,14 +688,17 @@ void compiled_plugin_base::AllocateMemory(info<double> myTargetInfo)
 		}
 	}
 
-	myTargetInfo.Index<param>(paramIndex);
+	myTargetInfo.template Index<param>(paramIndex);
 }
 
-void compiled_plugin_base::DeallocateMemory(info<double> myTargetInfo)
-{
-	size_t paramIndex = myTargetInfo.Index<param>();
+template void compiled_plugin_base::AllocateMemory<double>(info<double>);
 
-	for (myTargetInfo.Reset<param>(); myTargetInfo.Next<param>();)
+template <typename T>
+void compiled_plugin_base::DeallocateMemory(info<T> myTargetInfo)
+{
+	size_t paramIndex = myTargetInfo.template Index<param>();
+
+	for (myTargetInfo.template Reset<param>(); myTargetInfo.template Next<param>();)
 	{
 		if (myTargetInfo.IsValidGrid())
 		{
@@ -730,5 +706,7 @@ void compiled_plugin_base::DeallocateMemory(info<double> myTargetInfo)
 		}
 	}
 
-	myTargetInfo.Index<param>(paramIndex);
+	myTargetInfo.template Index<param>(paramIndex);
 }
+
+template void compiled_plugin_base::DeallocateMemory<double>(info<double>);
