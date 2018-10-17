@@ -40,8 +40,8 @@ himan::info_t Fetch(std::shared_ptr<const plugin_configuration>& conf,
 vec Shear(std::shared_ptr<himan::plugin::hitool>& h, const himan::param& par, const vec& lowerHeight,
           const vec& upperHeight)
 {
-	const auto lowerValues = h->VerticalValue(par, lowerHeight);
-	const auto upperValues = h->VerticalValue(par, upperHeight);
+	const auto lowerValues = h->VerticalValue<double>(par, lowerHeight);
+	const auto upperValues = h->VerticalValue<double>(par, upperHeight);
 
 	vec ret(lowerValues.size(), himan::MissingDouble());
 
@@ -199,11 +199,11 @@ vec CalculateBulkRichardsonNumber(shared_ptr<const plugin_configuration> conf, i
 	auto CAPEInfo = STABILITY::Fetch(conf, myTargetInfo, level(kHeightLayer, 500, 0), param("CAPE-JKG"));
 	const auto& CAPE = VEC(CAPEInfo);
 
-	auto U6 = h->VerticalAverage(UParam, 10, 6000);
-	auto V6 = h->VerticalAverage(VParam, 10, 6000);
+	auto U6 = h->VerticalAverage<double>(UParam, 10, 6000);
+	auto V6 = h->VerticalAverage<double>(VParam, 10, 6000);
 
-	auto U05 = h->VerticalAverage(UParam, 10, 500);
-	auto V05 = h->VerticalAverage(VParam, 10, 500);
+	auto U05 = h->VerticalAverage<double>(UParam, 10, 500);
+	auto V05 = h->VerticalAverage<double>(VParam, 10, 500);
 
 	vec BRN(CAPE.size(), MissingDouble());
 
@@ -259,20 +259,20 @@ void CalculateHelicityIndices(shared_ptr<const plugin_configuration> conf, info_
 tuple<vec, vec, vec, info_t, info_t, info_t> GetLiftedIndicesSourceData(shared_ptr<const plugin_configuration>& conf,
                                                                         info_t& myTargetInfo, shared_ptr<hitool>& h)
 {
-	auto T500 = h->VerticalAverage(TParam, 0., 500.);
-	auto P500 = h->VerticalAverage(PParam, 0., 500.);
+	auto T500 = h->VerticalAverage<double>(TParam, 0., 500.);
+	auto P500 = h->VerticalAverage<double>(PParam, 0., 500.);
 
 	vec TD500;
 
 	try
 	{
-		TD500 = h->VerticalAverage(param("TD-K"), 0., 500.);
+		TD500 = h->VerticalAverage<double>(param("TD-K"), 0., 500.);
 	}
 	catch (const HPExceptionType& e)
 	{
 		if (e == kFileDataNotFound)
 		{
-			TD500 = h->VerticalAverage(RHParam, 0., 500.);
+			TD500 = h->VerticalAverage<double>(RHParam, 0., 500.);
 
 			for (auto&& tup : zip_range(TD500, T500))
 			{
@@ -298,13 +298,13 @@ tuple<vec, vec, vec, info_t, info_t, info_t> GetLiftedIndicesSourceData(shared_p
 
 vec CalculateThetaE(shared_ptr<hitool>& h, double startHeight, double stopHeight)
 {
-	auto Tstop = h->VerticalValue(TParam, stopHeight);
-	auto RHstop = h->VerticalValue(RHParam, stopHeight);
-	auto Pstop = h->VerticalValue(PParam, stopHeight);
+	auto Tstop = h->VerticalValue<double>(TParam, stopHeight);
+	auto RHstop = h->VerticalValue<double>(RHParam, stopHeight);
+	auto Pstop = h->VerticalValue<double>(PParam, stopHeight);
 
-	auto Tstart = h->VerticalValue(TParam, startHeight);
-	auto RHstart = h->VerticalValue(RHParam, startHeight);
-	auto Pstart = h->VerticalValue(PParam, startHeight);
+	auto Tstart = h->VerticalValue<double>(TParam, startHeight);
+	auto RHstart = h->VerticalValue<double>(RHParam, startHeight);
+	auto Pstart = h->VerticalValue<double>(PParam, startHeight);
 
 	vec ret(Tstop.size());
 
@@ -473,7 +473,7 @@ void stability::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short 
 
 	try
 	{
-		vec FF1500 = h->VerticalValue(FFParam, 1500);
+		vec FF1500 = h->VerticalValue<double>(FFParam, 1500);
 
 		myTargetInfo->Find<param>(FFParam);
 		myTargetInfo->Find<level>(EuropeanMileLevel);
@@ -488,7 +488,7 @@ void stability::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short 
 
 	try
 	{
-		vec Q500 = h->VerticalAverage(QParam, 0, 500);
+		vec Q500 = h->VerticalAverage<double>(QParam, 0, 500);
 
 		myTargetInfo->Find<param>(QParam);
 		myTargetInfo->Find<level>(HalfKMLevel);
@@ -612,8 +612,8 @@ pair<vec, vec> GetSRHSourceData(const shared_ptr<info<double>>& myTargetInfo, sh
 	*/  // **********  SRH calculation help from Pieter Groenemeijer ******************
 
 	// average wind
-	auto Uavg = h->VerticalAverage(UParam, 10, 6000);
-	auto Vavg = h->VerticalAverage(VParam, 10, 6000);
+	auto Uavg = h->VerticalAverage<double>(UParam, 10, 6000);
+	auto Vavg = h->VerticalAverage<double>(VParam, 10, 6000);
 
 	// shear
 	auto Ushear = STABILITY::Shear(h, UParam, 10, 6000, Uavg.size());

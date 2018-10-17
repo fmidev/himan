@@ -422,7 +422,7 @@ void cape::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threa
 		const auto LPLPressure = Convert(get<2>(sourceValues));
 		myTargetInfo->Data().Set(LPLPressure);
 
-		auto height = h->VerticalValue(param("HL-M"), LPLPressure);
+		auto height = h->VerticalValue<double>(param("HL-M"), LPLPressure);
 
 		myTargetInfo->Find<param>(LPLZParam);
 		myTargetInfo->Data().Set(height);
@@ -455,7 +455,7 @@ void cape::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threa
 	myTargetInfo->Find<param>(LCLPParam);
 	myTargetInfo->Data().Set(Convert(LCL.second));
 
-	auto LCLZ = h->VerticalValue(param("HL-M"), Convert(LCL.second));
+	auto LCLZ = h->VerticalValue<double>(param("HL-M"), Convert(LCL.second));
 
 	myTargetInfo->Find<param>(LCLZParam);
 	myTargetInfo->Data().Set(LCLZ);
@@ -488,7 +488,7 @@ void cape::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threa
 	myTargetInfo->Find<param>(LFCPParam);
 	myTargetInfo->Data().Set(Convert(LFC.second));
 
-	auto LFCZ = h->VerticalValue(param("HL-M"), Convert(LFC.second));
+	auto LFCZ = h->VerticalValue<double>(param("HL-M"), Convert(LFC.second));
 
 	myTargetInfo->Find<param>(LFCZParam);
 	myTargetInfo->Data().Set(LFCZ);
@@ -1141,7 +1141,7 @@ pair<vector<float>, vector<float>> cape::GetLFC(shared_ptr<info<double>> myTarge
 
 	try
 	{
-		TenvLCL = Convert(h->VerticalValue(param("T-K"), Convert(P)));
+		TenvLCL = Convert(h->VerticalValue<double>(param("T-K"), Convert(P)));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -1539,7 +1539,7 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info<double>> myTargetI
 	auto curP = VEC(PInfo);
 
 	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 500.);
-	auto P500m = h->VerticalValue(param("P-HPA"), 500.);
+	auto P500m = h->VerticalValue<double>(param("P-HPA"), 500.);
 
 	auto sourceData =
 	    GetSampledSourceData(itsConfiguration, myTargetInfo, Convert(P500m), Convert(curP), curLevel, stopLevel.second);

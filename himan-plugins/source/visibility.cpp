@@ -91,21 +91,21 @@ void visibility::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short
 	h->ForecastType(myTargetInfo->ForecastType());
 
 	// Alle 304m (1000ft) sumupilven (max) määrä [0..1]
-	auto stN = h->VerticalMaximum(NParam, 0, stMaxH);
+	auto stN = h->VerticalMaximum<double>(NParam, 0, stMaxH);
 
 	// Stratus <15m (~0-50ft)
-	auto st15 = h->VerticalAverage(NParam, 0, 15);
+	auto st15 = h->VerticalAverage<double>(NParam, 0, 15);
 
 	// Stratus 15-45m (~50-150ft)
-	auto st45 = h->VerticalAverage(NParam, 15, 45);
+	auto st45 = h->VerticalAverage<double>(NParam, 15, 45);
 
 	// Sumupilven korkeus [m]
-	auto stH = h->VerticalHeightGreaterThan(NParam, 0, stMaxH, stLimit);
+	auto stH = h->VerticalHeightGreaterThan<double>(NParam, 0, stMaxH, stLimit);
 
 	// Jos sumupilveä ohut kerros (vain) ~alimmalla mallipinnalla, jätetään alin kerros huomioimatta
 	// (ehkä mieluummin ylempää keskiarvo, jottei tällöin mahdollinen ylempi st-kerros huononna näkyvyyttä liikaa?)
-	auto stHup = h->VerticalHeightGreaterThan(NParam, 25, stMaxH, stLimit);
-	auto stNup = h->VerticalAverage(NParam, 15, stMaxH);
+	auto stHup = h->VerticalHeightGreaterThan<double>(NParam, 25, stMaxH, stLimit);
+	auto stNup = h->VerticalAverage<double>(NParam, 15, stMaxH);
 
 	ASSERT(stH.size() == stHup.size());
 	ASSERT(st15.size() == stH.size());

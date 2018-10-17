@@ -19,8 +19,6 @@ namespace himan
 {
 namespace plugin
 {
-typedef std::pair<std::shared_ptr<info<double>>, std::shared_ptr<info<double>>> valueheight;
-
 class hitool : public auxiliary_plugin
 {
    public:
@@ -44,25 +42,26 @@ class hitool : public auxiliary_plugin
 	/**
 	 * @brief Return maximum value in a given height range for the first parameter found.
 	 *
-	 * Overcoat for VerticalMaximum(params, vector<double>, vector<double>)
+	 * Overcoat for VerticalMaximum(params, vector<T>, vector<T>)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
 	 */
 
-	std::vector<double> VerticalMaximum(const std::vector<param>& wantedParamList, double firstLevelValue,
-	                                    double lastLevelValue) const;
+	template <typename T>
+	std::vector<T> VerticalMaximum(const std::vector<param>& wantedParamList, T firstLevelValue,
+	                               T lastLevelValue) const;
 
 	/**
 	 * @brief Return maximum value in a given height range for the first parameter found.
 	 *
-	 * Overcoat for VerticalMaximum(param, vector<double>, vector<double>)
+	 * Overcoat for VerticalMaximum(param, vector<T>, vector<T>)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
 	 */
 
-	std::vector<double> VerticalMaximum(const std::vector<param>& wantedParamList,
-	                                    const std::vector<double>& firstLevelValue,
-	                                    const std::vector<double>& lastLevelValue) const;
+	template <typename T>
+	std::vector<T> VerticalMaximum(const std::vector<param>& wantedParamList, const std::vector<T>& firstLevelValue,
+	                               const std::vector<T>& lastLevelValue) const;
 
 	/**
 	 * @brief Find maximum value of a given parameter in a given height range
@@ -75,7 +74,8 @@ class hitool : public auxiliary_plugin
 	 * @return Maximum value for each point
 	 */
 
-	std::vector<double> VerticalMaximum(const param& wantedParam, double lowerHeight, double upperHeight) const;
+	template <typename T>
+	std::vector<T> VerticalMaximum(const param& wantedParam, T lowerHeight, T upperHeight) const;
 
 	/**
 	 * @brief Find maximum value of a given parameter in a given height range
@@ -88,31 +88,33 @@ class hitool : public auxiliary_plugin
 	 * @return Maximum value for each point
 	 */
 
-	std::vector<double> VerticalMaximum(const param& wantedParam, const std::vector<double>& firstLevelValue,
-	                                    const std::vector<double>& lastLevelValue) const;
+	template <typename T>
+	std::vector<T> VerticalMaximum(const param& wantedParam, const std::vector<T>& firstLevelValue,
+	                               const std::vector<T>& lastLevelValue) const;
 
 	/**
 	 * @brief Return maximum value in a given height range for the first parameter found.
 	 *
-	 * Overcoat for VerticalMinimum(params, vector<double>, vector<double>)
+	 * Overcoat for VerticalMinimum(params, vector<T>, vector<T>)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
 	 */
 
-	std::vector<double> VerticalMinimum(const std::vector<param>& wantedParamList, double firstLevelValue,
-	                                    double lastLevelValue) const;
+	template <typename T>
+	std::vector<T> VerticalMinimum(const std::vector<param>& wantedParamList, T firstLevelValue,
+	                               T lastLevelValue) const;
 
 	/**
 	 * @brief Return minimum value in a given height range for the first parameter found.
 	 *
-	 * Overcoat for VerticalMinimum(param, vector<double>, vector<double>)
+	 * Overcoat for VerticalMinimum(param, vector<T>, vector<T>)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
 	 */
 
-	std::vector<double> VerticalMinimum(const std::vector<param>& wantedParamList,
-	                                    const std::vector<double>& firstLevelValue,
-	                                    const std::vector<double>& lastLevelValue) const;
+	template <typename T>
+	std::vector<T> VerticalMinimum(const std::vector<param>& wantedParamList, const std::vector<T>& firstLevelValue,
+	                               const std::vector<T>& lastLevelValue) const;
 
 	/**
 	 * @brief Find minimum value of a given parameter in a given height range
@@ -123,7 +125,8 @@ class hitool : public auxiliary_plugin
 	 * @return Minimum value for each point
 	 */
 
-	std::vector<double> VerticalMinimum(const param& wantedParam, double lowerHeight, double upperHeight) const;
+	template <typename T>
+	std::vector<T> VerticalMinimum(const param& wantedParam, T lowerHeight, T upperHeight) const;
 
 	/**
 	 * @brief Find minimum value of a given parameter in a given height range
@@ -134,40 +137,42 @@ class hitool : public auxiliary_plugin
 	 * @return Minimum value for each point
 	 */
 
-	std::vector<double> VerticalMinimum(const param& wantedParam, const std::vector<double>& firstLevelValue,
-	                                    const std::vector<double>& lastLevelValue) const;
+	template <typename T>
+	std::vector<T> VerticalMinimum(const param& wantedParam, const std::vector<T>& firstLevelValue,
+	                               const std::vector<T>& lastLevelValue) const;
 
 	/**
 	 * @brief Return sum in a given height range for the first parameter found.
 	 *
-	 * Overcoat for VerticalSum(param, vector<double>, vector<double>)
+	 * Overcoat for VerticalSum(param, vector<T>, vector<T>)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
 	 */
 
-	std::vector<double> VerticalSum(const std::vector<param>& wantedParamList, double firstLevelValue,
-	                                double lastLevelValue) const;
+	template <typename T>
+	std::vector<T> VerticalSum(const std::vector<param>& wantedParamList, T firstLevelValue, T lastLevelValue) const;
 
 	/**
 	 * @brief Return sum in a given height range for the first parameter found.
 	 *
-	 * Overcoat for VerticalSum(param, vector<double>, vector<double>)
+	 * Overcoat for VerticalSum(param, vector<T>, vector<T>)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
 	 */
 
-	std::vector<double> VerticalSum(const std::vector<param>& wantedParamList,
-	                                const std::vector<double>& firstLevelValue,
-	                                const std::vector<double>& lastLevelValue) const;
+	template <typename T>
+	std::vector<T> VerticalSum(const std::vector<param>& wantedParamList, const std::vector<T>& firstLevelValue,
+	                           const std::vector<T>& lastLevelValue) const;
 
 	/**
 	 * @brief Return sum in a given height range for the first parameter found.
 	 *
-	 * Overcoat for VerticalSum(param, vector<double>, vector<double>)
+	 * Overcoat for VerticalSum(param, vector<T>, vector<T>)
 	 *
 	 */
 
-	std::vector<double> VerticalSum(const param& wantedParam, double firstLevelValue, double lastLevelValue) const;
+	template <typename T>
+	std::vector<T> VerticalSum(const param& wantedParam, T firstLevelValue, T lastLevelValue) const;
 
 	/**
 	 * @brief Calculate sum of values for each point in a given height range
@@ -178,31 +183,32 @@ class hitool : public auxiliary_plugin
 	 * @return Sum for each point
 	 */
 
-	std::vector<double> VerticalSum(const param& wantedParam, const std::vector<double>& firstLevelValue,
-	                                const std::vector<double>& lastLevelValue) const;
+	template <typename T>
+	std::vector<T> VerticalSum(const param& wantedParam, const std::vector<T>& firstLevelValue,
+	                           const std::vector<T>& lastLevelValue) const;
 
 	/**
 	 * @brief Return average of values in a given height range for the first parameter found.
 	 *
-	 * Overcoat for VerticalAverage(params, double, double)
+	 * Overcoat for VerticalAverage(params, T, T)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
 	 */
 
-	std::vector<double> VerticalAverage(const std::vector<param>& wantedParamList, double lowerHeight,
-	                                    double upperHeight) const;
+	template <typename T>
+	std::vector<T> VerticalAverage(const std::vector<param>& wantedParamList, T lowerHeight, T upperHeight) const;
 
 	/**
 	 * @brief Return average of values in a given height range for the first parameter found.
 	 *
-	 * Overcoat for VerticalAverage(param, vector<double>, vector<double>)
+	 * Overcoat for VerticalAverage(param, vector<T>, vector<T>)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
 	 */
 
-	std::vector<double> VerticalAverage(const std::vector<param>& wantedParamList,
-	                                    const std::vector<double>& firstLevelValue,
-	                                    const std::vector<double>& lastLevelValue) const;
+	template <typename T>
+	std::vector<T> VerticalAverage(const std::vector<param>& wantedParamList, const std::vector<T>& firstLevelValue,
+	                               const std::vector<T>& lastLevelValue) const;
 
 	/**
 	 * @brief Calculate average of values for each point in a given height range
@@ -213,7 +219,8 @@ class hitool : public auxiliary_plugin
 	 * @return Mean for each point
 	 */
 
-	std::vector<double> VerticalAverage(const param& wantedParam, double lowerHeight, double upperHeight) const;
+	template <typename T>
+	std::vector<T> VerticalAverage(const param& wantedParam, T lowerHeight, T upperHeight) const;
 
 	/**
 	 * @brief Calculate average of values for each point in a given height range
@@ -223,70 +230,68 @@ class hitool : public auxiliary_plugin
 	 * @param lastLevelValue Highest level value for each point, search will stop here
 	 * @return Mean for each point
 	 */
-
-	std::vector<double> VerticalAverage(const param& wantedParam, const std::vector<double>& firstLevelValue,
-	                                    const std::vector<double>& lastLevelValue) const;
-
-	/**
-	 * @brief Return height for given value for the first parameter found.
-	 *
-	 * Overcoat for VerticalHeight(params, vector<double>, vector<double>, vector<double>, size_t)
-	 *
-	 * @param wantedParamList List (vector) of wanted parameters
-	 */
-
-	std::vector<double> VerticalHeight(const std::vector<param>& wantedParamList, double firstLevelValue,
-	                                   double lastLevelValue, const std::vector<double>& findValue,
-	                                   size_t findNth = 1) const;
+	template <typename T>
+	std::vector<T> VerticalAverage(const param& wantedParam, const std::vector<T>& firstLevelValue,
+	                               const std::vector<T>& lastLevelValue) const;
 
 	/**
 	 * @brief Return height for given value for the first parameter found.
 	 *
-	 * Overcoat for VerticalHeight(param, vector<double>, vector<double>, vector<double>, size_t)
+	 * Overcoat for VerticalHeight(params, vector<T>, vector<T>, vector<T>, size_t)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
 	 */
+	template <typename T>
+	std::vector<T> VerticalHeight(const std::vector<param>& wantedParamList, T firstLevelValue, T lastLevelValue,
+	                              const std::vector<T>& findValue, size_t findNth = 1) const;
 
-	std::vector<double> VerticalHeight(const std::vector<param>& wantedParamList,
-	                                   const std::vector<double>& firstLevelValue,
-	                                   const std::vector<double>& lastLevelValue, const std::vector<double>& findValue,
-	                                   size_t findNth = 1) const;
+	/**
+	 * @brief Return height for given value for the first parameter found.
+	 *
+	 * Overcoat for VerticalHeight(param, vector<T>, vector<T>, vector<T>, size_t)
+	 *
+	 * @param wantedParamList List (vector) of wanted parameters
+	 */
+	template <typename T>
+	std::vector<T> VerticalHeight(const std::vector<param>& wantedParamList, const std::vector<T>& firstLevelValue,
+	                              const std::vector<T>& lastLevelValue, const std::vector<T>& findValue,
+	                              size_t findNth = 1) const;
 
 	/**
 	 * @brief Return height of a given parameter value.
 	 *
-	 * Overcoat for VerticalHeight(param, vector<double>, vector<double>, vector<double>, size_t)
+	 * Overcoat for VerticalHeight(param, vector<T>, vector<T>, vector<T>, size_t)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
 	 * @return Heights for given values for each point
 	 */
-
-	std::vector<double> VerticalHeight(const params& wantedParam, double firstLevelValue, double lastLevelValue,
-	                                   double findValue, size_t findNth = 1) const;
+	template <typename T>
+	std::vector<T> VerticalHeight(const params& wantedParam, T firstLevelValue, T lastLevelValue, T findValue,
+	                              size_t findNth = 1) const;
 
 	/**
 	 * @brief Return height of a given parameter value.
 	 *
-	 * Overcoat for VerticalHeight(param, vector<double>, vector<double>, vector<double>, size_t)
+	 * Overcoat for VerticalHeight(param, vector<T>, vector<T>, vector<T>, size_t)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
 	 * @return Heights for given values for each point
 	 */
-
-	std::vector<double> VerticalHeight(const param& wantedParam, double firstLevelValue, double lastLevelValue,
-	                                   double findValue, size_t findNth = 1) const;
+	template <typename T>
+	std::vector<T> VerticalHeight(const param& wantedParam, T firstLevelValue, T lastLevelValue, T findValue,
+	                              size_t findNth = 1) const;
 
 	/**
 	 * @brief Return height of a given parameter value.
 	 *
-	 * Overcoat for VerticalHeight(param, vector<double>, vector<double>, vector<double>, size_t)
+	 * Overcoat for VerticalHeight(param, vector<T>, vector<T>, vector<T>, size_t)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
 	 * @return Heights for given values for each point
 	 */
-
-	std::vector<double> VerticalHeight(const param& wantedParam, double firstLevelValue, double lastLevelValue,
-	                                   const std::vector<double>& findValue, size_t findNth = 1) const;
+	template <typename T>
+	std::vector<T> VerticalHeight(const param& wantedParam, T firstLevelValue, T lastLevelValue,
+	                              const std::vector<T>& findValue, size_t findNth = 1) const;
 
 	/**
 	 * @brief Find height of a given parameter value.
@@ -303,10 +308,10 @@ class hitool : public auxiliary_plugin
 	 * @param findNth Return the height of Nth found value
 	 * @return Heights for given values for each point
 	 */
-
-	std::vector<double> VerticalHeight(const param& wantedParam, const std::vector<double>& firstLevelValue,
-	                                   const std::vector<double>& lastLevelValue, const std::vector<double>& findValue,
-	                                   size_t findNth = 1) const;
+	template <typename T>
+	std::vector<T> VerticalHeight(const param& wantedParam, const std::vector<T>& firstLevelValue,
+	                              const std::vector<T>& lastLevelValue, const std::vector<T>& findValue,
+	                              size_t findNth = 1) const;
 
 	/**
 	 * @brief VerticalHeightGreaterThan() is similar to VerticalHeight(), but when searching
@@ -317,67 +322,75 @@ class hitool : public auxiliary_plugin
 	 * does not understand the situation where the first value read is already above the threshold
 	 * (stratus cloud).
 	 */
-
-	std::vector<double> VerticalHeightGreaterThan(const param& wantedParam, double firstLevelValue,
-	                                              double lastLevelValue, const std::vector<double>& findValue,
-	                                              size_t findNth = 1) const;
-	std::vector<double> VerticalHeightGreaterThan(const param& wantedParam, double firstLevelValue,
-	                                              double lastLevelValue, double findValue, size_t findNth = 1) const;
-	std::vector<double> VerticalHeightGreaterThan(const params& wantedParam, double firstLevelValue,
-	                                              double lastLevelValue, double findValue, size_t findNth = 1) const;
-	std::vector<double> VerticalHeightGreaterThan(const std::vector<param>& wantedParamList,
-	                                              const std::vector<double>& firstLevelValue,
-	                                              const std::vector<double>& lastLevelValue,
-	                                              const std::vector<double>& findValue, size_t findNth = 1) const;
-	std::vector<double> VerticalHeightGreaterThan(const std::vector<param>& wantedParamList, double firstLevelValue,
-	                                              double lastLevelValue, const std::vector<double>& findValue,
-	                                              size_t findNth = 1) const;
-	std::vector<double> VerticalHeightGreaterThan(const param& wantedParam, const std::vector<double>& firstLevelValue,
-	                                              const std::vector<double>& lastLevelValue,
-	                                              const std::vector<double>& findValue, size_t findNth = 1) const;
+	template <typename T>
+	std::vector<T> VerticalHeightGreaterThan(const param& wantedParam, T firstLevelValue, T lastLevelValue,
+	                                         const std::vector<T>& findValue, size_t findNth = 1) const;
+	template <typename T>
+	std::vector<T> VerticalHeightGreaterThan(const param& wantedParam, T firstLevelValue, T lastLevelValue, T findValue,
+	                                         size_t findNth = 1) const;
+	template <typename T>
+	std::vector<T> VerticalHeightGreaterThan(const params& wantedParam, T firstLevelValue, T lastLevelValue,
+	                                         T findValue, size_t findNth = 1) const;
+	template <typename T>
+	std::vector<T> VerticalHeightGreaterThan(const std::vector<param>& wantedParamList,
+	                                         const std::vector<T>& firstLevelValue,
+	                                         const std::vector<T>& lastLevelValue, const std::vector<T>& findValue,
+	                                         size_t findNth = 1) const;
+	template <typename T>
+	std::vector<T> VerticalHeightGreaterThan(const std::vector<param>& wantedParamList, T firstLevelValue,
+	                                         T lastLevelValue, const std::vector<T>& findValue,
+	                                         size_t findNth = 1) const;
+	template <typename T>
+	std::vector<T> VerticalHeightGreaterThan(const param& wantedParam, const std::vector<T>& firstLevelValue,
+	                                         const std::vector<T>& lastLevelValue, const std::vector<T>& findValue,
+	                                         size_t findNth = 1) const;
 
 	/**
 	 * @brief For description, look at VerticalHeightGreaterThan()
 	 */
 
-	std::vector<double> VerticalHeightLessThan(const param& wantedParam, double firstLevelValue, double lastLevelValue,
-	                                           const std::vector<double>& findValue, size_t findNth = 1) const;
-	std::vector<double> VerticalHeightLessThan(const param& wantedParam, double firstLevelValue, double lastLevelValue,
-	                                           double findValue, size_t findNth = 1) const;
-	std::vector<double> VerticalHeightLessThan(const params& wantedParam, double firstLevelValue, double lastLevelValue,
-	                                           double findValue, size_t findNth = 1) const;
-	std::vector<double> VerticalHeightLessThan(const std::vector<param>& wantedParamList,
-	                                           const std::vector<double>& firstLevelValue,
-	                                           const std::vector<double>& lastLevelValue,
-	                                           const std::vector<double>& findValue, size_t findNth = 1) const;
-	std::vector<double> VerticalHeightLessThan(const std::vector<param>& wantedParamList, double firstLevelValue,
-	                                           double lastLevelValue, const std::vector<double>& findValue,
-	                                           size_t findNth = 1) const;
-
-	std::vector<double> VerticalHeightLessThan(const param& wantedParam, const std::vector<double>& firstLevelValue,
-	                                           const std::vector<double>& lastLevelValue,
-	                                           const std::vector<double>& findValue, size_t findNth = 1) const;
+	template <typename T>
+	std::vector<T> VerticalHeightLessThan(const param& wantedParam, T firstLevelValue, T lastLevelValue,
+	                                      const std::vector<T>& findValue, size_t findNth = 1) const;
+	template <typename T>
+	std::vector<T> VerticalHeightLessThan(const param& wantedParam, T firstLevelValue, T lastLevelValue, T findValue,
+	                                      size_t findNth = 1) const;
+	template <typename T>
+	std::vector<T> VerticalHeightLessThan(const params& wantedParam, T firstLevelValue, T lastLevelValue, T findValue,
+	                                      size_t findNth = 1) const;
+	template <typename T>
+	std::vector<T> VerticalHeightLessThan(const std::vector<param>& wantedParamList,
+	                                      const std::vector<T>& firstLevelValue, const std::vector<T>& lastLevelValue,
+	                                      const std::vector<T>& findValue, size_t findNth = 1) const;
+	template <typename T>
+	std::vector<T> VerticalHeightLessThan(const std::vector<param>& wantedParamList, T firstLevelValue,
+	                                      T lastLevelValue, const std::vector<T>& findValue, size_t findNth = 1) const;
+	template <typename T>
+	std::vector<T> VerticalHeightLessThan(const param& wantedParam, const std::vector<T>& firstLevelValue,
+	                                      const std::vector<T>& lastLevelValue, const std::vector<T>& findValue,
+	                                      size_t findNth = 1) const;
 
 	/**
 	 * @brief Return value of parameter from given height for the first parameter found.
 	 *
-	 * Overcoat for VerticalValue(params, double, double)
+	 * Overcoat for VerticalValue(params, T, T)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
 	 */
 
-	std::vector<double> VerticalValue(const std::vector<param>& wantedParamList, double findValue) const;
+	template <typename T>
+	std::vector<T> VerticalValue(const std::vector<param>& wantedParamList, T findValue) const;
 
 	/**
 	 * @brief Return value of parameter from given height for the first parameter found.
 	 *
-	 * Overcoat for VerticalValue(param, vector<double>)
+	 * Overcoat for VerticalValue(param, vector<T>)
 	 *
 	 * @return Values for given heights
 	 */
 
-	std::vector<double> VerticalValue(const std::vector<param>& wantedParamList,
-	                                  const std::vector<double>& findValue) const;
+	template <typename T>
+	std::vector<T> VerticalValue(const std::vector<param>& wantedParamList, const std::vector<T>& findValue) const;
 
 	/**
 	 * @brief Find value of parameter from given height
@@ -389,7 +402,8 @@ class hitool : public auxiliary_plugin
 	 * @return Values for given height for each point
 	 */
 
-	std::vector<double> VerticalValue(const param& wantedParam, double findValue) const;
+	template <typename T>
+	std::vector<T> VerticalValue(const param& wantedParam, T findValue) const;
 
 	/**
 	 * @brief Find value of parameter from given height
@@ -401,44 +415,45 @@ class hitool : public auxiliary_plugin
 	 * @return Values for given heights for each point
 	 */
 
-	std::vector<double> VerticalValue(const param& wantedParam, const std::vector<double>& findValue) const;
+	template <typename T>
+	std::vector<T> VerticalValue(const param& wantedParam, const std::vector<T>& findValue) const;
 
 	/**
 	 * @brief Find the number of occurrences of a given parameter value in a given height range for the first parameter
 	 * found.
 	 *
-	 * Overcoat for VerticalCount(param, vector<double>, vector<double>, vector<double>)
+	 * Overcoat for VerticalCount(param, vector<T>, vector<T>, vector<T>)
 	 *
 	 * @return Values for given heights
 	 */
 
-	std::vector<double> VerticalCount(const std::vector<param>& wantedParamList, double firstLevelValue,
-	                                  double lastLevelValue, double findValue) const;
+	template <typename T>
+	std::vector<T> VerticalCount(const std::vector<param>& wantedParamList, T firstLevelValue, T lastLevelValue,
+	                             T findValue) const;
 
 	/**
 	 * @brief Find the number of occurrences of a given parameter value in a given height range for the first parameter
 	 * found.
 	 *
-	 * Overcoat for VerticalCount(param, vector<double>, vector<double>, vector<double>)
+	 * Overcoat for VerticalCount(param, vector<T>, vector<T>, vector<T>)
 	 *
 	 * @return Values for given heights
 	 */
 
-	std::vector<double> VerticalCount(const std::vector<param>& wantedParamList,
-	                                  const std::vector<double>& firstLevelValue,
-	                                  const std::vector<double>& lastLevelValue,
-	                                  const std::vector<double>& findValue) const;
+	template <typename T>
+	std::vector<T> VerticalCount(const std::vector<param>& wantedParamList, const std::vector<T>& firstLevelValue,
+	                             const std::vector<T>& lastLevelValue, const std::vector<T>& findValue) const;
 
 	/**
 	 * @brief Find the number of occurrences of a given parameter value in a given height range.
 	 *
-	 * Overcoat for VerticalCount(param, vector<double>, vector<double>, vector<double>)
+	 * Overcoat for VerticalCount(param, vector<T>, vector<T>, vector<T>)
 	 *
 	 * @return Values for given heights
 	 */
 
-	std::vector<double> VerticalCount(const param& wantedParam, double firstLevelValue, double lastLevelValue,
-	                                  double findValue) const;
+	template <typename T>
+	std::vector<T> VerticalCount(const param& wantedParam, T firstLevelValue, T lastLevelValue, T findValue) const;
 
 	/**
 	 * @brief Find the number of occurrences of a given parameter value in a given height range
@@ -452,34 +467,34 @@ class hitool : public auxiliary_plugin
 	 * @return Number of occurrences for each point
 	 */
 
-	std::vector<double> VerticalCount(const param& wantedParam, const std::vector<double>& firstLevelValue,
-	                                  const std::vector<double>& lastLevelValue,
-	                                  const std::vector<double>& findValue) const;
+	template <typename T>
+	std::vector<T> VerticalCount(const param& wantedParam, const std::vector<T>& firstLevelValue,
+	                             const std::vector<T>& lastLevelValue, const std::vector<T>& findValue) const;
 
 	/**
 	 * @brief Return the negative and positive area under a curve/vertical profile. First half of return vector contains
 	 * positive area, second half negative area.
 	 *
-	 * Overcoat for PlusMinusArea(params, double, double)
+	 * Overcoat for PlusMinusArea(params, T, T)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
 	 */
 
-	std::vector<double> PlusMinusArea(const std::vector<param>& wantedParamList, double lowerHeight,
-	                                  double upperHeight) const;
+	template <typename T>
+	std::vector<T> PlusMinusArea(const std::vector<param>& wantedParamList, T lowerHeight, T upperHeight) const;
 
 	/**
 	 * @brief Return the negative and positive area under a curve/vertical profile. First half of return vector contains
 	 * positive area, second half negative area.
 	 *
-	 * Overcoat for PlusMinusArea(param, vector<double>, vector<double>)
+	 * Overcoat for PlusMinusArea(param, vector<T>, vector<T>)
 	 *
 	 * @param wantedParamList List (vector) of wanted parameters
 	 */
 
-	std::vector<double> PlusMinusArea(const std::vector<param>& wantedParamList,
-	                                  const std::vector<double>& firstLevelValue,
-	                                  const std::vector<double>& lastLevelValue) const;
+	template <typename T>
+	std::vector<T> PlusMinusArea(const std::vector<param>& wantedParamList, const std::vector<T>& firstLevelValue,
+	                             const std::vector<T>& lastLevelValue) const;
 
 	/**
 	 * @brief Return the negative and positive area under a curve/vertical profile. First half of return vector contains
@@ -491,7 +506,8 @@ class hitool : public auxiliary_plugin
 	 * @return vector that contains positive area, second half negative area
 	 */
 
-	std::vector<double> PlusMinusArea(const param& wantedParam, double lowerHeight, double upperHeight) const;
+	template <typename T>
+	std::vector<T> PlusMinusArea(const param& wantedParam, T lowerHeight, T upperHeight) const;
 
 	/**
 	 * @brief Calculate negative and positive area under a curve/vertical profile.
@@ -502,8 +518,9 @@ class hitool : public auxiliary_plugin
 	 * @return vector that contains positive area, second half negative area
 	 */
 
-	std::vector<double> PlusMinusArea(const param& wantedParam, const std::vector<double>& firstLevelValue,
-	                                  const std::vector<double>& lastLevelValue) const;
+	template <typename T>
+	std::vector<T> PlusMinusArea(const param& wantedParam, const std::vector<T>& firstLevelValue,
+	                             const std::vector<T>& lastLevelValue) const;
 
 	/**
 	 * @brief Set current forecast time
@@ -560,14 +577,18 @@ class hitool : public auxiliary_plugin
 	 * @return vector
 	 */
 
-	std::vector<double> VerticalExtremeValue(std::shared_ptr<modifier> mod, HPLevelType wantedLevelType,
-	                                         const param& wantedParam,
-	                                         const std::vector<double>& firstLevelValue = std::vector<double>(),
-	                                         const std::vector<double>& lastLevelValue = std::vector<double>(),
-	                                         const std::vector<double>& findValue = std::vector<double>()) const;
+	template <typename T>
+	std::vector<T> VerticalExtremeValue(std::shared_ptr<modifier> mod, HPLevelType wantedLevelType,
+	                                    const param& wantedParam,
+	                                    const std::vector<T>& firstLevelValue = std::vector<T>(),
+	                                    const std::vector<T>& lastLevelValue = std::vector<T>(),
+	                                    const std::vector<T>& findValue = std::vector<T>()) const;
 
-	valueheight GetData(const level& wantedLevel, const param& wantedParam, const forecast_time& wantedTime,
-	                    const forecast_type& theType) const;
+	template <typename T>
+	std::pair<std::shared_ptr<info<T>>, std::shared_ptr<info<T>>> GetData(const level& wantedLevel,
+	                                                                      const param& wantedParam,
+	                                                                      const forecast_time& wantedTime,
+	                                                                      const forecast_type& theType) const;
 
 	std::shared_ptr<const plugin_configuration> itsConfiguration;
 	forecast_time itsTime;

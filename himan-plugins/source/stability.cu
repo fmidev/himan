@@ -365,10 +365,10 @@ void StormRelativeHelicity(std::shared_ptr<const plugin_configuration> conf, std
 		CUDA_CHECK(cudaMalloc((void**)&d_vshr, memsize));
 
 		// average wind
-		auto Uavg = h->VerticalAverage(UParam, 10, 6000);
+		auto Uavg = h->VerticalAverage<double>(UParam, 10, 6000);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_uavg, (const void*)Uavg.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		auto Vavg = h->VerticalAverage(VParam, 10, 6000);
+		auto Vavg = h->VerticalAverage<double>(VParam, 10, 6000);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_vavg, (const void*)Vavg.data(), memsize, cudaMemcpyHostToDevice, stream));
 
 		// shear
@@ -588,16 +588,16 @@ void CalculateBulkRichardsonNumber(std::shared_ptr<const plugin_configuration> c
 
 		cuda::PrepareInfo(CAPEInfo, d_cape, stream);
 
-		auto U6 = h->VerticalAverage(UParam, 10, 6000);
+		auto U6 = h->VerticalAverage<double>(UParam, 10, 6000);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_u6, (const void*)U6.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		auto V6 = h->VerticalAverage(VParam, 10, 6000);
+		auto V6 = h->VerticalAverage<double>(VParam, 10, 6000);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_v6, (const void*)V6.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		auto U05 = h->VerticalAverage(UParam, 10, 500);
+		auto U05 = h->VerticalAverage<double>(UParam, 10, 500);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_u05, (const void*)U05.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		auto V05 = h->VerticalAverage(VParam, 10, 500);
+		auto V05 = h->VerticalAverage<double>(VParam, 10, 500);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_v05, (const void*)V05.data(), memsize, cudaMemcpyHostToDevice, stream));
 
 		CUDA_CHECK(cudaMalloc((void**)&d_brn, memsize));
@@ -674,17 +674,17 @@ void CalculateLiftedIndices(std::shared_ptr<const plugin_configuration> conf,
 
 	// CUDA_CHECK(cudaStreamSynchronize(stream));
 
-	auto T500m = h->VerticalAverage(TParam, 0, 500.);
+	auto T500m = h->VerticalAverage<double>(TParam, 0, 500.);
 	CUDA_CHECK(cudaMemcpyAsync((void*)d_t500m, (const void*)T500m.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-	auto P500m = h->VerticalAverage(PParam, 0., 500.);
+	auto P500m = h->VerticalAverage<double>(PParam, 0., 500.);
 	CUDA_CHECK(cudaMemcpyAsync((void*)d_p500m, (const void*)P500m.data(), memsize, cudaMemcpyHostToDevice, stream));
 
 	std::vector<double> TD500m;
 
 	try
 	{
-		TD500m = h->VerticalAverage(himan::param("TD-K"), 0, 500.);
+		TD500m = h->VerticalAverage<double>(himan::param("TD-K"), 0, 500.);
 		CUDA_CHECK(
 		    cudaMemcpyAsync((void*)d_td500m, (const void*)TD500m.data(), memsize, cudaMemcpyHostToDevice, stream));
 	}
@@ -694,7 +694,7 @@ void CalculateLiftedIndices(std::shared_ptr<const plugin_configuration> conf,
 		{
 			try
 			{
-				TD500m = h->VerticalAverage(RHParam, 0, 500.);
+				TD500m = h->VerticalAverage<double>(RHParam, 0, 500.);
 				CUDA_CHECK(cudaMemcpyAsync((void*)d_td500m, (const void*)TD500m.data(), memsize, cudaMemcpyHostToDevice,
 				                           stream));
 
@@ -758,23 +758,23 @@ void CalculateThetaEIndices(std::shared_ptr<info<double>> myTargetInfo, std::sha
 
 		CUDA_CHECK(cudaMalloc((void**)&d_thetaediff, memsize));
 
-		auto T3000 = h->VerticalValue(TParam, 3000.);
+		auto T3000 = h->VerticalValue<double>(TParam, 3000.);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_tstop, (const void*)T3000.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		auto RH3000 = h->VerticalValue(RHParam, 3000.);
+		auto RH3000 = h->VerticalValue<double>(RHParam, 3000.);
 		CUDA_CHECK(
 		    cudaMemcpyAsync((void*)d_rhstop, (const void*)RH3000.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		auto P3000 = h->VerticalValue(PParam, 3000.);
+		auto P3000 = h->VerticalValue<double>(PParam, 3000.);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_pstop, (const void*)P3000.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		auto T2 = h->VerticalValue(TParam, 2.);
+		auto T2 = h->VerticalValue<double>(TParam, 2.);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_tstart, (const void*)T2.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		auto RH2 = h->VerticalValue(RHParam, 2.);
+		auto RH2 = h->VerticalValue<double>(RHParam, 2.);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_rhstart, (const void*)RH2.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		auto P2 = h->VerticalValue(PParam, 2.);
+		auto P2 = h->VerticalValue<double>(PParam, 2.);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_pstart, (const void*)P2.data(), memsize, cudaMemcpyHostToDevice, stream));
 
 		ThetaEKernel<<<gridSize, blockSize, 0, stream>>>(d_tstart, d_rhstart, d_pstart, d_tstop, d_rhstop, d_pstop,

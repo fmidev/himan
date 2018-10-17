@@ -142,7 +142,8 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	h->HeightUnit(kM);
 
-	auto cbbase = h->VerticalHeight(param("P-HPA"), levelsMin.second.Value(), levelsMax.first.Value(), VEC(LCL500));
+	auto cbbase =
+	    h->VerticalHeight<double>(param("P-HPA"), levelsMin.second.Value(), levelsMax.first.Value(), VEC(LCL500));
 
 	info_t TC = Fetch(forecastTime, level(kHeight, 0.0), TCU_CB, forecastType, false);
 	info_t Ceiling2 = Fetch(forecastTime, level(kHeight, 0.0), C2, forecastType, false);
@@ -154,8 +155,8 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	}
 
 	// 2. search for lowest cloud layer
-	auto few_lowest = h->VerticalHeight(param("N-0TO1"), 0.0, 10000.0, few, 1);
-	auto sct_lowest = h->VerticalHeight(param("N-0TO1"), 0.0, 10000.0, sct, 1);
+	auto few_lowest = h->VerticalHeight<double>(param("N-0TO1"), 0.0, 10000.0, few, 1);
+	auto sct_lowest = h->VerticalHeight<double>(param("N-0TO1"), 0.0, 10000.0, sct, 1);
 
 	for_each(few_lowest.begin(), few_lowest.end(), [](double& val) { val /= 0.3048; });
 	for_each(sct_lowest.begin(), sct_lowest.end(), [](double& val) { val /= 0.3048; });

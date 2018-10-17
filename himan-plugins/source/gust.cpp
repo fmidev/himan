@@ -237,7 +237,7 @@ void gust::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threa
 	vector<double> maxEstimate;
 	try
 	{
-		maxEstimate = h->VerticalAverage(WSParam, z_two_third_boundaryl, z_boundaryl);
+		maxEstimate = h->VerticalAverage<double>(WSParam, z_two_third_boundaryl, z_boundaryl);
 	}
 
 	catch (const HPExceptionType& e)
@@ -258,7 +258,7 @@ void gust::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threa
 	vector<double> BLtop_ws;
 	try
 	{
-		BLtop_ws = h->VerticalAverage(WSParam, z_one_third_boundaryl, z_boundaryl);
+		BLtop_ws = h->VerticalAverage<double>(WSParam, z_one_third_boundaryl, z_boundaryl);
 	}
 
 	catch (const HPExceptionType& e)
@@ -279,7 +279,7 @@ void gust::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threa
 	vector<double> meanWind;
 	try
 	{
-		meanWind = h->VerticalAverage(WSParam, z_zero, z_boundaryl);
+		meanWind = h->VerticalAverage<double>(WSParam, z_zero, z_boundaryl);
 	}
 
 	catch (const HPExceptionType& e)
@@ -300,7 +300,7 @@ void gust::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threa
 	vector<double> t_diff;
 	try
 	{
-		t_diff = h->VerticalMaximum(TParam, 0, 200);
+		t_diff = h->VerticalMaximum<double>(TParam, 0, 200);
 		for (size_t i = 0; i < gridSize; ++i)
 		{
 			t_diff[i] = t_diff[i] - T_LowestLevelInfo->Data()[i];
@@ -325,7 +325,7 @@ void gust::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threa
 	vector<double> BLbottom_ws;
 	try
 	{
-		BLbottom_ws = h->VerticalAverage(WSParam, 0, 200);
+		BLbottom_ws = h->VerticalAverage<double>(WSParam, 0, 200);
 	}
 
 	catch (const HPExceptionType& e)
@@ -520,13 +520,13 @@ void DeltaT(const shared_ptr<const plugin_configuration>& conf, info_t T_lowestL
 	try
 	{
 		// Potential temperature differences
-		dT.deltaT_100 = h->VerticalValue(TParam, 100);
-		dT.deltaT_200 = h->VerticalValue(TParam, 200);
-		dT.deltaT_300 = h->VerticalValue(TParam, 300);
-		dT.deltaT_400 = h->VerticalValue(TParam, 400);
-		dT.deltaT_500 = h->VerticalValue(TParam, 500);
-		dT.deltaT_600 = h->VerticalValue(TParam, 600);
-		dT.deltaT_700 = h->VerticalValue(TParam, 700);
+		dT.deltaT_100 = h->VerticalValue<double>(TParam, 100);
+		dT.deltaT_200 = h->VerticalValue<double>(TParam, 200);
+		dT.deltaT_300 = h->VerticalValue<double>(TParam, 300);
+		dT.deltaT_400 = h->VerticalValue<double>(TParam, 400);
+		dT.deltaT_500 = h->VerticalValue<double>(TParam, 500);
+		dT.deltaT_600 = h->VerticalValue<double>(TParam, 600);
+		dT.deltaT_700 = h->VerticalValue<double>(TParam, 700);
 
 		for (size_t i = 0; i < gridSize; ++i)
 		{

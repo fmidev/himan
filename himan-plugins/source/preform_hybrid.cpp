@@ -455,7 +455,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 		log.Trace("Counting number of zero levels");
 
-		numZeroLevels = h->VerticalCount(wantedParam, zerom, tenkm, zerodeg);
+		numZeroLevels = h->VerticalCount<double>(wantedParam, zerom, tenkm, zerodeg);
 
 		ret->Find<param>(numZeroLevelsParam);
 		ret->Data().Set(numZeroLevels);
@@ -491,14 +491,14 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 		minusArea = zeroLevel1;
 
 		log.Trace("Searching for first zero level height");
-		zeroLevel1 = h->VerticalHeight(wantedParam, zerom, tenkm, zerodeg, 1);
+		zeroLevel1 = h->VerticalHeight<double>(wantedParam, zerom, tenkm, zerodeg, 1);
 
 #ifdef DEBUG
 		util::DumpVector(zeroLevel1, "zero level 1");
 #endif
 
 		log.Trace("Searching for average temperature between ground level and first zero level");
-		Tavg01 = h->VerticalAverage(wantedParam, zerom, zeroLevel1);
+		Tavg01 = h->VerticalAverage<double>(wantedParam, zerom, zeroLevel1);
 
 #ifdef DEBUG
 		util::DumpVector(Tavg01, "tavg 01");
@@ -508,7 +508,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 		log.Trace("Searching for average humidity between ground and first zero level");
 		// Keskimääräinen RH nollarajan alapuolisessa plussakerroksessa
-		rhAvg01 = h->VerticalAverage(wantedParam, zerom, zeroLevel1);
+		rhAvg01 = h->VerticalAverage<double>(wantedParam, zerom, zeroLevel1);
 
 #ifdef DEBUG
 		util::DumpVector(rhAvg01, "rh avg 01");
@@ -523,14 +523,14 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 			wantedParam = param("T-K");
 
 			log.Trace("Searching for second zero level height");
-			zeroLevel2 = h->VerticalHeight(wantedParam, zerom, tenkm, zerodeg, 2);
+			zeroLevel2 = h->VerticalHeight<double>(wantedParam, zerom, tenkm, zerodeg, 2);
 
 #ifdef DEBUG
 			util::DumpVector(zeroLevel2, "zero level 2");
 #endif
 
 			log.Trace("Searching for average temperature between first and second zero level");
-			Tavg12 = h->VerticalAverage(wantedParam, zeroLevel1, zeroLevel2);
+			Tavg12 = h->VerticalAverage<double>(wantedParam, zeroLevel1, zeroLevel2);
 
 #ifdef DEBUG
 			util::DumpVector(Tavg12, "tavg 12");
@@ -541,7 +541,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 			// Keskimääräinen RH pakkaskerroksen yläpuolisessa plussakerroksessa
 			wantedParam = param("RH-PRCNT");
 
-			rhAvgUpper12 = h->VerticalAverage(wantedParam, zeroLevel1, zeroLevel2);
+			rhAvgUpper12 = h->VerticalAverage<double>(wantedParam, zeroLevel1, zeroLevel2);
 
 #ifdef DEBUG
 			util::DumpVector(rhAvgUpper12, "rh avg upper 12");
@@ -551,14 +551,14 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 			wantedParam = param("T-K");
 
 			log.Trace("Searching for third zero level height");
-			zeroLevel3 = h->VerticalHeight(wantedParam, zerom, tenkm, zerodeg, 3);
+			zeroLevel3 = h->VerticalHeight<double>(wantedParam, zerom, tenkm, zerodeg, 3);
 
 #ifdef DEBUG
 			util::DumpVector(zeroLevel3, "zero level 3");
 #endif
 
 			log.Trace("Searching for average temperature between second and third zero level");
-			Tavg23 = h->VerticalAverage(wantedParam, zeroLevel2, zeroLevel3);
+			Tavg23 = h->VerticalAverage<double>(wantedParam, zeroLevel2, zeroLevel3);
 
 #ifdef DEBUG
 			util::DumpVector(Tavg23, "tavg 23");
@@ -569,7 +569,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 			log.Trace("Searching for average humidity between second and third zero level");
 
 			// Keskimääräinen RH ylemmässä plussakerroksessa
-			rhAvgUpper23 = h->VerticalAverage(wantedParam, zeroLevel2, zeroLevel3);
+			rhAvgUpper23 = h->VerticalAverage<double>(wantedParam, zeroLevel2, zeroLevel3);
 
 #ifdef DEBUG
 			util::DumpVector(rhAvgUpper23, "rh avg upper 23");
@@ -579,14 +579,14 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 			wantedParam = param("T-K");
 
 			log.Trace("Searching for fourth zero level height");
-			zeroLevel4 = h->VerticalHeight(wantedParam, zerom, tenkm, zerodeg, 4);
+			zeroLevel4 = h->VerticalHeight<double>(wantedParam, zerom, tenkm, zerodeg, 4);
 
 #ifdef DEBUG
 			util::DumpVector(zeroLevel4, "zero level 4");
 #endif
 
 			log.Trace("Searching for average temperature between third and fourth zero level");
-			Tavg34 = h->VerticalAverage(wantedParam, zeroLevel3, zeroLevel4);
+			Tavg34 = h->VerticalAverage<double>(wantedParam, zeroLevel3, zeroLevel4);
 
 #ifdef DEBUG
 			util::DumpVector(Tavg34, "tavg 34");
@@ -798,21 +798,21 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		// Base = ensimmäinen korkeus, missä N>stCover
 		vector<param> wantedParamList({param("N-0TO1"), param("N-PRCNT")});
 
-		const auto base = h->VerticalHeightGreaterThan(wantedParamList, 0, baseLimit, stCover);
+		const auto base = h->VerticalHeightGreaterThan<double>(wantedParamList, 0, baseLimit, stCover);
 
 		ret->Find<param>(stratusBaseParam);
 		ret->Data().Set(base);
 
 		const auto basePlus10 = Add(base, 10.);
 
-		auto top = h->VerticalHeightLessThan(wantedParamList, basePlus10, layerVec, stCoverVec);
+		auto top = h->VerticalHeightLessThan<double>(wantedParamList, basePlus10, layerVec, stCoverVec);
 
 		// Mahdollinen toinen matala pilvikerros stratuksen yläpuolella
 		const auto topPlus10 = Add(top, 10.);
-		const auto base2 = h->VerticalHeightGreaterThan(wantedParamList, topPlus10, layerVec, stCoverVec);
+		const auto base2 = h->VerticalHeightGreaterThan<double>(wantedParamList, topPlus10, layerVec, stCoverVec);
 
 		// Top2 = seuraava (pilvi)korkeus, missä N<stCover
-		const auto top2 = h->VerticalHeightLessThan(wantedParamList, base2, layerVec, stCoverVec);
+		const auto top2 = h->VerticalHeightLessThan<double>(wantedParamList, base2, layerVec, stCoverVec);
 
 		// Jos toinen pilvikerros alle 45m (150ft) korkeammalla, katsotaan sen olevan samaa stratusta
 		for (size_t i = 0; i < base.size(); i++)
@@ -836,7 +836,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		ret->Data().Set(top);
 
 		// Stratuksen Topin lämpötila (jäätävä tihku)
-		auto Ttop = h->VerticalValue(param("T-K"), top);
+		auto Ttop = h->VerticalValue<double>(param("T-K"), top);
 
 		ret->Find<param>(stratusTopTempParam);
 		ret->Data().Set(Ttop);
@@ -844,7 +844,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		// Stratuksen keskimääräinen lämpötila (poissulkemaan
 		// kylmät <-10C stratukset, joiden toppi >-10C) (jäätävä tihku)
 		auto topMinus10 = Add(top, -10);
-		auto stTavg = h->VerticalAverage(param("T-K"), basePlus10, topMinus10);
+		auto stTavg = h->VerticalAverage<double>(param("T-K"), basePlus10, topMinus10);
 
 		ret->Find<param>(stratusMeanTempParam);
 		ret->Data().Set(stTavg);
@@ -852,7 +852,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		// Keskimääräinen pilven määrä [%] stratuksen yläpuolisessa kerroksessa
 		auto topPlus30 = Add(top, 30);
 		auto topPlusDrydz = Add(top, drydz);
-		auto upperLayerN = h->VerticalAverage(wantedParamList, topPlus30, topPlusDrydz);
+		auto upperLayerN = h->VerticalAverage<double>(wantedParamList, topPlus30, topPlusDrydz);
 
 		ret->Find<param>(stratusUpperLayerNParam);
 		ret->Data().Set(upperLayerN);
@@ -862,13 +862,13 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 
 		try
 		{
-			wAvg = h->VerticalAverage(param("VV-MMS"), base, top);
+			wAvg = h->VerticalAverage<double>(param("VV-MMS"), base, top);
 		}
 		catch (const HPExceptionType& e)
 		{
 			if (e == kFileDataNotFound)
 			{
-				wAvg = h->VerticalAverage(param("VV-MS"), base, top);
+				wAvg = h->VerticalAverage<double>(param("VV-MS"), base, top);
 
 				for (double& d : wAvg)
 				{

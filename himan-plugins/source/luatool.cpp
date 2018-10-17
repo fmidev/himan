@@ -409,7 +409,7 @@ object VerticalMaximumGrid(std::shared_ptr<hitool> h, const param& theParam, con
 	try
 	{
 		return VectorToTable(
-		    h->VerticalMaximum(theParam, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
+		    h->VerticalMaximum<double>(theParam, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -426,7 +426,7 @@ object VerticalMaximum(std::shared_ptr<hitool> h, const param& theParam, double 
 {
 	try
 	{
-		return VectorToTable(h->VerticalMaximum(theParam, firstLevelValue, lastLevelValue));
+		return VectorToTable(h->VerticalMaximum<double>(theParam, firstLevelValue, lastLevelValue));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -445,7 +445,7 @@ object VerticalMinimumGrid(std::shared_ptr<hitool> h, const param& theParam, con
 	try
 	{
 		return VectorToTable(
-		    h->VerticalMinimum(theParam, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
+		    h->VerticalMinimum<double>(theParam, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -462,7 +462,7 @@ object VerticalMinimum(std::shared_ptr<hitool> h, const param& theParam, double 
 {
 	try
 	{
-		return VectorToTable(h->VerticalMinimum(theParam, firstLevelValue, lastLevelValue));
+		return VectorToTable(h->VerticalMinimum<double>(theParam, firstLevelValue, lastLevelValue));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -480,7 +480,8 @@ object VerticalSumGrid(std::shared_ptr<hitool> h, const param& theParam, const o
 {
 	try
 	{
-		return VectorToTable(h->VerticalSum(theParam, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
+		return VectorToTable(
+		    h->VerticalSum<double>(theParam, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -497,7 +498,7 @@ object VerticalSum(std::shared_ptr<hitool> h, const param& theParam, double firs
 {
 	try
 	{
-		return VectorToTable(h->VerticalSum(theParam, firstLevelValue, lastLevelValue));
+		return VectorToTable(h->VerticalSum<double>(theParam, firstLevelValue, lastLevelValue));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -516,7 +517,7 @@ object VerticalAverageGrid(std::shared_ptr<hitool> h, const param& theParam, con
 	try
 	{
 		return VectorToTable(
-		    h->VerticalAverage(theParam, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
+		    h->VerticalAverage<double>(theParam, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -533,7 +534,7 @@ object VerticalAverage(std::shared_ptr<hitool> h, const param& theParams, double
 {
 	try
 	{
-		return VectorToTable(h->VerticalAverage(theParams, firstLevelValue, lastLevelValue));
+		return VectorToTable(h->VerticalAverage<double>(theParams, firstLevelValue, lastLevelValue));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -551,8 +552,8 @@ object VerticalCountGrid(std::shared_ptr<hitool> h, const param& theParams, cons
 {
 	try
 	{
-		return VectorToTable(h->VerticalCount(theParams, TableToVector(firstLevelValue), TableToVector(lastLevelValue),
-		                                      TableToVector(findValue)));
+		return VectorToTable(h->VerticalCount<double>(theParams, TableToVector(firstLevelValue),
+		                                              TableToVector(lastLevelValue), TableToVector(findValue)));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -570,7 +571,7 @@ object VerticalCount(std::shared_ptr<hitool> h, const param& theParams, double f
 {
 	try
 	{
-		return VectorToTable(h->VerticalCount(theParams, firstLevelValue, lastLevelValue, findValue));
+		return VectorToTable(h->VerticalCount<double>(theParams, firstLevelValue, lastLevelValue, findValue));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -588,8 +589,9 @@ object VerticalHeightGrid(std::shared_ptr<hitool> h, const param& theParam, cons
 {
 	try
 	{
-		return VectorToTable(h->VerticalHeight(theParam, TableToVector(firstLevelValue), TableToVector(lastLevelValue),
-		                                       TableToVector(findValue), findNth));
+		return VectorToTable(h->VerticalHeight<double>(theParam, TableToVector(firstLevelValue),
+		                                               TableToVector(lastLevelValue), TableToVector(findValue),
+		                                               findNth));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -607,7 +609,7 @@ object VerticalHeight(std::shared_ptr<hitool> h, const param& theParams, double 
 {
 	try
 	{
-		return VectorToTable(h->VerticalHeight(theParams, firstLevelValue, lastLevelValue, findValue, findNth));
+		return VectorToTable(h->VerticalHeight<double>(theParams, firstLevelValue, lastLevelValue, findValue, findNth));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -625,9 +627,9 @@ object VerticalHeightGreaterThanGrid(std::shared_ptr<hitool> h, const param& the
 {
 	try
 	{
-		return VectorToTable(h->VerticalHeightGreaterThan(theParam, TableToVector(firstLevelValue),
-		                                                  TableToVector(lastLevelValue), TableToVector(findValue),
-		                                                  findNth));
+		return VectorToTable(h->VerticalHeightGreaterThan<double>(theParam, TableToVector(firstLevelValue),
+		                                                          TableToVector(lastLevelValue),
+		                                                          TableToVector(findValue), findNth));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -646,7 +648,7 @@ object VerticalHeightGreaterThan(std::shared_ptr<hitool> h, const param& thePara
 	try
 	{
 		return VectorToTable(
-		    h->VerticalHeightGreaterThan(theParams, firstLevelValue, lastLevelValue, findValue, findNth));
+		    h->VerticalHeightGreaterThan<double>(theParams, firstLevelValue, lastLevelValue, findValue, findNth));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -664,9 +666,9 @@ object VerticalHeightLessThanGrid(std::shared_ptr<hitool> h, const param& thePar
 {
 	try
 	{
-		return VectorToTable(h->VerticalHeightLessThan(theParam, TableToVector(firstLevelValue),
-		                                               TableToVector(lastLevelValue), TableToVector(findValue),
-		                                               findNth));
+		return VectorToTable(h->VerticalHeightLessThan<double>(theParam, TableToVector(firstLevelValue),
+		                                                       TableToVector(lastLevelValue), TableToVector(findValue),
+		                                                       findNth));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -684,7 +686,8 @@ object VerticalHeightLessThan(std::shared_ptr<hitool> h, const param& theParams,
 {
 	try
 	{
-		return VectorToTable(h->VerticalHeightLessThan(theParams, firstLevelValue, lastLevelValue, findValue, findNth));
+		return VectorToTable(
+		    h->VerticalHeightLessThan<double>(theParams, firstLevelValue, lastLevelValue, findValue, findNth));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -701,7 +704,7 @@ object VerticalValueGrid(std::shared_ptr<hitool> h, const param& theParam, const
 {
 	try
 	{
-		return VectorToTable(h->VerticalValue(theParam, TableToVector(findValue)));
+		return VectorToTable(h->VerticalValue<double>(theParam, TableToVector(findValue)));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -718,7 +721,7 @@ object VerticalValue(std::shared_ptr<hitool> h, const param& theParam, double fi
 {
 	try
 	{
-		return VectorToTable(h->VerticalValue(theParam, findValue));
+		return VectorToTable(h->VerticalValue<double>(theParam, findValue));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -737,7 +740,7 @@ object VerticalPlusMinusAreaGrid(std::shared_ptr<hitool> h, const param& thePara
 	try
 	{
 		return VectorToTable(
-		    h->PlusMinusArea(theParams, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
+		    h->PlusMinusArea<double>(theParams, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -755,7 +758,7 @@ object VerticalPlusMinusArea(std::shared_ptr<hitool> h, const param& theParams, 
 {
 	try
 	{
-		return VectorToTable(h->PlusMinusArea(theParams, firstLevelValue, lastLevelValue));
+		return VectorToTable(h->PlusMinusArea<double>(theParams, firstLevelValue, lastLevelValue));
 	}
 	catch (const HPExceptionType& e)
 	{

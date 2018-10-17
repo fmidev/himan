@@ -724,7 +724,7 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 
 	auto dPVec = VEC(PInfo);
 
-	auto P500m = h->VerticalValue(param("P-HPA"), 500.);
+	auto P500m = h->VerticalValue<double>(param("P-HPA"), 500.);
 	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 500.);
 
 	h->HeightUnit(kHPa);

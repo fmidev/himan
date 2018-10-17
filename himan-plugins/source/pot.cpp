@@ -494,7 +494,7 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	try
 	{
-		CbTopTemp = h->VerticalValue(param("T-K"), filtered_CbTop.Values());
+		CbTopTemp = h->VerticalValue<double>(param("T-K"), filtered_CbTop.Values());
 	}
 	catch (const HPExceptionType& e)
 	{
