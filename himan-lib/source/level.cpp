@@ -41,8 +41,8 @@ bool level::operator==(const level& other) const
 		return true;
 	}
 
-	return (itsType == other.itsType && itsValue == other.itsValue && itsValue2 == other.itsValue2 &&
-	        itsAB == other.itsAB);
+	return (itsType == other.itsType && itsValue == other.itsValue && itsValue2 == other.itsValue2);  // &&
+	//	        itsAB == other.itsAB);
 }
 
 bool level::operator!=(const level& other) const
