@@ -49,9 +49,9 @@ class cache : public auxiliary_plugin
 	void Insert(std::shared_ptr<info<double>> anInfo, bool pin = false);
 
 	template <typename T>
-	std::vector<std::shared_ptr<info<T>>> GetInfo(search_options& options);
+	std::vector<std::shared_ptr<info<T>>> GetInfo(search_options& options, bool strict = false);
 
-	std::vector<std::shared_ptr<info<double>>> GetInfo(search_options& options);
+	std::vector<std::shared_ptr<info<double>>> GetInfo(search_options& options, bool strict = false);
 
 	void Clean();
 
@@ -99,8 +99,15 @@ class cache_pool : public auxiliary_plugin
 	template <typename T>
 	void Insert(const std::string& uniqueName, std::shared_ptr<info<T>> info, bool pin);
 
+	/**
+	 * @brief Get info from cache
+	 *
+	 * @param uniqueName unique label that identifies a cache element
+	 * @param strict define whether cache is allowed to do data type conversion (--> strict=false)
+	 */
+
 	template <typename T>
-	std::shared_ptr<info<T>> GetInfo(const std::string& uniqueName);
+	std::shared_ptr<info<T>> GetInfo(const std::string& uniqueName, bool strict);
 
 	void Clean();
 
