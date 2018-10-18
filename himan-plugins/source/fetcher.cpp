@@ -60,14 +60,22 @@ shared_ptr<info<double>> fetcher::Fetch(shared_ptr<const plugin_configuration> c
                                         level requestedLevel, const params& requestedParams,
                                         forecast_type requestedType, bool readPackedData)
 {
-	shared_ptr<info<double>> ret;
+	return Fetch<double>(config, requestedTime, requestedLevel, requestedParams, requestedType, readPackedData);
+}
+
+template <typename T>
+shared_ptr<info<T>> fetcher::Fetch(shared_ptr<const plugin_configuration> config, forecast_time requestedTime,
+                                   level requestedLevel, const params& requestedParams, forecast_type requestedType,
+                                   bool readPackedData)
+{
+	shared_ptr<info<T>> ret;
 
 	for (size_t i = 0; i < requestedParams.size(); i++)
 	{
 		try
 		{
-			return Fetch(config, requestedTime, requestedLevel, requestedParams[i], requestedType, readPackedData,
-			             true);
+			return Fetch<T>(config, requestedTime, requestedLevel, requestedParams[i], requestedType, readPackedData,
+			                true);
 		}
 		catch (const HPExceptionType& e)
 		{
@@ -108,7 +116,11 @@ shared_ptr<info<double>> fetcher::Fetch(shared_ptr<const plugin_configuration> c
 	throw kFileDataNotFound;
 }
 
-shared_ptr<info<double>> fetcher::FetchFromProducer(search_options& opts, bool readPackedData, bool suppressLogging)
+template shared_ptr<info<double>> fetcher::Fetch<double>(shared_ptr<const plugin_configuration>, forecast_time, level,
+                                                         const params&, forecast_type, bool);
+
+template <typename T>
+shared_ptr<info<T>> fetcher::FetchFromProducer(search_options& opts, bool readPackedData, bool suppressLogging)
 {
 	level newLevel = opts.level;
 
@@ -127,16 +139,16 @@ shared_ptr<info<double>> fetcher::FetchFromProducer(search_options& opts, bool r
 		}
 	}
 
-	auto ret = FetchFromAllSources(opts, readPackedData);
+	auto ret = FetchFromAllSources<T>(opts, readPackedData);
 
 	auto theInfos = ret.second;
 
 	if (theInfos.empty())
 	{
-		return shared_ptr<info<double>>();
+		return shared_ptr<info<T>>();
 	}
 
-	RotateVectorComponents(theInfos, opts.configuration->BaseGrid(), opts.configuration, opts.prod);
+	RotateVectorComponents<T>(theInfos, opts.configuration->BaseGrid(), opts.configuration, opts.prod);
 
 	if (itsDoInterpolation)
 	{
@@ -158,7 +170,7 @@ shared_ptr<info<double>> fetcher::FetchFromProducer(search_options& opts, bool r
 
 		itsApplyLandSeaMask = false;
 
-		if (!ApplyLandSeaMask(opts.configuration, theInfos[0], opts.time, opts.ftype))
+		if (!ApplyLandSeaMask<T>(opts.configuration, theInfos[0], opts.time, opts.ftype))
 		{
 			itsLogger.Warning("Land sea mask apply failed");
 		}
@@ -177,7 +189,7 @@ shared_ptr<info<double>> fetcher::FetchFromProducer(search_options& opts, bool r
 	    !theInfos[0]->PackedData()->HasData())
 	{
 		auto c = GET_PLUGIN(cache);
-		c->Insert(theInfos[0]);
+		c->Insert<T>(theInfos[0]);
 	}
 
 	ASSERT((theInfos[0]->Time()) == opts.time);
@@ -187,15 +199,26 @@ shared_ptr<info<double>> fetcher::FetchFromProducer(search_options& opts, bool r
 	return theInfos[0];
 }
 
+template shared_ptr<info<double>> fetcher::FetchFromProducer<double>(search_options&, bool, bool);
+
 shared_ptr<info<double>> fetcher::Fetch(shared_ptr<const plugin_configuration> config, forecast_time requestedTime,
                                         level requestedLevel, param requestedParam, forecast_type requestedType,
                                         bool readPackedData, bool suppressLogging)
+{
+	return Fetch<double>(config, requestedTime, requestedLevel, requestedParam, requestedType, readPackedData,
+	                     suppressLogging);
+}
+
+template <typename T>
+shared_ptr<info<T>> fetcher::Fetch(shared_ptr<const plugin_configuration> config, forecast_time requestedTime,
+                                   level requestedLevel, param requestedParam, forecast_type requestedType,
+                                   bool readPackedData, bool suppressLogging)
 {
 	timer t(true);
 
 	// Check sticky param cache first
 
-	shared_ptr<info<double>> ret;
+	shared_ptr<info<T>> ret;
 
 	for (const auto& prod : config->SourceProducers())
 	{
@@ -217,7 +240,7 @@ shared_ptr<info<double>> fetcher::Fetch(shared_ptr<const plugin_configuration> c
 		{
 			search_options opts(requestedTime, requestedParam, requestedLevel, prod, requestedType, config);
 
-			ret = FetchFromProducer(opts, readPackedData, suppressLogging);
+			ret = FetchFromProducer<T>(opts, readPackedData, suppressLogging);
 
 			if (ret)
 			{
@@ -232,7 +255,7 @@ shared_ptr<info<double>> fetcher::Fetch(shared_ptr<const plugin_configuration> c
 	{
 		search_options opts(requestedTime, requestedParam, requestedLevel, prod, requestedType, config);
 
-		ret = FetchFromProducer(opts, readPackedData, suppressLogging);
+		ret = FetchFromProducer<T>(opts, readPackedData, suppressLogging);
 
 		if (ret)
 		{
@@ -285,10 +308,14 @@ shared_ptr<info<double>> fetcher::Fetch(shared_ptr<const plugin_configuration> c
 	return ret;
 }
 
-vector<shared_ptr<info<double>>> fetcher::FromFile(const vector<string>& files, search_options& options,
-                                                   bool readContents, bool readPackedData, bool readIfNotMatching)
+template shared_ptr<info<double>> fetcher::Fetch<double>(shared_ptr<const plugin_configuration>, forecast_time, level,
+                                                         param, forecast_type, bool, bool);
+
+template <typename T>
+vector<shared_ptr<info<T>>> fetcher::FromFile(const vector<string>& files, search_options& options, bool readContents,
+                                              bool readPackedData, bool readIfNotMatching)
 {
-	vector<shared_ptr<info<double>>> allInfos;
+	vector<shared_ptr<info<T>>> allInfos;
 
 	set<string> fileset(files.begin(), files.end());
 
@@ -300,7 +327,7 @@ vector<shared_ptr<info<double>>> fetcher::FromFile(const vector<string>& files, 
 			continue;
 		}
 
-		vector<shared_ptr<info<double>>> curInfos;
+		vector<shared_ptr<info<T>>> curInfos;
 
 		switch (util::FileType(inputFile))
 		{
@@ -308,27 +335,28 @@ vector<shared_ptr<info<double>>> fetcher::FromFile(const vector<string>& files, 
 			case kGRIB1:
 			case kGRIB2:
 			{
-				curInfos = FromGrib(inputFile, options, readContents, readPackedData, readIfNotMatching);
+				auto g = GET_PLUGIN(grib);
+				curInfos = g->FromFile<T>(inputFile, options, readContents, readPackedData, readIfNotMatching);
 				break;
 			}
 			case kGRIBIndex:
 			{
-				curInfos = FromGribIndex(inputFile, options, readContents, readPackedData, readIfNotMatching);
+				auto g = GET_PLUGIN(grib);
+				curInfos = g->FromIndexFile<T>(inputFile, options, readContents, readPackedData, readIfNotMatching);
 				break;
 			}
 
 			case kQueryData:
-			{
 				throw runtime_error("QueryData as input is not supported");
-			}
 
 			case kNetCDF:
-				itsLogger.Error("File is NetCDF");
-				break;
+				throw runtime_error("NetCDF as input is not supported");
 
 			case kCSV:
 			{
-				curInfos = FromCSV(inputFile, options, readIfNotMatching);
+				auto c = GET_PLUGIN(csv);
+				auto anInfo = c->FromFile<T>(inputFile, options, readIfNotMatching);
+				curInfos.push_back(anInfo);
 				break;
 			}
 
@@ -344,42 +372,12 @@ vector<shared_ptr<info<double>>> fetcher::FromFile(const vector<string>& files, 
 	return allInfos;
 }
 
-vector<shared_ptr<info<double>>> fetcher::FromCache(search_options& options)
+template <typename T>
+vector<shared_ptr<info<T>>> fetcher::FromCache(search_options& options)
 {
 	auto c = GET_PLUGIN(cache);
 
-	vector<shared_ptr<info<double>>> infos = c->GetInfo(options);
-
-	return infos;
-}
-
-vector<shared_ptr<info<double>>> fetcher::FromGrib(const string& inputFile, search_options& options, bool readContents,
-                                                   bool readPackedData, bool readIfNotMatching)
-{
-	auto g = GET_PLUGIN(grib);
-
-	return g->FromFile(inputFile, options, readContents, readPackedData, readIfNotMatching);
-}
-
-vector<shared_ptr<info<double>>> fetcher::FromGribIndex(const string& inputFile, search_options& options,
-                                                        bool readContents, bool readPackedData, bool readIfNotMatching)
-{
-	auto g = GET_PLUGIN(grib);
-
-	return g->FromIndexFile(inputFile, options, readContents, readPackedData, readIfNotMatching);
-}
-
-vector<shared_ptr<info<double>>> fetcher::FromCSV(const string& inputFile, search_options& options,
-                                                  bool readIfNotMatching)
-{
-	auto c = GET_PLUGIN(csv);
-
-	auto anInfo = c->FromFile(inputFile, options, readIfNotMatching);
-
-	vector<info_t> infos;
-	infos.push_back(anInfo);
-
-	return infos;
+	return c->GetInfo<T>(options);
 }
 
 himan::level fetcher::LevelTransform(const shared_ptr<const configuration>& conf, const producer& sourceProducer,
@@ -523,8 +521,8 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vec
 			interpolate::RotateVectorComponents(*u, *v, opts.configuration->UseCudaForInterpolation());
 
 			auto c = GET_PLUGIN(cache);
-			c->Replace(u);
-			c->Replace(v);
+			c->Replace<double>(u);
+			c->Replace<double>(v);
 
 			// RotateVectorComponent modifies both components, so make sure we don't re-rotate the other
 			// component.
@@ -545,14 +543,15 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vec
 	}
 }
 
-vector<shared_ptr<info<double>>> fetcher::FetchFromCache(search_options& opts)
+template <typename T>
+vector<shared_ptr<info<T>>> fetcher::FetchFromCache(search_options& opts)
 {
-	vector<shared_ptr<info<double>>> ret;
+	vector<shared_ptr<info<T>>> ret;
 
 	if (itsUseCache && opts.configuration->UseCache())
 	{
 		// 1. Fetch data from cache
-		ret = FromCache(opts);
+		ret = FromCache<T>(opts);
 
 		if (ret.size())
 		{
@@ -595,7 +594,7 @@ pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAuxili
 
 				timer t(true);
 
-				ret = FromFile(files, opts, true, readPackedData, true);
+				ret = FromFile<double>(files, opts, true, readPackedData, true);
 
 				AuxiliaryFilesRotateAndInterpolate(opts, ret);
 
@@ -622,11 +621,11 @@ pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAuxili
 			auxiliaryFilesRead = true;
 			source = HPDataFoundFrom::kCache;
 
-			ret = FromCache(opts);
+			ret = FromCache<double>(opts);
 		}
 		else
 		{
-			ret = FromFile(files, opts, true, readPackedData, false);
+			ret = FromFile<double>(files, opts, true, readPackedData, false);
 		}
 
 		if (!ret.empty())
@@ -649,9 +648,10 @@ pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAuxili
 	return make_pair(source, ret);
 }
 
-vector<shared_ptr<info<double>>> fetcher::FetchFromDatabase(search_options& opts, bool readPackedData)
+template <typename T>
+vector<shared_ptr<info<T>>> fetcher::FetchFromDatabase(search_options& opts, bool readPackedData)
 {
-	vector<info_t> ret;
+	vector<shared_ptr<info<T>>> ret;
 
 	HPDatabaseType dbtype = opts.configuration->DatabaseType();
 
@@ -670,7 +670,7 @@ vector<shared_ptr<info<double>>> fetcher::FetchFromDatabase(search_options& opts
 
 			itsLogger.Trace("Accessing Radon database");
 
-			files = r->Files(opts);
+			files = r->Files<T>(opts);
 		}
 
 		if (files.first.empty())
@@ -683,7 +683,7 @@ vector<shared_ptr<info<double>>> fetcher::FetchFromDatabase(search_options& opts
 		}
 		else
 		{
-			ret = FromFile(files.first, opts, true, readPackedData);
+			ret = FromFile<T>(files.first, opts, true, readPackedData);
 
 			if (dynamic_pointer_cast<const plugin_configuration>(opts.configuration)->StatisticsEnabled())
 			{
@@ -721,10 +721,13 @@ vector<shared_ptr<info<double>>> fetcher::FetchFromDatabase(search_options& opts
 	return ret;
 }
 
-pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAllSources(search_options& opts,
-                                                                                     bool readPackedData)
+template vector<shared_ptr<info<double>>> fetcher::FetchFromDatabase<double>(search_options&, bool);
+
+template <typename T>
+pair<HPDataFoundFrom, vector<shared_ptr<info<T>>>> fetcher::FetchFromAllSources(search_options& opts,
+                                                                                bool readPackedData)
 {
-	auto ret = FetchFromCache(opts);
+	auto ret = FetchFromCache<T>(opts);
 
 	if (!ret.empty())
 	{
@@ -742,10 +745,14 @@ pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAllSou
 		}
 	}
 
-	return make_pair(HPDataFoundFrom::kDatabase, FetchFromDatabase(opts, readPackedData));
+	return make_pair(HPDataFoundFrom::kDatabase, FetchFromDatabase<T>(opts, readPackedData));
 }
 
-bool fetcher::ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> config, info_t theInfo,
+template pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAllSources<double>(search_options&,
+                                                                                                      bool);
+
+template <typename T>
+bool fetcher::ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> config, shared_ptr<info<T>> theInfo,
                                const forecast_time& requestedTime, const forecast_type& requestedType)
 {
 	raw_time originTime = requestedTime.OriginDateTime();
@@ -755,7 +762,7 @@ bool fetcher::ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> confi
 	{
 		itsApplyLandSeaMask = false;
 
-		auto lsmInfo = Fetch(config, firstTime, level(kHeight, 0), param("LC-0TO1"), requestedType, false);
+		auto lsmInfo = Fetch<T>(config, firstTime, level(kHeight, 0), param("LC-0TO1"), requestedType, false);
 
 		itsApplyLandSeaMask = true;
 
@@ -780,11 +787,11 @@ bool fetcher::ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> confi
 
 		for (lsmInfo->ResetLocation(), theInfo->ResetLocation(); lsmInfo->NextLocation() && theInfo->NextLocation();)
 		{
-			double lsm = lsmInfo->Value();
+			T lsm = lsmInfo->Value();
 
 			if (multiplier * lsm <= itsLandSeaMaskThreshold)
 			{
-				theInfo->Value(MissingDouble());
+				theInfo->Value(MissingValue<T>());
 			}
 		}
 	}
@@ -796,6 +803,9 @@ bool fetcher::ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> confi
 
 	return true;
 }
+
+template bool fetcher::ApplyLandSeaMask(std::shared_ptr<const plugin_configuration>, shared_ptr<info<double>>,
+                                        const forecast_time&, const forecast_type&);
 
 bool fetcher::ApplyLandSeaMask() const
 {
@@ -855,7 +865,8 @@ string GetOtherVectorComponentName(const string& name)
 	throw runtime_error("Unable to find component pair for " + name);
 }
 
-void fetcher::RotateVectorComponents(vector<info_t>& components, const grid* target,
+template <typename T>
+void fetcher::RotateVectorComponents(vector<shared_ptr<info<T>>>& components, const grid* target,
                                      shared_ptr<const plugin_configuration> config, const producer& sourceProd)
 {
 	for (auto& component : components)
@@ -879,7 +890,7 @@ void fetcher::RotateVectorComponents(vector<info_t>& components, const grid* tar
 
 			itsLogger.Trace("Fetching " + otherName + " for U/V rotation");
 
-			auto ret = FetchFromAllSources(opts, component->PackedData()->HasData());
+			auto ret = FetchFromAllSources<T>(opts, component->PackedData()->HasData());
 
 			auto otherVec = ret.second;
 
@@ -889,7 +900,7 @@ void fetcher::RotateVectorComponents(vector<info_t>& components, const grid* tar
 				continue;
 			}
 
-			info_t u, v, other = otherVec[0];
+			shared_ptr<info<T>> u, v, other = otherVec[0];
 
 			if (name.find("U-MS") != std::string::npos)
 			{
@@ -911,15 +922,18 @@ void fetcher::RotateVectorComponents(vector<info_t>& components, const grid* tar
 			// Most likely both U&V are requested, so interpolate the other one now
 			// and put it to cache.
 
-			std::vector<info_t> list({other});
+			std::vector<shared_ptr<info<T>>> list({other});
 			if (itsDoInterpolation && interpolate::Interpolate(target, list, config->UseCudaForInterpolation()))
 			{
 				if (itsUseCache && config->UseCache() && !other->PackedData()->HasData())
 				{
 					auto c = GET_PLUGIN(cache);
-					c->Insert(other);
+					c->Insert<T>(other);
 				}
 			}
 		}
 	}
 }
+
+template void fetcher::RotateVectorComponents<double>(vector<shared_ptr<info<double>>>&, const grid*,
+                                                      shared_ptr<const plugin_configuration>, const producer&);
