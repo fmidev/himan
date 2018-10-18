@@ -670,7 +670,7 @@ vector<shared_ptr<info<T>>> fetcher::FetchFromDatabase(search_options& opts, boo
 
 			itsLogger.Trace("Accessing Radon database");
 
-			files = r->Files<T>(opts);
+			files = r->Files(opts);
 		}
 
 		if (files.first.empty())
