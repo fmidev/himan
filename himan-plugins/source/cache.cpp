@@ -142,20 +142,29 @@ size_t cache::Size() const
 	return cache_pool::Instance()->Size();
 }
 
-void cache::Replace(info_t anInfo, bool pin)
+void cache::Replace(shared_ptr<info<double>> anInfo, bool pin)
 {
-	auto localInfo = make_shared<info<double>>(*anInfo);
+	return Replace<double>(anInfo, pin);
+}
+
+template <typename T>
+void cache::Replace(shared_ptr<info<T>> anInfo, bool pin)
+{
+	auto localInfo = make_shared<info<T>>(*anInfo);
 
 	if (localInfo->DimensionSize() > 1)
 	{
-		auto newInfo = make_shared<info<double>>(localInfo->ForecastType(), localInfo->Time(), localInfo->Level(),
-		                                         localInfo->Param());
+		auto newInfo =
+		    make_shared<info<T>>(localInfo->ForecastType(), localInfo->Time(), localInfo->Level(), localInfo->Param());
+		newInfo->Producer(localInfo->Producer());
 		newInfo->Base(localInfo->Base());
 		localInfo = newInfo;
 	}
 
 	cache_pool::Instance()->Replace(UniqueName(*localInfo), localInfo, pin);
 }
+
+template void cache::Replace<double>(shared_ptr<info<double>>, bool);
 
 cache_pool* cache_pool::itsInstance = NULL;
 
