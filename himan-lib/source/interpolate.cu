@@ -242,15 +242,16 @@ __device__ bool IsInsideGrid(point& gp, size_t size_x, size_t size_y)
 	return false;
 }
 
-__global__ void RotateLambert(double* __restrict__ d_u, double* __restrict__ d_v, const double* __restrict__ d_lon,
-                              double cone, double orientation, size_t size_x, size_t size_y)
+template <typename T>
+__global__ void RotateLambert(T* __restrict__ d_u, T* __restrict__ d_v, const double* __restrict__ d_lon, double cone,
+                              double orientation, size_t size_x, size_t size_y)
 {
 	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < size_x * size_y)
 	{
-		double U = d_u[idx];
-		double V = d_v[idx];
+		T U = d_u[idx];
+		T V = d_v[idx];
 
 		int i = fmod(static_cast<double>(idx), static_cast<double>(size_x));
 		int j = floor(static_cast<double>(idx / size_x));
@@ -259,21 +260,22 @@ __global__ void RotateLambert(double* __restrict__ d_u, double* __restrict__ d_v
 		const double angle = cone * londiff * himan::constants::kDeg;
 		double sinx, cosx;
 		sincos(angle, &sinx, &cosx);
-		d_u[idx] = cosx * U + sinx * V;
-		d_v[idx] = -1 * sinx * U + cosx * V;
+		d_u[idx] = static_cast<T>(cosx * U + sinx * V);
+		d_v[idx] = static_cast<T>(-1 * sinx * U + cosx * V);
 	}
 }
 
-__global__ void RotateRotatedLatitudeLongitude(double* __restrict__ d_u, double* __restrict__ d_v, size_t size_x,
-                                               size_t size_y, point first, point south_pole, double di, double dj,
+template <typename T>
+__global__ void RotateRotatedLatitudeLongitude(T* __restrict__ d_u, T* __restrict__ d_v, size_t size_x, size_t size_y,
+                                               point first, point south_pole, double di, double dj,
                                                himan::HPScanningMode mode)
 {
 	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < size_x * size_y)
 	{
-		double U = d_u[idx];
-		double V = d_v[idx];
+		T U = d_u[idx];
+		T V = d_v[idx];
 
 		// Rotated to regular coordinates
 
@@ -335,19 +337,20 @@ __global__ void RotateRotatedLatitudeLongitude(double* __restrict__ d_u, double*
 		double PC = (-SinYPole) * SinXRot / CosYReg;
 		double PD = (CosYPole * CosYRot - SinYPole * CosXRot * SinYRot) / CosYReg;
 
-		double newU = PA * U + PB * V;
-		double newV = PC * U + PD * V;
+		T newU = static_cast<T>(PA * U + PB * V);
+		T newV = static_cast<T>(PC * U + PD * V);
 
 		d_u[idx] = newU;
 		d_v[idx] = newV;
 	}
 }
 
-void himan::interpolate::RotateVectorComponentsGPU(himan::info<double>& UInfo, himan::info<double>& VInfo,
-                                                   cudaStream_t& stream, double* d_u, double* d_v)
+template <typename T>
+void himan::interpolate::RotateVectorComponentsGPU(himan::info<T>& UInfo, himan::info<T>& VInfo, cudaStream_t& stream,
+                                                   T* d_u, T* d_v)
 {
 	const size_t N = UInfo.SizeLocations();
-	const size_t memsize = N * sizeof(double);
+	const size_t memsize = N * sizeof(T);
 
 	const int bs = 256;
 	const int gs = N / bs + (N % bs == 0 ? 0 : 1);
@@ -368,9 +371,6 @@ void himan::interpolate::RotateVectorComponentsGPU(himan::info<double>& UInfo, h
 
 		CUDA_CHECK(cudaMemcpyAsync(d_u, UInfo.Data().ValuesAsPOD(), memsize, cudaMemcpyHostToDevice));
 		CUDA_CHECK(cudaMemcpyAsync(d_v, VInfo.Data().ValuesAsPOD(), memsize, cudaMemcpyHostToDevice));
-
-		//		cuda::PrepareInfo(UInfo, d_u, stream);
-		//		cuda::PrepareInfo(VInfo, d_v, stream);
 	}
 
 	switch (UInfo.Grid()->Type())
@@ -378,9 +378,9 @@ void himan::interpolate::RotateVectorComponentsGPU(himan::info<double>& UInfo, h
 		case himan::kRotatedLatitudeLongitude:
 		{
 			const auto rg = std::dynamic_pointer_cast<rotated_latitude_longitude_grid>(UInfo.Grid());
-			RotateRotatedLatitudeLongitude<<<gs, bs, 0, stream>>>(d_u, d_v, UInfo.Data().SizeX(), UInfo.Data().SizeY(),
-			                                                      ::point(rg->FirstPoint()), ::point(rg->SouthPole()),
-			                                                      rg->Di(), rg->Dj(), rg->ScanningMode());
+			RotateRotatedLatitudeLongitude<T>
+			    <<<gs, bs, 0, stream>>>(d_u, d_v, UInfo.Data().SizeX(), UInfo.Data().SizeY(), ::point(rg->FirstPoint()),
+			                            ::point(rg->SouthPole()), rg->Di(), rg->Dj(), rg->ScanningMode());
 		}
 		break;
 
@@ -418,8 +418,8 @@ void himan::interpolate::RotateVectorComponentsGPU(himan::info<double>& UInfo, h
 				       (log(tan((90 - fabs(latin1)) * kDeg * 0.5)) - log(tan(90 - fabs(latin2)) * kDeg * 0.5));
 			}
 
-			RotateLambert<<<gs, bs, 0, stream>>>(d_u, d_v, d_lon, cone, orientation, UInfo.Data().SizeX(),
-			                                     UInfo.Data().SizeY());
+			RotateLambert<T>
+			    <<<gs, bs, 0, stream>>>(d_u, d_v, d_lon, cone, orientation, UInfo.Data().SizeX(), UInfo.Data().SizeY());
 
 			CUDA_CHECK(cudaStreamSynchronize(stream));
 			CUDA_CHECK(cudaFreeHost(lon));
@@ -443,8 +443,8 @@ void himan::interpolate::RotateVectorComponentsGPU(himan::info<double>& UInfo, h
 
 			CUDA_CHECK(cudaMemcpyAsync(d_lon, lon, memsize, cudaMemcpyHostToDevice));
 
-			RotateLambert<<<gs, bs, 0, stream>>>(d_u, d_v, d_lon, 1, orientation, UInfo.Data().SizeX(),
-			                                     UInfo.Data().SizeY());
+			RotateLambert<T>
+			    <<<gs, bs, 0, stream>>>(d_u, d_v, d_lon, 1, orientation, UInfo.Data().SizeX(), UInfo.Data().SizeY());
 
 			CUDA_CHECK(cudaStreamSynchronize(stream));
 			CUDA_CHECK(cudaFreeHost(lon));
@@ -471,3 +471,8 @@ void himan::interpolate::RotateVectorComponentsGPU(himan::info<double>& UInfo, h
 		CUDA_CHECK(cudaFree(d_lon));
 	}
 }
+
+template void himan::interpolate::RotateVectorComponentsGPU<double>(himan::info<double>&, himan::info<double>&,
+                                                                    cudaStream_t&, double* d_u, double* d_v);
+template void himan::interpolate::RotateVectorComponentsGPU<float>(himan::info<float>&, himan::info<float>&,
+                                                                   cudaStream_t&, float* d_u, float* d_v);

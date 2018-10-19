@@ -20,12 +20,30 @@
 using namespace himan;
 using namespace Eigen;
 
-// bool InsideTriangle(point a, point b, point c, point p);
-
 namespace himan
 {
 namespace interpolate
 {
+
+// Function to return identifier for each supported datatype
+// In the interpolation weight cache we store weights separately
+// for each data type.
+
+template <typename T>
+int DataTypeId();
+
+template <>
+int DataTypeId<float>()
+{
+	return 1;
+}
+
+template <>
+int DataTypeId<double>()
+{
+	return 2;
+}
+
 bool IsSupportedGridForRotation(HPGridType type)
 {
 	switch (type)
@@ -39,7 +57,8 @@ bool IsSupportedGridForRotation(HPGridType type)
 	}
 }
 
-bool InterpolateArea(const grid* baseGrid, info_t source)
+template <typename T>
+bool InterpolateArea(const grid* baseGrid, std::shared_ptr<info<T>> source)
 {
 	if (!source)
 	{
@@ -49,11 +68,11 @@ bool InterpolateArea(const grid* baseGrid, info_t source)
 #ifdef HAVE_CUDA
 	if (source->PackedData()->HasData())
 	{
-		util::Unpack({source});
+		util::Unpack<T>({source});
 	}
 #endif
 
-	base<double> target;
+	base<T> target;
 	target.grid = std::shared_ptr<himan::grid>(baseGrid->Clone());
 
 	if (baseGrid->Class() == kRegularGrid)
@@ -66,7 +85,7 @@ bool InterpolateArea(const grid* baseGrid, info_t source)
 		target.data.Resize(baseGrid->Size(), 1);
 	}
 
-	if (interpolate::interpolator().Interpolate(*source->Base(), target, source->Param().InterpolationMethod()))
+	if (interpolate::interpolator().Interpolate<T>(*source->Base(), target, source->Param().InterpolationMethod()))
 	{
 		auto interpGrid = std::shared_ptr<grid>(baseGrid->Clone());
 
@@ -82,7 +101,11 @@ bool InterpolateArea(const grid* baseGrid, info_t source)
 	return false;
 }
 
-bool ReorderPoints(const grid* baseGrid, info_t info)
+template bool InterpolateArea<double>(const grid*, std::shared_ptr<info<double>>);
+template bool InterpolateArea<float>(const grid*, std::shared_ptr<info<float>>);
+
+template <typename T>
+bool ReorderPoints(const grid* baseGrid, std::shared_ptr<info<T>> info)
 {
 	if (!info)
 	{
@@ -94,7 +117,7 @@ bool ReorderPoints(const grid* baseGrid, info_t info)
 	auto targetStations = dynamic_cast<const point_list*>(baseGrid)->Stations();
 	auto sourceStations = std::dynamic_pointer_cast<point_list>(info->Grid())->Stations();
 	const auto& sourceData = info->Data();
-	matrix<double> newData(targetStations.size(), 1, 1, MissingDouble());
+	matrix<T> newData(targetStations.size(), 1, 1, MissingValue<T>());
 
 	if (targetStations.size() == 0 || sourceStations.size() == 0)
 	{
@@ -137,7 +160,11 @@ bool ReorderPoints(const grid* baseGrid, info_t info)
 	return true;
 }
 
-bool Interpolate(const grid* baseGrid, std::vector<info_t>& infos, bool useCudaForInterpolation)
+template bool ReorderPoints<double>(const grid*, std::shared_ptr<info<double>>);
+template bool ReorderPoints<float>(const grid*, std::shared_ptr<info<float>>);
+
+template <typename T>
+bool Interpolate(const grid* baseGrid, std::vector<std::shared_ptr<info<T>>>& infos, bool useCudaForInterpolation)
 {
 	for (const auto& info : infos)
 	{
@@ -171,10 +198,10 @@ bool Interpolate(const grid* baseGrid, std::vector<info_t>& infos, bool useCudaF
 				{
 					// must unpack before swapping
 					// itsLogger->Trace("Unpacking before swapping");
-					util::Unpack({info});
+					util::Unpack<T>({info});
 				}
 #endif
-				util::Flip(info->Data());
+				util::Flip<T>(info->Data());
 				std::dynamic_pointer_cast<regular_grid>(info->Grid())
 				    ->ScanningMode(dynamic_cast<const regular_grid*>(baseGrid)->ScanningMode());
 			}
@@ -211,11 +238,11 @@ bool Interpolate(const grid* baseGrid, std::vector<info_t>& infos, bool useCudaF
 			}
 		}
 
-		if (needInterpolation && InterpolateArea(baseGrid, info) == false)
+		if (needInterpolation && InterpolateArea<T>(baseGrid, info) == false)
 		{
 			return false;
 		}
-		else if (needPointReordering && ReorderPoints(baseGrid, info))
+		else if (needPointReordering && ReorderPoints<T>(baseGrid, info))
 		{
 			return false;
 		}
@@ -223,6 +250,9 @@ bool Interpolate(const grid* baseGrid, std::vector<info_t>& infos, bool useCudaF
 
 	return true;
 }
+
+template bool Interpolate<double>(const grid*, std::vector<std::shared_ptr<info<double>>>&, bool);
+template bool Interpolate<float>(const grid*, std::vector<std::shared_ptr<info<float>>>&, bool);
 
 bool IsVectorComponent(const std::string& paramName)
 {
@@ -262,7 +292,8 @@ HPInterpolationMethod InterpolationMethod(const std::string& paramName, HPInterp
 	return interpolationMethod;
 }
 
-void RotateVectorComponentsCPU(info<double>& UInfo, info<double>& VInfo)
+template <typename T>
+void RotateVectorComponentsCPU(info<T>& UInfo, info<T>& VInfo)
 {
 	ASSERT(UInfo.Grid()->Type() == VInfo.Grid()->Type());
 
@@ -287,11 +318,8 @@ void RotateVectorComponentsCPU(info<double>& UInfo, info<double>& VInfo)
 				const point regPoint = rll->LatLon(i);
 				const auto coeffs = util::EarthRelativeUVCoefficients(regPoint, rotPoint, southPole);
 
-				double newU = std::get<0>(coeffs) * U + std::get<1>(coeffs) * V;
-				double newV = std::get<2>(coeffs) * U + std::get<3>(coeffs) * V;
-
-				UVec[i] = newU;
-				VVec[i] = newV;
+				UVec[i] = static_cast<T>(std::get<0>(coeffs) * U + std::get<1>(coeffs) * V);
+				VVec[i] = static_cast<T>(std::get<2>(coeffs) * U + std::get<3>(coeffs) * V);
 			}
 		}
 		break;
@@ -326,8 +354,8 @@ void RotateVectorComponentsCPU(info<double>& UInfo, info<double>& VInfo)
 			{
 				size_t i = UInfo.LocationIndex();
 
-				double U = UVec[i];
-				double V = VVec[i];
+				T U = UVec[i];
+				T V = VVec[i];
 
 				// http://www.mcs.anl.gov/~emconsta/wind_conversion.txt
 
@@ -339,8 +367,8 @@ void RotateVectorComponentsCPU(info<double>& UInfo, info<double>& VInfo)
 				double sinx, cosx;
 				sincos(angle, &sinx, &cosx);
 
-				UVec[i] = cosx * U + sinx * V;
-				VVec[i] = -1 * sinx * U + cosx * V;
+				UVec[i] = static_cast<T>(cosx * U + sinx * V);
+				VVec[i] = static_cast<T>(-1 * sinx * U + cosx * V);
 			}
 		}
 		break;
@@ -356,16 +384,16 @@ void RotateVectorComponentsCPU(info<double>& UInfo, info<double>& VInfo)
 			{
 				size_t i = UInfo.LocationIndex();
 
-				double U = UVec[i];
-				double V = VVec[i];
+				T U = UVec[i];
+				T V = VVec[i];
 
 				const double angle = (UInfo.LatLon().X() - orientation) * constants::kDeg;
 				double sinx, cosx;
 
 				sincos(angle, &sinx, &cosx);
 
-				UVec[i] = -1 * cosx * U + sinx * V;
-				VVec[i] = -1 * -sinx * U + cosx * V;
+				UVec[i] = static_cast<T>(-1 * cosx * U + sinx * V);
+				VVec[i] = static_cast<T>(-1 * -sinx * U + cosx * V);
 			}
 		}
 		break;
@@ -374,7 +402,11 @@ void RotateVectorComponentsCPU(info<double>& UInfo, info<double>& VInfo)
 	}
 }
 
-void RotateVectorComponents(info<double>& UInfo, info<double>& VInfo, bool useCuda)
+template void RotateVectorComponentsCPU<double>(info<double>&, info<double>&);
+template void RotateVectorComponentsCPU<float>(info<float>&, info<float>&);
+
+template <typename T>
+void RotateVectorComponents(info<T>& UInfo, info<T>& VInfo, bool useCuda)
 {
 	ASSERT(UInfo.Grid()->UVRelativeToGrid() == VInfo.Grid()->UVRelativeToGrid());
 
@@ -388,18 +420,21 @@ void RotateVectorComponents(info<double>& UInfo, info<double>& VInfo, bool useCu
 	{
 		cudaStream_t stream;
 		CUDA_CHECK(cudaStreamCreate(&stream));
-		RotateVectorComponentsGPU(UInfo, VInfo, stream, 0, 0);
+		RotateVectorComponentsGPU<T>(UInfo, VInfo, stream, 0, 0);
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 	}
 	else
 #endif
 	{
-		RotateVectorComponentsCPU(UInfo, VInfo);
+		RotateVectorComponentsCPU<T>(UInfo, VInfo);
 	}
 
 	UInfo.Grid()->UVRelativeToGrid(false);
 	VInfo.Grid()->UVRelativeToGrid(false);
 }
+
+template void RotateVectorComponents<double>(info<double>&, info<double>&, bool);
+template void RotateVectorComponents<float>(info<float>&, info<float>&, bool);
 
 std::pair<std::vector<size_t>, std::vector<double>> InterpolationWeights(reduced_gaussian_grid& source, point target)
 {
@@ -610,10 +645,11 @@ std::pair<size_t, double> NearestPoint(regular_grid& source, point target)
 }
 
 // area_interpolation class member functions definitions
-area_interpolation::area_interpolation(grid& source, grid& target, HPInterpolationMethod method)
+template <typename T>
+area_interpolation<T>::area_interpolation(grid& source, grid& target, HPInterpolationMethod method)
     : itsInterpolation(target.Size(), source.Size())
 {
-	std::vector<Triplet<double>> coefficients;
+	std::vector<Triplet<T>> coefficients;
 	// compute weights in the interpolation matrix line by line, i.e. point by point on target grid
 	for (size_t i = 0; i < target.Size(); ++i)
 	{
@@ -663,51 +699,55 @@ area_interpolation::area_interpolation(grid& source, grid& target, HPInterpolati
 
 		for (size_t j = 0; j < w.first.size(); ++j)
 		{
-			coefficients.push_back(Triplet<double>(static_cast<int>(i), static_cast<int>(w.first[j]), w.second[j]));
+			coefficients.push_back(Triplet<T>(static_cast<int>(i), static_cast<int>(w.first[j]), w.second[j]));
 		}
 	}
 
 	itsInterpolation.setFromTriplets(coefficients.begin(), coefficients.end());
 }
 
-void area_interpolation::Interpolate(base<double>& source, base<double>& target)
+template <typename T>
+void area_interpolation<T>::Interpolate(base<T>& source, base<T>& target)
 {
-	Map<Matrix<double, Dynamic, Dynamic>> srcValues(source.data.ValuesAsPOD(), source.data.Size(), 1);
-	Map<Matrix<double, Dynamic, Dynamic>> trgValues(target.data.ValuesAsPOD(), target.data.Size(), 1);
+	Map<Matrix<T, Dynamic, Dynamic>> srcValues(source.data.ValuesAsPOD(), source.data.Size(), 1);
+	Map<Matrix<T, Dynamic, Dynamic>> trgValues(target.data.ValuesAsPOD(), target.data.Size(), 1);
 
 	trgValues = itsInterpolation * srcValues;
 }
 
-size_t area_interpolation::SourceSize() const
+template <typename T>
+size_t area_interpolation<T>::SourceSize() const
 {
 	return itsInterpolation.cols();
 }
 
-size_t area_interpolation::TargetSize() const
+template <typename T>
+size_t area_interpolation<T>::TargetSize() const
 {
 	return itsInterpolation.rows();
 }
 
 // Interpolator member functions
-std::map<size_t, himan::interpolate::area_interpolation> interpolator::cache;
+std::map<size_t, interp_cache> interpolator::cache;
 std::mutex interpolator::interpolatorAccessMutex;
 
-bool interpolator::Insert(const base<double>& source, const base<double>& target, HPInterpolationMethod method)
+template <typename T>
+bool interpolator::Insert(const base<T>& source, const base<T>& target, HPInterpolationMethod method)
 {
 	std::lock_guard<std::mutex> guard(interpolatorAccessMutex);
 
-	std::pair<size_t, himan::interpolate::area_interpolation> insertValue;
+	std::pair<size_t, himan::interpolate::area_interpolation<T>> insertValue;
 
 	try
 	{
-		std::vector<size_t> hashes{method, source.grid->Hash(), target.grid->Hash()};
+		std::vector<size_t> hashes{method, DataTypeId<T>(), source.grid->Hash(), target.grid->Hash()};
 		insertValue.first = boost::hash_range(hashes.begin(), hashes.end());
 
 		// area_interpolation is already present in cache
 		if (cache.count(insertValue.first) > 0)
 			return true;
 
-		insertValue.second = himan::interpolate::area_interpolation(*source.grid, *target.grid, method);
+		insertValue.second = himan::interpolate::area_interpolation<T>(*source.grid, *target.grid, method);
 	}
 	catch (const std::exception& e)
 	{
@@ -717,15 +757,27 @@ bool interpolator::Insert(const base<double>& source, const base<double>& target
 	return cache.insert(std::move(insertValue)).second;
 }
 
-bool interpolator::Interpolate(base<double>& source, base<double>& target, HPInterpolationMethod method)
+template bool interpolator::Insert<double>(const base<double>&, const base<double>&, HPInterpolationMethod);
+template bool interpolator::Insert<float>(const base<float>&, const base<float>&, HPInterpolationMethod);
+
+template <typename T>
+bool interpolator::Interpolate(base<T>& source, base<T>& target, HPInterpolationMethod method)
 {
-	std::vector<size_t> hashes{method, source.grid->Hash(), target.grid->Hash()};
+	std::vector<size_t> hashes{method, DataTypeId<T>(), source.grid->Hash(), target.grid->Hash()};
 	auto it = cache.find(boost::hash_range(hashes.begin(), hashes.end()));
 
 	if (it != cache.end())
 	{
-		it->second.Interpolate(source, target);
-		return true;
+		try
+		{
+			boost::get<area_interpolation<T>>(it->second).Interpolate(source, target);
+			return true;
+		}
+		catch (const boost::bad_get& e)
+		{
+			std::cout << e.what() << std::endl;
+			return false;
+		}
 	}
 
 	else
@@ -734,6 +786,9 @@ bool interpolator::Interpolate(base<double>& source, base<double>& target, HPInt
 		return Interpolate(source, target, method);
 	}
 }
+
+template bool interpolator::Interpolate<double>(base<double>&, base<double>&, HPInterpolationMethod);
+template bool interpolator::Interpolate<float>(base<float>&, base<float>&, HPInterpolationMethod);
 
 }  // namespace interpolate
 }  // namespace himan

@@ -98,6 +98,10 @@ struct packed_data
 	{
 		throw std::runtime_error("top level Unpack called");
 	}
+	virtual void Unpack(float* d_arr, size_t N, cudaStream_t* stream)
+	{
+		throw std::runtime_error("top level Unpack called");
+	}
 
 	unsigned char* data;
 	size_t packedLength;
