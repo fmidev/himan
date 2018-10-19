@@ -74,7 +74,7 @@ class matrix
 	{
 	}
 
-	matrix(const matrix& other)
+	explicit matrix(const matrix& other)
 	    : itsData(other.itsData)  // Copy contents!
 	      ,
 	      itsWidth(other.itsWidth),
@@ -82,6 +82,19 @@ class matrix
 	      itsDepth(other.itsDepth),
 	      itsMissingValue(other.itsMissingValue)
 	{
+	}
+
+	template <typename U>
+	matrix(const matrix<U>& other)
+	    : itsWidth(other.SizeX()),
+	      itsHeight(other.SizeY()),
+	      itsDepth(other.SizeZ()),
+	      itsMissingValue(himan::IsMissing(other.MissingValue()) ? himan::MissingValue<T>()
+	                                                             : static_cast<T>(other.MissingValue()))
+	{
+		itsData.resize(other.Size());
+		std::replace_copy_if(other.Values().begin(), other.Values().end(), itsData.begin(),
+		                     [=](const U& val) { return Compare(val, other.MissingValue()); }, itsMissingValue);
 	}
 
 	matrix(matrix&&) = default;
@@ -209,6 +222,12 @@ class matrix
 	{
 		return itsData;
 	}
+
+	const std::vector<T>& Values() const
+	{
+		return itsData;
+	}
+
 	friend std::ostream& operator<<(std::ostream& file, const matrix<T>& ob)
 	{
 		return ob.Write(file);
