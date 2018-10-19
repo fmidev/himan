@@ -304,13 +304,7 @@ shared_ptr<himan::info<U>> Convert(const shared_ptr<himan::info<T>>& fnd)
 
 	auto b = make_shared<himan::base<U>>();
 	b->grid = shared_ptr<himan::grid>(fnd->Grid()->Clone());
-	b->data.Resize(fnd->Data().SizeX(), fnd->Data().SizeY());
-
-	const auto& src = VEC(fnd);
-	auto& dst = b->data.Values();
-
-	replace_copy_if(src.begin(), src.end(), dst.begin(), [](const U& val) { return ::isnan(val); },
-	                himan::MissingValue<U>());
+	b->data = fnd->Data();
 
 	ret->Create(b);
 
