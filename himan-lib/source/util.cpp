@@ -880,7 +880,7 @@ void util::Unpack(vector<shared_ptr<info<T>>> infos, bool addToCache)
 			continue;
 		}
 
-		ASSERT(pdata->ClassName() == "simple_packed");
+		ASSERT(pdata->packingType == kSimplePacking);
 
 		T* arr = 0;
 		const size_t N = pdata->unpackedLength;
@@ -894,7 +894,7 @@ void util::Unpack(vector<shared_ptr<info<T>>> infos, bool addToCache)
 
 		ASSERT(arr);
 
-		pdata->Unpack(arr, N, &stream);
+		packing::Unpack<T>(dynamic_pointer_cast<simple_packed>(pdata).get(), arr, &stream);
 
 		CUDA_CHECK(cudaHostUnregister(arr));
 		CUDA_CHECK(cudaStreamSynchronize(stream));

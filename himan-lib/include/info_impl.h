@@ -77,6 +77,10 @@ std::ostream& info<T>::Write(std::ostream& file) const
 		{
 			file << *itsDimensions[i]->grid;
 		}
+		if (itsDimensions[i]->pdata)
+		{
+			file << "__itsPackedData__ " << itsDimensions[i]->pdata->HasData() << std::endl;
+		}
 		file << itsDimensions[i]->data;
 	}
 

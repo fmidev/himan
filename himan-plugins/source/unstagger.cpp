@@ -113,8 +113,6 @@ void unstagger::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short 
 #ifdef HAVE_CUDA
 		if (UInfo->PackedData()->HasData())
 		{
-			ASSERT(UInfo->PackedData()->ClassName() == "simple_packed");
-
 			util::Unpack<double>({UInfo, VInfo}, false);
 		}
 #endif

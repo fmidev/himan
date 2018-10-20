@@ -3,10 +3,6 @@
 #include <NFmiRotatedLatLonArea.h>
 #include <functional>
 
-#ifdef HAVE_CUDA
-#include "simple_packed.h"
-#endif
-
 using namespace himan;
 using namespace std;
 
