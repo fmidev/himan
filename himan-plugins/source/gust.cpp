@@ -126,8 +126,8 @@ void gust::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threa
 	const param TParam("T-K");                                            // temperature
 	const param TopoParam("Z-M2S2");                                      // geopotential height
 	const params LowCloudParam = {param("NL-0TO1"), param("NL-PRCNT")};   // low cloud cover
-	const params MidCloudParam = {param("NL-0TO1"), param("NM-PRCNT")};   // middle cloud cover
-	const params HighCloudParam = {param("NL-0TO1"), param("NH-PRCNT")};  // high cloud cover
+	const params MidCloudParam = {param("NM-0TO1"), param("NM-PRCNT")};   // middle cloud cover
+	const params HighCloudParam = {param("NH-0TO1"), param("NH-PRCNT")};  // high cloud cover
 	const params TotalCloudParam = {param("N-PRCNT"), param("N-0TO1")};   // total cloud cover
 
 	level H0, H10;
