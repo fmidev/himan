@@ -345,7 +345,7 @@ shared_ptr<himan::info<T>> cache_pool::GetInfo(const string& uniqueName, bool st
 	{
 		// if data is directly found from cache with correct data type,
 		// return that
-		return boost::get<std::shared_ptr<info<T>>>(it->second.info);
+		return make_shared<info<T>> (*boost::get<std::shared_ptr<info<T>>>(it->second.info));
 	}
 	catch (boost::bad_get& e)
 	{
