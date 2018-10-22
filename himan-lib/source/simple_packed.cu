@@ -216,7 +216,7 @@ __host__ void FillStaticGrid(const simple_packed* src, T* dst, cudaStream_t* str
 			CUDA_CHECK(
 			    cudaMemcpyAsync(d_b, src->bitmap, src->bitmapLength * sizeof(int), cudaMemcpyHostToDevice, *stream));
 
-			CopyWithBitmap<T><<<blockSize, gridSize, 0, stream>>>(dst, d_b, fillValue, N);
+			CopyWithBitmap<T><<<blockSize, gridSize, 0, *stream>>>(dst, d_b, fillValue, N);
 
 			CUDA_CHECK(cudaStreamSynchronize(*stream));
 			CUDA_CHECK(cudaFree(d_b));
@@ -325,5 +325,5 @@ __host__ void packing::Unpack(const simple_packed* src, T* dst, cudaStream_t* st
 	}
 }
 
-template __host__ void packing::Unpack<double>(const simple_packed* src, double* arr, cudaStream_t* stream);
-template __host__ void packing::Unpack<float>(const simple_packed* src, float* arr, cudaStream_t* stream);
+template __host__ void packing::Unpack<double>(const simple_packed*, double*, cudaStream_t*);
+template __host__ void packing::Unpack<float>(const simple_packed*, float*, cudaStream_t*);
