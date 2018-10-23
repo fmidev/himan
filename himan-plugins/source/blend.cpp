@@ -64,7 +64,7 @@ blend::~blend()
 }
 
 // 2 fetching helper functions are used:
-// - FetchProd: specify all information except geometry name, throws exception if data is not found
+// - FetchProd: specify all information including geometry name, throws exception if data is not found
 // - FetchNoExcept: same as FetchProd, except exceptions are caught and nullptr is returned
 info_t FetchProd(shared_ptr<plugin_configuration> cnf, const forecast_time& forecastTime,
                  HPTimeResolution stepResolution, const param& parm, const blend_producer& blendProd,
