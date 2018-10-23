@@ -69,20 +69,20 @@ template class area_interpolation<float>;
  * from unique grid identifiers and interpolation method.
  */
 
-typedef boost::variant<interpolate::area_interpolation<double>, interpolate::area_interpolation<float>> interp_cache;
-
+template <typename T>
 class interpolator
 {
    public:
-	template <typename T>
 	static bool Insert(const base<T>& source, const base<T>& target, HPInterpolationMethod method);
-	template <typename T>
 	bool Interpolate(base<T>& source, base<T>& target, HPInterpolationMethod method);
 
    private:
 	static std::mutex interpolatorAccessMutex;
-	static std::map<size_t, interp_cache> cache;
+	static std::map<size_t, area_interpolation<T>> cache;
 };
+template class interpolator<double>;
+template class interpolator<float>;
+
 #endif
 
 template <typename T>
@@ -116,8 +116,11 @@ bool IsSupportedGridForRotation(HPGridType type);
  * If point lies outside grid weight will be Missing Value
  */
 
-std::pair<std::vector<size_t>, std::vector<double>> InterpolationWeights(reduced_gaussian_grid& source, point target);
-std::pair<std::vector<size_t>, std::vector<double>> InterpolationWeights(regular_grid& source, point target);
+template <typename T>
+std::pair<std::vector<size_t>, std::vector<T>> InterpolationWeights(reduced_gaussian_grid& source, point target);
+
+template <typename T>
+std::pair<std::vector<size_t>, std::vector<T>> InterpolationWeights(regular_grid& source, point target);
 
 /**
  * @brief Provide the nearest point index for a single target point with weight 1.0
@@ -125,8 +128,11 @@ std::pair<std::vector<size_t>, std::vector<double>> InterpolationWeights(regular
  * If point lies outside grid weight will be MissingValue
  */
 
-std::pair<size_t, double> NearestPoint(reduced_gaussian_grid& source, point target);
-std::pair<size_t, double> NearestPoint(regular_grid& source, point target);
+template <typename T>
+std::pair<size_t, T> NearestPoint(reduced_gaussian_grid& source, point target);
+
+template <typename T>
+std::pair<size_t, T> NearestPoint(regular_grid& source, point target);
 }
 }
 
