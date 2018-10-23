@@ -12,8 +12,6 @@
 #include "serialization.h"
 #include <string>
 
-#include "packed_data.h"
-
 class OGRCoordinateTransformation;
 class OGRSpatialReference;
 
@@ -85,9 +83,6 @@ class lambert_conformal_grid : public regular_grid
 
 	bool operator==(const grid& other) const;
 	bool operator!=(const grid& other) const;
-
-	void PackedData(std::unique_ptr<packed_data> thePackedData);
-	packed_data& PackedData();
 
 	point XY(const point& latlon) const override;
 	point LatLon(size_t locationIndex) const override;

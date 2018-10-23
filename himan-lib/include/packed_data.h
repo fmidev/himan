@@ -11,8 +11,7 @@
  *
  */
 
-#ifndef PACKED_DATA_H
-#define PACKED_DATA_H
+#pragma once
 
 #ifndef HAVE_CUDA
 // Define shells so that compilation succeeds
@@ -37,6 +36,7 @@ struct packed_data
 #endif
 };
 }
+}
 
 #else
 
@@ -46,28 +46,14 @@ struct packed_data
 
 namespace himan
 {
-struct packing_coefficients
-{
-	int bitsPerValue;
-	double binaryScaleFactor;
-	double decimalScaleFactor;
-	double referenceValue;
-
-	CUDA_HOST
-	packing_coefficients() : bitsPerValue(0), binaryScaleFactor(0), decimalScaleFactor(0), referenceValue(0)
-	{
-	}
-};
-
 struct packed_data
 {
-	CUDA_HOST
-	packed_data()
-	    : data(0), packedLength(0), unpackedLength(0), bitmap(0), bitmapLength(0), packingType(kUnknownPackingType)
-	{
-	}
+	packed_data() = default;
 
-	CUDA_HOST virtual ~packed_data();
+	CUDA_HOST virtual ~packed_data()
+	{
+		Clear();
+	}
 
 	/**
 	 * @brief Copy constructor for packed data
@@ -80,72 +66,115 @@ struct packed_data
 	CUDA_HOST
 	packed_data(const packed_data& other);
 
-	virtual std::string ClassName() const
-	{
-		return "packed_data";
-	}
-	void Resize(size_t newPackedLength, size_t newUnpackedLength);
-	void Set(unsigned char* packedData, size_t packedDataLength, size_t unpackedDataLength);
-	void Bitmap(int* newBitmap, size_t newBitmapLength);
 	void Clear();
 
 	CUDA_HOST
-	bool HasData() const;
-
-	CUDA_HOST CUDA_DEVICE bool HasBitmap() const;
-
-	virtual void Unpack(double* d_arr, size_t N, cudaStream_t* stream)
+	bool HasData() const
 	{
-		throw std::runtime_error("top level Unpack called");
+		return (unpackedLength > 0);
 	}
 
-	unsigned char* data;
-	size_t packedLength;
-	size_t unpackedLength;
-	int* bitmap;
-	size_t bitmapLength;
+	CUDA_HOST CUDA_DEVICE bool HasBitmap() const
+	{
+		return (bitmapLength > 0);
+	}
 
-	HPPackingType packingType;
+	unsigned char* data = nullptr;
+	size_t packedLength = 0;
+	size_t unpackedLength = 0;
+	int* bitmap = nullptr;
+	size_t bitmapLength = 0;
+
+	HPPackingType packingType = kUnknownPackingType;
+};
+
+inline packed_data::packed_data(const packed_data& other)
+    : packedLength(other.packedLength),
+      unpackedLength(other.unpackedLength),
+      bitmapLength(other.bitmapLength),
+      packingType(other.packingType)
+{
+	data = nullptr;
+	bitmap = nullptr;
+
+	if (other.packedLength)
+	{
+		CUDA_CHECK(
+		    cudaHostAlloc(reinterpret_cast<void**>(&data), packedLength * sizeof(unsigned char), cudaHostAllocMapped));
+
+		memcpy(data, other.data, packedLength * sizeof(unsigned char));
+	}
+
+	if (other.bitmapLength)
+	{
+		cudaHostAlloc(reinterpret_cast<void**>(&bitmap), bitmapLength * sizeof(int), cudaHostAllocMapped);
+
+		memcpy(bitmap, other.bitmap, bitmapLength * sizeof(int));
+	}
+}
+
+inline void packed_data::Clear()
+{
+	if (data)
+	{
+		CUDA_CHECK(cudaFreeHost(data));
+	}
+
+	packedLength = 0;
+	data = nullptr;
+
+	if (bitmap)
+	{
+		CUDA_CHECK(cudaFreeHost(bitmap));
+	}
+
+	bitmapLength = 0;
+	bitmap = nullptr;
+
+	unpackedLength = 0;
+}
+
+struct packing_coefficients
+{
+	int bitsPerValue = 0;
+	double binaryScaleFactor = 0;
+	double decimalScaleFactor = 0;
+	double referenceValue = 0;
+};
+
+struct simple_packed : public packed_data
+{
+	CUDA_HOST
+	simple_packed() : packed_data()
+	{
+		packingType = kSimplePacking;
+	}
+
+	CUDA_HOST
+	simple_packed(int theBitsPerValue, double theBinaryScaleFactor, double theDecimaleScaleFactor,
+	              double theReferenceValue);
+
+	simple_packed(const simple_packed& other) = default;
 
 	packing_coefficients coefficients;
 };
 
-namespace packed_data_util
+inline CUDA_HOST simple_packed::simple_packed(int theBitsPerValue, double theBinaryScaleFactor,
+                                              double theDecimalScaleFactor, double theReferenceValue)
+    : simple_packed()
 {
-CUDA_HOST CUDA_DEVICE double GetGribPower(long s, long n);
+	coefficients.bitsPerValue = theBitsPerValue;
+	coefficients.binaryScaleFactor = theBinaryScaleFactor;
+	coefficients.decimalScaleFactor = theDecimalScaleFactor;
+	coefficients.referenceValue = theReferenceValue;
 }
 
-inline CUDA_HOST CUDA_DEVICE double himan::packed_data_util::GetGribPower(long s, long n)
+namespace packing
 {
-	double divisor = 1.0;
-	double dn = static_cast<double>(n);
-
-	while (s < 0)
-	{
-		divisor /= dn;
-		s++;
-	}
-	while (s > 0)
-	{
-		divisor *= dn;
-		s--;
-	}
-	return divisor;
+template <typename T>
+CUDA_HOST void Unpack(const simple_packed* src, T* dst, cudaStream_t* stream);
 }
 
-inline CUDA_HOST packed_data::~packed_data()
-{
-	Clear();
-}
-inline CUDA_HOST bool packed_data::HasData() const
-{
-	return (unpackedLength > 0);
-}
-inline CUDA_HOST CUDA_DEVICE bool packed_data::HasBitmap() const
-{
-	return (bitmapLength > 0);
-}
+#endif
+
 }  // namespace himan
-
-#endif /* HAVE_CUDA */
-#endif /* PACKED_DATA_H */

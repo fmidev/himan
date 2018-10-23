@@ -10,6 +10,7 @@
 #include "latitude_longitude_grid.h"
 #include "plugin_configuration.h"
 #include "reduced_gaussian_grid.h"
+#include <boost/variant.hpp>
 
 #ifndef __NVCC__
 #include <Eigen/SparseCore>
@@ -44,18 +45,22 @@ namespace interpolate
  * with i denotin source locations and j target locations
  */
 
+template <typename T>
 class area_interpolation
 {
    public:
 	area_interpolation() = default;
 	area_interpolation(grid& source, grid& target, HPInterpolationMethod method);
-	void Interpolate(base<double>& source, base<double>& target);
+	void Interpolate(base<T>& source, base<T>& target);
 	size_t SourceSize() const;
 	size_t TargetSize() const;
 
    private:
-	Eigen::SparseMatrix<double, Eigen::RowMajor> itsInterpolation;
+	Eigen::SparseMatrix<T, Eigen::RowMajor> itsInterpolation;
 };
+
+template class area_interpolation<double>;
+template class area_interpolation<float>;
 
 /**
  * @brief interpolator is a cache that holds area_interpolation instances
@@ -64,33 +69,42 @@ class area_interpolation
  * from unique grid identifiers and interpolation method.
  */
 
+typedef boost::variant<interpolate::area_interpolation<double>, interpolate::area_interpolation<float>> interp_cache;
+
 class interpolator
 {
    public:
-	static bool Insert(const base<double>& source, const base<double>& target, HPInterpolationMethod method);
-	bool Interpolate(base<double>& source, base<double>& target, HPInterpolationMethod method);
+	template <typename T>
+	static bool Insert(const base<T>& source, const base<T>& target, HPInterpolationMethod method);
+	template <typename T>
+	bool Interpolate(base<T>& source, base<T>& target, HPInterpolationMethod method);
 
    private:
 	static std::mutex interpolatorAccessMutex;
-	static std::map<size_t, interpolate::area_interpolation> cache;
+	static std::map<size_t, interp_cache> cache;
 };
 #endif
 
-bool InterpolateArea(const grid* baseGrid, info_t source);
+template <typename T>
+bool InterpolateArea(const grid* baseGrid, std::shared_ptr<info<T>> source);
 
-bool Interpolate(const grid* baseGrid, std::vector<info_t>& infos, bool useCudaForInterpolation = true);
+template <typename T>
+bool Interpolate(const grid* baseGrid, std::vector<std::shared_ptr<info<T>>>& infos,
+                 bool useCudaForInterpolation = true);
 
 bool IsVectorComponent(const std::string& paramName);
 
 HPInterpolationMethod InterpolationMethod(const std::string& paramName, HPInterpolationMethod interpolationMethod);
 
-void RotateVectorComponents(info<double>& UInfo, info<double>& VInfo, bool useCuda);
+template <typename T>
+void RotateVectorComponents(info<T>& UInfo, info<T>& VInfo, bool useCuda);
 
-void RotateVectorComponentsCPU(info<double>& UInfo, info<double>& VInfo);
+template <typename T>
+void RotateVectorComponentsCPU(info<T>& UInfo, info<T>& VInfo);
 
 #ifdef HAVE_CUDA
-void RotateVectorComponentsGPU(info<double>& UInfo, info<double>& VInfo, cudaStream_t& stream, double* d_u,
-                               double* d_v);
+template <typename T>
+void RotateVectorComponentsGPU(info<T>& UInfo, info<T>& VInfo, cudaStream_t& stream, T* d_u, T* d_v);
 #endif
 
 bool IsSupportedGridForRotation(HPGridType type);

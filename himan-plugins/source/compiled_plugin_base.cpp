@@ -142,7 +142,7 @@ bool compiled_plugin_base::SetAB(const info_t& myTargetInfo, const info_t& sourc
 
 		for (myTargetInfo->Reset<param>(); myTargetInfo->Next<param>();)
 		{
-        	        myTargetInfo->Set<level>(sourceInfo->Level());
+			myTargetInfo->Set<level>(sourceInfo->Level());
 		}
 
 		myTargetInfo->Index<param>(paramIndex);
@@ -636,7 +636,7 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 #ifdef HAVE_CUDA
 		if (!returnPacked && ret->PackedData()->HasData())
 		{
-			util::Unpack({ret}, itsConfiguration->UseCache());
+			util::Unpack<double>({ret}, itsConfiguration->UseCache());
 		}
 #endif
 	}
@@ -665,7 +665,7 @@ info_t compiled_plugin_base::Fetch(const forecast_time& theTime, const level& th
 #ifdef HAVE_CUDA
 		if (!returnPacked && ret->PackedData()->HasData())
 		{
-			util::Unpack({ret}, itsConfiguration->UseCache());
+			util::Unpack<double>({ret}, itsConfiguration->UseCache());
 		}
 #endif
 	}

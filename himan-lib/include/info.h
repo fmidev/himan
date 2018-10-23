@@ -15,6 +15,7 @@
 #include "lambert_conformal_grid.h"
 #include "latitude_longitude_grid.h"
 #include "level.h"
+#include "packed_data.h"
 #include "param.h"
 #include "point_list.h"
 #include "producer.h"

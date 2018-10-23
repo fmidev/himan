@@ -141,7 +141,8 @@ double ToPower(double value, double power);
  * @param grids List of infos that are unpacked.
  */
 
-void Unpack(std::vector<std::shared_ptr<info<double>>> infos, bool addToCache = true);
+template <typename T>
+void Unpack(std::vector<std::shared_ptr<info<T>>> infos, bool addToCache = true);
 
 /**
  * @brief Compute the x/y-derivative of input A
@@ -252,7 +253,8 @@ std::unique_ptr<grid> GridFromDatabase(const std::string& geom_name);
  * Used to be class function in grids called Swap().
  */
 
-void Flip(matrix<double>& mat);
+template <typename T>
+void Flip(matrix<T>& mat);
 
 template <class... Conts>
 inline auto zip_range(Conts&... conts)

@@ -10,8 +10,8 @@
 
 #include "cuda_helper.h"
 #include "info.h"
+#include "packed_data.h"
 #include "plugin_configuration.h"
-#include "simple_packed.h"
 
 namespace himan
 {
@@ -29,7 +29,9 @@ __global__ void Fill(T* devptr, size_t N, T fillValue)
 
 namespace cuda
 {
-void Unpack(std::shared_ptr<himan::info<double>> fullInfo, cudaStream_t& stream, double* d_arr);
+template <typename T>
+bool Unpack(std::shared_ptr<himan::info<T>> fullInfo, cudaStream_t& stream, T* d_arr);
+bool Unpack(std::shared_ptr<himan::info<double>> fullInfo, cudaStream_t& stream, double* d_arr);
 
 template <typename T>
 void PrepareInfo(std::shared_ptr<himan::info<double>> info, T* d_ret, cudaStream_t& stream, bool copyToHost = true);

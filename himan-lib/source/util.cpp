@@ -861,7 +861,8 @@ bool util::ParseBoolean(const string& val)
 }
 
 #ifdef HAVE_CUDA
-void util::Unpack(vector<shared_ptr<info<double>>> infos, bool addToCache)
+template <typename T>
+void util::Unpack(vector<shared_ptr<info<T>>> infos, bool addToCache)
 {
 	cudaStream_t stream;
 	CUDA_CHECK(cudaStreamCreate(&stream));
@@ -879,21 +880,21 @@ void util::Unpack(vector<shared_ptr<info<double>>> infos, bool addToCache)
 			continue;
 		}
 
-		ASSERT(pdata->ClassName() == "simple_packed");
+		ASSERT(pdata->packingType == kSimplePacking);
 
-		double* arr = 0;
+		T* arr = 0;
 		const size_t N = pdata->unpackedLength;
 
 		ASSERT(N > 0);
 		ASSERT(data.Size() == N);
 
-		arr = const_cast<double*>(data.ValuesAsPOD());
+		arr = const_cast<T*>(data.ValuesAsPOD());
 
-		CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(arr), sizeof(double) * N, 0));
+		CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(arr), sizeof(T) * N, 0));
 
 		ASSERT(arr);
 
-		pdata->Unpack(arr, N, &stream);
+		packing::Unpack<T>(dynamic_pointer_cast<simple_packed>(pdata).get(), arr, &stream);
 
 		CUDA_CHECK(cudaHostUnregister(arr));
 		CUDA_CHECK(cudaStreamSynchronize(stream));
@@ -907,6 +908,10 @@ void util::Unpack(vector<shared_ptr<info<double>>> infos, bool addToCache)
 	}
 	CUDA_CHECK(cudaStreamDestroy(stream));
 }
+
+template void util::Unpack<double>(vector<shared_ptr<info<double>>>, bool);
+template void util::Unpack<float>(vector<shared_ptr<info<float>>>, bool);
+
 #endif
 
 unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
@@ -1109,7 +1114,8 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 	return g;
 }
 
-void util::Flip(matrix<double>& mat)
+template <typename T>
+void util::Flip(matrix<T>& mat)
 {
 	// Flip with regards to x axis
 
@@ -1119,11 +1125,14 @@ void util::Flip(matrix<double>& mat)
 	{
 		for (size_t x = 0; x < mat.SizeX(); x++)
 		{
-			double upper = mat.At(x, y);
-			double lower = mat.At(x, mat.SizeY() - 1 - y);
+			T upper = mat.At(x, y);
+			T lower = mat.At(x, mat.SizeY() - 1 - y);
 
 			mat.Set(x, y, 0, lower);
 			mat.Set(x, mat.SizeY() - 1 - y, 0, upper);
 		}
 	}
 }
+
+template void util::Flip<double>(matrix<double>&);
+template void util::Flip<float>(matrix<float>&);

@@ -206,7 +206,7 @@ void windvector::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short
 #ifdef HAVE_CUDA
 		if (UInfo->PackedData()->HasData())
 		{
-			util::Unpack({UInfo, VInfo}, false);
+			util::Unpack<double>({UInfo, VInfo}, false);
 		}
 #endif
 
@@ -278,7 +278,7 @@ shared_ptr<himan::info<double>> windvector::Fetch(const forecast_time& theTime, 
 #ifdef HAVE_CUDA
 		if (!returnPacked && ret->PackedData()->HasData())
 		{
-			util::Unpack({ret}, false);
+			util::Unpack<double>({ret}, false);
 
 			auto c = GET_PLUGIN(cache);
 

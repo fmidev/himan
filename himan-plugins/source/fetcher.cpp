@@ -599,7 +599,7 @@ pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAuxili
 				AuxiliaryFilesRotateAndInterpolate(opts, ret);
 
 #ifdef HAVE_CUDA
-				util::Unpack(ret, false);
+				util::Unpack<double>(ret, false);
 #endif
 
 				for (const auto& info : ret)
@@ -777,7 +777,7 @@ bool fetcher::ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> confi
 		if (theInfo->PackedData()->HasData())
 		{
 			// We need to unpack
-			util::Unpack({theInfo}, false);
+			util::Unpack<T>({theInfo}, false);
 		}
 #endif
 

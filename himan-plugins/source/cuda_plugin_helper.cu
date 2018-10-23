@@ -15,7 +15,13 @@ namespace himan
 {
 namespace cuda
 {
-void Unpack(std::shared_ptr<himan::info<double>> fullInfo, cudaStream_t& stream, double* d_arr)
+bool Unpack(std::shared_ptr<himan::info<double>> fullInfo, cudaStream_t& stream, double* d_arr)
+{
+	return Unpack<double>(fullInfo, stream, d_arr);
+}
+
+template <typename T>
+bool Unpack(std::shared_ptr<himan::info<T>> fullInfo, cudaStream_t& stream, T* d_arr)
 {
 	using namespace himan;
 	using namespace himan::plugin;
@@ -28,42 +34,37 @@ void Unpack(std::shared_ptr<himan::info<double>> fullInfo, cudaStream_t& stream,
 	// Unpack if needed, leave data to device
 	if (fullInfo->PackedData()->HasData())
 	{
-		ASSERT(fullInfo->PackedData()->ClassName() == "simple_packed");
-		ASSERT(N > 0);
+		ASSERT(fullInfo->PackedData()->packingType == kSimplePacking);
 		ASSERT(fullInfo->Data().Size() == N);
 
-		double* arr = const_cast<double*>(fullInfo->Data().ValuesAsPOD());
-		CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(arr), sizeof(double) * N, 0));
+		packing::Unpack(std::dynamic_pointer_cast<simple_packed>(fullInfo->PackedData()).get(), d_arr, &stream);
 
-		ASSERT(arr);
-
-		fullInfo->PackedData()->Unpack(d_arr, N, &stream);
-
-		fullInfo->PackedData()->Clear();
-
-		CUDA_CHECK(cudaStreamSynchronize(stream));
-
-		CUDA_CHECK(cudaHostUnregister(arr));
+		return true;
 	}
 	else
 	{
+		// Data was not packed, ie it was returned to us from cache
 		CUDA_CHECK(
-		    cudaMemcpyAsync(d_arr, fullInfo->Data().ValuesAsPOD(), sizeof(double) * N, cudaMemcpyHostToDevice, stream));
-	}
+		    cudaMemcpyAsync(d_arr, fullInfo->Data().ValuesAsPOD(), sizeof(T) * N, cudaMemcpyHostToDevice, stream));
 
-	CUDA_CHECK(cudaStreamSynchronize(stream));
+		CUDA_CHECK(cudaStreamSynchronize(stream));
+		return false;
+	}
 }
+
+template bool Unpack<double>(std::shared_ptr<himan::info<double>>, cudaStream_t&, double*);
+template bool Unpack<float>(std::shared_ptr<himan::info<float>>, cudaStream_t&, float*);
 
 template <>
 void PrepareInfo(std::shared_ptr<himan::info<double>> info, double* d_ret, cudaStream_t& stream, bool copyToHost)
 {
-	Unpack(info, stream, d_ret);
-
-	if (copyToHost)
+	if (Unpack(info, stream, d_ret) && copyToHost)
 	{
 		CUDA_CHECK(cudaMemcpyAsync(info->Data().ValuesAsPOD(), d_ret, sizeof(double) * info->SizeLocations(),
 		                           cudaMemcpyDeviceToHost, stream));
 		CUDA_CHECK(cudaStreamSynchronize(stream));
+
+		info->PackedData()->Clear();
 
 		auto c = GET_PLUGIN(cache);
 		c->Insert(info);
@@ -77,13 +78,13 @@ void PrepareInfo(std::shared_ptr<himan::info<double>> info, float* d_ret, cudaSt
 	double* d_arr = 0;
 	CUDA_CHECK(cudaMalloc(reinterpret_cast<double**>(&d_arr), N * sizeof(double)));
 
-	Unpack(info, stream, d_arr);
-
-	if (copyToHost)
+	if (Unpack(info, stream, d_arr) && copyToHost)
 	{
 		CUDA_CHECK(cudaMemcpyAsync(info->Data().ValuesAsPOD(), d_arr, sizeof(double) * info->SizeLocations(),
 		                           cudaMemcpyDeviceToHost, stream));
 		CUDA_CHECK(cudaStreamSynchronize(stream));
+
+		info->PackedData()->Clear();
 
 		auto c = GET_PLUGIN(cache);
 		c->Insert(info);

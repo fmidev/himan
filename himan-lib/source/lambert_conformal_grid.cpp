@@ -7,8 +7,6 @@ using namespace himan;
 using namespace std;
 
 #ifdef HAVE_CUDA
-#include "simple_packed.h"
-
 // The following two functions are used for convenience in GPU specific code:
 // in grid rotation we need the standard parallels and orientation, but in order
 // to get those we need to include this file and ogr_spatialref.h, which is a

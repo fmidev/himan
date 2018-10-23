@@ -23,7 +23,7 @@ using namespace himan::plugin;
 #include "radon.h"
 
 #include "cuda_helper.h"
-#include "simple_packed.h"
+#include "packed_data.h"
 
 #define BitMask1(i) (1u << i)
 #define BitTest(n, i) !!((n)&BitMask1(i))
@@ -58,7 +58,7 @@ long DetermineBitsPerValue(const vector<T>& values, double precision)
 
 	// define manual minmax search as std::minmax_element uses std::less
 	// for comparison which does not work well with nan
-	T min = himan::MissingDouble(), max = himan::MissingDouble();
+	T min = himan::MissingValue<T>(), max = himan::MissingValue<T>();
 
 	for (const auto& v : values)
 	{
@@ -799,72 +799,48 @@ bool grib::ToFile(info<T>& anInfo, string& outputFile, bool appendToFile)
 		itsGrib->Message().Bitmap(true);
 	}
 
-#if defined GRIB_WRITE_PACKED_DATA and defined HAVE_CUDA
+	/*
+	 * Possible precipitation form value encoding must be done before determining
+	 * bits per value, as the range of values is changed.
+	 */
 
-	if (anInfo.PackedData()->HasData() && anInfo.PackedData()->ClassName() == "simple_packed")
+	const auto paramName = anInfo.Param().Name();
+	const int precision = anInfo.Param().Precision();
+
+	long bitsPerValue;
+
+	if (edition == 2 && (paramName == "PRECFORM-N" || paramName == "PRECFORM2-N"))
 	{
-		itsLogger.Trace("Writing packed data");
-		simple_packed* s = reinterpret_cast<simple_packed*>(anInfo.PackedData().get());
+		// We take a copy of the data, because the values at cache should not change
+		auto values = anInfo.Data().Values();
 
-		itsGrib->Message().ReferenceValue(s->coefficients.referenceValue);
-		itsGrib->Message().BinaryScaleFactor(static_cast<long>(s->coefficients.binaryScaleFactor));
-		itsGrib->Message().DecimalScaleFactor(static_cast<long>(s->coefficients.decimalScaleFactor));
-		itsGrib->Message().BitsPerValue(s->coefficients.bitsPerValue);
+		EncodePrecipitationFormToGrib2(values);
+		bitsPerValue = DetermineBitsPerValue(values, precision);
 
-		itsLogger.Trace("bits per value: " + to_string(itsGrib->Message().BitsPerValue()));
-		itsLogger.Trace("decimal scale factor: " + to_string(itsGrib->Message().DecimalScaleFactor()));
-		itsLogger.Trace("binary scale factor: " + to_string(itsGrib->Message().BinaryScaleFactor()));
-		itsLogger.Trace("reference value: " + to_string(itsGrib->Message().ReferenceValue()));
+		// Change missing value 'nan' to a real fp value
+		replace_if(values.begin(), values.end(), [](const T& v) { return IsMissing(v); }, gribMissing);
 
-		itsGrib->Message().PackedValues(s->data, anInfo.Data().Size(), 0, 0);
+		itsGrib->Message().BitsPerValue(bitsPerValue);
+		itsGrib->Message().Values(values.data(), static_cast<long>(values.size()));
 	}
 	else
-#endif
 	{
-		/*
-		 * Possible precipitation form value encoding must be done before determining
-		 * bits per value, as the range of values is changed.
-		 */
+		// In this branch no copy is made
+		const auto& values = anInfo.Data().Values();
+		bitsPerValue = DetermineBitsPerValue(values, precision);
 
-		const auto paramName = anInfo.Param().Name();
-		const int precision = anInfo.Param().Precision();
+		// Change missing value 'nan' to a real fp value
+		anInfo.Data().MissingValue(gribMissing);
 
-		long bitsPerValue;
-
-		if (edition == 2 && (paramName == "PRECFORM-N" || paramName == "PRECFORM2-N"))
-		{
-			// We take a copy of the data, because the values at cache should not change
-			auto values = anInfo.Data().Values();
-
-			EncodePrecipitationFormToGrib2(values);
-			bitsPerValue = DetermineBitsPerValue(values, precision);
-
-			// Change missing value 'nan' to a real fp value
-			replace_if(values.begin(), values.end(), [](const double& v) { return IsMissingDouble(v); }, gribMissing);
-
-			itsGrib->Message().BitsPerValue(bitsPerValue);
-			itsGrib->Message().Values(values.data(), static_cast<long>(values.size()));
-		}
-		else
-		{
-			// In this branch no copy is made
-			const auto& values = anInfo.Data().Values();
-			bitsPerValue = DetermineBitsPerValue(values, precision);
-
-			// Change missing value 'nan' to a real fp value
-			anInfo.Data().MissingValue(gribMissing);
-
-			itsGrib->Message().BitsPerValue(bitsPerValue);
-			itsGrib->Message().Values(values.data(), static_cast<long>(values.size()));
-		}
-
-		itsLogger.Trace("Using " +
-		                (precision == kHPMissingInt ? "maximum precision" : to_string(precision) + " decimals") + " (" +
-		                to_string(bitsPerValue) + " bits) to store " + paramName);
+		itsGrib->Message().BitsPerValue(bitsPerValue);
+		itsGrib->Message().Values(values.data(), static_cast<long>(values.size()));
 	}
 
+	itsLogger.Trace("Using " + (precision == kHPMissingInt ? "maximum precision" : to_string(precision) + " decimals") +
+	                " (" + to_string(bitsPerValue) + " bits) to store " + paramName);
+
 	// Return missing value to nan if info is recycled (luatool)
-	anInfo.Data().MissingValue(MissingDouble());
+	anInfo.Data().MissingValue(MissingValue<T>());
 
 	if (edition == 2 && itsWriteOptions.packing_type == kJpegPacking)
 	{
@@ -1764,7 +1740,8 @@ void grib::ReadData(shared_ptr<info<T>> newInfo, bool readPackedData) const
 
 			UnpackBitmap(bitmap, unpackedBitmap, bitmap_size, bitmap_len);
 
-			packed->Bitmap(unpackedBitmap, bitmap_len);
+			packed->bitmap = unpackedBitmap;
+			packed->bitmapLength = bitmap_len;
 
 			delete[] bitmap;
 		}
@@ -1778,7 +1755,7 @@ void grib::ReadData(shared_ptr<info<T>> newInfo, bool readPackedData) const
 		size_t len = itsGrib->Message().ValuesLength();
 
 		itsGrib->Message().GetValues(dm.ValuesAsPOD(), &len);
-		dm.MissingValue(MissingDouble());
+		dm.MissingValue(MissingValue<T>());
 
 		if (decodePrecipitationForm)
 		{
@@ -1910,19 +1887,19 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 
 	newInfo->Producer(prod);
 
-        std::vector<double> ab;
+	std::vector<double> ab;
 
-        if (l.Type() == himan::kHybrid)
-        {
-                long nv = itsGrib->Message().NV();
+	if (l.Type() == himan::kHybrid)
+	{
+		long nv = itsGrib->Message().NV();
 
-                if (nv > 0)
-                {
-                        ab = itsGrib->Message().PV();
-                }
-        }
+		if (nv > 0)
+		{
+			ab = itsGrib->Message().PV();
+		}
+	}
 
-        l.AB(ab);
+	l.AB(ab);
 
 	newInfo->template Set<param>({p});
 	newInfo->template Set<forecast_time>({t});
@@ -1932,7 +1909,7 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 	unique_ptr<grid> newGrid = ReadAreaAndGrid();
 
 	ASSERT(newGrid);
-	
+
 	auto b = make_shared<base<T>>();
 	b->grid = shared_ptr<grid>(newGrid->Clone());
 
