@@ -499,9 +499,6 @@ pair<shared_ptr<info<T>>, shared_ptr<info<T>>> hitool::GetData(const level& want
 template pair<shared_ptr<info<double>>, shared_ptr<info<double>>> hitool::GetData<double>(const level&, const param&,
                                                                                           const forecast_time&,
                                                                                           const forecast_type&) const;
-template pair<shared_ptr<info<float>>, shared_ptr<info<float>>> hitool::GetData<float>(const level&, const param&,
-                                                                                       const forecast_time&,
-                                                                                       const forecast_type&) const;
 
 /* CONVENIENCE FUNCTIONS */
 
