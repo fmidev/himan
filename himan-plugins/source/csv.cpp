@@ -80,6 +80,7 @@ bool csv::ToFile(info<T>& theInfo, string& theOutputFile)
 }
 
 template bool csv::ToFile<double>(info<double>&, string&);
+template bool csv::ToFile<float>(info<float>&, string&);
 
 shared_ptr<himan::info<double>> csv::FromFile(const string& inputFile, const search_options& options,
                                               bool readIfNotMatching) const
@@ -103,7 +104,7 @@ shared_ptr<himan::info<T>> csv::FromFile(const string& inputFile, const search_o
 		lines.push_back(line);
 	}
 
-	all = util::CSVToInfo(lines);
+	all = util::CSVToInfo<T>(lines);
 
 	if (readIfNotMatching)
 	{
@@ -194,7 +195,7 @@ shared_ptr<himan::info<T>> csv::FromFile(const string& inputFile, const search_o
 		throw kFileDataNotFound;
 	}
 
-	requested = make_shared<info<double>>();
+	requested = make_shared<info<T>>();
 	requested->Producer(options.prod);
 
 	requested->template Set<forecast_time>(times);
@@ -202,7 +203,7 @@ shared_ptr<himan::info<T>> csv::FromFile(const string& inputFile, const search_o
 	requested->template Set<level>(levels);
 	requested->template Set<forecast_type>(ftypes);
 
-	auto b = make_shared<base<double>>();
+	auto b = make_shared<base<T>>();
 	b->grid = shared_ptr<grid>(new point_list());  // placeholder
 
 	requested->Create(b, true);
@@ -249,3 +250,4 @@ shared_ptr<himan::info<T>> csv::FromFile(const string& inputFile, const search_o
 }
 
 template shared_ptr<himan::info<double>> csv::FromFile<double>(const string&, const search_options&, bool) const;
+template shared_ptr<himan::info<float>> csv::FromFile<float>(const string&, const search_options&, bool) const;

@@ -29,8 +29,6 @@ using namespace himan::plugin;
 #define BitTest(n, i) !!((n)&BitMask1(i))
 
 std::string GetParamNameFromGribShortName(const std::string& paramFileName, const std::string& shortName);
-void EncodePrecipitationFormToGrib2(vector<double>& arr);
-void DecodePrecipitationFormFromGrib2(vector<double>& arr);
 
 const double gribMissing = 32700.;
 
@@ -69,7 +67,7 @@ long DetermineBitsPerValue(const vector<T>& values, double precision)
 	}
 
 	// Required scale value to reach wanted precision
-	const T D = std::pow(10, precision);
+	const T D = static_cast<T>(std::pow(10, precision));
 
 	// Range of scaled data, ie the largest value we must be able to write
 	const int range = static_cast<int>(ceil(D * max - D * min));
@@ -99,6 +97,106 @@ long DetermineBitsPerValue(const vector<T>& values, double precision)
 	}
 
 	return bitsPerValue;
+}
+
+template <typename T>
+void EncodePrecipitationFormToGrib2(vector<T>& arr)
+{
+	for (auto& val : arr)
+	{
+		if (himan::IsMissing(val))
+			continue;
+
+		switch (static_cast<int>(val))
+		{
+			// rain
+			case 1:
+				break;
+			// drizzle
+			case 0:
+				val = 11;
+				break;
+			// sleet
+			case 2:
+				val = 7;
+				break;
+			// snow
+			case 3:
+				val = 5;
+				break;
+			// freezing drizzle
+			case 4:
+				val = 12;
+				break;
+			// freezing rain
+			case 5:
+				val = 3;
+				break;
+			// graupel
+			case 6:
+				val = 9;
+				break;
+			// snow pellet
+			case 7:
+				val = 13;
+				break;
+			// ice pellet
+			case 8:
+				break;
+			default:
+				throw runtime_error("Unknown precipitation form: " + to_string(val));
+		}
+	}
+}
+
+template <typename T>
+void DecodePrecipitationFormFromGrib2(vector<T>& arr)
+{
+	for (auto& val : arr)
+	{
+		if (himan::IsMissing(val))
+			continue;
+
+		switch (static_cast<int>(val))
+		{
+			// rain
+			case 1:
+				break;
+			// drizzle
+			case 11:
+				val = 0.;
+				break;
+			// sleet
+			case 7:
+				val = 2.;
+				break;
+			// snow
+			case 5:
+				val = 3.;
+				break;
+			// freezing drizzle
+			case 12:
+				val = 4.;
+				break;
+			// freezing rain
+			case 3:
+				val = 5.;
+				break;
+			// graupel
+			case 9:
+				val = 6;
+				break;
+			// snow pellet
+			case 13:
+				val = 7;
+				break;
+			// ice pellet
+			case 8:
+				break;
+			default:
+				throw runtime_error("Unknown precipitation form: " + to_string(val));
+		}
+	}
 }
 
 grib::grib()
@@ -673,6 +771,27 @@ void grib::WriteLevel(const level& lev)
 	}
 }
 
+template <typename T>
+void WriteDataValues(const vector<T>&, NFmiGribMessage&);
+
+template <>
+void WriteDataValues(const vector<double>& values, NFmiGribMessage& msg)
+{
+	msg.Values(values.data(), static_cast<long>(values.size()));
+}
+
+template <>
+void WriteDataValues(const vector<float>& values, NFmiGribMessage& msg)
+{
+	double* arr = new double[values.size()];
+	replace_copy_if(values.begin(), values.end(), arr, [](const float& val) { return himan::IsMissing(val); },
+	                himan::MissingDouble());
+
+	msg.Values(arr, static_cast<long>(values.size()));
+
+	delete[] arr;
+}
+
 bool grib::ToFile(info<double>& anInfo, string& outputFile, bool appendToFile)
 {
 	return ToFile<double>(anInfo, outputFile, appendToFile);
@@ -821,7 +940,7 @@ bool grib::ToFile(info<T>& anInfo, string& outputFile, bool appendToFile)
 		replace_if(values.begin(), values.end(), [](const T& v) { return IsMissing(v); }, gribMissing);
 
 		itsGrib->Message().BitsPerValue(bitsPerValue);
-		itsGrib->Message().Values(values.data(), static_cast<long>(values.size()));
+		WriteDataValues<T>(values, itsGrib->Message());
 	}
 	else
 	{
@@ -833,7 +952,8 @@ bool grib::ToFile(info<T>& anInfo, string& outputFile, bool appendToFile)
 		anInfo.Data().MissingValue(gribMissing);
 
 		itsGrib->Message().BitsPerValue(bitsPerValue);
-		itsGrib->Message().Values(values.data(), static_cast<long>(values.size()));
+
+		WriteDataValues<T>(values, itsGrib->Message());
 	}
 
 	itsLogger.Trace("Using " + (precision == kHPMissingInt ? "maximum precision" : to_string(precision) + " decimals") +
@@ -930,6 +1050,7 @@ bool grib::ToFile(info<T>& anInfo, string& outputFile, bool appendToFile)
 }
 
 template bool grib::ToFile<double>(info<double>&, string&, bool);
+template bool grib::ToFile<float>(info<float>&, string&, bool);
 
 // ---------------------------------------------------------------------------
 
@@ -1673,6 +1794,29 @@ himan::producer grib::ReadProducer(const search_options& options) const
 }
 
 template <typename T>
+void ReadDataValues(vector<T>&, NFmiGribMessage& msg);
+
+template <>
+void ReadDataValues(vector<double>& values, NFmiGribMessage& msg)
+{
+	size_t len = msg.ValuesLength();
+	msg.GetValues(values.data(), &len);
+}
+
+template <>
+void ReadDataValues(vector<float>& values, NFmiGribMessage& msg)
+{
+	double* arr = new double[values.size()];
+	size_t len = msg.ValuesLength();
+	msg.GetValues(arr, &len);
+
+	replace_copy_if(arr, arr + values.size(), values.begin(), [](const double& val) { return himan::IsMissing(val); },
+	                himan::MissingFloat());
+
+	delete[] arr;
+}
+
+template <typename T>
 void grib::ReadData(shared_ptr<info<T>> newInfo, bool readPackedData) const
 {
 	auto& dm = newInfo->Data();
@@ -1752,9 +1896,8 @@ void grib::ReadData(shared_ptr<info<T>> newInfo, bool readPackedData) const
 #endif
 	{
 		dm.MissingValue(gribMissing);
-		size_t len = itsGrib->Message().ValuesLength();
+		ReadDataValues<T>(dm.Values(), itsGrib->Message());
 
-		itsGrib->Message().GetValues(dm.ValuesAsPOD(), &len);
 		dm.MissingValue(MissingValue<T>());
 
 		if (decodePrecipitationForm)
@@ -1762,11 +1905,9 @@ void grib::ReadData(shared_ptr<info<T>> newInfo, bool readPackedData) const
 			DecodePrecipitationFormFromGrib2(dm.Values());
 		}
 
-		itsLogger.Trace("Retrieved " + std::to_string(len * sizeof(double)) + " bytes of unpacked data from grib");
+		itsLogger.Trace("Retrieved " + std::to_string(dm.Size() * sizeof(T)) + " bytes of unpacked data from grib");
 	}
 }
-
-template void grib::ReadData<double>(shared_ptr<info<double>>, bool) const;
 
 template <typename T>
 bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData, bool readIfNotMatching,
@@ -2001,6 +2142,8 @@ vector<shared_ptr<himan::info<T>>> grib::FromFile(const string& theInputFile, co
 
 template vector<shared_ptr<himan::info<double>>> grib::FromFile<double>(const string&, const search_options&, bool,
                                                                         bool, bool) const;
+template vector<shared_ptr<himan::info<float>>> grib::FromFile<float>(const string&, const search_options&, bool, bool,
+                                                                      bool) const;
 
 vector<shared_ptr<himan::info<double>>> grib::FromIndexFile(const string& theInputFile, const search_options& options,
                                                             bool readContents, bool readPackedData,
@@ -2053,6 +2196,8 @@ vector<shared_ptr<himan::info<T>>> grib::FromIndexFile(const string& theInputFil
 
 template vector<shared_ptr<himan::info<double>>> grib::FromIndexFile<double>(const string&, const search_options&, bool,
                                                                              bool, bool) const;
+template vector<shared_ptr<himan::info<float>>> grib::FromIndexFile<float>(const string&, const search_options&, bool,
+                                                                           bool, bool) const;
 
 void grib::UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restrict__ unpacked, size_t len,
                         size_t unpackedLen) const
@@ -2167,102 +2312,4 @@ std::string GetParamNameFromGribShortName(const std::string& paramFileName, cons
 	paramFile.close();
 
 	return ret;
-}
-
-void EncodePrecipitationFormToGrib2(vector<double>& arr)
-{
-	for (auto& val : arr)
-	{
-		if (himan::IsMissing(val))
-			continue;
-
-		switch (static_cast<int>(val))
-		{
-			// rain
-			case 1:
-				break;
-			// drizzle
-			case 0:
-				val = 11;
-				break;
-			// sleet
-			case 2:
-				val = 7;
-				break;
-			// snow
-			case 3:
-				val = 5;
-				break;
-			// freezing drizzle
-			case 4:
-				val = 12;
-				break;
-			// freezing rain
-			case 5:
-				val = 3;
-				break;
-			// graupel
-			case 6:
-				val = 9;
-				break;
-			// snow pellet
-			case 7:
-				val = 13;
-				break;
-			// ice pellet
-			case 8:
-				break;
-			default:
-				throw runtime_error("Unknown precipitation form: " + to_string(val));
-		}
-	}
-}
-
-void DecodePrecipitationFormFromGrib2(vector<double>& arr)
-{
-	for (auto& val : arr)
-	{
-		if (himan::IsMissing(val))
-			continue;
-
-		switch (static_cast<int>(val))
-		{
-			// rain
-			case 1:
-				break;
-			// drizzle
-			case 11:
-				val = 0.;
-				break;
-			// sleet
-			case 7:
-				val = 2.;
-				break;
-			// snow
-			case 5:
-				val = 3.;
-				break;
-			// freezing drizzle
-			case 12:
-				val = 4.;
-				break;
-			// freezing rain
-			case 3:
-				val = 5.;
-				break;
-			// graupel
-			case 9:
-				val = 6;
-				break;
-			// snow pellet
-			case 13:
-				val = 7;
-				break;
-			// ice pellet
-			case 8:
-				break;
-			default:
-				throw runtime_error("Unknown precipitation form: " + to_string(val));
-		}
-	}
 }

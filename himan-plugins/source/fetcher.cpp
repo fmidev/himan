@@ -118,6 +118,8 @@ shared_ptr<info<T>> fetcher::Fetch(shared_ptr<const plugin_configuration> config
 
 template shared_ptr<info<double>> fetcher::Fetch<double>(shared_ptr<const plugin_configuration>, forecast_time, level,
                                                          const params&, forecast_type, bool);
+template shared_ptr<info<float>> fetcher::Fetch<float>(shared_ptr<const plugin_configuration>, forecast_time, level,
+                                                       const params&, forecast_type, bool);
 
 template <typename T>
 shared_ptr<info<T>> fetcher::FetchFromProducer(search_options& opts, bool readPackedData, bool suppressLogging)
@@ -200,6 +202,7 @@ shared_ptr<info<T>> fetcher::FetchFromProducer(search_options& opts, bool readPa
 }
 
 template shared_ptr<info<double>> fetcher::FetchFromProducer<double>(search_options&, bool, bool);
+template shared_ptr<info<float>> fetcher::FetchFromProducer<float>(search_options&, bool, bool);
 
 shared_ptr<info<double>> fetcher::Fetch(shared_ptr<const plugin_configuration> config, forecast_time requestedTime,
                                         level requestedLevel, param requestedParam, forecast_type requestedType,
@@ -310,6 +313,8 @@ shared_ptr<info<T>> fetcher::Fetch(shared_ptr<const plugin_configuration> config
 
 template shared_ptr<info<double>> fetcher::Fetch<double>(shared_ptr<const plugin_configuration>, forecast_time, level,
                                                          param, forecast_type, bool, bool);
+template shared_ptr<info<float>> fetcher::Fetch<float>(shared_ptr<const plugin_configuration>, forecast_time, level,
+                                                       param, forecast_type, bool, bool);
 
 template <typename T>
 vector<shared_ptr<info<T>>> fetcher::FromFile(const vector<string>& files, search_options& options, bool readContents,
@@ -567,6 +572,9 @@ vector<shared_ptr<info<T>>> fetcher::FetchFromCache(search_options& opts)
 	return ret;
 }
 
+template vector<shared_ptr<info<double>>> fetcher::FetchFromCache<double>(search_options&);
+template vector<shared_ptr<info<float>>> fetcher::FetchFromCache<float>(search_options&);
+
 pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAuxiliaryFiles(search_options& opts,
                                                                                          bool readPackedData)
 {
@@ -710,7 +718,7 @@ vector<shared_ptr<info<T>>> fetcher::FetchFromDatabase(search_options& opts, boo
 		itsLogger.Trace("Accessing Radon database for previ data");
 
 		auto csv_forecasts = r->CSV(opts);
-		auto _ret = util::CSVToInfo(csv_forecasts);
+		auto _ret = util::CSVToInfo<T>(csv_forecasts);
 
 		if (_ret)
 		{
@@ -722,6 +730,25 @@ vector<shared_ptr<info<T>>> fetcher::FetchFromDatabase(search_options& opts, boo
 }
 
 template vector<shared_ptr<info<double>>> fetcher::FetchFromDatabase<double>(search_options&, bool);
+template vector<shared_ptr<info<float>>> fetcher::FetchFromDatabase<float>(search_options&, bool);
+
+namespace
+{
+template <typename T>
+shared_ptr<info<T>> ConvertTo(shared_ptr<info<double>>&);
+
+template <>
+shared_ptr<info<double>> ConvertTo(shared_ptr<info<double>>& anInfo)
+{
+	return anInfo;
+}
+
+template <>
+shared_ptr<info<float>> ConvertTo(shared_ptr<info<double>>& anInfo)
+{
+	return make_shared<info<float>>(*anInfo);
+}
+}  // namespace
 
 template <typename T>
 pair<HPDataFoundFrom, vector<shared_ptr<info<T>>>> fetcher::FetchFromAllSources(search_options& opts,
@@ -741,7 +768,7 @@ pair<HPDataFoundFrom, vector<shared_ptr<info<T>>>> fetcher::FetchFromAllSources(
 
 		if (!_ret.second.empty())
 		{
-			return _ret;
+			return make_pair(_ret.first, vector<shared_ptr<info<T>>>({ConvertTo<T>(_ret.second[0])}));
 		}
 	}
 
@@ -750,6 +777,8 @@ pair<HPDataFoundFrom, vector<shared_ptr<info<T>>>> fetcher::FetchFromAllSources(
 
 template pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAllSources<double>(search_options&,
                                                                                                       bool);
+template pair<HPDataFoundFrom, vector<shared_ptr<info<float>>>> fetcher::FetchFromAllSources<float>(search_options&,
+                                                                                                    bool);
 
 template <typename T>
 bool fetcher::ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> config, shared_ptr<info<T>> theInfo,
@@ -804,8 +833,10 @@ bool fetcher::ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> confi
 	return true;
 }
 
-template bool fetcher::ApplyLandSeaMask(std::shared_ptr<const plugin_configuration>, shared_ptr<info<double>>,
-                                        const forecast_time&, const forecast_type&);
+template bool fetcher::ApplyLandSeaMask<double>(std::shared_ptr<const plugin_configuration>, shared_ptr<info<double>>,
+                                                const forecast_time&, const forecast_type&);
+template bool fetcher::ApplyLandSeaMask<float>(std::shared_ptr<const plugin_configuration>, shared_ptr<info<float>>,
+                                               const forecast_time&, const forecast_type&);
 
 bool fetcher::ApplyLandSeaMask() const
 {
@@ -937,3 +968,5 @@ void fetcher::RotateVectorComponents(vector<shared_ptr<info<T>>>& components, co
 
 template void fetcher::RotateVectorComponents<double>(vector<shared_ptr<info<double>>>&, const grid*,
                                                       shared_ptr<const plugin_configuration>, const producer&);
+template void fetcher::RotateVectorComponents<float>(vector<shared_ptr<info<float>>>&, const grid*,
+                                                     shared_ptr<const plugin_configuration>, const producer&);

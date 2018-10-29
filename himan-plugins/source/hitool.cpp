@@ -222,7 +222,11 @@ pair<level, level> hitool::LevelForHeight(const producer& prod, double height) c
 
 namespace
 {
-// template specialization to avoid conversion from double --> double
+// modifier uses vector<double>, hitool can use either vector<double>
+// or vector<float>
+//
+// do conversion here; template specialization to avoid conversion
+// from double --> double
 
 // T = from
 // U = to

@@ -102,6 +102,7 @@ bool compiled_plugin_base::Next(info<T>& myTargetInfo)
 }
 
 template bool compiled_plugin_base::Next<double>(info<double>&);
+template bool compiled_plugin_base::Next<float>(info<float>&);
 
 bool compiled_plugin_base::SetAB(const shared_ptr<info<double>>& myTargetInfo,
                                  const shared_ptr<info<double>>& sourceInfo)
@@ -174,6 +175,7 @@ void compiled_plugin_base::WriteToFile(const shared_ptr<info<T>> targetInfo, wri
 }
 
 template void compiled_plugin_base::WriteToFile<double>(const shared_ptr<info<double>>, write_options);
+template void compiled_plugin_base::WriteToFile<float>(const shared_ptr<info<float>>, write_options);
 
 void compiled_plugin_base::Start()
 {
@@ -257,6 +259,21 @@ void compiled_plugin_base::SetThreadCount()
 }
 
 template <typename T>
+std::string TypeToName();
+
+template <>
+string TypeToName<double>()
+{
+	return string("double");
+}
+
+template <>
+string TypeToName<float>()
+{
+	return string("float");
+}
+
+template <typename T>
 void compiled_plugin_base::Start()
 {
 	if (!itsPluginIsInitialized)
@@ -305,13 +322,14 @@ void compiled_plugin_base::Start()
 	SetThreadCount();
 	SetInitialIteratorPositions();
 
+	itsBaseLogger.Info("Plugin is using data type: " + TypeToName<T>());
+
 	vector<thread> threads;
 
 	for (short i = 0; i < itsThreadCount; i++)
 	{
 		itsBaseLogger.Info("Thread " + to_string(i) + " starting");
-		threads.emplace_back(
-		    thread(&compiled_plugin_base::Run<T>, this, make_shared<info<T>>(*baseInfo), i + 1));
+		threads.emplace_back(thread(&compiled_plugin_base::Run<T>, this, make_shared<info<T>>(*baseInfo), i + 1));
 	}
 
 	for (auto& t : threads)
@@ -323,6 +341,7 @@ void compiled_plugin_base::Start()
 }
 
 template void compiled_plugin_base::Start<double>();
+template void compiled_plugin_base::Start<float>();
 
 void compiled_plugin_base::Init(const shared_ptr<const plugin_configuration> conf)
 {
@@ -368,6 +387,7 @@ void compiled_plugin_base::Run(shared_ptr<info<T>> myTargetInfo, unsigned short 
 }
 
 template void compiled_plugin_base::Run<double>(shared_ptr<info<double>>, unsigned short);
+template void compiled_plugin_base::Run<float>(shared_ptr<info<float>>, unsigned short);
 
 void compiled_plugin_base::Finish()
 {
@@ -571,6 +591,7 @@ bool compiled_plugin_base::IsMissingValue(initializer_list<T> values) const
 }
 
 template bool compiled_plugin_base::IsMissingValue<double>(initializer_list<double>) const;
+template bool compiled_plugin_base::IsMissingValue<float>(initializer_list<float>) const;
 
 shared_ptr<info<double>> compiled_plugin_base::Fetch(const forecast_time& theTime, const level& theLevel,
                                                      const params& theParams, const forecast_type& theType,
@@ -625,6 +646,8 @@ shared_ptr<info<T>> compiled_plugin_base::Fetch(const forecast_time& theTime, co
 
 template shared_ptr<info<double>> compiled_plugin_base::Fetch<double>(const forecast_time&, const level&, const params&,
                                                                       const forecast_type&, bool) const;
+template shared_ptr<info<float>> compiled_plugin_base::Fetch<float>(const forecast_time&, const level&, const params&,
+                                                                    const forecast_type&, bool) const;
 
 shared_ptr<info<double>> compiled_plugin_base::Fetch(const forecast_time& theTime, const level& theLevel,
                                                      const param& theParam, const forecast_type& theType,
@@ -644,7 +667,8 @@ shared_ptr<info<T>> compiled_plugin_base::Fetch(const forecast_time& theTime, co
 
 	try
 	{
-		ret = f->Fetch(itsConfiguration, theTime, theLevel, theParam, theType, itsConfiguration->UseCudaForPacking());
+		ret =
+		    f->Fetch<T>(itsConfiguration, theTime, theLevel, theParam, theType, itsConfiguration->UseCudaForPacking());
 
 #ifdef HAVE_CUDA
 		if (!returnPacked && ret->PackedData()->HasData())
@@ -666,6 +690,8 @@ shared_ptr<info<T>> compiled_plugin_base::Fetch(const forecast_time& theTime, co
 
 template shared_ptr<info<double>> compiled_plugin_base::Fetch<double>(const forecast_time&, const level&, const param&,
                                                                       const forecast_type&, bool) const;
+template shared_ptr<info<float>> compiled_plugin_base::Fetch<float>(const forecast_time&, const level&, const param&,
+                                                                    const forecast_type&, bool) const;
 
 template <typename T>
 void compiled_plugin_base::AllocateMemory(info<T> myTargetInfo)
@@ -692,6 +718,7 @@ void compiled_plugin_base::AllocateMemory(info<T> myTargetInfo)
 }
 
 template void compiled_plugin_base::AllocateMemory<double>(info<double>);
+template void compiled_plugin_base::AllocateMemory<float>(info<float>);
 
 template <typename T>
 void compiled_plugin_base::DeallocateMemory(info<T> myTargetInfo)
@@ -710,3 +737,4 @@ void compiled_plugin_base::DeallocateMemory(info<T> myTargetInfo)
 }
 
 template void compiled_plugin_base::DeallocateMemory<double>(info<double>);
+template void compiled_plugin_base::DeallocateMemory<float>(info<float>);

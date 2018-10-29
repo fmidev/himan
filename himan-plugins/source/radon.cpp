@@ -418,6 +418,7 @@ bool radon::Save(const info<T>& resultInfo, const string& theFileName, const str
 }
 
 template bool radon::Save<double>(const info<double>&, const string&, const string&);
+template bool radon::Save<float>(const info<float>&, const string&, const string&);
 
 template <typename T>
 bool radon::SavePrevi(const info<T>& resultInfo)
@@ -521,6 +522,7 @@ bool radon::SavePrevi(const info<T>& resultInfo)
 }
 
 template bool radon::SavePrevi<double>(const info<double>&);
+template bool radon::SavePrevi<float>(const info<float>&);
 
 template <typename T>
 bool radon::SaveGrid(const info<T>& resultInfo, const string& theFileName, const string& targetGeomName)
@@ -718,3 +720,4 @@ bool radon::SaveGrid(const info<T>& resultInfo, const string& theFileName, const
 }
 
 template bool radon::SaveGrid<double>(const info<double>&, const string&, const string&);
+template bool radon::SaveGrid<float>(const info<float>&, const string&, const string&);

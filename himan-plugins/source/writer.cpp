@@ -109,6 +109,7 @@ bool writer::CreateFile(info<T>& theInfo, std::shared_ptr<const plugin_configura
 }
 
 template bool writer::CreateFile<double>(info<double>&, std::shared_ptr<const plugin_configuration>, std::string&);
+template bool writer::CreateFile<float>(info<float>&, std::shared_ptr<const plugin_configuration>, std::string&);
 
 bool writer::ToFile(std::shared_ptr<info<double>> theInfo, std::shared_ptr<const plugin_configuration> conf,
                     const std::string& theOriginalOutputFile)
@@ -192,6 +193,8 @@ bool writer::ToFile(std::shared_ptr<info<T>> theInfo, std::shared_ptr<const plug
 
 template bool writer::ToFile<double>(std::shared_ptr<info<double>>, std::shared_ptr<const plugin_configuration>,
                                      const std::string&);
+template bool writer::ToFile<float>(std::shared_ptr<info<float>>, std::shared_ptr<const plugin_configuration>,
+                                    const std::string&);
 
 write_options writer::WriteOptions() const
 {

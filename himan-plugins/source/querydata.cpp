@@ -41,6 +41,362 @@
 using namespace std;
 using namespace himan::plugin;
 
+template <typename T>
+bool CopyData(himan::info<T>& theInfo, NFmiFastQueryInfo& qinfo, bool applyScaleAndBase)
+{
+	ASSERT(theInfo.Data().Size() == qinfo.SizeLocations());
+
+	// convert missing value to kFloatMissing
+	theInfo.Data().MissingValue(kFloatMissing);
+	theInfo.ResetLocation();
+	qinfo.ResetLocation();
+
+	double scale = 1, base = 0;
+
+	if (applyScaleAndBase)
+	{
+		scale = theInfo.Param().Scale();
+		base = theInfo.Param().Base();
+	}
+
+	if (theInfo.Grid()->Class() == himan::kRegularGrid &&
+	    dynamic_pointer_cast<himan::regular_grid>(theInfo.Grid())->ScanningMode() != himan::kBottomLeft)
+	{
+		ASSERT(std::dynamic_pointer_cast<himan::regular_grid>(theInfo.Grid())->ScanningMode() == himan::kTopLeft);
+
+		size_t nj = theInfo.Data().SizeY();
+		size_t ni = theInfo.Data().SizeX();
+
+		int y = static_cast<int>(nj) - 1;
+
+		do
+		{
+			size_t x = 0;
+
+			do
+			{
+				qinfo.NextLocation();
+				qinfo.FloatValue(static_cast<float>(theInfo.Data().At(x, y) * scale + base));
+				x++;
+			} while (x < ni);
+
+			y--;
+		} while (y != -1);
+	}
+	else
+	{
+		// Grid is irregular OR source & dest are both kBottomLeft
+		while (theInfo.NextLocation() && qinfo.NextLocation())
+		{
+			qinfo.FloatValue(static_cast<float>(theInfo.Value() * scale + base));
+		}
+	}
+
+	// return to original missing value
+	theInfo.Data().MissingValue(himan::MissingValue<T>());
+
+	return true;
+}
+
+template <typename T>
+NFmiTimeDescriptor CreateTimeDescriptor(himan::info<T>& info, bool theActiveOnly)
+{
+	/*
+	 * Create time descriptor
+	 */
+
+	NFmiTimeList tlist;
+
+	NFmiMetTime originTime;
+
+	if (theActiveOnly)
+	{
+		originTime = NFmiMetTime(stol(info.Time().ValidDateTime().String("%Y%m%d")),
+		                         stol(info.Time().OriginDateTime().String("%H%M")));
+
+		tlist.Add(new NFmiMetTime(stol(info.Time().ValidDateTime().String("%Y%m%d")),
+		                          stol(info.Time().ValidDateTime().String("%H%M"))));
+	}
+	else
+	{
+		info.template Reset<himan::forecast_time>();
+
+		himan::raw_time firstOriginTime;
+
+		while (info.template Next<himan::forecast_time>())
+		{
+			if (firstOriginTime.Empty())
+			{
+				firstOriginTime = info.Time().OriginDateTime();
+				originTime = NFmiMetTime(stol(firstOriginTime.String("%Y%m%d")), stol(firstOriginTime.String("%H%M")));
+			}
+			else
+			{
+				if (firstOriginTime != info.Time().OriginDateTime())
+				{
+					throw std::runtime_error("Origintime is not the same for all grids in info");
+				}
+			}
+
+			tlist.Add(new NFmiMetTime(stol(info.Time().ValidDateTime().String("%Y%m%d")),
+			                          stol(info.Time().ValidDateTime().String("%H%M"))));
+		}
+	}
+
+	return NFmiTimeDescriptor(originTime, tlist);
+}
+
+template <typename T>
+void AddToParamBag(himan::info<T>& info, NFmiParamBag& pbag)
+{
+	string precision;
+
+	if (info.Param().Precision() != himan::kHPMissingInt)
+	{
+		precision = "%." + to_string(info.Param().Precision()) + "f";
+	}
+	else
+	{
+		precision = "%.1f";
+	}
+
+	NFmiParam nbParam(info.Param().UnivId(), info.Param().Name(), ::kFloatMissing, ::kFloatMissing,
+	                  static_cast<float>(info.Param().Scale()), static_cast<float>(info.Param().Base()), precision,
+	                  ::kLinearly);
+
+	pbag.Add(NFmiDataIdent(nbParam));
+}
+
+template <typename T>
+NFmiHPlaceDescriptor CreateGrid(himan::info<T>& info)
+{
+	/*
+	 * If whole info is converted to querydata, we need to check that if info contains
+	 * more than one element, the grids of each element must be equal!
+	 *
+	 * TODO: interpolate to same grid if they are different ???
+	 */
+
+	NFmiArea* theArea = 0;
+
+	switch (info.Grid()->Type())
+	{
+		case himan::kLatitudeLongitude:
+		{
+			auto g = std::dynamic_pointer_cast<himan::latitude_longitude_grid>(info.Grid());
+
+			theArea = new NFmiLatLonArea(NFmiPoint(g->BottomLeft().X(), g->BottomLeft().Y()),
+			                             NFmiPoint(g->TopRight().X(), g->TopRight().Y()));
+
+			break;
+		}
+
+		case himan::kRotatedLatitudeLongitude:
+		{
+			auto g = std::dynamic_pointer_cast<himan::rotated_latitude_longitude_grid>(info.Grid());
+
+			theArea = new NFmiRotatedLatLonArea(
+			    NFmiPoint(g->BottomLeft().X(), g->BottomLeft().Y()), NFmiPoint(g->TopRight().X(), g->TopRight().Y()),
+			    NFmiPoint(g->SouthPole().X(), g->SouthPole().Y()), NFmiPoint(0., 0.),  // default values
+			    NFmiPoint(1., 1.),                                                     // default values
+			    true);
+
+			break;
+		}
+
+		case himan::kStereographic:
+		{
+			auto g = std::dynamic_pointer_cast<himan::stereographic_grid>(info.Grid());
+
+			theArea = new NFmiStereographicArea(NFmiPoint(g->BottomLeft().X(), g->BottomLeft().Y()),
+			                                    g->Di() * static_cast<double>((g->Ni() - 1)),
+			                                    g->Dj() * static_cast<double>((g->Nj() - 1)), g->Orientation());
+			break;
+		}
+
+		case himan::kLambertConformalConic:
+		{
+			auto g = std::dynamic_pointer_cast<himan::lambert_conformal_grid>(info.Grid());
+
+			std::stringstream ss;
+			ss << "GEOGCS[\"MEPS\","
+			   << " DATUM[\"unknown\","
+			   << "     SPHEROID[\"Sphere\",6367470,0]],"
+			   << " PRIMEM[\"Greenwich\",0],"
+			   << " UNIT[\"degree\",0.0174532925199433]]";
+
+			theArea =
+			    new NFmiGdalArea(ss.str(), g->SpatialReference(), 0, 0, g->Di() * (static_cast<double>(g->Ni()) - 1),
+			                     g->Dj() * (static_cast<double>(g->Nj()) - 1));
+			break;
+		}
+
+		default:
+			throw std::runtime_error("No supported projection found");
+	}
+
+	ASSERT(theArea);
+
+#ifdef DEBUG
+	OGRSpatialReference crs;
+	const auto wkt = theArea->WKT();
+	if (crs.SetFromUserInput(wkt.c_str()) == OGRERR_NONE)
+	{
+		char* proj4 = 0;
+		crs.exportToProj4(&proj4);
+		itsLogger.Trace(string(proj4));
+		OGRFree(proj4);
+	}
+#endif
+
+	NFmiGrid theGrid(theArea, std::dynamic_pointer_cast<himan::regular_grid>(info.Grid())->Ni(),
+	                 std::dynamic_pointer_cast<himan::regular_grid>(info.Grid())->Nj());
+
+	delete theArea;
+
+	return NFmiHPlaceDescriptor(theGrid);
+}
+
+template <typename T>
+NFmiParamDescriptor CreateParamDescriptor(himan::info<T>& info, bool theActiveOnly)
+{
+	/*
+	 * Create parameter descriptor
+	 */
+
+	NFmiParamBag pbag;
+
+	if (theActiveOnly)
+	{
+		AddToParamBag(info, pbag);
+	}
+	else
+	{
+		info.template Reset<himan::param>();
+
+		while (info.template Next<himan::param>())
+		{
+			AddToParamBag(info, pbag);
+		}
+	}
+
+	return NFmiParamDescriptor(pbag);
+}
+
+template <typename T>
+NFmiHPlaceDescriptor CreatePoint(himan::info<T>& info)
+{
+	const auto g = std::dynamic_pointer_cast<himan::point_list>(info.Grid());
+	NFmiLocationBag bag;
+
+	for (const himan::station& s : g->Stations())
+	{
+		NFmiStation stat(s.Id(), s.Name(), s.X(), s.Y());
+		bag.AddLocation(stat);
+	}
+
+	return NFmiHPlaceDescriptor(bag);
+}
+
+template <typename T>
+NFmiHPlaceDescriptor CreateHPlaceDescriptor(himan::info<T>& info, bool activeOnly)
+{
+	himan::logger log("querydata");
+	if (!activeOnly && info.template Size<himan::forecast_time>() * info.template Size<himan::param>() *
+	                           info.template Size<himan::level>() >
+	                       1)
+	{
+		info.template Reset<himan::forecast_time>();
+		std::shared_ptr<himan::grid> firstGrid = nullptr;
+
+		while (info.template Next<himan::forecast_time>())
+		{
+			info.template Reset<himan::level>();
+
+			while (info.template Next<himan::level>())
+			{
+				info.template Reset<himan::param>();
+
+				while (info.template Next<himan::param>())
+				{
+					auto g = info.Grid();
+
+					if (!g)
+					{
+						continue;
+					}
+
+					if (!firstGrid)
+					{
+						firstGrid = g;
+						continue;
+					}
+
+					if (firstGrid->Type() != g->Type())
+					{
+						log.Error("All grids in info are not equal, unable to write querydata");
+						return NFmiHPlaceDescriptor();
+					}
+
+					if (firstGrid->Class() == himan::kRegularGrid)
+					{
+						if (*firstGrid != *g)
+						{
+							log.Error("All grids in info are not equal, unable to write querydata");
+							return NFmiHPlaceDescriptor();
+						}
+					}
+					else
+					{
+						const auto fg_ = std::dynamic_pointer_cast<himan::point_list>(firstGrid);
+						auto g_ = std::dynamic_pointer_cast<himan::point_list>(info.Grid());
+
+						if (*fg_ != *g_)
+						{
+							log.Error("All grids in info are not equal, unable to write querydata");
+							return NFmiHPlaceDescriptor();
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if (info.Grid()->Class() == himan::kRegularGrid)
+	{
+		return CreateGrid<T>(info);
+	}
+	else
+	{
+		return CreatePoint<T>(info);
+	}
+}
+
+template <typename T>
+NFmiVPlaceDescriptor CreateVPlaceDescriptor(himan::info<T>& info, bool theActiveOnly)
+{
+	NFmiLevelBag lbag;
+
+	if (theActiveOnly)
+	{
+		lbag.AddLevel(NFmiLevel(info.Level().Type(), himan::HPLevelTypeToString.at(info.Level().Type()),
+		                        static_cast<float>(info.Level().Value())));
+	}
+	else
+	{
+		info.template Reset<himan::level>();
+
+		while (info.template Next<himan::level>())
+		{
+			lbag.AddLevel(NFmiLevel(info.template Level().Type(),
+			                        himan::HPLevelTypeToString.at(info.template Level().Type()),
+			                        static_cast<float>(info.template Level().Value())));
+		}
+	}
+
+	return NFmiVPlaceDescriptor(lbag);
+}
+
 querydata::querydata()
 {
 	itsLogger = logger("querydata");
@@ -63,7 +419,7 @@ bool querydata::ToFile(info<T>& theInfo, string& theOutputFile)
 		activeOnly = false;
 	}
 
-	auto qdata = CreateQueryData<double>(theInfo, activeOnly, true);
+	auto qdata = CreateQueryData<T>(theInfo, activeOnly, true);
 
 	if (!qdata)
 	{
@@ -78,6 +434,7 @@ bool querydata::ToFile(info<T>& theInfo, string& theOutputFile)
 }
 
 template bool querydata::ToFile<double>(info<double>&, string&);
+template bool querydata::ToFile<float>(info<float>&, string&);
 
 template <typename T>
 shared_ptr<NFmiQueryData> querydata::CreateQueryData(const info<T>& originalInfo, bool activeOnly,
@@ -141,7 +498,7 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(const info<T>& originalInfo
 		qinfo.FirstLevel();
 		qinfo.FirstTime();
 
-		CopyData(localInfo, qinfo, applyScaleAndBase);
+		CopyData<T>(localInfo, qinfo, applyScaleAndBase);
 	}
 	else
 	{
@@ -174,7 +531,7 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(const info<T>& originalInfo
 						continue;
 					}
 
-					CopyData(localInfo, qinfo, applyScaleAndBase);
+					CopyData<T>(localInfo, qinfo, applyScaleAndBase);
 				}
 			}
 		}
@@ -186,353 +543,7 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(const info<T>& originalInfo
 }
 
 template shared_ptr<NFmiQueryData> querydata::CreateQueryData<double>(const info<double>&, bool, bool);
-
-bool querydata::CopyData(info<double>& theInfo, NFmiFastQueryInfo& qinfo, bool applyScaleAndBase) const
-{
-	ASSERT(theInfo.Data().Size() == qinfo.SizeLocations());
-
-	// convert missing value to kFloatMissing
-	theInfo.Data().MissingValue(kFloatMissing);
-	theInfo.ResetLocation();
-	qinfo.ResetLocation();
-
-	double scale = 1, base = 0;
-
-	if (applyScaleAndBase)
-	{
-		scale = theInfo.Param().Scale();
-		base = theInfo.Param().Base();
-	}
-
-	if (theInfo.Grid()->Class() == kRegularGrid &&
-	    dynamic_pointer_cast<regular_grid>(theInfo.Grid())->ScanningMode() != kBottomLeft)
-	{
-		ASSERT(std::dynamic_pointer_cast<regular_grid>(theInfo.Grid())->ScanningMode() == kTopLeft);
-
-		size_t nj = theInfo.Data().SizeY();
-		size_t ni = theInfo.Data().SizeX();
-
-		int y = static_cast<int>(nj) - 1;
-
-		do
-		{
-			size_t x = 0;
-
-			do
-			{
-				qinfo.NextLocation();
-				qinfo.FloatValue(static_cast<float>(theInfo.Data().At(x, y) * scale + base));
-				x++;
-			} while (x < ni);
-
-			y--;
-		} while (y != -1);
-	}
-	else
-	{
-		// Grid is irregular OR source & dest are both kBottomLeft
-		while (theInfo.NextLocation() && qinfo.NextLocation())
-		{
-			qinfo.FloatValue(static_cast<float>(theInfo.Value() * scale + base));
-		}
-	}
-
-	// return to original missing value
-	theInfo.Data().MissingValue(MissingDouble());
-
-	return true;
-}
-
-NFmiTimeDescriptor querydata::CreateTimeDescriptor(info<double>& info, bool theActiveOnly)
-{
-	/*
-	 * Create time descriptor
-	 */
-
-	NFmiTimeList tlist;
-
-	NFmiMetTime originTime;
-
-	if (theActiveOnly)
-	{
-		originTime = NFmiMetTime(stol(info.Time().ValidDateTime().String("%Y%m%d")),
-		                         stol(info.Time().OriginDateTime().String("%H%M")));
-
-		tlist.Add(new NFmiMetTime(stol(info.Time().ValidDateTime().String("%Y%m%d")),
-		                          stol(info.Time().ValidDateTime().String("%H%M"))));
-	}
-	else
-	{
-		info.Reset<forecast_time>();
-
-		raw_time firstOriginTime;
-
-		while (info.Next<forecast_time>())
-		{
-			if (firstOriginTime.Empty())
-			{
-				firstOriginTime = info.Time().OriginDateTime();
-				originTime = NFmiMetTime(stol(firstOriginTime.String("%Y%m%d")), stol(firstOriginTime.String("%H%M")));
-			}
-			else
-			{
-				if (firstOriginTime != info.Time().OriginDateTime())
-				{
-					itsLogger.Error("Origintime is not the same for all grids in info");
-					return NFmiTimeDescriptor();
-				}
-			}
-
-			tlist.Add(new NFmiMetTime(stol(info.Time().ValidDateTime().String("%Y%m%d")),
-			                          stol(info.Time().ValidDateTime().String("%H%M"))));
-		}
-	}
-
-	return NFmiTimeDescriptor(originTime, tlist);
-}
-
-void AddToParamBag(himan::info<double>& info, NFmiParamBag& pbag)
-{
-	string precision;
-
-	if (info.Param().Precision() != himan::kHPMissingInt)
-	{
-		precision = "%." + to_string(info.Param().Precision()) + "f";
-	}
-	else
-	{
-		precision = "%.1f";
-	}
-
-	NFmiParam nbParam(info.Param().UnivId(), info.Param().Name(), ::kFloatMissing, ::kFloatMissing,
-	                  static_cast<float>(info.Param().Scale()), static_cast<float>(info.Param().Base()), precision,
-	                  ::kLinearly);
-
-	pbag.Add(NFmiDataIdent(nbParam));
-}
-
-NFmiParamDescriptor querydata::CreateParamDescriptor(info<double>& info, bool theActiveOnly)
-{
-	/*
-	 * Create parameter descriptor
-	 */
-
-	NFmiParamBag pbag;
-
-	if (theActiveOnly)
-	{
-		AddToParamBag(info, pbag);
-	}
-	else
-	{
-		info.Reset<param>();
-
-		while (info.Next<param>())
-		{
-			AddToParamBag(info, pbag);
-		}
-	}
-
-	return NFmiParamDescriptor(pbag);
-}
-
-NFmiHPlaceDescriptor querydata::CreatePoint(info<double>& info) const
-{
-	const auto g = std::dynamic_pointer_cast<point_list>(info.Grid());
-	NFmiLocationBag bag;
-
-	for (const station& s : g->Stations())
-	{
-		NFmiStation stat(s.Id(), s.Name(), s.X(), s.Y());
-		bag.AddLocation(stat);
-	}
-
-	return NFmiHPlaceDescriptor(bag);
-}
-
-NFmiHPlaceDescriptor querydata::CreateGrid(info<double>& info) const
-{
-	/*
-	 * If whole info is converted to querydata, we need to check that if info contains
-	 * more than one element, the grids of each element must be equal!
-	 *
-	 * TODO: interpolate to same grid if they are different ???
-	 */
-
-	NFmiArea* theArea = 0;
-
-	switch (info.Grid()->Type())
-	{
-		case kLatitudeLongitude:
-		{
-			auto g = std::dynamic_pointer_cast<latitude_longitude_grid>(info.Grid());
-
-			theArea = new NFmiLatLonArea(NFmiPoint(g->BottomLeft().X(), g->BottomLeft().Y()),
-			                             NFmiPoint(g->TopRight().X(), g->TopRight().Y()));
-
-			break;
-		}
-
-		case kRotatedLatitudeLongitude:
-		{
-			auto g = std::dynamic_pointer_cast<rotated_latitude_longitude_grid>(info.Grid());
-
-			theArea = new NFmiRotatedLatLonArea(
-			    NFmiPoint(g->BottomLeft().X(), g->BottomLeft().Y()), NFmiPoint(g->TopRight().X(), g->TopRight().Y()),
-			    NFmiPoint(g->SouthPole().X(), g->SouthPole().Y()), NFmiPoint(0., 0.),  // default values
-			    NFmiPoint(1., 1.),                                                     // default values
-			    true);
-
-			break;
-		}
-
-		case kStereographic:
-		{
-			auto g = std::dynamic_pointer_cast<stereographic_grid>(info.Grid());
-
-			theArea = new NFmiStereographicArea(NFmiPoint(g->BottomLeft().X(), g->BottomLeft().Y()),
-			                                    g->Di() * static_cast<double>((g->Ni() - 1)),
-			                                    g->Dj() * static_cast<double>((g->Nj() - 1)), g->Orientation());
-			break;
-		}
-
-		case kLambertConformalConic:
-		{
-			auto g = std::dynamic_pointer_cast<lambert_conformal_grid>(info.Grid());
-
-			std::stringstream ss;
-			ss << "GEOGCS[\"MEPS\","
-			   << " DATUM[\"unknown\","
-			   << "     SPHEROID[\"Sphere\",6367470,0]],"
-			   << " PRIMEM[\"Greenwich\",0],"
-			   << " UNIT[\"degree\",0.0174532925199433]]";
-
-			theArea =
-			    new NFmiGdalArea(ss.str(), g->SpatialReference(), 0, 0, g->Di() * (static_cast<double>(g->Ni()) - 1),
-			                     g->Dj() * (static_cast<double>(g->Nj()) - 1));
-			break;
-		}
-
-		default:
-			itsLogger.Error("No supported projection found");
-			return NFmiHPlaceDescriptor();
-			break;
-	}
-
-	ASSERT(theArea);
-
-#ifdef DEBUG
-	OGRSpatialReference crs;
-	const auto wkt = theArea->WKT();
-	if (crs.SetFromUserInput(wkt.c_str()) == OGRERR_NONE)
-	{
-		char* proj4 = 0;
-		crs.exportToProj4(&proj4);
-		itsLogger.Trace(string(proj4));
-		OGRFree(proj4);
-	}
-#endif
-
-	NFmiGrid theGrid(theArea, std::dynamic_pointer_cast<regular_grid>(info.Grid())->Ni(),
-	                 std::dynamic_pointer_cast<regular_grid>(info.Grid())->Nj());
-
-	delete theArea;
-
-	return NFmiHPlaceDescriptor(theGrid);
-}
-
-NFmiHPlaceDescriptor querydata::CreateHPlaceDescriptor(info<double>& info, bool activeOnly)
-{
-	if (!activeOnly && info.Size<forecast_time>() * info.Size<param>() * info.Size<level>() > 1)
-	{
-		info.Reset<forecast_time>();
-		std::shared_ptr<grid> firstGrid = nullptr;
-
-		while (info.Next<forecast_time>())
-		{
-			info.Reset<level>();
-
-			while (info.Next<level>())
-			{
-				info.Reset<param>();
-
-				while (info.Next<param>())
-				{
-					auto g = info.Grid();
-
-					if (!g)
-					{
-						continue;
-					}
-
-					if (!firstGrid)
-					{
-						firstGrid = g;
-						continue;
-					}
-
-					if (firstGrid->Type() != g->Type())
-					{
-						itsLogger.Error("All grids in info are not equal, unable to write querydata");
-						return NFmiHPlaceDescriptor();
-					}
-
-					if (firstGrid->Class() == kRegularGrid)
-					{
-						if (*firstGrid != *g)
-						{
-							itsLogger.Error("All grids in info are not equal, unable to write querydata");
-							return NFmiHPlaceDescriptor();
-						}
-					}
-					else
-					{
-						const auto fg_ = std::dynamic_pointer_cast<point_list>(firstGrid);
-						auto g_ = std::dynamic_pointer_cast<point_list>(info.Grid());
-
-						if (*fg_ != *g_)
-						{
-							itsLogger.Error("All grids in info are not equal, unable to write querydata");
-							return NFmiHPlaceDescriptor();
-						}
-					}
-				}
-			}
-		}
-	}
-
-	if (info.Grid()->Class() == kRegularGrid)
-	{
-		return CreateGrid(info);
-	}
-	else
-	{
-		return CreatePoint(info);
-	}
-}
-
-NFmiVPlaceDescriptor querydata::CreateVPlaceDescriptor(info<double>& info, bool theActiveOnly)
-{
-	NFmiLevelBag lbag;
-
-	if (theActiveOnly)
-	{
-		lbag.AddLevel(NFmiLevel(info.Level().Type(), HPLevelTypeToString.at(info.Level().Type()),
-		                        static_cast<float>(info.Level().Value())));
-	}
-	else
-	{
-		info.Reset<level>();
-
-		while (info.Next<level>())
-		{
-			lbag.AddLevel(NFmiLevel(info.Level().Type(), HPLevelTypeToString.at(info.Level().Type()),
-			                        static_cast<float>(info.Level().Value())));
-		}
-	}
-
-	return NFmiVPlaceDescriptor(lbag);
-}
+template shared_ptr<NFmiQueryData> querydata::CreateQueryData<float>(const info<float>&, bool, bool);
 
 template <typename T>
 shared_ptr<himan::info<T>> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData) const
@@ -704,7 +715,7 @@ shared_ptr<himan::info<T>> querydata::CreateInfo(shared_ptr<NFmiQueryData> theDa
 				}
 
 				// convert kFloatMissing to nan
-				dm.MissingValue(MissingDouble());
+				dm.MissingValue(MissingValue<T>());
 				b = newInfo->Base();
 				b->data = move(dm);
 			}
@@ -715,3 +726,4 @@ shared_ptr<himan::info<T>> querydata::CreateInfo(shared_ptr<NFmiQueryData> theDa
 }
 
 template shared_ptr<himan::info<double>> querydata::CreateInfo<double>(shared_ptr<NFmiQueryData>) const;
+template shared_ptr<himan::info<float>> querydata::CreateInfo<float>(shared_ptr<NFmiQueryData>) const;

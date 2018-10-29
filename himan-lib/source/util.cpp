@@ -30,15 +30,16 @@
 using namespace himan;
 using namespace std;
 
-string util::MakeFileName(HPFileWriteOption fileWriteOption, const info<double>& info, const configuration& conf)
+template <typename T>
+string util::MakeFileName(HPFileWriteOption fileWriteOption, const info<T>& info, const configuration& conf)
 {
 	ostringstream fileName;
 	ostringstream base;
 
-	const auto ftype = info.Value<forecast_type>();
-	const auto ftime = info.Value<forecast_time>();
-	const auto lvl = info.Value<level>();
-	const auto par = info.Value<param>();
+	const auto ftype = info.template Value<forecast_type>();
+	const auto ftime = info.template Value<forecast_time>();
+	const auto lvl = info.template Value<level>();
+	const auto par = info.template Value<param>();
 
 	base.str(".");
 
@@ -99,6 +100,9 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, const info<double>&
 
 	return fileName.str();
 }
+
+template string util::MakeFileName<double>(HPFileWriteOption, const info<double>&, const configuration&);
+template string util::MakeFileName<float>(HPFileWriteOption, const info<float>&, const configuration&);
 
 himan::HPFileType util::FileType(const string& theFile)
 {
@@ -378,10 +382,11 @@ double util::ToPower(double value, double power)
 	return divisor;
 }
 
-pair<matrix<double>, matrix<double>> util::CentralDifference(matrix<double>& A, vector<double>& dx, vector<double>& dy)
+template <typename T>
+pair<matrix<T>, matrix<T>> util::CentralDifference(matrix<T>& A, vector<T>& dx, vector<T>& dy)
 {
-	matrix<double> dA_dx(A.SizeX(), A.SizeY(), 1, A.MissingValue());
-	matrix<double> dA_dy(A.SizeX(), A.SizeY(), 1, A.MissingValue());
+	matrix<T> dA_dx(A.SizeX(), A.SizeY(), 1, A.MissingValue());
+	matrix<T> dA_dy(A.SizeX(), A.SizeY(), 1, A.MissingValue());
 
 	int ASizeX = int(A.SizeX());
 	int ASizeY = int(A.SizeY());
@@ -456,9 +461,12 @@ pair<matrix<double>, matrix<double>> util::CentralDifference(matrix<double>& A, 
 	          (A.At(ASizeX - 1, ASizeY - 1, 0) - A.At(ASizeX - 1, ASizeY - 2, 0)) /
 	              dy[ASizeX - 1]);  // backward difference in y-direction
 
-	pair<matrix<double>, matrix<double>> ret(dA_dx, dA_dy);
+	pair<matrix<T>, matrix<T>> ret(dA_dx, dA_dy);
 	return ret;
 }
+
+template pair<matrix<double>, matrix<double>> util::CentralDifference<double>(matrix<double>& A, vector<double>& dx, vector<double>& dy);
+template pair<matrix<float>, matrix<float>> util::CentralDifference<float>(matrix<float>& A, vector<float>& dx, vector<float>& dy);
 
 double util::LatitudeLength(double phi)
 {
@@ -519,10 +527,16 @@ string util::Expand(const string& in)
 
 void util::DumpVector(const vector<double>& vec, const string& name)
 {
-	double min = 1e38, max = -1e38, sum = 0;
+	return DumpVector<double>(vec, name);
+}
+
+template <typename T>
+void util::DumpVector(const vector<T>& vec, const string& name)
+{
+	T min = numeric_limits<T>::max(), max = numeric_limits<T>::lowest(), sum = 0;
 	size_t count = 0, missing = 0;
 
-	for (const double& val : vec)
+	for (const T& val : vec)
 	{
 		if (IsMissing(val))
 		{
@@ -536,11 +550,11 @@ void util::DumpVector(const vector<double>& vec, const string& name)
 		sum += val;
 	}
 
-	double mean = numeric_limits<double>::quiet_NaN();
+	T mean = numeric_limits<T>::quiet_NaN();
 
 	if (count > 0)
 	{
-		mean = sum / static_cast<double>(count);
+		mean = sum / static_cast<T>(count);
 	}
 
 	if (!name.empty())
@@ -554,21 +568,21 @@ void util::DumpVector(const vector<double>& vec, const string& name)
 	{
 		long binn = (count < 10) ? count : 10;
 
-		double binw = (max - min) / static_cast<double>(binn);
+		T binw = (max - min) / static_cast<T>(binn);
 
-		double binmin = min;
-		double binmax = binmin + binw;
+		T binmin = min;
+		T binmax = binmin + binw;
 
 		cout << "distribution (bins=" << binn << "):" << endl;
 
 		for (int i = 1; i <= binn; i++)
 		{
 			if (i == binn)
-				binmax += 0.001;
+				binmax += 0.001f;
 
 			count = 0;
 
-			for (const double& val : vec)
+			for (const T& val : vec)
 			{
 				if (IsMissing(val))
 					continue;
@@ -580,7 +594,7 @@ void util::DumpVector(const vector<double>& vec, const string& name)
 			}
 
 			if (i == binn)
-				binmax -= 0.001;
+				binmax -= 0.001f;
 
 			cout << binmin << ":" << binmax << " " << count << std::endl;
 
@@ -589,6 +603,9 @@ void util::DumpVector(const vector<double>& vec, const string& name)
 		}
 	}
 }
+
+template void util::DumpVector<double>(const vector<double>&, const string&);
+template void util::DumpVector<float>(const vector<float>&, const string&);
 
 string util::GetEnv(const string& key)
 {
@@ -600,10 +617,9 @@ string util::GetEnv(const string& key)
 	return string(var);
 }
 
-info_t util::CSVToInfo(const vector<string>& csv)
+template <typename T>
+shared_ptr<info<T>> util::CSVToInfo(const vector<string>& csv)
 {
-	info_t ret;
-
 	vector<forecast_time> times;
 	vector<param> params;
 	vector<level> levels;
@@ -716,18 +732,18 @@ info_t util::CSVToInfo(const vector<string>& csv)
 
 	if (times.size() == 0 || params.size() == 0 || levels.size() == 0 || ftypes.size() == 0)
 	{
-		return ret;
+		return nullptr;
 	}
 
-	ret = make_shared<info<double>>();
+	auto ret = make_shared<info<T>>();
 
 	ret->Producer(prod);
-	ret->Set<forecast_time>(times);
-	ret->Set<param>(params);
-	ret->Set<level>(levels);
-	ret->Set<forecast_type>(ftypes);
+	ret->template Set<forecast_time>(times);
+	ret->template Set<param>(params);
+	ret->template Set<level>(levels);
+	ret->template Set<forecast_type>(ftypes);
 
-	auto b = make_shared<base<double>>();
+	auto b = make_shared<base<T>>();
 	b->grid = shared_ptr<grid>(new point_list(stats));
 	ret->Create(b, true);
 
@@ -791,13 +807,13 @@ info_t util::CSVToInfo(const vector<string>& csv)
 
 		const station s(stationId, elems[3], longitude, latitude);
 
-		if (!ret->Find<param>(p))
+		if (!ret->template Find<param>(p))
 			continue;
-		if (!ret->Find<forecast_time>(f))
+		if (!ret->template Find<forecast_time>(f))
 			continue;
-		if (!ret->Find<level>(l))
+		if (!ret->template Find<level>(l))
 			continue;
-		if (!ret->Find<forecast_type>(ftype))
+		if (!ret->template Find<forecast_type>(ftype))
 			continue;
 
 		for (size_t i = 0; i < stats.size(); i++)
@@ -805,13 +821,16 @@ info_t util::CSVToInfo(const vector<string>& csv)
 			if (s == stats[i])
 			{
 				// Add the data point
-				ret->Data().Set(i, stod(elems[13]));
+				ret->Data().Set(i, static_cast<T>(stod(elems[13])));
 			}
 		}
 	}
 
 	return ret;
 }
+
+template shared_ptr<info<double>> util::CSVToInfo<double>(const vector<string>&);
+template shared_ptr<info<float>> util::CSVToInfo<float>(const vector<string>&);
 
 double util::MissingPercent(const himan::info<double>& info)
 {

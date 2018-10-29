@@ -27,7 +27,7 @@ info<T>::info(const forecast_type& ftype, const forecast_time& time, const level
 }
 
 template <typename T>
-info<T>::info(const info& other)
+info<T>::info(const info<T>& other)
     // Iterators are COPIED
     : itsLevelIterator(other.itsLevelIterator),
       itsTimeIterator(other.itsTimeIterator),
@@ -38,6 +38,37 @@ info<T>::info(const info& other)
       itsLocationIndex(other.itsLocationIndex)
 {
 	itsLogger = logger("info");
+}
+
+template <typename T>
+template <typename V>
+info<T>::info(const info<V>& other)
+    : itsLevelIterator(other.Iterator<level>()),
+      itsTimeIterator(other.Iterator<forecast_time>()),
+      itsParamIterator(other.Iterator<param>()),
+      itsForecastTypeIterator(other.Iterator<forecast_type>()),
+      itsProducer(other.Producer()),
+      itsLocationIndex(other.LocationIndex())
+{
+	itsLogger = logger("info");
+
+	itsDimensions.resize(other.DimensionSize());
+
+	for (size_t i = 0; i < itsDimensions.size(); i++)
+	{
+		const auto& ob = other.itsDimensions[i];
+
+		if (ob == nullptr || ob->grid == nullptr)
+		{
+			continue;
+		}
+
+		auto b = std::make_shared<himan::base<T>>();
+		b->grid = std::shared_ptr<himan::grid>(ob->grid->Clone());
+		b->data = ob->data;
+
+		itsDimensions[i] = b;
+	}
 }
 
 template <typename T>
