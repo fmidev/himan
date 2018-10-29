@@ -85,7 +85,7 @@ bool InterpolateArea(const grid* baseGrid, std::shared_ptr<info<T>> source)
 		target.data.Resize(baseGrid->Size(), 1);
 	}
 
-	if (interpolate::interpolator().Interpolate<T>(*source->Base(), target, source->Param().InterpolationMethod()))
+	if (interpolate::interpolator<T>().Interpolate(*source->Base(), target, source->Param().InterpolationMethod()))
 	{
 		auto interpGrid = std::shared_ptr<grid>(baseGrid->Clone());
 
@@ -436,7 +436,8 @@ void RotateVectorComponents(info<T>& UInfo, info<T>& VInfo, bool useCuda)
 template void RotateVectorComponents<double>(info<double>&, info<double>&, bool);
 template void RotateVectorComponents<float>(info<float>&, info<float>&, bool);
 
-std::pair<std::vector<size_t>, std::vector<double>> InterpolationWeights(reduced_gaussian_grid& source, point target)
+template <typename T>
+std::pair<std::vector<size_t>, std::vector<T>> InterpolationWeights(reduced_gaussian_grid& source, point target)
 {
 	// target lon 0 <= lon < 360
 	if (target.X() < 0.0)
@@ -450,13 +451,13 @@ std::pair<std::vector<size_t>, std::vector<double>> InterpolationWeights(reduced
 	if (target.Y() >= lats.front())
 	{
 		// point north of domain
-		return std::make_pair(std::vector<size_t>{0}, std::vector<double>{MissingDouble()});
+		return std::make_pair(std::vector<size_t>{0}, std::vector<T>{MissingValue<T>()});
 	}
 
 	if (target.Y() <= lats.back())
 	{
 		// point south of domain
-		return std::make_pair(std::vector<size_t>{0}, std::vector<double>{MissingDouble()});
+		return std::make_pair(std::vector<size_t>{0}, std::vector<T>{MissingValue<T>()});
 	}
 
 	// find y-indices
@@ -502,7 +503,7 @@ std::pair<std::vector<size_t>, std::vector<double>> InterpolationWeights(reduced
 	const point c = source.LatLon(idxs[2]);
 	const point d = source.LatLon(idxs[3]);
 
-	std::vector<double> weights(4);
+	std::vector<T> weights(4);
 
 	// Matrices and Vectors
 	Eigen::Matrix4d A(4, 4);
@@ -550,20 +551,21 @@ std::pair<std::vector<size_t>, std::vector<double>> InterpolationWeights(reduced
 	xi.transposeInPlace();
 	phi = xi * x;
 
-	weights[0] = (1 - phi[0]) * phi[1];
-	weights[1] = phi[0] * phi[1];
-	weights[2] = (1 - phi[0]) * (1 - phi[1]);
-	weights[3] = phi[0] * (1 - phi[1]);
+	weights[0] = static_cast<T>((1 - phi[0]) * phi[1]);
+	weights[1] = static_cast<T>(phi[0] * phi[1]);
+	weights[2] = static_cast<T>((1 - phi[0]) * (1 - phi[1]));
+	weights[3] = static_cast<T>(phi[0] * (1 - phi[1]));
 
 	return std::make_pair(idxs, weights);
 }
 
-std::pair<std::vector<size_t>, std::vector<double>> InterpolationWeights(regular_grid& source, point target)
+template <typename T>
+std::pair<std::vector<size_t>, std::vector<T>> InterpolationWeights(regular_grid& source, point target)
 {
 	auto xy = source.XY(target);
 
 	if (IsMissing(xy.X()) || IsMissing(xy.Y()))
-		return std::make_pair(std::vector<size_t>{0}, std::vector<double>{MissingDouble()});
+		return std::make_pair(std::vector<size_t>{0}, std::vector<T>{MissingValue<T>()});
 
 	std::vector<size_t> idxs{static_cast<size_t>(xy.X()) + source.Ni() * static_cast<size_t>(xy.Y()),
 	                         static_cast<size_t>(xy.X()) + source.Ni() * static_cast<size_t>(xy.Y()) + 1 -
@@ -572,12 +574,12 @@ std::pair<std::vector<size_t>, std::vector<double>> InterpolationWeights(regular
 	                         static_cast<size_t>(xy.X()) + source.Ni() * static_cast<size_t>(xy.Y() + 1) + 1 -
 	                             (static_cast<size_t>(xy.X()) == source.Ni() - 1 ? source.Ni() : 0)};
 
-	std::vector<double> weights(4);
+	std::vector<T> weights(4);
 
-	weights[0] = (1 - std::fmod(xy.X(), 1)) * (1 - std::fmod(xy.Y(), 1));
-	weights[1] = std::fmod(xy.X(), 1) * (1 - std::fmod(xy.Y(), 1));
-	weights[2] = (1 - std::fmod(xy.X(), 1)) * std::fmod(xy.Y(), 1);
-	weights[3] = std::fmod(xy.X(), 1) * std::fmod(xy.Y(), 1);
+	weights[0] = static_cast<T>((1 - std::fmod(xy.X(), 1)) * (1 - std::fmod(xy.Y(), 1)));
+	weights[1] = static_cast<T>(std::fmod(xy.X(), 1) * (1 - std::fmod(xy.Y(), 1)));
+	weights[2] = static_cast<T>((1 - std::fmod(xy.X(), 1)) * std::fmod(xy.Y(), 1));
+	weights[3] = static_cast<T>(std::fmod(xy.X(), 1) * std::fmod(xy.Y(), 1));
 
 	// Index is outside grid. This happens when target point is located on bottom edge
 	// Set index to first grid point
@@ -592,7 +594,8 @@ std::pair<std::vector<size_t>, std::vector<double>> InterpolationWeights(regular
 	return std::make_pair(idxs, weights);
 }
 
-std::pair<size_t, double> NearestPoint(reduced_gaussian_grid& source, point target)
+template <typename T>
+std::pair<size_t, T> NearestPoint(reduced_gaussian_grid& source, point target)
 {
 	// target lon 0 <= lon < 360
 	if (target.X() < 0.0)
@@ -630,11 +633,12 @@ std::pair<size_t, double> NearestPoint(reduced_gaussian_grid& source, point targ
 	return std::make_pair(nearest, 1.0);
 }
 
-std::pair<size_t, double> NearestPoint(regular_grid& source, point target)
+template <typename T>
+std::pair<size_t, T> NearestPoint(regular_grid& source, point target)
 {
 	auto xy = source.XY(target);
 	if (IsMissing(xy.X()) || IsMissing(xy.Y()))
-		return std::make_pair(0, MissingDouble());
+		return std::make_pair(0, MissingValue<T>());
 
 	// In case of point in wrap-around region on global grid
 	if (std::round(xy.X()) == source.Ni())
@@ -653,7 +657,7 @@ area_interpolation<T>::area_interpolation(grid& source, grid& target, HPInterpol
 	// compute weights in the interpolation matrix line by line, i.e. point by point on target grid
 	for (size_t i = 0; i < target.Size(); ++i)
 	{
-		std::pair<std::vector<size_t>, std::vector<double>> w;
+		std::pair<std::vector<size_t>, std::vector<T>> w;
 		switch (source.Type())
 		{
 			case kLatitudeLongitude:
@@ -662,11 +666,11 @@ area_interpolation<T>::area_interpolation(grid& source, grid& target, HPInterpol
 			case kLambertConformalConic:
 				if (method == kBiLinear)
 				{
-					w = InterpolationWeights(dynamic_cast<regular_grid&>(source), target.LatLon(i));
+					w = InterpolationWeights<T>(dynamic_cast<regular_grid&>(source), target.LatLon(i));
 				}
 				else if (method == kNearestPoint)
 				{
-					auto np = NearestPoint(dynamic_cast<regular_grid&>(source), target.LatLon(i));
+					auto np = NearestPoint<T>(dynamic_cast<regular_grid&>(source), target.LatLon(i));
 					w.first.push_back(np.first);
 					w.second.push_back(np.second);
 				}
@@ -678,11 +682,11 @@ area_interpolation<T>::area_interpolation(grid& source, grid& target, HPInterpol
 			case kReducedGaussian:
 				if (method == kBiLinear)
 				{
-					w = InterpolationWeights(dynamic_cast<reduced_gaussian_grid&>(source), target.LatLon(i));
+					w = InterpolationWeights<T>(dynamic_cast<reduced_gaussian_grid&>(source), target.LatLon(i));
 				}
 				else if (method == kNearestPoint)
 				{
-					auto np = NearestPoint(dynamic_cast<reduced_gaussian_grid&>(source), target.LatLon(i));
+					auto np = NearestPoint<T>(dynamic_cast<reduced_gaussian_grid&>(source), target.LatLon(i));
 					w.first.push_back(np.first);
 					w.second.push_back(np.second);
 				}
@@ -728,11 +732,14 @@ size_t area_interpolation<T>::TargetSize() const
 }
 
 // Interpolator member functions
-std::map<size_t, interp_cache> interpolator::cache;
-std::mutex interpolator::interpolatorAccessMutex;
+template <typename T>
+std::map<size_t, area_interpolation<T>> interpolator<T>::cache;
 
 template <typename T>
-bool interpolator::Insert(const base<T>& source, const base<T>& target, HPInterpolationMethod method)
+std::mutex interpolator<T>::interpolatorAccessMutex;
+
+template <typename T>
+bool interpolator<T>::Insert(const base<T>& source, const base<T>& target, HPInterpolationMethod method)
 {
 	std::lock_guard<std::mutex> guard(interpolatorAccessMutex);
 
@@ -740,7 +747,7 @@ bool interpolator::Insert(const base<T>& source, const base<T>& target, HPInterp
 
 	try
 	{
-		std::vector<size_t> hashes{method, DataTypeId<T>(), source.grid->Hash(), target.grid->Hash()};
+		std::vector<size_t> hashes{method, source.grid->Hash(), target.grid->Hash()};
 		insertValue.first = boost::hash_range(hashes.begin(), hashes.end());
 
 		// area_interpolation is already present in cache
@@ -757,20 +764,20 @@ bool interpolator::Insert(const base<T>& source, const base<T>& target, HPInterp
 	return cache.insert(std::move(insertValue)).second;
 }
 
-template bool interpolator::Insert<double>(const base<double>&, const base<double>&, HPInterpolationMethod);
-template bool interpolator::Insert<float>(const base<float>&, const base<float>&, HPInterpolationMethod);
+//template bool interpolator::Insert<double>(const base<double>&, const base<double>&, HPInterpolationMethod);
+//template bool interpolator::Insert<float>(const base<float>&, const base<float>&, HPInterpolationMethod);
 
 template <typename T>
-bool interpolator::Interpolate(base<T>& source, base<T>& target, HPInterpolationMethod method)
+bool interpolator<T>::Interpolate(base<T>& source, base<T>& target, HPInterpolationMethod method)
 {
-	std::vector<size_t> hashes{method, DataTypeId<T>(), source.grid->Hash(), target.grid->Hash()};
+	std::vector<size_t> hashes{method, source.grid->Hash(), target.grid->Hash()};
 	auto it = cache.find(boost::hash_range(hashes.begin(), hashes.end()));
 
 	if (it != cache.end())
 	{
 		try
 		{
-			boost::get<area_interpolation<T>>(it->second).Interpolate(source, target);
+			it->second.Interpolate(source, target);
 			return true;
 		}
 		catch (const boost::bad_get& e)
@@ -787,8 +794,8 @@ bool interpolator::Interpolate(base<T>& source, base<T>& target, HPInterpolation
 	}
 }
 
-template bool interpolator::Interpolate<double>(base<double>&, base<double>&, HPInterpolationMethod);
-template bool interpolator::Interpolate<float>(base<float>&, base<float>&, HPInterpolationMethod);
+//template bool interpolator::Interpolate<double>(base<double>&, base<double>&, HPInterpolationMethod);
+//template bool interpolator::Interpolate<float>(base<float>&, base<float>&, HPInterpolationMethod);
 
 }  // namespace interpolate
 }  // namespace himan

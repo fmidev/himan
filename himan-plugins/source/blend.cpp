@@ -66,13 +66,13 @@ blend::~blend()
 // 2 fetching helper functions are used:
 // - FetchProd: specify all information except geometry name, throws exception if data is not found
 // - FetchNoExcept: same as FetchProd, except exceptions are caught and nullptr is returned
-static info_t FetchProd(shared_ptr<plugin_configuration> cnf, const forecast_time& forecastTime,
-                        HPTimeResolution stepResolution, const param& parm, const blend_producer& blendProd,
-                        const producer& prod)
+info_t FetchProd(shared_ptr<plugin_configuration> cnf, const forecast_time& forecastTime,
+                 HPTimeResolution stepResolution, const param& parm, const blend_producer& blendProd,
+                 const producer& prod, const string& geom = "")
 {
 	auto f = GET_PLUGIN(fetcher);
 
-	const string geomName = cnf->TargetGeomName();
+	const string geomName = geom.empty() ? cnf->TargetGeomName() : geom;
 
 	forecast_time ftime = forecastTime;
 	ftime.StepResolution(stepResolution);
@@ -83,22 +83,13 @@ static info_t FetchProd(shared_ptr<plugin_configuration> cnf, const forecast_tim
 	return f->Fetch(cnf, ftime, blendProd.lvl, parm, blendProd.type, false);
 }
 
-static info_t FetchNoExcept(shared_ptr<plugin_configuration> cnf, const forecast_time& forecastTime,
-                            HPTimeResolution stepResolution, const param& parm, const blend_producer& blendProd,
-                            const producer& prod, const string& geom)
+info_t FetchNoExcept(shared_ptr<plugin_configuration> cnf, const forecast_time& forecastTime,
+                     HPTimeResolution stepResolution, const param& parm, const blend_producer& blendProd,
+                     const producer& prod, const string& geom)
 {
-	auto f = GET_PLUGIN(fetcher);
-
-	forecast_time ftime = forecastTime;
-	ftime.StepResolution(stepResolution);
-
-	cnf->SourceGeomNames({geom});
-	cnf->SourceProducers({prod});
-
-	info_t I;
 	try
 	{
-		I = f->Fetch(cnf, ftime, blendProd.lvl, parm, blendProd.type, false);
+		return FetchProd(cnf, forecastTime, stepResolution, parm, blendProd, prod, geom);
 	}
 	catch (HPExceptionType& e)
 	{
@@ -111,7 +102,6 @@ static info_t FetchNoExcept(shared_ptr<plugin_configuration> cnf, const forecast
 			return nullptr;
 		}
 	}
-	return I;
 }
 
 static mutex dimensionMutex;
@@ -411,12 +401,7 @@ matrix<double> blend::CalculateBias(logger& log, shared_ptr<info<double>> target
 
 	HPTimeResolution currentRes = currentTime.StepResolution();
 
-	info_t analysis = FetchNoExcept(cnf, analysisFetchTime, currentRes, currentParam, LAPS, kLapsProd, kLapsGeom);
-	if (!analysis)
-	{
-		log.Error("Analysis (LAPS) data not found");
-		himan::Abort();
-	}
+	info_t analysis = FetchProd(cnf, analysisFetchTime, currentRes, currentParam, LAPS, kLapsProd, kLapsGeom);
 
 	matrix<double> currentBias(targetInfo->Data().SizeX(), targetInfo->Data().SizeY(), targetInfo->Data().SizeZ(),
 	                           MissingDouble());
@@ -515,12 +500,7 @@ matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info<double>> targetI
 
 	HPTimeResolution currentRes = currentTime.StepResolution();
 
-	info_t analysis = FetchNoExcept(cnf, analysisFetchTime, currentRes, currentParam, LAPS, kLapsProd, kLapsGeom);
-	if (!analysis)
-	{
-		log.Error("Analysis (LAPS) data not found");
-		himan::Abort();
-	}
+	info_t analysis = FetchProd(cnf, analysisFetchTime, currentRes, currentParam, LAPS, kLapsProd, kLapsGeom);
 
 	matrix<double> MAE(targetInfo->Data().SizeX(), targetInfo->Data().SizeY(), targetInfo->Data().SizeZ(),
 	                   MissingDouble());
@@ -688,25 +668,35 @@ void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short 
 		}
 
 		matrix<double> d;
-		if (mode == kCalculateBias)
-		{
-			d = CalculateBias(log, targetInfo, ftime, itsBlendProducer);
-		}
-		else
-		{
-			d = CalculateMAE(log, targetInfo, ftime, itsBlendProducer);
-		}
 
-		if (Info->Find<forecast_type>(forecastType))
+		try
 		{
-			auto b = Info->Base();
-			b->data = std::move(d);
-			WriteToFile(Info);
+			if (mode == kCalculateBias)
+			{
+				d = CalculateBias(log, targetInfo, ftime, itsBlendProducer);
+			}
+			else
+			{
+				d = CalculateMAE(log, targetInfo, ftime, itsBlendProducer);
+			}
+			if (Info->Find<forecast_type>(forecastType))
+			{
+				auto b = Info->Base();
+				b->data = std::move(d);
+				WriteToFile(Info);
+			}
+			else
+			{
+				log.Error("Failed to set the correct output forecast type");
+				himan::Abort();
+			}
 		}
-		else
+		catch (const HPExceptionType& e)
 		{
-			log.Error("Failed to set the correct output forecast type");
-			himan::Abort();
+			if (e != kFileDataNotFound)
+			{
+				throw e;
+			}
 		}
 
 		Info->Next<forecast_time>();
@@ -944,7 +934,7 @@ void blend::CalculateBlend(shared_ptr<info<double>> targetInfo, unsigned short t
 	if (std::all_of(forecasts.begin(), forecasts.end(), [&](info_t i) { return i == nullptr; }))
 	{
 		log.Error("Failed to acquire any source data");
-		himan::Abort();
+		return;
 	}
 
 	// First reset all the locations for the upcoming loop.
