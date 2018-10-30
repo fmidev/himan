@@ -264,8 +264,6 @@ void blend::Process(shared_ptr<const plugin_configuration> conf)
 		throw std::runtime_error(ClassName() + ": parameter not specified");
 	}
 	params.push_back(param(p));
-
-	itsThreadDistribution = ThreadDistribution::kThreadForForecastTypeAndLevel;
 	SetParams(params);
 	Start();
 }
@@ -1043,8 +1041,6 @@ void blend::CalculateBlend(shared_ptr<info<double>> targetInfo, unsigned short t
 
 	log.Info("[" + deviceType + "] Missing values: " + to_string(targetInfo->Data().MissingCount()) + "/" +
 	         to_string(targetInfo->Data().Size()));
-
-	WriteToFile(targetInfo);
 }
 
 void blend::WriteToFile(const info_t targetInfo, write_options writeOptions)
