@@ -36,7 +36,6 @@ struct packed_data
 #endif
 };
 }
-}
 
 #else
 

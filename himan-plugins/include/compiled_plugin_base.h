@@ -102,13 +102,42 @@ namespace himan
 {
 namespace plugin
 {
+// Decide the strategegy how work is distributed to threads. Basically the smaller the number, the less control
+// there is to be done for the thread itself (most of the work is done in the functions of this superclass).
+// So aim for smaller enum numbers unless a good reason to do otherwise.
+// Enum value naming is such that the dimension(s) in the enum name is given to thread, and dimension(s) not
+// mentioned are the responsibility of the thread.
+enum class ThreadDistribution
+{
+	// Calculations between 'dimensions' are not dependent, each time/level/thread combination is given randomly to
+	// requesting thread. Thread will controll no iterators by itself. This is the same as
+	// "kThreadForForecastTypeAndTimeAndLevel"
+	kThreadForAny = 0,
+	// Each requesting thread will get their own forecast type and forecast time to process
+	// (eg. hybrid_height, stability, cape). Thread will control level iterator.
+	kThreadForForecastTypeAndTime,
+	// Each requesting thread will get their own forecast type and level to process. Thread will control time
+	// iterator.
+	kThreadForForecastTypeAndLevel,
+	// Each requesting thread will get their own forecast time and level to process. Thread will control forecast type
+	// iterator.
+	kThreadForTimeAndLevel,
+	// Each requesting thread will get their own forecast type to process. Thread will control time and level
+	// iterators.
+	kThreadForForecastType,
+	// Each requesting thread will get their own time to process. Thread will control forecast type and level
+	// iterators.
+	kThreadForTime,
+	// Each requesting thread will get their own level to process. Thread will control forecast type and time
+	// iterators.
+	kThreadForLevel
+};
+
 class compiled_plugin_base
 {
    public:
-	compiled_plugin_base();
-	inline virtual ~compiled_plugin_base()
-	{
-	}
+	compiled_plugin_base() = default;
+	inline virtual ~compiled_plugin_base() = default;
 	compiled_plugin_base(const compiled_plugin_base& other) = delete;
 	compiled_plugin_base& operator=(const compiled_plugin_base& other) = delete;
 
@@ -121,30 +150,24 @@ class compiled_plugin_base
 	 * @param targetInfo info-class instance holding the data
 	 */
 
-	virtual void WriteToFile(const info_t targetInfo, write_options opts = write_options());
+	template <typename T>
+	void WriteToFile(const std::shared_ptr<info<T>> targetInfo, write_options opts = write_options());
+
+	virtual void WriteToFile(const std::shared_ptr<info<double>> targetInfo, write_options opts = write_options());
 
    protected:
 	virtual std::string ClassName() const
 	{
 		return "himan::plugin::compiled_plugin_base";
 	}
-	/**
-	 * @brief Set primary dimension
-	 *
-	 * Functionality of this function could be replaced just by exposing the
-	 * variables to all child classes but as all other access to this
-	 * variable is through functions (ie adjusting the dimensions), it is
-	 * better not to allow direct access to have some consistency.
-	 */
-
-	void PrimaryDimension(HPDimensionType thePrimaryDimension);
-	HPDimensionType PrimaryDimension() const;
 
 	/**
 	 * @brief Copy AB values from source to dest info
 	 */
 
-	bool SetAB(const info_t& myTargetInfo, const info_t& sourceInfo);
+	template <typename T>
+	bool SetAB(const std::shared_ptr<info<T>>& myTargetInfo, const std::shared_ptr<info<T>>& sourceInfo);
+	bool SetAB(const std::shared_ptr<info<double>>& myTargetInfo, const std::shared_ptr<info<double>>& sourceInfo);
 
 	/**
 	 * @brief Distribute work equally to all threads
@@ -152,17 +175,8 @@ class compiled_plugin_base
 	 * @return
 	 */
 
-	virtual bool Next(info<double>& myTargetInfo);
-
-	/**
-	 * @brief Distribute work equally to all threads so that each calling
-	 * thread will have access to all levels.
-	 *
-	 * @param myTargetInfo
-	 * @return
-	 */
-
-	virtual bool NextExcludingLevel(info<double>& myTargetInfo);
+	template <typename T>
+	bool Next(info<T>& myTargetInfo);
 
 	/**
 	 * @brief Entry point for threads.
@@ -172,7 +186,8 @@ class compiled_plugin_base
 	 * @param threadIndex
 	 */
 
-	virtual void Run(unsigned short threadIndex);
+	template <typename T>
+	void Run(std::shared_ptr<info<T>> myTargetInfo, unsigned short threadIndex);
 
 	/**
 	 * @brief Set target params
@@ -213,22 +228,17 @@ class compiled_plugin_base
 	 * @param threadIndex
 	 */
 
-	virtual void Calculate(info_t myTargetInfo, unsigned short threadIndex);
+	virtual void Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex);
+	virtual void Calculate(std::shared_ptr<info<float>> myTargetInfo, unsigned short threadIndex);
 
 	/**
 	 * @brief Start threaded calculation
 	 */
 
+	template <typename T>
+	void Start();
+
 	virtual void Start();
-
-	/**
-	 * @brief Compare a number of grids to see if they are equal.
-	 *
-	 * @param grids List of grids
-	 * @return True if all are equal, else false
-	 */
-
-	bool CompareGrids(std::initializer_list<std::shared_ptr<grid>> grids) const;
 
 	/**
 	 * @brief Syntactic sugar: simple function to check if any of the arguments is a missing value
@@ -237,6 +247,8 @@ class compiled_plugin_base
 	 * @return True if any of the values is missing value, otherwise false
 	 */
 
+	template <typename T>
+	bool IsMissingValue(std::initializer_list<T> values) const;
 	bool IsMissingValue(std::initializer_list<double> values) const;
 
 	/**
@@ -251,6 +263,11 @@ class compiled_plugin_base
 	 * @param theType
 	 * @return shared_ptr<info> on success, null-pointer if data not found
 	 */
+
+	template <typename T>
+	std::shared_ptr<info<T>> Fetch(const forecast_time& theTime, const level& theLevel, const himan::params& theParams,
+	                               const forecast_type& theType = forecast_type(kDeterministic),
+	                               bool returnPacked = false) const;
 
 	virtual info_t Fetch(const forecast_time& theTime, const level& theLevel, const himan::params& theParams,
 	                     const forecast_type& theType = forecast_type(kDeterministic), bool returnPacked = false) const;
@@ -299,6 +316,11 @@ class compiled_plugin_base
 	 * @return shared_ptr<info> on success, un-initialized shared_ptr if data not found
 	 */
 
+	template <typename T>
+	std::shared_ptr<info<T>> Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam,
+	                               const forecast_type& theType = forecast_type(kDeterministic),
+	                               bool returnPacked = false) const;
+
 	virtual info_t Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam,
 	                     const forecast_type& theType = forecast_type(kDeterministic), bool returnPacked = false) const;
 
@@ -310,35 +332,37 @@ class compiled_plugin_base
 
 	virtual void Init(const std::shared_ptr<const plugin_configuration> conf);
 
-	/**
-	 * @brief Run threads through all dimensions in the most effective way.
-	 */
+	template <typename T>
+	void AllocateMemory(info<T> myTargetInfo);
 
-	void RunAll(info_t myTargetInfo, unsigned short threadIndex);
-
-	/**
-	 * @brief Run threads so that each thread will get one time step.
-	 *
-	 * This limits the number of threads to the number of time steps, but it is
-	 * the preferred way when f.ex. levels need to be accessed sequentially (hybrid_height).
-	 */
-
-	virtual void RunTimeDimension(info_t myTargetInfo, unsigned short threadIndex);
-
-	virtual void AllocateMemory(info<double> myTargetInfo);
-	virtual void DeallocateMemory(info<double> myTargetInfo);
+	template <typename T>
+	void DeallocateMemory(info<T> myTargetInfo);
 
    protected:
-	info_t itsInfo;
+	void SetInitialIteratorPositions();
+	void SetThreadCount();
+
 	std::shared_ptr<const plugin_configuration> itsConfiguration;
-	timer itsTimer;
-	short itsThreadCount;
-	bool itsDimensionsRemaining;
+	timer itsTimer = timer();
+	short itsThreadCount = -1;
+	bool itsDimensionsRemaining = true;
+	param_iter itsParamIterator;
+	level_iter itsLevelIterator;
+	time_iter itsTimeIterator;
+	forecast_type_iter itsForecastTypeIterator;
+	ThreadDistribution itsThreadDistribution = ThreadDistribution::kThreadForAny;
 
    private:
-	logger itsBaseLogger;
-	bool itsPluginIsInitialized;
-	HPDimensionType itsPrimaryDimension;
+	logger itsBaseLogger = logger("compiled_plugin_base");
+	bool itsPluginIsInitialized = false;
+	/**
+	 * Variable will hold the actual level-param pairs that plugin is using.
+	 * Because Himan will create a cartesian product of all dimensions, in
+	 * some cases (like stability plugin) we only want to calculate certain
+	 * parameters for certain level. We do not want to allocate memory for
+	 * those level-param combinations that we don't actually calculate.
+	 */
+	std::vector<std::pair<level, param>> itsLevelParams;
 };
 
 }  // namespace plugin
