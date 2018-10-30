@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 18.10.29
+Version: 18.10.30
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -59,6 +59,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Tue Oct 30 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.30-1.fmi
+- Reworked thread work distribution
 * Mon Oct 29 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.29-1.fmi
 - Interpolation as template
 * Tue Oct 23 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.23-1.fmi
