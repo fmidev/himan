@@ -104,46 +104,6 @@ info_t FetchNoExcept(shared_ptr<plugin_configuration> cnf, const forecast_time& 
 	}
 }
 
-static mutex dimensionMutex;
-
-void blend::Run(unsigned short threadIndex)
-{
-	// Iterate through timesteps
-	auto targetInfo = make_shared<info<double>>(*itsInfo);
-
-	while (itsDimensionsRemaining)
-	{
-		{
-			lock_guard<mutex> lock(dimensionMutex);
-
-			if (itsInfo->Next<forecast_time>())
-			{
-				if (!targetInfo->Find<forecast_time>(itsInfo->Time()))
-				{
-					throw std::runtime_error("invalid target time");
-				}
-			}
-			else
-			{
-				itsDimensionsRemaining = false;
-				break;
-			}
-		}
-
-		Calculate(targetInfo, threadIndex);
-
-		if (itsConfiguration->StatisticsEnabled())
-		{
-			// NOTE this is likely wrong. (Only counts the current iterator position's missing count.)
-			itsConfiguration->Statistics()->AddToMissingCount(targetInfo->Data().MissingCount());
-			itsConfiguration->Statistics()->AddToValueCount(targetInfo->Data().Size());
-		}
-
-		// NOTE: Each Calculate-function will call WriteToFile manually, since they write out data at different
-		// frequencies.
-	}
-}
-
 raw_time blend::LatestOriginTimeForProducer(const blend_producer& producer) const
 {
 	// These are hardcoded for simplicity.
@@ -204,31 +164,6 @@ raw_time blend::LatestOriginTimeForProducer(const blend_producer& producer) cons
 	}
 
 	return raw;
-}
-
-void blend::Start()
-{
-	itsThreadCount = static_cast<short>(itsInfo->Size<forecast_time>());
-
-	vector<thread> threads;
-	threads.reserve(static_cast<size_t>(itsThreadCount));
-
-	itsInfo->Reset();
-	itsInfo->First<forecast_type>();
-	itsInfo->First<level>();
-	itsInfo->First<param>();
-
-	for (unsigned short i = 0; i < itsThreadCount; i++)
-	{
-		threads.push_back(thread(&blend::Run, this, i));
-	}
-
-	for (auto&& t : threads)
-	{
-		t.join();
-	}
-
-	Finish();
 }
 
 // Read the configuration and set plugin properties:
@@ -330,7 +265,7 @@ void blend::Process(shared_ptr<const plugin_configuration> conf)
 	}
 	params.push_back(param(p));
 
-	PrimaryDimension(kTimeDimension);
+	itsThreadDistribution = ThreadDistribution::kThreadForForecastTypeAndLevel;
 	SetParams(params);
 	Start();
 }
@@ -703,6 +638,16 @@ void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short 
 
 		ftime.OriginDateTime().Adjust(kHourResolution, originTimeStep);
 	}
+
+	// Remove grid so it won't be written: blend is manually writing out grids with a separate info.
+	// Previously blend implemented Start() and prevented it from being written, but this is not
+	// allowed now. Blend should also be fixed so that we don't need this workaround.
+
+	auto b = targetInfo->Base();
+	b->grid = nullptr;
+	b->data.Clear();
+
+	targetInfo->Base(b);
 }
 
 static std::vector<info_t> FetchRawGrids(shared_ptr<info<double>> targetInfo, shared_ptr<plugin_configuration> cnf,
@@ -1108,6 +1053,11 @@ void blend::WriteToFile(const info_t targetInfo, write_options writeOptions)
 
 	aWriter->WriteOptions(writeOptions);
 	auto tempInfo = make_shared<info<double>>(*targetInfo);
+
+	if (targetInfo->IsValidGrid() == false)
+	{
+		return;
+	}
 
 	if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
 	{

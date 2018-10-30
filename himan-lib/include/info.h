@@ -181,6 +181,17 @@ class iterator
 	 * @return Reference to current value or throw exception
 	 */
 
+	U& At()
+	{
+		if (itsIndex != kIteratorResetValue && itsIndex < itsElements.size())
+		{
+			return itsElements[itsIndex];
+		}
+
+		std::cerr << ClassName() + ": Invalid index value: " + std::to_string(itsIndex) << std::endl;
+		himan::Abort();
+	}
+
 	const U& At() const
 	{
 		if (itsIndex != kIteratorResetValue && itsIndex < itsElements.size())
@@ -313,6 +324,12 @@ class iterator
 	{
 		itsElements.clear();
 	}
+
+	std::vector<U> Values() const
+	{
+		return itsElements;
+	}
+
 	/**
 	 * @brief Write object to stream
 	 */
@@ -629,7 +646,17 @@ class info
 		return itsParamIterator.At();
 	}
 
+	param& Param()
+	{
+		return itsParamIterator.At();
+	}
+
 	const level& Level() const
+	{
+		return itsLevelIterator.At();
+	}
+
+	level& Level()
 	{
 		return itsLevelIterator.At();
 	}
@@ -639,7 +666,17 @@ class info
 		return itsTimeIterator.At();
 	}
 
+	forecast_time& Time()
+	{
+		return itsTimeIterator.At();
+	}
+
 	const forecast_type& ForecastType() const
+	{
+		return itsForecastTypeIterator.At();
+	}
+
+	forecast_type& ForecastType()
 	{
 		return itsForecastTypeIterator.At();
 	}

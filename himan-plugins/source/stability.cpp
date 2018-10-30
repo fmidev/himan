@@ -92,9 +92,9 @@ void stability::Process(std::shared_ptr<const plugin_configuration> conf)
 	stability_cuda::itsBottomLevel = itsBottomLevel;
 #endif
 
-	PrimaryDimension(kTimeDimension);
+	itsThreadDistribution = ThreadDistribution::kThreadForForecastTypeAndTime;
 
-	itsInfo->Iterator<level>().Clear();
+	itsLevelIterator.Clear();
 
 	SetParams({EBSParam, LIParam, SIParam, CAPESParam}, {Height0Level});
 	SetParams({BSParam}, {OneKMLevel, ThreeKMLevel, SixKMLevel});
@@ -629,29 +629,6 @@ pair<vec, vec> GetSRHSourceData(const shared_ptr<info<double>>& myTargetInfo, sh
 	}
 
 	return make_pair(Uid, Vid);
-}
-
-void stability::RunTimeDimension(info_t myTargetInfo, unsigned short threadIndex)
-{
-	myTargetInfo->First<level>();
-	while (NextExcludingLevel(*myTargetInfo))
-	{
-		if (itsConfiguration->UseDynamicMemoryAllocation())
-		{
-			AllocateMemory(*myTargetInfo);
-		}
-
-		ASSERT(myTargetInfo->Data().Size() > 0);
-
-		Calculate(myTargetInfo, threadIndex);
-
-		if (itsConfiguration->StatisticsEnabled())
-		{
-			itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Data().MissingCount());
-			itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data().Size());
-		}
-	}
-	WriteToFile(myTargetInfo);
 }
 
 void stability::WriteToFile(const info_t targetInfo, write_options writeOptions)

@@ -80,7 +80,7 @@ class luatool : public compiled_plugin, public compiled_plugin_base
 	void Run(info_t myTargetInfo, unsigned short threadIndex);
 
    private:
-	void Calculate(std::shared_ptr<info<double>> theTargetInfo, unsigned short theThreadIndex);
+	void Calculate(std::shared_ptr<info<double>> theTargetInfo, unsigned short theThreadIndex) override;
 	void InitLua();
 	void ResetVariables(info_t myTargetInfo);
 	bool ReadFile(const std::string& luaFile);
