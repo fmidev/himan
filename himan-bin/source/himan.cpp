@@ -356,35 +356,25 @@ int main(int argc, char** argv)
 		{
 			plugin_timing t = pluginTimes[i];
 
-			cout << t.plugin_name;
+			cout << setw(25) << left << t.plugin_name;
 
 			if (t.order_number > 1)
 			{
 				cout << " #" << t.order_number;
 			}
 
-			string indent = "\t\t\t\t";
+			// c++ string formatting really is unnecessarily hard
+			stringstream ss;
 
-			if (t.plugin_name.length() < 6)
-			{
-				indent = "\t\t\t";
-			}
-			else if (t.plugin_name.length() < 12)
-			{
-				indent = "\t\t";
-			}
-			else if (t.plugin_name.length() < 18)
-			{
-				indent = "\t";
-			}
+			ss << "("
+			   << static_cast<int>(((static_cast<double>(t.time_elapsed) / static_cast<double>(totalTime)) * 100))
+			   << "%)";
 
-			cout << indent << t.time_elapsed << " ms\t("
-			     << static_cast<int>(((static_cast<double>(t.time_elapsed) / static_cast<double>(totalTime)) * 100))
-			     << "%)" << endl;
+			cout << setw(8) << right << t.time_elapsed << " ms " << setw(5) << right << ss.str() << endl;
 		}
 
-		cout << "------------------------------------" << endl;
-		cout << "Total duration:\t\t" << totalTime << " ms" << endl;
+		cout << "-------------------------------------------" << endl;
+		cout << setw(25) << left << "Total duration:" << setw(8) << right << totalTime << " ms" << endl;
 
 		if (conf->DatabaseType() == kRadon && conf->FileWriteOption() == kDatabase)
 		{
