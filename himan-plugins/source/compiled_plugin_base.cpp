@@ -147,27 +147,61 @@ void compiled_plugin_base::WriteToFile(const shared_ptr<info<T>> targetInfo, wri
 
 	auto tempInfo = make_shared<info<T>>(*targetInfo);
 
-	tempInfo->template Reset<param>();
-
-	while (tempInfo->template Next<param>())
+	// TODO: should work for all thread distribution types
+	if (itsThreadDistribution == ThreadDistribution::kThreadForForecastTypeAndTime)
 	{
-		if (!tempInfo->IsValidGrid())
-		{
-			continue;
-		}
+		// LOOP over levels as well
+		tempInfo->template Reset<level>();
 
-		if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
+		while (tempInfo->template Next<level>())
 		{
-			aWriter->ToFile(tempInfo, itsConfiguration);
-		}
-		else
-		{
-			lock_guard<mutex> lock(singleFileWriteMutex);
+			tempInfo->template Reset<param>();
 
-			aWriter->ToFile(tempInfo, itsConfiguration, itsConfiguration->ConfigurationFile());
+			while (tempInfo->template Next<param>())
+			{
+				if (!tempInfo->IsValidGrid())
+				{
+					continue;
+				}
+
+				if (itsConfiguration->FileWriteOption() == kDatabase ||
+				    itsConfiguration->FileWriteOption() == kMultipleFiles)
+				{
+					aWriter->ToFile(tempInfo, itsConfiguration);
+				}
+				else
+				{
+					lock_guard<mutex> lock(singleFileWriteMutex);
+
+					aWriter->ToFile(tempInfo, itsConfiguration, itsConfiguration->ConfigurationFile());
+				}
+			}
 		}
 	}
+	else
+	{
+		tempInfo->template Reset<param>();
 
+		while (tempInfo->template Next<param>())
+		{
+			if (!tempInfo->IsValidGrid())
+			{
+				continue;
+			}
+
+			if (itsConfiguration->FileWriteOption() == kDatabase ||
+			    itsConfiguration->FileWriteOption() == kMultipleFiles)
+			{
+				aWriter->ToFile(tempInfo, itsConfiguration);
+			}
+			else
+			{
+				lock_guard<mutex> lock(singleFileWriteMutex);
+
+				aWriter->ToFile(tempInfo, itsConfiguration, itsConfiguration->ConfigurationFile());
+			}
+		}
+	}
 	if (itsConfiguration->UseDynamicMemoryAllocation())
 	{
 		DeallocateMemory(*targetInfo);
