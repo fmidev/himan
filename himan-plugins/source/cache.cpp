@@ -174,6 +174,7 @@ void cache::Replace(shared_ptr<info<T>> anInfo, bool pin)
 }
 
 template void cache::Replace<double>(shared_ptr<info<double>>, bool);
+template void cache::Replace<float>(shared_ptr<info<float>>, bool);
 
 cache_pool* cache_pool::itsInstance = NULL;
 
@@ -295,33 +296,17 @@ void cache_pool::Clean()
 
 namespace
 {
-template <typename T, typename U>
-shared_ptr<himan::info<U>> Convert(const shared_ptr<himan::info<T>>& fnd)
-{
-	// Since data type needs to be changed, we have to create new info
-	auto ret = make_shared<himan::info<U>>(fnd->ForecastType(), fnd->Time(), fnd->Level(), fnd->Param());
-	ret->Producer(fnd->Producer());
-
-	auto b = make_shared<himan::base<U>>();
-	b->grid = shared_ptr<himan::grid>(fnd->Grid()->Clone());
-	b->data = fnd->Data();
-
-	ret->Create(b);
-
-	return ret;
-}
-
 template <typename T>
 struct cache_visitor : public boost::static_visitor<std::shared_ptr<himan::info<T>>>
 {
    public:
 	shared_ptr<himan::info<T>> operator()(shared_ptr<himan::info<double>>& fnd) const
 	{
-		return Convert<double, T>(fnd);
+		return make_shared<himan::info<T>>(*fnd);
 	}
 	shared_ptr<himan::info<T>> operator()(shared_ptr<himan::info<float>>& fnd) const
 	{
-		return Convert<float, T>(fnd);
+		return make_shared<himan::info<T>>(*fnd);
 	}
 };
 }  // namespace
@@ -345,7 +330,7 @@ shared_ptr<himan::info<T>> cache_pool::GetInfo(const string& uniqueName, bool st
 	{
 		// if data is directly found from cache with correct data type,
 		// return that
-		return make_shared<info<T>> (*boost::get<std::shared_ptr<info<T>>>(it->second.info));
+		return make_shared<info<T>>(*boost::get<std::shared_ptr<info<T>>>(it->second.info));
 	}
 	catch (boost::bad_get& e)
 	{

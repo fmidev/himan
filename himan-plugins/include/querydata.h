@@ -91,22 +91,6 @@ class querydata : public io_plugin
 	bool UseDatabase() const;
 
    private:
-	NFmiTimeDescriptor CreateTimeDescriptor(info<double>& info, bool activeOnly);
-	NFmiParamDescriptor CreateParamDescriptor(info<double>& info, bool activeOnly);
-	NFmiHPlaceDescriptor CreateHPlaceDescriptor(info<double>& info, bool activeOnly);
-	NFmiVPlaceDescriptor CreateVPlaceDescriptor(info<double>& info, bool activeOnly);
-
-	/**
-	 * @brief Copy data from info to querydata
-	 *
-	 * @param theInfo
-	 * @param theQueryData
-	 * @return
-	 */
-	bool CopyData(info<double>& theInfo, NFmiFastQueryInfo& qinfo, bool applyScaleAndBase) const;
-
-	NFmiHPlaceDescriptor CreateGrid(info<double>& info) const;
-	NFmiHPlaceDescriptor CreatePoint(info<double>& info) const;
 };
 
 #ifndef HIMAN_AUXILIARY_INCLUDE

@@ -36,7 +36,8 @@ HPFileType FileType(const std::string& theFile);
  * @brief Creates a neons-style filename with path, but without file extension
  */
 
-std::string MakeFileName(HPFileWriteOption fileWriteOption, const info<double>& info, const configuration& conf);
+template <typename T>
+std::string MakeFileName(HPFileWriteOption fileWriteOption, const info<T>& info, const configuration& conf);
 
 /**
  * @brief Splits a string and fills the gaps if requested
@@ -152,9 +153,10 @@ void Unpack(std::vector<std::shared_ptr<info<T>>> infos, bool addToCache = true)
  * @return pair of dA/dx,dA/Dy
  */
 
-std::pair<himan::matrix<double>, himan::matrix<double>> CentralDifference(himan::matrix<double>& A,
-                                                                          std::vector<double>& dx,
-                                                                          std::vector<double>& dy);
+template <typename T>
+std::pair<himan::matrix<T>, himan::matrix<T>> CentralDifference(himan::matrix<T>& A,
+                                                                          std::vector<T>& dx,
+                                                                          std::vector<T>& dy);
 
 /**
  * @brief Round a double to requested precision
@@ -205,6 +207,8 @@ std::string Expand(const std::string& in);
  * @param name identifier for vector
  */
 
+template <typename T>
+void DumpVector(const std::vector<T>& arr, const std::string& name = "");
 void DumpVector(const std::vector<double>& arr, const std::string& name = "");
 
 /**
@@ -213,6 +217,7 @@ void DumpVector(const std::vector<double>& arr, const std::string& name = "");
 
    @return value of the supplied key
  */
+
 std::string GetEnv(const std::string& key);
 
 /**
@@ -227,7 +232,8 @@ std::string GetEnv(const std::string& key);
  * 134254,2017-04-13 00:00:00,2017-04-13 03:00:00,HEIGHT,0,-1,1,-1,T-K,5.3
  */
 
-info_t CSVToInfo(const std::vector<std::string>& csv);
+template <typename T>
+std::shared_ptr<info<T>> CSVToInfo(const std::vector<std::string>& csv);
 
 /**
  * @brief Return the percentage of missing values in info for all grids.

@@ -401,13 +401,14 @@ class info
 {
    public:
 	friend class himan::plugin::compiled_plugin_base;
+	template <typename>
+	friend class info;  // for templated copy constructor
 
 	info() = default;
 	~info() = default;
 
 	/**
 	 * @brief Copy constructor for info class. Will preserve data backend.
-
 	 * New info has the same data backend matrix as the original one.
 	 * This means that multiple threads can access the same data with
 	 * different infos ( --> descriptor positions ). Clone will have the
@@ -415,6 +416,11 @@ class info
 	 */
 
 	info(const info& other);
+
+	// 'coercion constructor' to create info from an info with a different data type
+	template <typename V>
+	info(const info<V>& other);
+
 	info(const std::vector<forecast_type>& ftypes, const std::vector<forecast_time>& times,
 	     const std::vector<level>& levels, const std::vector<param>& params);
 	info(const forecast_type& ftype, const forecast_time& time, const level& level, const param& param);
@@ -895,8 +901,8 @@ class info
 	void serialize(Archive& ar)
 	{
 		ar(CEREAL_NVP(itsLevelIterator), CEREAL_NVP(itsTimeIterator), CEREAL_NVP(itsParamIterator),
-		   CEREAL_NVP(itsForecastTypeIterator), CEREAL_NVP(itsDimensions), CEREAL_NVP(itsBaseGrid),
-		   CEREAL_NVP(itsLogger), CEREAL_NVP(itsProducer), CEREAL_NVP(itsLocationIndex));
+		   CEREAL_NVP(itsForecastTypeIterator), CEREAL_NVP(itsDimensions), CEREAL_NVP(itsLogger),
+		   CEREAL_NVP(itsProducer), CEREAL_NVP(itsLocationIndex));
 	}
 #endif
 };
