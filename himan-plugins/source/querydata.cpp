@@ -237,18 +237,6 @@ NFmiHPlaceDescriptor CreateGrid(himan::info<T>& info)
 
 	ASSERT(theArea);
 
-#ifdef DEBUG
-	OGRSpatialReference crs;
-	const auto wkt = theArea->WKT();
-	if (crs.SetFromUserInput(wkt.c_str()) == OGRERR_NONE)
-	{
-		char* proj4 = 0;
-		crs.exportToProj4(&proj4);
-		itsLogger.Trace(string(proj4));
-		OGRFree(proj4);
-	}
-#endif
-
 	NFmiGrid theGrid(theArea, std::dynamic_pointer_cast<himan::regular_grid>(info.Grid())->Ni(),
 	                 std::dynamic_pointer_cast<himan::regular_grid>(info.Grid())->Nj());
 
