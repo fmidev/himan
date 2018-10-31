@@ -318,7 +318,6 @@ void cape::Process(shared_ptr<const plugin_configuration> conf)
 	theParams.push_back(CAPE3kmParam);
 	theParams.push_back(CINParam);
 
-	itsThreadDistribution = ThreadDistribution::kThreadForForecastTypeAndTime;
 	// Discard the levels defined in json
 	itsLevelIterator.Clear();
 
