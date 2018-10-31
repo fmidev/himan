@@ -57,10 +57,7 @@ class radon : public auxiliary_plugin
 	{
 		return kAuxiliary;
 	}
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(0, 1);
-	}
+
 	/**
 	 * @brief Return filename of a field
 	 */

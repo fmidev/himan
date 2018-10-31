@@ -38,10 +38,6 @@ class tropopause : public compiled_plugin, private compiled_plugin_base
 	{
 		return kCompiled;
 	}
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(0, 1);
-	}
 
    private:
 	virtual void Calculate(std::shared_ptr<info<double>> theTargetInfo, unsigned short theThreadIndex);

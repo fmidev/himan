@@ -731,7 +731,7 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 
 		for (const auto& plugin : thePlugins)
 		{
-			cout << "Plugin '" << plugin->ClassName() << "'" << endl << "\tversion " << plugin->Version() << endl;
+			cout << "Plugin '" << plugin->ClassName() << "'" << endl;
 
 			switch (plugin->PluginClass())
 			{

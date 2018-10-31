@@ -63,10 +63,7 @@ class cache : public auxiliary_plugin
 	{
 		return kAuxiliary;
 	};
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(1, 2);
-	}
+
 	size_t Size() const;
 
 	template <typename T>
@@ -119,10 +116,6 @@ class cache_pool : public auxiliary_plugin
 	{
 		return kAuxiliary;
 	};
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(1, 1);
-	}
 	void UpdateTime(const std::string& uniqueName);
 	void CacheLimit(int theCacheLimit);
 

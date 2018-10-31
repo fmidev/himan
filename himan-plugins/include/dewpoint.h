@@ -42,10 +42,6 @@ class dewpoint : public compiled_plugin, private compiled_plugin_base
 	{
 		return kCompiled;
 	}
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(1, 0);
-	}
 
    private:
 	virtual void Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex);

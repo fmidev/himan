@@ -41,10 +41,6 @@ class hybrid_pressure : public compiled_plugin, private compiled_plugin_base
 	{
 		return kCompiled;
 	}
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(0, 1);
-	}
 	virtual void WriteToFile(const info_t targetInfo, write_options opts = write_options()) override;
 
    private:

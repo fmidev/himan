@@ -50,10 +50,7 @@ class luatool : public compiled_plugin, public compiled_plugin_base
 	{
 		return kCompiled;
 	}
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(1, 1);
-	}
+
 	void Process(std::shared_ptr<const plugin_configuration> configuration);
 
 	std::shared_ptr<info<double>> FetchInfo(const forecast_time& theTime, const level& theLevel,

@@ -52,10 +52,7 @@ class fetcher : public auxiliary_plugin
 	{
 		return kAuxiliary;
 	}
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(1, 1);
-	}
+
 	/**
 	 * @brief Multi-param overcoat for the other Fetch() function
 	 *

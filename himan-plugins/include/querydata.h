@@ -37,10 +37,6 @@ class querydata : public io_plugin
 	{
 		return kAuxiliary;
 	}
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(1, 1);
-	}
 
 	/**
 	 * @brief Write info contents to a querydata file
