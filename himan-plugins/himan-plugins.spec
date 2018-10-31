@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.10.30
+Version: 18.10.31
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 18.10.30
+Requires: himan-lib >= 18.10.31
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 18.2.12
@@ -112,7 +112,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
-* Tue Oct 30 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.30-1.fmi
+* Tue Oct 31 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.31-1.fmi
+- Add float support for Himan core
 - Reworked thread work distribution
 * Mon Oct 29 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.29-1.fmi
 - Minor changes to blend
