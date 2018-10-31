@@ -14,6 +14,8 @@
 #include "logger.h"
 #include "plugin_factory.h"
 #include "radon.h"
+#include "statistics.h"
+#include "timer.h"
 #include "util.h"
 #include <boost/program_options.hpp>
 #include <future>
@@ -193,12 +195,8 @@ void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
 
 void ExecutePlugin(const shared_ptr<plugin_configuration>& pc, vector<plugin_timing>& pluginTimes)
 {
-	timer aTimer;
+	timer aTimer(true);
 	logger aLogger("himan");
-	if (pc->StatisticsEnabled())
-	{
-		aTimer.Start();
-	}
 
 	auto aPlugin = dynamic_pointer_cast<plugin::compiled_plugin>(plugin_factory::Instance()->Plugin(pc->Name()));
 
@@ -206,11 +204,6 @@ void ExecutePlugin(const shared_ptr<plugin_configuration>& pc, vector<plugin_tim
 	{
 		aLogger.Error("Unable to declare plugin " + pc->Name());
 		return;
-	}
-
-	if (pc->StatisticsEnabled())
-	{
-		pc->StartStatistics();
 	}
 
 	aLogger.Info("Calculating " + pc->Name());
@@ -227,12 +220,14 @@ void ExecutePlugin(const shared_ptr<plugin_configuration>& pc, vector<plugin_tim
 
 	if (pc->StatisticsEnabled())
 	{
+		aTimer.Stop();
+		const auto totalTime = aTimer.GetTime();
+		pc->Statistics()->AddToTotalTime(totalTime);
 		pc->WriteStatistics();
 
-		aTimer.Stop();
 		plugin_timing t;
 		t.plugin_name = pc->Name();
-		t.time_elapsed = aTimer.GetTime();
+		t.time_elapsed = totalTime;
 		t.order_number = HighestOrderNumber(pluginTimes, pc->Name());
 
 		pluginTimes.push_back(t);

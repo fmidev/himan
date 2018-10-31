@@ -9,8 +9,8 @@
 #include "compiled_plugin.h"
 #include "info.h"
 #include "plugin_configuration.h"
+#include "timer.h"
 #include <boost/iterator/zip_iterator.hpp>
-#include <mutex>
 #include <write_options.h>
 
 template <class... Conts>

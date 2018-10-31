@@ -1,11 +1,8 @@
-/*
- * writer.cpp
- *
- */
-
 #include "writer.h"
 #include "logger.h"
 #include "plugin_factory.h"
+#include "statistics.h"
+#include "timer.h"
 #include "util.h"
 #include <boost/filesystem.hpp>
 #include <fstream>

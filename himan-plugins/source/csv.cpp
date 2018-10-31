@@ -1,6 +1,7 @@
 #include "csv.h"
 #include "logger.h"
 #include "point_list.h"
+#include "timer.h"
 #include "util.h"
 #include <algorithm>
 #include <boost/filesystem.hpp>

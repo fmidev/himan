@@ -1,8 +1,3 @@
-/**
- * @file plugin_configuration.h
- *
- */
-
 #ifndef PLUGIN_CONFIGURATION_H
 #define PLUGIN_CONFIGURATION_H
 
@@ -12,12 +7,12 @@
 #include "grid.h"
 #include "himan_common.h"
 #include "level.h"
-#include "statistics.h"
 #include <map>
 #include <utility>
 
 namespace himan
 {
+class statistics;
 class plugin_configuration : public configuration
 {
    public:
@@ -109,7 +104,6 @@ class plugin_configuration : public configuration
 	std::shared_ptr<statistics> Statistics() const;
 
 	bool StatisticsEnabled() const;
-	void StartStatistics();
 	void WriteStatistics();
 
 	const std::vector<level>& Levels() const

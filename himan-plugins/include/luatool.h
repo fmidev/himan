@@ -65,17 +65,6 @@ class luatool : public compiled_plugin, public compiled_plugin_base
 	void WriteToFile(const info_t targetInfo, write_options opts = write_options()) override;
 	void WriteToFile(const info_t targetInfo);
 
-   protected:
-	/* These functions exists because we need to stop himan
-	 * from writing data to disk when calculation finished.
-	 *
-	 * All data write in luatool should be initiated from the
-	 * lua scripts!
-	 */
-
-	void Finish();
-	void Run(info_t myTargetInfo, unsigned short threadIndex);
-
    private:
 	void Calculate(std::shared_ptr<info<double>> theTargetInfo, unsigned short theThreadIndex) override;
 	void InitLua();

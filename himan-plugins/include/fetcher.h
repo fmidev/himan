@@ -24,6 +24,7 @@
 #include "info.h"
 #include "plugin_configuration.h"
 #include "search_options.h"
+#include "timer.h"
 
 namespace himan
 {

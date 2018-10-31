@@ -11,7 +11,7 @@
 #include "numerical_functions_impl.h"
 #include "plugin_factory.h"
 #include "radon.h"
-//#include "reduced_gaussian_grid.h"
+#include "statistics.h"
 #include "stereographic_grid.h"
 #include <boost/filesystem.hpp>
 #include <boost/thread.hpp>
@@ -1334,29 +1334,6 @@ void BindPlugins(lua_State* L)
 }
 
 // clang-format on
-
-void luatool::Run(info_t myTargetInfo, unsigned short threadIndex)
-{
-	while (Next(*myTargetInfo))
-	{
-		Calculate(myTargetInfo, threadIndex);
-
-		if (itsConfiguration->StatisticsEnabled())
-		{
-			itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Data().MissingCount());
-			itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data().Size());
-		}
-	}
-}
-
-void luatool::Finish()
-{
-	if (itsConfiguration->StatisticsEnabled())
-	{
-		itsTimer.Stop();
-		itsConfiguration->Statistics()->AddToProcessingTime(itsTimer.GetTime());
-	}
-}
 
 std::shared_ptr<info<double>> luatool::FetchInfo(const forecast_time& theTime, const level& theLevel,
                                                  const param& theParam) const

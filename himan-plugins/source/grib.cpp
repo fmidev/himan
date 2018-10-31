@@ -1,8 +1,3 @@
-/**
- * @file grib.cpp
- *
- */
-
 #include "grib.h"
 #include "NFmiGrib.h"
 #include "grid.h"
@@ -13,6 +8,7 @@
 #include "producer.h"
 #include "reduced_gaussian_grid.h"
 #include "stereographic_grid.h"
+#include "timer.h"
 #include "util.h"
 #include <algorithm>
 #include <boost/filesystem.hpp>
