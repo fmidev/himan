@@ -43,10 +43,10 @@ info<T>::info(const info<T>& other)
 template <typename T>
 template <typename V>
 info<T>::info(const info<V>& other)
-    : itsLevelIterator(other.Iterator<level>()),
-      itsTimeIterator(other.Iterator<forecast_time>()),
-      itsParamIterator(other.Iterator<param>()),
-      itsForecastTypeIterator(other.Iterator<forecast_type>()),
+    : itsLevelIterator(other.template Iterator<level>()),
+      itsTimeIterator(other.template Iterator<forecast_time>()),
+      itsParamIterator(other.template Iterator<param>()),
+      itsForecastTypeIterator(other.template Iterator<forecast_type>()),
       itsProducer(other.Producer()),
       itsLocationIndex(other.LocationIndex())
 {
