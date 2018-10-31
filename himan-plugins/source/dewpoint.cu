@@ -33,10 +33,10 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 	double* d_rh = 0;
 	double* d_td = 0;
 
-	auto TInfo =
-	    cuda::Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("T-K"), myTargetInfo->ForecastType());
-	auto RHInfo = cuda::Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level(), {param("RH-PRCNT"), param("RH-0TO1")},
-	                          myTargetInfo->ForecastType());
+	auto TInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("T-K"),
+	                                 myTargetInfo->ForecastType());
+	auto RHInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(),
+	                                  {param("RH-PRCNT"), param("RH-0TO1")}, myTargetInfo->ForecastType());
 
 	if (!TInfo || !RHInfo)
 	{
@@ -49,8 +49,8 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 	CUDA_CHECK(cudaMalloc((void**)&d_rh, memsize));
 	CUDA_CHECK(cudaMalloc((void**)&d_td, memsize));
 
-	cuda::PrepareInfo(TInfo, d_t, stream);
-	cuda::PrepareInfo(RHInfo, d_rh, stream);
+	cuda::PrepareInfo<double>(TInfo, d_t, stream);
+	cuda::PrepareInfo<double>(RHInfo, d_rh, stream);
 
 	double RHScale = 1;
 
@@ -68,7 +68,7 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 
 	DewpointKernel<double><<<gridSize, blockSize, 0, stream>>>(d_t, d_rh, d_td, RHScale, N);
 
-	cuda::ReleaseInfo(myTargetInfo, d_td, stream);
+	cuda::ReleaseInfo<double>(myTargetInfo, d_td, stream);
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 

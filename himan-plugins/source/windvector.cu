@@ -86,8 +86,10 @@ void himan::plugin::windvector_cuda::RunCuda(std::shared_ptr<const plugin_config
 
 	// Fetch U & V, unpack to device, do not copy to host
 
-	auto UInfo = cuda::Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level(), UParam, myTargetInfo->ForecastType());
-	auto VInfo = cuda::Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level(), VParam, myTargetInfo->ForecastType());
+	auto UInfo =
+	    cuda::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(), UParam, myTargetInfo->ForecastType());
+	auto VInfo =
+	    cuda::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(), VParam, myTargetInfo->ForecastType());
 
 	if (!UInfo || !VInfo)
 	{
@@ -127,17 +129,17 @@ void himan::plugin::windvector_cuda::RunCuda(std::shared_ptr<const plugin_config
 	c->Insert(UInfo);
 	c->Insert(VInfo);
 
-        if (myTargetInfo->Level().Type() == kHybrid)
-        {
-                const size_t paramIndex = myTargetInfo->Index<param>();
+	if (myTargetInfo->Level().Type() == kHybrid)
+	{
+		const size_t paramIndex = myTargetInfo->Index<param>();
 
-                for (myTargetInfo->Reset<param>(); myTargetInfo->Next<param>();)
-                {
-                        myTargetInfo->Set<level>(UInfo->Level());
-                }
+		for (myTargetInfo->Reset<param>(); myTargetInfo->Next<param>();)
+		{
+			myTargetInfo->Set<level>(UInfo->Level());
+		}
 
-                myTargetInfo->Index<param>(paramIndex);
-        }
+		myTargetInfo->Index<param>(paramIndex);
+	}
 
 	// dims
 

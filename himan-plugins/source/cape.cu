@@ -40,7 +40,8 @@ extern float Max(const std::vector<float>& vec);
 extern std::vector<float> Convert(const std::vector<double>& arr);
 extern std::vector<double> Convert(const std::vector<float>& arr);
 extern std::tuple<vec2d, vec2d, vec2d> GetSampledSourceData(std::shared_ptr<const plugin_configuration> conf,
-                                                            info_t myTargetInfo, const std::vector<float>& P500m,
+                                                            std::shared_ptr<info<float>> myTargetInfo,
+                                                            const std::vector<float>& P500m,
                                                             const std::vector<float>& Psurface, const level& startLevel,
                                                             const level& stopLevel);
 
@@ -577,7 +578,7 @@ __global__ void MixingRatioFinalizeKernel(float* __restrict__ d_T, float* __rest
 }
 
 cape_source cape_cuda::GetHighestThetaEValuesGPU(const std::shared_ptr<const plugin_configuration>& conf,
-                                                 std::shared_ptr<info<double>> myTargetInfo)
+                                                 std::shared_ptr<info<float>> myTargetInfo)
 {
 	himan::level curLevel = itsBottomLevel;
 
@@ -628,10 +629,12 @@ cape_source cape_cuda::GetHighestThetaEValuesGPU(const std::shared_ptr<const plu
 
 	while (true)
 	{
-		auto TInfo = cuda::Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
+		auto TInfo =
+		    cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
 		auto RHInfo =
-		    cuda::Fetch(conf, myTargetInfo->Time(), curLevel, param("RH-PRCNT"), myTargetInfo->ForecastType());
-		auto PInfo = cuda::Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
+		    cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("RH-PRCNT"), myTargetInfo->ForecastType());
+		auto PInfo =
+		    cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
 
 		if (!TInfo || !RHInfo || !PInfo)
 		{
@@ -689,7 +692,7 @@ cape_source cape_cuda::GetHighestThetaEValuesGPU(const std::shared_ptr<const plu
 }
 
 cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_configuration>& conf,
-                                                   std::shared_ptr<info<double>> myTargetInfo)
+                                                   std::shared_ptr<info<float>> myTargetInfo)
 {
 	myTargetInfo->FirstValidGrid();
 	const size_t N = myTargetInfo->Data().Size();
@@ -714,8 +717,8 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	tp.HeightInMeters(false);
 	mr.HeightInMeters(false);
 
-	info_t PInfo =
-	    cuda::Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
+	auto PInfo =
+	    cuda::Fetch<double>(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
 
 	if (!PInfo || PInfo->Data().MissingCount() == PInfo->SizeLocations())
 	{
@@ -834,7 +837,8 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	float* d_Psurf = 0;
 	CUDA_CHECK(cudaMalloc((float**)&d_Psurf, N * sizeof(float)));
 
-	auto Psurf = cuda::Fetch(conf, myTargetInfo->Time(), itsBottomLevel, param("P-HPA"), myTargetInfo->ForecastType());
+	auto Psurf =
+	    cuda::Fetch<float>(conf, myTargetInfo->Time(), itsBottomLevel, param("P-HPA"), myTargetInfo->ForecastType());
 	cuda::PrepareInfo(Psurf, d_Psurf, stream);
 
 	InitializeArray<float>(d_T, himan::MissingFloat(), N, stream);
@@ -859,11 +863,11 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 
 	CUDA_CHECK(cudaStreamDestroy(stream));
 
-	return std::make_tuple(T, TD, Convert(VEC(Psurf)));
+	return std::make_tuple(T, TD, VEC(Psurf));
 }
 
 std::pair<std::vector<float>, std::vector<float>> cape_cuda::GetLFCGPU(
-    const std::shared_ptr<const plugin_configuration>& conf, std::shared_ptr<info<double>> myTargetInfo,
+    const std::shared_ptr<const plugin_configuration>& conf, std::shared_ptr<info<float>> myTargetInfo,
     std::vector<float>& T, std::vector<float>& P, std::vector<float>& TenvLCL)
 {
 	auto h = GET_PLUGIN(hitool);
@@ -930,8 +934,10 @@ std::pair<std::vector<float>, std::vector<float>> cape_cuda::GetLFCGPU(
 
 	level curLevel = levels.first;
 
-	auto prevPenvInfo = cuda::Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
-	auto prevTenvInfo = cuda::Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
+	auto prevPenvInfo =
+	    cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
+	auto prevTenvInfo =
+	    cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
 
 	cuda::PrepareInfo(prevTenvInfo, d_prevTenv, stream);
 	cuda::PrepareInfo(prevPenvInfo, d_prevPenv, stream);
@@ -970,8 +976,10 @@ std::pair<std::vector<float>, std::vector<float>> cape_cuda::GetLFCGPU(
 	while (curLevel.Value() > stopLevel.first.Value())
 	{
 		// Get environment temperature and pressure values for this level
-		auto TenvInfo = cuda::Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
-		auto PenvInfo = cuda::Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
+		auto TenvInfo =
+		    cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
+		auto PenvInfo =
+		    cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
 
 		cuda::PrepareInfo(PenvInfo, d_Penv, stream);
 		cuda::PrepareInfo(TenvInfo, d_Tenv, stream);
@@ -1036,7 +1044,7 @@ std::pair<std::vector<float>, std::vector<float>> cape_cuda::GetLFCGPU(
 }
 
 void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration>& conf,
-                          std::shared_ptr<info<double>> myTargetInfo, const std::vector<float>& Tsource,
+                          std::shared_ptr<info<float>> myTargetInfo, const std::vector<float>& Tsource,
                           const std::vector<float>& Psource, const std::vector<float>& TLCL,
                           const std::vector<float>& PLCL, const std::vector<float>& ZLCL,
                           const std::vector<float>& PLFC, const std::vector<float>& ZLFC)
@@ -1063,9 +1071,9 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration>& con
 
 	level curLevel = itsBottomLevel;
 
-	auto prevZenvInfo = cuda::Fetch(conf, ftime, curLevel, param("HL-M"), ftype);
-	auto prevTenvInfo = cuda::Fetch(conf, ftime, curLevel, param("T-K"), ftype);
-	auto prevPenvInfo = cuda::Fetch(conf, ftime, curLevel, param("P-HPA"), ftype);
+	auto prevZenvInfo = cuda::Fetch<float>(conf, ftime, curLevel, param("HL-M"), ftype);
+	auto prevTenvInfo = cuda::Fetch<float>(conf, ftime, curLevel, param("T-K"), ftype);
+	auto prevPenvInfo = cuda::Fetch<float>(conf, ftime, curLevel, param("P-HPA"), ftype);
 
 	const size_t N = myTargetInfo->Data().Size();
 	const int blockSize = 256;
@@ -1150,9 +1158,9 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration>& con
 
 	while (curLevel.Value() > hPa100.first.Value())
 	{
-		auto ZenvInfo = cuda::Fetch(conf, ftime, curLevel, param("HL-M"), ftype);
-		auto TenvInfo = cuda::Fetch(conf, ftime, curLevel, param("T-K"), ftype);
-		auto PenvInfo = cuda::Fetch(conf, ftime, curLevel, param("P-HPA"), ftype);
+		auto ZenvInfo = cuda::Fetch<float>(conf, ftime, curLevel, param("HL-M"), ftype);
+		auto TenvInfo = cuda::Fetch<float>(conf, ftime, curLevel, param("T-K"), ftype);
+		auto PenvInfo = cuda::Fetch<float>(conf, ftime, curLevel, param("P-HPA"), ftype);
 
 		cuda::PrepareInfo(ZenvInfo, d_Zenv, stream);
 		cuda::PrepareInfo(PenvInfo, d_Penv, stream);
@@ -1212,11 +1220,11 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration>& con
 	CUDA_CHECK(cudaStreamDestroy(stream));
 
 	myTargetInfo->Find<param>(CINParam);
-	myTargetInfo->Data().Set(Convert(cinh));
+	myTargetInfo->Data().Set(cinh);
 }
 
 void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>& conf,
-                           std::shared_ptr<info<double>> myTargetInfo, const std::vector<float>& T,
+                           std::shared_ptr<info<float>> myTargetInfo, const std::vector<float>& T,
                            const std::vector<float>& P)
 {
 	ASSERT(T.size() == P.size());
@@ -1322,9 +1330,12 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>& co
 
 	level curLevel = levels.first;
 
-	auto prevZenvInfo = cuda::Fetch(conf, myTargetInfo->Time(), curLevel, param("HL-M"), myTargetInfo->ForecastType());
-	auto prevTenvInfo = cuda::Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
-	auto prevPenvInfo = cuda::Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
+	auto prevZenvInfo =
+	    cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("HL-M"), myTargetInfo->ForecastType());
+	auto prevTenvInfo =
+	    cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
+	auto prevPenvInfo =
+	    cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
 
 	cuda::PrepareInfo(prevZenvInfo, d_prevZenv, stream);
 	cuda::PrepareInfo(prevPenvInfo, d_prevPenv, stream);
@@ -1342,22 +1353,24 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>& co
 
 	thrust::device_ptr<unsigned char> dt_found = thrust::device_pointer_cast(d_found);
 
-	info_t PenvInfo, TenvInfo, ZenvInfo;
+	std::shared_ptr<info<float>> PenvInfo, TenvInfo, ZenvInfo;
 
 	while (curLevel.Value() > stopLevel.first.Value())
 	{
-		PenvInfo = cuda::Fetch(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
-		TenvInfo = cuda::Fetch(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
-		ZenvInfo = cuda::Fetch(conf, myTargetInfo->Time(), curLevel, param("HL-M"), myTargetInfo->ForecastType());
+		PenvInfo =
+		    cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
+		TenvInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
+		ZenvInfo =
+		    cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("HL-M"), myTargetInfo->ForecastType());
 
 		if (!PenvInfo || !TenvInfo || !ZenvInfo)
 		{
 			break;
 		}
 
-		cuda::PrepareInfo(ZenvInfo, d_Zenv, stream);
-		cuda::PrepareInfo(PenvInfo, d_Penv, stream);
-		cuda::PrepareInfo(TenvInfo, d_Tenv, stream);
+		cuda::PrepareInfo<float>(ZenvInfo, d_Zenv, stream);
+		cuda::PrepareInfo<float>(PenvInfo, d_Penv, stream);
+		cuda::PrepareInfo<float>(TenvInfo, d_Tenv, stream);
 
 		if (cape_cuda::itsUseVirtualTemperature)
 		{
@@ -1441,29 +1454,29 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>& co
 	CUDA_CHECK(cudaFree(d_LastELZ));
 
 	myTargetInfo->Find<param>(ELTParam);
-	myTargetInfo->Data().Set(Convert(ELT));
+	myTargetInfo->Data().Set(ELT);
 
 	myTargetInfo->Find<param>(ELPParam);
-	myTargetInfo->Data().Set(Convert(ELP));
+	myTargetInfo->Data().Set(ELP);
 
 	myTargetInfo->Find<param>(ELZParam);
-	myTargetInfo->Data().Set(Convert(ELZ));
+	myTargetInfo->Data().Set(ELZ);
 
 	myTargetInfo->Find<param>(LastELTParam);
-	myTargetInfo->Data().Set(Convert(LastELT));
+	myTargetInfo->Data().Set(LastELT);
 
 	myTargetInfo->Find<param>(LastELPParam);
-	myTargetInfo->Data().Set(Convert(LastELP));
+	myTargetInfo->Data().Set(LastELP);
 
 	myTargetInfo->Find<param>(LastELZParam);
-	myTargetInfo->Data().Set(Convert(LastELZ));
+	myTargetInfo->Data().Set(LastELZ);
 
 	myTargetInfo->Find<param>(CAPEParam);
-	myTargetInfo->Data().Set(Convert(CAPE));
+	myTargetInfo->Data().Set(CAPE);
 
 	myTargetInfo->Find<param>(CAPE1040Param);
-	myTargetInfo->Data().Set(Convert(CAPE1040));
+	myTargetInfo->Data().Set(CAPE1040);
 
 	myTargetInfo->Find<param>(CAPE3kmParam);
-	myTargetInfo->Data().Set(Convert(CAPE3km));
+	myTargetInfo->Data().Set(CAPE3km);
 }

@@ -42,18 +42,18 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 
 	// Allocate device arrays
 
-	float* d_t = 0;
-	float* d_p = 0;
-	float* d_vv = 0;
-	float* d_vv_ms = 0;
+	double* d_t = 0;
+	double* d_p = 0;
+	double* d_vv = 0;
+	double* d_vv_ms = 0;
 
 	const size_t N = myTargetInfo->SizeLocations();
-	const size_t memsize = N * sizeof(float);
+	const size_t memsize = N * sizeof(double);
 
-	auto TInfo =
-	    cuda::Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("T-K"), myTargetInfo->ForecastType());
-	auto VVInfo =
-	    cuda::Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("VV-PAS"), myTargetInfo->ForecastType());
+	auto TInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("T-K"),
+	                                 myTargetInfo->ForecastType());
+	auto VVInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("VV-PAS"),
+	                                  myTargetInfo->ForecastType());
 
 	if (!TInfo || !VVInfo)
 	{
@@ -64,8 +64,8 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 	CUDA_CHECK(cudaMalloc((void**)&d_t, memsize));
 	CUDA_CHECK(cudaMalloc((void**)&d_vv, memsize));
 
-	cuda::PrepareInfo(TInfo, d_t, stream);
-	cuda::PrepareInfo(VVInfo, d_vv, stream);
+	cuda::PrepareInfo<double>(TInfo, d_t, stream);
+	cuda::PrepareInfo<double>(VVInfo, d_vv, stream);
 
 	// dims
 
@@ -74,7 +74,7 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 
 	bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
 
-	const float vv_scale = (myTargetInfo->Param().Name() == "VV-MMS") ? 1000. : 1.;
+	const double vv_scale = (myTargetInfo->Param().Name() == "VV-MMS") ? 1000. : 1.;
 
 	// "SetAB"
 
@@ -94,19 +94,19 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 	{
 		CUDA_CHECK(cudaMalloc((void**)&d_p, memsize));
 
-		auto PInfo = cuda::Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("P-HPA"),
-		                         myTargetInfo->ForecastType());
+		auto PInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("P-HPA"),
+		                                 myTargetInfo->ForecastType());
 		cuda::PrepareInfo(PInfo, d_p, stream);
 
-		VVMSKernel<float><<<gridSize, blockSize, 0, stream>>>(d_t, d_vv, d_p, d_vv_ms, vv_scale, N);
+		VVMSKernel<double><<<gridSize, blockSize, 0, stream>>>(d_t, d_vv, d_p, d_vv_ms, vv_scale, N);
 	}
 	else
 	{
-		VVMSKernel<float>
+		VVMSKernel<double>
 		    <<<gridSize, blockSize, 0, stream>>>(d_t, d_vv, myTargetInfo->Level().Value(), d_vv_ms, vv_scale, N);
 	}
 
-	cuda::ReleaseInfo(myTargetInfo, d_vv_ms, stream);
+	cuda::ReleaseInfo<double>(myTargetInfo, d_vv_ms, stream);
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 

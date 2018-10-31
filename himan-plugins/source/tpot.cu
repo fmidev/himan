@@ -68,8 +68,8 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 
 	info_t TDInfo;
 
-	auto TInfo =
-	    cuda::Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("T-K"), myTargetInfo->ForecastType());
+	auto TInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("T-K"),
+	                                 myTargetInfo->ForecastType());
 
 	if (!TInfo)
 	{
@@ -78,8 +78,8 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 
 	if (thetae || thetaw)
 	{
-		TDInfo =
-		    cuda::Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("TD-K"), myTargetInfo->ForecastType());
+		TDInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("TD-K"),
+		                             myTargetInfo->ForecastType());
 
 		if (!TDInfo)
 		{
@@ -89,8 +89,8 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 
 	if (myTargetInfo->Level().Type() != kPressure)
 	{
-		auto PInfo = cuda::Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("P-HPA"),
-		                         myTargetInfo->ForecastType());
+		auto PInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("P-HPA"),
+		                                 myTargetInfo->ForecastType());
 
 		if (!PInfo)
 		{
