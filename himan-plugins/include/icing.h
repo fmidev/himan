@@ -25,9 +25,7 @@ class icing : public compiled_plugin, private compiled_plugin_base
    public:
 	icing();
 
-	inline virtual ~icing()
-	{
-	}
+	inline virtual ~icing() = default;
 	icing(const icing& other) = delete;
 	icing& operator=(const icing& other) = delete;
 
@@ -41,20 +39,16 @@ class icing : public compiled_plugin, private compiled_plugin_base
 	{
 		return kCompiled;
 	}
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(0, 1);
-	}
 
    private:
-	virtual void Calculate(std::shared_ptr<info<double>> theTargetInfo, unsigned short theThreadIndex);
+	virtual void Calculate(std::shared_ptr<info<float>> theTargetInfo, unsigned short theThreadIndex) override;
 };
 
 // the class factory
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-	return std::shared_ptr<icing>(new icing());
+	return std::make_shared<icing>();
 }
 }  // namespace plugin
 }  // namespace himan

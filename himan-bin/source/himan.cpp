@@ -14,6 +14,8 @@
 #include "logger.h"
 #include "plugin_factory.h"
 #include "radon.h"
+#include "statistics.h"
+#include "timer.h"
 #include "util.h"
 #include <boost/program_options.hpp>
 #include <future>
@@ -193,12 +195,8 @@ void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
 
 void ExecutePlugin(const shared_ptr<plugin_configuration>& pc, vector<plugin_timing>& pluginTimes)
 {
-	timer aTimer;
+	timer aTimer(true);
 	logger aLogger("himan");
-	if (pc->StatisticsEnabled())
-	{
-		aTimer.Start();
-	}
 
 	auto aPlugin = dynamic_pointer_cast<plugin::compiled_plugin>(plugin_factory::Instance()->Plugin(pc->Name()));
 
@@ -206,11 +204,6 @@ void ExecutePlugin(const shared_ptr<plugin_configuration>& pc, vector<plugin_tim
 	{
 		aLogger.Error("Unable to declare plugin " + pc->Name());
 		return;
-	}
-
-	if (pc->StatisticsEnabled())
-	{
-		pc->StartStatistics();
 	}
 
 	aLogger.Info("Calculating " + pc->Name());
@@ -227,12 +220,14 @@ void ExecutePlugin(const shared_ptr<plugin_configuration>& pc, vector<plugin_tim
 
 	if (pc->StatisticsEnabled())
 	{
+		aTimer.Stop();
+		const auto totalTime = aTimer.GetTime();
+		pc->Statistics()->AddToTotalTime(totalTime);
 		pc->WriteStatistics();
 
-		aTimer.Stop();
 		plugin_timing t;
 		t.plugin_name = pc->Name();
-		t.time_elapsed = aTimer.GetTime();
+		t.time_elapsed = totalTime;
 		t.order_number = HighestOrderNumber(pluginTimes, pc->Name());
 
 		pluginTimes.push_back(t);
@@ -356,35 +351,25 @@ int main(int argc, char** argv)
 		{
 			plugin_timing t = pluginTimes[i];
 
-			cout << t.plugin_name;
+			cout << setw(25) << left << t.plugin_name;
 
 			if (t.order_number > 1)
 			{
 				cout << " #" << t.order_number;
 			}
 
-			string indent = "\t\t\t\t";
+			// c++ string formatting really is unnecessarily hard
+			stringstream ss;
 
-			if (t.plugin_name.length() < 6)
-			{
-				indent = "\t\t\t";
-			}
-			else if (t.plugin_name.length() < 12)
-			{
-				indent = "\t\t";
-			}
-			else if (t.plugin_name.length() < 18)
-			{
-				indent = "\t";
-			}
+			ss << "("
+			   << static_cast<int>(((static_cast<double>(t.time_elapsed) / static_cast<double>(totalTime)) * 100))
+			   << "%)";
 
-			cout << indent << t.time_elapsed << " ms\t("
-			     << static_cast<int>(((static_cast<double>(t.time_elapsed) / static_cast<double>(totalTime)) * 100))
-			     << "%)" << endl;
+			cout << setw(8) << right << t.time_elapsed << " ms " << setw(5) << right << ss.str() << endl;
 		}
 
-		cout << "------------------------------------" << endl;
-		cout << "Total duration:\t\t" << totalTime << " ms" << endl;
+		cout << "-------------------------------------------" << endl;
+		cout << setw(25) << left << "Total duration:" << setw(8) << right << totalTime << " ms" << endl;
 
 		if (conf->DatabaseType() == kRadon && conf->FileWriteOption() == kDatabase)
 		{
@@ -731,7 +716,7 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 
 		for (const auto& plugin : thePlugins)
 		{
-			cout << "Plugin '" << plugin->ClassName() << "'" << endl << "\tversion " << plugin->Version() << endl;
+			cout << "Plugin '" << plugin->ClassName() << "'" << endl;
 
 			switch (plugin->PluginClass())
 			{

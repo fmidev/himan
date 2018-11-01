@@ -49,8 +49,6 @@ class himan_plugin
 
 	virtual HPPluginClass PluginClass() const = 0;
 
-	virtual HPVersionNumber Version() const = 0;
-
    protected:
 	logger itsLogger;
 };

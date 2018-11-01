@@ -350,12 +350,6 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 			}
 		}
 
-		if (itsConfiguration->StatisticsEnabled())
-		{
-			itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Data().MissingCount());
-			itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data().Size());
-		}
-
 		const bool levelsRemaining = topToBottom ? myTargetInfo->Previous<level>() : myTargetInfo->Next<level>();
 
 		if (levelsRemaining == false)

@@ -32,10 +32,6 @@ class writer : public auxiliary_plugin
 	{
 		return kAuxiliary;
 	}
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(1, 2);
-	}
 	template <typename T>
 	bool ToFile(std::shared_ptr<info<T>> theInfo, std::shared_ptr<const plugin_configuration> conf,
 	            const std::string& theFileName = "");

@@ -34,20 +34,22 @@ bool Unpack(std::shared_ptr<himan::info<T>> fullInfo, cudaStream_t& stream, T* d
 bool Unpack(std::shared_ptr<himan::info<double>> fullInfo, cudaStream_t& stream, double* d_arr);
 
 template <typename T>
-void PrepareInfo(std::shared_ptr<himan::info<double>> info, T* d_ret, cudaStream_t& stream, bool copyToHost = true);
+void PrepareInfo(std::shared_ptr<himan::info<T>> info, T* d_ret, cudaStream_t& stream, bool copyToHost = true);
 
 template <typename T>
-void ReleaseInfo(std::shared_ptr<himan::info<double>> info, T* d_ret, cudaStream_t& stream);
+void ReleaseInfo(std::shared_ptr<himan::info<T>> info, T* d_ret, cudaStream_t& stream);
 
-std::shared_ptr<himan::info<double>> Fetch(const std::shared_ptr<const plugin_configuration> conf,
-                                           const himan::forecast_time& theTime, const himan::level& theLevel,
-                                           const himan::param& theParam, const himan::forecast_type& theType,
-                                           bool returnPacked = true);
+template <typename T>
+std::shared_ptr<himan::info<T>> Fetch(const std::shared_ptr<const plugin_configuration> conf,
+                                      const himan::forecast_time& theTime, const himan::level& theLevel,
+                                      const himan::param& theParam, const himan::forecast_type& theType,
+                                      bool returnPacked = true);
 
-std::shared_ptr<himan::info<double>> Fetch(const std::shared_ptr<const plugin_configuration> conf,
-                                           const himan::forecast_time& theTime, const himan::level& theLevel,
-                                           const himan::params& theParams, const himan::forecast_type& theType,
-                                           bool returnPacked = true);
+template <typename T>
+std::shared_ptr<himan::info<T>> Fetch(const std::shared_ptr<const plugin_configuration> conf,
+                                      const himan::forecast_time& theTime, const himan::level& theLevel,
+                                      const himan::params& theParams, const himan::forecast_type& theType,
+                                      bool returnPacked = true);
 
 }  // namespace cuda
 

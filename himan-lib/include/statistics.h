@@ -6,10 +6,8 @@
 #ifndef STATISTICS_H
 #define STATISTICS_H
 
-#include "raw_time.h"
-#include "timer.h"
-
 #include <atomic>
+#include <string>
 
 namespace himan
 {
@@ -33,6 +31,7 @@ class statistics
 
 	void AddToMissingCount(size_t theMissingCount);
 	void AddToValueCount(size_t theValueCount);
+	void AddToTotalTime(int64_t theTotalTime);
 	void AddToFetchingTime(int64_t theFetchingTime);
 	void AddToProcessingTime(int64_t theProcessingTime);
 	void AddToWritingTime(int64_t theWritingTime);
@@ -46,19 +45,16 @@ class statistics
 	bool Enabled() const;
 
 	void UsedThreadCount(short theThreadCount);
-	void UsedGPUCount(short theGPUCount);
 
 	int64_t FetchingTime() const;
 
    private:
-	void Init();
 	bool StoreToDatabase();
 	bool StoreToFile();
 
-	timer itsTimer;
-
 	std::atomic<size_t> itsValueCount;
 	std::atomic<size_t> itsMissingValueCount;
+	std::atomic<int64_t> itsTotalTime;
 	std::atomic<int64_t> itsFetchingTime;
 	std::atomic<int64_t> itsWritingTime;
 	std::atomic<int64_t> itsProcessingTime;
@@ -67,7 +63,6 @@ class statistics
 	std::atomic<size_t> itsCacheHitCount;
 
 	short itsUsedThreadCount;
-	short itsUsedGPUCount;
 };
 
 }  // namespace himan

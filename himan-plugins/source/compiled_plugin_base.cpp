@@ -8,7 +8,9 @@
 #include "cuda_helper.h"
 #include "logger.h"
 #include "plugin_factory.h"
+#include "statistics.h"
 #include "util.h"
+#include <mutex>
 #include <thread>
 
 #include "cache.h"
@@ -290,6 +292,7 @@ void compiled_plugin_base::SetThreadCount()
 	}
 
 	itsThreadCount = static_cast<short>(std::min(12, static_cast<int>(dims)));
+	itsConfiguration->Statistics()->UsedThreadCount(itsThreadCount);
 }
 
 template <typename T>
@@ -314,6 +317,20 @@ void compiled_plugin_base::Start()
 	{
 		itsBaseLogger.Error("Start() called before Init()");
 		return;
+	}
+
+	/*
+	 * From the timing perspective at this point plugin initialization is
+	 * considered to be done
+	 */
+
+	if (itsConfiguration->StatisticsEnabled())
+	{
+		itsConfiguration->Statistics()->UsedThreadCount(itsThreadCount);
+		itsTimer.Stop();
+		itsConfiguration->Statistics()->AddToInitTime(itsTimer.GetTime());
+		// Start process timing
+		itsTimer.Start();
 	}
 
 	auto baseInfo = make_shared<info<T>>(itsForecastTypeIterator.Values(), itsTimeIterator.Values(),
@@ -384,7 +401,6 @@ void compiled_plugin_base::Init(const shared_ptr<const plugin_configuration> con
 	if (itsConfiguration->StatisticsEnabled())
 	{
 		itsTimer.Start();
-		itsConfiguration->Statistics()->UsedGPUCount(static_cast<short>(conf->CudaDeviceCount()));
 	}
 
 	itsForecastTypeIterator = forecast_type_iter(itsConfiguration->ForecastTypes());
@@ -576,20 +592,6 @@ void compiled_plugin_base::SetParams(std::vector<param>& params, const vector<le
 		{
 			itsLevelParams.push_back(make_pair(l, p));
 		}
-	}
-
-	/*
-	 * From the timing perspective at this point plugin initialization is
-	 * considered to be done
-	 */
-
-	if (itsConfiguration->StatisticsEnabled())
-	{
-		itsConfiguration->Statistics()->UsedThreadCount(itsThreadCount);
-		itsTimer.Stop();
-		itsConfiguration->Statistics()->AddToInitTime(itsTimer.GetTime());
-		// Start process timing
-		itsTimer.Start();
 	}
 }
 

@@ -1,6 +1,6 @@
 PROG = himan
 
-SCONS_FLAGS=-j 4
+SCONS_FLAGS=-j 1
 
 # How to install
 

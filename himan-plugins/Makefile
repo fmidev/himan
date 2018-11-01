@@ -1,6 +1,8 @@
 LIB = himan-plugins
 
-SCONS_FLAGS=-j 8
+NPROC=$(shell nproc)
+
+SCONS_FLAGS=-j $(NPROC)
 
 # How to install
 

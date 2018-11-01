@@ -31,10 +31,6 @@ class csv : public io_plugin
 	{
 		return kAuxiliary;
 	}
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(1, 1);
-	}
 	/**
 	 * @brief Return all data from a csv file.
 	 *

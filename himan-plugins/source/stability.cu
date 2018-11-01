@@ -263,10 +263,10 @@ void CalculateBulkShear(std::shared_ptr<const plugin_configuration> conf, std::s
 
 		// Effective bulk shear
 
-		auto ELInfo = cuda::Fetch(conf, myTargetInfo->Time(), level(kMaximumThetaE, 0), param("EL-LAST-M"),
-		                          myTargetInfo->ForecastType(), false);
-		auto LPLInfo = cuda::Fetch(conf, myTargetInfo->Time(), level(kMaximumThetaE, 0), param("LPL-M"),
-		                           myTargetInfo->ForecastType(), false);
+		auto ELInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), level(kMaximumThetaE, 0), param("EL-LAST-M"),
+		                                  myTargetInfo->ForecastType(), false);
+		auto LPLInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), level(kMaximumThetaE, 0), param("LPL-M"),
+		                                   myTargetInfo->ForecastType(), false);
 
 		if (!ELInfo || !LPLInfo)
 		{
@@ -297,8 +297,8 @@ void CalculateBulkShear(std::shared_ptr<const plugin_configuration> conf, std::s
 
 		// CAPE shear
 
-		auto CAPEInfo = cuda::Fetch(conf, myTargetInfo->Time(), level(kMaximumThetaE, 0), param("CAPE-JKG"),
-		                            myTargetInfo->ForecastType(), false);
+		auto CAPEInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), level(kMaximumThetaE, 0), param("CAPE-JKG"),
+		                                    myTargetInfo->ForecastType(), false);
 
 		if (!CAPEInfo)
 		{
@@ -415,9 +415,12 @@ void StormRelativeHelicity(std::shared_ptr<const plugin_configuration> conf, std
 
 		InitializeArray<unsigned char>(d_found, 0, N, stream);
 
-		auto prevUInfo = cuda::Fetch(conf, myTargetInfo->Time(), itsBottomLevel, UParam, myTargetInfo->ForecastType());
-		auto prevVInfo = cuda::Fetch(conf, myTargetInfo->Time(), itsBottomLevel, VParam, myTargetInfo->ForecastType());
-		auto prevZInfo = cuda::Fetch(conf, myTargetInfo->Time(), itsBottomLevel, HLParam, myTargetInfo->ForecastType());
+		auto prevUInfo =
+		    cuda::Fetch<double>(conf, myTargetInfo->Time(), itsBottomLevel, UParam, myTargetInfo->ForecastType());
+		auto prevVInfo =
+		    cuda::Fetch<double>(conf, myTargetInfo->Time(), itsBottomLevel, VParam, myTargetInfo->ForecastType());
+		auto prevZInfo =
+		    cuda::Fetch<double>(conf, myTargetInfo->Time(), itsBottomLevel, HLParam, myTargetInfo->ForecastType());
 
 		if (!prevUInfo || !prevVInfo || !prevZInfo)
 		{
@@ -436,9 +439,12 @@ void StormRelativeHelicity(std::shared_ptr<const plugin_configuration> conf, std
 		{
 			curLevel.Value(curLevel.Value() - 1);
 
-			auto UInfo = cuda::Fetch(conf, myTargetInfo->Time(), curLevel, UParam, myTargetInfo->ForecastType());
-			auto VInfo = cuda::Fetch(conf, myTargetInfo->Time(), curLevel, VParam, myTargetInfo->ForecastType());
-			auto ZInfo = cuda::Fetch(conf, myTargetInfo->Time(), curLevel, HLParam, myTargetInfo->ForecastType());
+			auto UInfo =
+			    cuda::Fetch<double>(conf, myTargetInfo->Time(), curLevel, UParam, myTargetInfo->ForecastType());
+			auto VInfo =
+			    cuda::Fetch<double>(conf, myTargetInfo->Time(), curLevel, VParam, myTargetInfo->ForecastType());
+			auto ZInfo =
+			    cuda::Fetch<double>(conf, myTargetInfo->Time(), curLevel, HLParam, myTargetInfo->ForecastType());
 
 			if (!UInfo || !VInfo || !ZInfo)
 			{
@@ -506,8 +512,8 @@ void EnergyHelicityIndex(std::shared_ptr<const plugin_configuration> conf, std::
 
 	try
 	{
-		auto CAPEInfo = cuda::Fetch(conf, myTargetInfo->Time(), himan::level(himan::kHeightLayer, 500, 0),
-		                            himan::param("CAPE-JKG"), myTargetInfo->ForecastType());
+		auto CAPEInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), himan::level(himan::kHeightLayer, 500, 0),
+		                                    himan::param("CAPE-JKG"), myTargetInfo->ForecastType());
 
 		if (!CAPEInfo)
 		{
@@ -572,8 +578,8 @@ void CalculateBulkRichardsonNumber(std::shared_ptr<const plugin_configuration> c
 
 	try
 	{
-		auto CAPEInfo = cuda::Fetch(conf, myTargetInfo->Time(), himan::level(himan::kHeightLayer, 500, 0),
-		                            himan::param("CAPE-JKG"), myTargetInfo->ForecastType());
+		auto CAPEInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), himan::level(himan::kHeightLayer, 500, 0),
+		                                    himan::param("CAPE-JKG"), myTargetInfo->ForecastType());
 
 		if (!CAPEInfo)
 		{
@@ -648,9 +654,9 @@ void CalculateLiftedIndices(std::shared_ptr<const plugin_configuration> conf,
 	double* d_t850 = 0;
 	double* d_td850 = 0;
 
-	auto T850Info = cuda::Fetch(conf, myTargetInfo->Time(), P850Level, TParam, myTargetInfo->ForecastType());
-	auto T500Info = cuda::Fetch(conf, myTargetInfo->Time(), P500Level, TParam, myTargetInfo->ForecastType());
-	auto TD850Info = cuda::Fetch(conf, myTargetInfo->Time(), P850Level, TDParam, myTargetInfo->ForecastType());
+	auto T850Info = cuda::Fetch<double>(conf, myTargetInfo->Time(), P850Level, TParam, myTargetInfo->ForecastType());
+	auto T500Info = cuda::Fetch<double>(conf, myTargetInfo->Time(), P500Level, TParam, myTargetInfo->ForecastType());
+	auto TD850Info = cuda::Fetch<double>(conf, myTargetInfo->Time(), P850Level, TDParam, myTargetInfo->ForecastType());
 
 	if (!T850Info || !T500Info || !TD850Info)
 	{

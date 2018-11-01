@@ -48,10 +48,6 @@ class preform_hybrid : public compiled_plugin, private compiled_plugin_base
 	{
 		return kCompiled;
 	}
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(1, 1);
-	}
 
    protected:
 	virtual void Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex);

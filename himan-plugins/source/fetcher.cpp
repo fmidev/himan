@@ -7,6 +7,7 @@
 #include "interpolate.h"
 #include "logger.h"
 #include "plugin_factory.h"
+#include "statistics.h"
 #include "util.h"
 #include <boost/filesystem/operations.hpp>
 #include <fstream>

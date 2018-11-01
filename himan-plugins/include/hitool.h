@@ -35,10 +35,7 @@ class hitool : public auxiliary_plugin
 	{
 		return kAuxiliary;
 	}
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(1, 0);
-	}
+
 	/**
 	 * @brief Return maximum value in a given height range for the first parameter found.
 	 *

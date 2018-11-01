@@ -523,35 +523,6 @@ const boost::unordered_map<std::string, HPProducerClass> HPStringToProducerClass
 	("previ", kPreviClass)
 	;
 
-
-/**
- * @struct HPVersionNumber
- *
- * @brief Simple struct to hold plugin version number with major and minor digit.
- *
- */
-
-struct HPVersionNumber
-{
-	unsigned short itsMajorVersion;
-	unsigned short itsMinorVersion;
-
-	unsigned short Minor() { return itsMinorVersion; }
-	unsigned short Major() { return itsMajorVersion; }
-	HPVersionNumber(unsigned short theMajorVersion, unsigned short theMinorVersion)
-	{
-		itsMinorVersion = theMinorVersion;
-		itsMajorVersion = theMajorVersion;
-	}
-
-	std::ostream& Write(std::ostream& file) const
-	{
-		file << itsMajorVersion << "." << itsMinorVersion;
-		return file;
-	}
-};
-
-inline std::ostream& operator<<(std::ostream& file, const HPVersionNumber& vers) { return vers.Write(file); }
 // clang-format on
 
 namespace constants

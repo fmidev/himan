@@ -50,10 +50,7 @@ class luatool : public compiled_plugin, public compiled_plugin_base
 	{
 		return kCompiled;
 	}
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(1, 1);
-	}
+
 	void Process(std::shared_ptr<const plugin_configuration> configuration);
 
 	std::shared_ptr<info<double>> FetchInfo(const forecast_time& theTime, const level& theLevel,
@@ -67,17 +64,6 @@ class luatool : public compiled_plugin, public compiled_plugin_base
 
 	void WriteToFile(const info_t targetInfo, write_options opts = write_options()) override;
 	void WriteToFile(const info_t targetInfo);
-
-   protected:
-	/* These functions exists because we need to stop himan
-	 * from writing data to disk when calculation finished.
-	 *
-	 * All data write in luatool should be initiated from the
-	 * lua scripts!
-	 */
-
-	void Finish();
-	void Run(info_t myTargetInfo, unsigned short threadIndex);
 
    private:
 	void Calculate(std::shared_ptr<info<double>> theTargetInfo, unsigned short theThreadIndex) override;
