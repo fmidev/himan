@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 18.10.31
+Version: 18.11.1
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -59,6 +59,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Thu Nov  1 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.1-1.fmi
+- Remove HPVersionNumber
+- Fix invalid timing statistics at plugin_configuration
 * Wed Oct 31 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.31-1.fmi
 - Add float support for Himan core
 - Reworked thread work distribution

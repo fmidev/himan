@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 18.10.16
+Version: 18.11.1
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 18.8.7
+Requires: himan-lib >= 18.11.1
 Requires: himan-plugins
 Requires: gdal >= 1.11.0
 Requires: zlib
@@ -63,6 +63,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Thu Nov  1 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.1-1.fmi
+- Timing output formatting improvements
+- Remove HPVersionNumber
 * Tue Oct 16 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.16-1.fmi
 - Improved statistics upload
 * Mon Oct 15 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.15-1.fmi
