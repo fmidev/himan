@@ -11,7 +11,6 @@ namespace plugin
 enum blend_mode
 {
 	kCalculateNone,
-	//
 	kCalculateBlend,
 	kCalculateMAE,
 	kCalculateBias
@@ -29,23 +28,21 @@ struct blend_producer
 		kGfs = 5
 	};
 
-	blend_producer() : type(), lvl(), forecastLength(), originTimestep(0)
+	blend_producer() : type(), forecastLength(), originTimestep(0)
 	{
 	}
 
-	blend_producer(const forecast_type& _type, const level& _lvl, int _forecastLength, int _originTimestep)
-	    : type(_type), lvl(_lvl), forecastLength(_forecastLength), originTimestep(_originTimestep)
+	blend_producer(const forecast_type& _type, int _forecastLength, int _originTimestep)
+	    : type(_type), forecastLength(_forecastLength), originTimestep(_originTimestep)
 	{
 	}
 
 	bool operator==(const blend_producer& other) const
 	{
-		return type == other.type && lvl == other.lvl && forecastLength == other.forecastLength &&
-		       originTimestep == other.originTimestep;
+		return type == other.type && forecastLength == other.forecastLength && originTimestep == other.originTimestep;
 	}
 
 	forecast_type type;
-	level lvl;
 	int forecastLength;
 	int originTimestep;
 };
@@ -54,7 +51,7 @@ class blend : public compiled_plugin, private compiled_plugin_base
 {
    public:
 	blend();
-	virtual ~blend();
+	virtual ~blend() = default;
 
 	blend(const blend& other) = delete;
 	blend& operator=(const blend& other) = delete;
@@ -71,31 +68,30 @@ class blend : public compiled_plugin, private compiled_plugin_base
 	}
 
    protected:
-	virtual void Calculate(std::shared_ptr<info<double>> targetInfo, unsigned short threadIndex);
+	virtual void Calculate(std::shared_ptr<info<double>> targetInfo, unsigned short threadIndex) override;
 	virtual void WriteToFile(const info_t targetInfo, write_options opts = write_options()) override;
 
    private:
 	void CalculateBlend(std::shared_ptr<info<double>> targetInfo, unsigned short threadIndex);
 	void CalculateMember(std::shared_ptr<info<double>> targetInfo, unsigned short threadIndex, blend_mode mode);
 
-	matrix<double> CalculateMAE(logger& log, std::shared_ptr<info<double>> targetInfo, const forecast_time& calcTime,
-	                            const blend_producer& blendProd);
-	matrix<double> CalculateBias(logger& log, std::shared_ptr<info<double>> targetInfo, const forecast_time& calcTime,
-	                             const blend_producer& blendProd);
+	matrix<double> CalculateMAE(logger& log, std::shared_ptr<info<double>> targetInfo, const forecast_time& calcTime);
+	matrix<double> CalculateBias(logger& log, std::shared_ptr<info<double>> targetInfo, const forecast_time& calcTime);
 
 	void SetupOutputForecastTimes(std::shared_ptr<info<double>> Info, const raw_time& latestOrigin,
 	                              const forecast_time& current, int maxStep, int originTimeStep);
-	raw_time LatestOriginTimeForProducer(const blend_producer& producer) const;
+	bool ParseConfigurationOptions(const std::shared_ptr<const plugin_configuration>& conf);
+	std::vector<info_t> FetchRawGrids(std::shared_ptr<info<double>> targetInfo, unsigned short threadIdx) const;
 
 	blend_mode itsCalculationMode;
 	int itsNumHours;
-	int itsAnalysisHour;
+	forecast_time itsAnalysisTime;  // store observation analysis time
 	blend_producer itsBlendProducer;
 };
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-	return std::shared_ptr<himan_plugin>(new blend());
+	return std::make_shared<blend>();
 }
 
 }  // namespace plugin

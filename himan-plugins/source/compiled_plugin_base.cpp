@@ -730,6 +730,60 @@ template shared_ptr<info<float>> compiled_plugin_base::Fetch<float>(const foreca
                                                                     const forecast_type&, bool) const;
 
 template <typename T>
+shared_ptr<info<T>> compiled_plugin_base::Fetch(const forecast_time& theTime, const level& theLevel,
+                                                const param& theParam, const forecast_type& theType,
+                                                const vector<string>& geomNames, const producer& sourceProd,
+                                                bool returnPacked) const
+{
+	auto f = GET_PLUGIN(fetcher);
+
+	shared_ptr<info<T>> ret = nullptr;
+
+	auto cnf = make_shared<plugin_configuration>(*itsConfiguration);
+
+	cnf->SourceGeomNames(geomNames);
+	cnf->SourceProducers({sourceProd});
+
+	try
+	{
+		ret = f->Fetch<T>(cnf, theTime, theLevel, theParam, theType, cnf->UseCudaForPacking());
+
+#ifdef HAVE_CUDA
+		if (!returnPacked && ret->PackedData()->HasData())
+		{
+			util::Unpack<T>({ret}, cnf->UseCache());
+		}
+#endif
+	}
+	catch (HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw runtime_error(ClassName() + ": Unable to proceed");
+		}
+	}
+
+	return ret;
+}
+
+template shared_ptr<info<double>> compiled_plugin_base::Fetch<double>(const forecast_time& e, const level&,
+                                                                      const param&, const forecast_type&,
+                                                                      const vector<string>&, const producer&,
+                                                                      bool) const;
+
+template shared_ptr<info<float>> compiled_plugin_base::Fetch<float>(const forecast_time& e, const level&, const param&,
+                                                                    const forecast_type&, const vector<string>&,
+                                                                    const producer&, bool) const;
+
+shared_ptr<info<double>> compiled_plugin_base::Fetch(const forecast_time& theTime, const level& theLevel,
+                                                     const param& theParam, const forecast_type& theType,
+                                                     const vector<string>& geomNames, const producer& sourceProd,
+                                                     bool returnPacked) const
+{
+	return Fetch<double>(theTime, theLevel, theParam, theType, geomNames, sourceProd, returnPacked);
+}
+
+template <typename T>
 void compiled_plugin_base::AllocateMemory(info<T> myTargetInfo)
 {
 	size_t paramIndex = myTargetInfo.template Index<param>();

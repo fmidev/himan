@@ -324,6 +324,15 @@ class compiled_plugin_base
 	virtual info_t Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam,
 	                     const forecast_type& theType = forecast_type(kDeterministic), bool returnPacked = false) const;
 
+	template <typename T>
+	std::shared_ptr<info<T>> Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam,
+	                               const forecast_type& theType, const std::vector<std::string>& geomNames,
+	                               const producer& sourceProd, bool returnPacked = false) const;
+
+	std::shared_ptr<info<double>> Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam,
+	                                    const forecast_type& theType, const std::vector<std::string>& geomNames,
+	                                    const producer& sourceProd, bool returnPacked = false) const;
+
 	/**
 	 * @brief Initialize compiled_plugin_base and set internal state.
 	 *
