@@ -351,15 +351,19 @@ int main(int argc, char** argv)
 		{
 			plugin_timing t = pluginTimes[i];
 
-			cout << setw(25) << left << t.plugin_name;
+			// c++ string formatting really is unnecessarily hard
+			stringstream ss;
+
+			ss << t.plugin_name;
 
 			if (t.order_number > 1)
 			{
-				cout << " #" << t.order_number;
+				ss << " #" << t.order_number;
 			}
 
-			// c++ string formatting really is unnecessarily hard
-			stringstream ss;
+			cout << setw(25) << left << ss.str();
+
+			ss.str("");
 
 			ss << "("
 			   << static_cast<int>(((static_cast<double>(t.time_elapsed) / static_cast<double>(totalTime)) * 100))
