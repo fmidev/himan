@@ -255,15 +255,18 @@ shared_ptr<info<T>> fetcher::Fetch(shared_ptr<const plugin_configuration> config
 		}
 	}
 
-	for (const auto& prod : config->SourceProducers())
+	if (!ret)
 	{
-		search_options opts(requestedTime, requestedParam, requestedLevel, prod, requestedType, config);
-
-		ret = FetchFromProducer<T>(opts, readPackedData, suppressLogging);
-
-		if (ret)
+		for (const auto& prod : config->SourceProducers())
 		{
-			break;
+			search_options opts(requestedTime, requestedParam, requestedLevel, prod, requestedType, config);
+
+			ret = FetchFromProducer<T>(opts, readPackedData, suppressLogging);
+
+			if (ret)
+			{
+				break;
+			}
 		}
 	}
 
