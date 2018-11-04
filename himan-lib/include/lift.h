@@ -252,11 +252,9 @@ CUDA_DEVICE lcl_t<Type> LCLA_(Type P, Type T, Type TD)
 
 	// Sanity checks
 
-	ASSERT(P > 10000);
-	ASSERT(T > 0 || IsMissing(T));
-	ASSERT(T < 500 || IsMissing(T));
-	ASSERT(TD > 0 && TD != 56);
-	ASSERT(TD < 500);
+	ASSERT(P > 10000 || IsMissing(P));
+	ASSERT((T > 0 && T < 500) || IsMissing(T));
+	ASSERT((TD > 60 && TD < 500) || IsMissing(TD));
 
 	Type B = 1 / (TD - 56);
 	Type C = std::log(T / TD) / 800.f;
@@ -291,7 +289,7 @@ CUDA_DEVICE Type DryLift_(Type P, Type T, Type targetP)
 	ASSERT(IsMissing(T) || (T > 100 && T < 400));
 	ASSERT(targetP > 10000);
 
-	return T * std::pow((targetP / P), static_cast<Type> (0.286));
+	return T * std::pow((targetP / P), static_cast<Type>(0.286));
 }
 
 /**
@@ -516,11 +514,10 @@ namespace smarttool
 template <typename Type>
 CUDA_DEVICE Type ThetaE_(Type T, Type RH, Type P)
 {
-	ASSERT(RH >= 0);
-	ASSERT(RH < 103);
+	ASSERT((RH >= 0 && RH < 103) || IsMissing(RH));
 	ASSERT(T > 150 || IsMissing(T));
 	ASSERT(T < 350 || IsMissing(T));
-	ASSERT(P > 1500);
+	ASSERT(P > 1500 || IsMissing(P));
 
 	const Type tpot = himan::metutil::Theta_<Type>(T, P);
 	const Type w = himan::metutil::smarttool::MixingRatio_<Type>(T, RH, P);

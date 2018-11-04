@@ -366,8 +366,7 @@ namespace smarttool
 template <typename Type>
 CUDA_DEVICE Type Es2_(Type T)
 {
-	ASSERT(T > 100 || IsMissing(T));
-	ASSERT(T < 350 || IsMissing(T));
+	ASSERT((T > 100 && T < 350) || IsMissing(T));
 
 	const Type b = static_cast<Type>(17.2694);
 	const Type e0 = static_cast<Type>(6.11);   // 6.11 <- 0.611 [kPa]
@@ -387,10 +386,10 @@ CUDA_DEVICE Type Es2_(Type T)
 template <typename Type>
 CUDA_DEVICE Type W_(Type e, Type P)
 {
-	ASSERT(P > 1500);
+	ASSERT(P > 1500 || IsMissing(P));
 
 	const Type w = static_cast<Type>(0.622) * e / P * 100000;
-	ASSERT(w < 60);
+	ASSERT(w < 60 || IsMissing(w));
 
 	return w;
 }
@@ -398,8 +397,7 @@ CUDA_DEVICE Type W_(Type e, Type P)
 template <typename Type>
 CUDA_DEVICE Type E_(Type RH, Type es)
 {
-	ASSERT(RH >= 0);
-	ASSERT(RH < 103);
+	ASSERT((RH >= 0 && RH < 103) || IsMissing(RH));
 
 	return RH * es / static_cast<Type>(100);
 }
@@ -417,12 +415,6 @@ CUDA_DEVICE Type E_(Type RH, Type es)
 template <typename Type>
 CUDA_DEVICE Type MixingRatio_(Type T, Type RH, Type P)
 {
-	ASSERT(RH >= 0);
-	ASSERT(RH < 103);
-	ASSERT(T > 150 || IsMissing(T));
-	ASSERT(T < 350 || IsMissing(T));
-	ASSERT(P > 1500);
-
 	const Type es = himan::metutil::smarttool::Es2_<Type>(T);
 	const Type e = himan::metutil::smarttool::E_<Type>(RH, es);
 	const Type w = himan::metutil::smarttool::W_<Type>(e, P);
