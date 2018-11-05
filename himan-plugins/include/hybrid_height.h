@@ -1,8 +1,3 @@
-/**
- * @file hybrid_height.h
- *
- */
-
 #ifndef HYBRID_HEIGHT_H
 #define HYBRID_HEIGHT_H
 
@@ -19,7 +14,7 @@ class hybrid_height : public compiled_plugin, private compiled_plugin_base
    public:
 	hybrid_height();
 
-	virtual ~hybrid_height();
+	virtual ~hybrid_height() = default;
 
 	hybrid_height(const hybrid_height& other) = delete;
 	hybrid_height& operator=(const hybrid_height& other) = delete;
@@ -36,10 +31,10 @@ class hybrid_height : public compiled_plugin, private compiled_plugin_base
 	}
 
    private:
-	virtual void Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex);
-	bool WithHypsometricEquation(info_t& myTargetInfo);
-	bool WithGeopotential(info_t& myTargetInfo);
-	std::shared_ptr<himan::info<double>> GetSurfacePressure(std::shared_ptr<himan::info<double>>& myTargetInfo);
+	virtual void Calculate(std::shared_ptr<info<float>> myTargetInfo, unsigned short threadIndex) override;
+	bool WithHypsometricEquation(std::shared_ptr<info<float>>& myTargetInfo);
+	bool WithGeopotential(std::shared_ptr<info<float>>& myTargetInfo);
+	std::shared_ptr<himan::info<float>> GetSurfacePressure(std::shared_ptr<himan::info<float>>& myTargetInfo);
 
 	int itsBottomLevel;
 	bool itsUseGeopotential;

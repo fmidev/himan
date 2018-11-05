@@ -22,9 +22,6 @@ hybrid_height::hybrid_height() : itsBottomLevel(kHPMissingInt), itsUseGeopotenti
 	itsLogger = logger(itsName);
 }
 
-hybrid_height::~hybrid_height()
-{
-}
 void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
@@ -53,10 +50,10 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	SetParams({param(HParam)});
 
-	Start();
+	Start<float>();
 }
 
-void hybrid_height::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
+void hybrid_height::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short threadIndex)
 {
 	auto myThreadedLogger = logger(itsName + "Thread #" + to_string(threadIndex));
 
@@ -86,12 +83,13 @@ void hybrid_height::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned sh
 	                      to_string(myTargetInfo->Data().Size()));
 }
 
-bool hybrid_height::WithGeopotential(info_t& myTargetInfo)
+bool hybrid_height::WithGeopotential(shared_ptr<himan::info<float>>& myTargetInfo)
 {
 	const himan::level H0(himan::kHeight, 0);
 
-	auto GPInfo = Fetch(myTargetInfo->Time(), myTargetInfo->Level(), ZParam, myTargetInfo->ForecastType(), false);
-	auto zeroGPInfo = Fetch(myTargetInfo->Time(), H0, ZParam, myTargetInfo->ForecastType(), false);
+	auto GPInfo =
+	    Fetch<float>(myTargetInfo->Time(), myTargetInfo->Level(), ZParam, myTargetInfo->ForecastType(), false);
+	auto zeroGPInfo = Fetch<float>(myTargetInfo->Time(), H0, ZParam, myTargetInfo->ForecastType(), false);
 
 	if (!GPInfo || !zeroGPInfo)
 	{
@@ -106,45 +104,45 @@ bool hybrid_height::WithGeopotential(info_t& myTargetInfo)
 
 	for (auto&& tup : zip_range(target, GP, zeroGP))
 	{
-		double& result = tup.get<0>();
-		const double gp = tup.get<1>();
-		const double zerogp = tup.get<2>();
+		float& result = tup.get<0>();
+		const float gp = tup.get<1>();
+		const float zerogp = tup.get<2>();
 
-		result = (gp - zerogp) * himan::constants::kIg;
+		result = (gp - zerogp) * static_cast<float>(himan::constants::kIg);
 	}
 
 	return true;
 }
 
-himan::info_t hybrid_height::GetSurfacePressure(himan::info_t& myTargetInfo)
+shared_ptr<himan::info<float>> hybrid_height::GetSurfacePressure(shared_ptr<himan::info<float>>& myTargetInfo)
 {
 	const auto forecastTime = myTargetInfo->Time();
 	const auto forecastType = myTargetInfo->ForecastType();
 
-	info_t ret;
+	shared_ptr<info<float>> ret;
 
 	if (myTargetInfo->Producer().Id() == 240 || myTargetInfo->Producer().Id() == 243)
 	{
 		// LNSP is always at level 1 for ECMWF
 
-		ret = Fetch(forecastTime, level(himan::kHybrid, 1), param("LNSP-HPA"), forecastType, false);
+		ret = Fetch<float>(forecastTime, level(himan::kHybrid, 1), param("LNSP-HPA"), forecastType, false);
 
 		if (!ret)
 		{
-			ret = Fetch(forecastTime, level(himan::kHybrid, 1), param("LNSP-N"), forecastType, false);
+			ret = Fetch<float>(forecastTime, level(himan::kHybrid, 1), param("LNSP-N"), forecastType, false);
 
 			if (ret)
 			{
 				// LNSP to regular pressure
 
-				auto newInfo = make_shared<info<double>>(*ret);
+				auto newInfo = make_shared<info<float>>(*ret);
 				newInfo->Set<param>(param("LNSP-HPA"));
 				newInfo->Create(ret->Base());
 
 				auto& target = VEC(newInfo);
-				for (double& val : target)
+				for (float& val : target)
 				{
-					val = 0.01 * exp(val);
+					val = 0.01f * exp(val);
 					ASSERT(isfinite(val));
 				}
 
@@ -154,13 +152,13 @@ himan::info_t hybrid_height::GetSurfacePressure(himan::info_t& myTargetInfo)
 	}
 	else
 	{
-		ret = Fetch(forecastTime, level(himan::kHeight, 0), PParam, forecastType, false);
+		ret = Fetch<float>(forecastTime, level(himan::kHeight, 0), PParam, forecastType, false);
 	}
 
 	return ret;
 }
 
-bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
+bool hybrid_height::WithHypsometricEquation(shared_ptr<himan::info<float>>& myTargetInfo)
 {
 	/*
 	 * Processing is done in two passes:
@@ -174,7 +172,7 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 	const auto forecastTime = myTargetInfo->Time();
 	const auto forecastType = myTargetInfo->ForecastType();
 
-	info_t prevPInfo, prevTInfo;
+	shared_ptr<info<float>> prevPInfo, prevTInfo;
 
 	bool firstLevel;
 
@@ -203,11 +201,11 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 	{
 		prevPInfo = GetSurfacePressure(myTargetInfo);
 
-		prevTInfo = Fetch(forecastTime, level(himan::kHeight, 2), TParam, forecastType, false);
+		prevTInfo = Fetch<float>(forecastTime, level(himan::kHeight, 2), TParam, forecastType, false);
 
 		if (!prevTInfo)
 		{
-			prevTInfo = Fetch(forecastTime, level(himan::kHybrid, itsBottomLevel), TParam, forecastType, false);
+			prevTInfo = Fetch<float>(forecastTime, level(himan::kHybrid, itsBottomLevel), TParam, forecastType, false);
 		}
 	}
 	else
@@ -215,8 +213,8 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 		level prevLevel(myTargetInfo->Level());
 		prevLevel.Value(myTargetInfo->Level().Value() + 1);
 
-		prevTInfo = Fetch(forecastTime, prevLevel, TParam, forecastType, false);
-		prevPInfo = Fetch(forecastTime, prevLevel, PParam, forecastType, false);
+		prevTInfo = Fetch<float>(forecastTime, prevLevel, TParam, forecastType, false);
+		prevPInfo = Fetch<float>(forecastTime, prevLevel, PParam, forecastType, false);
 	}
 
 	vector<future<void>> pool;
@@ -234,8 +232,8 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 
 		ASSERT(myTargetInfo->Data().Size() > 0);
 
-		auto PInfo = Fetch(forecastTime, myTargetInfo->Level(), PParam, forecastType, false);
-		auto TInfo = Fetch(forecastTime, myTargetInfo->Level(), TParam, forecastType, false);
+		auto PInfo = Fetch<float>(forecastTime, myTargetInfo->Level(), PParam, forecastType, false);
+		auto TInfo = Fetch<float>(forecastTime, myTargetInfo->Level(), TParam, forecastType, false);
 
 		if (!prevTInfo || !prevPInfo || !PInfo || !TInfo)
 		{
@@ -250,30 +248,31 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 		// We have to give shared_ptr's as arguments to make sure they don't go
 		// out of scope and memory free'd while processing is still in progress
 
-		pool.push_back(
-		    async(launch::async,
-		          [&](info_t _myTargetInfo, info_t _PInfo, info_t _prevPInfo, info_t _TInfo, info_t _prevTInfo) {
-			          auto& target = VEC(_myTargetInfo);
-			          const auto& PVec = VEC(_PInfo);
-			          const auto& prevPVec = VEC(_prevPInfo);
-			          const auto& TVec = VEC(_TInfo);
-			          const auto& prevTVec = VEC(_prevTInfo);
+		pool.push_back(async(launch::async,
+		                     [&](shared_ptr<himan::info<float>> _myTargetInfo, shared_ptr<himan::info<float>> _PInfo,
+		                         shared_ptr<himan::info<float>> _prevPInfo, shared_ptr<himan::info<float>> _TInfo,
+		                         shared_ptr<himan::info<float>> _prevTInfo) {
+			                     auto& target = VEC(_myTargetInfo);
+			                     const auto& PVec = VEC(_PInfo);
+			                     const auto& prevPVec = VEC(_prevPInfo);
+			                     const auto& TVec = VEC(_TInfo);
+			                     const auto& prevTVec = VEC(_prevTInfo);
 
-			          for (auto&& tup : zip_range(target, PVec, prevPVec, TVec, prevTVec))
-			          {
-				          double& result = tup.get<0>();
+			                     for (auto&& tup : zip_range(target, PVec, prevPVec, TVec, prevTVec))
+			                     {
+				                     float& result = tup.get<0>();
 
-				          const double P = tup.get<1>();
-				          const double prevP = tup.get<2>();
-				          const double T = tup.get<3>();
-				          const double prevT = tup.get<4>();
+				                     const float P = tup.get<1>();
+				                     const float prevP = tup.get<2>();
+				                     const float T = tup.get<3>();
+				                     const float prevT = tup.get<4>();
 
-				          result = 14.628 * (prevT + T) * log(prevP / P);
+				                     result = 14.628f * (prevT + T) * log(prevP / P);
 
-				          ASSERT(isfinite(result));
-			          }
-		          },
-		          make_shared<info<double>>(*myTargetInfo), PInfo, prevPInfo, TInfo, prevTInfo));
+				                     ASSERT(isfinite(result));
+			                     }
+		                     },
+		                     make_shared<info<float>>(*myTargetInfo), PInfo, prevPInfo, TInfo, prevTInfo));
 
 		if (pool.size() == 8)
 		{
@@ -326,7 +325,7 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 			{
 				const auto& prev = VEC(myTargetInfo);
 
-				transform(cur.begin(), cur.end(), prev.begin(), cur.begin(), plus<double>());
+				transform(cur.begin(), cur.end(), prev.begin(), cur.begin(), plus<float>());
 
 				topToBottom ? myTargetInfo->Previous<level>() : myTargetInfo->Next<level>();
 			}
@@ -336,7 +335,7 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 				level prevLevel(myTargetInfo->Level());
 				prevLevel.Value(prevLevel.Value() + 1);
 
-				auto prevH = Fetch(forecastTime, prevLevel, HParam, forecastType, false);
+				auto prevH = Fetch<float>(forecastTime, prevLevel, HParam, forecastType, false);
 				if (!prevH)
 				{
 					itsLogger.Error("Unable to get height of level below level " +
@@ -346,7 +345,7 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 
 				const auto& prev = VEC(prevH);
 
-				transform(cur.begin(), cur.end(), prev.begin(), cur.begin(), plus<double>());
+				transform(cur.begin(), cur.end(), prev.begin(), cur.begin(), plus<float>());
 			}
 		}
 

@@ -12,13 +12,16 @@
 using namespace std;
 using namespace himan::plugin;
 
-void WithTD(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t TDInfo);
-void WithQ(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t QInfo, himan::info_t PInfo, double PScale);
-void WithQ(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t QInfo, double P);
+void WithTD(shared_ptr<himan::info<float>> myTargetInfo, shared_ptr<himan::info<float>> TInfo,
+            shared_ptr<himan::info<float>> TDInfo);
+void WithQ(shared_ptr<himan::info<float>> myTargetInfo, shared_ptr<himan::info<float>> TInfo,
+           shared_ptr<himan::info<float>> QInfo, shared_ptr<himan::info<float>> PInfo, float PScale);
+void WithQ(shared_ptr<himan::info<float>> myTargetInfo, shared_ptr<himan::info<float>> TInfo,
+           shared_ptr<himan::info<float>> QInfo, float P);
 
 #ifdef HAVE_CUDA
 extern void ProcessHumidityGPU(std::shared_ptr<const himan::plugin_configuration> conf,
-                               std::shared_ptr<himan::info<double>> myTargetInfo);
+                               std::shared_ptr<himan::info<float>> myTargetInfo);
 #endif
 
 relative_humidity::relative_humidity()
@@ -34,7 +37,7 @@ void relative_humidity::Process(shared_ptr<const plugin_configuration> conf)
 
 	SetParams({param("RH-PRCNT", 13, 0, 1, 1)});
 
-	Start();
+	Start<float>();
 }
 
 /*
@@ -43,7 +46,7 @@ void relative_humidity::Process(shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void relative_humidity::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
+void relative_humidity::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short threadIndex)
 {
 	const param TParam("T-K");
 	const params PParams = {param("P-HPA"), param("P-PA")};
@@ -76,7 +79,8 @@ void relative_humidity::Calculate(shared_ptr<info<double>> myTargetInfo, unsigne
 
 		// Temperature is always needed
 
-		info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, itsConfiguration->UseCudaForPacking());
+		auto TInfo =
+		    Fetch<float>(forecastTime, forecastLevel, TParam, forecastType, itsConfiguration->UseCudaForPacking());
 
 		if (!TInfo)
 		{
@@ -87,12 +91,13 @@ void relative_humidity::Calculate(shared_ptr<info<double>> myTargetInfo, unsigne
 
 		// First try to calculate using Q and P
 
-		info_t QInfo = Fetch(forecastTime, forecastLevel, QParam, forecastType, itsConfiguration->UseCudaForPacking());
+		auto QInfo =
+		    Fetch<float>(forecastTime, forecastLevel, QParam, forecastType, itsConfiguration->UseCudaForPacking());
 
 		if (!QInfo)
 		{
 			auto TDInfo =
-			    Fetch(forecastTime, forecastLevel, TDParam, forecastType, itsConfiguration->UseCudaForPacking());
+			    Fetch<float>(forecastTime, forecastLevel, TDParam, forecastType, itsConfiguration->UseCudaForPacking());
 
 			if (!TDInfo)
 			{
@@ -105,12 +110,13 @@ void relative_humidity::Calculate(shared_ptr<info<double>> myTargetInfo, unsigne
 		}
 		else if (myTargetInfo->Level().Type() == kPressure)
 		{
-			WithQ(myTargetInfo, TInfo, QInfo, myTargetInfo->Level().Value());  // Pressure is needed as hPa, no scaling
+			WithQ(myTargetInfo, TInfo, QInfo,
+			      static_cast<float>(myTargetInfo->Level().Value()));  // Pressure is needed as hPa, no scaling
 		}
 		else
 		{
 			auto PInfo =
-			    Fetch(forecastTime, forecastLevel, PParams, forecastType, itsConfiguration->UseCudaForPacking());
+			    Fetch<float>(forecastTime, forecastLevel, PParams, forecastType, itsConfiguration->UseCudaForPacking());
 
 			if (!PInfo)
 			{
@@ -119,14 +125,11 @@ void relative_humidity::Calculate(shared_ptr<info<double>> myTargetInfo, unsigne
 				return;
 			}
 
-			//	ASSERT(!PInfo || TInfo->Grid()->AB() == PInfo->Grid()->AB());
-			//	ASSERT(!TDInfo || TInfo->Grid()->AB() == TDInfo->Grid()->AB());
-			//	ASSERT(!QInfo || TInfo->Grid()->AB() == QInfo->Grid()->AB());
-			double PScale = 1;
+			float PScale = 1;
 
 			if (PInfo->Param().Name() == "P-PA")
 			{
-				PScale = 0.01;
+				PScale = 0.01f;
 			}
 
 			WithQ(myTargetInfo, TInfo, QInfo, PInfo, PScale);
@@ -139,64 +142,72 @@ void relative_humidity::Calculate(shared_ptr<info<double>> myTargetInfo, unsigne
 	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
 
-void WithQ(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t QInfo, double P)
+void WithQ(shared_ptr<himan::info<float>> myTargetInfo, shared_ptr<himan::info<float>> TInfo,
+           shared_ptr<himan::info<float>> QInfo, float P)
 {
 	// Pressure needs to be hPa and temperature C
+
+	const float ep = static_cast<float>(himan::constants::kEp);
 
 	for (auto&& tup : zip_range(VEC(myTargetInfo), VEC(TInfo), VEC(QInfo)))
 	{
-		double& result = tup.get<0>();
-		const double T = tup.get<1>();
-		const double Q = tup.get<2>();
+		float& result = tup.get<0>();
+		const float T = tup.get<1>();
+		const float Q = tup.get<2>();
 
-		const double es = himan::metutil::Es_<double>(T) * 0.01;
+		const float es = himan::metutil::Es_<float>(T) * 0.01f;
 
-		result = (P * Q / himan::constants::kEp / es) * (P - es) / (P - Q * P / himan::constants::kEp);
+		result = (P * Q / ep / es) * (P - es) / (P - Q * P / ep);
 
 		if (himan::IsMissing(result))
 		{
 			continue;
 		}
 
-		result = fmin(fmax(0.0, result), 1.0) * 100;  // scale to range 0 .. 100
+		result = fminf(fmaxf(0.0f, result), 1.0f) * 100;  // scale to range 0 .. 100
 	}
 }
 
-void WithQ(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t QInfo, himan::info_t PInfo, double PScale)
+void WithQ(shared_ptr<himan::info<float>> myTargetInfo, shared_ptr<himan::info<float>> TInfo,
+           shared_ptr<himan::info<float>> QInfo, shared_ptr<himan::info<float>> PInfo, float PScale)
 {
 	// Pressure needs to be hPa and temperature C
 
+	const float ep = static_cast<float>(himan::constants::kEp);
+
 	for (auto&& tup : zip_range(VEC(myTargetInfo), VEC(TInfo), VEC(QInfo), VEC(PInfo)))
 	{
-		double& result = tup.get<0>();
-		const double T = tup.get<1>();
-		const double Q = tup.get<2>();
-		const double P = tup.get<3>() * PScale;
+		float& result = tup.get<0>();
+		const float T = tup.get<1>();
+		const float Q = tup.get<2>();
+		const float P = tup.get<3>() * PScale;
 
-		const double es = himan::metutil::Es_<double>(T) * 0.01;
+		const float es = himan::metutil::Es_<float>(T) * 0.01f;
 
-		result = (P * Q / himan::constants::kEp / es) * (P - es) / (P - Q * P / himan::constants::kEp);
+		result = (P * Q / ep / es) * (P - es) / (P - Q * P / ep);
 
 		if (himan::IsMissing(result))
 		{
 			continue;
 		}
 
-		result = fmin(fmax(0.0, result), 1.0) * 100;  // scale to range 0 .. 100
+		result = fminf(fmaxf(0.0f, result), 1.0f) * 100;  // scale to range 0 .. 100
 	}
 }
 
-void WithTD(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t TDInfo)
+void WithTD(shared_ptr<himan::info<float>> myTargetInfo, shared_ptr<himan::info<float>> TInfo,
+            shared_ptr<himan::info<float>> TDInfo)
 {
-	const double b = 17.27;
-	const double c = 237.3;
-	const double d = 1.8;
+	const float b = 17.27f;
+	const float c = 237.3f;
+	const float d = 1.8f;
+	const float k = static_cast<float>(himan::constants::kKelvin);
 
 	for (auto&& tup : zip_range(VEC(myTargetInfo), VEC(TInfo), VEC(TDInfo)))
 	{
-		double& result = tup.get<0>();
-		const double T = tup.get<1>() - himan::constants::kKelvin;
-		const double TD = tup.get<2>() - himan::constants::kKelvin;
+		float& result = tup.get<0>();
+		const float T = tup.get<1>() - k;
+		const float TD = tup.get<2>() - k;
 
 		result = exp(d + b * (TD / (TD + c))) / exp(d + b * (T / (T + c)));
 
@@ -205,6 +216,6 @@ void WithTD(himan::info_t myTargetInfo, himan::info_t TInfo, himan::info_t TDInf
 			continue;
 		}
 
-		result = fmin(fmax(0.0, result), 1.0) * 100;  // scale to range 0 .. 100
+		result = fminf(fmaxf(0.0f, result), 1.0f) * 100;  // scale to range 0 .. 100
 	}
 }

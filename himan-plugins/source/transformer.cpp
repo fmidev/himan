@@ -67,7 +67,7 @@ void transformer::SetAdditionalParameters()
 	}
 	else
 	{
-		itsLogger.Trace("Base not specified, using default value 0.0");
+		itsLogger.Trace("base not specified, using default value 0.0");
 	}
 
 	if (!itsConfiguration->GetValue("scale").empty())
@@ -76,7 +76,7 @@ void transformer::SetAdditionalParameters()
 	}
 	else
 	{
-		itsLogger.Trace("Scale not specified, using default value 1.0");
+		itsLogger.Trace("scale not specified, using default value 1.0");
 	}
 
 	if (itsConfiguration->Exists("rotation"))
@@ -119,7 +119,7 @@ void transformer::SetAdditionalParameters()
 	}
 	else
 	{
-		itsLogger.Trace("Source_level not specified, source_level set to target level");
+		itsLogger.Trace("source_level_type not specified, set to target level type");
 	}
 
 	if (!itsConfiguration->GetValue("source_levels").empty())
@@ -128,7 +128,7 @@ void transformer::SetAdditionalParameters()
 	}
 	else
 	{
-		itsLogger.Trace("Source_levels not specified, source_levels set to target levels");
+		itsLogger.Trace("source_levels not specified, set to target levels");
 	}
 
 	if (!itsConfiguration->GetValue("target_forecast_type").empty())
@@ -227,7 +227,7 @@ void transformer::Process(std::shared_ptr<const plugin_configuration> conf)
 			itsForecastTypeIterator.First();
 			// Copy the original so that we can fetch the right data.
 			itsSourceForecastType = itsForecastTypeIterator.At();
-			itsForecastTypeIterator.Set(itsTargetForecastType);
+			itsForecastTypeIterator.Replace(itsTargetForecastType);
 		}
 	}
 
