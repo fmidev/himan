@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.11.1
+Version: 18.11.5
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -112,6 +112,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Nov  5 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.1-1.fmi
+- Single precision for hybrid_pressure, hybrid_height, relative-humidity
+- Fix for transformer / target forecast type
 * Thu Nov  1 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.1-1.fmi
 - Remove HPVersionNumber
 - (Integrated) single precision support for cape
