@@ -42,145 +42,46 @@ const string kLapsGeom = "LAPSSCANLARGE";
 
 // Each blend producer is composed of these original producers. We use forecast_types to distinguish them
 // from each other, and this way we don't have to create bunch of extra producers.
-const blend_producer LAPS(forecast_type(kAnalysis), level(kHeight, 2.0), 0, 1);
-const blend_producer MOS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kMos)), level(kHeight, 2.0),
-                         kMosForecastLength, 12);
+const blend_producer LAPS(forecast_type(kAnalysis), 0, 1);
+const blend_producer MOS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kMos)), kMosForecastLength,
+                         12);
 const blend_producer ECMWF(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kEcmwf)),
-                           level(kHeight, 2.0), kEcmwfForecastLength, 12);
+                           kEcmwfForecastLength, 12);
 const blend_producer HIRLAM(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kHirlam)),
-                            level(kHeight, 2.0), kHirlamForecastLength, 6);
+                            kHirlamForecastLength, 6);
 const blend_producer MEPS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kMeps)),
-                          level(kHeight, 2.0), kMepsForecastLength, 6);
-const blend_producer GFS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kGfs)), level(kHeight, 2.0),
-                         kGfsForecastLength, 6);
+                          kMepsForecastLength, 6);
+const blend_producer GFS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kGfs)), kGfsForecastLength,
+                         6);
 
-blend::blend() : itsCalculationMode(kCalculateNone), itsNumHours(0), itsAnalysisHour(0), itsBlendProducer()
+blend::blend() : itsCalculationMode(kCalculateNone), itsNumHours(0), itsAnalysisTime(), itsBlendProducer()
 {
 	itsLogger = logger("blend");
 }
 
-blend::~blend()
+// Create observation analysis time (ie. LAPS analysis time) from analysis hour that's
+// given in conf file
+forecast_time MakeAnalysisTime(const forecast_time& currentTime, int analysisHour)
 {
-}
+	const int validHour = stoi(currentTime.ValidDateTime().String("%H"));
 
-// 2 fetching helper functions are used:
-// - FetchProd: specify all information including geometry name, throws exception if data is not found
-// - FetchNoExcept: same as FetchProd, except exceptions are caught and nullptr is returned
-info_t FetchProd(shared_ptr<plugin_configuration> cnf, const forecast_time& forecastTime,
-                 HPTimeResolution stepResolution, const param& parm, const blend_producer& blendProd,
-                 const producer& prod, const string& geom = "")
-{
-	auto f = GET_PLUGIN(fetcher);
+	forecast_time analysisFetchTime = currentTime;
 
-	const string geomName = geom.empty() ? cnf->TargetGeomName() : geom;
+	analysisFetchTime.ValidDateTime().Adjust(kHourResolution, -validHour);  // set to 00
+	analysisFetchTime.ValidDateTime().Adjust(kHourResolution, analysisHour);
 
-	forecast_time ftime = forecastTime;
-	ftime.StepResolution(stepResolution);
+	analysisFetchTime.OriginDateTime() = analysisFetchTime.ValidDateTime();
 
-	cnf->SourceGeomNames({geomName});
-	cnf->SourceProducers({prod});
-
-	return f->Fetch(cnf, ftime, blendProd.lvl, parm, blendProd.type, false);
-}
-
-info_t FetchNoExcept(shared_ptr<plugin_configuration> cnf, const forecast_time& forecastTime,
-                     HPTimeResolution stepResolution, const param& parm, const blend_producer& blendProd,
-                     const producer& prod, const string& geom)
-{
-	try
-	{
-		return FetchProd(cnf, forecastTime, stepResolution, parm, blendProd, prod, geom);
-	}
-	catch (HPExceptionType& e)
-	{
-		if (e != kFileDataNotFound)
-		{
-			himan::Abort();
-		}
-		else
-		{
-			return nullptr;
-		}
-	}
-}
-
-raw_time blend::LatestOriginTimeForProducer(const blend_producer& producer) const
-{
-	// These are hardcoded for simplicity.
-	int producerId = -1;
-	string geom;
-	if (producer == MOS)
-	{
-		producerId = 120;
-		geom = "MOSKRIGING2";
-	}
-	else if (producer == ECMWF)
-	{
-		producerId = 131;
-		geom = "ECGLO0100";
-	}
-	else if (producer == HIRLAM)
-	{
-		producerId = 1;
-		geom = "RCR068";
-	}
-	else if (producer == MEPS)
-	{
-		producerId = 4;
-		geom = "MEPSSCAN2500";
-	}
-	else if (producer == GFS)
-	{
-		producerId = 53;
-		geom = "GFS0250";
-	}
-	else
-	{
-		itsLogger.Error("Invalid producer type");
-		himan::Abort();
-	}
-
-	auto r = GET_PLUGIN(radon);
-
-	const string latest = r->RadonDB().GetLatestTime(producerId, geom, 0);
-	if (latest.empty())
-	{
-		itsLogger.Error("Failed to find latest time for producer: " + to_string(producerId) + " and geom: " + geom +
-		                " from Radon");
-		himan::Abort();
-	}
-
-	raw_time raw(latest);
-
-	// With ECMWF and MOS we only want 00 and 12 times. MOS is only calculated for 00 and 12. ECMWF forecast length is
-	// shorter for 6 and 18, and that seems to break everything.
-	const int hour = stoi(raw.String("%H"));
-	if (producer == ECMWF || producer == MOS)
-	{
-		if (hour == 6 || hour == 18)
-		{
-			raw.Adjust(kHourResolution, -6);
-		}
-	}
-
-	return raw;
+	return analysisFetchTime;
 }
 
 // Read the configuration and set plugin properties:
 // - calculation mode (bias, mae, blend) that is to be dispatched in Calculate()
 // - producer for bias and mae
-// - analysis hour
-// - parameter
-void blend::Process(shared_ptr<const plugin_configuration> conf)
+// - analysis time (obs)
+bool blend::ParseConfigurationOptions(const shared_ptr<const plugin_configuration>& conf)
 {
-	Init(conf);
-	vector<param> params;
-
-	const string mode = conf->Exists("mode") ? conf->GetValue("mode") : "";
-	if (mode.empty())
-	{
-		throw std::runtime_error(ClassName() + ": blender 'mode' not specified");
-	}
+	const string mode = conf->GetValue("mode");
 
 	if (mode == "blend")
 	{
@@ -196,10 +97,12 @@ void blend::Process(shared_ptr<const plugin_configuration> conf)
 	}
 	else
 	{
-		throw std::runtime_error(ClassName() + ": invalid blender 'mode' specified");
+		itsLogger.Fatal("Invalid blender 'mode' specified: '" + mode + "'");
+		return false;
 	}
 
-	const string hours = conf->Exists("hours") ? conf->GetValue("hours") : "";
+	const string hours = conf->GetValue("hours");
+
 	if ((itsCalculationMode == kCalculateBias || itsCalculationMode == kCalculateMAE) && hours.empty())
 	{
 		throw std::runtime_error(ClassName() + ": number of previous hours ('hours') for calculation not specified");
@@ -244,33 +147,44 @@ void blend::Process(shared_ptr<const plugin_configuration> conf)
 		}
 	}
 
-	if (itsCalculationMode != kCalculateBlend)
+	try
 	{
-		const string analysisHour = conf->Exists("analysis_hour") ? conf->GetValue("analysis_hour") : "";
-		if (analysisHour.empty())
-		{
-			throw std::runtime_error(ClassName() + ": analysis_hour not defined");
-		}
-		else
-		{
-			itsAnalysisHour = stoi(analysisHour);
-		}
+		const int ahour = stoi(conf->GetValue("analysis_hour"));
+		itsAnalysisTime = MakeAnalysisTime(itsTimeIterator.At(0), ahour);
+	}
+	catch (const std::invalid_argument& e)
+	{
+		itsLogger.Fatal("Analysis_hour not defined");
+		return false;
+	}
+
+	return true;
+}
+
+// - parameter
+
+void blend::Process(shared_ptr<const plugin_configuration> conf)
+{
+	Init(conf);
+
+	if (ParseConfigurationOptions(conf) == false)
+	{
+		return;
 	}
 
 	// Each parameter has to be processed with a separate process queue invocation.
-	const string p = conf->Exists("param") ? conf->GetValue("param") : "";
+	const string p = conf->GetValue("param");
 	if (p.empty())
 	{
 		throw std::runtime_error(ClassName() + ": parameter not specified");
 	}
-	params.push_back(param(p));
-	SetParams(params);
+
+	SetParams({param(p)});
 	Start();
 }
 
 void blend::Calculate(shared_ptr<info<double>> targetInfo, unsigned short threadIndex)
 {
-	auto f = GET_PLUGIN(fetcher);
 	auto log = logger("blendThread#" + to_string(threadIndex));
 	const string deviceType = "CPU";
 	const forecast_time currentTime = targetInfo->Time();
@@ -299,42 +213,20 @@ void blend::Calculate(shared_ptr<info<double>> targetInfo, unsigned short thread
 	}
 }
 
-// MOS doesn't have forecast hours 0, 1, 2
-static bool IsDuringMosFirstHours(const forecast_time& currentTime)
-{
-	const int validHour = stoi(currentTime.ValidDateTime().String("%H"));
-	const int originHour = stoi(currentTime.OriginDateTime().String("%H"));
-	const bool firstHours = (originHour == 0 && validHour >= 0 && validHour <= 2) ||
-	                        (originHour == 12 && validHour >= 12 && validHour <= 14);
-	return firstHours;
-}
-
-static forecast_time MakeAnalysisFetchTime(const forecast_time& currentTime, int analysisHour)
-{
-	const int validHour = stoi(currentTime.ValidDateTime().String("%H"));
-
-	forecast_time analysisFetchTime = currentTime;
-
-	analysisFetchTime.ValidDateTime().Adjust(kHourResolution, -validHour);  // set to 00
-	analysisFetchTime.ValidDateTime().Adjust(kHourResolution, analysisHour);
-
-	analysisFetchTime.OriginDateTime() = analysisFetchTime.ValidDateTime();
-
-	return analysisFetchTime;
-}
-
-matrix<double> blend::CalculateBias(logger& log, shared_ptr<info<double>> targetInfo, const forecast_time& calcTime,
-                                    const blend_producer& blendProd)
+matrix<double> blend::CalculateBias(logger& log, shared_ptr<info<double>> targetInfo, const forecast_time& calcTime)
 {
 	shared_ptr<plugin_configuration> cnf = make_shared<plugin_configuration>(*itsConfiguration);
 
-	param currentParam = targetInfo->Param();
-	forecast_time currentTime = targetInfo->Time();
-	forecast_time analysisFetchTime = MakeAnalysisFetchTime(currentTime, itsAnalysisHour);
+	const param& currentParam = targetInfo->Param();
+	const forecast_time& currentTime = targetInfo->Time();
+	const level& currentLevel = targetInfo->Level();
 
-	HPTimeResolution currentRes = currentTime.StepResolution();
+	info_t analysis = Fetch(itsAnalysisTime, currentLevel, currentParam, LAPS.type, {kLapsGeom}, kLapsProd);
 
-	info_t analysis = FetchProd(cnf, analysisFetchTime, currentRes, currentParam, LAPS, kLapsProd, kLapsGeom);
+	if (!analysis)
+	{
+		return matrix<double>();
+	}
 
 	matrix<double> currentBias(targetInfo->Data().SizeX(), targetInfo->Data().SizeY(), targetInfo->Data().SizeZ(),
 	                           MissingDouble());
@@ -344,52 +236,46 @@ matrix<double> blend::CalculateBias(logger& log, shared_ptr<info<double>> target
 
 	// MOS doesn't have hours 0, 1, 2. So we'll set this to missing. We don't want to do this with other models, since
 	// in these cases it is certainly an error that needs to be looked at and fixed manually.
-	if (itsBlendProducer == MOS && IsDuringMosFirstHours(currentTime))
+	if (itsBlendProducer == MOS && currentTime.Step() < 3)
 	{
-		try
-		{
-			info_t Info = FetchProd(cnf, leadTime, currentRes, currentParam, itsBlendProducer, kBlendRawProd);
-			forecast = VEC(Info);
-		}
-		catch (HPExceptionType& e)
-		{
-			if (e == kFileDataNotFound)
-			{
-				forecast = vector<double>(targetInfo->Data().Size(), MissingDouble());
-			}
-			else
-			{
-				throw;
-			}
-		}
+		forecast = vector<double>(targetInfo->Data().Size(), MissingDouble());
 	}
 	else
 	{
-		info_t Info = FetchProd(cnf, leadTime, currentRes, currentParam, itsBlendProducer, kBlendRawProd);
+		info_t Info = Fetch(leadTime, currentLevel, currentParam, itsBlendProducer.type);
+
+		if (!Info)
+		{
+			return matrix<double>();
+		}
+
 		forecast = VEC(Info);
 	}
 
 	// Previous forecast's bias corrected data is optional. If the data is not found we'll set the grid to missing.
 	// (This happens, for example, during initialization.)
 	forecast_time prevLeadTime(leadTime);
-	prevLeadTime.OriginDateTime().Adjust(currentRes, -blendProd.originTimestep);
+	prevLeadTime.OriginDateTime().Adjust(kHourResolution, -itsBlendProducer.originTimestep);
 
 	vector<double> prevBias;
-	try
+
+	if (prevLeadTime.Step() <= itsBlendProducer.forecastLength)
 	{
-		info_t temp = FetchProd(cnf, prevLeadTime, currentRes, currentParam, itsBlendProducer, kBlendBiasProd);
-		prevBias = VEC(temp);
-	}
-	catch (HPExceptionType& e)
-	{
-		if (e == kFileDataNotFound)
+		info_t prev = Fetch(prevLeadTime, currentLevel, currentParam, itsBlendProducer.type,
+		                    {itsConfiguration->TargetGeomName()}, kBlendBiasProd);
+
+		if (!prev)
 		{
 			prevBias = vector<double>(targetInfo->Data().Size(), MissingDouble());
 		}
 		else
 		{
-			throw;
+			prevBias = VEC(prev);
 		}
+	}
+	else
+	{
+		prevBias = vector<double>(targetInfo->Data().Size(), MissingDouble());
 	}
 
 	// Introduce shorter names for clarity
@@ -420,66 +306,61 @@ matrix<double> blend::CalculateBias(logger& log, shared_ptr<info<double>> target
 }
 
 // Follows largely the same format as CalculateBias
-matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info<double>> targetInfo, const forecast_time& calcTime,
-                                   const blend_producer& blendProd)
+matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info<double>> targetInfo, const forecast_time& calcTime)
 {
-	shared_ptr<plugin_configuration> cnf = make_shared<plugin_configuration>(*itsConfiguration);
+	const param& currentParam = targetInfo->Param();
+	const forecast_time& currentTime = targetInfo->Time();
+	const level& currentLevel = targetInfo->Level();
 
-	const string geom = cnf->TargetGeomName();
+	info_t analysis = Fetch(itsAnalysisTime, currentLevel, currentParam, LAPS.type, {kLapsGeom}, kLapsProd);
 
-	param currentParam = targetInfo->Param();
-	forecast_time currentTime = targetInfo->Time();
-	forecast_time analysisFetchTime = MakeAnalysisFetchTime(currentTime, itsAnalysisHour);
-
-	HPTimeResolution currentRes = currentTime.StepResolution();
-
-	info_t analysis = FetchProd(cnf, analysisFetchTime, currentRes, currentParam, LAPS, kLapsProd, kLapsGeom);
+	if (!analysis)
+	{
+		return matrix<double>();
+	}
 
 	matrix<double> MAE(targetInfo->Data().SizeX(), targetInfo->Data().SizeY(), targetInfo->Data().SizeZ(),
 	                   MissingDouble());
 
 	forecast_time leadTime(calcTime);
-	forecast_time prevLeadTime(leadTime);
-	prevLeadTime.OriginDateTime().Adjust(currentRes, -blendProd.originTimestep);
 
-	info_t bias = FetchProd(cnf, leadTime, currentRes, currentParam, blendProd, kBlendBiasProd);
+	info_t bias = Fetch(leadTime, currentLevel, currentParam, itsBlendProducer.type,
+	                    itsConfiguration->SourceGeomNames(), kBlendBiasProd);
 
 	// See note pertaining to MOS at CalculateBias.
 	vector<double> forecast;
-	if (itsBlendProducer == MOS && IsDuringMosFirstHours(currentTime))
+	if (itsBlendProducer == MOS && currentTime.Step() < 3)
 	{
-		try
-		{
-			info_t Info = FetchProd(cnf, leadTime, currentRes, currentParam, blendProd, kBlendRawProd);
-			forecast = VEC(Info);
-		}
-		catch (HPExceptionType& e)
-		{
-			if (e == kFileDataNotFound)
-			{
-				forecast = vector<double>(targetInfo->Data().Size(), MissingDouble());
-			}
-			else
-			{
-				throw;
-			}
-		}
+		forecast = vector<double>(targetInfo->Data().Size(), MissingDouble());
 	}
 	else
 	{
-		info_t Info = FetchProd(cnf, leadTime, currentRes, currentParam, blendProd, kBlendRawProd);
+		info_t Info = Fetch(leadTime, currentLevel, currentParam, itsBlendProducer.type);
 		forecast = VEC(Info);
 	}
 
 	vector<double> prevMAE;
-	info_t prevMAE_Info = FetchNoExcept(cnf, prevLeadTime, currentRes, currentParam, blendProd, kBlendWeightProd, geom);
-	if (!prevMAE_Info)
+
+	forecast_time prevLeadTime(leadTime);
+	prevLeadTime.OriginDateTime().Adjust(kHourResolution, -itsBlendProducer.originTimestep);
+
+	if (prevLeadTime.Step() <= itsBlendProducer.forecastLength)
 	{
-		prevMAE = vector<double>(targetInfo->Data().Size(), MissingDouble());
+		info_t prev = Fetch(prevLeadTime, currentLevel, currentParam, itsBlendProducer.type,
+		                    {itsConfiguration->TargetGeomName()}, kBlendWeightProd);
+
+		if (!prev)
+		{
+			prevMAE = vector<double>(targetInfo->Data().Size(), MissingDouble());
+		}
+		else
+		{
+			prevMAE = VEC(prev);
+		}
 	}
 	else
 	{
-		prevMAE = VEC(prevMAE_Info);
+		prevMAE = vector<double>(targetInfo->Data().Size(), MissingDouble());
 	}
 
 	const vector<double>& O = VEC(analysis);
@@ -532,7 +413,7 @@ void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short 
 	level targetLevel = targetInfo->Level();
 	forecast_time current = targetInfo->Time();
 
-	raw_time latestOrigin = LatestOriginTimeForProducer(itsBlendProducer);
+	const raw_time latestOrigin = targetInfo->Time().OriginDateTime();
 	log.Info("Latest origin time for producer: " + latestOrigin.String());
 
 	// Used for fetching raw model output, bias, and weight for models.
@@ -602,16 +483,17 @@ void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short 
 
 		matrix<double> d;
 
-		try
+		if (mode == kCalculateBias)
 		{
-			if (mode == kCalculateBias)
-			{
-				d = CalculateBias(log, targetInfo, ftime, itsBlendProducer);
-			}
-			else
-			{
-				d = CalculateMAE(log, targetInfo, ftime, itsBlendProducer);
-			}
+			d = CalculateBias(log, targetInfo, ftime);
+		}
+		else
+		{
+			d = CalculateMAE(log, targetInfo, ftime);
+		}
+
+		if (d.Size() > 0)
+		{
 			if (Info->Find<forecast_type>(forecastType))
 			{
 				auto b = Info->Base();
@@ -622,13 +504,6 @@ void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short 
 			{
 				log.Error("Failed to set the correct output forecast type");
 				himan::Abort();
-			}
-		}
-		catch (const HPExceptionType& e)
-		{
-			if (e != kFileDataNotFound)
-			{
-				throw e;
 			}
 		}
 
@@ -648,16 +523,13 @@ void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short 
 	targetInfo->Base(b);
 }
 
-static std::vector<info_t> FetchRawGrids(shared_ptr<info<double>> targetInfo, shared_ptr<plugin_configuration> cnf,
-                                         unsigned short threadIdx)
+std::vector<info_t> blend::FetchRawGrids(shared_ptr<info<double>> targetInfo, unsigned short threadIdx) const
 {
-	auto f = GET_PLUGIN(fetcher);
 	auto log = logger("calculateBlend_FetchRawGrids#" + to_string(threadIdx));
 
-	const forecast_time currentTime = targetInfo->Time();
-	const HPTimeResolution currentResolution = currentTime.StepResolution();
-	const param currentParam = targetInfo->Param();
-	const string geom = cnf->TargetGeomName();
+	const forecast_time& currentTime = targetInfo->Time();
+	const param& currentParam = targetInfo->Param();
+	const level& currentLevel = targetInfo->Level();
 
 	// Fetch previous model runs raw fields for EC and MOS when we're calculating during the 06 and 18 cycles.
 	forecast_time ecmosFetchTime = currentTime;
@@ -667,11 +539,11 @@ static std::vector<info_t> FetchRawGrids(shared_ptr<info<double>> targetInfo, sh
 		ecmosFetchTime.OriginDateTime().Adjust(kHourResolution, -6);
 	}
 
-	info_t mosRaw = FetchNoExcept(cnf, ecmosFetchTime, currentResolution, currentParam, MOS, kBlendRawProd, geom);
-	info_t ecRaw = FetchNoExcept(cnf, ecmosFetchTime, currentResolution, currentParam, ECMWF, kBlendRawProd, geom);
-	info_t mepsRaw = FetchNoExcept(cnf, currentTime, currentResolution, currentParam, MEPS, kBlendRawProd, geom);
-	info_t hirlamRaw = FetchNoExcept(cnf, currentTime, currentResolution, currentParam, HIRLAM, kBlendRawProd, geom);
-	info_t gfsRaw = FetchNoExcept(cnf, currentTime, currentResolution, currentParam, GFS, kBlendRawProd, geom);
+	info_t mosRaw = Fetch(ecmosFetchTime, currentLevel, currentParam, MOS.type);
+	info_t ecRaw = Fetch(ecmosFetchTime, currentLevel, currentParam, ECMWF.type);
+	info_t mepsRaw = Fetch(currentTime, currentLevel, currentParam, MEPS.type);
+	info_t hirlamRaw = Fetch(currentTime, currentLevel, currentParam, HIRLAM.type);
+	info_t gfsRaw = Fetch(currentTime, currentLevel, currentParam, GFS.type);
 
 	//
 	// We want to return nullptrs here so that we can skip over these entries in the Calculate-loop.
@@ -736,7 +608,7 @@ info_t FetchHistorical(logger& log, shared_ptr<plugin_configuration> cnf, const 
 		ftime.ValidDateTime() = ftime.OriginDateTime();
 		ftime.ValidDateTime().Adjust(kHourResolution, currentStep);
 
-		search_options opts(ftime, parm, blendProd.lvl, prod, blendProd.type, cnf);
+		search_options opts(ftime, parm, level(kHeight, 2.0), prod, blendProd.type, cnf);
 		const vector<string> files = r->Files(opts).first;
 		if (files.empty())
 		{
@@ -754,7 +626,7 @@ info_t FetchHistorical(logger& log, shared_ptr<plugin_configuration> cnf, const 
 	info_t Info;
 	try
 	{
-		Info = f->Fetch(cnf, ftime, blendProd.lvl, parm, blendProd.type, false);
+		Info = f->Fetch(cnf, ftime, level(kHeight, 2.0), parm, blendProd.type, false);
 		log.Info("Found matching file: " + to_string(prod.Id()) + "/" + to_string(blendProd.type.Value()) + " " +
 		         ftime.OriginDateTime().String() + " " + ftime.ValidDateTime().String());
 	}
@@ -872,8 +744,8 @@ void blend::CalculateBlend(shared_ptr<info<double>> targetInfo, unsigned short t
 	// NOTE: If one of the grids is missing, we should still put an empty grid there. Since all the stages assume that
 	// F[i], B[i], W[i] are all of the same model! This means that the ordering is fixed for the return vector of
 	// FetchRawGrids, FetchBiasGrids, FetchMAEGrids.
-	vector<info_t> forecasts =
-	    FetchRawGrids(targetInfo, make_shared<plugin_configuration>(*itsConfiguration), threadIdx);
+	vector<info_t> forecasts = FetchRawGrids(targetInfo, threadIdx);
+
 	if (std::all_of(forecasts.begin(), forecasts.end(), [&](info_t i) { return i == nullptr; }))
 	{
 		log.Error("Failed to acquire any source data");

@@ -465,8 +465,10 @@ pair<matrix<T>, matrix<T>> util::CentralDifference(matrix<T>& A, vector<T>& dx, 
 	return ret;
 }
 
-template pair<matrix<double>, matrix<double>> util::CentralDifference<double>(matrix<double>& A, vector<double>& dx, vector<double>& dy);
-template pair<matrix<float>, matrix<float>> util::CentralDifference<float>(matrix<float>& A, vector<float>& dx, vector<float>& dy);
+template pair<matrix<double>, matrix<double>> util::CentralDifference<double>(matrix<double>& A, vector<double>& dx,
+                                                                              vector<double>& dy);
+template pair<matrix<float>, matrix<float>> util::CentralDifference<float>(matrix<float>& A, vector<float>& dx,
+                                                                           vector<float>& dy);
 
 double util::LatitudeLength(double phi)
 {
@@ -534,13 +536,19 @@ template <typename T>
 void util::DumpVector(const vector<T>& vec, const string& name)
 {
 	T min = numeric_limits<T>::max(), max = numeric_limits<T>::lowest(), sum = 0;
-	size_t count = 0, missing = 0;
+	size_t count = 0, missing = 0, nan = 0;
 
 	for (const T& val : vec)
 	{
 		if (IsMissing(val))
 		{
 			missing++;
+			continue;
+		}
+
+		if (std::isnan(val))
+		{
+			nan++;
 			continue;
 		}
 
@@ -562,7 +570,8 @@ void util::DumpVector(const vector<T>& vec, const string& name)
 		cout << name << "\t";
 	}
 
-	cout << "min " << min << " max " << max << " mean " << mean << " count " << count << " missing " << missing << endl;
+	cout << "min " << min << " max " << max << " mean " << mean << " count " << count << " nan " << nan << " missing "
+	     << missing << endl;
 
 	if (min != max && count > 0)
 	{
