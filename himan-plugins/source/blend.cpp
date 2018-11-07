@@ -327,6 +327,10 @@ matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info<double>> targetI
 	info_t bias = Fetch(leadTime, currentLevel, currentParam, itsBlendProducer.type,
 	                    itsConfiguration->SourceGeomNames(), kBlendBiasProd);
 
+	if (!bias)
+	{
+		return matrix<double>();
+	}
 	// See note pertaining to MOS at CalculateBias.
 	vector<double> forecast;
 	if (itsBlendProducer == MOS && currentTime.Step() < 3)
@@ -336,6 +340,12 @@ matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info<double>> targetI
 	else
 	{
 		info_t Info = Fetch(leadTime, currentLevel, currentParam, itsBlendProducer.type);
+
+		if (Info)
+		{
+			matrix<double>();
+		}
+
 		forecast = VEC(Info);
 	}
 
