@@ -147,17 +147,19 @@ bool blend::ParseConfigurationOptions(const shared_ptr<const plugin_configuratio
 		}
 	}
 
-	try
+	if (itsCalculationMode != kCalculateBlend)
 	{
-		const int ahour = stoi(conf->GetValue("analysis_hour"));
-		itsAnalysisTime = MakeAnalysisTime(itsTimeIterator.At(0), ahour);
+		try
+		{
+			const int ahour = stoi(conf->GetValue("analysis_hour"));
+			itsAnalysisTime = MakeAnalysisTime(itsTimeIterator.At(0), ahour);
+		}
+		catch (const std::invalid_argument& e)
+		{
+			itsLogger.Fatal("Analysis_hour not defined");
+			return false;
+		}
 	}
-	catch (const std::invalid_argument& e)
-	{
-		itsLogger.Fatal("Analysis_hour not defined");
-		return false;
-	}
-
 	return true;
 }
 
@@ -423,8 +425,20 @@ void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short 
 	level targetLevel = targetInfo->Level();
 	forecast_time current = targetInfo->Time();
 
-	const raw_time latestOrigin = targetInfo->Time().OriginDateTime();
-	log.Info("Latest origin time for producer: " + latestOrigin.String());
+	raw_time latestOrigin = current.OriginDateTime();
+
+	if (itsBlendProducer == MOS || itsBlendProducer == ECMWF)
+	{
+		const int validHour = stoi(current.OriginDateTime().String("%H"));
+
+		if (validHour == 6 || validHour == 18)
+		{
+			latestOrigin.Adjust(kHourResolution, -6);
+		}
+	}
+
+	log.Info("Latest origin time for producer " + to_string(itsConfiguration->SourceProducers()[0].Id()) +
+	         " ftype val: " + to_string(forecastType.Type()) + ": " + latestOrigin.String());
 
 	// Used for fetching raw model output, bias, and weight for models.
 
