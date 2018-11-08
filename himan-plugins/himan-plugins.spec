@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.11.7
+Version: 18.11.8
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -112,6 +112,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Nov  8 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.8-1.fmi
+- Updates to blend
 * Wed Nov  7 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.7-1.fmi
 - Updates to blend
 * Mon Nov  5 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.5-1.fmi
