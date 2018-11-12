@@ -141,11 +141,11 @@ void modifier::UpperHeight(const std::vector<double>& theUpperHeight)
 #endif
 }
 
-size_t modifier::FindNth() const
+int modifier::FindNth() const
 {
 	return itsFindNthValue;
 }
-void modifier::FindNth(size_t theNth)
+void modifier::FindNth(int theNth)
 {
 	itsFindNthValue = theNth;
 }
@@ -658,7 +658,7 @@ bool modifier_findheight::CalculationFinished() const
 {
 	return (itsResult.size() && (itsValuesFound == itsResult.size() ||
 	                             static_cast<size_t>(count(itsOutOfBoundHeights.begin(), itsOutOfBoundHeights.end(),
-	                                                       true)) == itsResult.size()));
+	                                                       true)) == itsFindValue.size()));
 }
 
 void modifier_findheight::Init(const std::vector<double>& theData, const std::vector<double>& theHeights)
@@ -740,6 +740,14 @@ void modifier_findheight::Calculate(double theValue, double theHeight, double th
 					itsValuesFound++;
 					itsOutOfBoundHeights[itsIndex] = true;
 				}
+				else if (itsFindNthValue == -1)
+				{
+					if (itsResult.size() < itsFindValue.size() * itsFoundNValues[itsIndex])
+					{
+						itsResult.resize(itsFindValue.size() * itsFoundNValues[itsIndex], himan::MissingDouble());
+					}
+					itsResult[itsIndex + (itsFoundNValues[itsIndex] - 1) * itsFindValue.size()] = actualHeight;
+				}
 			}
 			else
 			{
@@ -752,7 +760,7 @@ void modifier_findheight::Calculate(double theValue, double theHeight, double th
 
 /* ----------------- */
 
-void modifier_findheight_gt::FindNth(size_t theNth)
+void modifier_findheight_gt::FindNth(int theNth)
 {
 	if (theNth > 1)
 	{
@@ -868,7 +876,7 @@ void modifier_findheight_gt::Calculate(double theValue, double theHeight, double
 
 /* ----------------- */
 
-void modifier_findheight_lt::FindNth(size_t theNth)
+void modifier_findheight_lt::FindNth(int theNth)
 {
 	if (theNth != 0 && theNth != 1)
 	{

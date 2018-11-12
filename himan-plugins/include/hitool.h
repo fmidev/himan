@@ -240,7 +240,7 @@ class hitool : public auxiliary_plugin
 	 */
 	template <typename T>
 	std::vector<T> VerticalHeight(const std::vector<param>& wantedParamList, T firstLevelValue, T lastLevelValue,
-	                              const std::vector<T>& findValue, size_t findNth = 1) const;
+	                              const std::vector<T>& findValue, int findNth = 1) const;
 
 	/**
 	 * @brief Return height for given value for the first parameter found.
@@ -252,7 +252,7 @@ class hitool : public auxiliary_plugin
 	template <typename T>
 	std::vector<T> VerticalHeight(const std::vector<param>& wantedParamList, const std::vector<T>& firstLevelValue,
 	                              const std::vector<T>& lastLevelValue, const std::vector<T>& findValue,
-	                              size_t findNth = 1) const;
+	                              int findNth = 1) const;
 
 	/**
 	 * @brief Return height of a given parameter value.
@@ -264,7 +264,7 @@ class hitool : public auxiliary_plugin
 	 */
 	template <typename T>
 	std::vector<T> VerticalHeight(const params& wantedParam, T firstLevelValue, T lastLevelValue, T findValue,
-	                              size_t findNth = 1) const;
+	                              int findNth = 1) const;
 
 	/**
 	 * @brief Return height of a given parameter value.
@@ -276,7 +276,7 @@ class hitool : public auxiliary_plugin
 	 */
 	template <typename T>
 	std::vector<T> VerticalHeight(const param& wantedParam, T firstLevelValue, T lastLevelValue, T findValue,
-	                              size_t findNth = 1) const;
+	                              int findNth = 1) const;
 
 	/**
 	 * @brief Return height of a given parameter value.
@@ -288,7 +288,7 @@ class hitool : public auxiliary_plugin
 	 */
 	template <typename T>
 	std::vector<T> VerticalHeight(const param& wantedParam, T firstLevelValue, T lastLevelValue,
-	                              const std::vector<T>& findValue, size_t findNth = 1) const;
+	                              const std::vector<T>& findValue, int findNth = 1) const;
 
 	/**
 	 * @brief Find height of a given parameter value.
@@ -297,6 +297,7 @@ class hitool : public auxiliary_plugin
 	 *
 	 * If findNth > 1 and value is not found (although lower count values are found),
 	 * value is set to Missing (unlike in smarttool).
+	 * If findNth = -1, all found values are returned
 	 *
 	 * @param wantedParam Wanted parameter
 	 * @param firstLevelValue Lowest level value for each point, search will start here
@@ -308,7 +309,7 @@ class hitool : public auxiliary_plugin
 	template <typename T>
 	std::vector<T> VerticalHeight(const param& wantedParam, const std::vector<T>& firstLevelValue,
 	                              const std::vector<T>& lastLevelValue, const std::vector<T>& findValue,
-	                              size_t findNth = 1) const;
+	                              int findNth = 1) const;
 
 	/**
 	 * @brief VerticalHeightGreaterThan() is similar to VerticalHeight(), but when searching
@@ -321,26 +322,25 @@ class hitool : public auxiliary_plugin
 	 */
 	template <typename T>
 	std::vector<T> VerticalHeightGreaterThan(const param& wantedParam, T firstLevelValue, T lastLevelValue,
-	                                         const std::vector<T>& findValue, size_t findNth = 1) const;
+	                                         const std::vector<T>& findValue, int findNth = 1) const;
 	template <typename T>
 	std::vector<T> VerticalHeightGreaterThan(const param& wantedParam, T firstLevelValue, T lastLevelValue, T findValue,
-	                                         size_t findNth = 1) const;
+	                                         int findNth = 1) const;
 	template <typename T>
 	std::vector<T> VerticalHeightGreaterThan(const params& wantedParam, T firstLevelValue, T lastLevelValue,
-	                                         T findValue, size_t findNth = 1) const;
+	                                         T findValue, int findNth = 1) const;
 	template <typename T>
 	std::vector<T> VerticalHeightGreaterThan(const std::vector<param>& wantedParamList,
 	                                         const std::vector<T>& firstLevelValue,
 	                                         const std::vector<T>& lastLevelValue, const std::vector<T>& findValue,
-	                                         size_t findNth = 1) const;
+	                                         int findNth = 1) const;
 	template <typename T>
 	std::vector<T> VerticalHeightGreaterThan(const std::vector<param>& wantedParamList, T firstLevelValue,
-	                                         T lastLevelValue, const std::vector<T>& findValue,
-	                                         size_t findNth = 1) const;
+	                                         T lastLevelValue, const std::vector<T>& findValue, int findNth = 1) const;
 	template <typename T>
 	std::vector<T> VerticalHeightGreaterThan(const param& wantedParam, const std::vector<T>& firstLevelValue,
 	                                         const std::vector<T>& lastLevelValue, const std::vector<T>& findValue,
-	                                         size_t findNth = 1) const;
+	                                         int findNth = 1) const;
 
 	/**
 	 * @brief For description, look at VerticalHeightGreaterThan()
@@ -348,24 +348,24 @@ class hitool : public auxiliary_plugin
 
 	template <typename T>
 	std::vector<T> VerticalHeightLessThan(const param& wantedParam, T firstLevelValue, T lastLevelValue,
-	                                      const std::vector<T>& findValue, size_t findNth = 1) const;
+	                                      const std::vector<T>& findValue, int findNth = 1) const;
 	template <typename T>
 	std::vector<T> VerticalHeightLessThan(const param& wantedParam, T firstLevelValue, T lastLevelValue, T findValue,
-	                                      size_t findNth = 1) const;
+	                                      int findNth = 1) const;
 	template <typename T>
 	std::vector<T> VerticalHeightLessThan(const params& wantedParam, T firstLevelValue, T lastLevelValue, T findValue,
-	                                      size_t findNth = 1) const;
+	                                      int findNth = 1) const;
 	template <typename T>
 	std::vector<T> VerticalHeightLessThan(const std::vector<param>& wantedParamList,
 	                                      const std::vector<T>& firstLevelValue, const std::vector<T>& lastLevelValue,
-	                                      const std::vector<T>& findValue, size_t findNth = 1) const;
+	                                      const std::vector<T>& findValue, int findNth = 1) const;
 	template <typename T>
 	std::vector<T> VerticalHeightLessThan(const std::vector<param>& wantedParamList, T firstLevelValue,
-	                                      T lastLevelValue, const std::vector<T>& findValue, size_t findNth = 1) const;
+	                                      T lastLevelValue, const std::vector<T>& findValue, int findNth = 1) const;
 	template <typename T>
 	std::vector<T> VerticalHeightLessThan(const param& wantedParam, const std::vector<T>& firstLevelValue,
 	                                      const std::vector<T>& lastLevelValue, const std::vector<T>& findValue,
-	                                      size_t findNth = 1) const;
+	                                      int findNth = 1) const;
 
 	/**
 	 * @brief Return value of parameter from given height for the first parameter found.

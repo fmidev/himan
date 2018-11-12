@@ -432,7 +432,7 @@ vector<T> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelType wan
 
 	auto ret = mod->Result();
 
-	if (mod->HeightsCrossed() != ret.size())
+	if (mod->HeightsCrossed() < itsConfiguration->BaseGrid()->Size())
 	{
 		itsLogger.Warning(to_string(ret.size() - mod->HeightsCrossed()) +
 		                  " grid points did not reach upper height limit. Did I run out of vertical levels?");
@@ -508,7 +508,7 @@ template pair<shared_ptr<info<double>>, shared_ptr<info<double>>> hitool::GetDat
 
 template <typename T>
 vector<T> hitool::VerticalHeight(const vector<param>& wantedParamList, T lowerHeight, T upperHeight,
-                                 const vector<T>& findValue, size_t findNth) const
+                                 const vector<T>& findValue, int findNth) const
 {
 	vector<T> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
 	vector<T> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
@@ -516,13 +516,12 @@ vector<T> hitool::VerticalHeight(const vector<param>& wantedParamList, T lowerHe
 	return VerticalHeight<T>(wantedParamList, firstLevelValue, lastLevelValue, findValue, findNth);
 }
 
-template vector<double> hitool::VerticalHeight<double>(const params&, double, double, const vector<double>&,
-                                                       size_t) const;
-template vector<float> hitool::VerticalHeight<float>(const params&, float, float, const vector<float>&, size_t) const;
+template vector<double> hitool::VerticalHeight<double>(const params&, double, double, const vector<double>&, int) const;
+template vector<float> hitool::VerticalHeight<float>(const params&, float, float, const vector<float>&, int) const;
 
 template <typename T>
 vector<T> hitool::VerticalHeight(const vector<param>& wantedParamList, const vector<T>& firstLevelValue,
-                                 const vector<T>& lastLevelValue, const vector<T>& findValue, size_t findNth) const
+                                 const vector<T>& lastLevelValue, const vector<T>& findValue, int findNth) const
 {
 	ASSERT(!wantedParamList.empty());
 
@@ -563,13 +562,12 @@ vector<T> hitool::VerticalHeight(const vector<param>& wantedParamList, const vec
 }
 
 template vector<double> hitool::VerticalHeight<double>(const vector<param>&, const vector<double>&,
-                                                       const vector<double>&, const vector<double>&, size_t) const;
+                                                       const vector<double>&, const vector<double>&, int) const;
 template vector<float> hitool::VerticalHeight<float>(const vector<param>&, const vector<float>&, const vector<float>&,
-                                                     const vector<float>&, size_t) const;
+                                                     const vector<float>&, int) const;
 
 template <typename T>
-vector<T> hitool::VerticalHeight(const param& wantedParam, T lowerHeight, T upperHeight, T findValue,
-                                 size_t findNth) const
+vector<T> hitool::VerticalHeight(const param& wantedParam, T lowerHeight, T upperHeight, T findValue, int findNth) const
 {
 	vector<T> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
 	vector<T> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
@@ -578,12 +576,12 @@ vector<T> hitool::VerticalHeight(const param& wantedParam, T lowerHeight, T uppe
 	return VerticalHeight<T>(wantedParam, firstLevelValue, lastLevelValue, findValueVector, findNth);
 }
 
-template vector<double> hitool::VerticalHeight<double>(const param&, double, double, double, size_t) const;
-template vector<float> hitool::VerticalHeight<float>(const param&, float, float, float, size_t) const;
+template vector<double> hitool::VerticalHeight<double>(const param&, double, double, double, int) const;
+template vector<float> hitool::VerticalHeight<float>(const param&, float, float, float, int) const;
 
 template <typename T>
 vector<T> hitool::VerticalHeight(const params& wantedParamList, T lowerHeight, T upperHeight, T findValue,
-                                 size_t findNth) const
+                                 int findNth) const
 {
 	vector<T> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
 	vector<T> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
@@ -592,12 +590,12 @@ vector<T> hitool::VerticalHeight(const params& wantedParamList, T lowerHeight, T
 	return VerticalHeight<T>(wantedParamList, firstLevelValue, lastLevelValue, findValueVector, findNth);
 }
 
-template vector<double> hitool::VerticalHeight<double>(const params&, double, double, double, size_t) const;
-template vector<float> hitool::VerticalHeight<float>(const params&, float, float, float, size_t) const;
+template vector<double> hitool::VerticalHeight<double>(const params&, double, double, double, int) const;
+template vector<float> hitool::VerticalHeight<float>(const params&, float, float, float, int) const;
 
 template <typename T>
 vector<T> hitool::VerticalHeight(const param& wantedParam, T lowerHeight, T upperHeight, const vector<T>& findValue,
-                                 size_t findNth) const
+                                 int findNth) const
 {
 	vector<T> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
 	vector<T> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
@@ -605,13 +603,12 @@ vector<T> hitool::VerticalHeight(const param& wantedParam, T lowerHeight, T uppe
 	return VerticalHeight<T>(wantedParam, firstLevelValue, lastLevelValue, findValue, findNth);
 }
 
-template vector<double> hitool::VerticalHeight<double>(const param&, double, double, const vector<double>&,
-                                                       size_t) const;
-template vector<float> hitool::VerticalHeight<float>(const param&, float, float, const vector<float>&, size_t) const;
+template vector<double> hitool::VerticalHeight<double>(const param&, double, double, const vector<double>&, int) const;
+template vector<float> hitool::VerticalHeight<float>(const param&, float, float, const vector<float>&, int) const;
 
 template <typename T>
 vector<T> hitool::VerticalHeight(const param& wantedParam, const vector<T>& firstLevelValue,
-                                 const vector<T>& lastLevelValue, const vector<T>& findValue, size_t findNth) const
+                                 const vector<T>& lastLevelValue, const vector<T>& findValue, int findNth) const
 {
 	auto modifier = CreateModifier(kFindHeightModifier);
 	modifier->FindNth(findNth);
@@ -620,13 +617,13 @@ vector<T> hitool::VerticalHeight(const param& wantedParam, const vector<T>& firs
 }
 
 template vector<double> hitool::VerticalHeight<double>(const param&, const vector<double>&, const vector<double>&,
-                                                       const vector<double>&, size_t) const;
+                                                       const vector<double>&, int) const;
 template vector<float> hitool::VerticalHeight<float>(const param&, const vector<float>&, const vector<float>&,
-                                                     const vector<float>&, size_t) const;
+                                                     const vector<float>&, int) const;
 
 template <typename T>
 vector<T> hitool::VerticalHeightGreaterThan(const param& wantedParam, T lowerHeight, T upperHeight, T findValue,
-                                            size_t findNth) const
+                                            int findNth) const
 {
 	vector<T> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
 	vector<T> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
@@ -635,12 +632,12 @@ vector<T> hitool::VerticalHeightGreaterThan(const param& wantedParam, T lowerHei
 	return VerticalHeightGreaterThan<T>(wantedParam, firstLevelValue, lastLevelValue, findValueVector, findNth);
 }
 
-template vector<double> hitool::VerticalHeightGreaterThan<double>(const param&, double, double, double, size_t) const;
-template vector<float> hitool::VerticalHeightGreaterThan<float>(const param&, float, float, float, size_t) const;
+template vector<double> hitool::VerticalHeightGreaterThan<double>(const param&, double, double, double, int) const;
+template vector<float> hitool::VerticalHeightGreaterThan<float>(const param&, float, float, float, int) const;
 
 template <typename T>
 vector<T> hitool::VerticalHeightGreaterThan(const params& wantedParamList, T lowerHeight, T upperHeight, T findValue,
-                                            size_t findNth) const
+                                            int findNth) const
 {
 	vector<T> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
 	vector<T> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
@@ -649,12 +646,12 @@ vector<T> hitool::VerticalHeightGreaterThan(const params& wantedParamList, T low
 	return VerticalHeightGreaterThan<T>(wantedParamList, firstLevelValue, lastLevelValue, findValueVector, findNth);
 }
 
-template vector<double> hitool::VerticalHeightGreaterThan<double>(const params&, double, double, double, size_t) const;
-template vector<float> hitool::VerticalHeightGreaterThan<float>(const params&, float, float, float, size_t) const;
+template vector<double> hitool::VerticalHeightGreaterThan<double>(const params&, double, double, double, int) const;
+template vector<float> hitool::VerticalHeightGreaterThan<float>(const params&, float, float, float, int) const;
 
 template <typename T>
 vector<T> hitool::VerticalHeightGreaterThan(const param& wantedParam, T lowerHeight, T upperHeight,
-                                            const vector<T>& findValue, size_t findNth) const
+                                            const vector<T>& findValue, int findNth) const
 {
 	vector<T> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
 	vector<T> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
@@ -663,13 +660,13 @@ vector<T> hitool::VerticalHeightGreaterThan(const param& wantedParam, T lowerHei
 }
 
 template vector<double> hitool::VerticalHeightGreaterThan<double>(const param&, double, double, const vector<double>&,
-                                                                  size_t) const;
+                                                                  int) const;
 template vector<float> hitool::VerticalHeightGreaterThan<float>(const param&, float, float, const vector<float>&,
-                                                                size_t) const;
+                                                                int) const;
 
 template <typename T>
 vector<T> hitool::VerticalHeightGreaterThan(const vector<param>& wantedParamList, T lowerHeight, T upperHeight,
-                                            const vector<T>& findValue, size_t findNth) const
+                                            const vector<T>& findValue, int findNth) const
 {
 	vector<T> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
 	vector<T> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
@@ -678,14 +675,14 @@ vector<T> hitool::VerticalHeightGreaterThan(const vector<param>& wantedParamList
 }
 
 template vector<double> hitool::VerticalHeightGreaterThan<double>(const params&, double, double, const vector<double>&,
-                                                                  size_t) const;
+                                                                  int) const;
 template vector<float> hitool::VerticalHeightGreaterThan<float>(const params&, float, float, const vector<float>&,
-                                                                size_t) const;
+                                                                int) const;
 
 template <typename T>
 vector<T> hitool::VerticalHeightGreaterThan(const vector<param>& wantedParamList, const vector<T>& firstLevelValue,
                                             const vector<T>& lastLevelValue, const vector<T>& findValue,
-                                            size_t findNth) const
+                                            int findNth) const
 {
 	ASSERT(!wantedParamList.empty());
 
@@ -727,15 +724,14 @@ vector<T> hitool::VerticalHeightGreaterThan(const vector<param>& wantedParamList
 
 template vector<double> hitool::VerticalHeightGreaterThan<double>(const params&, const vector<double>&,
                                                                   const vector<double>&, const vector<double>&,
-                                                                  size_t) const;
+                                                                  int) const;
 template vector<float> hitool::VerticalHeightGreaterThan<float>(const params&, const vector<float>&,
-                                                                const vector<float>&, const vector<float>&,
-                                                                size_t) const;
+                                                                const vector<float>&, const vector<float>&, int) const;
 
 template <typename T>
 vector<T> hitool::VerticalHeightGreaterThan(const param& wantedParam, const vector<T>& firstLevelValue,
                                             const vector<T>& lastLevelValue, const vector<T>& findValue,
-                                            size_t findNth) const
+                                            int findNth) const
 {
 	auto modifier = CreateModifier(kFindHeightGreaterThanModifier);
 	modifier->FindNth(findNth);
@@ -745,14 +741,13 @@ vector<T> hitool::VerticalHeightGreaterThan(const param& wantedParam, const vect
 
 template vector<double> hitool::VerticalHeightGreaterThan<double>(const param&, const vector<double>&,
                                                                   const vector<double>&, const vector<double>&,
-                                                                  size_t) const;
+                                                                  int) const;
 template vector<float> hitool::VerticalHeightGreaterThan<float>(const param&, const vector<float>&,
-                                                                const vector<float>&, const vector<float>&,
-                                                                size_t) const;
+                                                                const vector<float>&, const vector<float>&, int) const;
 
 template <typename T>
 vector<T> hitool::VerticalHeightLessThan(const param& wantedParam, T lowerHeight, T upperHeight, T findValue,
-                                         size_t findNth) const
+                                         int findNth) const
 {
 	vector<T> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
 	vector<T> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
@@ -761,12 +756,12 @@ vector<T> hitool::VerticalHeightLessThan(const param& wantedParam, T lowerHeight
 	return VerticalHeightLessThan<T>(wantedParam, firstLevelValue, lastLevelValue, findValueVector, findNth);
 }
 
-template vector<double> hitool::VerticalHeightLessThan<double>(const param&, double, double, double, size_t) const;
-template vector<float> hitool::VerticalHeightLessThan<float>(const param&, float, float, float, size_t) const;
+template vector<double> hitool::VerticalHeightLessThan<double>(const param&, double, double, double, int) const;
+template vector<float> hitool::VerticalHeightLessThan<float>(const param&, float, float, float, int) const;
 
 template <typename T>
 vector<T> hitool::VerticalHeightLessThan(const params& wantedParamList, T lowerHeight, T upperHeight, T findValue,
-                                         size_t findNth) const
+                                         int findNth) const
 {
 	vector<T> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
 	vector<T> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
@@ -775,12 +770,12 @@ vector<T> hitool::VerticalHeightLessThan(const params& wantedParamList, T lowerH
 	return VerticalHeightLessThan<T>(wantedParamList, firstLevelValue, lastLevelValue, findValueVector, findNth);
 }
 
-template vector<double> hitool::VerticalHeightLessThan<double>(const params&, double, double, double, size_t) const;
-template vector<float> hitool::VerticalHeightLessThan<float>(const params&, float, float, float, size_t) const;
+template vector<double> hitool::VerticalHeightLessThan<double>(const params&, double, double, double, int) const;
+template vector<float> hitool::VerticalHeightLessThan<float>(const params&, float, float, float, int) const;
 
 template <typename T>
 vector<T> hitool::VerticalHeightLessThan(const param& wantedParam, T lowerHeight, T upperHeight,
-                                         const vector<T>& findValue, size_t findNth) const
+                                         const vector<T>& findValue, int findNth) const
 {
 	vector<T> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
 	vector<T> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
@@ -789,13 +784,13 @@ vector<T> hitool::VerticalHeightLessThan(const param& wantedParam, T lowerHeight
 }
 
 template vector<double> hitool::VerticalHeightLessThan<double>(const param&, double, double, const vector<double>&,
-                                                               size_t) const;
+                                                               int) const;
 template vector<float> hitool::VerticalHeightLessThan<float>(const param&, float, float, const vector<float>&,
-                                                             size_t) const;
+                                                             int) const;
 
 template <typename T>
 vector<T> hitool::VerticalHeightLessThan(const vector<param>& wantedParamList, T lowerHeight, T upperHeight,
-                                         const vector<T>& findValue, size_t findNth) const
+                                         const vector<T>& findValue, int findNth) const
 {
 	vector<T> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
 	vector<T> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
@@ -804,14 +799,13 @@ vector<T> hitool::VerticalHeightLessThan(const vector<param>& wantedParamList, T
 }
 
 template vector<double> hitool::VerticalHeightLessThan<double>(const params&, double, double, const vector<double>&,
-                                                               size_t) const;
+                                                               int) const;
 template vector<float> hitool::VerticalHeightLessThan<float>(const params&, float, float, const vector<float>&,
-                                                             size_t) const;
+                                                             int) const;
 
 template <typename T>
 vector<T> hitool::VerticalHeightLessThan(const vector<param>& wantedParamList, const vector<T>& firstLevelValue,
-                                         const vector<T>& lastLevelValue, const vector<T>& findValue,
-                                         size_t findNth) const
+                                         const vector<T>& lastLevelValue, const vector<T>& findValue, int findNth) const
 {
 	ASSERT(!wantedParamList.empty());
 
@@ -852,15 +846,13 @@ vector<T> hitool::VerticalHeightLessThan(const vector<param>& wantedParamList, c
 }
 
 template vector<double> hitool::VerticalHeightLessThan<double>(const params&, const vector<double>&,
-                                                               const vector<double>&, const vector<double>&,
-                                                               size_t) const;
+                                                               const vector<double>&, const vector<double>&, int) const;
 template vector<float> hitool::VerticalHeightLessThan<float>(const params&, const vector<float>&, const vector<float>&,
-                                                             const vector<float>&, size_t) const;
+                                                             const vector<float>&, int) const;
 
 template <typename T>
 vector<T> hitool::VerticalHeightLessThan(const param& wantedParam, const vector<T>& firstLevelValue,
-                                         const vector<T>& lastLevelValue, const vector<T>& findValue,
-                                         size_t findNth) const
+                                         const vector<T>& lastLevelValue, const vector<T>& findValue, int findNth) const
 {
 	auto modifier = CreateModifier(kFindHeightLessThanModifier);
 	modifier->FindNth(findNth);
@@ -869,10 +861,9 @@ vector<T> hitool::VerticalHeightLessThan(const param& wantedParam, const vector<
 }
 
 template vector<double> hitool::VerticalHeightLessThan<double>(const param&, const vector<double>&,
-                                                               const vector<double>&, const vector<double>&,
-                                                               size_t) const;
+                                                               const vector<double>&, const vector<double>&, int) const;
 template vector<float> hitool::VerticalHeightLessThan<float>(const param&, const vector<float>&, const vector<float>&,
-                                                             const vector<float>&, size_t) const;
+                                                             const vector<float>&, int) const;
 
 template <typename T>
 vector<T> hitool::VerticalMinimum(const vector<param>& wantedParamList, T lowerHeight, T upperHeight) const
