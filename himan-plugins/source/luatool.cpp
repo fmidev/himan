@@ -585,7 +585,7 @@ object VerticalCount(std::shared_ptr<hitool> h, const param& theParams, double f
 }
 
 object VerticalHeightGrid(std::shared_ptr<hitool> h, const param& theParam, const object& firstLevelValue,
-                          const object& lastLevelValue, const object& findValue, size_t findNth)
+                          const object& lastLevelValue, const object& findValue, int findNth)
 {
 	try
 	{
@@ -605,7 +605,7 @@ object VerticalHeightGrid(std::shared_ptr<hitool> h, const param& theParam, cons
 }
 
 object VerticalHeight(std::shared_ptr<hitool> h, const param& theParams, double firstLevelValue, double lastLevelValue,
-                      double findValue, size_t findNth)
+                      double findValue, int findNth)
 {
 	try
 	{
@@ -623,7 +623,7 @@ object VerticalHeight(std::shared_ptr<hitool> h, const param& theParams, double 
 }
 
 object VerticalHeightGreaterThanGrid(std::shared_ptr<hitool> h, const param& theParam, const object& firstLevelValue,
-                                     const object& lastLevelValue, const object& findValue, size_t findNth)
+                                     const object& lastLevelValue, const object& findValue, int findNth)
 {
 	try
 	{
@@ -643,7 +643,7 @@ object VerticalHeightGreaterThanGrid(std::shared_ptr<hitool> h, const param& the
 }
 
 object VerticalHeightGreaterThan(std::shared_ptr<hitool> h, const param& theParams, double firstLevelValue,
-                                 double lastLevelValue, double findValue, size_t findNth)
+                                 double lastLevelValue, double findValue, int findNth)
 {
 	try
 	{
@@ -662,7 +662,7 @@ object VerticalHeightGreaterThan(std::shared_ptr<hitool> h, const param& thePara
 }
 
 object VerticalHeightLessThanGrid(std::shared_ptr<hitool> h, const param& theParam, const object& firstLevelValue,
-                                  const object& lastLevelValue, const object& findValue, size_t findNth)
+                                  const object& lastLevelValue, const object& findValue, int findNth)
 {
 	try
 	{
@@ -682,7 +682,7 @@ object VerticalHeightLessThanGrid(std::shared_ptr<hitool> h, const param& thePar
 }
 
 object VerticalHeightLessThan(std::shared_ptr<hitool> h, const param& theParams, double firstLevelValue,
-                              double lastLevelValue, double findValue, size_t findNth)
+                              double lastLevelValue, double findValue, int findNth)
 {
 	try
 	{
@@ -1229,8 +1229,8 @@ void BindLib(lua_State* L)
 		      .def("SetUpperHeightGrid", &modifier_wrapper::SetUpperHeightGrid)
 		      .def("GetFindValue", &modifier_wrapper::GetFindValueGrid)
 		      .def("SetFindValue", &modifier_wrapper::SetFindValueGrid)
-		      .def("SetFindNth", LUA_MEMFN(void, modifier, FindNth, size_t))
-		      .def("GetFindNth", LUA_CMEMFN(size_t, modifier, FindNth, void)),
+		      .def("SetFindNth", LUA_MEMFN(void, modifier, FindNth, int))
+		      .def("GetFindNth", LUA_CMEMFN(int, modifier, FindNth, void)),
 		  class_<modifier_findvalue, modifier>("modifier_findvalue")
 		      .def(constructor<>())
 		      .def("ClassName", &modifier_findvalue::ClassName)

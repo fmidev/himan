@@ -417,6 +417,8 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
                                   const forecast_type& ftype, shared_ptr<info<double>>& result,
                                   shared_ptr<base<double>> baseGrid)
 {
+	timer t(true);
+
 	auto h = GET_PLUGIN(hitool);
 
 	h->Configuration(conf);
@@ -436,11 +438,12 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 	ret->Set<forecast_type>({forecast_type()});
 	ret->Create(baseGrid);
 
-	vector<double> zerom(ret->Data().Size(), 0);
-	vector<double> tenkm(zerom.size(), 10000.);
-	vector<double> zerodeg(zerom.size(), himan::constants::kKelvin);  // 0C
+	const size_t N = ret->Data().Size();
+	vector<double> zerom(N, 0);
+	vector<double> tenkm(N, 10000.);
+	vector<double> zerodeg(N, himan::constants::kKelvin);  // 0C
 
-	vector<double> numZeroLevels, zeroLevel1, zeroLevel2, zeroLevel3, zeroLevel4;
+	vector<double> numZeroLevels(N), zeroLevel1(N), zeroLevel2(N), zeroLevel3(N), zeroLevel4(N);
 	vector<double> Tavg01, Tavg12, Tavg23, Tavg34;
 	vector<double> plusArea, minusArea, plusAreaSfc;
 	vector<double> rhAvg01, rhAvgUpper12, rhAvgUpper23;
@@ -451,28 +454,48 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 	{
 		// 0-kohtien lkm pinnasta (yläraja 10km, jotta ylinkin nollakohta varmasti löytyy)
 
+		log.Trace("Finding all zero levels");
+
 		param wantedParam("T-K");
 
-		log.Trace("Counting number of zero levels");
+		const auto zeroLevels = h->VerticalHeight<double>(wantedParam, zerom, tenkm, zerodeg, -1);
+		const size_t maxNumZeroLevels = zeroLevels.size() / zerom.size();
 
-		numZeroLevels = h->VerticalCount<double>(wantedParam, zerom, tenkm, zerodeg);
+		for (size_t i = 0; i < N; i++)
+		{
+			for (size_t j = 0; j < maxNumZeroLevels; j++)
+			{
+				const double val = zeroLevels[i + j * N];
+
+				if (IsMissing(val))
+				{
+					continue;
+				}
+
+				numZeroLevels[i] += 1;
+
+				switch (j)
+				{
+					case 0:
+						zeroLevel1[i] = val;
+						break;
+					case 1:
+						zeroLevel2[i] = val;
+						break;
+					case 2:
+						zeroLevel3[i] = val;
+						break;
+					case 3:
+						zeroLevel4[i] = val;
+						break;
+					default:
+						break;
+				}
+			}
+		}
 
 		ret->Find<param>(numZeroLevelsParam);
 		ret->Data().Set(numZeroLevels);
-
-#ifdef DEBUG
-		for (size_t i = 0; i < numZeroLevels.size(); i++)
-		{
-			ASSERT(!IsMissing(numZeroLevels[i]));
-		}
-
-		util::DumpVector(numZeroLevels, "num zero levels");
-#endif
-
-		zeroLevel1.resize(numZeroLevels.size(), MissingDouble());
-		zeroLevel2.resize(numZeroLevels.size(), MissingDouble());
-		zeroLevel3.resize(numZeroLevels.size(), MissingDouble());
-		zeroLevel4.resize(numZeroLevels.size(), MissingDouble());
 
 		rhAvgUpper12.resize(numZeroLevels.size(), MissingDouble());
 		rhAvgUpper23.resize(numZeroLevels.size(), MissingDouble());
@@ -489,13 +512,6 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 		// Mahdollisen pinta- tai 1/2. nollarajojen välisen pakkaskerroksen koko [mC, "metriastetta"]
 		minusArea = zeroLevel1;
-
-		log.Trace("Searching for first zero level height");
-		zeroLevel1 = h->VerticalHeight<double>(wantedParam, zerom, tenkm, zerodeg, 1);
-
-#ifdef DEBUG
-		util::DumpVector(zeroLevel1, "zero level 1");
-#endif
 
 		log.Trace("Searching for average temperature between ground level and first zero level");
 		Tavg01 = h->VerticalAverage<double>(wantedParam, zerom, zeroLevel1);
@@ -522,13 +538,6 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 			// Values between zero levels 1 <--> 2
 			wantedParam = param("T-K");
 
-			log.Trace("Searching for second zero level height");
-			zeroLevel2 = h->VerticalHeight<double>(wantedParam, zerom, tenkm, zerodeg, 2);
-
-#ifdef DEBUG
-			util::DumpVector(zeroLevel2, "zero level 2");
-#endif
-
 			log.Trace("Searching for average temperature between first and second zero level");
 			Tavg12 = h->VerticalAverage<double>(wantedParam, zeroLevel1, zeroLevel2);
 
@@ -540,7 +549,6 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 			// Keskimääräinen RH pakkaskerroksen yläpuolisessa plussakerroksessa
 			wantedParam = param("RH-PRCNT");
-
 			rhAvgUpper12 = h->VerticalAverage<double>(wantedParam, zeroLevel1, zeroLevel2);
 
 #ifdef DEBUG
@@ -550,13 +558,6 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 			// 2 <--> 3
 			wantedParam = param("T-K");
 
-			log.Trace("Searching for third zero level height");
-			zeroLevel3 = h->VerticalHeight<double>(wantedParam, zerom, tenkm, zerodeg, 3);
-
-#ifdef DEBUG
-			util::DumpVector(zeroLevel3, "zero level 3");
-#endif
-
 			log.Trace("Searching for average temperature between second and third zero level");
 			Tavg23 = h->VerticalAverage<double>(wantedParam, zeroLevel2, zeroLevel3);
 
@@ -565,7 +566,6 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 #endif
 
 			wantedParam = param("RH-PRCNT");
-
 			log.Trace("Searching for average humidity between second and third zero level");
 
 			// Keskimääräinen RH ylemmässä plussakerroksessa
@@ -577,13 +577,6 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 			// 3 <--> 4
 			wantedParam = param("T-K");
-
-			log.Trace("Searching for fourth zero level height");
-			zeroLevel4 = h->VerticalHeight<double>(wantedParam, zerom, tenkm, zerodeg, 4);
-
-#ifdef DEBUG
-			util::DumpVector(zeroLevel4, "zero level 4");
-#endif
 
 			log.Trace("Searching for average temperature between third and fourth zero level");
 			Tavg34 = h->VerticalAverage<double>(wantedParam, zeroLevel3, zeroLevel4);
@@ -745,6 +738,9 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 	ret->Find<param>(rhMeltUpperParam);
 	ret->Data().Set(rhMeltUpper);
 
+	t.Stop();
+	log.Debug("Freezing area processed in " + to_string(t.GetTime()) + " ms");
+
 	result = ret;
 }
 
@@ -760,6 +756,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
                              const forecast_type& ftype, shared_ptr<info<double>>& result,
                              shared_ptr<base<double>> baseGrid)
 {
+	timer t(true);
 	auto h = GET_PLUGIN(hitool);
 
 	h->Configuration(conf);
@@ -791,7 +788,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 	const vector<double> layerVec(ret->Data().Size(), layer);
 	const vector<double> stCoverVec(layerVec.size(), stCover);
 
-	auto log = logger("preform_hybrid-stratus");
+	logger log("preform_hybrid-stratus");
 
 	try
 	{
@@ -837,7 +834,6 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 
 		// Stratuksen Topin lämpötila (jäätävä tihku)
 		auto Ttop = h->VerticalValue<double>(param("T-K"), top);
-
 		ret->Find<param>(stratusTopTempParam);
 		ret->Data().Set(Ttop);
 
@@ -888,5 +884,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		}
 	}
 
+	t.Stop();
+	log.Debug("Stratus processed in " + to_string(t.GetTime()) + " ms");
 	result = ret;
 }

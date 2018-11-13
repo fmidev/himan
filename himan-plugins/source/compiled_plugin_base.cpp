@@ -291,7 +291,8 @@ void compiled_plugin_base::SetThreadCount()
 			break;
 	}
 
-	itsThreadCount = static_cast<short>(std::min(12, static_cast<int>(dims)));
+	const auto cnfCount = itsConfiguration->ThreadCount();
+	itsThreadCount = (cnfCount == -1) ? static_cast<short>(std::min(12, static_cast<int>(dims))) : cnfCount;
 	itsConfiguration->Statistics()->UsedThreadCount(itsThreadCount);
 }
 
