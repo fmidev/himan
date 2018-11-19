@@ -112,6 +112,9 @@ const param rhAvgUpperParam("RHAVG-UPPER-PRCNT");
 const param rhMeltParam("RHMELT-PRCNT");
 const param rhMeltUpperParam("RHMELT-UPPER-PRCNT");
 
+const param TParam("T-K");
+const param RHParam("RH-PRCNT");
+
 preform_hybrid::preform_hybrid()
 {
 	itsLogger = logger("preform_hybrid");
@@ -148,8 +151,6 @@ void preform_hybrid::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned s
 	// Required source parameters
 
 	params RRParam({param("RRR-KGM2"), param("RR-1-MM")});  // one hour prec OR precipitation rate (HHsade)
-	const param TParam("T-K");
-	const param RHParam("RH-PRCNT");
 
 	level surface0mLevel(kHeight, 0);
 	level surface2mLevel(kHeight, 2);
@@ -457,9 +458,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 	{
 		// 0-kohtien lkm pinnasta (yläraja 10km, jotta ylinkin nollakohta varmasti löytyy)
 
-		param wantedParam("T-K");
-
-		const auto zeroLevels = h->VerticalHeight<double>(wantedParam, zerom, tenkm, zerodeg, -1);
+		const auto zeroLevels = h->VerticalHeight<double>(TParam, zerom, tenkm, zerodeg, -1);
 		const size_t maxNumZeroLevels = zeroLevels.size() / zerom.size();
 
 		for (size_t i = 0; i < N; i++)
@@ -505,12 +504,10 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 		// Mahdollisen pinta- tai 1/2. nollarajojen välisen pakkaskerroksen koko [mC, "metriastetta"]
 		minusArea = zeroLevel1;
 
-		futTavg01 = async(launch::async, [&]() { return h->VerticalAverage<double>(wantedParam, zerom, zeroLevel1); });
-
-		wantedParam = param("RH-PRCNT");
+		futTavg01 = async(launch::async, [&]() { return h->VerticalAverage<double>(TParam, zerom, zeroLevel1); });
 
 		// Keskimääräinen RH nollarajan alapuolisessa plussakerroksessa
-		futrhAvg01 = async(launch::async, [&]() { return h->VerticalAverage<double>(wantedParam, zerom, zeroLevel1); });
+		futrhAvg01 = async(launch::async, [&]() { return h->VerticalAverage<double>(RHParam, zerom, zeroLevel1); });
 
 		// Only the first zero layer with at least one non-missing element is required
 		// to be present. All other zero layers (2,3,4) are optional.
@@ -518,30 +515,21 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 		try
 		{
 			// Values between zero levels 1 <--> 2
-			wantedParam = param("T-K");
-
 			futTavg12 =
-			    async(launch::async, [&]() { return h->VerticalAverage<double>(wantedParam, zeroLevel1, zeroLevel2); });
+			    async(launch::async, [&]() { return h->VerticalAverage<double>(TParam, zeroLevel1, zeroLevel2); });
 
 			// Keskimääräinen RH pakkaskerroksen yläpuolisessa plussakerroksessa
-			wantedParam = param("RH-PRCNT");
 			futrhAvgUpper12 =
-			    async(launch::async, [&]() { return h->VerticalAverage<double>(wantedParam, zeroLevel1, zeroLevel2); });
+			    async(launch::async, [&]() { return h->VerticalAverage<double>(RHParam, zeroLevel1, zeroLevel2); });
 
 			// 2 <--> 3
-			wantedParam = param("T-K");
-
-			Tavg23 = h->VerticalAverage<double>(wantedParam, zeroLevel2, zeroLevel3);
-
-			wantedParam = param("RH-PRCNT");
+			Tavg23 = h->VerticalAverage<double>(TParam, zeroLevel2, zeroLevel3);
 
 			// Keskimääräinen RH ylemmässä plussakerroksessa
-			rhAvgUpper23 = h->VerticalAverage<double>(wantedParam, zeroLevel2, zeroLevel3);
+			rhAvgUpper23 = h->VerticalAverage<double>(RHParam, zeroLevel2, zeroLevel3);
 
 			// 3 <--> 4
-			wantedParam = param("T-K");
-
-			Tavg34 = h->VerticalAverage<double>(wantedParam, zeroLevel3, zeroLevel4);
+			Tavg34 = h->VerticalAverage<double>(TParam, zeroLevel3, zeroLevel4);
 		}
 		catch (const HPExceptionType& e)
 		{
@@ -796,14 +784,14 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		ret->Data().Set(top);
 
 		// Stratuksen Topin lämpötila (jäätävä tihku)
-		auto futTtop = async(launch::async, [&]() { return h->VerticalValue<double>(param("T-K"), top); });
+		auto futTtop = async(launch::async, [&]() { return h->VerticalValue<double>(TParam, top); });
 
 		// Stratuksen keskimääräinen lämpötila (poissulkemaan
 		// kylmät <-10C stratukset, joiden toppi >-10C) (jäätävä tihku)
 		auto topMinus10 = Add(top, -10);
 
 		auto futstTavg =
-		    async(launch::async, [&]() { return h->VerticalAverage<double>(param("T-K"), basePlus10, topMinus10); });
+		    async(launch::async, [&]() { return h->VerticalAverage<double>(TParam, basePlus10, topMinus10); });
 
 		// Keskimääräinen pilven määrä [%] stratuksen yläpuolisessa kerroksessa
 		auto topPlus30 = Add(top, 30);
