@@ -12,8 +12,9 @@
 #include "logger.h"
 #include "plugin_factory.h"
 #include "util.h"
-#include <boost/thread.hpp>
+#include <future>
 #include <iostream>
+#include <thread>
 
 #include "hitool.h"
 
@@ -111,6 +112,9 @@ const param rhAvgUpperParam("RHAVG-UPPER-PRCNT");
 const param rhMeltParam("RHMELT-PRCNT");
 const param rhMeltUpperParam("RHMELT-UPPER-PRCNT");
 
+const param TParam("T-K");
+const param RHParam("RH-PRCNT");
+
 preform_hybrid::preform_hybrid()
 {
 	itsLogger = logger("preform_hybrid");
@@ -147,8 +151,6 @@ void preform_hybrid::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned s
 	// Required source parameters
 
 	params RRParam({param("RRR-KGM2"), param("RR-1-MM")});  // one hour prec OR precipitation rate (HHsade)
-	const param TParam("T-K");
-	const param RHParam("RH-PRCNT");
 
 	level surface0mLevel(kHeight, 0);
 	level surface2mLevel(kHeight, 2);
@@ -185,8 +187,8 @@ void preform_hybrid::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned s
 	 * and stores them *by value*.
 	 */
 
-	boost::thread t(&preform_hybrid::FreezingArea, this, itsConfiguration, forecastTime, forecastType,
-	                boost::ref(freezingArea), myTargetInfo->Base());
+	thread t(&preform_hybrid::FreezingArea, this, itsConfiguration, forecastTime, forecastType, ref(freezingArea),
+	         myTargetInfo->Base());
 
 	Stratus(itsConfiguration, forecastTime, forecastType, stratus, myTargetInfo->Base());
 
@@ -444,21 +446,19 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 	vector<double> zerodeg(N, himan::constants::kKelvin);  // 0C
 
 	vector<double> numZeroLevels(N), zeroLevel1(N), zeroLevel2(N), zeroLevel3(N), zeroLevel4(N);
-	vector<double> Tavg01, Tavg12, Tavg23, Tavg34;
+	vector<double> Tavg23, Tavg34;
 	vector<double> plusArea, minusArea, plusAreaSfc;
-	vector<double> rhAvg01, rhAvgUpper12, rhAvgUpper23;
+	vector<double> rhAvgUpper23;
 
 	auto log = logger("preform_hybrid-freezing_area");
+
+	future<vector<double>> futTavg01, futTavg12, futrhAvg01, futrhAvgUpper12;
 
 	try
 	{
 		// 0-kohtien lkm pinnasta (yläraja 10km, jotta ylinkin nollakohta varmasti löytyy)
 
-		log.Trace("Finding all zero levels");
-
-		param wantedParam("T-K");
-
-		const auto zeroLevels = h->VerticalHeight<double>(wantedParam, zerom, tenkm, zerodeg, -1);
+		const auto zeroLevels = h->VerticalHeight<double>(TParam, zerom, tenkm, zerodeg, -1);
 		const size_t maxNumZeroLevels = zeroLevels.size() / zerom.size();
 
 		for (size_t i = 0; i < N; i++)
@@ -497,15 +497,6 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 		ret->Find<param>(numZeroLevelsParam);
 		ret->Data().Set(numZeroLevels);
 
-		rhAvgUpper12.resize(numZeroLevels.size(), MissingDouble());
-		rhAvgUpper23.resize(numZeroLevels.size(), MissingDouble());
-
-		// Keskim. lämpötila 1. nollarajan alapuolella, 1/2. ja 2/3. nollarajojen välisissä kerroksissa [C]
-		Tavg01.resize(numZeroLevels.size(), MissingDouble());
-		Tavg12.resize(numZeroLevels.size(), MissingDouble());
-		Tavg23.resize(numZeroLevels.size(), MissingDouble());
-		Tavg34.resize(numZeroLevels.size(), MissingDouble());
-
 		// 1. nollarajan alapuolisen, 2/3. nollarajojen välisen, ja koko T>0 alueen koko [mC, "metriastetta"]
 		plusArea = zeroLevel1;
 		plusAreaSfc = zeroLevel1;
@@ -513,22 +504,10 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 		// Mahdollisen pinta- tai 1/2. nollarajojen välisen pakkaskerroksen koko [mC, "metriastetta"]
 		minusArea = zeroLevel1;
 
-		log.Trace("Searching for average temperature between ground level and first zero level");
-		Tavg01 = h->VerticalAverage<double>(wantedParam, zerom, zeroLevel1);
+		futTavg01 = async(launch::async, [&]() { return h->VerticalAverage<double>(TParam, zerom, zeroLevel1); });
 
-#ifdef DEBUG
-		util::DumpVector(Tavg01, "tavg 01");
-#endif
-
-		wantedParam = param("RH-PRCNT");
-
-		log.Trace("Searching for average humidity between ground and first zero level");
 		// Keskimääräinen RH nollarajan alapuolisessa plussakerroksessa
-		rhAvg01 = h->VerticalAverage<double>(wantedParam, zerom, zeroLevel1);
-
-#ifdef DEBUG
-		util::DumpVector(rhAvg01, "rh avg 01");
-#endif
+		futrhAvg01 = async(launch::async, [&]() { return h->VerticalAverage<double>(RHParam, zerom, zeroLevel1); });
 
 		// Only the first zero layer with at least one non-missing element is required
 		// to be present. All other zero layers (2,3,4) are optional.
@@ -536,54 +515,21 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 		try
 		{
 			// Values between zero levels 1 <--> 2
-			wantedParam = param("T-K");
-
-			log.Trace("Searching for average temperature between first and second zero level");
-			Tavg12 = h->VerticalAverage<double>(wantedParam, zeroLevel1, zeroLevel2);
-
-#ifdef DEBUG
-			util::DumpVector(Tavg12, "tavg 12");
-#endif
-
-			log.Trace("Searching for average humidity between first and second zero level");
+			futTavg12 =
+			    async(launch::async, [&]() { return h->VerticalAverage<double>(TParam, zeroLevel1, zeroLevel2); });
 
 			// Keskimääräinen RH pakkaskerroksen yläpuolisessa plussakerroksessa
-			wantedParam = param("RH-PRCNT");
-			rhAvgUpper12 = h->VerticalAverage<double>(wantedParam, zeroLevel1, zeroLevel2);
-
-#ifdef DEBUG
-			util::DumpVector(rhAvgUpper12, "rh avg upper 12");
-#endif
+			futrhAvgUpper12 =
+			    async(launch::async, [&]() { return h->VerticalAverage<double>(RHParam, zeroLevel1, zeroLevel2); });
 
 			// 2 <--> 3
-			wantedParam = param("T-K");
-
-			log.Trace("Searching for average temperature between second and third zero level");
-			Tavg23 = h->VerticalAverage<double>(wantedParam, zeroLevel2, zeroLevel3);
-
-#ifdef DEBUG
-			util::DumpVector(Tavg23, "tavg 23");
-#endif
-
-			wantedParam = param("RH-PRCNT");
-			log.Trace("Searching for average humidity between second and third zero level");
+			Tavg23 = h->VerticalAverage<double>(TParam, zeroLevel2, zeroLevel3);
 
 			// Keskimääräinen RH ylemmässä plussakerroksessa
-			rhAvgUpper23 = h->VerticalAverage<double>(wantedParam, zeroLevel2, zeroLevel3);
-
-#ifdef DEBUG
-			util::DumpVector(rhAvgUpper23, "rh avg upper 23");
-#endif
+			rhAvgUpper23 = h->VerticalAverage<double>(RHParam, zeroLevel2, zeroLevel3);
 
 			// 3 <--> 4
-			wantedParam = param("T-K");
-
-			log.Trace("Searching for average temperature between third and fourth zero level");
-			Tavg34 = h->VerticalAverage<double>(wantedParam, zeroLevel3, zeroLevel4);
-
-#ifdef DEBUG
-			util::DumpVector(Tavg34, "tavg 34");
-#endif
+			Tavg34 = h->VerticalAverage<double>(TParam, zeroLevel3, zeroLevel4);
 		}
 		catch (const HPExceptionType& e)
 		{
@@ -607,12 +553,17 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 	// Keskimääräinen rhMelt nollarajan alapuolisessa plussakerroksessa, ja pakkaskerroksen yläpuolisessa
 	// plussakerroksessa
-	vector<double> rhMeltUpper(rhAvg01.size(), MissingDouble());
-	vector<double> rhMelt(rhAvg01.size(), MissingDouble());
+	vector<double> rhMeltUpper(N, MissingDouble());
+	vector<double> rhMelt(N, MissingDouble());
 
 	// Keskimääräinen RH nollarajan alapuolisessa plussakerroksessa, ja pakkaskerroksen yläpuolisessa plussakerroksessa
-	vector<double> rhAvgUpper(rhAvg01.size(), MissingDouble());
-	vector<double> rhAvg(rhAvg01.size(), MissingDouble());
+	vector<double> rhAvgUpper(N, MissingDouble());
+	vector<double> rhAvg(N, MissingDouble());
+
+	auto Tavg01 = futTavg01.get();
+	auto Tavg12 = futTavg12.get();
+	auto rhAvg01 = futrhAvg01.get();
+	auto rhAvgUpper12 = futrhAvgUpper12.get();
 
 	for (size_t i = 0; i < numZeroLevels.size(); i++)
 	{
@@ -833,25 +784,21 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 		ret->Data().Set(top);
 
 		// Stratuksen Topin lämpötila (jäätävä tihku)
-		auto Ttop = h->VerticalValue<double>(param("T-K"), top);
-		ret->Find<param>(stratusTopTempParam);
-		ret->Data().Set(Ttop);
+		auto futTtop = async(launch::async, [&]() { return h->VerticalValue<double>(TParam, top); });
 
 		// Stratuksen keskimääräinen lämpötila (poissulkemaan
 		// kylmät <-10C stratukset, joiden toppi >-10C) (jäätävä tihku)
 		auto topMinus10 = Add(top, -10);
-		auto stTavg = h->VerticalAverage<double>(param("T-K"), basePlus10, topMinus10);
 
-		ret->Find<param>(stratusMeanTempParam);
-		ret->Data().Set(stTavg);
+		auto futstTavg =
+		    async(launch::async, [&]() { return h->VerticalAverage<double>(TParam, basePlus10, topMinus10); });
 
 		// Keskimääräinen pilven määrä [%] stratuksen yläpuolisessa kerroksessa
 		auto topPlus30 = Add(top, 30);
 		auto topPlusDrydz = Add(top, drydz);
-		auto upperLayerN = h->VerticalAverage<double>(wantedParamList, topPlus30, topPlusDrydz);
 
-		ret->Find<param>(stratusUpperLayerNParam);
-		ret->Data().Set(upperLayerN);
+		auto futupperLayerN = async(
+		    launch::async, [&]() { return h->VerticalAverage<double>(wantedParamList, topPlus30, topPlusDrydz); });
 
 		// Keskimääräinen vertikaalinopeus st:ssa [mm/s]
 		vector<double> wAvg;
@@ -875,6 +822,18 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 
 		ret->Find<param>(stratusVerticalVelocityParam);
 		ret->Data().Set(wAvg);
+
+		auto Ttop = futTtop.get();
+		ret->Find<param>(stratusTopTempParam);
+		ret->Data().Set(Ttop);
+
+		auto stTavg = futstTavg.get();
+		ret->Find<param>(stratusMeanTempParam);
+		ret->Data().Set(stTavg);
+
+		auto upperLayerN = futupperLayerN.get();
+		ret->Find<param>(stratusUpperLayerNParam);
+		ret->Data().Set(upperLayerN);
 	}
 	catch (const HPExceptionType& e)
 	{
