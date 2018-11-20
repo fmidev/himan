@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.11.19
+Version: 18.11.20
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -112,6 +112,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Nov 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.20-1.fmi
+- mucape algorithm changes
 * Mon Nov 19 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.19-1.fmi
 - More preform_hybrid optimization
 * Tue Nov 13 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.13-1.fmi
