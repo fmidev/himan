@@ -18,55 +18,9 @@ const param SAParam("SNACC-H");
 const param DAParam("SNDACC-N");
 const double SFLimit = 0.09;
 
-double DriftMagnitude(double ff, double mi)
-{
-	return (ff * ff * ff / 1728.0) * mi;
-}
-
-double DriftIndex(double sv)
-{
-	if (sv < 0.09)
-	{
-		return 0;  // no drift
-	}
-	else if (sv < 0.21)
-	{
-		return 1;  // low
-	}
-	else if (sv < 0.5)
-	{
-		return 2;  // moderate
-	}
-	else
-	{
-		return 3;  // high
-	}
-}
-
-double MobilityIndex(double da, double sa)
-{
-	double mi = MissingDouble();
-
-	if (da < 2.0 && sa < 24.0)
-	{
-		mi = 1.0;
-	}
-	else if (da >= 2.0 && da <= 6.0)
-	{
-		mi = 0.6;
-	}
-	else if (da > 6.0)
-	{
-		mi = 0.3;
-	}
-
-	if (sa >= 24.0 && mi == 1.0)
-	{
-		mi = 0.6;
-	}
-
-	return mi;
-}
+double DriftMagnitude(double ff, double mi);
+double DriftIndex(double sv);
+double MobilityIndex(double da, double sa);
 
 void CalculateSnowDriftIndex(info_t& myTargetInfo, const std::vector<double>& T, const std::vector<double>& FF,
                              const std::vector<double>& SF, const std::vector<double>& pSA,
@@ -166,6 +120,13 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 
 	if (forecastTime.Step() == 0 && prod.Id() != 109)
 	{
+		// We only calculate analysis hour for LAPS
+		return;
+	}
+
+	if (forecastTime.StepResolution() != kHourResolution || itsConfiguration->ForecastStep() != 1)
+	{
+		myThreadedLogger.Error("Snow drift can only be calculated with one hour resolution");
 		return;
 	}
 
@@ -196,6 +157,7 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 	{
 		prevTime.OriginDateTime(prevTime.ValidDateTime());
 
+		// Allow up to three hours of missing data
 		for (int i = 0; i < 3; i++)
 		{
 			pSAInfo = Fetch(prevTime, level(kHeight, 0), SAParam, forecastType, itsConfiguration->SourceGeomNames(),
@@ -207,6 +169,9 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 			{
 				break;
 			}
+
+			prevTime.ValidDateTime().Adjust(kHourResolution, -1);
+			prevTime.OriginDateTime(prevTime.ValidDateTime());
 		}
 	}
 	else
@@ -215,41 +180,79 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 		pDAInfo = Fetch(prevTime, level(kHeight, 0), DAParam, forecastType, false);
 	}
 
-	bool spinUp = false;
-
-	std::vector<double> pSA, pDA;
-
 	if (!pSAInfo || !pDAInfo)
 	{
-		if (prod.Id() == 109)
-		{
-			// If we don't have a history of sa & da, start accumulating
-			// it but do not write snow index.
-
-			spinUp = true;
-			pSA.resize(myTargetInfo->Grid()->Size(), 0.0);
-			pDA.resize(myTargetInfo->Grid()->Size(), 0.0);
-			myThreadedLogger.Warning("Spinup phase, producing only DA and SA");
-		}
-		else
+		if (prod.Id() != 109)
 		{
 			myThreadedLogger.Error("DA and SA not found from obs producer");
 			return;
 		}
-	}
-	else
-	{
-		pSA = VEC(pSAInfo);
-		pDA = VEC(pDAInfo);
-	}
+		// If we don't have a history of sa & da, start accumulating
+		// it but do not write snow index.
 
-	CalculateSnowDriftIndex(myTargetInfo, VEC(TInfo), VEC(FFInfo), VEC(SFInfo), pSA, pDA);
+		std::vector<double> pSA(myTargetInfo->Grid()->Size(), 0.0);
+		std::vector<double> pDA = pSA;
 
-	if (spinUp)
-	{
+		myThreadedLogger.Warning("Spinup phase, producing only DA and SA");
+		CalculateSnowDriftIndex(myTargetInfo, VEC(TInfo), VEC(FFInfo), VEC(SFInfo), pSA, pDA);
+
 		myTargetInfo->Find<param>(SDIParam);
 		myTargetInfo->Data().Fill(MissingDouble());
 	}
+	else
+	{
+		CalculateSnowDriftIndex(myTargetInfo, VEC(TInfo), VEC(FFInfo), VEC(SFInfo), VEC(pSAInfo), VEC(pDAInfo));
+	}
 
 	myThreadedLogger.Info("[" + deviceType + "] Missing: " + std::to_string(util::MissingPercent(*myTargetInfo)) + "%");
+}
+
+double DriftMagnitude(double ff, double mi)
+{
+	return (ff * ff * ff / 1728.0) * mi;
+}
+
+double DriftIndex(double sv)
+{
+	if (sv < 0.09)
+	{
+		return 0;  // no drift
+	}
+	else if (sv < 0.21)
+	{
+		return 1;  // low
+	}
+	else if (sv < 0.5)
+	{
+		return 2;  // moderate
+	}
+	else
+	{
+		return 3;  // high
+	}
+}
+
+double MobilityIndex(double da, double sa)
+{
+	double mi = 1.0;
+
+	if (da < 2.0 && sa < 24.0)
+	{
+		mi = 1.0;
+	}
+	else if (da >= 2.0 && da <= 6.0)
+	{
+		mi = 0.6;
+	}
+	else if (da > 6.0)
+	{
+		mi = 0.3;
+	}
+
+	if (sa >= 24.0 && mi == 1.0)
+	{
+		mi = 0.6;
+	}
+
+	return mi;
 }
