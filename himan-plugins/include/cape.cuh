@@ -33,6 +33,9 @@ const himan::param CAPE1040Param("CAPE1040-JKG");
 const himan::param CAPE3kmParam("CAPE3KM-JKG");
 const himan::param CINParam("CIN-JKG");
 
+const double mucape_search_limit = 550.;         // hPa
+const double mucape_maxima_search_limit = 650.;  // hPa
+
 namespace CAPE
 {
 CUDA_DEVICE
@@ -628,6 +631,11 @@ inline float CalcCIN(float Tenv, float prevTenv, float Tparcel, float prevTparce
 #include "plugin_configuration.h"
 
 typedef std::tuple<std::vector<float>, std::vector<float>, std::vector<float>> cape_source;
+typedef std::tuple<std::vector<std::vector<float>>, std::vector<std::vector<float>>, std::vector<std::vector<float>>>
+    cape_multi_source;
+typedef std::tuple<std::vector<float>, std::vector<float>, std::vector<float>, std::vector<float>, std::vector<float>,
+                   std::vector<float>, std::vector<float>, std::vector<float>, std::vector<float>>
+    CAPEdata;
 
 namespace himan
 {
@@ -635,20 +643,21 @@ namespace plugin
 {
 namespace cape_cuda
 {
-cape_source GetHighestThetaEValuesGPU(const std::shared_ptr<const plugin_configuration>& conf,
-                                      std::shared_ptr<info<float>> myTargetInfo);
+cape_multi_source GetNHighestThetaEValuesGPU(const std::shared_ptr<const plugin_configuration>& conf,
+                                             std::shared_ptr<info<float>> myTargetInfo, int N);
 std::pair<std::vector<float>, std::vector<float>> GetLFCGPU(const std::shared_ptr<const plugin_configuration>& conf,
                                                             std::shared_ptr<info<float>> myTargetInfo,
                                                             std::vector<float>& T, std::vector<float>& P,
                                                             std::vector<float>& TenvLCL);
 cape_source Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_configuration>& conf,
                                         std::shared_ptr<info<float>> myTargetInfo);
-void GetCINGPU(const std::shared_ptr<const plugin_configuration>& conf, std::shared_ptr<info<float>> myTargetInfo,
-               const std::vector<float>& Tsource, const std::vector<float>& Psource, const std::vector<float>& TLCL,
-               const std::vector<float>& PLCL, const std::vector<float>& ZLCL, const std::vector<float>& PLFC,
-               const std::vector<float>& ZLFC);
-void GetCAPEGPU(const std::shared_ptr<const plugin_configuration>& conf, std::shared_ptr<info<float>> myTargetInfo,
-                const std::vector<float>& T, const std::vector<float>& P);
+std::vector<float> GetCINGPU(const std::shared_ptr<const plugin_configuration>& conf,
+                             std::shared_ptr<info<float>> myTargetInfo, const std::vector<float>& Tsource,
+                             const std::vector<float>& Psource, const std::vector<float>& TLCL,
+                             const std::vector<float>& PLCL, const std::vector<float>& ZLCL,
+                             const std::vector<float>& PLFC, const std::vector<float>& ZLFC);
+CAPEdata GetCAPEGPU(const std::shared_ptr<const plugin_configuration>& conf, std::shared_ptr<info<float>> myTargetInfo,
+                    const std::vector<float>& T, const std::vector<float>& P);
 
 extern bool itsUseVirtualTemperature;
 extern level itsBottomLevel;

@@ -18,6 +18,7 @@
 #include "cuda_plugin_helper.h"
 #include "forecast_time.h"
 #include "level.h"
+#include "timer.h"
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -121,21 +122,6 @@ __global__ void VirtualTemperatureKernel(float* __restrict__ d_T, const float* _
 	if (idx < N)
 	{
 		d_T[idx] = himan::metutil::VirtualTemperature_<float>(d_T[idx], d_P[idx] * 100);
-	}
-}
-
-__global__ void CopyLFCIteratorValuesKernel(float* __restrict__ d_Titer, const float* __restrict__ d_Tparcel,
-                                            float* __restrict__ d_Piter, const float* __restrict__ d_Penv, size_t N)
-{
-	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-	if (idx < N)
-	{
-		if (!IsMissing(d_Tparcel[idx]) && !IsMissing(d_Penv[idx]))
-		{
-			d_Titer[idx] = d_Tparcel[idx];
-			d_Piter[idx] = d_Penv[idx];
-		}
 	}
 }
 
@@ -481,47 +467,38 @@ __global__ void LFCKernel(const float* __restrict__ d_T, const float* __restrict
 	}
 }
 
-__global__ void ThetaEKernel(const float* __restrict__ d_T, const float* __restrict__ d_RH,
-                             const float* __restrict__ d_P, const float* __restrict__ d_prevT,
-                             const float* __restrict__ d_prevRH, const float* __restrict__ d_prevP,
-                             float* __restrict__ d_maxThetaE, float* __restrict__ d_Tresult,
-                             float* __restrict__ d_TDresult, float* __restrict__ d_Presult,
+__global__ void ThetaEKernel(float* __restrict__ d_T, const float* __restrict__ d_RH, float* __restrict__ d_P,
+                             const float* __restrict__ d_prevT, const float* __restrict__ d_prevRH,
+                             const float* __restrict__ d_prevP, float* __restrict__ d_ThetaE, float* __restrict__ d_TD,
                              unsigned char* __restrict__ d_found, size_t N)
 {
 	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	if (idx < N && d_found[idx] == 0)
+	if (idx < N)
 	{
-		float T = d_T[idx];
-		float P = d_P[idx];
-		float RH = d_RH[idx];
+		float ThetaE = MissingFloat(), TD = MissingFloat();
 
-		if (P < 600.)
+		if (d_found[idx] == 0)
 		{
-			// Cut search if reach level 600hPa
+			float& T = d_T[idx];
+			float& P = d_P[idx];
+			float RH = d_RH[idx];
 
-			// Linearly interpolate temperature and humidity values to 600hPa, to check
-			// if highest theta e is found there
+			if (P < mucape_search_limit)
+			{
+				T = interpolation::Linear<float>(mucape_search_limit, P, d_prevP[idx], T, d_prevT[idx]);
+				RH = interpolation::Linear<float>(mucape_search_limit, P, d_prevP[idx], RH, d_prevRH[idx]);
 
-			T = interpolation::Linear<float>(600.f, P, d_prevP[idx], T, d_prevT[idx]);
-			RH = interpolation::Linear<float>(600.f, P, d_prevP[idx], RH, d_prevRH[idx]);
+				d_found[idx] = 1;  // Make sure this is the last time we access this grid point
+				P = mucape_search_limit;
+			}
 
-			d_found[idx] = 1;  // Make sure this is the last time we access this grid point
-			P = 600.;
+			TD = metutil::DewPointFromRH_<float>(T, RH);
+			ThetaE = metutil::smarttool::ThetaE_<float>(T, RH, P * 100);
 		}
 
-		float TD = metutil::DewPointFromRH_<float>(T, RH);
-
-		float& refThetaE = d_maxThetaE[idx];
-		float ThetaE = metutil::smarttool::ThetaE_<float>(T, RH, P * 100);
-
-		if ((ThetaE - refThetaE) > 0.0001)  // epsilon added for numerical stability
-		{
-			refThetaE = ThetaE;
-			d_Tresult[idx] = T;
-			d_TDresult[idx] = TD;
-			d_Presult[idx] = P;
-		}
+		d_ThetaE[idx] = ThetaE;
+		d_TD[idx] = TD;
 	}
 }
 
@@ -577,10 +554,338 @@ __global__ void MixingRatioFinalizeKernel(float* __restrict__ d_T, float* __rest
 	}
 }
 
-cape_source cape_cuda::GetHighestThetaEValuesGPU(const std::shared_ptr<const plugin_configuration>& conf,
-                                                 std::shared_ptr<info<float>> myTargetInfo)
+__global__ void Max1D(const float* __restrict__ d_v, float* __restrict__ d_maxima, size_t mask_len, size_t K, size_t N)
+{
+	ASSERT(mask_len % 2 == 1);
+
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < N)
+	{
+		const size_t half = mask_len / 2;
+
+		// data layout is changed here wrt to the source
+
+		// old layout:
+		// |x(0)y(0)z(0)..n(0)|x(1)y(1)z(1)..n(1)|..|x(N)y(N)z(N)..n(N)|
+
+		// new layout:
+		// |x(0)x(1)x(2)..x(K)|y(1)y(2)y(2)..y(K)|..|n(1)n(1)n(3)..n(K)|
+
+		// beginning
+
+		for (size_t i = 0; i < half; i++)
+		{
+			float maxv = FLT_MIN;
+
+			for (size_t j = 0; j <= half + i; j++)
+			{
+				maxv = fmaxf(maxv, d_v[idx + j * N]);
+			}
+			d_maxima[i + idx * K] = maxv;
+		}
+
+		// center
+
+		for (size_t i = half; i < K - half; i++)
+		{
+			float maxv = FLT_MIN;
+
+			for (size_t j = i - half; j <= i + half; j++)
+			{
+				maxv = fmaxf(maxv, d_v[idx + j * N]);
+			}
+			d_maxima[i + idx * K] = maxv;
+		}
+
+		// end
+
+		for (size_t i = K - half; i < K; i++)
+		{
+			float maxv = FLT_MIN;
+
+			for (size_t j = i - half; j < K; j++)
+			{
+				maxv = fmaxf(maxv, d_v[idx + j * N]);
+			}
+
+			d_maxima[i + idx * K] = maxv;
+		}
+	}
+}
+
+__global__ void Max1D(const float* __restrict__ d_v, unsigned char* __restrict__ d_maxima, unsigned char mask_len,
+                      unsigned char K, size_t N)
+{
+	ASSERT(mask_len % 2 == 1);
+
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < N)
+	{
+		const unsigned char half = mask_len / 2;
+
+		// data layout is changed here wrt to the source
+
+		// old layout:
+		// |x(0)y(0)z(0)..n(0)|x(1)y(1)z(1)..n(1)|..|x(N)y(N)z(N)..n(N)|
+
+		// new layout:
+		// |x(0)x(1)x(2)..x(K)|y(1)y(2)y(2)..y(K)|..|n(1)n(1)n(3)..n(K)|
+
+		// beginning
+
+		for (unsigned char i = 0; i < half; i++)
+		{
+			float maxv = d_v[idx];
+			unsigned char maxl = 0;  // first guess
+
+			for (unsigned char j = 1; j <= half + i; j++)
+			{
+				if (d_v[idx + j * N] > maxv)
+				{
+					maxv = d_v[idx + j * N];
+					maxl = j;
+				}
+			}
+			d_maxima[i + idx * K] = maxl;
+		}
+
+		// center
+
+		for (unsigned char i = half; i < K - half; i++)
+		{
+			float maxv = d_v[idx + (i - half) * N];
+			unsigned char maxl = i - half;
+
+			for (unsigned char j = i - half + 1; j <= i + half; j++)
+			{
+				if (d_v[idx + j * N] > maxv)
+				{
+					maxv = d_v[idx + j * N];
+					maxl = j;
+				}
+			}
+			d_maxima[i + idx * K] = maxl;
+		}
+
+		// end
+
+		for (unsigned char i = K - half; i < K; i++)
+		{
+			float maxv = d_v[idx + (i - half) * N];
+			unsigned char maxl = i - half;
+
+			for (unsigned char j = i - half + 1; j < K; j++)
+			{
+				if (d_v[idx + j * N] > maxv)
+				{
+					maxv = d_v[idx + j * N];
+					maxl = j;
+				}
+			}
+			d_maxima[i + idx * K] = maxl;
+		}
+	}
+}
+
+__global__ void MaximaLocation(const float* __restrict__ d_v, const float* __restrict__ d_maxima,
+                               unsigned char* __restrict__ d_idx, size_t K, size_t N)
+{
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < N)
+	{
+		const int maxMax = K / 4;
+
+		float* d_max = new float[maxMax + 1];
+
+		int maximaN = 1;
+
+		for (int i = 0; i < K; i++)
+		{
+			const float v = d_v[idx + i * N];
+
+			if (v == d_maxima[i + idx * K] && v == d_maxima[i + idx * K + N * K])
+			{
+				d_idx[maximaN + idx * maxMax] = i;
+				d_max[maximaN] = v;
+				maximaN++;
+			}
+
+			if (maximaN == maxMax)
+			{
+				break;
+			}
+		}
+
+		d_idx[idx * maxMax] = --maximaN;
+
+		// bubble sort
+
+		bool passed;
+
+		do
+		{
+			passed = true;
+
+			for (int i = 2; i < maximaN + 1; i++)
+			{
+				unsigned char& previ = d_idx[i - 1 + idx * maxMax];
+				unsigned char& curi = d_idx[i + idx * maxMax];
+				float& prev = d_max[i - 1];
+				float& cur = d_max[i];
+
+				if (prev < cur)
+				{
+					float tmp = cur;
+					cur = prev;
+					prev = tmp;
+
+					unsigned char tmpi = curi;
+					curi = previ;
+					previ = tmpi;
+
+					passed = false;
+				}
+			}
+		} while (!passed);
+
+#if 0
+		if (idx == 5608307)
+		{
+			printf("Num maxima: %d\n", d_idx[idx * maxMax]);
+			for (int i = 1; i < 1 + d_idx[idx * maxMax]; i++)
+				printf("%d %f\n", d_idx[idx * maxMax + i], d_max[i]);
+			for (int i = 0; i < K; i++)
+			{
+				const float v = d_v[idx + i * N];
+
+				float max = -1.f;
+				for (int j = 1; j < d_idx[idx * maxMax] + 1; j++)
+				{
+					if (fabs(d_max[j] - v) < 0.002)
+						max = v;
+				}
+				printf("%d %f %f %f %f\n", i, d_v[idx + i * N], d_maxima[i + idx * K], d_maxima[i + idx * K + N * K],
+				       max);
+			}
+		}
+#endif
+		delete[] d_max;
+	}
+}
+
+__global__ void MaximaLocation(const float* __restrict__ d_v, const unsigned char* __restrict__ d_maxima,
+                               unsigned char* __restrict__ d_idx, size_t K, size_t N)
+{
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < N)
+	{
+		const int maxMax = K / 4;
+
+		float* d_max = new float[maxMax + 1];
+
+		int maximaN = 1;
+
+		for (int i = 0; i < K; i++)
+		{
+			const float v = d_v[idx + i * N];
+
+			if (i == d_maxima[i + idx * K])
+			{
+				if (i > 0 && v == d_v[idx + (i - 1) * N])
+				{
+				}
+				else
+				{
+					d_idx[maximaN + idx * maxMax] = i;
+					d_max[maximaN] = v;
+					maximaN++;
+				}
+			}
+
+			if (maximaN == maxMax)
+			{
+				break;
+			}
+		}
+
+		d_idx[idx * maxMax] = --maximaN;
+
+		// bubble sort
+
+		bool passed;
+
+		do
+		{
+			passed = true;
+
+			for (int i = 2; i < maximaN + 1; i++)
+			{
+				unsigned char& previ = d_idx[i - 1 + idx * maxMax];
+				unsigned char& curi = d_idx[i + idx * maxMax];
+				float& prev = d_max[i - 1];
+				float& cur = d_max[i];
+
+				if (prev < cur)
+				{
+					float tmp = cur;
+					cur = prev;
+					prev = tmp;
+
+					unsigned char tmpi = curi;
+					curi = previ;
+					previ = tmpi;
+
+					passed = false;
+				}
+			}
+		} while (!passed);
+
+#if 0
+		if (idx == 9586)
+		{
+			printf("Num maxima: %d\n", d_idx[idx * maxMax]);
+			for (int i = 1; i < 1 + d_idx[idx * maxMax]; i++)
+				printf("%d %f\n", d_idx[idx * maxMax + i], d_max[i]);
+			for (int i = 0; i < K; i++)
+			{
+				const float v = d_v[idx + i * N];
+
+				float max = -1.f;
+				for (int j = 1; j < d_idx[idx * maxMax] + 1; j++)
+				{
+					if (fabs(d_max[j] - v) < 0.002)
+						max = v;
+				}
+				printf("%d %f %f %f %f\n", i, d_v[idx + i * N], d_maxima[i + idx * K], d_maxima[i + idx * K + N * K],
+				       max);
+			}
+		}
+#endif
+		delete[] d_max;
+	}
+}
+
+cape_multi_source cape_cuda::GetNHighestThetaEValuesGPU(const std::shared_ptr<const plugin_configuration>& conf,
+                                                        std::shared_ptr<info<float>> myTargetInfo, int n)
 {
 	himan::level curLevel = itsBottomLevel;
+
+	auto h = GET_PLUGIN(hitool);
+
+	h->Configuration(conf);
+	h->Time(myTargetInfo->Time());
+	h->ForecastType(myTargetInfo->ForecastType());
+	h->HeightUnit(kHPa);
+
+	// We need to get the number of layers so we can preallocate
+	// a suitable sized array.
+
+	const auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), mucape_search_limit);
+	const auto levelSpan = curLevel.Value() - stopLevel.second.Value();
 
 	const size_t N = myTargetInfo->Data().Size();
 	const int blockSize = 256;
@@ -590,12 +895,10 @@ cape_source cape_cuda::GetHighestThetaEValuesGPU(const std::shared_ptr<const plu
 
 	CUDA_CHECK(cudaStreamCreate(&stream));
 
-	float* d_maxThetaE = 0;
-	float* d_Tresult = 0;
-	float* d_TDresult = 0;
-	float* d_Presult = 0;
 	float* d_T = 0;
+	float* d_TD = 0;
 	float* d_P = 0;
+	float* d_ThetaE = 0;
 	float* d_RH = 0;
 	float* d_prevT = 0;
 	float* d_prevP = 0;
@@ -603,22 +906,19 @@ cape_source cape_cuda::GetHighestThetaEValuesGPU(const std::shared_ptr<const plu
 
 	unsigned char* d_found = 0;
 
-	CUDA_CHECK(cudaMalloc((float**)&d_maxThetaE, sizeof(float) * N));
-	CUDA_CHECK(cudaMalloc((float**)&d_Tresult, sizeof(float) * N));
-	CUDA_CHECK(cudaMalloc((float**)&d_TDresult, sizeof(float) * N));
-	CUDA_CHECK(cudaMalloc((float**)&d_Presult, sizeof(float) * N));
-	CUDA_CHECK(cudaMalloc((float**)&d_found, sizeof(unsigned char) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_T, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_TD, sizeof(float) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_P, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_ThetaE, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_found, sizeof(unsigned char) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_RH, sizeof(float) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_prevT, sizeof(float) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_prevP, sizeof(float) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_prevRH, sizeof(float) * N));
 
-	InitializeArray<float>(d_maxThetaE, -1, N, stream);
-	InitializeArray<float>(d_Tresult, himan::MissingFloat(), N, stream);
-	InitializeArray<float>(d_TDresult, himan::MissingFloat(), N, stream);
-	InitializeArray<float>(d_Presult, himan::MissingFloat(), N, stream);
+	InitializeArray<float>(d_T, himan::MissingFloat(), N, stream);
+	InitializeArray<float>(d_TD, himan::MissingFloat(), N, stream);
+	InitializeArray<float>(d_P, himan::MissingFloat(), N, stream);
 	InitializeArray<float>(d_prevT, himan::MissingFloat(), N, stream);
 	InitializeArray<float>(d_prevP, himan::MissingFloat(), N, stream);
 	InitializeArray<float>(d_prevRH, himan::MissingFloat(), N, stream);
@@ -627,52 +927,84 @@ cape_source cape_cuda::GetHighestThetaEValuesGPU(const std::shared_ptr<const plu
 
 	thrust::device_ptr<unsigned char> dt_found = thrust::device_pointer_cast(d_found);
 
+	// profiles are create as flattened vectors
+	// in order the insertion to be as fast as possible, the layout is such:
+	// |x(0)y(0)z(0)..n(0)|x(1)y(1)z(1)..n(1)|..|x(N)y(N)z(N)..n(N)|
+
+	std::vector<float> ThetaEProfile(levelSpan * N), TProfile(levelSpan * N), PProfile(levelSpan * N),
+	    TDProfile(levelSpan * N);
+
+	CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(ThetaEProfile.data()), sizeof(float) * levelSpan * N, 0));
+	CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(TProfile.data()), sizeof(float) * N * levelSpan, 0));
+	CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(TDProfile.data()), sizeof(float) * N, 0));
+	CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(PProfile.data()), sizeof(float) * N, 0));
+
+	const param TParam("T-K");
+	const param RHParam("RH-PRCNT");
+	const param PParam("P-HPA");
+
+	size_t K = 0;  // this will hold the number of levels read (should match what we calculated previously)
 	while (true)
 	{
-		auto TInfo =
-		    cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
-		auto RHInfo =
-		    cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("RH-PRCNT"), myTargetInfo->ForecastType());
-		auto PInfo =
-		    cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
+		auto TInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType());
+		auto RHInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, RHParam, myTargetInfo->ForecastType());
+		auto PInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType());
 
 		if (!TInfo || !RHInfo || !PInfo)
 		{
-			return std::make_tuple(std::vector<float>(), std::vector<float>(), std::vector<float>());
+			CUDA_CHECK(cudaHostUnregister(ThetaEProfile.data()));
+			CUDA_CHECK(cudaHostUnregister(TProfile.data()));
+			CUDA_CHECK(cudaHostUnregister(TDProfile.data()));
+			CUDA_CHECK(cudaHostUnregister(PProfile.data()));
+
+			CUDA_CHECK(cudaFree(d_T));
+			CUDA_CHECK(cudaFree(d_P));
+			CUDA_CHECK(cudaFree(d_RH));
+			CUDA_CHECK(cudaFree(d_prevT));
+			CUDA_CHECK(cudaFree(d_prevP));
+			CUDA_CHECK(cudaFree(d_prevRH));
+			CUDA_CHECK(cudaFree(d_ThetaE));
+			CUDA_CHECK(cudaFree(d_TD));
+			CUDA_CHECK(cudaFree(d_found));
+
+			return cape_multi_source();
 		}
 
 		cuda::PrepareInfo(TInfo, d_T, stream);
 		cuda::PrepareInfo(PInfo, d_P, stream);
 		cuda::PrepareInfo(RHInfo, d_RH, stream);
 
-		ThetaEKernel<<<gridSize, blockSize, 0, stream>>>(d_T, d_RH, d_P, d_prevT, d_prevRH, d_prevP, d_maxThetaE,
-		                                                 d_Tresult, d_TDresult, d_Presult, d_found, N);
+		ThetaEKernel<<<gridSize, blockSize, 0, stream>>>(d_T, d_RH, d_P, d_prevT, d_prevRH, d_prevP, d_ThetaE, d_TD,
+		                                                 d_found, N);
 
 		size_t foundCount = thrust::count(thrust::cuda::par.on(stream), dt_found, dt_found + N, 1);
 
-		CUDA_CHECK(cudaMemcpyAsync(d_prevT, d_T, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
-		CUDA_CHECK(cudaMemcpyAsync(d_prevP, d_P, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
-		CUDA_CHECK(cudaMemcpyAsync(d_prevRH, d_RH, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync(&ThetaEProfile[K * N], d_ThetaE, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
+		CUDA_CHECK(cudaMemcpyAsync(&TProfile[K * N], d_T, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
+		CUDA_CHECK(cudaMemcpyAsync(&TDProfile[K * N], d_TD, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
+		CUDA_CHECK(cudaMemcpyAsync(&PProfile[K * N], d_P, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
 
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
 		curLevel.Value(curLevel.Value() - 1);
+		K++;
 
 		if (foundCount == N)
 		{
 			break;
 		}
+
+		CUDA_CHECK(cudaMemcpyAsync(d_prevT, d_T, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync(d_prevP, d_P, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync(d_prevRH, d_RH, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
 	}
 
-	std::vector<float> Tthetae(myTargetInfo->Data().Size());
-	std::vector<float> TDthetae(myTargetInfo->Data().Size());
-	std::vector<float> Pthetae(myTargetInfo->Data().Size());
+	ASSERT(K == levelSpan);
 
-	CUDA_CHECK(cudaMemcpyAsync(&Tthetae[0], d_Tresult, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaMemcpyAsync(&TDthetae[0], d_TDresult, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaMemcpyAsync(&Pthetae[0], d_Presult, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
-
-	CUDA_CHECK(cudaStreamSynchronize(stream));
+	CUDA_CHECK(cudaHostUnregister(ThetaEProfile.data()));
+	CUDA_CHECK(cudaHostUnregister(TProfile.data()));
+	CUDA_CHECK(cudaHostUnregister(TDProfile.data()));
+	CUDA_CHECK(cudaHostUnregister(PProfile.data()));
 
 	CUDA_CHECK(cudaFree(d_T));
 	CUDA_CHECK(cudaFree(d_P));
@@ -680,15 +1012,121 @@ cape_source cape_cuda::GetHighestThetaEValuesGPU(const std::shared_ptr<const plu
 	CUDA_CHECK(cudaFree(d_prevT));
 	CUDA_CHECK(cudaFree(d_prevP));
 	CUDA_CHECK(cudaFree(d_prevRH));
-	CUDA_CHECK(cudaFree(d_maxThetaE));
-	CUDA_CHECK(cudaFree(d_Tresult));
-	CUDA_CHECK(cudaFree(d_TDresult));
-	CUDA_CHECK(cudaFree(d_Presult));
+	CUDA_CHECK(cudaFree(d_ThetaE));
+	CUDA_CHECK(cudaFree(d_TD));
 	CUDA_CHECK(cudaFree(d_found));
+
+	// Check comments from cape.cpp
+	vec2d Tret(n), TDret(n), Pret(n);
+
+	for (size_t j = 0; j < static_cast<size_t>(n); j++)
+	{
+		Tret[j].resize(N, MissingFloat());
+		TDret[j].resize(N, MissingFloat());
+		Pret[j].resize(N, MissingFloat());
+	}
+
+	float* d_v = 0;
+	unsigned char* d_maxima = 0;
+	unsigned char* d_idxs = 0;
+
+	CUDA_CHECK(cudaMalloc((float**)&d_v, sizeof(float) * N * K));  // Actual ThetaE values
+	CUDA_CHECK(cudaMalloc((unsigned char**)&d_maxima,
+	                      sizeof(unsigned char) * N * K));  // Local maxima locations in the profile
+
+	CUDA_CHECK(cudaMemcpyAsync(d_v, ThetaEProfile.data(), sizeof(float) * N * K, cudaMemcpyHostToDevice, stream));
+
+	Max1D<<<gridSize, blockSize, 0, stream>>>(d_v, d_maxima, 5, K, N);
+
+	// maximum number of maximas we expect to find in the profile
+	const size_t maxMax = K / 4;
+
+	CUDA_CHECK(cudaMalloc((unsigned char**)&d_idxs, sizeof(unsigned char) * N * maxMax));
+
+	MaximaLocation<<<gridSize, blockSize, 0, stream>>>(d_v, d_maxima, d_idxs, K, N);
+
+	std::vector<unsigned char> idxs(N * maxMax);
+
+	CUDA_CHECK(cudaMemcpyAsync(&idxs[0], d_idxs, sizeof(unsigned char) * N * maxMax, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaStreamSynchronize(stream));
+
+	CUDA_CHECK(cudaFree(d_v));
+	CUDA_CHECK(cudaFree(d_maxima));
+	CUDA_CHECK(cudaFree(d_idxs));
+
+	for (size_t i = 0; i < N; i++)
+	{
+		const size_t s = i * maxMax;     // start index of this grid point
+		const size_t maximaN = idxs[s];  // number of maximas found (at most maxMax)
+
+		ASSERT(maximaN > 0);
+		ASSERT(maximaN <= maxMax);
+
+		// Remove maximas that are too high in the atmosphere
+		size_t newMaximaN = 0;
+		size_t offset = 0;
+		for (size_t j = 0; j < maximaN; j++)
+		{
+			const size_t sidx = 1 + s + j;            // index in the array where maxima index is found
+			const unsigned char maxidx = idxs[sidx];  // index in the vertical profile where the maxima was found
+
+			if (PProfile[maxidx * N + i] < mucape_maxima_search_limit)
+			{
+				offset++;
+				continue;
+			}
+			newMaximaN++;
+			idxs[sidx - offset] = maxidx;
+		}
+
+#if 0
+		if (i == 9586)
+		{
+			printf("Num maxima for gp %ld: %ld\n", i, newMaximaN);
+			for (size_t j = 0; j < newMaximaN; j++)
+			{
+				printf("idxs[%ld] = %u\n", (s + j + 1),  idxs[s + j + 1]);
+			}
+
+			for (size_t j = 0; j < K; j++)
+			{
+                                std::string maxs = "MISS";
+                                for (size_t h = 0; h < newMaximaN; h++)
+                                {
+                                        if (idxs[s + h + 1] == static_cast<unsigned char> (j))
+                                                maxs = std::to_string(ThetaEProfile[i + j * N]);
+                                }
+
+				printf("%ld %f %f %s\n", j, PProfile[i + j * N], ThetaEProfile[i + j * N], maxs.c_str());
+			}
+			exit(1);
+		}
+
+#endif
+
+		for (size_t j = 0; j < min(static_cast<size_t>(n), newMaximaN); j++)
+		{
+			const size_t sidx = 1 + s + j;  // index in the array where maxima index is found
+			const short maxidx =
+			    static_cast<short>(idxs[sidx]);  // index in the vertical profile where the maxima was found
+
+			ASSERT(static_cast<unsigned>(maxidx) <= K);
+
+			// Copy values from max theta e levels for further processing
+
+			Tret[j][i] = TProfile[maxidx * N + i];
+			TDret[j][i] = TDProfile[maxidx * N + i];
+			Pret[j][i] = PProfile[maxidx * N + i];
+
+			ASSERT(IsValid(Tret[j][i]));
+			ASSERT(IsValid(TDret[j][i]));
+			ASSERT(IsValid(Pret[j][i]));
+		}
+	}
 
 	CUDA_CHECK(cudaStreamDestroy(stream));
 
-	return std::make_tuple(Tthetae, TDthetae, Pthetae);
+	return std::make_tuple(Tret, TDret, Pret);
 }
 
 cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_configuration>& conf,
@@ -884,9 +1322,6 @@ std::pair<std::vector<float>, std::vector<float>> cape_cuda::GetLFCGPU(
 
 	CUDA_CHECK(cudaStreamCreate(&stream));
 
-	float* d_TenvLCL = 0;
-	float* d_Titer = 0;
-	float* d_Piter = 0;
 	float* d_LCLP = 0;
 	float* d_LCLT = 0;
 	float* d_LFCT = 0;
@@ -900,9 +1335,6 @@ std::pair<std::vector<float>, std::vector<float>> cape_cuda::GetLFCGPU(
 
 	unsigned char* d_found = 0;
 
-	CUDA_CHECK(cudaMalloc((float**)&d_TenvLCL, sizeof(float) * N));
-	CUDA_CHECK(cudaMalloc((float**)&d_Piter, sizeof(float) * N));
-	CUDA_CHECK(cudaMalloc((float**)&d_Titer, sizeof(float) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_LCLT, sizeof(float) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_LCLP, sizeof(float) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_LFCT, sizeof(float) * N));
@@ -915,12 +1347,8 @@ std::pair<std::vector<float>, std::vector<float>> cape_cuda::GetLFCGPU(
 	CUDA_CHECK(cudaMalloc((float**)&d_prevTenv, sizeof(float) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_prevPenv, sizeof(float) * N));
 
-	CUDA_CHECK(cudaMemcpyAsync(d_TenvLCL, &TenvLCL[0], sizeof(float) * N, cudaMemcpyHostToDevice, stream));
-	CUDA_CHECK(cudaMemcpyAsync(d_Titer, &T[0], sizeof(float) * N, cudaMemcpyHostToDevice, stream));
-	CUDA_CHECK(cudaMemcpyAsync(d_Piter, &P[0], sizeof(float) * N, cudaMemcpyHostToDevice, stream));
-
-	CUDA_CHECK(cudaMemcpyAsync(d_LCLT, d_Titer, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
-	CUDA_CHECK(cudaMemcpyAsync(d_LCLP, d_Piter, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_LCLT, &T[0], sizeof(float) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_LCLP, &P[0], sizeof(float) * N, cudaMemcpyHostToDevice, stream));
 
 	InitializeArray<float>(d_LFCT, himan::MissingFloat(), N, stream);
 	InitializeArray<float>(d_LFCP, himan::MissingFloat(), N, stream);
@@ -993,7 +1421,7 @@ std::pair<std::vector<float>, std::vector<float>> cape_cuda::GetLFCGPU(
 		// of this loop the starting level is LCL. If target level level is below current level
 		// (ie. we would be lowering the particle) missing value is returned.
 
-		MoistLiftKernel<<<gridSize, blockSize, 0, stream>>>(d_Titer, d_Piter, d_Penv, d_Tparcel, N);
+		MoistLiftKernel<<<gridSize, blockSize, 0, stream>>>(d_LCLT, d_LCLP, d_Penv, d_Tparcel, N);
 
 		LFCKernel<<<gridSize, blockSize, 0, stream>>>(d_Tenv, d_Penv, d_prevTenv, d_prevPenv, d_Tparcel, d_prevTparcel,
 		                                              d_LCLT, d_LCLP, d_LFCT, d_LFCP, d_found, curLevel.Value(),
@@ -1025,9 +1453,6 @@ std::pair<std::vector<float>, std::vector<float>> cape_cuda::GetLFCGPU(
 	CUDA_CHECK(cudaFree(d_Tparcel));
 	CUDA_CHECK(cudaFree(d_prevTparcel));
 	CUDA_CHECK(cudaFree(d_found));
-	CUDA_CHECK(cudaFree(d_Titer));
-	CUDA_CHECK(cudaFree(d_Piter));
-	CUDA_CHECK(cudaFree(d_TenvLCL));
 	CUDA_CHECK(cudaFree(d_Penv));
 	CUDA_CHECK(cudaFree(d_Tenv));
 	CUDA_CHECK(cudaFree(d_prevPenv));
@@ -1043,11 +1468,11 @@ std::pair<std::vector<float>, std::vector<float>> cape_cuda::GetLFCGPU(
 	return std::make_pair(LFCT, LFCP);
 }
 
-void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration>& conf,
-                          std::shared_ptr<info<float>> myTargetInfo, const std::vector<float>& Tsource,
-                          const std::vector<float>& Psource, const std::vector<float>& TLCL,
-                          const std::vector<float>& PLCL, const std::vector<float>& ZLCL,
-                          const std::vector<float>& PLFC, const std::vector<float>& ZLFC)
+std::vector<float> cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration>& conf,
+                                        std::shared_ptr<info<float>> myTargetInfo, const std::vector<float>& Tsource,
+                                        const std::vector<float>& Psource, const std::vector<float>& TLCL,
+                                        const std::vector<float>& PLCL, const std::vector<float>& ZLCL,
+                                        const std::vector<float>& PLFC, const std::vector<float>& ZLFC)
 {
 	const params PParams({param("PGR-PA"), param("P-PA")});
 
@@ -1086,10 +1511,7 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration>& con
 	float* d_Psource = 0;
 	float* d_Tparcel = 0;
 	float* d_prevTparcel = 0;
-	float* d_Piter = 0;
-	float* d_prevPiter = 0;
-	float* d_Titer = 0;
-	float* d_prevTiter = 0;
+	float* d_Tsource = 0;
 	float* d_PLCL = 0;
 	float* d_PLFC = 0;
 	float* d_cinh = 0;
@@ -1105,8 +1527,7 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration>& con
 	CUDA_CHECK(cudaMalloc((float**)&d_Psource, N * sizeof(float)));
 	CUDA_CHECK(cudaMalloc((float**)&d_Tparcel, N * sizeof(float)));
 	CUDA_CHECK(cudaMalloc((float**)&d_prevTparcel, N * sizeof(float)));
-	CUDA_CHECK(cudaMalloc((float**)&d_Piter, N * sizeof(float)));
-	CUDA_CHECK(cudaMalloc((float**)&d_Titer, N * sizeof(float)));
+	CUDA_CHECK(cudaMalloc((float**)&d_Tsource, N * sizeof(float)));
 	CUDA_CHECK(cudaMalloc((float**)&d_PLCL, N * sizeof(float)));
 	CUDA_CHECK(cudaMalloc((float**)&d_PLFC, N * sizeof(float)));
 	CUDA_CHECK(cudaMalloc((float**)&d_cinh, N * sizeof(float)));
@@ -1128,8 +1549,7 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration>& con
 
 	CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, Tsource.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
 	CUDA_CHECK(cudaMemcpyAsync(d_Psource, Psource.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
-	CUDA_CHECK(cudaMemcpyAsync(d_Titer, Tsource.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
-	CUDA_CHECK(cudaMemcpyAsync(d_Piter, Psource.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_Tsource, d_prevTparcel, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
 	CUDA_CHECK(cudaMemcpyAsync(d_PLCL, PLCL.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
 	CUDA_CHECK(cudaMemcpyAsync(d_PLFC, PLFC.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
 
@@ -1166,7 +1586,7 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration>& con
 		cuda::PrepareInfo(PenvInfo, d_Penv, stream);
 		cuda::PrepareInfo(TenvInfo, d_Tenv, stream);
 
-		LiftLCLKernel<<<gridSize, blockSize, 0, stream>>>(d_Piter, d_Titer, d_PLCL, d_Penv, d_Tparcel, N);
+		LiftLCLKernel<<<gridSize, blockSize, 0, stream>>>(d_Psource, d_Tsource, d_PLCL, d_Penv, d_Tparcel, N);
 
 		CINKernel<<<gridSize, blockSize, 0, stream>>>(d_Tenv, d_prevTenv, d_Penv, d_prevPenv, d_Zenv, d_prevZenv,
 		                                              d_Tparcel, d_prevTparcel, d_PLCL, d_PLFC, d_Psource, d_cinh,
@@ -1186,10 +1606,6 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration>& con
 		CUDA_CHECK(cudaMemcpyAsync(d_prevTenv, d_Tenv, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
 		CUDA_CHECK(cudaMemcpyAsync(d_prevPenv, d_Penv, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
 
-		// preserve starting position for those grid points that have value
-
-		CopyLFCIteratorValuesKernel<<<gridSize, blockSize, 0, stream>>>(d_Titer, d_Tparcel, d_Piter, d_Penv, N);
-
 		curLevel.Value(curLevel.Value() - 1);
 	}
 
@@ -1200,10 +1616,7 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration>& con
 	CUDA_CHECK(cudaFree(d_Psource));
 	CUDA_CHECK(cudaFree(d_Tparcel));
 	CUDA_CHECK(cudaFree(d_prevTparcel));
-	CUDA_CHECK(cudaFree(d_Piter));
-	CUDA_CHECK(cudaFree(d_prevPiter));
-	CUDA_CHECK(cudaFree(d_Titer));
-	CUDA_CHECK(cudaFree(d_prevTiter));
+	CUDA_CHECK(cudaFree(d_Tsource));
 	CUDA_CHECK(cudaFree(d_PLCL));
 	CUDA_CHECK(cudaFree(d_PLFC));
 	CUDA_CHECK(cudaFree(d_prevZenv));
@@ -1219,13 +1632,12 @@ void cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration>& con
 
 	CUDA_CHECK(cudaStreamDestroy(stream));
 
-	myTargetInfo->Find<param>(CINParam);
-	myTargetInfo->Data().Set(cinh);
+	return cinh;
 }
 
-void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>& conf,
-                           std::shared_ptr<info<float>> myTargetInfo, const std::vector<float>& T,
-                           const std::vector<float>& P)
+CAPEdata cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>& conf,
+                               std::shared_ptr<info<float>> myTargetInfo, const std::vector<float>& T,
+                               const std::vector<float>& P)
 {
 	ASSERT(T.size() == P.size());
 
@@ -1266,8 +1678,6 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>& co
 	float* d_LastELT = 0;
 	float* d_LastELP = 0;
 	float* d_LastELZ = 0;
-	float* d_Titer = 0;
-	float* d_Piter = 0;
 	float* d_prevTparcel = 0;
 	float* d_Tparcel = 0;
 	float* d_LFCT = 0;
@@ -1290,8 +1700,6 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>& co
 	CUDA_CHECK(cudaMalloc((float**)&d_LastELP, sizeof(float) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_LastELT, sizeof(float) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_LastELZ, sizeof(float) * N));
-	CUDA_CHECK(cudaMalloc((float**)&d_Piter, sizeof(float) * N));
-	CUDA_CHECK(cudaMalloc((float**)&d_Titer, sizeof(float) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_Tparcel, sizeof(float) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_prevTparcel, sizeof(float) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_prevZenv, sizeof(float) * N));
@@ -1304,11 +1712,9 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>& co
 	CUDA_CHECK(cudaMalloc((float**)&d_LFCP, sizeof(float) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_found, sizeof(unsigned char) * N));
 
-	CUDA_CHECK(cudaMemcpyAsync(d_Titer, T.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
-	CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, d_Titer, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
-	CUDA_CHECK(cudaMemcpyAsync(d_Piter, P.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
-	CUDA_CHECK(cudaMemcpyAsync(d_LFCT, T.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
 	CUDA_CHECK(cudaMemcpyAsync(d_LFCP, P.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_LFCT, T.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, d_LFCT, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
 
 	CUDA_CHECK(cudaMemcpyAsync(d_found, found.data(), sizeof(unsigned char) * N, cudaMemcpyHostToDevice, stream));
 
@@ -1377,7 +1783,7 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>& co
 			VirtualTemperatureKernel<<<gridSize, blockSize, 0, stream>>>(d_Tenv, d_Penv, N);
 		}
 
-		MoistLiftKernel<<<gridSize, blockSize, 0, stream>>>(d_Titer, d_Piter, d_Penv, d_Tparcel, N);
+		MoistLiftKernel<<<gridSize, blockSize, 0, stream>>>(d_LFCT, d_LFCP, d_Penv, d_Tparcel, N);
 
 		CAPEKernel<<<gridSize, blockSize, 0, stream>>>(d_Tenv, d_Penv, d_Zenv, d_prevTenv, d_prevPenv, d_prevZenv,
 		                                               d_Tparcel, d_prevTparcel, d_LFCT, d_LFCP, d_CAPE, d_CAPE1040,
@@ -1405,8 +1811,6 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>& co
 	CUDA_CHECK(cudaFree(d_prevTparcel));
 	CUDA_CHECK(cudaFree(d_LFCT));
 	CUDA_CHECK(cudaFree(d_LFCP));
-	CUDA_CHECK(cudaFree(d_Piter));
-	CUDA_CHECK(cudaFree(d_Titer));
 	CUDA_CHECK(cudaFree(d_found));
 	CUDA_CHECK(cudaFree(d_prevTenv));
 	CUDA_CHECK(cudaFree(d_prevPenv));
@@ -1453,30 +1857,5 @@ void cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>& co
 	CUDA_CHECK(cudaFree(d_LastELP));
 	CUDA_CHECK(cudaFree(d_LastELZ));
 
-	myTargetInfo->Find<param>(ELTParam);
-	myTargetInfo->Data().Set(ELT);
-
-	myTargetInfo->Find<param>(ELPParam);
-	myTargetInfo->Data().Set(ELP);
-
-	myTargetInfo->Find<param>(ELZParam);
-	myTargetInfo->Data().Set(ELZ);
-
-	myTargetInfo->Find<param>(LastELTParam);
-	myTargetInfo->Data().Set(LastELT);
-
-	myTargetInfo->Find<param>(LastELPParam);
-	myTargetInfo->Data().Set(LastELP);
-
-	myTargetInfo->Find<param>(LastELZParam);
-	myTargetInfo->Data().Set(LastELZ);
-
-	myTargetInfo->Find<param>(CAPEParam);
-	myTargetInfo->Data().Set(CAPE);
-
-	myTargetInfo->Find<param>(CAPE1040Param);
-	myTargetInfo->Data().Set(CAPE1040);
-
-	myTargetInfo->Find<param>(CAPE3kmParam);
-	myTargetInfo->Data().Set(CAPE3km);
+	return make_tuple(ELT, ELP, ELZ, LastELT, LastELP, LastELZ, CAPE, CAPE1040, CAPE3km);
 }

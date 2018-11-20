@@ -8,7 +8,6 @@
 #include "numerical_functions.h"
 #include "plugin_factory.h"
 #include "util.h"
-#include <boost/thread.hpp>
 #include <future>
 
 #include "debug.h"
@@ -31,6 +30,16 @@ typedef vector<vector<float>> vec2d;
 const himan::level SURFACE(himan::kHeight, 0);
 const himan::level M500(himan::kHeightLayer, 500, 0);
 const himan::level UNSTABLE(himan::kMaximumThetaE, 0);
+
+void SmoothData(shared_ptr<himan::info<float>> myTargetInfo);
+void ValidateData(vector<float>& LCLZ, vector<float>& LFCT, vector<float>& LFCP, vector<float>& LFCZ,
+                  vector<float>& ELT, vector<float>& ELP, vector<float>& ELZ, vector<float>& CAPE,
+                  vector<float>& CAPE1040, vector<float>& CAPE3km, vector<float>& CIN);
+void SetDataToInfo(shared_ptr<himan::info<float>> myTargetInfo, vector<float>& LCLT, vector<float>& LCLP,
+                   vector<float>& LCLZ, vector<float>& LFCT, vector<float>& LFCP, vector<float>& LFCZ,
+                   vector<float>& ELT, vector<float>& ELP, vector<float>& ELZ, vector<float>& LastELT,
+                   vector<float>& LastELP, vector<float>& LastELZ, vector<float>& CAPE, vector<float>& CAPE1040,
+                   vector<float>& CAPE3km, vector<float>& CIN);
 
 vector<float> Convert(const vector<double>& arr)
 {
@@ -158,7 +167,7 @@ vector<float> VirtualTemperature(vector<float> T, const vector<float>& P)
 	for (size_t i = 0; i < T.size(); i++)
 	{
 		T[i] = himan::metutil::VirtualTemperature_<float>(T[i], P[i]);
-		ASSERT(T[i] > 100 && T[i] < 400);
+		ASSERT(himan::IsMissing(T[i]) || (T[i] > 100 && T[i] < 400));
 	}
 
 	return T;
@@ -166,7 +175,7 @@ vector<float> VirtualTemperature(vector<float> T, const vector<float>& P)
 
 float Max(const vector<float>& vec)
 {
-	float ret = nanf("");
+	float ret = himan::MissingFloat();
 
 	for (const float& val : vec)
 	{
@@ -343,6 +352,187 @@ void cape::Process(shared_ptr<const plugin_configuration> conf)
 	Start<float>();
 }
 
+void cape::MostUnstableCAPE(shared_ptr<info<float>> myTargetInfo, short threadIndex) const
+{
+	/*
+	 * Most unstable CAPE is defined as the highest CAPE value found from a given
+	 * location. The 'proper' way of calculating this then would be to calculate
+	 * CAPE from all hybrid levels and select the highest. This is computationally
+	 * too expensive.
+	 *
+	 * An approximation is to calculate theta e value for each hybrid level: most
+	 * unstable CAPE is most often found from the level where the maximum theta e
+	 * value is found.
+	 *
+	 * Unfortunately this is only an approximation, and it fails sometimes especially
+	 * when maximum theta e is found high in the atmosphere in a relatively dry air
+	 * and when there's a relatively warm and moist layer near surface.
+	 *
+	 * In order to alleviate this problem we do 'probing' for the most unstable CAPE
+	 * value: instead of extracting a single theta e maximum value and process CAPE
+	 * with that information, we calculate up to three local maxima from the theta e
+	 * profile. Then we proceed to calculate CAPE separately for each three theta e
+	 * maxima data, and in the end select the one that produces largest CAPE value.
+	 */
+
+	const size_t N = myTargetInfo->Data().Size();
+	logger log("muCAPEThread #" + to_string(threadIndex));
+
+	timer tmr(true);
+
+	auto source = GetNHighestThetaEValues(myTargetInfo, 3);
+
+	tmr.Stop();
+
+	const auto& Ts = get<0>(source);
+	const auto& TDs = get<1>(source);
+	const auto& Ps = get<2>(source);
+
+	if (Ts.empty())
+	{
+		return;
+	}
+
+	log.Debug("Potential source data created in " + to_string(tmr.GetTime()) + " ms");
+
+	size_t probeN = Ts.size();
+
+	// LCLT, LCLP, LFCT, LFCP, ELT, ELP, ELZ, LastELT, LastELP, LastELZ, CAPE, CAPE1040, CAPE3km
+
+	typedef tuple<vector<float>, vector<float>, vector<float>, vector<float>, vector<float>, vector<float>,
+	              vector<float>, vector<float>, vector<float>, vector<float>, vector<float>, vector<float>,
+	              vector<float>>
+	    tuple13f;
+
+	tmr.Start();
+
+	vector<future<tuple13f>> futures;
+
+	for (size_t i = 0; i < probeN; i++)
+	{
+		log.Debug("Launching async task #" + to_string(i));
+
+		futures.push_back(async(launch::async,
+		                        [&myTargetInfo, &log, this](const cape_source& sourceValues, size_t taskId) {
+			                        auto LCL = GetLCL(sourceValues);
+			                        auto LFC = GetLFC(myTargetInfo, LCL.first, LCL.second);
+
+			                        const auto missingLFCcount = count_if(LFC.first.begin(), LFC.first.end(),
+			                                                              [](const float& f) { return IsMissing(f); });
+
+			                        if (LFC.first.empty() || static_cast<int>(LFC.first.size()) == missingLFCcount)
+			                        {
+				                        log.Warning("LFC level not found for task #" + to_string(taskId));
+				                        return tuple13f();
+			                        }
+
+			                        auto CAPE = GetCAPE(myTargetInfo, LFC);
+
+#if 0
+			                        int index = 9586;
+			                        cout << index << " " << get<2>(sourceValues)[index] << " " << get<6>(CAPE)[index]
+			                             << "\n";
+
+#endif
+
+			                        return tuple_cat(LCL, LFC, CAPE);
+
+		                        },
+		                        make_tuple(Ts[i], TDs[i], Ps[i]), i));
+	}
+
+	// This is where we store the results of the runs
+	vector<tuple13f> results;
+
+	// This is where we put thetae values so they are more convenient to read later on
+	vec2d refValues(N);
+
+	for (size_t i = 0; i < probeN; i++)
+	{
+		auto res = futures[i].get();
+
+		if (get<0>(res).empty())
+		{
+			continue;
+		}
+
+		results.push_back(res);
+
+		const auto& muCAPE = get<10>(res);
+
+		for (size_t j = 0; j < N; j++)
+		{
+			refValues[j].push_back(muCAPE[j]);
+		}
+	}
+	tmr.Stop();
+	log.Debug("MUCape produced in " + to_string(tmr.GetTime()) + " ms");
+
+	vector<float> LPLT(N), LPLP(N), LCLT(N), LCLP(N), LFCT(N), LFCP(N), ELT(N), ELP(N), ELZ(N), LastELT(N), LastELP(N),
+	    LastELZ(N), CAPE(N), CAPE1040(N), CAPE3km(N);
+
+	// cache trashing
+	for (size_t i = 0; i < N; i++)
+	{
+		const auto& ref = refValues[i];
+
+		// Find the position of the highest mucape
+		auto pos = distance(ref.begin(), max_element(ref.begin(), ref.end()));
+
+		LPLT[i] = Ts[pos][i];
+		LPLP[i] = Ps[pos][i];
+		LCLT[i] = get<0>(results[pos])[i];
+		LCLP[i] = get<1>(results[pos])[i];
+		LFCT[i] = get<2>(results[pos])[i];
+		LFCP[i] = get<3>(results[pos])[i];
+		ELT[i] = get<4>(results[pos])[i];
+		ELP[i] = get<5>(results[pos])[i];
+		ELZ[i] = get<6>(results[pos])[i];
+		LastELT[i] = get<7>(results[pos])[i];
+		LastELP[i] = get<8>(results[pos])[i];
+		LastELZ[i] = get<9>(results[pos])[i];
+		CAPE[i] = get<10>(results[pos])[i];
+		CAPE1040[i] = get<11>(results[pos])[i];
+		CAPE3km[i] = get<12>(results[pos])[i];
+	}
+
+	auto h = GET_PLUGIN(hitool);
+	h->Configuration(itsConfiguration);
+	h->Time(myTargetInfo->Time());
+	h->ForecastType(myTargetInfo->ForecastType());
+	h->HeightUnit(kHPa);
+
+	myTargetInfo->Find<param>(LPLTParam);
+	myTargetInfo->Data().Set(LPLT);
+	myTargetInfo->Find<param>(LPLPParam);
+	myTargetInfo->Data().Set(LPLP);
+
+	log.Debug("Fetching LCL height");
+	auto LCLZ = h->VerticalValue<float>(param("HL-M"), LCLP);
+
+	log.Debug("Fetching LFC height");
+	auto LFCZ = h->VerticalValue<float>(param("HL-M"), LFCP);
+
+	log.Debug("Processing CIN");
+
+	future<vector<float>> CINfut =
+	    async(launch::async, &cape::GetCIN, this, myTargetInfo, LPLT, LPLP, LCLT, LCLP, LCLZ, LFCP, LFCZ);
+
+	log.Debug("Fetching LPL height");
+
+	auto LPLZ = h->VerticalValue<float>(param("HL-M"), LPLP);
+
+	myTargetInfo->Find<param>(LPLZParam);
+	myTargetInfo->Data().Set(LPLZ);
+
+	auto CIN = CINfut.get();
+
+	ValidateData(LCLZ, LFCT, LFCP, LFCZ, ELT, ELP, ELZ, CAPE, CAPE1040, CAPE3km, CIN);
+	SetDataToInfo(myTargetInfo, LCLT, LCLP, LCLZ, LFCT, LFCP, LFCZ, ELT, ELP, ELZ, LastELT, LastELP, LastELZ, CAPE,
+	              CAPE1040, CAPE3km, CIN);
+	SmoothData(myTargetInfo);
+}
+
 void cape::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short threadIndex)
 {
 	/*
@@ -354,24 +544,18 @@ void cape::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short thread
 	 *
 	 * 3) Continue lifting the particle to LFC height moist adiabatically.
 	 *
-	 * This is done by lifting the parcel a certain height at a time (500 Pa),
-	 * and calculating the new temperature from the lifted height. If parcel
-	 * temperature is larger than environment temperature, we have reached LFC.
-	 * Environment temperature is therefore fetched every iteration of integration
-	 * algorithm.
+	 * 4) Integrate from LFC to EL to get CAPE
 	 *
-	 * 4) Integrate from LFC to EL
-	 *
-	 * 5) Integrate from surface to LFC to find CIN
+	 * 5) Integrate from source parcel height to LFC to get CIN
 	 */
 
-	auto sourceLevel = myTargetInfo->Level();
+	const auto sourceLevel = myTargetInfo->Level();
 
-	auto mySubThreadedLogger =
+	auto log =
 	    logger("capeThread#" + to_string(threadIndex) + "Version" + to_string(static_cast<int>(sourceLevel.Type())));
 
-	mySubThreadedLogger.Info("Calculating source level type " + HPLevelTypeToString.at(sourceLevel.Type()) +
-	                         " for time " + static_cast<string>(myTargetInfo->Time().ValidDateTime()));
+	log.Info("Calculating source level type " + HPLevelTypeToString.at(sourceLevel.Type()) + " for time " +
+	         static_cast<string>(myTargetInfo->Time().ValidDateTime()));
 
 	// 1.
 
@@ -391,7 +575,7 @@ void cape::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short thread
 			break;
 
 		case kMaximumThetaE:
-			sourceValues = GetHighestThetaEValues(myTargetInfo);
+			return MostUnstableCAPE(myTargetInfo, threadIndex);
 			break;
 
 		default:
@@ -412,182 +596,160 @@ void cape::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short thread
 	h->ForecastType(myTargetInfo->ForecastType());
 	h->HeightUnit(kHPa);
 
-	if (sourceLevel.Type() == kMaximumThetaE)
-	{
-		myTargetInfo->Find<param>(LPLTParam);
-		myTargetInfo->Data().Set(get<0>(sourceValues));
-		myTargetInfo->Find<param>(LPLPParam);
-
-		const auto LPLPressure = get<2>(sourceValues);
-		myTargetInfo->Data().Set(LPLPressure);
-
-		auto height = h->VerticalValue<float>(param("HL-M"), LPLPressure);
-
-		myTargetInfo->Find<param>(LPLZParam);
-		myTargetInfo->Data().Set(height);
-	}
-
 	aTimer.Stop();
 
-	mySubThreadedLogger.Info("Source data calculated in " + to_string(aTimer.GetTime()) + " ms");
+	log.Info("Source data calculated in " + to_string(aTimer.GetTime()) + " ms");
 
-	mySubThreadedLogger.Debug("Source temperature: " + ::PrintMean<float>(get<0>(sourceValues)));
-	mySubThreadedLogger.Debug("Source dewpoint: " + ::PrintMean<float>(get<1>(sourceValues)));
-	mySubThreadedLogger.Debug("Source pressure: " + ::PrintMean<float>(get<2>(sourceValues)));
+	log.Debug("Source temperature: " + ::PrintMean<float>(get<0>(sourceValues)));
+	log.Debug("Source dewpoint: " + ::PrintMean<float>(get<1>(sourceValues)));
+	log.Debug("Source pressure: " + ::PrintMean<float>(get<2>(sourceValues)));
 
 	// 2.
 
 	aTimer.Start();
 
-	auto LCL = GetLCL(myTargetInfo, sourceValues);
+	auto LCL = GetLCL(sourceValues);
+	auto& LCLT = LCL.first;
+	auto& LCLP = LCL.second;
 
 	aTimer.Stop();
 
-	mySubThreadedLogger.Info("LCL calculated in " + to_string(aTimer.GetTime()) + " ms");
+	log.Info("LCL calculated in " + to_string(aTimer.GetTime()) + " ms");
 
-	mySubThreadedLogger.Debug("LCL temperature: " + ::PrintMean<float>(LCL.first));
-	mySubThreadedLogger.Debug("LCL pressure: " + ::PrintMean<float>(LCL.second));
-
-	myTargetInfo->Find<param>(LCLTParam);
-	myTargetInfo->Data().Set(LCL.first);
-
-	myTargetInfo->Find<param>(LCLPParam);
-	myTargetInfo->Data().Set(LCL.second);
+	log.Debug("LCL temperature: " + ::PrintMean<float>(LCL.first));
+	log.Debug("LCL pressure: " + ::PrintMean<float>(LCL.second));
 
 	auto LCLZ = h->VerticalValue<float>(param("HL-M"), LCL.second);
-
-	myTargetInfo->Find<param>(LCLZParam);
-	myTargetInfo->Data().Set(LCLZ);
 
 	// 3.
 
 	aTimer.Start();
 
 	auto LFC = GetLFC(myTargetInfo, LCL.first, LCL.second);
+	auto& LFCT = LFC.first;
+	auto& LFCP = LFC.second;
 
 	aTimer.Stop();
 
-	mySubThreadedLogger.Info("LFC calculated in " + to_string(aTimer.GetTime()) + " ms");
+	log.Info("LFC calculated in " + to_string(aTimer.GetTime()) + " ms");
 
 	const auto missingLFCcount =
 	    count_if(LFC.first.begin(), LFC.first.end(), [](const float& f) { return IsMissing(f); });
 
 	if (LFC.first.empty() || static_cast<int>(LFC.first.size()) == missingLFCcount)
 	{
-		mySubThreadedLogger.Warning("LFC level not found");
+		log.Warning("LFC level not found");
 		return;
 	}
 
-	mySubThreadedLogger.Debug("LFC temperature: " + ::PrintMean<float>(LFC.first));
-	mySubThreadedLogger.Debug("LFC pressure: " + ::PrintMean<float>(LFC.second));
-
-	myTargetInfo->Find<param>(LFCTParam);
-	myTargetInfo->Data().Set(LFC.first);
-
-	myTargetInfo->Find<param>(LFCPParam);
-	myTargetInfo->Data().Set(LFC.second);
+	log.Debug("LFC temperature: " + ::PrintMean<float>(LFC.first));
+	log.Debug("LFC pressure: " + ::PrintMean<float>(LFC.second));
 
 	auto LFCZ = h->VerticalValue<float>(param("HL-M"), LFC.second);
-
-	myTargetInfo->Find<param>(LFCZParam);
-	myTargetInfo->Data().Set(LFCZ);
 
 	// 4. & 5.
 
 	aTimer.Start();
 
-	auto capeInfo = make_shared<info<float>>(*myTargetInfo);
-	boost::thread t1(&cape::GetCAPE, this, boost::ref(capeInfo), LFC);
+	future<CAPEdata> CAPEfut = async(launch::async, &cape::GetCAPE, this, myTargetInfo, LFC);
 
-	auto cinInfo = make_shared<info<float>>(*myTargetInfo);
-	boost::thread t2(&cape::GetCIN, this, boost::ref(cinInfo), get<0>(sourceValues), get<2>(sourceValues), LCL.first,
-	                 LCL.second, LCLZ, LFC.second, LFCZ);
+	future<vector<float>> CINfut = async(launch::async, &cape::GetCIN, this, myTargetInfo, get<0>(sourceValues),
+	                                     get<2>(sourceValues), LCL.first, LCL.second, LCLZ, LFC.second, LFCZ);
 
-	t1.join();
-	t2.join();
+	auto CAPEresult = CAPEfut.get();
+	auto CIN = CINfut.get();
 
 	aTimer.Stop();
 
-	mySubThreadedLogger.Info("CAPE and CIN calculated in " + to_string(aTimer.GetTime()) + " ms");
+	log.Info("CAPE and CIN calculated in " + to_string(aTimer.GetTime()) + " ms");
 
-	// Sometimes CAPE area is infinitely small -- so that CAPE is zero but LFC is found. In this case set all derivative
-	// parameters missing.
+	auto& ELT = get<0>(CAPEresult);
+	auto& ELP = get<1>(CAPEresult);
+	auto& ELZ = get<2>(CAPEresult);
+	auto& LastELT = get<3>(CAPEresult);
+	auto& LastELP = get<4>(CAPEresult);
+	auto& LastELZ = get<5>(CAPEresult);
+	auto& CAPE = get<6>(CAPEresult);
+	auto& CAPE1040 = get<7>(CAPEresult);
+	auto& CAPE3km = get<8>(CAPEresult);
 
-	capeInfo->Find<param>(LFCZParam);
-	auto& lfcz_ = VEC(capeInfo);
-	capeInfo->Find<param>(LFCPParam);
-	auto& lfcp_ = VEC(capeInfo);
-	capeInfo->Find<param>(LFCTParam);
-	auto& lfct_ = VEC(capeInfo);
-	cinInfo->Find<param>(CINParam);
-	auto& cin_ = VEC(cinInfo);
-	capeInfo->Find<param>(ELZParam);
-	auto& elz_ = VEC(capeInfo);
-	capeInfo->Find<param>(CAPEParam);
-	const auto& cape_ = VEC(capeInfo);
-	capeInfo->Find<param>(LCLZParam);
-	auto& lclz_ = VEC(capeInfo);
+	ValidateData(LCLZ, LFCT, LFCP, LFCZ, ELT, ELP, ELZ, CAPE, CAPE1040, CAPE3km, CIN);
+	SetDataToInfo(myTargetInfo, LCLT, LCLP, LCLZ, LFCT, LFCP, LFCZ, ELT, ELP, ELZ, LastELT, LastELP, LastELZ, CAPE,
+	              CAPE1040, CAPE3km, CIN);
+	SmoothData(myTargetInfo);
 
-	for (size_t i = 0; i < lfcz_.size(); i++)
-	{
-		// If LFC was found but EL was not, set LFC to missing also to avoid
-		// unclosed CAPE ranges.
+	log.Debug("CAPE: " + ::PrintMean<float>(CAPE));
+	log.Debug("CAPE1040: " + ::PrintMean<float>(CAPE1040));
+	log.Debug("CAPE3km: " + ::PrintMean<float>(CAPE3km));
+	log.Debug("CIN: " + ::PrintMean<float>(CIN));
+}
 
-		if (cape_[i] == 0 && himan::IsMissing(elz_[i]) && !himan::IsMissing(lfcz_[i]))
-		{
-			cin_[i] = 0;
-			lfcz_[i] = MissingFloat();
-			lfcp_[i] = MissingFloat();
-			lfct_[i] = MissingFloat();
-		}
+void SetDataToInfo(shared_ptr<himan::info<float>> myTargetInfo, vector<float>& LCLT, vector<float>& LCLP,
+                   vector<float>& LCLZ, vector<float>& LFCT, vector<float>& LFCP, vector<float>& LFCZ,
+                   vector<float>& ELT, vector<float>& ELP, vector<float>& ELZ, vector<float>& LastELT,
+                   vector<float>& LastELP, vector<float>& LastELZ, vector<float>& CAPE, vector<float>& CAPE1040,
+                   vector<float>& CAPE3km, vector<float>& CIN)
+{
+	using himan::param;
 
-		// Due to numeric inaccuracies sometimes LFC is slightly *below*
-		// LCL. If the shift is small enough, consider them to be at
-		// equal height.
+	myTargetInfo->Find<param>(LCLTParam);
+	myTargetInfo->Data().Set(LCLT);
 
-		if ((lclz_[i] - lfcz_[i]) > 0 && (lclz_[i] - lfcz_[i]) < 0.1)
-		{
-			lfcz_[i] = lclz_[i];
-		}
+	myTargetInfo->Find<param>(LCLPParam);
+	myTargetInfo->Data().Set(LCLP);
 
-		// The same with LFC & EL.
+	myTargetInfo->Find<param>(LCLZParam);
+	myTargetInfo->Data().Set(LCLZ);
 
-		if ((lfcz_[i] - elz_[i]) > 0 && (lfcz_[i] - elz_[i]) < 0.1)
-		{
-			elz_[i] = lfcz_[i];
-		}
-	}
+	myTargetInfo->Find<param>(LFCTParam);
+	myTargetInfo->Data().Set(LFCT);
 
-#ifdef DEBUG
-	ASSERT(lfcz_.size() == elz_.size());
-	ASSERT(cape_.size() == elz_.size());
-	ASSERT(cin_.size() == elz_.size());
+	myTargetInfo->Find<param>(LFCPParam);
+	myTargetInfo->Data().Set(LFCP);
 
-	for (size_t i = 0; i < lfcz_.size(); i++)
-	{
-		// Check:
-		// * If LFC is missing, EL is missing
-		// * If LFC is present, EL is present
-		// * If both are present, LFC must be below EL
-		// * LFC must be above LCL or equal to it
-		// * CAPE must be zero or positive real value
-		// * CIN must be zero or negative real value
+	myTargetInfo->Find<param>(LFCZParam);
+	myTargetInfo->Data().Set(LFCZ);
 
-		ASSERT((IsMissing(lfcz_[i]) && IsMissing(elz_[i])) ||
-		       (!IsMissing(lfcz_[i]) && !IsMissing(elz_[i]) && (lfcz_[i] <= elz_[i])));
-		ASSERT(IsMissing(lfcz_[i]) || (lfcz_[i] >= lclz_[i] && !IsMissing(lclz_[i])));
-		ASSERT(cape_[i] >= 0);
-		ASSERT(cin_[i] <= 0);
-	}
-#endif
+	myTargetInfo->Find<param>(ELTParam);
+	myTargetInfo->Data().Set(ELT);
 
+	myTargetInfo->Find<param>(ELPParam);
+	myTargetInfo->Data().Set(ELP);
+
+	myTargetInfo->Find<param>(ELZParam);
+	myTargetInfo->Data().Set(ELZ);
+
+	myTargetInfo->Find<param>(LastELTParam);
+	myTargetInfo->Data().Set(LastELT);
+
+	myTargetInfo->Find<param>(LastELPParam);
+	myTargetInfo->Data().Set(LastELP);
+
+	myTargetInfo->Find<param>(LastELZParam);
+	myTargetInfo->Data().Set(LastELZ);
+
+	myTargetInfo->Find<param>(CAPEParam);
+	myTargetInfo->Data().Set(CAPE);
+
+	myTargetInfo->Find<param>(CAPE1040Param);
+	myTargetInfo->Data().Set(CAPE1040);
+
+	myTargetInfo->Find<param>(CAPE3kmParam);
+	myTargetInfo->Data().Set(CAPE3km);
+
+	myTargetInfo->Find<param>(CINParam);
+	myTargetInfo->Data().Set(CIN);
+}
+
+void SmoothData(shared_ptr<himan::info<float>> myTargetInfo)
+{
 	// Do smoothening for CAPE & CIN parameters
-	himan::matrix<float> filter_kernel(3, 3, 1, MissingFloat(), 1.0f / 9.0f);
+	himan::matrix<float> filter_kernel(3, 3, 1, himan::MissingFloat(), 1.0f / 9.0f);
 
-	auto filter = [&](const param& par) {
+	auto filter = [&](const himan::param& par) {
 
-		capeInfo->Find<param>(par);
-		himan::matrix<float> filtered = numerical_functions::Filter2D(capeInfo->Data(), filter_kernel);
+		myTargetInfo->Find<himan::param>(par);
+		himan::matrix<float> filtered = himan::numerical_functions::Filter2D(myTargetInfo->Data(), filter_kernel);
 
 		// HIMAN-224: CAPE & CIN values smaller than 0.1 are rounded to zero
 
@@ -601,7 +763,7 @@ void cape::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short thread
 			}
 		}
 
-		auto b = capeInfo->Base();
+		auto b = myTargetInfo->Base();
 		b->data = move(filtered);
 	};
 
@@ -609,36 +771,88 @@ void cape::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short thread
 	filter(CAPE1040Param);
 	filter(CAPE3kmParam);
 	filter(CINParam);
-
-	capeInfo->Find<param>(CAPEParam);
-	mySubThreadedLogger.Debug("CAPE: " + ::PrintMean<float>(VEC(capeInfo)));
-	capeInfo->Find<param>(CAPE1040Param);
-	mySubThreadedLogger.Debug("CAPE1040: " + ::PrintMean<float>(VEC(capeInfo)));
-	capeInfo->Find<param>(CAPE3kmParam);
-	mySubThreadedLogger.Debug("CAPE3km: " + ::PrintMean<float>(VEC(capeInfo)));
-	cinInfo->Find<param>(CINParam);
-	mySubThreadedLogger.Debug("CIN: " + ::PrintMean<float>(VEC(cinInfo)));
 }
 
-void cape::GetCIN(shared_ptr<info<float>> myTargetInfo, const vector<float>& Tsource, const vector<float>& Psource,
-                  const vector<float>& TLCL, const vector<float>& PLCL, const vector<float>& ZLCL,
-                  const vector<float>& PLFC, const vector<float>& ZLFC)
+void ValidateData(vector<float>& LCLZ, vector<float>& LFCT, vector<float>& LFCP, vector<float>& LFCZ,
+                  vector<float>& ELT, vector<float>& ELP, vector<float>& ELZ, vector<float>& CAPE,
+                  vector<float>& CAPE1040, vector<float>& CAPE3km, vector<float>& CIN)
+{
+	// Sometimes CAPE area is infinitely small -- so that CAPE is zero but LFC is found. In this case set all
+	// derivative parameters missing.
+
+	for (size_t i = 0; i < LFCZ.size(); i++)
+	{
+		// If LFC was found but EL was not, set LFC to missing also to avoid
+		// unclosed CAPE ranges.
+
+		if (CAPE[i] == 0 && himan::IsMissing(ELZ[i]) && !himan::IsMissing(LFCZ[i]))
+		{
+			CIN[i] = 0;
+			LFCZ[i] = himan::MissingFloat();
+			LFCP[i] = himan::MissingFloat();
+			LFCT[i] = himan::MissingFloat();
+		}
+
+		// Due to numeric inaccuracies sometimes LFC is slightly *below*
+		// LCL. If the shift is small enough, consider them to be at
+		// equal height.
+
+		if ((LCLZ[i] - LFCZ[i]) > 0 && (LCLZ[i] - LFCZ[i]) < 0.1)
+		{
+			LFCZ[i] = LCLZ[i];
+		}
+
+		// The same with LFC & EL.
+
+		if ((LFCZ[i] - ELZ[i]) > 0 && (LFCZ[i] - ELZ[i]) < 0.1)
+		{
+			ELZ[i] = LFCZ[i];
+		}
+	}
+
+#ifdef DEBUG
+	ASSERT(LFCZ.size() == ELZ.size());
+	ASSERT(CAPE.size() == ELZ.size());
+	ASSERT(CIN.size() == ELZ.size());
+
+	for (size_t i = 0; i < LFCZ.size(); i++)
+	{
+		// Check:
+		// * If LFC is missing, EL is missing
+		// * If LFC is present, EL is present
+		// * If both are present, LFC must be below EL
+		// * LFC must be above LCL or equal to it
+		// * CAPE must be zero or positive real value
+		// * CIN must be zero or negative real value
+
+		ASSERT((himan::IsMissing(LFCZ[i]) && himan::IsMissing(ELZ[i])) ||
+		       (!himan::IsMissing(LFCZ[i]) && !himan::IsMissing(ELZ[i]) && (LFCZ[i] <= ELZ[i])));
+		ASSERT(himan::IsMissing(LFCZ[i]) || (LFCZ[i] >= LCLZ[i] && !himan::IsMissing(LCLZ[i])));
+		ASSERT(CAPE[i] >= 0);
+		ASSERT(CIN[i] <= 0);
+	}
+#endif
+}
+
+vector<float> cape::GetCIN(shared_ptr<info<float>> myTargetInfo, const vector<float>& Tsource,
+                           const vector<float>& Psource, const vector<float>& TLCL, const vector<float>& PLCL,
+                           const vector<float>& ZLCL, const vector<float>& PLFC, const vector<float>& ZLFC) const
 {
 #ifdef HAVE_CUDA
 	if (itsConfiguration->UseCuda())
 	{
-		cape_cuda::GetCINGPU(itsConfiguration, myTargetInfo, Tsource, Psource, TLCL, PLCL, ZLCL, PLFC, ZLFC);
+		return cape_cuda::GetCINGPU(itsConfiguration, myTargetInfo, Tsource, Psource, TLCL, PLCL, ZLCL, PLFC, ZLFC);
 	}
 	else
 #endif
 	{
-		GetCINCPU(myTargetInfo, Tsource, Psource, TLCL, PLCL, ZLCL, PLFC, ZLFC);
+		return GetCINCPU(myTargetInfo, Tsource, Psource, TLCL, PLCL, ZLCL, PLFC, ZLFC);
 	}
 }
 
-void cape::GetCINCPU(shared_ptr<info<float>> myTargetInfo, const vector<float>& Tsource, const vector<float>& Psource,
-                     const vector<float>& TLCL, const vector<float>& PLCL, const vector<float>& ZLCL,
-                     const vector<float>& PLFC, const vector<float>& ZLFC)
+vector<float> cape::GetCINCPU(shared_ptr<info<float>> myTargetInfo, const vector<float>& Tsource,
+                              const vector<float>& Psource, const vector<float>& TLCL, const vector<float>& PLCL,
+                              const vector<float>& ZLCL, const vector<float>& PLFC, const vector<float>& ZLFC) const
 {
 	vector<bool> found(Tsource.size(), false);
 
@@ -745,7 +959,7 @@ void cape::GetCINCPU(shared_ptr<info<float>> myTargetInfo, const vector<float>& 
 			float Penv = tup.get<3>() * 0.01f;  // hPa
 			ASSERT(Penv < 1200.);
 
-			float prevPenv = tup.get<4>();
+			float prevPenv = tup.get<4>() * 0.01f;
 
 			float Zenv = tup.get<5>();      // m
 			float prevZenv = tup.get<6>();  // m
@@ -805,6 +1019,7 @@ void cape::GetCINCPU(shared_ptr<info<float>> myTargetInfo, const vector<float>& 
 			}
 
 			cin += CAPE::CalcCIN(Tenv, prevTenv, Tparcel, prevTparcel, Penv, prevPenv, Zenv, prevZenv);
+
 			ASSERT(cin <= 0);
 		}
 
@@ -821,12 +1036,6 @@ void cape::GetCINCPU(shared_ptr<info<float>> myTargetInfo, const vector<float>& 
 
 		for (size_t j = 0; j < Titer.size(); j++)
 		{
-			if (!IsMissing(TparcelVec[j]) && !IsMissing(PenvVec[j]))
-			{
-				Titer[j] = TparcelVec[j];
-				Piter[j] = PenvVec[j];
-			}
-
 			if (found[j])
 			{
 				Titer[j] = MissingFloat();  // by setting this we prevent MoistLift to integrate particle
@@ -834,25 +1043,24 @@ void cape::GetCINCPU(shared_ptr<info<float>> myTargetInfo, const vector<float>& 
 		}
 	}
 
-	myTargetInfo->Find<param>(CINParam);
-	myTargetInfo->Data().Set(cinh);
+	return cinh;
 }
 
-void cape::GetCAPE(shared_ptr<info<float>> myTargetInfo, const pair<vector<float>, vector<float>>& LFC)
+CAPEdata cape::GetCAPE(shared_ptr<info<float>> myTargetInfo, const pair<vector<float>, vector<float>>& LFC) const
 {
 #ifdef HAVE_CUDA
 	if (itsConfiguration->UseCuda())
 	{
-		cape_cuda::GetCAPEGPU(itsConfiguration, myTargetInfo, LFC.first, LFC.second);
+		return cape_cuda::GetCAPEGPU(itsConfiguration, myTargetInfo, LFC.first, LFC.second);
 	}
 	else
 #endif
 	{
-		GetCAPECPU(myTargetInfo, LFC.first, LFC.second);
+		return GetCAPECPU(myTargetInfo, LFC.first, LFC.second);
 	}
 }
 
-void cape::GetCAPECPU(shared_ptr<info<float>> myTargetInfo, const vector<float>& T, const vector<float>& P)
+CAPEdata cape::GetCAPECPU(shared_ptr<info<float>> myTargetInfo, const vector<float>& T, const vector<float>& P) const
 {
 	ASSERT(T.size() == P.size());
 
@@ -891,7 +1099,13 @@ void cape::GetCAPECPU(shared_ptr<info<float>> myTargetInfo, const vector<float>&
 	// For each grid point find the hybrid level that's below LFC and then pick the lowest level
 	// among all grid points
 
-	auto levels = h->LevelForHeight(myTargetInfo->Producer(), ::Max(P));
+	const float maxP = ::Max(P);
+
+	if (IsMissing(maxP))
+	{
+		throw runtime_error("CAPE: LFC pressure is missing");
+	}
+	auto levels = h->LevelForHeight(myTargetInfo->Producer(), maxP);
 
 	level curLevel = levels.first;
 
@@ -1003,9 +1217,10 @@ void cape::GetCAPECPU(shared_ptr<info<float>> myTargetInfo, const vector<float>&
 				prevTparcel = T[i];  // LFC temperature
 
 				// If LFC was found close to lower hybrid level, the linear interpolation and moist lift will result
-				// to same values. In this case CAPE integration fails as there is no area formed between environment
-				// and parcel temperature. The result for this is that LFC is found but EL is not found. To prevent
-				// this, warm the parcel value just slightly so that a miniscule CAPE area is formed and EL is found.
+				// to same values. In this case CAPE integration fails as there is no area formed between
+				// environment and parcel temperature. The result for this is that LFC is found but EL is not found.
+				// To prevent this, warm the parcel value just slightly so that a miniscule CAPE area is formed and
+				// EL is found.
 
 				if (fabs(prevTparcel - prevTenv) < 0.0001f)
 				{
@@ -1096,36 +1311,12 @@ void cape::GetCAPECPU(shared_ptr<info<float>> myTargetInfo, const vector<float>&
 		ASSERT((IsMissing(ELP[i]) && IsMissing(LastELP[i])) || (ELP[i] >= LastELP[i]));
 	}
 #endif
-	myTargetInfo->Find<param>(ELTParam);
-	myTargetInfo->Data().Set(ELT);
 
-	myTargetInfo->Find<param>(ELPParam);
-	myTargetInfo->Data().Set(ELP);
-
-	myTargetInfo->Find<param>(ELZParam);
-	myTargetInfo->Data().Set(ELZ);
-
-	myTargetInfo->Find<param>(LastELTParam);
-	myTargetInfo->Data().Set(LastELT);
-
-	myTargetInfo->Find<param>(LastELPParam);
-	myTargetInfo->Data().Set(LastELP);
-
-	myTargetInfo->Find<param>(LastELZParam);
-	myTargetInfo->Data().Set(LastELZ);
-
-	myTargetInfo->Find<param>(CAPEParam);
-	myTargetInfo->Data().Set(CAPE);
-
-	myTargetInfo->Find<param>(CAPE1040Param);
-	myTargetInfo->Data().Set(CAPE1040);
-
-	myTargetInfo->Find<param>(CAPE3kmParam);
-	myTargetInfo->Data().Set(CAPE3km);
+	return make_tuple(ELT, ELP, ELZ, LastELT, LastELP, LastELZ, CAPE, CAPE1040, CAPE3km);
 }
 
 pair<vector<float>, vector<float>> cape::GetLFC(shared_ptr<info<float>> myTargetInfo, vector<float>& T,
-                                                vector<float>& P)
+                                                vector<float>& P) const
 {
 	auto h = GET_PLUGIN(hitool);
 
@@ -1182,7 +1373,7 @@ pair<vector<float>, vector<float>> cape::GetLFC(shared_ptr<info<float>> myTarget
 }
 
 pair<vector<float>, vector<float>> cape::GetLFCCPU(shared_ptr<info<float>> myTargetInfo, vector<float>& T,
-                                                   vector<float>& P, vector<float>& TenvLCL)
+                                                   vector<float>& P, vector<float>& TenvLCL) const
 {
 	auto h = GET_PLUGIN(hitool);
 
@@ -1226,7 +1417,14 @@ pair<vector<float>, vector<float>> cape::GetLFCCPU(shared_ptr<info<float>> myTar
 	// For each grid point find the hybrid level that's below LCL and then pick the lowest level
 	// among all grid points; most commonly it's the lowest hybrid level
 
-	auto levels = h->LevelForHeight(myTargetInfo->Producer(), ::Max(P));
+	const float maxP = ::Max(P);
+
+	if (IsMissing(maxP))
+	{
+		throw runtime_error("LFC: LCL pressure is missing");
+	}
+
+	auto levels = h->LevelForHeight(myTargetInfo->Producer(), maxP);
 	level curLevel = levels.first;
 
 	auto prevPenvInfo =
@@ -1417,7 +1615,7 @@ pair<vector<float>, vector<float>> cape::GetLFCCPU(shared_ptr<info<float>> myTar
 	return make_pair(LFCT, LFCP);
 }
 
-pair<vector<float>, vector<float>> cape::GetLCL(shared_ptr<info<float>> myTargetInfo, const cape_source& sourceValues)
+pair<vector<float>, vector<float>> cape::GetLCL(const cape_source& sourceValues) const
 {
 	vector<float> TLCL(get<0>(sourceValues).size(), MissingFloat());
 	vector<float> PLCL = TLCL;
@@ -1642,41 +1840,117 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info<float>> myTargetIn
 	return make_tuple(T, TD, PSurf);
 }
 
-cape_source cape::GetHighestThetaEValues(shared_ptr<info<float>> myTargetInfo)
+cape_multi_source cape::GetNHighestThetaEValues(shared_ptr<info<float>> myTargetInfo, int n) const
 {
-/*
- * 1. Calculate equivalent potential temperature for all hybrid levels
- *    below 600hPa
- * 2. Take temperature and relative humidity from the level that had
- *    highest theta e
- * 3. Calculate dewpoint temperature from temperature and relative humidity.
- * 4. Return temperature and dewpoint
- */
-
 #ifdef HAVE_CUDA
 	if (itsConfiguration->UseCuda())
 	{
-		return cape_cuda::GetHighestThetaEValuesGPU(itsConfiguration, myTargetInfo);
+		return cape_cuda::GetNHighestThetaEValuesGPU(itsConfiguration, myTargetInfo, n);
 	}
 	else
 #endif
 	{
-		return GetHighestThetaEValuesCPU(myTargetInfo);
+		return GetNHighestThetaEValuesCPU(myTargetInfo, n);
 	}
 }
 
-cape_source cape::GetHighestThetaEValuesCPU(shared_ptr<info<float>> myTargetInfo)
+vector<float> Max1D(const vector<float>& v, size_t mask_len)
 {
-	vector<bool> found(myTargetInfo->Data().Size(), false);
+	ASSERT(mask_len % 2 == 1);
+	ASSERT(!v.empty());
 
-	vector<float> maxThetaE(myTargetInfo->Data().Size(), -1);
-	vector<float> Ttheta(myTargetInfo->Data().Size(), MissingFloat());
-	auto TDtheta = Ttheta;
-	auto Ptheta = Ttheta;
+	vector<float> ret(v.size());
+
+	const size_t half = mask_len / 2;
+
+	// beginning
+
+	for (size_t i = 0; i < half; i++)
+	{
+		float maxv = numeric_limits<float>::lowest();
+
+		for (size_t j = 0; j <= half + i; j++)
+		{
+			maxv = fmaxf(maxv, v[j]);
+		}
+		ret[i] = maxv;
+	}
+
+	// center
+
+	for (size_t i = half; i < v.size() - half; i++)
+	{
+		float maxv = numeric_limits<float>::lowest();
+
+		for (size_t j = i - half; j <= i + half; j++)
+		{
+			maxv = fmaxf(maxv, v[j]);
+		}
+		ret[i] = maxv;
+	}
+
+	// end
+
+	for (size_t i = v.size() - half; i < v.size(); i++)
+	{
+		float maxv = numeric_limits<float>::lowest();
+
+		for (size_t j = i - half; j < v.size(); j++)
+		{
+			maxv = fmaxf(maxv, v[j]);
+		}
+
+		ret[i] = maxv;
+	}
+
+	return ret;
+};
+
+vector<pair<size_t, float>> MaximaLocation(const vector<float>& vals, const vector<float>& max)
+{
+	vector<pair<size_t, float>> ml;
+
+	for (size_t i = 0; i < vals.size(); i++)
+	{
+		if (vals[i] == max[i])
+		{
+			ml.push_back(std::make_pair(i, vals[i]));
+		}
+	}
+
+	// sort maxima values so that the biggest value of thetae comes first
+	// (we want to make sure that if there are more than 3 maximas, we use the
+	// three largest ones for further processing)
+
+	sort(ml.begin(), ml.end(),
+	     [](const pair<size_t, float>& a, const pair<size_t, float>& b) -> bool { return a.second > b.second; });
+
+	// remove duplicates (sometimes two consecutive levels have the same theta e
+	// value which also happens to be a maxima
+	auto newEnd = unique(ml.begin(), ml.end(), [](const pair<size_t, float>& a, const pair<size_t, float>& b) {
+		return a.second == b.second;
+	});
+
+	ml.erase(newEnd, ml.end());
+
+	return ml;
+}
+
+cape_multi_source cape::GetNHighestThetaEValuesCPU(shared_ptr<info<float>> myTargetInfo, int n) const
+{
+	// Note: this function has not optimized for performance
+	const size_t N = myTargetInfo->Data().Size();
+	vector<bool> found(N, false);
 
 	level curLevel = itsBottomLevel;
 
 	vector<float> prevT, prevRH, prevP;
+	vec2d ThetaEProfile, TProfile, TDProfile, PProfile;
+
+	// 1. Create a vertical profile (for each grid point) that consists of
+	// - temperature
+	// - relative humidity
+	// - theta e value
 
 	while (true)
 	{
@@ -1687,16 +1961,18 @@ cape_source cape::GetHighestThetaEValuesCPU(shared_ptr<info<float>> myTargetInfo
 
 		if (!TInfo || !RHInfo || !PInfo)
 		{
-			return make_tuple(vector<float>(), vector<float>(), vector<float>());
+			return cape_multi_source();
 		}
 
 		int i = -1;
 
-		const auto curT = VEC(TInfo);
-		const auto curP = VEC(PInfo);
-		const auto curRH = VEC(RHInfo);
+		auto curT = VEC(TInfo);
+		auto curP = VEC(PInfo);
+		const auto& curRH = VEC(RHInfo);
 
-		for (auto&& tup : zip_range(curT, curRH, curP, maxThetaE, Ttheta, TDtheta, Ptheta))
+		vector<float> TD(N, MissingFloat()), ThetaE(N, MissingFloat());
+
+		for (auto&& tup : zip_range(curT, curRH, curP))
 		{
 			i++;
 
@@ -1705,13 +1981,9 @@ cape_source cape::GetHighestThetaEValuesCPU(shared_ptr<info<float>> myTargetInfo
 				continue;
 			}
 
-			float T = tup.get<0>();
+			float& T = tup.get<0>();
 			float RH = tup.get<1>();
-			float P = tup.get<2>();
-			float& refThetaE = tup.get<3>();
-			float& Tresult = tup.get<4>();
-			float& TDresult = tup.get<5>();
-			float& Presult = tup.get<6>();
+			float& P = tup.get<2>();
 
 			if (IsMissing(P))
 			{
@@ -1719,39 +1991,33 @@ cape_source cape::GetHighestThetaEValuesCPU(shared_ptr<info<float>> myTargetInfo
 				continue;
 			}
 
-			if (P < 600.)
+			if (P < mucape_search_limit)
 			{
 				found[i] = true;  // Make sure this is the last time we access this grid point
 
 				if (prevP.empty())
 				{
-					// Lowest grid point located above 600hPa, hmm...
+					// Lowest grid point located above search limit, hmm...
 					continue;
 				}
 
-				// Linearly interpolate temperature and humidity values to 600hPa, to check
+				// Linearly interpolate temperature and humidity values to search limit, to check
 				// if highest theta e is found there
 
-				T = interpolation::Linear<float>(600., P, prevP[i], T, prevT[i]);
-				RH = interpolation::Linear<float>(600., P, prevP[i], RH, prevRH[i]);
+				T = interpolation::Linear<float>(mucape_search_limit, P, prevP[i], T, prevT[i]);
+				RH = interpolation::Linear<float>(mucape_search_limit, P, prevP[i], RH, prevRH[i]);
 
-				P = 600.f;
+				P = mucape_search_limit;
 			}
 
-			const float TD = metutil::DewPointFromRH_(T, RH);
-			const float ThetaE = metutil::smarttool::ThetaE_<float>(T, RH, P * 100);
-			ASSERT(ThetaE >= 0);
-
-			if ((ThetaE - refThetaE) > 0.0001)  // epsilon added for numerical stability
-			{
-				refThetaE = ThetaE;
-				Tresult = T;
-				TDresult = TD;
-				Presult = P;
-
-				ASSERT(TDresult > 100);
-			}
+			TD[i] = metutil::DewPointFromRH_(T, RH);
+			ThetaE[i] = metutil::smarttool::ThetaE_<float>(T, RH, P * 100);
 		}
+
+		TProfile.push_back(curT);
+		PProfile.push_back(curP);
+		TDProfile.push_back(TD);
+		ThetaEProfile.push_back(ThetaE);
 
 		size_t foundCount = count(found.begin(), found.end(), true);
 
@@ -1770,5 +2036,77 @@ cape_source cape::GetHighestThetaEValuesCPU(shared_ptr<info<float>> myTargetInfo
 		prevRH = curRH;
 	}
 
-	return make_tuple(Ttheta, TDtheta, Ptheta);
+	// 2. Find local maximas from thetae values
+	// Select up to n local theta e maximas, and pick the temperature, dewpoint and
+	// pressure values found from those levels.
+
+	vec2d Tret(n), TDret(n), Pret(n);
+
+	// Vector initialization is set to missing value, as not all grid points will have
+	// three maximas
+	for (size_t j = 0; j < static_cast<size_t>(n); j++)
+	{
+		Tret[j].resize(N, MissingFloat());
+		TDret[j].resize(N, MissingFloat());
+		Pret[j].resize(N, MissingFloat());
+	}
+
+	const size_t K = ThetaEProfile.size();
+
+	for (size_t i = 0; i < N; i++)
+	{
+		// Collect data for single gridpoint
+		vector<float> ThetaE(K);
+
+		for (size_t k = 0; k < K; k++)
+		{
+			ThetaE[k] = ThetaEProfile[k][i];
+		}
+
+		const auto max = Max1D(ThetaE, 5);
+		auto ml = MaximaLocation(ThetaE, max);
+
+		// erase values above maxima search limit
+
+		ml.erase(
+		    remove_if(ml.begin(), ml.end(),
+		              [&](const pair<size_t, float>& a) { return PProfile[a.first][i] < mucape_maxima_search_limit; }),
+		    ml.end());
+
+#if 0
+		if (i == 9586)
+		{
+			printf("Num maxima for gp %ld: %ld\n", i, ml.size());
+			for (const auto& f : ml)
+				std::cout << f.first << " " << f.second << "\n";
+			for (size_t j = 0; j < ThetaE.size(); j++)
+			{
+				const float v = ThetaE[j];
+
+				string maxs = "MISS";
+				for (size_t h = 0; h < ml.size(); h++)
+				{
+					if (ml[h].first == j)
+						maxs = to_string(v);
+				}
+				printf("%ld %f %f %f %s\n", j, PProfile[j][i], v, max[j], maxs.c_str());
+			}
+			exit(1);
+		}
+#endif
+		// Copy values from max theta e levels for further processing
+
+		for (size_t j = 0; j < min(static_cast<size_t>(n), ml.size()); j++)
+		{
+			Tret[j][i] = TProfile[ml[j].first][i];
+			TDret[j][i] = TDProfile[ml[j].first][i];
+			Pret[j][i] = PProfile[ml[j].first][i];
+
+			ASSERT(IsValid(Tret[j][i]));
+			ASSERT(IsValid(TDret[j][i]));
+			ASSERT(IsValid(Pret[j][i]));
+		}
+	}
+
+	return make_tuple(Tret, TDret, Pret);
 }
