@@ -376,11 +376,13 @@ void cape::MostUnstableCAPE(shared_ptr<info<float>> myTargetInfo, short threadIn
 	 */
 
 	const size_t N = myTargetInfo->Data().Size();
-	logger log("muCAPEThread #" + to_string(threadIndex));
+	logger log("muCAPEThread#" + to_string(threadIndex));
 
 	timer tmr(true);
 
-	auto source = GetNHighestThetaEValues(myTargetInfo, 3);
+	const int num = 3;  // number of potential source levels to consider
+
+	auto source = GetNHighestThetaEValues(myTargetInfo, num);
 
 	tmr.Stop();
 
@@ -395,8 +397,6 @@ void cape::MostUnstableCAPE(shared_ptr<info<float>> myTargetInfo, short threadIn
 
 	log.Debug("Potential source data created in " + to_string(tmr.GetTime()) + " ms");
 
-	size_t probeN = Ts.size();
-
 	// LCLT, LCLP, LFCT, LFCP, ELT, ELP, ELZ, LastELT, LastELP, LastELZ, CAPE, CAPE1040, CAPE3km
 
 	typedef tuple<vector<float>, vector<float>, vector<float>, vector<float>, vector<float>, vector<float>,
@@ -408,25 +408,44 @@ void cape::MostUnstableCAPE(shared_ptr<info<float>> myTargetInfo, short threadIn
 
 	vector<future<tuple13f>> futures;
 
-	for (size_t i = 0; i < probeN; i++)
+	// This is where we store the results of the runs
+	vector<tuple13f> results;
+
+	// This is where we put thetae values so they are more convenient to read later on
+	vec2d refValues(N);
+
+	for (size_t taskIndex = 0; taskIndex < num; taskIndex++)
 	{
-		log.Debug("Launching async task #" + to_string(i));
+		log.Debug("Launching async task #" + to_string(taskIndex));
 
-		futures.push_back(async(launch::async,
-		                        [&myTargetInfo, &log, this](const cape_source& sourceValues, size_t taskId) {
-			                        auto LCL = GetLCL(sourceValues);
-			                        auto LFC = GetLFC(myTargetInfo, LCL.first, LCL.second);
+		futures.push_back(
+		    async(launch::async,
+		          [&myTargetInfo, this](const cape_source& sourceValues, short threadId, size_t taskId) {
+			          logger tasklog("muCAPEThread#" + to_string(threadId) + "asyncTask#" + to_string(taskId));
 
-			                        const auto missingLFCcount = count_if(LFC.first.begin(), LFC.first.end(),
-			                                                              [](const float& f) { return IsMissing(f); });
+			          timer tasktmr(true);
+			          auto LCL = GetLCL(sourceValues);
+			          tasktmr.Stop();
+			          tasklog.Debug("LCL in " + to_string(tasktmr.GetTime()) + "ms");
 
-			                        if (LFC.first.empty() || static_cast<int>(LFC.first.size()) == missingLFCcount)
-			                        {
-				                        log.Warning("LFC level not found for task #" + to_string(taskId));
-				                        return tuple13f();
-			                        }
+			          tasktmr.Start();
+			          auto LFC = GetLFC(myTargetInfo, LCL.first, LCL.second);
+			          tasktmr.Stop();
+			          tasklog.Debug("LFC in " + to_string(tasktmr.GetTime()) + "ms");
 
-			                        auto CAPE = GetCAPE(myTargetInfo, LFC);
+			          const auto missingLFCcount =
+			              count_if(LFC.first.begin(), LFC.first.end(), [](const float& f) { return IsMissing(f); });
+
+			          if (LFC.first.empty() || static_cast<int>(LFC.first.size()) == missingLFCcount)
+			          {
+				          tasklog.Warning("LFC level not found");
+				          return tuple13f();
+			          }
+
+			          tasktmr.Start();
+			          auto CAPE = GetCAPE(myTargetInfo, LFC);
+			          tasktmr.Stop();
+			          tasklog.Debug("CAPE in " + to_string(tasktmr.GetTime()) + "ms");
 
 #if 0
 			                        int index = 9586;
@@ -435,19 +454,37 @@ void cape::MostUnstableCAPE(shared_ptr<info<float>> myTargetInfo, short threadIn
 
 #endif
 
-			                        return tuple_cat(LCL, LFC, CAPE);
+			          return tuple_cat(LCL, LFC, CAPE);
 
-		                        },
-		                        make_tuple(Ts[i], TDs[i], Ps[i]), i));
+		          },
+		          make_tuple(Ts[taskIndex], TDs[taskIndex], Ps[taskIndex]), threadIndex, taskIndex));
+
+		if (taskIndex == 1)
+		{
+			for (size_t i = 0; i < futures.size(); i++)
+			{
+				auto res = futures[i].get();
+
+				if (get<0>(res).empty())
+				{
+					continue;
+				}
+
+				results.push_back(res);
+
+				const auto& muCAPE = get<10>(res);
+
+				for (size_t j = 0; j < N; j++)
+				{
+					refValues[j].push_back(muCAPE[j]);
+				}
+			}
+
+			futures.clear();
+		}
 	}
 
-	// This is where we store the results of the runs
-	vector<tuple13f> results;
-
-	// This is where we put thetae values so they are more convenient to read later on
-	vec2d refValues(N);
-
-	for (size_t i = 0; i < probeN; i++)
+	for (size_t i = 0; i < futures.size(); i++)
 	{
 		auto res = futures[i].get();
 
@@ -465,6 +502,7 @@ void cape::MostUnstableCAPE(shared_ptr<info<float>> myTargetInfo, short threadIn
 			refValues[j].push_back(muCAPE[j]);
 		}
 	}
+
 	tmr.Stop();
 	log.Debug("MUCape produced in " + to_string(tmr.GetTime()) + " ms");
 

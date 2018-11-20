@@ -554,66 +554,6 @@ __global__ void MixingRatioFinalizeKernel(float* __restrict__ d_T, float* __rest
 	}
 }
 
-__global__ void Max1D(const float* __restrict__ d_v, float* __restrict__ d_maxima, size_t mask_len, size_t K, size_t N)
-{
-	ASSERT(mask_len % 2 == 1);
-
-	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-	if (idx < N)
-	{
-		const size_t half = mask_len / 2;
-
-		// data layout is changed here wrt to the source
-
-		// old layout:
-		// |x(0)y(0)z(0)..n(0)|x(1)y(1)z(1)..n(1)|..|x(N)y(N)z(N)..n(N)|
-
-		// new layout:
-		// |x(0)x(1)x(2)..x(K)|y(1)y(2)y(2)..y(K)|..|n(1)n(1)n(3)..n(K)|
-
-		// beginning
-
-		for (size_t i = 0; i < half; i++)
-		{
-			float maxv = FLT_MIN;
-
-			for (size_t j = 0; j <= half + i; j++)
-			{
-				maxv = fmaxf(maxv, d_v[idx + j * N]);
-			}
-			d_maxima[i + idx * K] = maxv;
-		}
-
-		// center
-
-		for (size_t i = half; i < K - half; i++)
-		{
-			float maxv = FLT_MIN;
-
-			for (size_t j = i - half; j <= i + half; j++)
-			{
-				maxv = fmaxf(maxv, d_v[idx + j * N]);
-			}
-			d_maxima[i + idx * K] = maxv;
-		}
-
-		// end
-
-		for (size_t i = K - half; i < K; i++)
-		{
-			float maxv = FLT_MIN;
-
-			for (size_t j = i - half; j < K; j++)
-			{
-				maxv = fmaxf(maxv, d_v[idx + j * N]);
-			}
-
-			d_maxima[i + idx * K] = maxv;
-		}
-	}
-}
-
 __global__ void Max1D(const float* __restrict__ d_v, unsigned char* __restrict__ d_maxima, unsigned char mask_len,
                       unsigned char K, size_t N)
 {
@@ -708,7 +648,7 @@ __global__ void MaximaLocation(const float* __restrict__ d_v, const float* __res
 
 			if (v == d_maxima[i + idx * K] && v == d_maxima[i + idx * K + N * K])
 			{
-				d_idx[maximaN + idx * maxMax] = i;
+				d_idx[(maximaN + idx) * maxMax] = i;
 				d_max[maximaN] = v;
 				maximaN++;
 			}
@@ -787,7 +727,7 @@ __global__ void MaximaLocation(const float* __restrict__ d_v, const unsigned cha
 
 		float* d_max = new float[maxMax + 1];
 
-		int maximaN = 1;
+		int maximaN = 0;
 
 		for (int i = 0; i < K; i++)
 		{
@@ -797,11 +737,13 @@ __global__ void MaximaLocation(const float* __restrict__ d_v, const unsigned cha
 			{
 				if (i > 0 && v == d_v[idx + (i - 1) * N])
 				{
+					// duplicate maximas (two consecutive vertical levels
+					// have the same thetae value and are both maximas)
 				}
 				else
 				{
-					d_idx[maximaN + idx * maxMax] = i;
-					d_max[maximaN] = v;
+					d_idx[maximaN + 1 + idx * maxMax] = i;
+					d_max[maximaN + 1] = v;
 					maximaN++;
 				}
 			}
@@ -812,7 +754,7 @@ __global__ void MaximaLocation(const float* __restrict__ d_v, const unsigned cha
 			}
 		}
 
-		d_idx[idx * maxMax] = --maximaN;
+		d_idx[idx * maxMax] = maximaN;
 
 		// bubble sort
 
@@ -989,7 +931,7 @@ cape_multi_source cape_cuda::GetNHighestThetaEValuesGPU(const std::shared_ptr<co
 		curLevel.Value(curLevel.Value() - 1);
 		K++;
 
-		if (foundCount == N)
+		if (foundCount == N || levelSpan == K)
 		{
 			break;
 		}
@@ -998,8 +940,6 @@ cape_multi_source cape_cuda::GetNHighestThetaEValuesGPU(const std::shared_ptr<co
 		CUDA_CHECK(cudaMemcpyAsync(d_prevP, d_P, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
 		CUDA_CHECK(cudaMemcpyAsync(d_prevRH, d_RH, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
 	}
-
-	ASSERT(K == levelSpan);
 
 	CUDA_CHECK(cudaHostUnregister(ThetaEProfile.data()));
 	CUDA_CHECK(cudaHostUnregister(TProfile.data()));
