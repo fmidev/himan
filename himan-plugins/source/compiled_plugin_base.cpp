@@ -149,39 +149,7 @@ void compiled_plugin_base::WriteToFile(const shared_ptr<info<T>> targetInfo, wri
 
 	auto tempInfo = make_shared<info<T>>(*targetInfo);
 
-	// TODO: should work for all thread distribution types
-	if (itsThreadDistribution == ThreadDistribution::kThreadForForecastTypeAndTime)
-	{
-		// LOOP over levels as well
-		tempInfo->template Reset<level>();
-
-		while (tempInfo->template Next<level>())
-		{
-			tempInfo->template Reset<param>();
-
-			while (tempInfo->template Next<param>())
-			{
-				if (!tempInfo->IsValidGrid())
-				{
-					continue;
-				}
-
-				if (itsConfiguration->FileWriteOption() == kDatabase ||
-				    itsConfiguration->FileWriteOption() == kMultipleFiles)
-				{
-					aWriter->ToFile(tempInfo, itsConfiguration);
-				}
-				else
-				{
-					lock_guard<mutex> lock(singleFileWriteMutex);
-
-					aWriter->ToFile(tempInfo, itsConfiguration, itsConfiguration->ConfigurationFile());
-				}
-			}
-		}
-	}
-	else
-	{
+	auto WriteParam = [&]() {
 		tempInfo->template Reset<param>();
 
 		while (tempInfo->template Next<param>())
@@ -203,7 +171,73 @@ void compiled_plugin_base::WriteToFile(const shared_ptr<info<T>> targetInfo, wri
 				aWriter->ToFile(tempInfo, itsConfiguration, itsConfiguration->ConfigurationFile());
 			}
 		}
+	};
+
+	// TODO: should work for all thread distribution types
+	switch (itsThreadDistribution)
+	{
+		case ThreadDistribution::kThreadForForecastTypeAndTime:
+			tempInfo->template Reset<level>();
+
+			while (tempInfo->template Next<level>())
+			{
+				WriteParam();
+			}
+			break;
+
+		case ThreadDistribution::kThreadForForecastTypeAndLevel:
+			tempInfo->template Reset<forecast_time>();
+
+			while (tempInfo->template Next<forecast_time>())
+			{
+				WriteParam();
+			}
+			break;
+
+		case ThreadDistribution::kThreadForTimeAndLevel:
+			tempInfo->template Reset<forecast_type>();
+
+			while (tempInfo->template Next<forecast_type>())
+			{
+				WriteParam();
+			}
+			break;
+
+		case ThreadDistribution::kThreadForForecastType:
+			for (tempInfo->template Reset<forecast_time>(); tempInfo->template Next<forecast_time>();)
+			{
+				for (tempInfo->template Reset<level>(); tempInfo->template Next<level>();)
+				{
+					WriteParam();
+				}
+			}
+			break;
+
+		case ThreadDistribution::kThreadForTime:
+			for (tempInfo->template Reset<forecast_type>(); tempInfo->template Next<forecast_type>();)
+			{
+				for (tempInfo->template Reset<level>(); tempInfo->template Next<level>();)
+				{
+					WriteParam();
+				}
+			}
+			break;
+
+		case ThreadDistribution::kThreadForLevel:
+			for (tempInfo->template Reset<forecast_type>(); tempInfo->template Next<forecast_type>();)
+			{
+				for (tempInfo->template Reset<forecast_time>(); tempInfo->template Next<forecast_time>();)
+				{
+					WriteParam();
+				}
+			}
+			break;
+
+		case ThreadDistribution::kThreadForAny:
+			WriteParam();
+			break;
 	}
+
 	if (itsConfiguration->UseDynamicMemoryAllocation())
 	{
 		DeallocateMemory(*targetInfo);
