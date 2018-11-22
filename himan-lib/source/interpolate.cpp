@@ -85,7 +85,9 @@ bool InterpolateArea(const grid* baseGrid, std::shared_ptr<info<T>> source)
 		target.data.Resize(baseGrid->Size(), 1);
 	}
 
-	if (interpolate::interpolator<T>().Interpolate(*source->Base(), target, source->Param().InterpolationMethod()))
+	auto method = InterpolationMethod(source->Param().Name(), source->Param().InterpolationMethod());
+
+	if (interpolate::interpolator<T>().Interpolate(*source->Base(), target, method))
 	{
 		auto interpGrid = std::shared_ptr<grid>(baseGrid->Clone());
 
