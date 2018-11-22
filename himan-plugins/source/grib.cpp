@@ -1315,8 +1315,8 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 			rg->Nj(nj);
 
 			rg->Orientation(itsGrib->Message().GridOrientation());
-			rg->Di(round(100. * itsGrib->Message().XLengthInMeters()) / 100.);
-			rg->Dj(round(100. * itsGrib->Message().YLengthInMeters()) / 100.);
+			rg->Di(itsGrib->Message().XLengthInMeters());
+			rg->Dj(itsGrib->Message().YLengthInMeters());
 
 			rg->ScanningMode(m);
 			rg->UVRelativeToGrid(itsGrib->Message().UVRelativeToGrid());
