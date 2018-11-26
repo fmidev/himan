@@ -161,9 +161,9 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 		for (int i = 0; i < 3; i++)
 		{
 			pSAInfo = Fetch(prevTime, level(kHeight, 0), SAParam, forecastType, itsConfiguration->SourceGeomNames(),
-			                producer(109), false);
+			                producer(109, 0, 0, "LAPSSCAN"), false);
 			pDAInfo = Fetch(prevTime, level(kHeight, 0), DAParam, forecastType, itsConfiguration->SourceGeomNames(),
-			                producer(109), false);
+			                producer(109, 0, 0, "LAPSSCAN"), false);
 
 			if (pSAInfo && pDAInfo)
 			{
