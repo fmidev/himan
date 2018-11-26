@@ -629,93 +629,6 @@ __global__ void Max1D(const float* __restrict__ d_v, unsigned char* __restrict__
 	}
 }
 
-__global__ void MaximaLocation(const float* __restrict__ d_v, const float* __restrict__ d_maxima,
-                               unsigned char* __restrict__ d_idx, size_t K, size_t N)
-{
-	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-	if (idx < N)
-	{
-		const int maxMax = K / 4;
-
-		float* d_max = new float[maxMax + 1];
-
-		int maximaN = 1;
-
-		for (int i = 0; i < K; i++)
-		{
-			const float v = d_v[idx + i * N];
-
-			if (v == d_maxima[i + idx * K] && v == d_maxima[i + idx * K + N * K])
-			{
-				d_idx[(maximaN + idx) * maxMax] = i;
-				d_max[maximaN] = v;
-				maximaN++;
-			}
-
-			if (maximaN == maxMax)
-			{
-				break;
-			}
-		}
-
-		d_idx[idx * maxMax] = --maximaN;
-
-		// bubble sort
-
-		bool passed;
-
-		do
-		{
-			passed = true;
-
-			for (int i = 2; i < maximaN + 1; i++)
-			{
-				unsigned char& previ = d_idx[i - 1 + idx * maxMax];
-				unsigned char& curi = d_idx[i + idx * maxMax];
-				float& prev = d_max[i - 1];
-				float& cur = d_max[i];
-
-				if (prev < cur)
-				{
-					float tmp = cur;
-					cur = prev;
-					prev = tmp;
-
-					unsigned char tmpi = curi;
-					curi = previ;
-					previ = tmpi;
-
-					passed = false;
-				}
-			}
-		} while (!passed);
-
-#if 0
-		if (idx == 5608307)
-		{
-			printf("Num maxima: %d\n", d_idx[idx * maxMax]);
-			for (int i = 1; i < 1 + d_idx[idx * maxMax]; i++)
-				printf("%d %f\n", d_idx[idx * maxMax + i], d_max[i]);
-			for (int i = 0; i < K; i++)
-			{
-				const float v = d_v[idx + i * N];
-
-				float max = -1.f;
-				for (int j = 1; j < d_idx[idx * maxMax] + 1; j++)
-				{
-					if (fabs(d_max[j] - v) < 0.002)
-						max = v;
-				}
-				printf("%d %f %f %f %f\n", i, d_v[idx + i * N], d_maxima[i + idx * K], d_maxima[i + idx * K + N * K],
-				       max);
-			}
-		}
-#endif
-		delete[] d_max;
-	}
-}
-
 __global__ void MaximaLocation(const float* __restrict__ d_v, const unsigned char* __restrict__ d_maxima,
                                unsigned char* __restrict__ d_idx, size_t K, size_t N)
 {
@@ -725,38 +638,31 @@ __global__ void MaximaLocation(const float* __restrict__ d_v, const unsigned cha
 	{
 		const int maxMax = K / 4;
 
-		float* d_max = new float[maxMax + 1];
-
 		int maximaN = 0;
 
-		for (int i = 0; i < K; i++)
+		for (int i = 0; i < K && maximaN < (maxMax - 1); i++)
 		{
-			const float v = d_v[idx + i * N];
+			const float v = d_v[idx + i * N];  // ThetaE value at this point in the profile
 
 			if (i == d_maxima[i + idx * K])
 			{
 				if (i > 0 && v == d_v[idx + (i - 1) * N])
 				{
-					// duplicate maximas (two consecutive vertical levels
-					// have the same thetae value and are both maximas)
+					// Duplicate maximas (two consecutive vertical levels
+					// have the same thetae value and are both maximas).
+					// Disregard this higher one.
 				}
 				else
 				{
 					d_idx[maximaN + 1 + idx * maxMax] = i;
-					d_max[maximaN + 1] = v;
 					maximaN++;
 				}
-			}
-
-			if (maximaN == maxMax)
-			{
-				break;
 			}
 		}
 
 		d_idx[idx * maxMax] = maximaN;
 
-		// bubble sort
+		// bubble sort: highest value theta e should be first
 
 		bool passed;
 
@@ -768,15 +674,11 @@ __global__ void MaximaLocation(const float* __restrict__ d_v, const unsigned cha
 			{
 				unsigned char& previ = d_idx[i - 1 + idx * maxMax];
 				unsigned char& curi = d_idx[i + idx * maxMax];
-				float& prev = d_max[i - 1];
-				float& cur = d_max[i];
+				float prev = d_v[previ * N + idx];
+				float cur = d_v[curi * N + idx];
 
 				if (prev < cur)
 				{
-					float tmp = cur;
-					cur = prev;
-					prev = tmp;
-
 					unsigned char tmpi = curi;
 					curi = previ;
 					previ = tmpi;
@@ -785,29 +687,6 @@ __global__ void MaximaLocation(const float* __restrict__ d_v, const unsigned cha
 				}
 			}
 		} while (!passed);
-
-#if 0
-		if (idx == 9586)
-		{
-			printf("Num maxima: %d\n", d_idx[idx * maxMax]);
-			for (int i = 1; i < 1 + d_idx[idx * maxMax]; i++)
-				printf("%d %f\n", d_idx[idx * maxMax + i], d_max[i]);
-			for (int i = 0; i < K; i++)
-			{
-				const float v = d_v[idx + i * N];
-
-				float max = -1.f;
-				for (int j = 1; j < d_idx[idx * maxMax] + 1; j++)
-				{
-					if (fabs(d_max[j] - v) < 0.002)
-						max = v;
-				}
-				printf("%d %f %f %f %f\n", i, d_v[idx + i * N], d_maxima[i + idx * K], d_maxima[i + idx * K + N * K],
-				       max);
-			}
-		}
-#endif
-		delete[] d_max;
 	}
 }
 

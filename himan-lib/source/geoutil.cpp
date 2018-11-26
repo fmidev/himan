@@ -33,6 +33,11 @@ double geoutil::Area(const point& P1, const point& P2, const point& P3, double r
 	       r * r;
 }
 
+double geoutil::Bearing(const point& a, const point& b)
+{
+	return std::atan2(std::sin((b.X() - a.X())/180*M_PI) * std::cos(b.Y()/180*M_PI) , std::cos(a.Y()/180*M_PI) * std::sin(b.Y()/180*M_PI) - std::sin(a.Y()/180*M_PI) * std::cos(b.Y()/180*M_PI) * std::cos((b.X() - a.X())/180*M_PI));
+}
+
 bool geoutil::InsideTriangle(const point& a, const point& b, const point& c, const point& p)
 {
 	const double epsilon = 1e-12;

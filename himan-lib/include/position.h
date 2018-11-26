@@ -3,8 +3,8 @@
  *
  * @brief Define position vector from origin to a point in 3d space.
  * Coordinate transformations are taken from:
- * Datums and Map Projections 
- * for Remote Sensing, GIS and Surveying 
+ * Datums and Map Projections
+ * for Remote Sensing, GIS and Surveying
  * 2nd Edition
  * ISBN 978-1-904445-47-0
  *
@@ -16,18 +16,23 @@
 #ifndef POSITION_H
 #define POSITION_H
 
+namespace himan
+{
+namespace geoutil
+{
 template <typename T>
 class position
 {
    public:
-	position()
+	position() : itsValues(himan::MissingValue<T>())
 	{
 	}
+
 	// From cartesian coordinates
-	position(const T& theX, const T& theY, const T& theZ) : itsValues({theX, theY, theZ})
+	position(const T& theX, const T& theY, const T& theZ) : itsValues{theX, theY, theZ}
 	{
 	}
-	// From Lat, Lon, H on an ellipsoid 
+	// From Lat, Lon (angles in radians) and height H on an ellipsoid
 	// Eq. 2.6 - 2.8 and Appendix C.2
 	position(const T& theLat, const T& theLon, const T& theHeight, const himan::earth_shape<T>& theShape)
 	{
@@ -50,6 +55,7 @@ class position
 		return itsValues[2];
 	}
 
+	// Return geo coordinates for general spherical shape geoid (angles in radians)
 	T Lat(const himan::earth_shape<T>&) const;
 	T Lon(const himan::earth_shape<T>&) const;
 	T H(const himan::earth_shape<T>&) const;
@@ -108,13 +114,17 @@ T position<T>::Lon(const himan::earth_shape<T>& theShape) const
 {
 	const T x = itsValues[0];
 	const T y = itsValues[1];
-	return std::atan(y / x);
+	return std::atan2(y, x);
 }
 
 // Latitude from Eq. 2.10 - 2.14
 template <typename T>
 T position<T>::Lat(const himan::earth_shape<T>& theShape) const
 {
+	// Dealing with a sphere simplifies things
+	if (theShape.A() == theShape.B())
+		return std::asin(itsValues[2]);
+
 	const T x = itsValues[0];
 	const T y = itsValues[1];
 	const T z = itsValues[2];
@@ -138,4 +148,6 @@ T position<T>::H(const himan::earth_shape<T>& theShape) const
 	return p * 1.0 / std::cos(Lat(theShape)) - v;
 }
 
+}  // namespace geoutil
+}  // namespace himan
 #endif /* POSITION_H */

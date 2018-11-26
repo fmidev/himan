@@ -28,6 +28,9 @@ double Distance(const himan::point& a, const himan::point& b, double r = 1.0);
 // area of a spherical triangle with corner points P1|P2|P3
 double Area(const himan::point& P1, const himan::point& P2, const himan::point& P3, double r = 1.0);
 
+// initial heading / forward azimuth of a path from point a to point b
+double Bearing(const himan::point& a, const himan::point& b);
+
 }  // namespace geoutil
 }  // namespace himan
 
