@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.11.21
+Version: 18.11.26
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -96,6 +96,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libradon.so
 %{_libdir}/himan-plugins/librelative_humidity.so
 %{_libdir}/himan-plugins/libseaicing.so
+%{_libdir}/himan-plugins/libsnow_drift.so
 %{_libdir}/himan-plugins/libsplit_sum.so
 %{_libdir}/himan-plugins/libstability.so
 %{_libdir}/himan-plugins/libstability_simple.so
@@ -112,6 +113,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Nov 26 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.26-1.fmi
+- New plugin snow_drift
+- Improved accuracy for grib2/stereographic projection dx&dy 
+- Reduce cape GPU memory requirements
 * Wed Nov 21 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.21-1.fmi
 - Minor fixes
 * Tue Nov 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.20-1.fmi

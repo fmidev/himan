@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 18.11.13
+Version: 18.11.26
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -59,6 +59,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Mon Nov 26 2018  Mikko Partio <mikko.partio@fmi.fi> - 18.11.28-1.fmi
+- geoutil additions
+* Thu Nov 22 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.22-1.fmi
+- Fix interpolation method check
 * Tue Nov 13 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.13-1.fmi
 - modifier_fingheight support for find nth -1
 * Thu Nov  1 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.1-1.fmi
