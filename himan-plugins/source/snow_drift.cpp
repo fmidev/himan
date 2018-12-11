@@ -118,7 +118,7 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 	const auto forecastType = myTargetInfo->ForecastType();
 	const auto prod = myTargetInfo->Producer();
 
-	if (forecastTime.Step() == 0 && prod.Id() != 109)
+	if (forecastTime.Step() == 0 && prod.Id() != 107)
 	{
 		// We only calculate analysis hour for LAPS
 		return;
@@ -153,7 +153,7 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 	// In the start of the forecast fetch the latest sa and da
 	// values from LAPS producer.
 
-	if (prod.Id() == 109 || forecastTime.Step() == 1)
+	if (prod.Id() == 107 || forecastTime.Step() == 1)
 	{
 		prevTime.OriginDateTime(prevTime.ValidDateTime());
 
@@ -161,9 +161,9 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 		for (int i = 0; i < 3; i++)
 		{
 			pSAInfo = Fetch(prevTime, level(kHeight, 0), SAParam, forecastType, itsConfiguration->SourceGeomNames(),
-			                producer(109, 0, 0, "LAPSSCAN"), false);
+			                producer(107, 0, 0, "LAPSFIN"), false);
 			pDAInfo = Fetch(prevTime, level(kHeight, 0), DAParam, forecastType, itsConfiguration->SourceGeomNames(),
-			                producer(109, 0, 0, "LAPSSCAN"), false);
+			                producer(107, 0, 0, "LAPSFIN"), false);
 
 			if (pSAInfo && pDAInfo)
 			{
@@ -182,7 +182,7 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 
 	if (!pSAInfo || !pDAInfo)
 	{
-		if (prod.Id() != 109)
+		if (prod.Id() != 107)
 		{
 			myThreadedLogger.Error("DA and SA not found from obs producer");
 			return;
