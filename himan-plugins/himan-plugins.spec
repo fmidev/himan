@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.11.26
-Release: 2.el7.fmi
+Version: 18.12.11
+Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -113,6 +113,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Dec 11 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.12.11-1.fmi
+- snow_drift analysis producer to 107 (LAPS FIN)
 * Mon Nov 26 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.26-2.fmi
 - Minor addition to snow_drif
 * Mon Nov 26 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.26-1.fmi
