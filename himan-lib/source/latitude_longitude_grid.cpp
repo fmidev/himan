@@ -435,7 +435,8 @@ ostream& latitude_longitude_grid::Write(std::ostream& file) const
 	return file;
 }
 
-rotated_latitude_longitude_grid::rotated_latitude_longitude_grid() : latitude_longitude_grid(), itsSouthPole()
+rotated_latitude_longitude_grid::rotated_latitude_longitude_grid()
+    : latitude_longitude_grid(), itsSouthPole(), itsFromRotLatLon(), itsToRotLatLon()
 {
 	itsGridType = kRotatedLatitudeLongitude;
 	itsLogger = logger("rotated_latitude_longitude_grid");
@@ -449,12 +450,20 @@ rotated_latitude_longitude_grid::rotated_latitude_longitude_grid(HPScanningMode 
 	if (!initiallyRotated)
 		throw std::runtime_error("Unable to create rotated_latitude_longitude_grid with unrotated coordinates, yet");
 
+	itsFromRotLatLon = himan::geoutil::rotation<double>().FromRotLatLon(theSouthPole.Y() * constants::kDeg,
+	                                                                    theSouthPole.X() * constants::kDeg, 0);
+	itsToRotLatLon = himan::geoutil::rotation<double>().ToRotLatLon(theSouthPole.Y() * constants::kDeg,
+	                                                                theSouthPole.X() * constants::kDeg, 0);
+
 	itsGridType = kRotatedLatitudeLongitude;
 	itsLogger = logger("rotated_latitude_longitude_grid");
 }
 
 rotated_latitude_longitude_grid::rotated_latitude_longitude_grid(const rotated_latitude_longitude_grid& other)
-    : latitude_longitude_grid(other), itsSouthPole(other.itsSouthPole)
+    : latitude_longitude_grid(other),
+      itsSouthPole(other.itsSouthPole),
+      itsFromRotLatLon(other.itsFromRotLatLon),
+      itsToRotLatLon(other.itsToRotLatLon)
 {
 	itsLogger = logger("rotated_latitude_longitude_grid");
 }
@@ -508,31 +517,28 @@ point rotated_latitude_longitude_grid::SouthPole() const
 void rotated_latitude_longitude_grid::SouthPole(const point& theSouthPole)
 {
 	itsSouthPole = theSouthPole;
+	itsFromRotLatLon = himan::geoutil::rotation<double>().FromRotLatLon(theSouthPole.Y() * constants::kDeg,
+	                                                                    theSouthPole.X() * constants::kDeg, 0.0);
+	itsToRotLatLon = himan::geoutil::rotation<double>().ToRotLatLon(theSouthPole.Y() * constants::kDeg,
+	                                                                theSouthPole.X() * constants::kDeg, 0.0);
 }
 point rotated_latitude_longitude_grid::XY(const point& latlon) const
 {
-	if (!itsRotLatLonArea)
-	{
-		InitNewbaseArea();
-	}
-
-	auto rotpoint = itsRotLatLonArea->ToRotLatLon(NFmiPoint(latlon.X(), latlon.Y()));
-
-	return latitude_longitude_grid::XY(point(rotpoint.X(), rotpoint.Y()));
+	himan::geoutil::position<double> p(latlon.Y() * constants::kDeg, latlon.X() * constants::kDeg, 0.0,
+	                                   earth_shape<double>(1.0));
+	himan::geoutil::rotate(p, itsToRotLatLon);
+	return latitude_longitude_grid::XY(
+	    point(p.Lon(earth_shape<double>(1.0)) * constants::kRad, p.Lat(earth_shape<double>(1.0)) * constants::kRad));
 }
 
 point rotated_latitude_longitude_grid::LatLon(size_t locationIndex) const
 {
 	point rll = latitude_longitude_grid::LatLon(locationIndex);  // rotated coordinates
 
-	if (!itsRotLatLonArea)
-	{
-		InitNewbaseArea();
-	}
-
-	auto regpoint = itsRotLatLonArea->ToRegLatLon(NFmiPoint(rll.X(), rll.Y()));
-
-	return point(regpoint.X(), regpoint.Y());
+	himan::geoutil::position<double> p(rll.Y() * constants::kDeg, rll.X() * constants::kDeg, 0.0,
+	                                   earth_shape<double>(1.0));
+	himan::geoutil::rotate(p, itsFromRotLatLon);
+	return point(p.Lon(earth_shape<double>(1.0)) * constants::kRad, p.Lat(earth_shape<double>(1.0)) * constants::kRad);
 }
 
 point rotated_latitude_longitude_grid::RotatedLatLon(size_t locationIndex) const
@@ -561,17 +567,4 @@ size_t rotated_latitude_longitude_grid::Hash() const
 	hashes.push_back(ScanningMode());
 	hashes.push_back(SouthPole().Hash());
 	return boost::hash_range(hashes.begin(), hashes.end());
-}
-
-void rotated_latitude_longitude_grid::InitNewbaseArea() const
-{
-	call_once(itsNewbaseAreaFlag, [&]() {
-		ASSERT(itsBottomLeft != point());
-		ASSERT(itsTopRight != point());
-		ASSERT(itsSouthPole != point());
-
-		itsRotLatLonArea = unique_ptr<NFmiRotatedLatLonArea>(new NFmiRotatedLatLonArea(
-		    NFmiPoint(itsBottomLeft.X(), itsBottomLeft.Y()), NFmiPoint(itsTopRight.X(), itsTopRight.Y()),
-		    NFmiPoint(itsSouthPole.X(), itsSouthPole.Y()), NFmiPoint(0., 0.), NFmiPoint(1., 1.), true));
-	});
 }

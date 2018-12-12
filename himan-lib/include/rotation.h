@@ -45,7 +45,7 @@ class rotation
 
 // rotate a position
 template <typename T>
-void rotate(position<T>&, rotation<T>&);
+void rotate(position<T>&, const rotation<T>&);
 
 // create a rotated copy of a position
 template <typename T>
