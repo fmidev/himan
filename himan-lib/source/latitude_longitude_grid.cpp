@@ -1,6 +1,5 @@
 #include "latitude_longitude_grid.h"
 #include "info.h"
-#include <NFmiRotatedLatLonArea.h>
 #include <functional>
 
 using namespace himan;

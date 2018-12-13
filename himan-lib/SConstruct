@@ -8,7 +8,6 @@ Import('env build_dir')
 # Includes
 
 includes = []
-includes.append('/usr/include/smartmet/newbase')
 includes.append('/usr/include/gdal')
 
 env.Append(CPPPATH = includes)
@@ -25,7 +24,6 @@ env.Append(LIBPATH = librarypaths)
 libraries = []
 
 libraries.append('fmidb')
-libraries.append('smartmet-newbase')
 libraries.append('dl')
 libraries.append('pqxx')
 libraries.append('boost_iostreams')

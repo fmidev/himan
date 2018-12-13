@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.12.11
+Version: 18.12.13
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -20,6 +20,8 @@ Requires: libfmigrib >= 18.2.12
 Requires: libfmidb >= 18.10.5
 Requires: smartmet-library-newbase >= 17.12.1
 Requires: libpqxx
+Requires: boost-iostreams
+Requires: boost-thread
 
 %if %{defined suse_version}
 Requires: libjasper
@@ -113,6 +115,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Dec 13 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.12.13-1.fmi
+- More snow_drift tuning
 * Tue Dec 11 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.12.11-1.fmi
 - snow_drift analysis producer to 107 (LAPS FIN)
 * Mon Nov 26 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.26-2.fmi

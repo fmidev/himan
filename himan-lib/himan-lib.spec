@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 18.11.26
+Version: 18.12.13
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -16,6 +16,8 @@ Requires: libstdc++
 Requires: libfmidb >= 17.9.18
 Requires: libfmigrib >= 18.2.12
 Requires: gdal
+Requires: boost-iostreams
+Requires: boost-filesystem
 
 %if %{defined suse_version}
 BuildRequires: bzip2
@@ -31,7 +33,6 @@ BuildRequires: libfmidb-devel >= 17.9.18
 BuildRequires: libfmigrib-devel >= 18.2.12
 BuildRequires: zlib-devel
 BuildRequires: boost-devel >= 1.66
-BuildRequires: smartmet-library-newbase-devel >= 17.9.27
 BuildRequires: scons
 
 Provides: libhiman.so
@@ -59,6 +60,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Thu Dec 13 2018  Mikko Partio <mikko.partio@fmi.fi> - 18.12.13-1.fmi
+- new implementation of coordinate rotation
 * Mon Nov 26 2018  Mikko Partio <mikko.partio@fmi.fi> - 18.11.28-1.fmi
 - geoutil additions
 * Thu Nov 22 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.22-1.fmi
