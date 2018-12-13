@@ -5,32 +5,10 @@
 using namespace Eigen;
 
 template <typename T>
-void himan::geoutil::rotate(himan::geoutil::position<T>& p, himan::geoutil::rotation<T>& r)
+void himan::geoutil::rotate(himan::geoutil::position<T>& p, const himan::geoutil::rotation<T>& r)
 {
 	// Map data structures to Eigen library objects
 	Map<Matrix<T, 3, 1>> P(p.Data());
-	Map<Quaternion<T>> QR(r.Data());
-
-	// Create a corresponding quaternion of the input position vector
-	Quaternion<T> QP;
-	QP.w() = 0;
-	QP.vec() = P;
-
-	// Apply spatial rotation through quaternion products
-	Quaternion<T> rotatedP = QR * QP * QR.inverse();
-	P = rotatedP.vec();
-}
-template void himan::geoutil::rotate<float>(himan::geoutil::position<float>&, himan::geoutil::rotation<float>&);
-template void himan::geoutil::rotate<double>(himan::geoutil::position<double>&, himan::geoutil::rotation<double>&);
-
-template <typename T>
-himan::geoutil::position<T> himan::geoutil::rotate(const himan::geoutil::position<T>& p,
-                                                   const himan::geoutil::rotation<T>& r)
-{
-	position<T> ret(p);
-
-	// Map data structures to Eigen library objects
-	Map<Matrix<T, 3, 1>> P(ret.Data());
 	Map<const Quaternion<T>> QR(r.Data());
 
 	// Create a corresponding quaternion of the input position vector
@@ -41,6 +19,17 @@ himan::geoutil::position<T> himan::geoutil::rotate(const himan::geoutil::positio
 	// Apply spatial rotation through quaternion products
 	Quaternion<T> rotatedP = QR * QP * QR.inverse();
 	P = rotatedP.vec();
+}
+template void himan::geoutil::rotate<float>(himan::geoutil::position<float>&, const himan::geoutil::rotation<float>&);
+template void himan::geoutil::rotate<double>(himan::geoutil::position<double>&,
+                                             const himan::geoutil::rotation<double>&);
+
+template <typename T>
+himan::geoutil::position<T> himan::geoutil::rotate(const himan::geoutil::position<T>& p,
+                                                   const himan::geoutil::rotation<T>& r)
+{
+	position<T> ret(p);
+	rotate(ret, r);
 	return ret;
 }
 template himan::geoutil::position<float> himan::geoutil::rotate<float>(const himan::geoutil::position<float>&,
