@@ -132,7 +132,7 @@ shared_ptr<info<T>> fetcher::FetchFromProducer(search_options& opts, bool readPa
 	{
 		newLevel = LevelTransform(opts.configuration, opts.prod, opts.param, opts.level);
 
-		if (newLevel != opts.level)
+		if (newLevel != opts.level || newLevel.Value() != opts.level.Value())
 		{
 			itsLogger.Trace("Transform level " + static_cast<string>(opts.level) + " to " +
 			                static_cast<string>(newLevel) + " for producer " + to_string(opts.prod.Id()) +
@@ -423,7 +423,16 @@ himan::level fetcher::LevelTransform(const shared_ptr<const configuration>& conf
 
 		if (!levelXrefInfo.empty())
 		{
-			double lvlValue = targetLevel.Value();
+			double lvlValue;
+
+			try
+			{
+				lvlValue = stod(levelXrefInfo["value"]);
+			}
+			catch (const invalid_argument& e)
+			{
+				lvlValue = targetLevel.Value();
+			}
 
 			HPLevelType lvlType = HPStringToLevelType.at(boost::to_lower_copy(levelXrefInfo["name"]));
 

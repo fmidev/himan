@@ -44,7 +44,7 @@ void CalculateSnowDriftIndex(info_t& myTargetInfo, const std::vector<double>& T,
 		const auto psa = tup.get<6>();  // previous accumulated snow cover age
 		const auto pda = tup.get<7>();  // previous accumulated snowdrift value
 
-		if (IsMissing(t) || IsMissing(ff) || IsMissing(sf))
+		if (IsMissing(t) || IsMissing(ff) || IsMissing(sf) || IsMissing(psa) || IsMissing(pda))
 		{
 			continue;
 		}
@@ -160,10 +160,10 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 		// Allow up to three hours of missing data
 		for (int i = 0; i < 3; i++)
 		{
-			pSAInfo = Fetch(prevTime, level(kHeight, 0), SAParam, forecastType, itsConfiguration->SourceGeomNames(),
-			                producer(107, 0, 0, "LAPSFIN"), false);
-			pDAInfo = Fetch(prevTime, level(kHeight, 0), DAParam, forecastType, itsConfiguration->SourceGeomNames(),
-			                producer(107, 0, 0, "LAPSFIN"), false);
+			pSAInfo = Fetch(prevTime, level(kHeight, 0), SAParam, forecast_type(kAnalysis),
+			                itsConfiguration->SourceGeomNames(), producer(107, 86, 107, "LAPSFIN"), false);
+			pDAInfo = Fetch(prevTime, level(kHeight, 0), DAParam, forecast_type(kAnalysis),
+			                itsConfiguration->SourceGeomNames(), producer(107, 86, 107, "LAPSFIN"), false);
 
 			if (pSAInfo && pDAInfo)
 			{
