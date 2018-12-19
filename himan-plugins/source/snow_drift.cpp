@@ -185,17 +185,26 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 
 		if (!pSAInfo || !pDAInfo)
 		{
-			// If we don't have a history of sa & da, start accumulating
-			// it but do not write snow index.
+			if (forecastTime.Step() == 0)
+			{
+				// If we don't have a history of sa & da, start accumulating
+				// it but do not write snow index.
 
-			std::vector<double> pSA(myTargetInfo->Grid()->Size(), 0.0);
-			std::vector<double> pDA = pSA;
+				std::vector<double> pSA(myTargetInfo->Grid()->Size(), 0.0);
+				std::vector<double> pDA = pSA;
 
-			myThreadedLogger.Warning("Spinup phase, producing only DA and SA");
-			CalculateSnowDriftIndex(myTargetInfo, VEC(TInfo), VEC(FFInfo), VEC(SFInfo), pSA, pDA);
+				myThreadedLogger.Warning("Spinup phase, producing only DA and SA");
+				CalculateSnowDriftIndex(myTargetInfo, VEC(TInfo), VEC(FFInfo), VEC(SFInfo), pSA, pDA);
 
-			myTargetInfo->Find<param>(SDIParam);
-			myTargetInfo->Data().Fill(MissingDouble());
+				myTargetInfo->Find<param>(SDIParam);
+				myTargetInfo->Data().Fill(MissingDouble());
+			}
+			else
+			{
+				// strict mode: if previous forecasted sa & da is not found,
+				// stop calculation
+				break;
+			}
 		}
 		else
 		{
