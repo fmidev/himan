@@ -113,95 +113,99 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 {
 	auto myThreadedLogger = logger("snow_driftThread #" + std::to_string(theThreadIndex));
 
-	const auto forecastTime = myTargetInfo->Time();
 	const auto forecastLevel = myTargetInfo->Level();
 	const auto forecastType = myTargetInfo->ForecastType();
 	const auto prod = myTargetInfo->Producer();
 
-	if (forecastTime.Step() == 0 && prod.Id() != 107)
-	{
-		// We only calculate analysis hour for LAPS
-		return;
-	}
-
-	if (forecastTime.StepResolution() != kHourResolution || itsConfiguration->ForecastStep() != 1)
+	if (myTargetInfo->Time().StepResolution() != kHourResolution || itsConfiguration->ForecastStep() != 1)
 	{
 		myThreadedLogger.Error("Snow drift can only be calculated with one hour resolution");
 		return;
 	}
 
-	myThreadedLogger.Info("Calculating time " + static_cast<std::string>(forecastTime.ValidDateTime()) + " level " +
-	                      static_cast<std::string>(forecastLevel));
-
 	const std::string deviceType = "CPU";
 
-	auto TInfo = Fetch(forecastTime, level(kHeight, 2), param("T-K"), forecastType, false);
-	auto FFInfo = Fetch(forecastTime, level(kHeight, 10), param("FF-MS"), forecastType, false);
-	auto SFInfo = Fetch(forecastTime, level(kHeight, 0), param("SNR-KGM2"), forecastType, false);
+	info_t pSAInfo, pDAInfo;  // data from previous time step
 
-	if (!TInfo || !FFInfo || !SFInfo)
+	for (myTargetInfo->Reset<forecast_time>(); myTargetInfo->Next<forecast_time>();)
 	{
-		return;
-	}
+		const auto forecastTime = myTargetInfo->Time();
 
-	auto prevTime = forecastTime;
-
-	std::shared_ptr<info<double>> pSAInfo, pDAInfo;
-
-	prevTime.ValidDateTime().Adjust(kHourResolution, -1);
-
-	// In the start of the forecast fetch the latest sa and da
-	// values from LAPS producer.
-
-	if (prod.Id() == 107 || forecastTime.Step() == 1)
-	{
-		prevTime.OriginDateTime(prevTime.ValidDateTime());
-
-		// Allow up to three hours of missing data
-		for (int i = 0; i < 3; i++)
+		if (forecastTime.Step() == 0 && prod.Id() != 107)
 		{
-			pSAInfo = Fetch(prevTime, level(kHeight, 0), SAParam, forecast_type(kAnalysis),
-			                itsConfiguration->SourceGeomNames(), producer(107, 86, 107, "LAPSFIN"), false);
-			pDAInfo = Fetch(prevTime, level(kHeight, 0), DAParam, forecast_type(kAnalysis),
-			                itsConfiguration->SourceGeomNames(), producer(107, 86, 107, "LAPSFIN"), false);
+			// We only calculate analysis hour for LAPS
+			continue;
+		}
 
-			if (pSAInfo && pDAInfo)
-			{
-				break;
-			}
+		myThreadedLogger.Info("Calculating time " + static_cast<std::string>(forecastTime.ValidDateTime()) + " level " +
+		                      static_cast<std::string>(forecastLevel));
 
-			prevTime.ValidDateTime().Adjust(kHourResolution, -1);
+		auto TInfo = Fetch(forecastTime, level(kHeight, 2), param("T-K"), forecastType, false);
+		auto FFInfo = Fetch(forecastTime, level(kHeight, 10), param("FF-MS"), forecastType, false);
+		auto SFInfo = Fetch(forecastTime, level(kHeight, 0), param("SNR-KGM2"), forecastType, false);
+
+		if (!TInfo || !FFInfo || !SFInfo)
+		{
+			continue;
+		}
+
+		auto prevTime = forecastTime;
+		prevTime.ValidDateTime().Adjust(kHourResolution, -1);
+
+		// In the start of the forecast fetch the latest sa and da
+		// values from LAPS producer.
+
+		if (prod.Id() == 107 || forecastTime.Step() == 1)
+		{
 			prevTime.OriginDateTime(prevTime.ValidDateTime());
-		}
-	}
-	else
-	{
-		pSAInfo = Fetch(prevTime, level(kHeight, 0), SAParam, forecastType, false);
-		pDAInfo = Fetch(prevTime, level(kHeight, 0), DAParam, forecastType, false);
-	}
 
-	if (!pSAInfo || !pDAInfo)
-	{
-		if (prod.Id() != 107)
+			// Previous data can be max three hours old
+			for (int i = 0; i < 3; i++)
+			{
+				pSAInfo = Fetch(prevTime, level(kHeight, 0), SAParam, forecast_type(kAnalysis),
+				                itsConfiguration->SourceGeomNames(), producer(107, 86, 107, "LAPSFIN"), false);
+				pDAInfo = Fetch(prevTime, level(kHeight, 0), DAParam, forecast_type(kAnalysis),
+				                itsConfiguration->SourceGeomNames(), producer(107, 86, 107, "LAPSFIN"), false);
+
+				if (pSAInfo && pDAInfo)
+				{
+					break;
+				}
+
+				prevTime.ValidDateTime().Adjust(kHourResolution, -1);
+				prevTime.OriginDateTime(prevTime.ValidDateTime());
+			}
+		}
+		else if (!pSAInfo || !pDAInfo)
 		{
-			myThreadedLogger.Error("DA and SA not found from obs producer");
-			return;
+			// Calculation started "mid" timeseries
+			pSAInfo = Fetch(prevTime, level(kHeight, 0), SAParam, forecastType, false);
+			pDAInfo = Fetch(prevTime, level(kHeight, 0), DAParam, forecastType, false);
 		}
-		// If we don't have a history of sa & da, start accumulating
-		// it but do not write snow index.
 
-		std::vector<double> pSA(myTargetInfo->Grid()->Size(), 0.0);
-		std::vector<double> pDA = pSA;
+		if (!pSAInfo || !pDAInfo)
+		{
+			// If we don't have a history of sa & da, start accumulating
+			// it but do not write snow index.
 
-		myThreadedLogger.Warning("Spinup phase, producing only DA and SA");
-		CalculateSnowDriftIndex(myTargetInfo, VEC(TInfo), VEC(FFInfo), VEC(SFInfo), pSA, pDA);
+			std::vector<double> pSA(myTargetInfo->Grid()->Size(), 0.0);
+			std::vector<double> pDA = pSA;
 
-		myTargetInfo->Find<param>(SDIParam);
-		myTargetInfo->Data().Fill(MissingDouble());
-	}
-	else
-	{
-		CalculateSnowDriftIndex(myTargetInfo, VEC(TInfo), VEC(FFInfo), VEC(SFInfo), VEC(pSAInfo), VEC(pDAInfo));
+			myThreadedLogger.Warning("Spinup phase, producing only DA and SA");
+			CalculateSnowDriftIndex(myTargetInfo, VEC(TInfo), VEC(FFInfo), VEC(SFInfo), pSA, pDA);
+
+			myTargetInfo->Find<param>(SDIParam);
+			myTargetInfo->Data().Fill(MissingDouble());
+		}
+		else
+		{
+			CalculateSnowDriftIndex(myTargetInfo, VEC(TInfo), VEC(FFInfo), VEC(SFInfo), VEC(pSAInfo), VEC(pDAInfo));
+		}
+
+		myTargetInfo->Find<param>(SAParam);
+		pSAInfo = std::make_shared<info<double>>(*myTargetInfo);
+		myTargetInfo->Find<param>(DAParam);
+		pDAInfo = std::make_shared<info<double>>(*myTargetInfo);
 	}
 
 	myThreadedLogger.Info("[" + deviceType + "] Missing: " + std::to_string(util::MissingPercent(*myTargetInfo)) + "%");
