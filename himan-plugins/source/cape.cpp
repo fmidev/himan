@@ -1487,7 +1487,7 @@ pair<vector<float>, vector<float>> cape::GetLFCCPU(shared_ptr<info<float>> myTar
 
 	curLevel.Value(curLevel.Value() - 1);
 
-	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 50.);
+	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 250.);
 	auto hPa450 = h->LevelForHeight(myTargetInfo->Producer(), 450.);
 	vector<float> prevTparcelVec(P.size(), MissingFloat());
 

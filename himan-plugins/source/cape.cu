@@ -1218,7 +1218,7 @@ std::pair<std::vector<float>, std::vector<float>> cape_cuda::GetLFCGPU(
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
 	auto hPa450 = h->LevelForHeight(myTargetInfo->Producer(), 450.);
-	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 150.);
+	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 250.);
 
 	while (curLevel.Value() > stopLevel.first.Value())
 	{
