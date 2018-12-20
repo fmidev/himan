@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.12.19
+Version: 18.12.20
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -115,6 +115,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Dec 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.12.20-1.fmi
+- cape-plugin: LFC max height lowered to ~250hPa
 * Wed Dec 19 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.12.19-1.fmi
 - Even more snow_drift tuning
 * Thu Dec 13 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.12.13-1.fmi
