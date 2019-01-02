@@ -138,6 +138,11 @@ void compiled_plugin_base::WriteToFile(const shared_ptr<info<double>> targetInfo
 	return WriteToFile<double>(targetInfo, writeOptions);
 }
 
+void compiled_plugin_base::WriteToFile(const shared_ptr<info<float>> targetInfo, write_options writeOptions)
+{
+	return WriteToFile<float>(targetInfo, writeOptions);
+}
+
 template <typename T>
 void compiled_plugin_base::WriteToFile(const shared_ptr<info<T>> targetInfo, write_options writeOptions)
 {

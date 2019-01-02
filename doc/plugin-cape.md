@@ -36,7 +36,7 @@ Plugin is optimized for GPU use.
 
 # Required source parameters
 
-All parameters must be found from vertical levels starting from lowest hybrid level (~10 meters) up to ~100 hPa.
+All parameters must be found from vertical levels starting from lowest hybrid level (~10 meters) up to ~250 hPa.
 
 * Air temperature, K
 * Relative humidity, %
