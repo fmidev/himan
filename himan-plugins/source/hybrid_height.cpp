@@ -7,9 +7,12 @@
 #include "cache.h"
 #include "radon.h"
 #include "util.h"
+#include "writer.h"
 
 using namespace std;
 using namespace himan::plugin;
+
+extern mutex singleFileWriteMutex;
 
 const string itsName("hybrid_height");
 const himan::param PParam("P-HPA");
@@ -111,6 +114,7 @@ bool hybrid_height::WithGeopotential(shared_ptr<himan::info<float>>& myTargetInf
 		result = (gp - zerogp) * static_cast<float>(himan::constants::kIg);
 	}
 
+	WriteSingleGridToFile(myTargetInfo);
 	return true;
 }
 
@@ -302,6 +306,8 @@ bool hybrid_height::WithHypsometricEquation(shared_ptr<himan::info<float>>& myTa
 
 	// Second pass
 
+	vector<future<void>> writers;
+
 	topToBottom ? myTargetInfo->Last<level>() : myTargetInfo->First<level>();
 
 	while (true)
@@ -351,11 +357,52 @@ bool hybrid_height::WithHypsometricEquation(shared_ptr<himan::info<float>>& myTa
 
 		const bool levelsRemaining = topToBottom ? myTargetInfo->Previous<level>() : myTargetInfo->Next<level>();
 
+		if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
+		{
+			writers.push_back(async(launch::async,
+			                        [this](shared_ptr<info<float>> tempInfo) { WriteSingleGridToFile(tempInfo); },
+			                        make_shared<info<float>>(*myTargetInfo)));
+		}
+		else
+		{
+			WriteSingleGridToFile(myTargetInfo);
+		}
+
 		if (levelsRemaining == false)
 		{
 			break;
 		}
 	}
 
+	for (auto& f : writers)
+	{
+		f.get();
+	}
+
 	return true;
+}
+
+void hybrid_height::WriteToFile(const shared_ptr<info<float>> targetInfo, write_options writeOptions)
+{
+}
+
+void hybrid_height::WriteSingleGridToFile(const shared_ptr<info<float>> targetInfo)
+{
+	auto aWriter = GET_PLUGIN(writer);
+
+	if (!targetInfo->IsValidGrid())
+	{
+		return;
+	}
+
+	if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
+	{
+		aWriter->ToFile<float>(targetInfo, itsConfiguration);
+	}
+	else
+	{
+		lock_guard<mutex> lock(singleFileWriteMutex);
+
+		aWriter->ToFile<float>(targetInfo, itsConfiguration, itsConfiguration->ConfigurationFile());
+	}
 }
