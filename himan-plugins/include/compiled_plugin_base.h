@@ -154,6 +154,7 @@ class compiled_plugin_base
 	void WriteToFile(const std::shared_ptr<info<T>> targetInfo, write_options opts = write_options());
 
 	virtual void WriteToFile(const std::shared_ptr<info<double>> targetInfo, write_options opts = write_options());
+	virtual void WriteToFile(const std::shared_ptr<info<float>> targetInfo, write_options opts = write_options());
 
    protected:
 	virtual std::string ClassName() const
