@@ -387,12 +387,12 @@ void modifier_max::Calculate(double theValue, double theHeight, double thePrevio
 	else if (EnteringHeightZone(theHeight, thePreviousHeight, lowerLimit))
 	{
 		double exactLower = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
-		theValue = fmax(exactLower, theValue);
+		theValue = fmax(exactLower, Value());
 	}
 	else if (LeavingHeightZone(theHeight, thePreviousHeight, upperLimit))
 	{
 		double exactUpper = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
-		theValue = fmax(exactUpper, theValue);
+		theValue = fmax(exactUpper, Value());
 		itsOutOfBoundHeights[itsIndex] = true;
 	}
 
@@ -418,12 +418,12 @@ void modifier_min::Calculate(double theValue, double theHeight, double thePrevio
 	else if (EnteringHeightZone(theHeight, thePreviousHeight, lowerLimit))
 	{
 		double exactLower = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
-		theValue = fmin(exactLower, theValue);
+		theValue = fmin(exactLower, Value());
 	}
 	else if (LeavingHeightZone(theHeight, thePreviousHeight, upperLimit))
 	{
 		double exactUpper = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
-		theValue = fmin(exactUpper, theValue);
+		theValue = fmin(exactUpper, Value());
 		itsOutOfBoundHeights[itsIndex] = true;
 	}
 
@@ -466,15 +466,15 @@ void modifier_maxmin::Calculate(double theValue, double theHeight, double thePre
 	{
 		double exactLower = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
 
-		smaller = fmin(exactLower, theValue);
-		bigger = fmax(exactLower, theValue);
+		smaller = fmin(exactLower, Value());
+		bigger = fmax(exactLower, Value());
 	}
 	else if (LeavingHeightZone(theHeight, thePreviousHeight, upperLimit))
 	{
 		double exactUpper = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
 
-		smaller = fmin(exactUpper, theValue);
-		bigger = fmax(exactUpper, theValue);
+		smaller = fmin(exactUpper, Value());
+		bigger = fmax(exactUpper, Value());
 
 		itsOutOfBoundHeights[itsIndex] = true;
 	}
