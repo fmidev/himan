@@ -387,7 +387,7 @@ void modifier_max::Calculate(double theValue, double theHeight, double thePrevio
 	else if (EnteringHeightZone(theHeight, thePreviousHeight, lowerLimit))
 	{
 		double exactLower = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
-		theValue = fmax(exactLower, Value());
+		theValue = fmax(exactLower, theValue);
 	}
 	else if (LeavingHeightZone(theHeight, thePreviousHeight, upperLimit))
 	{
@@ -418,7 +418,7 @@ void modifier_min::Calculate(double theValue, double theHeight, double thePrevio
 	else if (EnteringHeightZone(theHeight, thePreviousHeight, lowerLimit))
 	{
 		double exactLower = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
-		theValue = fmin(exactLower, Value());
+		theValue = fmin(exactLower, theValue);
 	}
 	else if (LeavingHeightZone(theHeight, thePreviousHeight, upperLimit))
 	{
@@ -466,8 +466,8 @@ void modifier_maxmin::Calculate(double theValue, double theHeight, double thePre
 	{
 		double exactLower = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
 
-		smaller = fmin(exactLower, Value());
-		bigger = fmax(exactLower, Value());
+		smaller = fmin(exactLower, theValue);
+		bigger = fmax(exactLower, theValue);
 	}
 	else if (LeavingHeightZone(theHeight, thePreviousHeight, upperLimit))
 	{
