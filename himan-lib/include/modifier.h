@@ -345,7 +345,7 @@ class modifier_findheight : public modifier
 class modifier_findheight_gt : public modifier_findheight
 {
    public:
-	modifier_findheight_gt() : modifier_findheight(kFindHeightLessThanModifier)
+	modifier_findheight_gt() : modifier_findheight(kFindHeightGreaterThanModifier)
 	{
 	}
 	virtual ~modifier_findheight_gt()
@@ -367,7 +367,7 @@ class modifier_findheight_gt : public modifier_findheight
 class modifier_findheight_lt : public modifier_findheight
 {
    public:
-	modifier_findheight_lt() : modifier_findheight(kFindHeightGreaterThanModifier)
+	modifier_findheight_lt() : modifier_findheight(kFindHeightLessThanModifier)
 	{
 	}
 	virtual ~modifier_findheight_lt()
