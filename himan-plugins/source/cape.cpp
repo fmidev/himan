@@ -458,30 +458,6 @@ void cape::MostUnstableCAPE(shared_ptr<info<float>> myTargetInfo, short threadIn
 
 		          },
 		          make_tuple(Ts[taskIndex], TDs[taskIndex], Ps[taskIndex]), threadIndex, taskIndex));
-
-		if (taskIndex == 1)
-		{
-			for (size_t i = 0; i < futures.size(); i++)
-			{
-				auto res = futures[i].get();
-
-				if (get<0>(res).empty())
-				{
-					continue;
-				}
-
-				results.push_back(res);
-
-				const auto& muCAPE = get<10>(res);
-
-				for (size_t j = 0; j < N; j++)
-				{
-					refValues[j].push_back(muCAPE[j]);
-				}
-			}
-
-			futures.clear();
-		}
 	}
 
 	for (size_t i = 0; i < futures.size(); i++)
