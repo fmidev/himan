@@ -131,10 +131,8 @@ tuple<vec2d, vec2d, vec2d> GetSampledSourceData(shared_ptr<const himan::plugin_c
 
 	while (curLevel.Value() >= stopLevel.Value())
 	{
-		auto PInfo =
-		    f->Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
-		auto TInfo =
-		    f->Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType(), false);
+		auto PInfo = f->Fetch<float>(conf, myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType(), false);
+		auto TInfo = f->Fetch<float>(conf, myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType(), false);
 		auto RHInfo = f->Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("RH-PRCNT"),
 		                              myTargetInfo->ForecastType(), false);
 
@@ -522,10 +520,10 @@ void cape::MostUnstableCAPE(shared_ptr<info<float>> myTargetInfo, short threadIn
 	myTargetInfo->Data().Set(LPLP);
 
 	log.Debug("Fetching LCL height");
-	auto LCLZ = h->VerticalValue<float>(param("HL-M"), LCLP);
+	auto LCLZ = h->VerticalValue<float>(ZParam, LCLP);
 
 	log.Debug("Fetching LFC height");
-	auto LFCZ = h->VerticalValue<float>(param("HL-M"), LFCP);
+	auto LFCZ = h->VerticalValue<float>(ZParam, LFCP);
 
 	log.Debug("Processing CIN");
 
@@ -534,7 +532,7 @@ void cape::MostUnstableCAPE(shared_ptr<info<float>> myTargetInfo, short threadIn
 
 	log.Debug("Fetching LPL height");
 
-	auto LPLZ = h->VerticalValue<float>(param("HL-M"), LPLP);
+	auto LPLZ = h->VerticalValue<float>(ZParam, LPLP);
 
 	myTargetInfo->Find<param>(LPLZParam);
 	myTargetInfo->Data().Set(LPLZ);
@@ -633,7 +631,7 @@ void cape::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short thread
 	log.Debug("LCL temperature: " + ::PrintMean<float>(LCL.first));
 	log.Debug("LCL pressure: " + ::PrintMean<float>(LCL.second));
 
-	auto LCLZ = h->VerticalValue<float>(param("HL-M"), LCL.second);
+	auto LCLZ = h->VerticalValue<float>(ZParam, LCL.second);
 
 	// 3.
 
@@ -659,7 +657,7 @@ void cape::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short thread
 	log.Debug("LFC temperature: " + ::PrintMean<float>(LFC.first));
 	log.Debug("LFC pressure: " + ::PrintMean<float>(LFC.second));
 
-	auto LFCZ = h->VerticalValue<float>(param("HL-M"), LFC.second);
+	auto LFCZ = h->VerticalValue<float>(ZParam, LFC.second);
 
 	// 4. & 5.
 
@@ -898,9 +896,9 @@ vector<float> cape::GetCINCPU(shared_ptr<info<float>> myTargetInfo, const vector
 
 	level curLevel = itsBottomLevel;
 
-	auto prevZenvInfo = Fetch<float>(ftime, curLevel, param("HL-M"), ftype, false);
-	auto prevTenvInfo = Fetch<float>(ftime, curLevel, param("T-K"), ftype, false);
-	auto prevPenvInfo = Fetch<float>(ftime, curLevel, param("P-HPA"), ftype, false);
+	auto prevZenvInfo = Fetch<float>(ftime, curLevel, ZParam, ftype, false);
+	auto prevTenvInfo = Fetch<float>(ftime, curLevel, TParam, ftype, false);
+	auto prevPenvInfo = Fetch<float>(ftime, curLevel, PParam, ftype, false);
 
 	auto prevZenvVec = VEC(prevZenvInfo);
 	auto prevTenvVec = VEC(prevTenvInfo);
@@ -931,9 +929,9 @@ vector<float> cape::GetCINCPU(shared_ptr<info<float>> myTargetInfo, const vector
 
 	while (curLevel.Value() > stopLevel.first.Value() && foundCount != found.size())
 	{
-		auto ZenvInfo = Fetch<float>(ftime, curLevel, param("HL-M"), ftype, false);
-		auto TenvInfo = Fetch<float>(ftime, curLevel, param("T-K"), ftype, false);
-		auto PenvInfo = Fetch<float>(ftime, curLevel, param("P-HPA"), ftype, false);
+		auto ZenvInfo = Fetch<float>(ftime, curLevel, ZParam, ftype, false);
+		auto TenvInfo = Fetch<float>(ftime, curLevel, TParam, ftype, false);
+		auto PenvInfo = Fetch<float>(ftime, curLevel, PParam, ftype, false);
 
 		auto ZenvVec = VEC(ZenvInfo);
 		auto TenvVec = VEC(TenvInfo);
@@ -1123,11 +1121,9 @@ CAPEdata cape::GetCAPECPU(shared_ptr<info<float>> myTargetInfo, const vector<flo
 
 	level curLevel = levels.first;
 
-	auto prevZenvInfo =
-	    Fetch<float>(myTargetInfo->Time(), curLevel, param("HL-M"), myTargetInfo->ForecastType(), false);
-	auto prevTenvInfo = Fetch<float>(myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType(), false);
-	auto prevPenvInfo =
-	    Fetch<float>(myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
+	auto prevZenvInfo = Fetch<float>(myTargetInfo->Time(), curLevel, ZParam, myTargetInfo->ForecastType(), false);
+	auto prevTenvInfo = Fetch<float>(myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType(), false);
+	auto prevPenvInfo = Fetch<float>(myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType(), false);
 
 	auto prevPenvVec = VEC(prevPenvInfo);
 	auto prevZenvVec = VEC(prevZenvInfo);
@@ -1160,9 +1156,9 @@ CAPEdata cape::GetCAPECPU(shared_ptr<info<float>> myTargetInfo, const vector<flo
 	while (curLevel.Value() > stopLevel.first.Value() && foundCount != found.size())
 	{
 		// Get environment temperature, pressure and height values for this level
-		PenvInfo = Fetch<float>(myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
-		TenvInfo = Fetch<float>(myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType(), false);
-		ZenvInfo = Fetch<float>(myTargetInfo->Time(), curLevel, param("HL-M"), myTargetInfo->ForecastType(), false);
+		PenvInfo = Fetch<float>(myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType(), false);
+		TenvInfo = Fetch<float>(myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType(), false);
+		ZenvInfo = Fetch<float>(myTargetInfo->Time(), curLevel, ZParam, myTargetInfo->ForecastType(), false);
 
 		if (!PenvInfo || !TenvInfo || !ZenvInfo)
 		{
@@ -1347,7 +1343,7 @@ pair<vector<float>, vector<float>> cape::GetLFC(shared_ptr<info<float>> myTarget
 
 	try
 	{
-		TenvLCL = h->VerticalValue<float>(param("T-K"), P);
+		TenvLCL = h->VerticalValue<float>(TParam, P);
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -1441,11 +1437,10 @@ pair<vector<float>, vector<float>> cape::GetLFCCPU(shared_ptr<info<float>> myTar
 	auto levels = h->LevelForHeight(myTargetInfo->Producer(), maxP);
 	level curLevel = levels.first;
 
-	auto prevPenvInfo =
-	    Fetch<float>(myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
+	auto prevPenvInfo = Fetch<float>(myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType(), false);
 	auto prevPenvVec = VEC(prevPenvInfo);
 
-	auto prevTenvInfo = Fetch<float>(myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType(), false);
+	auto prevTenvInfo = Fetch<float>(myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType(), false);
 
 	vector<float> prevTenvVec;
 
@@ -1470,9 +1465,8 @@ pair<vector<float>, vector<float>> cape::GetLFCCPU(shared_ptr<info<float>> myTar
 	while (curLevel.Value() > stopLevel.first.Value() && foundCount != found.size())
 	{
 		// Get environment temperature and pressure values for this level
-		auto TenvInfo = Fetch<float>(myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType(), false);
-		auto PenvInfo =
-		    Fetch<float>(myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
+		auto TenvInfo = Fetch<float>(myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType(), false);
+		auto PenvInfo = Fetch<float>(myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType(), false);
 
 		// Convert pressure to Pa since metutil-library expects that
 		auto PenvVec = VEC(PenvInfo);
@@ -1666,11 +1660,10 @@ cape_source cape::GetSurfaceValues(shared_ptr<info<float>> myTargetInfo)
 	 * 3. Return temperature and dewpoint
 	 */
 
-	auto TInfo = Fetch<float>(myTargetInfo->Time(), itsBottomLevel, param("T-K"), myTargetInfo->ForecastType(), false);
+	auto TInfo = Fetch<float>(myTargetInfo->Time(), itsBottomLevel, TParam, myTargetInfo->ForecastType(), false);
 	auto RHInfo =
 	    Fetch<float>(myTargetInfo->Time(), itsBottomLevel, param("RH-PRCNT"), myTargetInfo->ForecastType(), false);
-	auto PInfo =
-	    Fetch<float>(myTargetInfo->Time(), itsBottomLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
+	auto PInfo = Fetch<float>(myTargetInfo->Time(), itsBottomLevel, PParam, myTargetInfo->ForecastType(), false);
 
 	if (!TInfo || !RHInfo || !PInfo)
 	{
@@ -1728,7 +1721,7 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info<float>> myTargetIn
 	tp.HeightInMeters(false);
 	mr.HeightInMeters(false);
 
-	auto PInfo = Fetch<double>(myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
+	auto PInfo = Fetch<double>(myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType(), false);
 
 	if (!PInfo)
 	{
@@ -1756,7 +1749,7 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info<float>> myTargetIn
 	auto curP = VEC(PInfo);
 
 	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 500.);
-	auto P500m = h->VerticalValue<double>(param("P-HPA"), 500.);
+	auto P500m = h->VerticalValue<double>(PParam, 500.);
 
 	auto sourceData =
 	    GetSampledSourceData(itsConfiguration, myTargetInfo, Convert(P500m), Convert(curP), curLevel, stopLevel.second);
@@ -1821,8 +1814,7 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info<float>> myTargetIn
 	auto Tpot = Convert(tp.Result());
 	auto MR = Convert(mr.Result());
 
-	auto PsurfInfo =
-	    Fetch<float>(myTargetInfo->Time(), itsBottomLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
+	auto PsurfInfo = Fetch<float>(myTargetInfo->Time(), itsBottomLevel, PParam, myTargetInfo->ForecastType(), false);
 	auto PSurf = VEC(PsurfInfo);
 
 	vector<float> T(Tpot.size());
@@ -1968,10 +1960,10 @@ cape_multi_source cape::GetNHighestThetaEValuesCPU(shared_ptr<info<float>> myTar
 
 	while (true)
 	{
-		auto TInfo = Fetch<float>(myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType(), false);
+		auto TInfo = Fetch<float>(myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType(), false);
 		auto RHInfo =
 		    Fetch<float>(myTargetInfo->Time(), curLevel, param("RH-PRCNT"), myTargetInfo->ForecastType(), false);
-		auto PInfo = Fetch<float>(myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
+		auto PInfo = Fetch<float>(myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType(), false);
 
 		if (!TInfo || !RHInfo || !PInfo)
 		{
