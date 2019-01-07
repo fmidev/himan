@@ -392,7 +392,7 @@ void modifier_max::Calculate(double theValue, double theHeight, double thePrevio
 	else if (LeavingHeightZone(theHeight, thePreviousHeight, upperLimit))
 	{
 		double exactUpper = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
-		theValue = fmax(exactUpper, theValue);
+		theValue = fmax(exactUpper, Value());
 		itsOutOfBoundHeights[itsIndex] = true;
 	}
 
@@ -423,7 +423,7 @@ void modifier_min::Calculate(double theValue, double theHeight, double thePrevio
 	else if (LeavingHeightZone(theHeight, thePreviousHeight, upperLimit))
 	{
 		double exactUpper = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
-		theValue = fmin(exactUpper, theValue);
+		theValue = fmin(exactUpper, Value());
 		itsOutOfBoundHeights[itsIndex] = true;
 	}
 
@@ -473,8 +473,8 @@ void modifier_maxmin::Calculate(double theValue, double theHeight, double thePre
 	{
 		double exactUpper = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
 
-		smaller = fmin(exactUpper, theValue);
-		bigger = fmax(exactUpper, theValue);
+		smaller = fmin(exactUpper, Value());
+		bigger = fmax(exactUpper, Value());
 
 		itsOutOfBoundHeights[itsIndex] = true;
 	}

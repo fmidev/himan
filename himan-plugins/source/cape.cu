@@ -150,18 +150,13 @@ __global__ void MoistLiftKernel(const float* __restrict__ d_T, const float* __re
 {
 	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	ASSERT(d_T);
-	ASSERT(d_P);
-
 	if (idx < N)
 	{
 		ASSERT((d_P[idx] > 10 && d_P[idx] < 1500) || IsMissing(d_P[idx]));
 		ASSERT((d_Ptarget[idx] > 10 && d_Ptarget[idx] < 1500) || IsMissing(d_Ptarget[idx]));
-
 		ASSERT((d_T[idx] > 100 && d_T[idx] < 350) || IsMissing(d_T[idx]));
 
 		float T = metutil::MoistLiftA_<float>(d_P[idx] * 100, d_T[idx], d_Ptarget[idx] * 100);
-
 		ASSERT((T > 100 && T < 350) || IsMissing(T));
 
 		d_Tparcel[idx] = T;
@@ -974,8 +969,7 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	tp.HeightInMeters(false);
 	mr.HeightInMeters(false);
 
-	auto PInfo =
-	    cuda::Fetch<double>(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType(), false);
+	auto PInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType(), false);
 
 	if (!PInfo || PInfo->Data().MissingCount() == PInfo->SizeLocations())
 	{
@@ -984,7 +978,7 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 
 	auto dPVec = VEC(PInfo);
 
-	auto P500m = h->VerticalValue<double>(param("P-HPA"), 500.);
+	auto P500m = h->VerticalValue<double>(PParam, 500.);
 	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 500.);
 
 	h->HeightUnit(kHPa);
@@ -1094,8 +1088,7 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	float* d_Psurf = 0;
 	CUDA_CHECK(cudaMalloc((float**)&d_Psurf, N * sizeof(float)));
 
-	auto Psurf =
-	    cuda::Fetch<float>(conf, myTargetInfo->Time(), itsBottomLevel, param("P-HPA"), myTargetInfo->ForecastType());
+	auto Psurf = cuda::Fetch<float>(conf, myTargetInfo->Time(), itsBottomLevel, PParam, myTargetInfo->ForecastType());
 	cuda::PrepareInfo(Psurf, d_Psurf, stream);
 
 	InitializeArray<float>(d_T, himan::MissingFloat(), N, stream);
@@ -1181,10 +1174,8 @@ std::pair<std::vector<float>, std::vector<float>> cape_cuda::GetLFCGPU(
 
 	level curLevel = levels.first;
 
-	auto prevPenvInfo =
-	    cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
-	auto prevTenvInfo =
-	    cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
+	auto prevPenvInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType());
+	auto prevTenvInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType());
 
 	cuda::PrepareInfo(prevTenvInfo, d_prevTenv, stream);
 	cuda::PrepareInfo(prevPenvInfo, d_prevPenv, stream);
@@ -1223,10 +1214,8 @@ std::pair<std::vector<float>, std::vector<float>> cape_cuda::GetLFCGPU(
 	while (curLevel.Value() > stopLevel.first.Value())
 	{
 		// Get environment temperature and pressure values for this level
-		auto TenvInfo =
-		    cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
-		auto PenvInfo =
-		    cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
+		auto TenvInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType());
+		auto PenvInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType());
 
 		cuda::PrepareInfo(PenvInfo, d_Penv, stream);
 		cuda::PrepareInfo(TenvInfo, d_Tenv, stream);
@@ -1315,9 +1304,9 @@ std::vector<float> cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_confi
 
 	level curLevel = itsBottomLevel;
 
-	auto prevZenvInfo = cuda::Fetch<float>(conf, ftime, curLevel, param("HL-M"), ftype);
-	auto prevTenvInfo = cuda::Fetch<float>(conf, ftime, curLevel, param("T-K"), ftype);
-	auto prevPenvInfo = cuda::Fetch<float>(conf, ftime, curLevel, param("P-HPA"), ftype);
+	auto prevZenvInfo = cuda::Fetch<float>(conf, ftime, curLevel, ZParam, ftype);
+	auto prevTenvInfo = cuda::Fetch<float>(conf, ftime, curLevel, TParam, ftype);
+	auto prevPenvInfo = cuda::Fetch<float>(conf, ftime, curLevel, PParam, ftype);
 
 	const size_t N = myTargetInfo->Data().Size();
 	const int blockSize = 256;
@@ -1397,9 +1386,9 @@ std::vector<float> cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_confi
 
 	while (curLevel.Value() > hPa100.first.Value())
 	{
-		auto ZenvInfo = cuda::Fetch<float>(conf, ftime, curLevel, param("HL-M"), ftype);
-		auto TenvInfo = cuda::Fetch<float>(conf, ftime, curLevel, param("T-K"), ftype);
-		auto PenvInfo = cuda::Fetch<float>(conf, ftime, curLevel, param("P-HPA"), ftype);
+		auto ZenvInfo = cuda::Fetch<float>(conf, ftime, curLevel, ZParam, ftype);
+		auto TenvInfo = cuda::Fetch<float>(conf, ftime, curLevel, TParam, ftype);
+		auto PenvInfo = cuda::Fetch<float>(conf, ftime, curLevel, PParam, ftype);
 
 		cuda::PrepareInfo(ZenvInfo, d_Zenv, stream);
 		cuda::PrepareInfo(PenvInfo, d_Penv, stream);
@@ -1467,8 +1456,20 @@ CAPEdata cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>
 	h->ForecastType(myTargetInfo->ForecastType());
 	h->HeightUnit(kHPa);
 
-	// Found count determines if we have calculated all three CAPE variation for a single grid point
-	std::vector<unsigned char> found(T.size(), 0);
+	// Typically LFC value is not found to all grid points -- in many cases as few as
+	// 10% of grid points have LFC defined. Therefore we do some memory-optimization
+	// here: instead of allocating and processing whole grids with 90% missing data,
+	// we 'compact' the data with a bitmap.
+	//
+	// The LFC pressure field is read and each missing grid point is marked with a '1'.
+	// The effective grid size in the processing phase is then the number of ones in the
+	// bitmap field. Every time a a new field is read from database, it is processed so
+	// that grid points who's bitmap value is zero are removed.
+	//
+	// At the end of processing the grid is again 'expanded' so that the grid point values
+	// in the compact grid are moved to correct locations.
+
+	std::vector<unsigned char> bitmap(T.size(), 1);
 
 	// No LFC --> No CAPE
 
@@ -1476,16 +1477,26 @@ CAPEdata cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>
 	{
 		if (IsMissing(P[i]))
 		{
-			found[i] = 1;
+			bitmap[i] = 0;
 		}
 	}
 
-	const size_t N = myTargetInfo->Data().Size();
+	const size_t N = count(bitmap.begin(), bitmap.end(), 1);
+	const size_t NB = bitmap.size();
+
+	// 'bitmap' variable is immutable; 'found' variable gets filled up with
+	// ones as processing proceeds
+
+	std::vector<unsigned char> found(N, 0);
+
+	logger log("CAPEGPU");
+
+	log.Info("Compacting data with a ratio of " + std::to_string(static_cast<double>(N) / NB) + " (smaller is better)");
+
 	const int blockSize = 256;
 	const int gridSize = N / blockSize + (N % blockSize == 0 ? 0 : 1);
 
 	cudaStream_t stream;
-
 	CUDA_CHECK(cudaStreamCreate(&stream));
 
 	float* d_CAPE = 0;
@@ -1501,14 +1512,20 @@ CAPEdata cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>
 	float* d_Tparcel = 0;
 	float* d_LFCT = 0;
 	float* d_LFCP = 0;
+	float* d_origLFCT = 0;
+	float* d_origLFCP = 0;
 	float* d_prevZenv = 0;
 	float* d_prevPenv = 0;
 	float* d_prevTenv = 0;
 	float* d_Zenv = 0;
 	float* d_Penv = 0;
 	float* d_Tenv = 0;
+	float* d_origZenv = 0;
+	float* d_origPenv = 0;
+	float* d_origTenv = 0;
 
 	unsigned char* d_found = 0;
+	unsigned char* d_bitmap = 0;
 
 	CUDA_CHECK(cudaMalloc((float**)&d_CAPE, sizeof(float) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_CAPE1040, sizeof(float) * N));
@@ -1527,16 +1544,31 @@ CAPEdata cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>
 	CUDA_CHECK(cudaMalloc((float**)&d_Zenv, sizeof(float) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_Tenv, sizeof(float) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_Penv, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_origZenv, sizeof(float) * NB));
+	CUDA_CHECK(cudaMalloc((float**)&d_origTenv, sizeof(float) * NB));
+	CUDA_CHECK(cudaMalloc((float**)&d_origPenv, sizeof(float) * NB));
 	CUDA_CHECK(cudaMalloc((float**)&d_LFCT, sizeof(float) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_LFCP, sizeof(float) * N));
-	CUDA_CHECK(cudaMalloc((float**)&d_found, sizeof(unsigned char) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_origLFCT, sizeof(float) * NB));
+	CUDA_CHECK(cudaMalloc((float**)&d_origLFCP, sizeof(float) * NB));
+	CUDA_CHECK(cudaMalloc((unsigned char**)&d_found, sizeof(unsigned char) * N));
+	CUDA_CHECK(cudaMalloc((unsigned char**)&d_bitmap, sizeof(unsigned char) * NB));
 
-	CUDA_CHECK(cudaMemcpyAsync(d_LFCP, P.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
-	CUDA_CHECK(cudaMemcpyAsync(d_LFCT, T.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_origLFCP, P.data(), sizeof(float) * NB, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_origLFCT, T.data(), sizeof(float) * NB, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_bitmap, bitmap.data(), sizeof(unsigned char) * NB, cudaMemcpyHostToDevice, stream));
+
 	CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, d_LFCT, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
 
-	CUDA_CHECK(cudaMemcpyAsync(d_found, found.data(), sizeof(unsigned char) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_bitmap, bitmap.data(), sizeof(unsigned char) * NB, cudaMemcpyHostToDevice, stream));
 
+	auto bitmapHot = [] __device__(const unsigned char& u) { return u == 1; };
+
+	// https://thrust.github.io/doc/group__stream__compaction.html#ga36d9d6ed8e17b442c1fd8dc40bd515d5
+	thrust::copy_if(thrust::cuda::par.on(stream), d_origLFCT, d_origLFCT + NB, d_bitmap, d_LFCT, bitmapHot);
+	thrust::copy_if(thrust::cuda::par.on(stream), d_origLFCP, d_origLFCP + NB, d_bitmap, d_LFCP, bitmapHot);
+
+	InitializeArray<unsigned char>(d_found, 0., N, stream);
 	InitializeArray<float>(d_CAPE, 0., N, stream);
 	InitializeArray<float>(d_CAPE1040, 0., N, stream);
 	InitializeArray<float>(d_CAPE3km, 0., N, stream);
@@ -1548,6 +1580,11 @@ CAPEdata cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>
 	InitializeArray<float>(d_LastELT, himan::MissingFloat(), N, stream);
 	InitializeArray<float>(d_LastELZ, himan::MissingFloat(), N, stream);
 
+	CUDA_CHECK(cudaStreamSynchronize(stream));
+
+	CUDA_CHECK(cudaFree(d_origLFCT));
+	CUDA_CHECK(cudaFree(d_origLFCP));
+
 	// For each grid point find the hybrid level that's below LFC and then pick the lowest level
 	// among all grid points
 
@@ -1555,16 +1592,18 @@ CAPEdata cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>
 
 	level curLevel = levels.first;
 
-	auto prevZenvInfo =
-	    cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("HL-M"), myTargetInfo->ForecastType());
-	auto prevTenvInfo =
-	    cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
-	auto prevPenvInfo =
-	    cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
+	auto prevZenvInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, ZParam, myTargetInfo->ForecastType());
+	auto prevTenvInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType());
+	auto prevPenvInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType());
 
-	cuda::PrepareInfo(prevZenvInfo, d_prevZenv, stream);
-	cuda::PrepareInfo(prevPenvInfo, d_prevPenv, stream);
-	cuda::PrepareInfo(prevTenvInfo, d_prevTenv, stream);
+	// "orig" variables are just as a temporary placeholder
+	cuda::PrepareInfo(prevZenvInfo, d_origZenv, stream);
+	cuda::PrepareInfo(prevPenvInfo, d_origPenv, stream);
+	cuda::PrepareInfo(prevTenvInfo, d_origTenv, stream);
+
+	thrust::copy_if(thrust::cuda::par.on(stream), d_origZenv, d_origZenv + NB, d_bitmap, d_prevZenv, bitmapHot);
+	thrust::copy_if(thrust::cuda::par.on(stream), d_origPenv, d_origPenv + NB, d_bitmap, d_prevPenv, bitmapHot);
+	thrust::copy_if(thrust::cuda::par.on(stream), d_origTenv, d_origTenv + NB, d_bitmap, d_prevTenv, bitmapHot);
 
 	if (cape_cuda::itsUseVirtualTemperature)
 	{
@@ -1582,20 +1621,22 @@ CAPEdata cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>
 
 	while (curLevel.Value() > stopLevel.first.Value())
 	{
-		PenvInfo =
-		    cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("P-HPA"), myTargetInfo->ForecastType());
-		TenvInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("T-K"), myTargetInfo->ForecastType());
-		ZenvInfo =
-		    cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("HL-M"), myTargetInfo->ForecastType());
+		PenvInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType());
+		TenvInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType());
+		ZenvInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, ZParam, myTargetInfo->ForecastType());
 
 		if (!PenvInfo || !TenvInfo || !ZenvInfo)
 		{
 			break;
 		}
 
-		cuda::PrepareInfo<float>(ZenvInfo, d_Zenv, stream);
-		cuda::PrepareInfo<float>(PenvInfo, d_Penv, stream);
-		cuda::PrepareInfo<float>(TenvInfo, d_Tenv, stream);
+		cuda::PrepareInfo<float>(ZenvInfo, d_origZenv, stream);
+		cuda::PrepareInfo<float>(PenvInfo, d_origPenv, stream);
+		cuda::PrepareInfo<float>(TenvInfo, d_origTenv, stream);
+
+		thrust::copy_if(thrust::cuda::par.on(stream), d_origZenv, d_origZenv + NB, d_bitmap, d_Zenv, bitmapHot);
+		thrust::copy_if(thrust::cuda::par.on(stream), d_origPenv, d_origPenv + NB, d_bitmap, d_Penv, bitmapHot);
+		thrust::copy_if(thrust::cuda::par.on(stream), d_origTenv, d_origTenv + NB, d_bitmap, d_Tenv, bitmapHot);
 
 		if (cape_cuda::itsUseVirtualTemperature)
 		{
@@ -1610,7 +1651,6 @@ CAPEdata cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>
 		                                               d_found, curLevel.Value(), hPa450.first.Value(), N);
 
 		size_t foundCount = thrust::count(thrust::cuda::par.on(stream), dt_found, dt_found + N, 1);
-
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
 		if (foundCount == N)
@@ -1631,38 +1671,52 @@ CAPEdata cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>
 	CUDA_CHECK(cudaFree(d_LFCT));
 	CUDA_CHECK(cudaFree(d_LFCP));
 	CUDA_CHECK(cudaFree(d_found));
+	CUDA_CHECK(cudaFree(d_bitmap));
 	CUDA_CHECK(cudaFree(d_prevTenv));
 	CUDA_CHECK(cudaFree(d_prevPenv));
 	CUDA_CHECK(cudaFree(d_prevZenv));
+	CUDA_CHECK(cudaFree(d_origTenv));
+	CUDA_CHECK(cudaFree(d_origPenv));
+	CUDA_CHECK(cudaFree(d_origZenv));
 
 	CapELValuesKernel<<<gridSize, blockSize, 0, stream>>>(d_CAPE, d_ELT, d_ELP, d_ELZ, d_LastELT, d_LastELP, d_LastELZ,
 	                                                      d_Tenv, d_Penv, d_Zenv, N);
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
-
 	CUDA_CHECK(cudaFree(d_Tenv));
 	CUDA_CHECK(cudaFree(d_Penv));
 	CUDA_CHECK(cudaFree(d_Zenv));
 
-	std::vector<float> CAPE(T.size());
-	std::vector<float> CAPE1040(T.size());
-	std::vector<float> CAPE3km(T.size());
-	std::vector<float> ELT(T.size());
-	std::vector<float> ELP(T.size());
-	std::vector<float> ELZ(T.size());
-	std::vector<float> LastELT(T.size());
-	std::vector<float> LastELP(T.size());
-	std::vector<float> LastELZ(T.size());
+	std::vector<float> CAPE(NB, 0);
+	std::vector<float> CAPE1040(NB, 0);
+	std::vector<float> CAPE3km(NB, 0);
+	std::vector<float> ELT(NB, himan::MissingFloat());
+	std::vector<float> ELP(NB, himan::MissingFloat());
+	std::vector<float> ELZ(NB, himan::MissingFloat());
+	std::vector<float> LastELT(NB, himan::MissingFloat());
+	std::vector<float> LastELP(NB, himan::MissingFloat());
+	std::vector<float> LastELZ(NB, himan::MissingFloat());
 
-	CUDA_CHECK(cudaMemcpyAsync(CAPE.data(), d_CAPE, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaMemcpyAsync(CAPE1040.data(), d_CAPE1040, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaMemcpyAsync(CAPE3km.data(), d_CAPE3km, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaMemcpyAsync(ELT.data(), d_ELT, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaMemcpyAsync(ELP.data(), d_ELP, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaMemcpyAsync(ELZ.data(), d_ELZ, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaMemcpyAsync(LastELT.data(), d_LastELT, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaMemcpyAsync(LastELP.data(), d_LastELP, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
-	CUDA_CHECK(cudaMemcpyAsync(LastELZ.data(), d_LastELZ, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
+	// intermediate containers where data is copied before expansion
+	std::vector<float> bm_CAPE(N);
+	std::vector<float> bm_CAPE1040(N);
+	std::vector<float> bm_CAPE3km(N);
+	std::vector<float> bm_ELT(N);
+	std::vector<float> bm_ELP(N);
+	std::vector<float> bm_ELZ(N);
+	std::vector<float> bm_LastELT(N);
+	std::vector<float> bm_LastELP(N);
+	std::vector<float> bm_LastELZ(N);
+
+	CUDA_CHECK(cudaMemcpyAsync(bm_CAPE.data(), d_CAPE, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(bm_CAPE1040.data(), d_CAPE1040, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(bm_CAPE3km.data(), d_CAPE3km, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(bm_ELT.data(), d_ELT, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(bm_ELP.data(), d_ELP, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(bm_ELZ.data(), d_ELZ, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(bm_LastELT.data(), d_LastELT, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(bm_LastELP.data(), d_LastELP, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(bm_LastELZ.data(), d_LastELZ, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
@@ -1675,6 +1729,26 @@ CAPEdata cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>
 	CUDA_CHECK(cudaFree(d_LastELT));
 	CUDA_CHECK(cudaFree(d_LastELP));
 	CUDA_CHECK(cudaFree(d_LastELZ));
+
+	// "expand" data again with bitmap
+
+	for (size_t i = 0, j = 0; i < NB; i++)
+	{
+		if (bitmap[i])
+		{
+			CAPE[i] = bm_CAPE[j];
+			CAPE1040[i] = bm_CAPE1040[j];
+			CAPE3km[i] = bm_CAPE3km[j];
+			ELT[i] = bm_ELT[j];
+			ELP[i] = bm_ELP[j];
+			ELZ[i] = bm_ELZ[j];
+			LastELT[i] = bm_LastELT[j];
+			LastELP[i] = bm_LastELP[j];
+			LastELZ[i] = bm_LastELZ[j];
+
+			j++;
+		}
+	}
 
 	return make_tuple(ELT, ELP, ELZ, LastELT, LastELP, LastELZ, CAPE, CAPE1040, CAPE3km);
 }

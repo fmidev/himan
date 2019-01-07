@@ -43,11 +43,6 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 	{
 		itsUseGeopotential = false;
 
-		// Using separate writer threads is only efficient when we are calculating with iteration (ECMWF)
-		// and if we are using external packing like gzip or if the grid size is large (several million grid points)
-		// In those conditions spawning a separate thread to write the results should give according to initial tests
-		// a ~30% increase in total calculation speed.
-
 		itsThreadDistribution = ThreadDistribution::kThreadForForecastTypeAndTime;
 	}
 
@@ -306,6 +301,11 @@ bool hybrid_height::WithHypsometricEquation(shared_ptr<himan::info<float>>& myTa
 
 	// Second pass
 
+	// Using separate writer threads is efficient when we are calculating with iteration (ECMWF) and if
+	// we are using external packing like gzip or if the grid size is large (several million grid points)
+	// In those conditions spawning a separate thread to write the results should give according to initial tests
+	// a ~30%-50% increase in total calculation speed.
+
 	vector<future<void>> writers;
 
 	topToBottom ? myTargetInfo->Last<level>() : myTargetInfo->First<level>();
@@ -355,8 +355,6 @@ bool hybrid_height::WithHypsometricEquation(shared_ptr<himan::info<float>>& myTa
 			}
 		}
 
-		const bool levelsRemaining = topToBottom ? myTargetInfo->Previous<level>() : myTargetInfo->Next<level>();
-
 		if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
 		{
 			writers.push_back(async(launch::async,
@@ -367,6 +365,8 @@ bool hybrid_height::WithHypsometricEquation(shared_ptr<himan::info<float>>& myTa
 		{
 			WriteSingleGridToFile(myTargetInfo);
 		}
+
+		const bool levelsRemaining = topToBottom ? myTargetInfo->Previous<level>() : myTargetInfo->Next<level>();
 
 		if (levelsRemaining == false)
 		{
