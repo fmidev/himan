@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 19.1.2
+Version: 19.1.7
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -115,6 +115,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Jan  7 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.1.7-1.fmi
+- cape gpu memory optimization
 * Wed Jan  2 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.1.2-1.fmi
 - Fixing hybrid_height perf regression
 * Thu Dec 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.12.20-1.fmi
