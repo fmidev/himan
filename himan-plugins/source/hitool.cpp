@@ -320,6 +320,9 @@ vector<T> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelType wan
 		case kMinimumModifier:
 		case kMaximumModifier:
 		case kCountModifier:
+		case kFindHeightModifier:
+		case kFindHeightGreaterThanModifier:
+		case kFindHeightLessThanModifier:
 		{
 			auto iter = std::max_element(upperHeight.begin(), upperHeight.end(), [](const T& val1, const T& val2) {
 				return (val1 < val2) ? true : IsMissing(val1);
