@@ -44,15 +44,15 @@ const string kLapsGeom = "LAPSSCANLARGE";
 // from each other, and this way we don't have to create bunch of extra producers.
 const blend_producer LAPS(forecast_type(kAnalysis), 0, 1);
 const blend_producer MOS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kMos)), kMosForecastLength,
-                         24);
+                         12);
 const blend_producer ECMWF(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kEcmwf)),
-                           kEcmwfForecastLength, 24);
+                           kEcmwfForecastLength, 12);
 const blend_producer HIRLAM(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kHirlam)),
-                            kHirlamForecastLength, 24);
+                            kHirlamForecastLength, 12);
 const blend_producer MEPS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kMeps)),
-                          kMepsForecastLength, 24);
+                          kMepsForecastLength, 12);
 const blend_producer GFS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kGfs)), kGfsForecastLength,
-                         24);
+                         12);
 
 blend::blend() : itsCalculationMode(kCalculateNone), itsNumHours(0), itsAnalysisTime(), itsBlendProducer()
 {
@@ -624,7 +624,8 @@ info_t FetchHistorical(logger& log, shared_ptr<plugin_configuration> cnf, const 
 	ftime.StepResolution(stepResolution);
 	int currentStep = ftime.Step();
 
-	const int maxIterations = blendProd.forecastLength / blendProd.originTimestep;
+	const int step = 24;
+	const int maxIterations = blendProd.forecastLength / step;
 
 	for (int i = 0; i < maxIterations; i++)
 	{
@@ -644,7 +645,7 @@ info_t FetchHistorical(logger& log, shared_ptr<plugin_configuration> cnf, const 
 			break;
 		}
 
-		ftime.OriginDateTime().Adjust(kHourResolution, -blendProd.originTimestep);
+		ftime.OriginDateTime().Adjust(kHourResolution, -step);
 	}
 
 	// ftime is set to the time where we found a matching file
