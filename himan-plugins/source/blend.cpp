@@ -44,15 +44,15 @@ const string kLapsGeom = "LAPSSCANLARGE";
 // from each other, and this way we don't have to create bunch of extra producers.
 const blend_producer LAPS(forecast_type(kAnalysis), 0, 1);
 const blend_producer MOS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kMos)), kMosForecastLength,
-                         12);
+                         24);
 const blend_producer ECMWF(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kEcmwf)),
-                           kEcmwfForecastLength, 12);
+                           kEcmwfForecastLength, 24);
 const blend_producer HIRLAM(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kHirlam)),
-                            kHirlamForecastLength, 6);
+                            kHirlamForecastLength, 24);
 const blend_producer MEPS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kMeps)),
-                          kMepsForecastLength, 6);
+                          kMepsForecastLength, 24);
 const blend_producer GFS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kGfs)), kGfsForecastLength,
-                         6);
+                         24);
 
 blend::blend() : itsCalculationMode(kCalculateNone), itsNumHours(0), itsAnalysisTime(), itsBlendProducer()
 {
@@ -628,7 +628,6 @@ info_t FetchHistorical(logger& log, shared_ptr<plugin_configuration> cnf, const 
 
 	for (int i = 0; i < maxIterations; i++)
 	{
-		ftime.OriginDateTime().Adjust(kHourResolution, -blendProd.originTimestep);
 		ftime.ValidDateTime() = ftime.OriginDateTime();
 		ftime.ValidDateTime().Adjust(kHourResolution, currentStep);
 
@@ -644,6 +643,8 @@ info_t FetchHistorical(logger& log, shared_ptr<plugin_configuration> cnf, const 
 		{
 			break;
 		}
+
+		ftime.OriginDateTime().Adjust(kHourResolution, -blendProd.originTimestep);
 	}
 
 	// ftime is set to the time where we found a matching file
