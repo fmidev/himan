@@ -532,6 +532,11 @@ void util::DumpVector(const vector<double>& vec, const string& name)
 	return DumpVector<double>(vec, name);
 }
 
+void util::DumpVector(const vector<float>& vec, const string& name)
+{
+	return DumpVector<float>(vec, name);
+}
+
 template <typename T>
 void util::DumpVector(const vector<T>& vec, const string& name)
 {
