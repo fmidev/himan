@@ -257,7 +257,8 @@ matrix<double> blend::CalculateBias(logger& log, shared_ptr<info<double>> target
 	// Previous forecast's bias corrected data is optional. If the data is not found we'll set the grid to missing.
 	// (This happens, for example, during initialization.)
 	forecast_time prevLeadTime(leadTime);
-	prevLeadTime.OriginDateTime().Adjust(kHourResolution, -itsBlendProducer.originTimestep);
+	prevLeadTime.OriginDateTime().Adjust(kHourResolution, -24);
+	prevLeadTime.ValidDateTime().Adjust(kHourResolution, -24);
 
 	vector<double> prevBias;
 
@@ -354,7 +355,8 @@ matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info<double>> targetI
 	vector<double> prevMAE;
 
 	forecast_time prevLeadTime(leadTime);
-	prevLeadTime.OriginDateTime().Adjust(kHourResolution, -itsBlendProducer.originTimestep);
+	prevLeadTime.OriginDateTime().Adjust(kHourResolution, -24);
+	prevLeadTime.ValidDateTime().Adjust(kHourResolution, -24);
 
 	if (prevLeadTime.Step() <= itsBlendProducer.forecastLength)
 	{
