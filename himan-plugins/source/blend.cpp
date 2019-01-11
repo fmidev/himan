@@ -438,33 +438,13 @@ void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short 
 	}
 
 	log.Info("Latest origin time for producer " + to_string(itsConfiguration->SourceProducers()[0].Id()) +
-	         " ftype val: " + to_string(forecastType.Type()) + ": " + latestOrigin.String());
-
-	// Used for fetching raw model output, bias, and weight for models.
-
-	if (itsBlendProducer == MOS || itsBlendProducer == ECMWF)
-	{
-		// ValidDateTime can be borked on ECMWF and MOS.
-		const int validHour = stoi(current.OriginDateTime().String("%H"));
-		if (validHour == 6 || validHour == 18)
-		{
-			current.ValidDateTime().Adjust(kHourResolution, -6);
-		}
-	}
+	         " ftype val: " + to_string(static_cast<int>(forecastType.Value())) + ": " + latestOrigin.String());
 
 	// Start from the 'earliest' (set below) point in time, and proceed to current time.
-	forecast_time ftime(latestOrigin, current.ValidDateTime());
+	//	forecast_time ftimeo(latestOrigin, current.ValidDateTime());
 
 	const int maxStep = itsBlendProducer.forecastLength;
 	const int originTimeStep = itsBlendProducer.originTimestep;
-
-	ftime.OriginDateTime().Adjust(kHourResolution, -itsNumHours);
-
-	// Check that we're not overstepping the forecast length.
-	while (ftime.Step() > maxStep)
-	{
-		ftime.OriginDateTime().Adjust(kHourResolution, originTimeStep);
-	}
 
 	// Problem: targetInfo has information for the data that we want to fetch, but because of the convoluted way of
 	// calculating everything, this doesn't match with the data we want to write out.
@@ -486,8 +466,10 @@ void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short 
 	Info->Create(targetInfo->Base(), true);
 	Info->First();
 
-	while (true)
+	for (Info->Reset<forecast_time>(); Info->Next<forecast_time>();)
+	//	while (true)
 	{
+		auto ftime = Info->Value<forecast_time>();
 		/// LAPS fetching is done via forecast time in |targetInfo|. Each call to Calculate{Bias,MAE} calculates for one
 		/// time step.
 		///
@@ -530,10 +512,6 @@ void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short 
 				himan::Abort();
 			}
 		}
-
-		Info->Next<forecast_time>();
-
-		ftime.OriginDateTime().Adjust(kHourResolution, originTimeStep);
 	}
 
 	// Remove grid so it won't be written: blend is manually writing out grids with a separate info.
@@ -981,18 +959,28 @@ void blend::SetupOutputForecastTimes(shared_ptr<info<double>> Info, const raw_ti
 	forecast_time ftime(latestOrigin, current.ValidDateTime());
 	ftime.OriginDateTime().Adjust(kHourResolution, -itsNumHours);
 
+	auto numHours = itsNumHours;
+
+	if (ftime.Step() % 12 != 0)
+	{
+		// Adjusted analysis time is not 0 or 12
+		ASSERT(ftime.Step() % 6 == 0);
+
+		ftime.OriginDateTime().Adjust(kHourResolution, 6);
+		numHours -= 6;
+	}
+
 	while (ftime.Step() > maxStep)
 	{
 		ftime.OriginDateTime().Adjust(kHourResolution, originTimeStep);
 	}
 
-	for (int i = 0; i < itsNumHours; i += originTimeStep)
+	for (int i = 0; i < numHours; i += originTimeStep)
 	{
 		ftimes.push_back(ftime);
 		ftime.OriginDateTime().Adjust(kHourResolution, originTimeStep);
 	}
 	ftimes.push_back(ftime);
-
 	Info->Set<forecast_time>(ftimes);
 }
 
