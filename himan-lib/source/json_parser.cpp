@@ -650,6 +650,8 @@ raw_time GetLatestOriginDateTime(const shared_ptr<configuration> conf, const str
 
 	if (!latestFromDatabase.empty())
 	{
+		logger log("json_parser");
+		log.Debug("Latest analysis time: " + latestFromDatabase);
 		return raw_time(latestFromDatabase, "%Y-%m-%d %H:%M:%S");
 	}
 
