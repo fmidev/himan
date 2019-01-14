@@ -154,9 +154,8 @@ void Unpack(std::vector<std::shared_ptr<info<T>>> infos, bool addToCache = true)
  */
 
 template <typename T>
-std::pair<himan::matrix<T>, himan::matrix<T>> CentralDifference(himan::matrix<T>& A,
-                                                                          std::vector<T>& dx,
-                                                                          std::vector<T>& dy);
+std::pair<himan::matrix<T>, himan::matrix<T>> CentralDifference(himan::matrix<T>& A, std::vector<T>& dx,
+                                                                std::vector<T>& dy);
 
 /**
  * @brief Round a double to requested precision
@@ -210,6 +209,7 @@ std::string Expand(const std::string& in);
 template <typename T>
 void DumpVector(const std::vector<T>& arr, const std::string& name = "");
 void DumpVector(const std::vector<double>& arr, const std::string& name = "");
+void DumpVector(const std::vector<float>& arr, const std::string& name = "");
 
 /**
    @brief Get the value of the specified environment variable.

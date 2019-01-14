@@ -20,6 +20,7 @@ class grid;
 namespace util
 {
 extern void DumpVector(const std::vector<double>& vec, const std::string& name);
+extern void DumpVector(const std::vector<float>& vec, const std::string& name);
 }
 
 /**

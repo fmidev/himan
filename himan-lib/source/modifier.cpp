@@ -816,7 +816,7 @@ void modifier_findheight_gt::Calculate(double theValue, double theHeight, double
 	}
 
 	// Entering area
-	if (theValue > findValue && (thePreviousValue < findValue || IsMissing(thePreviousValue)))
+	if (theValue > findValue && (thePreviousValue <= findValue || IsMissing(thePreviousValue)))
 	{
 		// if last value is searched, pick actual level value
 		if (itsFindNthValue == 0)
@@ -931,7 +931,7 @@ void modifier_findheight_lt::Calculate(double theValue, double theHeight, double
 	}
 
 	// Entering area
-	if (theValue < findValue && thePreviousValue > findValue)
+	if (theValue < findValue && thePreviousValue >= findValue)
 	{
 		// if last value is searched, pick actual level value
 		if (itsFindNthValue == 0)
