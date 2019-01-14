@@ -59,6 +59,38 @@ void luatool::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	SetParams({param("DUMMY")});
 
+	if (!itsConfiguration->GetValue("ThreadDistribution").empty())
+	{
+		if (itsConfiguration->GetValue("ThreadDistribution") == "kThreadForAny")
+                {
+                        itsThreadDistribution = ThreadDistribution::kThreadForAny;
+                }
+                else if (itsConfiguration->GetValue("ThreadDistribution") == "kThreadForForecastTypeAndTime")
+		{
+			itsThreadDistribution = ThreadDistribution::kThreadForForecastTypeAndTime;
+		}
+                else if (itsConfiguration->GetValue("ThreadDistribution") == "kThreadForForecastTypeAndLevel")
+                {
+                        itsThreadDistribution = ThreadDistribution::kThreadForForecastTypeAndLevel;
+                }
+                else if (itsConfiguration->GetValue("ThreadDistribution") == "kThreadForTimeAndLevel")
+                {
+                        itsThreadDistribution = ThreadDistribution::kThreadForTimeAndLevel;
+                }
+		else if (itsConfiguration->GetValue("ThreadDistribution") == "kThreadForForecastType")
+		{
+			itsThreadDistribution = ThreadDistribution::kThreadForForecastType;
+		}
+		else if (itsConfiguration->GetValue("ThreadDistribution") == "kThreadForTime")
+		{
+			itsThreadDistribution = ThreadDistribution::kThreadForTime;
+		}
+		else if (itsConfiguration->GetValue("ThreadDistribution") == "kThreadForLevel")
+		{
+			itsThreadDistribution = ThreadDistribution::kThreadForLevel;
+		}
+	}
+
 	Start();
 }
 
@@ -117,15 +149,25 @@ void luatool::ResetVariables(info_t myTargetInfo)
 
 	const auto L = myL.get();
 
+	// luatool is recycling info when data is written, this causes problems with
+	// cache as the data in the cache might be overwritten by another script.
+	// Therefore re-create the info here which means a memory copy.
+	auto newInfo = std::make_shared<info<double>>(*myTargetInfo);
+	newInfo->Create(myTargetInfo->Base());
+	newInfo->Iterator<forecast_type>().Index(myTargetInfo->Index<forecast_type>());
+	newInfo->Iterator<forecast_time>().Index(myTargetInfo->Index<forecast_time>());
+	newInfo->Iterator<level>().Index(myTargetInfo->Index<level>());
+	newInfo->Iterator<param>().Index(myTargetInfo->Index<param>());
+
 	globals(L)["luatool"] = boost::ref(*this);
-	globals(L)["result"] = myTargetInfo;
+	globals(L)["result"] = newInfo;
 	globals(L)["configuration"] = itsConfiguration;
 	globals(L)["write_options"] = boost::ref(itsWriteOptions);
 
 	// Useful variables
-	globals(L)["current_time"] = forecast_time(myTargetInfo->Time());
-	globals(L)["current_level"] = level(myTargetInfo->Level());
-	globals(L)["current_forecast_type"] = forecast_type(myTargetInfo->ForecastType());
+	globals(L)["current_time"] = forecast_time(newInfo->Time());
+	globals(L)["current_level"] = level(newInfo->Level());
+	globals(L)["current_forecast_type"] = forecast_type(newInfo->ForecastType());
 	globals(L)["missing"] = MissingDouble();
 
 	globals(L)["kKelvin"] = constants::kKelvin;
@@ -133,8 +175,8 @@ void luatool::ResetVariables(info_t myTargetInfo)
 	auto h = GET_PLUGIN(hitool);
 
 	h->Configuration(itsConfiguration);
-	h->Time(forecast_time(myTargetInfo->Time()));
-	h->ForecastType(forecast_type(myTargetInfo->ForecastType()));
+	h->Time(forecast_time(newInfo->Time()));
+	h->ForecastType(forecast_type(newInfo->ForecastType()));
 
 	auto r = GET_PLUGIN(radon);
 
@@ -1420,16 +1462,6 @@ void luatool::WriteToFile(const info_t targetInfo, write_options writeOptions)
 
 void luatool::WriteToFile(const info_t targetInfo)
 {
-	// luatool is recycling info when data is written, this causes problems with
-	// cache as the data in the cache might be overwritten by another script.
-	// Therefore re-create the info here which means a memory copy.
-	auto newInfo = std::make_shared<info<double>>(*targetInfo);
-	newInfo->Create(targetInfo->Base());
-	newInfo->Iterator<forecast_type>().Index(targetInfo->Index<forecast_type>());
-	newInfo->Iterator<forecast_time>().Index(targetInfo->Index<forecast_time>());
-	newInfo->Iterator<level>().Index(targetInfo->Index<level>());
-	newInfo->Iterator<param>().Index(targetInfo->Index<param>());
-
-	compiled_plugin_base::WriteToFile(newInfo, itsWriteOptions);
+	compiled_plugin_base::WriteToFile(targetInfo, itsWriteOptions);
 }
 #endif  // __clang_analyzer__
