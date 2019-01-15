@@ -1,19 +1,18 @@
-/**
- * @file plugin_configuration.h
- *
- */
-
 #ifndef PLUGIN_CONFIGURATION_H
 #define PLUGIN_CONFIGURATION_H
 
 #include "configuration.h"
+#include "forecast_time.h"
+#include "forecast_type.h"
+#include "grid.h"
 #include "himan_common.h"
-#include "statistics.h"
+#include "level.h"
 #include <map>
 #include <utility>
 
 namespace himan
 {
+class statistics;
 class plugin_configuration : public configuration
 {
    public:
@@ -73,17 +72,17 @@ class plugin_configuration : public configuration
 	const std::vector<std::string>& GetValueList(const std::string& key) const;
 
 	/**
-	  * @brief Add a new parameter to the preconfigured parameters map
-	  * @param paramName Parameter name
-	  * @param opts      Parameter specific options
-	  */
+	 * @brief Add a new parameter to the preconfigured parameters map
+	 * @param paramName Parameter name
+	 * @param opts      Parameter specific options
+	 */
 
 	void AddParameter(const std::string& paramName, const std::vector<std::pair<std::string, std::string>>& opts);
 
 	/**
-	* @brief Check if the preconfigured parameter exists
-	* @param paramName Parameter name
-	*/
+	 * @brief Check if the preconfigured parameter exists
+	 * @param paramName Parameter name
+	 */
 
 	bool ParameterExists(const std::string& paramName) const;
 
@@ -94,29 +93,51 @@ class plugin_configuration : public configuration
 	std::vector<std::string> GetParameterNames() const;
 
 	/**
-	* @brief Get parameter options
-	* @param paramName Parameter name
-	* @return Parameter options as a vector of strings, empty vector if the parameter doesn't exist
-	* @throws runtime_error if the parameter was not found, use ParamExists(paramName) to check if the parameter exists
-	*/
+	 * @brief Get parameter options
+	 * @param paramName Parameter name
+	 * @return Parameter options as a vector of strings, empty vector if the parameter doesn't exist
+	 * @throws runtime_error if the parameter was not found, use ParamExists(paramName) to check if the parameter exists
+	 */
 
 	const std::vector<std::pair<std::string, std::string>>& GetParameterOptions(const std::string& paramName) const;
-
-	void Info(std::shared_ptr<info> theInfo);
-	std::shared_ptr<info> Info() const;
 
 	std::shared_ptr<statistics> Statistics() const;
 
 	bool StatisticsEnabled() const;
-	void StartStatistics();
 	void WriteStatistics();
 
+	const std::vector<level>& Levels() const
+	{
+		return itsLevels;
+	}
+
+	const std::vector<forecast_time>& Times() const
+	{
+		return itsTimes;
+	}
+
+	const std::vector<forecast_type>& ForecastTypes() const
+	{
+		return itsForecastTypes;
+	}
+
+	const grid* BaseGrid() const
+	{
+		ASSERT(itsBaseGrid);
+		return itsBaseGrid.get();
+	}
+
    private:
+	friend class json_parser;
+
 	std::string itsName;
 	std::map<std::string, std::vector<std::string>> itsOptions;
 	std::map<std::string, std::vector<std::pair<std::string, std::string>>> itsPreconfiguredParams;
-	std::shared_ptr<info> itsInfo;
 	std::shared_ptr<statistics> itsStatistics;
+	std::vector<level> itsLevels;
+	std::vector<forecast_type> itsForecastTypes;
+	std::vector<forecast_time> itsTimes;
+	std::unique_ptr<grid> itsBaseGrid;
 };
 
 inline std::ostream& operator<<(std::ostream& file, const plugin_configuration& ob)

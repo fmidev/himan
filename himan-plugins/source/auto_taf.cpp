@@ -23,7 +23,7 @@ const double ovc = .900;  // 7/8
 struct cloud_layer
 {
 	cloud_layer() : base(MissingDouble()), amount(MissingDouble()), top(MissingDouble()){};
-	cloud_layer(double base, double amount, double top) : base(base), amount(amount), top(top){};
+	cloud_layer(double _base, double _amount, double _top) : base(_base), amount(_amount), top(_top){};
 
 	double base;
 	double amount;
@@ -99,14 +99,6 @@ void auto_taf::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 {
-#ifdef DEBUG
-	auto pxy = myTargetInfo->Grid()->XY(point(24.975133948461, 60.363380893204));
-	auto pdebug =
-	    myTargetInfo->Data().Index(static_cast<size_t>(round(pxy.X())), static_cast<size_t>(round(pxy.Y())), 0);
-	cout << "index of debug point " << pdebug << '\n';
-
-	vector<pair<double, double>> cloud_profile;
-#endif
 	// Required source parameters
 	const params Nparam{param("N-0TO1"), param("N-PRCNT")};
 	const param TCU_CB("CBTCU-FL");
@@ -150,7 +142,8 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	h->HeightUnit(kM);
 
-	auto cbbase = h->VerticalHeight(param("P-HPA"), levelsMin.second.Value(), levelsMax.first.Value(), VEC(LCL500));
+	auto cbbase =
+	    h->VerticalHeight<double>(param("P-HPA"), levelsMin.second.Value(), levelsMax.first.Value(), VEC(LCL500));
 
 	info_t TC = Fetch(forecastTime, level(kHeight, 0.0), TCU_CB, forecastType, false);
 	info_t Ceiling2 = Fetch(forecastTime, level(kHeight, 0.0), C2, forecastType, false);
@@ -162,8 +155,8 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	}
 
 	// 2. search for lowest cloud layer
-	auto few_lowest = h->VerticalHeight(param("N-0TO1"), 0.0, 10000.0, few, 1);
-	auto sct_lowest = h->VerticalHeight(param("N-0TO1"), 0.0, 10000.0, sct, 1);
+	auto few_lowest = h->VerticalHeight<double>(param("N-0TO1"), 0.0, 10000.0, few, 1);
+	auto sct_lowest = h->VerticalHeight<double>(param("N-0TO1"), 0.0, 10000.0, sct, 1);
 
 	for_each(few_lowest.begin(), few_lowest.end(), [](double& val) { val /= 0.3048; });
 	for_each(sct_lowest.begin(), sct_lowest.end(), [](double& val) { val /= 0.3048; });
@@ -236,12 +229,7 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 					top[k].push_back(newtop);
 				}
 			}
-#ifdef DEBUG
-			if (k == pdebug)
-			{
-				cloud_profile.emplace_back(_Height / 0.3048, _N);
-			}
-#endif
+
 			// update the maximum number of cloud layers in the whole grid
 			max_num_cl = max(max_num_cl, base[k].size());
 		}
@@ -484,60 +472,23 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			ovcbase[k] = sct_lowest[k];
 	}
 
-#ifdef DEBUG
-	for (size_t k = 0; k < grd_size; ++k)
-	{
-		// Check against illegal outcomes for TAF
-		assert(!(fewbase[k] > sctbase[k]));
-		assert(!(sctbase[k] > bknbase[k]));
-		assert(!(bknbase[k] > ovcbase[k]));
-		assert(!(cbbase[k] >= ovcbase[k]));
-		assert(!(bknbase[k] >= cbbase[k]));
-		assert(!(sctbase[k] >= cbbase[k]));
-		assert(!(fewbase[k] >= cbbase[k]));
-		assert(!(bknbase[k] < TC->Data().At(k)));
-		assert(!(ovcbase[k] < TC->Data().At(k)));
+	myTargetInfo->Index<param>(0);
+	myTargetInfo->Data().Set(move(fewbase));
 
-		if (k == pdebug)
-		{
-			auto p = myTargetInfo->Grid()->LatLon(pdebug);
-			cout << p.X() << " " << p.Y() << " " << k << '\n';
-			cout << "few " << fewbase[k] << '\n';
-			cout << "sct " << sctbase[k] << '\n';
-			cout << "bkn " << bknbase[k] << '\n';
-			cout << "ovc " << ovcbase[k] << '\n';
-			cout << "cb " << cbbase[k] << '\n';
-			cout << "tcu " << TC->Data().At(k) << '\n';
-			cout << "ceil2 " << Ceiling2->Data().At(k) << '\n';
-			for (auto& x : c_l[k])
-			{
-				cout << "base " << x.base << " top " << x.top << " amount " << x.amount << '\n';
-			}
-		}
-	}
-	for (auto& x : cloud_profile)
-	{
-		cout << "height " << x.first << " N " << x.second << '\n';
-	}
-#endif
+	myTargetInfo->Index<param>(1);
+	myTargetInfo->Data().Set(move(sctbase));
 
-	myTargetInfo->ParamIndex(0);
-	myTargetInfo->Grid()->Data().Set(move(fewbase));
+	myTargetInfo->Index<param>(2);
+	myTargetInfo->Data().Set(move(bknbase));
 
-	myTargetInfo->ParamIndex(1);
-	myTargetInfo->Grid()->Data().Set(move(sctbase));
+	myTargetInfo->Index<param>(3);
+	myTargetInfo->Data().Set(move(ovcbase));
 
-	myTargetInfo->ParamIndex(2);
-	myTargetInfo->Grid()->Data().Set(move(bknbase));
+	myTargetInfo->Index<param>(4);
+	myTargetInfo->Data().Set(move(cbbase));
 
-	myTargetInfo->ParamIndex(3);
-	myTargetInfo->Grid()->Data().Set(move(ovcbase));
-
-	myTargetInfo->ParamIndex(4);
-	myTargetInfo->Grid()->Data().Set(move(cbbase));
-
-	myTargetInfo->ParamIndex(5);
-	myTargetInfo->Grid()->Data().Set(move(cbN));
+	myTargetInfo->Index<param>(5);
+	myTargetInfo->Data().Set(move(cbN));
 
 	string deviceType = "CPU";
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +

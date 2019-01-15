@@ -11,8 +11,6 @@
 
 #include "windvector.cuh"  // need to have this here because of HPTargetType
 
-class NFmiArea;
-
 namespace himan
 {
 namespace plugin
@@ -38,23 +36,15 @@ class windvector : public compiled_plugin, private compiled_plugin_base
 	{
 		return kCompiled;
 	}
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(1, 1);
-	}
 
    protected:
-	virtual std::shared_ptr<info> Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam,
-	                                    const forecast_type& theType = forecast_type(kDeterministic),
-	                                    bool returnPacked = false) const override;
+	virtual std::shared_ptr<info<double>> Fetch(const forecast_time& theTime, const level& theLevel,
+	                                            const param& theParam,
+	                                            const forecast_type& theType = forecast_type(kDeterministic),
+	                                            bool returnPacked = false) const override;
 
    private:
-	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
-	std::unique_ptr<NFmiArea> ToNewbaseArea(std::shared_ptr<info> myTargetInfo) const;
-#ifdef HAVE_CUDA
-	std::unique_ptr<windvector_cuda::options> CudaPrepare(std::shared_ptr<info> myTargetInfo,
-	                                                      std::shared_ptr<info> UInfo, std::shared_ptr<info> VInfo);
-#endif
+	virtual void Calculate(std::shared_ptr<info<double>> theTargetInfo, unsigned short theThreadIndex);
 
 	HPWindVectorTargetType itsCalculationTarget;
 	bool itsVectorCalculation;

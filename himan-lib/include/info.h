@@ -12,14 +12,20 @@
 #include "forecast_type.h"
 #include "grid.h"
 #include "himan_common.h"
-#include "info_simple.h"
+#include "lambert_conformal_grid.h"
+#include "latitude_longitude_grid.h"
 #include "level.h"
+#include "packed_data.h"
 #include "param.h"
+#include "point_list.h"
 #include "producer.h"
 #include "raw_time.h"
 #include "serialization.h"
 #include "station.h"
+#include "stereographic_grid.h"
+#include <limits>  // for std::numeric_limits<size_t>::max();
 #include <vector>
+
 #define VEC(I) I->Data().Values()
 
 namespace himan
@@ -30,22 +36,22 @@ class compiled_plugin_base;
 }
 
 /**
-* @class iterator
-*
-* @brief Nested class inside info to provide iterator functions to info class
-*
-*/
+ * @class iterator
+ *
+ * @brief Nested class inside info to provide iterator functions to info class
+ *
+ */
 
 const size_t kIteratorResetValue = std::numeric_limits<size_t>::max();
 
-template <class T>
+template <class U>
 class iterator
 {
    public:
-	iterator<T>() : itsIndex(kIteratorResetValue)
+	iterator<U>() : itsIndex(kIteratorResetValue)
 	{
 	}
-	explicit iterator<T>(const std::vector<T>& theElements) : itsElements(theElements)
+	explicit iterator<U>(const std::vector<U>& theElements) : itsElements(theElements)
 	{
 		Reset();
 	}
@@ -175,7 +181,18 @@ class iterator
 	 * @return Reference to current value or throw exception
 	 */
 
-	const T& At() const
+	U& At()
+	{
+		if (itsIndex != kIteratorResetValue && itsIndex < itsElements.size())
+		{
+			return itsElements[itsIndex];
+		}
+
+		std::cerr << ClassName() + ": Invalid index value: " + std::to_string(itsIndex) << std::endl;
+		himan::Abort();
+	}
+
+	const U& At() const
 	{
 		if (itsIndex != kIteratorResetValue && itsIndex < itsElements.size())
 		{
@@ -190,7 +207,7 @@ class iterator
 	 * @return Reference to value requested or throw exception
 	 */
 
-	const T& At(size_t theIndex) const
+	const U& At(size_t theIndex) const
 	{
 		if (theIndex < itsElements.size())
 		{
@@ -208,7 +225,7 @@ class iterator
 	 *
 	 */
 
-	bool Set(const T& theElement)
+	bool Set(const U& theElement)
 	{
 		for (size_t i = 0; i < itsElements.size(); i++)
 		{
@@ -230,6 +247,11 @@ class iterator
 	 * @todo Should return bool like Set(const T theElement) ?
 	 */
 
+	void Index(size_t theIndex)
+	{
+		itsIndex = theIndex;
+	}
+	// DEPRECATED
 	void Set(size_t theIndex)
 	{
 		itsIndex = theIndex;
@@ -239,7 +261,7 @@ class iterator
 	 *
 	 */
 
-	void Replace(const T& theNewValue)
+	void Replace(const U& theNewValue)
 	{
 		itsElements[itsIndex] = theNewValue;
 	}
@@ -259,7 +281,7 @@ class iterator
 	{
 		return itsElements.size();
 	}
-	friend std::ostream& operator<<(std::ostream& file, const iterator<T>& ob)
+	friend std::ostream& operator<<(std::ostream& file, const iterator<U>& ob)
 	{
 		return ob.Write(file);
 	}
@@ -274,7 +296,7 @@ class iterator
 	 * @return True if adding was successful
 	 */
 
-	bool Add(const T& newElement, bool strict = true)
+	bool Add(const U& newElement, bool strict = true)
 	{
 		if (strict)
 		{
@@ -302,6 +324,12 @@ class iterator
 	{
 		itsElements.clear();
 	}
+
+	std::vector<U> Values() const
+	{
+		return itsElements;
+	}
+
 	/**
 	 * @brief Write object to stream
 	 */
@@ -321,7 +349,7 @@ class iterator
 	}
 
    private:
-	std::vector<T> itsElements;  //<! Vector to hold the elements
+	std::vector<U> itsElements;  //<! Vector to hold the elements
 	size_t itsIndex;             //<! Current index of iterator
 
 #ifdef SERIALIZATION
@@ -347,18 +375,40 @@ typedef iterator<forecast_time> time_iter;
 typedef iterator<producer> producer_iter;
 typedef iterator<forecast_type> forecast_type_iter;
 
+template <typename U>
+struct type2type
+{
+	typedef U type;
+};
+
+template <typename T>
+struct base
+{
+	std::shared_ptr<himan::grid> grid;
+	matrix<T> data;
+	std::shared_ptr<packed_data> pdata;
+
+	base() : grid(), data(0, 0, 1, MissingValue<T>()), pdata(new packed_data)
+	{
+	}
+	base(std::shared_ptr<himan::grid> grid_, const matrix<T>& data_) : grid(grid_), data(data_), pdata(new packed_data)
+	{
+	}
+};
+
+template <typename T>
 class info
 {
    public:
-	friend class json_parser;
 	friend class himan::plugin::compiled_plugin_base;
+	template <typename>
+	friend class info;  // for templated copy constructor
 
-	info();
-	~info();
+	info() = default;
+	~info() = default;
 
 	/**
 	 * @brief Copy constructor for info class. Will preserve data backend.
-
 	 * New info has the same data backend matrix as the original one.
 	 * This means that multiple threads can access the same data with
 	 * different infos ( --> descriptor positions ). Clone will have the
@@ -366,6 +416,11 @@ class info
 	 */
 
 	info(const info& other);
+
+	// 'coercion constructor' to create info from an info with a different data type
+	template <typename V>
+	info(const info<V>& other);
+
 	info(const std::vector<forecast_type>& ftypes, const std::vector<forecast_time>& times,
 	     const std::vector<level>& levels, const std::vector<param>& params);
 	info(const forecast_type& ftype, const forecast_time& time, const level& level, const param& param);
@@ -393,51 +448,6 @@ class info
 	void Merge(std::vector<std::shared_ptr<info>>& otherInfos);
 
 	/**
-	 * @brief Initialize parameter iterator with new parameters
-	 * @param theParams A vector containing new parameter information for this info
-	 */
-
-	void Params(const std::vector<param>& theParams);
-
-	/**
-	 * @brief Replace current parameter iterator with a new one
-	 * @param theParamIterator New parameter iterator
-	 */
-
-	void ParamIterator(const param_iter& theParamIterator);
-
-	/**
-	 * @brief Initialize level iterator with new levels
-	 * @param theLevels A vector containing new level information for this info
-	 */
-
-	void Levels(const std::vector<level>& theLevels);
-
-	/**
-	 * @brief Replace current level iterator with a new one
-	 * @param theLevelIterator New level iterator
-	 */
-
-	void LevelIterator(const level_iter& theLevelIterator);
-
-	/**
-	 * @brief Initialize time iterator with new times
-	 * @param theTimes A vector containing new time information for this info
-	 */
-
-	void Times(const std::vector<forecast_time>& theTimes);
-
-	/**
-	 * @brief Replace current time iterator with a new one
-	 * @param theTimeIterator New time iterator
-	 */
-
-	void TimeIterator(const time_iter& theTimeIterator);
-
-	void ForecastTypes(const std::vector<forecast_type>& theTypes);
-	void ForecastTypeIterator(const forecast_type_iter& theForecastTypeIterator);
-
-	/**
 	 * @brief Initialize data backend with correct number of matrices
 	 *
 	 * Function will create a number of matrices to
@@ -449,8 +459,7 @@ class info
 	 * Will *not* preserve iterator positions.
 	 */
 
-	void Create(const grid* baseGrid, bool createDataBackend = false);
-	void Create(const grid* baseGrid, const param& par, const level& lev, bool createDataBackend = false);
+	void Create(std::shared_ptr<base<T>> baseGrid, bool createDataBackend = false);
 
 	/**
 	 * @brief Re-order infos in the dimension vector if dimension sizes are changed
@@ -465,19 +474,28 @@ class info
 	 * Will *not* preserve iterator positions.
 	 */
 
-	void Regrid(const std::vector<param>& params);
-	void Regrid(const std::vector<level>& levels);
+	template <typename U>
+	void Regrid(const std::vector<U>& newDim);
 
-	void Producer(long theFmiProducerID);
-	void Producer(const producer& theProducer);
-	const producer& Producer() const;
+	void Producer(long theFmiProducerID)
+	{
+		itsProducer = producer(theFmiProducerID);
+	}
 
+	void Producer(const producer& theProducer)
+	{
+		itsProducer = theProducer;
+	}
+
+	const producer& Producer() const
+	{
+		return itsProducer;
+	}
+
+	//! Set all iterators to first position
 	void First();
 
-	/**
-	 * @brief Reset all descriptors
-	 */
-
+	//! Reset all iterators
 	void Reset();
 
 	/**
@@ -489,149 +507,34 @@ class info
 	bool Next();
 
 	/**
-	 * @see iterator#Reset
-	 */
-
-	void ResetParam();
-
-	/**
-	 * @see iterator#Next
-	 */
-
-	bool NextParam();
-
-	/**
-	 * @see iterator#First
-	 */
-
-	bool FirstParam();
-
-	/**
-	 * @brief Set parameter iterator to position indicated by the function argument
-	 * @see iterator#Set
-	 */
-
-	bool Param(const param& theRequiredParam);
-	void ParamIndex(size_t theParamIndex);
-	size_t ParamIndex() const;
-	param Param() const;
-	const param& PeekParam(size_t theIndex) const;
-	void SetParam(const param& theParam);
-
-	size_t SizeParams() const;
-
-	/**
-	 * @see iterator#Reset
-	 */
-
-	void ResetLevel();
-
-	/**
-	 * @see iterator#Next
-	 */
-
-	bool NextLevel();
-
-	/**
-	 * @see iterator#Previous
-	 */
-
-	bool PreviousLevel();
-
-	/**
-	 * @see iterator#First
-	 */
-
-	bool FirstLevel();
-
-	/**
-	 * @see iterator#Last
-	 */
-
-	bool LastLevel();
-	/**
-	 * @brief Set level iterator to position indicated by the function argument
-	 * @see iterator#Set
-	 */
-
-	bool Level(const level& theLevel);
-	void LevelIndex(size_t theLevelIndex);
-	size_t LevelIndex() const;
-	level Level() const;
-	const level& PeekLevel(size_t theIndex) const;
-	void SetLevel(const level& theLevel);
-
-	HPLevelOrder LevelOrder() const;
-	void LevelOrder(HPLevelOrder levelOrder);
-
-	size_t SizeLevels() const;
-
-	/**
-	 * @see iterator#Reset
-	 */
-
-	void ResetTime();
-
-	/**
-	 * @see iterator#Next
-	 */
-
-	bool NextTime();
-
-	/**
-	 * @see iterator#Previous
-	 */
-
-	bool PreviousTime();
-
-	/**
-	 * @see iterator#First
-	 */
-
-	bool FirstTime();
-
-	/**
-	 * @see iterator#Last
-	 */
-
-	bool LastTime();
-
-	/**
-	 * @brief Set time iterator to position indicated by the function argument
-	 * @see iterator#Set
-	 */
-
-	bool Time(const forecast_time& theTime);
-	void TimeIndex(size_t theTimeIndex);
-	size_t TimeIndex() const;
-	forecast_time Time() const;
-	const forecast_time& PeekTime(size_t theIndex) const;
-	void SetTime(const forecast_time& theTime);
-
-	size_t SizeTimes() const;
-
-	/**
 	 * @brief Set location iterator to given index value. No limit-checking is made.
 	 */
 
-	void LocationIndex(size_t theLocationIndex);
-	size_t LocationIndex() const;
-	void ResetLocation();
+	void LocationIndex(size_t theLocationIndex)
+	{
+		itsLocationIndex = theLocationIndex;
+	}
+
+	void ResetLocation()
+	{
+		itsLocationIndex = kIteratorResetValue;
+	}
+
 	bool NextLocation();
-	bool FirstLocation();
-	bool PreviousLocation();
-	bool LastLocation();
-	size_t LocationIndex();
+	bool FirstLocation()
+	{
+		ResetLocation();
+		return NextLocation();
+	}
+	size_t LocationIndex() const
+	{
+		return itsLocationIndex;
+	}
 
-	size_t SizeLocations() const;
-
-	bool NextForecastType();
-	void ResetForecastType();
-	bool FirstForecastType();
-	size_t ForecastTypeIndex() const;
-	size_t SizeForecastTypes() const;
-	bool ForecastType(const forecast_type& theType);
-	forecast_type ForecastType() const;
+	size_t SizeLocations() const
+	{
+		return itsDimensions[Index()]->data.Size();
+	}
 
 	/**
 	 * @brief Return current latlon coordinates
@@ -654,68 +557,69 @@ class info
 	station Station() const;
 
 	/**
-	 * @return Current grid
-	 */
-
-	grid* Grid() const;
-	std::shared_ptr<grid> SharedGrid() const;
-
-	/**
-	 * @brief Return data matrix from the given time/level/param indexes
-	 *
-	 * @note Function argument order is important!
-	 *
-	 * @return Data matrix pointed by the given function arguments.
-	 */
-
-	grid* Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) const;  // Always this order
-
-	/**
 	 * @brief Replace current grid with the function argument
 	 * @param d shared pointer to a grid instance
 	 */
 
-	void Grid(std::shared_ptr<grid> d);
+	void Base(std::shared_ptr<base<T>> b)
+	{
+		ASSERT(itsDimensions.size() > Index());
+		itsDimensions[Index()] = b;
+	}
+
+	std::shared_ptr<base<T>> Base()
+	{
+		return itsDimensions[Index()];
+	}
 
 	/**
 	 * @brief Shortcut to get the current data matrix
 	 * @return Current data matrix
 	 */
 
-	matrix<double>& Data();
+	matrix<T>& Data()
+	{
+		return itsDimensions[Index()]->data;
+	}
+
+	std::shared_ptr<grid> Grid() const
+	{
+		ASSERT(itsDimensions.size());
+		return itsDimensions[Index()]->grid;
+	}
+
+	std::shared_ptr<packed_data> PackedData() const
+	{
+		return itsDimensions[Index()]->pdata;
+	}
 
 	/**
 	 * @brief Return size of meta matrix. Is the same as times*params*levels.
 	 *
 	 */
 
-	size_t DimensionSize() const;
+	size_t DimensionSize() const
+	{
+		return itsDimensions.size();
+	}
 
 	/**
 	 * @brief Set the data value pointed by the iterators with a new one
 	 */
 
-	void Value(double theValue);
+	void Value(T theValue)
+	{
+		Data().Set(itsLocationIndex, theValue);
+	}
 
 	/**
 	 * @return Data value pointed by the iterators
 	 */
 
-	double Value() const;
-
-#ifdef HAVE_CUDA
-
-	/**
-	 * @brief Stupify this info to a C-style struct
-	 *
-	 * @return
-	 */
-
-	info_simple* ToSimple() const;
-
-#endif
-
-	const std::vector<std::shared_ptr<grid>>& Dimensions() const;
+	T Value() const
+	{
+		return itsDimensions[Index()]->data.At(itsLocationIndex);
+	}
 
 	/**
 	 * @brief Clear info contents and iterators
@@ -725,7 +629,10 @@ class info
 
 	void Clear();
 
-	bool IsValidGrid() const;
+	bool IsValidGrid() const
+	{
+		return (itsDimensions[Index()] != nullptr && Grid());
+	}
 
 	/**
 	 * @brief Set the iterator positions to first valid grid found.
@@ -735,31 +642,213 @@ class info
 	 * (parameter).
 	 */
 	void FirstValidGrid();
-
-	/**
-	 * @brief Clone an info
-	 *
-	 * Simply put we create a copy of the current instance
-	 * and copy all data so that the matrices are not shared
-	 * anymore.
-	 *
-	 * This function used to be called ReGrid.
-	 *
-	 * Does retain iterator positions.
-	 */
-
 	info Clone();
 
-	time_iter& TimeIterator();
-	param_iter& ParamIterator();
-	level_iter& LevelIterator();
-	forecast_type_iter& ForecastTypeIterator();
+	// The following four functions are for convenience and backwards
+	// compatibility only
+
+	const param& Param() const
+	{
+		return itsParamIterator.At();
+	}
+
+	param& Param()
+	{
+		return itsParamIterator.At();
+	}
+
+	const level& Level() const
+	{
+		return itsLevelIterator.At();
+	}
+
+	level& Level()
+	{
+		return itsLevelIterator.At();
+	}
+
+	const forecast_time& Time() const
+	{
+		return itsTimeIterator.At();
+	}
+
+	forecast_time& Time()
+	{
+		return itsTimeIterator.At();
+	}
+
+	const forecast_type& ForecastType() const
+	{
+		return itsForecastTypeIterator.At();
+	}
+
+	forecast_type& ForecastType()
+	{
+		return itsForecastTypeIterator.At();
+	}
+
+	template <typename U>
+	himan::iterator<U>& Iterator()
+	{
+		return ReturnIterator(type2type<U>());
+	}
+
+	template <typename U>
+	const himan::iterator<U>& Iterator() const
+	{
+		return ReturnIterator(type2type<U>());
+	}
+	//! Set iterator position to first element
+	template <typename U>
+	bool First()
+	{
+		return Iterator<U>().First();
+	}
+
+	//! Set iterator position to last element
+	template <typename U>
+	bool Last()
+	{
+		return Iterator<U>().Last();
+	}
+
+	//! Advance iterator by one
+	template <typename U>
+	bool Next()
+	{
+		return Iterator<U>().Next();
+	}
+
+	//! Retreat iterator by one
+	template <typename U>
+	bool Previous()
+	{
+		return Iterator<U>().Previous();
+	}
+
+	//! Reset iterator position (not pointing to any element)
+	template <typename U>
+	void Reset()
+	{
+		Iterator<U>().Reset();
+	}
+
+	//! Replace iterator with a new one
+	template <typename U>
+	void Iterator(const himan::iterator<U>& theIter)
+	{
+		Iterator<U>() = theIter;
+	}
+
+	//! Set iterator values from a vector replacing old values
+	template <typename U>
+	void Set(const std::vector<U>& values)
+	{
+		auto& iter = Iterator<U>();
+
+		if (!itsDimensions.empty() && iter.Size() && iter.Size() < values.size())
+		{
+			Regrid<U>(values);
+		}
+
+		iter = iterator<U>(values);
+	}
+
+	//! Replace a single value in iterator
+	template <typename U>
+	void Set(const U& value)
+	{
+		Iterator<U>().Replace(value);
+	}
+
+	//! Return iteraror value with given index without moving the position
+	template <typename U>
+	const U& Peek(size_t index) const
+	{
+		return Iterator<U>().At(index);
+	}
+
+	//! Find if a given value is in the iterator range
+	template <typename U>
+	bool Find(const U& value)
+	{
+		return Iterator<U>().Set(value);
+	}
+
+	//! Return current iterator index number
+	template <typename U>
+	size_t Index() const
+	{
+		return Iterator<U>().Index();
+	}
+
+	//! Set current iterator index number
+	template <typename U>
+	void Index(size_t theIndex)
+	{
+		Iterator<U>().Index(theIndex);
+	}
+
+	//! Return iterator size
+	template <typename U>
+	size_t Size() const
+	{
+		return Iterator<U>().Size();
+	}
+
+	//! Return iterator value from current position
+	template <typename U>
+	U Value() const
+	{
+		return Iterator<U>().At();
+	}
 
    protected:
-	std::unique_ptr<grid> itsBaseGrid;  //!< grid information from json. used as a template, never to store data
+	std::vector<std::shared_ptr<base<T>>>& Dimensions()
+	{
+		return itsDimensions;
+	}
 
    private:
-	void Init();
+	const himan::iterator<forecast_type>& ReturnIterator(type2type<forecast_type>) const
+	{
+		return itsForecastTypeIterator;
+	}
+
+	himan::iterator<forecast_type>& ReturnIterator(type2type<forecast_type>)
+	{
+		return itsForecastTypeIterator;
+	}
+
+	const himan::iterator<forecast_time>& ReturnIterator(type2type<forecast_time>) const
+	{
+		return itsTimeIterator;
+	}
+
+	himan::iterator<forecast_time>& ReturnIterator(type2type<forecast_time>)
+	{
+		return itsTimeIterator;
+	}
+
+	const himan::iterator<level>& ReturnIterator(type2type<level>) const
+	{
+		return itsLevelIterator;
+	}
+
+	himan::iterator<level>& ReturnIterator(type2type<level>)
+	{
+		return itsLevelIterator;
+	}
+
+	const himan::iterator<param>& ReturnIterator(type2type<param>) const
+	{
+		return itsParamIterator;
+	}
+
+	himan::iterator<param>& ReturnIterator(type2type<param>)
+	{
+		return itsParamIterator;
+	}
 
 	/**
 	 * @brief Re-create indexing of elements in meta-matrix if the dimensions
@@ -771,7 +860,7 @@ class info
 	 *
 	 * ReIndex() moves data around but does not copy (ie allocate new memory).
 	 *
-	*/
+	 */
 
 	void ReIndex(size_t oldForecastTypeSize, size_t oldTimeSize, size_t oldLevelSize, size_t oldParamSize);
 
@@ -786,22 +875,24 @@ class info
 	 */
 
 	size_t Index(size_t forecastTypeIndex, size_t timeIndex, size_t levelIndex, size_t paramIndex) const;
-	size_t Index() const;
 
-	HPLevelOrder itsLevelOrder;
+	size_t Index() const
+	{
+		return Index(Index<forecast_type>(), Index<forecast_time>(), Index<level>(), Index<param>());
+	}
 
 	level_iter itsLevelIterator;
 	time_iter itsTimeIterator;
 	param_iter itsParamIterator;
 	forecast_type_iter itsForecastTypeIterator;
 
-	std::vector<std::shared_ptr<grid>> itsDimensions;
+	std::vector<std::shared_ptr<base<T>>> itsDimensions;
 
-	logger itsLogger;
+	logger itsLogger = logger("info");
 
 	producer itsProducer;
 
-	size_t itsLocationIndex;
+	size_t itsLocationIndex = kIteratorResetValue;
 
 #ifdef SERIALIZATION
 	friend class cereal::access;
@@ -809,55 +900,16 @@ class info
 	template <class Archive>
 	void serialize(Archive& ar)
 	{
-		ar(CEREAL_NVP(itsLevelOrder), CEREAL_NVP(itsLevelIterator), CEREAL_NVP(itsTimeIterator),
-		   CEREAL_NVP(itsParamIterator), CEREAL_NVP(itsForecastTypeIterator), CEREAL_NVP(itsDimensions),
-		   CEREAL_NVP(itsBaseGrid), CEREAL_NVP(itsLogger), CEREAL_NVP(itsProducer), CEREAL_NVP(itsLocationIndex));
+		ar(CEREAL_NVP(itsLevelIterator), CEREAL_NVP(itsTimeIterator), CEREAL_NVP(itsParamIterator),
+		   CEREAL_NVP(itsForecastTypeIterator), CEREAL_NVP(itsDimensions), CEREAL_NVP(itsLogger),
+		   CEREAL_NVP(itsProducer), CEREAL_NVP(itsLocationIndex));
 	}
 #endif
 };
 
-inline std::ostream& operator<<(std::ostream& file, const info& ob)
-{
-	return ob.Write(file);
-}
-inline size_t himan::info::Index(size_t forecastTypeIndex, size_t timeIndex, size_t levelIndex, size_t paramIndex) const
-{
-	ASSERT(forecastTypeIndex != kIteratorResetValue);
-	ASSERT(timeIndex != kIteratorResetValue);
-	ASSERT(levelIndex != kIteratorResetValue);
-	ASSERT(paramIndex != kIteratorResetValue);
+#include "info_impl.h"
 
-	return (paramIndex * itsForecastTypeIterator.Size() * itsTimeIterator.Size() * itsLevelIterator.Size() +
-	        levelIndex * itsForecastTypeIterator.Size() * itsTimeIterator.Size() +
-	        timeIndex * itsForecastTypeIterator.Size() + forecastTypeIndex);
-}
-
-inline size_t himan::info::Index() const
-{
-	return Index(ForecastTypeIndex(), TimeIndex(), LevelIndex(), ParamIndex());
-}
-inline grid* info::Grid() const
-{
-	ASSERT(itsDimensions.size());
-	return itsDimensions[Index()].get();
-}
-
-inline grid* info::Grid(size_t timeIndex, size_t levelIndex, size_t paramIndex) const
-{
-	ASSERT(itsDimensions.size());
-	return itsDimensions[Index(ForecastTypeIndex(), timeIndex, levelIndex, paramIndex)].get();
-}
-
-inline void info::Value(double theValue)
-{
-	Grid()->Data().Set(itsLocationIndex, theValue);
-}
-
-inline double info::Value() const
-{
-	return Grid()->Data().At(itsLocationIndex);
-}
-typedef std::shared_ptr<info> info_t;
+typedef std::shared_ptr<info<double>> info_t;
 
 }  // namespace himan
 

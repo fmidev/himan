@@ -1,6 +1,7 @@
 #include "csv.h"
 #include "logger.h"
 #include "point_list.h"
+#include "timer.h"
 #include "util.h"
 #include <algorithm>
 #include <boost/filesystem.hpp>
@@ -13,7 +14,14 @@ csv::csv()
 {
 	itsLogger = logger("csv");
 }
-bool csv::ToFile(info& theInfo, string& theOutputFile)
+
+bool csv::ToFile(info<double>& theInfo, string& theOutputFile)
+{
+	return ToFile<double>(theInfo, theOutputFile);
+}
+
+template <typename T>
+bool csv::ToFile(info<T>& theInfo, string& theOutputFile)
 {
 	if (theInfo.Grid()->Class() != kIrregularGrid)
 	{
@@ -34,7 +42,7 @@ bool csv::ToFile(info& theInfo, string& theOutputFile)
 	    << endl;
 
 	theInfo.First();
-	theInfo.ResetParam();
+	theInfo.template Reset<param>();
 
 	const auto originTime = theInfo.Time().OriginDateTime().String();
 	while (theInfo.Next())
@@ -72,10 +80,20 @@ bool csv::ToFile(info& theInfo, string& theOutputFile)
 	return true;
 }
 
-shared_ptr<himan::info> csv::FromFile(const string& inputFile, const search_options& options,
-                                      bool readIfNotMatching) const
+template bool csv::ToFile<double>(info<double>&, string&);
+template bool csv::ToFile<float>(info<float>&, string&);
+
+shared_ptr<himan::info<double>> csv::FromFile(const string& inputFile, const search_options& options,
+                                              bool readIfNotMatching) const
 {
-	info_t all, requested;
+	return FromFile<double>(inputFile, options, readIfNotMatching);
+}
+
+template <typename T>
+shared_ptr<himan::info<T>> csv::FromFile(const string& inputFile, const search_options& options,
+                                         bool readIfNotMatching) const
+{
+	shared_ptr<info<T>> all, requested;
 
 	vector<string> lines;
 	string line;
@@ -87,7 +105,7 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, const search_opti
 		lines.push_back(line);
 	}
 
-	all = util::CSVToInfo(lines);
+	all = util::CSVToInfo<T>(lines);
 
 	if (readIfNotMatching)
 	{
@@ -95,7 +113,7 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, const search_opti
 		// We just have to trust that it came from the producer that was requested.
 
 		all->First();
-		all->ResetParam();
+		all->template Reset<param>();
 
 		while (all->Next())
 		{
@@ -114,7 +132,7 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, const search_opti
 	forecast_time optsTime(options.time);
 
 	all->First();
-	all->ResetParam();
+	all->template Reset<param>();
 
 	// Remove those dimensions that are not requested
 	while (all->Next())
@@ -178,23 +196,24 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, const search_opti
 		throw kFileDataNotFound;
 	}
 
-	requested = make_shared<info>();
+	requested = make_shared<info<T>>();
 	requested->Producer(options.prod);
 
-	requested->Times(times);
-	requested->Params(params);
-	requested->Levels(levels);
-	requested->ForecastTypes(ftypes);
+	requested->template Set<forecast_time>(times);
+	requested->template Set<param>(params);
+	requested->template Set<level>(levels);
+	requested->template Set<forecast_type>(ftypes);
 
-	auto base = unique_ptr<grid>(new point_list());  // placeholder
+	auto b = make_shared<base<T>>();
+	b->grid = shared_ptr<grid>(new point_list());  // placeholder
 
-	requested->Create(base.get(), true);
+	requested->Create(b, true);
 	requested->First();
-	requested->ResetParam();
+	requested->template Reset<param>();
 
 	while (requested->Next())
 	{
-		dynamic_cast<point_list*>(requested->Grid())->Stations(stations);
+		dynamic_pointer_cast<point_list>(requested->Grid())->Stations(stations);
 	}
 
 	itsLogger.Debug("Read " + to_string(times.size()) + " times, " + to_string(levels.size()) + " levels, " +
@@ -202,17 +221,17 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, const search_opti
 	                " params from file '" + inputFile + "'");
 
 	requested->First();
-	requested->ResetParam();
+	requested->template Reset<param>();
 
 	while (requested->Next())
 	{
-		if (!all->Param(requested->Param()))
+		if (!all->template Find<param>(requested->Param()))
 			throw runtime_error("Impossible error occurred");
-		if (!all->Level(requested->Level()))
+		if (!all->template Find<level>(requested->Level()))
 			throw runtime_error("Impossible error occurred");
-		if (!all->Time(requested->Time()))
+		if (!all->template Find<forecast_time>(requested->Time()))
 			throw runtime_error("Impossible error occurred");
-		if (!all->ForecastType(requested->ForecastType()))
+		if (!all->template Find<forecast_type>(requested->ForecastType()))
 			throw runtime_error("Impossible error occurred");
 
 		for (requested->ResetLocation(); requested->NextLocation();)
@@ -230,3 +249,6 @@ shared_ptr<himan::info> csv::FromFile(const string& inputFile, const search_opti
 
 	return requested;
 }
+
+template shared_ptr<himan::info<double>> csv::FromFile<double>(const string&, const search_options&, bool) const;
+template shared_ptr<himan::info<float>> csv::FromFile<float>(const string&, const search_options&, bool) const;

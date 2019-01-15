@@ -8,7 +8,6 @@
 
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
-#include "tpot.cuh"
 
 namespace himan
 {
@@ -35,45 +34,9 @@ class tpot : public compiled_plugin, private compiled_plugin_base
 	{
 		return kCompiled;
 	}
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(1, 1);
-	}
 
    private:
-	/**
-	 * @brief Calculating pseudo-adiabatic theta (ie thetaw).
-	 *
-	 * Method: numerical integration from LCL to 1000mb level along wet adiabatic line.
-	 *
-	 * Numerical integration method used: leapfrog starting with euler
-	 *
-	 * Original author AK Sarkanen / May 1985
-	 *
-	 * @param P Pressure in hPa
-	 * @param T Temperature in C
-	 * @param TD Dew point temperature in C
-	 * @return Pseudo-adiabatic potential temperature in C
-	 */
-
-	double ThetaW(double P, double T, double TD);
-
-	/**
-	  * @brief Calculate equivalent potential temperature
-	  *
-	  * @param P Pressure in Pa
-	  * @param T Temperature in K
-	  * @param TD Dew point temperature in C
-	  * @return Equivalent potential temperature in K
-	  */
-
-	double ThetaE(double P, double T, double TD);
-
-	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short theThreadIndex);
-#ifdef HAVE_CUDA
-	std::unique_ptr<tpot_cuda::options> CudaPrepare(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo,
-	                                                std::shared_ptr<info> PInfo, std::shared_ptr<info> TDInfo);
-#endif
+	virtual void Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned short theThreadIndex);
 
 	bool itsThetaCalculation;
 	bool itsThetaWCalculation;

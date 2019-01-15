@@ -24,24 +24,6 @@ aggregation::aggregation(HPAggregationType theType, HPTimeResolution theTimeReso
 {
 }
 
-aggregation::aggregation(const aggregation& other)
-    : itsType(other.itsType),
-      itsTimeResolution(other.itsTimeResolution),
-      itsTimeResolutionValue(other.itsTimeResolutionValue),
-      itsFirstTimeValue(other.itsFirstTimeValue)
-{
-}
-
-aggregation& aggregation::operator=(const aggregation& other)
-{
-	itsTimeResolutionValue = other.itsTimeResolutionValue;
-	itsFirstTimeValue = other.itsFirstTimeValue;
-	itsTimeResolution = other.itsTimeResolution;
-	itsType = other.itsType;
-
-	return *this;
-}
-
 bool aggregation::operator==(const aggregation& other) const
 {
 	if (this == &other)

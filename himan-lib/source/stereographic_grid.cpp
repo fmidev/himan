@@ -1,11 +1,12 @@
 #include "stereographic_grid.h"
+#include <functional>
 #include <ogr_spatialref.h>
 
 using namespace himan;
 using namespace std;
 
 stereographic_grid::stereographic_grid()
-    : grid(kRegularGrid, kStereographic),
+    : regular_grid(),
       itsBottomLeft(),
       itsTopLeft(),
       itsOrientation(kHPMissingInt),
@@ -15,20 +16,20 @@ stereographic_grid::stereographic_grid()
       itsNj(kHPMissingInt)
 {
 	itsLogger = logger("stereographic_grid");
+	Type(kStereographic);
 }
 
 stereographic_grid::stereographic_grid(HPScanningMode theScanningMode, point theBottomLeft, point theTopLeft,
                                        double theOrientation)
-    : grid(kRegularGrid, kStereographic, theScanningMode),
-      itsBottomLeft(theBottomLeft),
-      itsTopLeft(theTopLeft),
-      itsOrientation(theOrientation)
+    : regular_grid(), itsBottomLeft(theBottomLeft), itsTopLeft(theTopLeft), itsOrientation(theOrientation)
 {
 	itsLogger = logger("stereographic_grid");
+	Type(kStereographic);
+	ScanningMode(theScanningMode);
 }
 
 stereographic_grid::stereographic_grid(const stereographic_grid& other)
-    : grid(other),
+    : regular_grid(other),
       itsBottomLeft(other.itsBottomLeft),
       itsTopLeft(other.itsTopLeft),
       itsOrientation(other.itsOrientation),
@@ -106,7 +107,7 @@ void stereographic_grid::CreateAreaAndGrid() const
 	call_once(itsAreaFlag, [&]() {
 		std::stringstream ss;
 
-		if (itsOrientation == kHPMissingInt || itsEarthShape == earth_shape() || FirstPoint() == point())
+		if (itsOrientation == kHPMissingInt || itsEarthShape == earth_shape<double>() || FirstPoint() == point())
 		{
 			itsLogger.Fatal("Missing required area information");
 			himan::Abort();
@@ -198,6 +199,9 @@ point stereographic_grid::XY(const point& latlon) const
 
 	const double x = (projX / itsDi);
 	const double y = (projY / itsDj);
+
+	if (x < 0 || x > static_cast<double>(Ni() - 1) || y < 0 || y > static_cast<double>(Nj() - 1))
+		return point(MissingDouble(), MissingDouble());
 
 	return point(x, y);
 }
@@ -357,48 +361,25 @@ point stereographic_grid::LastPoint() const
 	}
 }
 
-bool stereographic_grid::Swap(HPScanningMode newScanningMode)
+size_t stereographic_grid::Hash() const
 {
-	if (itsScanningMode == newScanningMode)
-	{
-		return true;
-	}
-
-	// Flip with regards to x axis
-
-	if ((itsScanningMode == kTopLeft && newScanningMode == kBottomLeft) ||
-	    (itsScanningMode == kBottomLeft && newScanningMode == kTopLeft))
-	{
-		size_t halfSize = static_cast<size_t>(floor(Nj() / 2));
-
-		for (size_t y = 0; y < halfSize; y++)
-		{
-			for (size_t x = 0; x < Ni(); x++)
-			{
-				double upper = itsData.At(x, y);
-				double lower = itsData.At(x, Nj() - 1 - y);
-
-				itsData.Set(x, y, 0, lower);
-				itsData.Set(x, Nj() - 1 - y, 0, upper);
-			}
-		}
-	}
-	else
-	{
-		itsLogger.Error("Swap from mode " + string(HPScanningModeToString.at(itsScanningMode)) + " to mode " +
-		                string(HPScanningModeToString.at(newScanningMode)) + " not implemented yet");
-		return false;
-	}
-
-	itsScanningMode = newScanningMode;
-
-	return true;
+	vector<size_t> hashes;
+	hashes.push_back(Type());
+	hashes.push_back(FirstPoint().Hash());
+	hashes.push_back(Ni());
+	hashes.push_back(Nj());
+	hashes.push_back(hash<double>{}(Di()));
+	hashes.push_back(hash<double>{}(Dj()));
+	hashes.push_back(ScanningMode());
+	hashes.push_back(hash<double>{}(Orientation()));
+	return boost::hash_range(hashes.begin(), hashes.end());
 }
 
-stereographic_grid* stereographic_grid::Clone() const
+unique_ptr<grid> stereographic_grid::Clone() const
 {
-	return new stereographic_grid(*this);
+	return unique_ptr<grid>(new stereographic_grid(*this));
 }
+
 ostream& stereographic_grid::Write(std::ostream& file) const
 {
 	grid::Write(file);
@@ -433,7 +414,7 @@ bool stereographic_grid::operator==(const grid& other) const
 
 bool stereographic_grid::EqualsTo(const stereographic_grid& other) const
 {
-	if (!grid::EqualsTo(other))
+	if (!regular_grid::EqualsTo(other))
 	{
 		return false;
 	}

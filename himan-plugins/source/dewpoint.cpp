@@ -12,6 +12,14 @@
 using namespace std;
 using namespace himan::plugin;
 
+#ifdef HAVE_CUDA
+namespace dewpointgpu
+{
+extern void Process(std::shared_ptr<const himan::plugin_configuration> conf,
+                    std::shared_ptr<himan::info<double>> myTargetInfo);
+}
+#endif
+
 dewpoint::dewpoint()
 {
 	itsCudaEnabledCalculation = true;
@@ -42,7 +50,7 @@ void dewpoint::Process(shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void dewpoint::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	const param TParam("T-K");
 	const params RHParam = {param("RH-PRCNT"), param("RH-0TO1")};
@@ -73,10 +81,8 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 
 	SetAB(myTargetInfo, TInfo);
 
-	// Special case for harmonie & MEPS
-	if (RHInfo->Param().Unit() != kPrcnt || itsConfiguration->SourceProducer().Id() == 199)
+	if (RHInfo->Param().Name() == "RH-0TO1")
 	{
-		itsLogger.Warning("Unable to determine RH unit, assuming 0 .. 1");
 		RHScale = 100.0;
 	}
 
@@ -95,58 +101,27 @@ void dewpoint::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInd
 	{
 		deviceType = "GPU";
 
-		auto opts = CudaPrepare(myTargetInfo, TInfo, RHInfo);
-
-		dewpoint_cuda::Process(*opts);
+		dewpointgpu::Process(itsConfiguration, myTargetInfo);
 	}
 	else
 #endif
 	{
 		deviceType = "CPU";
+		auto& target = VEC(myTargetInfo);
+		const auto& TVec = VEC(TInfo);
+		const auto& RHVec = VEC(RHInfo);
 
-		LOCKSTEP(myTargetInfo, TInfo, RHInfo)
+		for (auto&& tup : zip_range(target, TVec, RHVec))
 		{
-			double T = TInfo->Value();
-			double RH = RHInfo->Value();
+			double& result = tup.get<0>();
 
-			T += TBase;
-			RH *= RHScale;
+			const double T = tup.get<1>();
+			const double RH = tup.get<2>();
 
-			double TD = metutil::DewPointFromRH_<double>(T, RH);
-
-			myTargetInfo->Value(TD);
+			result = metutil::DewPointFromRH_<double>(T + TBase, RH * RHScale);
 		}
 	}
 
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
 	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
-
-#ifdef HAVE_CUDA
-
-unique_ptr<dewpoint_cuda::options> dewpoint::CudaPrepare(shared_ptr<info> myTargetInfo, shared_ptr<info> TInfo,
-                                                         shared_ptr<info> RHInfo)
-{
-	unique_ptr<dewpoint_cuda::options> opts(new dewpoint_cuda::options);
-
-	opts->t = TInfo->ToSimple();
-	opts->rh = RHInfo->ToSimple();
-	opts->td = myTargetInfo->ToSimple();
-
-	opts->N = opts->td->size_x * opts->td->size_y;
-
-	if (TInfo->Param().Unit() == kC)
-	{
-		opts->t_base = himan::constants::kKelvin;
-	}
-
-	if (RHInfo->Param().Unit() != kPrcnt || itsConfiguration->SourceProducer().Id() == 199)
-	{
-		// If unit cannot be detected, assume the values are from 0 .. 1
-		opts->rh_scale = 100;
-	}
-
-	return opts;
-}
-
-#endif

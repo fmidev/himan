@@ -1,16 +1,12 @@
 #include "latitude_longitude_grid.h"
 #include "info.h"
-#include <NFmiRotatedLatLonArea.h>
-
-#ifdef HAVE_CUDA
-#include "simple_packed.h"
-#endif
+#include <functional>
 
 using namespace himan;
 using namespace std;
 
 latitude_longitude_grid::latitude_longitude_grid()
-    : grid(kRegularGrid, kLatitudeLongitude),
+    : regular_grid(),
       itsBottomLeft(),
       itsTopRight(),
       itsBottomRight(),
@@ -18,14 +14,14 @@ latitude_longitude_grid::latitude_longitude_grid()
       itsDi(kHPMissingValue),
       itsDj(kHPMissingValue),
       itsNi(kHPMissingInt),
-      itsNj(kHPMissingInt),
-      itsIsGlobal(false)
+      itsNj(kHPMissingInt)
 {
 	itsLogger = logger("latitude_longitude_grid");
+	Type(kLatitudeLongitude);
 }
 
 latitude_longitude_grid::latitude_longitude_grid(HPScanningMode theScanningMode, point theBottomLeft, point theTopRight)
-    : grid(kRegularGrid, kLatitudeLongitude, theScanningMode),
+    : regular_grid(),
       itsBottomLeft(theBottomLeft),
       itsTopRight(theTopRight),
       itsBottomRight(),
@@ -33,15 +29,16 @@ latitude_longitude_grid::latitude_longitude_grid(HPScanningMode theScanningMode,
       itsDi(kHPMissingValue),
       itsDj(kHPMissingValue),
       itsNi(kHPMissingInt),
-      itsNj(kHPMissingInt),
-      itsIsGlobal(false)
+      itsNj(kHPMissingInt)
 {
 	itsLogger = logger("latitude_longitude_grid");
+	Type(kLatitudeLongitude);
+	ScanningMode(theScanningMode);
 	UpdateCoordinates();
 }
 
 latitude_longitude_grid::latitude_longitude_grid(const latitude_longitude_grid& other)
-    : grid(other),
+    : regular_grid(other),
       itsBottomLeft(other.itsBottomLeft),
       itsTopRight(other.itsTopRight),
       itsBottomRight(other.itsBottomRight),
@@ -49,8 +46,7 @@ latitude_longitude_grid::latitude_longitude_grid(const latitude_longitude_grid& 
       itsDi(other.itsDi),
       itsDj(other.itsDj),
       itsNi(other.itsNi),
-      itsNj(other.itsNj),
-      itsIsGlobal(other.itsIsGlobal)
+      itsNj(other.itsNj)
 {
 	itsLogger = logger("latitude_longitude_grid");
 }
@@ -131,23 +127,37 @@ point latitude_longitude_grid::LastPoint() const
 	}
 }
 
+bool latitude_longitude_grid::IsGlobal() const
+{
+	if (static_cast<double>(Ni()) * Di() == 360.0)
+		return true;
+	return false;
+}
+
 point latitude_longitude_grid::XY(const himan::point& latlon) const
 {
 	double x = (latlon.X() - itsBottomLeft.X()) / Di();
 
-	if (itsIsGlobal && (x < 0 || x > static_cast<double>(Ni()) - 1))
+	if (x < 0 || x > static_cast<double>(Ni() - 1))
 	{
-		// wrap x if necessary
-		// this might happen f.ex. with EC where grid start at 0 meridian and
-		// we interpolate from say -10 to 40 longitude
+		if (IsGlobal())
+		{
+			// wrap x if necessary
+			// this might happen f.ex. with EC where grid start at 0 meridian and
+			// we interpolate from say -10 to 40 longitude
 
-		while (x < 0)
-		{
-			x += static_cast<double>(Ni());
+			while (x < 0)
+			{
+				x += static_cast<double>(Ni());
+			}
+			while (x > static_cast<double>(Ni()))
+			{
+				x -= static_cast<double>(Ni());
+			}
 		}
-		while (x > static_cast<double>(Ni()) - 1)
+		else
 		{
-			x -= static_cast<double>(Ni()) - 1.;
+			x = MissingDouble();
 		}
 	}
 
@@ -164,6 +174,11 @@ point latitude_longitude_grid::XY(const himan::point& latlon) const
 		default:
 			throw runtime_error("Scanning mode not supported: " + HPScanningModeToString.at(itsScanningMode));
 			break;
+	}
+
+	if (y < 0 || y > static_cast<double>(Nj()) - 1)
+	{
+		y = MissingDouble();
 	}
 
 	return point(x, y);
@@ -197,45 +212,25 @@ point latitude_longitude_grid::LatLon(size_t locationIndex) const
 			throw runtime_error("Scanning mode not supported: " + HPScanningModeToString.at(itsScanningMode));
 	}
 
+	while (ret.X() >= 360.)
+		ret.X(ret.X() - 360.);
+	if (itsNj == 1)
+		ret.Y(firstPoint.Y());
+
 	return ret;
 }
 
-bool latitude_longitude_grid::Swap(HPScanningMode newScanningMode)
+size_t latitude_longitude_grid::Hash() const
 {
-	if (itsScanningMode == newScanningMode)
-	{
-		return true;
-	}
-
-	// Flip with regards to x axis
-
-	if ((itsScanningMode == kTopLeft && newScanningMode == kBottomLeft) ||
-	    (itsScanningMode == kBottomLeft && newScanningMode == kTopLeft))
-	{
-		size_t halfSize = static_cast<size_t>(floor(Nj() / 2));
-
-		for (size_t y = 0; y < halfSize; y++)
-		{
-			for (size_t x = 0; x < Ni(); x++)
-			{
-				double upper = itsData.At(x, y);
-				double lower = itsData.At(x, Nj() - 1 - y);
-
-				itsData.Set(x, y, 0, lower);
-				itsData.Set(x, Nj() - 1 - y, 0, upper);
-			}
-		}
-	}
-	else
-	{
-		itsLogger.Error("Swap from mode " + string(HPScanningModeToString.at(itsScanningMode)) + " to mode " +
-		                string(HPScanningModeToString.at(newScanningMode)) + " not implemented yet");
-		return false;
-	}
-
-	itsScanningMode = newScanningMode;
-
-	return true;
+	vector<size_t> hashes;
+	hashes.push_back(Type());
+	hashes.push_back(FirstPoint().Hash());
+	hashes.push_back(Ni());
+	hashes.push_back(Nj());
+	hashes.push_back(hash<double>{}(Di()));
+	hashes.push_back(hash<double>{}(Dj()));
+	hashes.push_back(ScanningMode());
+	return boost::hash_range(hashes.begin(), hashes.end());
 }
 
 void latitude_longitude_grid::Ni(size_t theNi)
@@ -270,8 +265,8 @@ double latitude_longitude_grid::Di() const
 		double fx = FirstPoint().X();
 		double lx = LastPoint().X();
 
-		if (fx == 0. && lx < 0)
-			lx += 360;
+		if (fx > lx)
+			fx -= 360;
 		itsDi = fabs((fx - lx) / (static_cast<double>(itsNi) - 1.));
 	}
 
@@ -349,12 +344,6 @@ void latitude_longitude_grid::UpdateCoordinates() const
 
 	Di();
 	Dj();
-
-	if (FirstPoint() != missing && LastPoint() != missing && !IsKHPMissingValue(Di()))
-	{
-		double span = itsBottomLeft.X() + itsTopRight.X() + Di();
-		itsIsGlobal = (span == 0. || span == 360.);
-	}
 }
 
 bool latitude_longitude_grid::operator!=(const grid& other) const
@@ -427,10 +416,11 @@ bool latitude_longitude_grid::EqualsTo(const latitude_longitude_grid& other) con
 	return true;
 }
 
-latitude_longitude_grid* latitude_longitude_grid::Clone() const
+unique_ptr<grid> latitude_longitude_grid::Clone() const
 {
-	return new latitude_longitude_grid(*this);
+	return unique_ptr<grid>(new latitude_longitude_grid(*this));
 }
+
 ostream& latitude_longitude_grid::Write(std::ostream& file) const
 {
 	grid::Write(file);
@@ -439,12 +429,13 @@ ostream& latitude_longitude_grid::Write(std::ostream& file) const
 	     << "__itsNj__ " << itsNj << endl
 	     << "__itsDi__ " << itsDi << endl
 	     << "__itsDj__ " << itsDj << endl
-	     << "__itsIsGlobal__" << itsIsGlobal << endl;
+	     << "__itsIsGlobal__" << IsGlobal() << endl;
 
 	return file;
 }
 
-rotated_latitude_longitude_grid::rotated_latitude_longitude_grid() : latitude_longitude_grid(), itsSouthPole()
+rotated_latitude_longitude_grid::rotated_latitude_longitude_grid()
+    : latitude_longitude_grid(), itsSouthPole(), itsFromRotLatLon(), itsToRotLatLon()
 {
 	itsGridType = kRotatedLatitudeLongitude;
 	itsLogger = logger("rotated_latitude_longitude_grid");
@@ -458,12 +449,20 @@ rotated_latitude_longitude_grid::rotated_latitude_longitude_grid(HPScanningMode 
 	if (!initiallyRotated)
 		throw std::runtime_error("Unable to create rotated_latitude_longitude_grid with unrotated coordinates, yet");
 
+	itsFromRotLatLon = himan::geoutil::rotation<double>().FromRotLatLon(theSouthPole.Y() * constants::kDeg,
+	                                                                    theSouthPole.X() * constants::kDeg, 0);
+	itsToRotLatLon = himan::geoutil::rotation<double>().ToRotLatLon(theSouthPole.Y() * constants::kDeg,
+	                                                                theSouthPole.X() * constants::kDeg, 0);
+
 	itsGridType = kRotatedLatitudeLongitude;
 	itsLogger = logger("rotated_latitude_longitude_grid");
 }
 
 rotated_latitude_longitude_grid::rotated_latitude_longitude_grid(const rotated_latitude_longitude_grid& other)
-    : latitude_longitude_grid(other), itsSouthPole(other.itsSouthPole)
+    : latitude_longitude_grid(other),
+      itsSouthPole(other.itsSouthPole),
+      itsFromRotLatLon(other.itsFromRotLatLon),
+      itsToRotLatLon(other.itsToRotLatLon)
 {
 	itsLogger = logger("rotated_latitude_longitude_grid");
 }
@@ -505,9 +504,9 @@ bool rotated_latitude_longitude_grid::EqualsTo(const rotated_latitude_longitude_
 	return true;
 }
 
-rotated_latitude_longitude_grid* rotated_latitude_longitude_grid::Clone() const
+unique_ptr<grid> rotated_latitude_longitude_grid::Clone() const
 {
-	return new rotated_latitude_longitude_grid(*this);
+	return unique_ptr<grid>(new rotated_latitude_longitude_grid(*this));
 }
 
 point rotated_latitude_longitude_grid::SouthPole() const
@@ -517,31 +516,28 @@ point rotated_latitude_longitude_grid::SouthPole() const
 void rotated_latitude_longitude_grid::SouthPole(const point& theSouthPole)
 {
 	itsSouthPole = theSouthPole;
+	itsFromRotLatLon = himan::geoutil::rotation<double>().FromRotLatLon(theSouthPole.Y() * constants::kDeg,
+	                                                                    theSouthPole.X() * constants::kDeg, 0.0);
+	itsToRotLatLon = himan::geoutil::rotation<double>().ToRotLatLon(theSouthPole.Y() * constants::kDeg,
+	                                                                theSouthPole.X() * constants::kDeg, 0.0);
 }
 point rotated_latitude_longitude_grid::XY(const point& latlon) const
 {
-	if (!itsRotLatLonArea)
-	{
-		InitNewbaseArea();
-	}
-
-	auto rotpoint = itsRotLatLonArea->ToRotLatLon(NFmiPoint(latlon.X(), latlon.Y()));
-
-	return latitude_longitude_grid::XY(point(rotpoint.X(), rotpoint.Y()));
+	himan::geoutil::position<double> p(latlon.Y() * constants::kDeg, latlon.X() * constants::kDeg, 0.0,
+	                                   earth_shape<double>(1.0));
+	himan::geoutil::rotate(p, itsToRotLatLon);
+	return latitude_longitude_grid::XY(
+	    point(p.Lon(earth_shape<double>(1.0)) * constants::kRad, p.Lat(earth_shape<double>(1.0)) * constants::kRad));
 }
 
 point rotated_latitude_longitude_grid::LatLon(size_t locationIndex) const
 {
 	point rll = latitude_longitude_grid::LatLon(locationIndex);  // rotated coordinates
 
-	if (!itsRotLatLonArea)
-	{
-		InitNewbaseArea();
-	}
-
-	auto regpoint = itsRotLatLonArea->ToRegLatLon(NFmiPoint(rll.X(), rll.Y()));
-
-	return point(regpoint.X(), regpoint.Y());
+	himan::geoutil::position<double> p(rll.Y() * constants::kDeg, rll.X() * constants::kDeg, 0.0,
+	                                   earth_shape<double>(1.0));
+	himan::geoutil::rotate(p, itsFromRotLatLon);
+	return point(p.Lon(earth_shape<double>(1.0)) * constants::kRad, p.Lat(earth_shape<double>(1.0)) * constants::kRad);
 }
 
 point rotated_latitude_longitude_grid::RotatedLatLon(size_t locationIndex) const
@@ -558,15 +554,16 @@ ostream& rotated_latitude_longitude_grid::Write(std::ostream& file) const
 	return file;
 }
 
-void rotated_latitude_longitude_grid::InitNewbaseArea() const
+size_t rotated_latitude_longitude_grid::Hash() const
 {
-	call_once(itsNewbaseAreaFlag, [&]() {
-		ASSERT(itsBottomLeft != point());
-		ASSERT(itsTopRight != point());
-		ASSERT(itsSouthPole != point());
-
-		itsRotLatLonArea = unique_ptr<NFmiRotatedLatLonArea>(new NFmiRotatedLatLonArea(
-		    NFmiPoint(itsBottomLeft.X(), itsBottomLeft.Y()), NFmiPoint(itsTopRight.X(), itsTopRight.Y()),
-		    NFmiPoint(itsSouthPole.X(), itsSouthPole.Y()), NFmiPoint(0., 0.), NFmiPoint(1., 1.), true));
-	});
+	vector<size_t> hashes;
+	hashes.push_back(Type());
+	hashes.push_back(FirstPoint().Hash());
+	hashes.push_back(Ni());
+	hashes.push_back(Nj());
+	hashes.push_back(hash<double>{}(Di()));
+	hashes.push_back(hash<double>{}(Dj()));
+	hashes.push_back(ScanningMode());
+	hashes.push_back(SouthPole().Hash());
+	return boost::hash_range(hashes.begin(), hashes.end());
 }

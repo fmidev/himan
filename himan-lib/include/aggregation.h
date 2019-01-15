@@ -18,11 +18,10 @@ class aggregation
 	aggregation();
 	aggregation(HPAggregationType theAggregationType, HPTimeResolution theTimeResolution, int theTimeResolutionValue,
 	            int theFirstTimeValue);
-	~aggregation()
-	{
-	}
-	aggregation(const aggregation& other);
-	aggregation& operator=(const aggregation& other);
+
+	~aggregation() = default;
+	aggregation(const aggregation& other) = default;
+	aggregation& operator=(const aggregation& other) = default;
 
 	bool operator==(const aggregation& other) const;
 	bool operator!=(const aggregation& other) const;

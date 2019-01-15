@@ -332,16 +332,16 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void split_sum::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void split_sum::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	boost::thread_group threads;
 	vector<info_t> infos;
 
 	int subThreadIndex = 0;
 
-	for (myTargetInfo->ResetParam(); myTargetInfo->NextParam(); ++subThreadIndex)
+	for (myTargetInfo->Reset<param>(); myTargetInfo->Next<param>(); ++subThreadIndex)
 	{
-		auto newInfo = make_shared<info>(*myTargetInfo);
+		auto newInfo = make_shared<info<double>>(*myTargetInfo);
 
 		infos.push_back(newInfo);  // extend lifetime over this loop
 
@@ -518,9 +518,9 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 
 	const double invstep = 1. / step;
 
-	auto& result = VEC(myTargetInfo);
+	auto& resultVec = VEC(myTargetInfo);
 
-	for (auto&& tup : zip_range(result, VEC(curSumInfo), VEC(prevSumInfo)))
+	for (auto&& tup : zip_range(resultVec, VEC(curSumInfo), VEC(prevSumInfo)))
 	{
 		double& result = tup.get<0>();
 		double currentSum = tup.get<1>();
@@ -536,15 +536,15 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 		ASSERT(isRadiationCalculation || result >= 0 || IsMissing(result));
 	}
 
-	myThreadedLogger.Info("[" + deviceType + "] Parameter " + myParamName + " missing values: " +
-	                      to_string(myTargetInfo->Data().MissingCount()) + "/" +
+	myThreadedLogger.Info("[" + deviceType + "] Parameter " + myParamName +
+	                      " missing values: " + to_string(myTargetInfo->Data().MissingCount()) + "/" +
 	                      to_string(myTargetInfo->Data().Size()));
 }
 
-pair<shared_ptr<himan::info>, shared_ptr<himan::info>> split_sum::GetSourceDataForRate(
-    shared_ptr<const info> myTargetInfo, int step) const
+pair<shared_ptr<himan::info<double>>, shared_ptr<himan::info<double>>> split_sum::GetSourceDataForRate(
+    shared_ptr<info<double>> myTargetInfo, int step) const
 {
-	shared_ptr<info> prevInfo, curInfo;
+	shared_ptr<info<double>> prevInfo, curInfo;
 
 	HPTimeResolution timeResolution = myTargetInfo->Time().StepResolution();
 
@@ -654,8 +654,8 @@ pair<shared_ptr<himan::info>, shared_ptr<himan::info>> split_sum::GetSourceDataF
 	return make_pair(prevInfo, curInfo);
 }
 
-shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTargetInfo,
-                                                   const forecast_time& wantedTime) const
+shared_ptr<himan::info<double>> split_sum::FetchSourceData(shared_ptr<info<double>> myTargetInfo,
+                                                           const forecast_time& wantedTime) const
 {
 	level wantedLevel(kHeight, 0, "HEIGHT");
 
@@ -672,32 +672,25 @@ shared_ptr<himan::info> split_sum::FetchSourceData(shared_ptr<const info> myTarg
 		wantedLevel = level(kTopOfAtmosphere, 0, "TOP");
 	}
 
-	shared_ptr<info> SumInfo = Fetch(wantedTime, wantedLevel, params, myTargetInfo->ForecastType());
+	shared_ptr<info<double>> SumInfo = Fetch(wantedTime, wantedLevel, params, myTargetInfo->ForecastType());
 
 	// If model does not provide data for timestep 0, emulate it
 	// by providing a zero-grid
 
 	if (!SumInfo && wantedTime.Step() == 0)
 	{
-		SumInfo = make_shared<info>(*myTargetInfo);
+		SumInfo = make_shared<info<double>>(*myTargetInfo);
 		vector<forecast_time> times = {wantedTime};
 		vector<level> levels = {wantedLevel};
-		vector<param> params = {sourceParameters[myTargetInfo->Param().Name()][0]};
+		params = {sourceParameters[myTargetInfo->Param().Name()][0]};
 
-		SumInfo->Params(params);
-		SumInfo->Levels(levels);
-		SumInfo->Times(times);
+		SumInfo->Set<param>(params);
+		SumInfo->Set<level>(levels);
+		SumInfo->Set<forecast_time>(times);
 
-		SumInfo->Create(myTargetInfo->Grid());
+		SumInfo->Create(myTargetInfo->Base());
 		SumInfo->Data().Fill(0);
 	}
 
 	return SumInfo;
-}
-
-void split_sum::WriteToFile(const info_t targetInfo, write_options writeOptions)
-{
-	writeOptions.write_empty_grid = false;
-
-	compiled_plugin_base::WriteToFile(targetInfo, writeOptions);
 }

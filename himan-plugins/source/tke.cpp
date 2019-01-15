@@ -15,7 +15,7 @@
 using namespace std;
 using namespace himan::plugin;
 
-tke::tke() : itsTopLevel()
+tke::tke()
 {
 	itsLogger = logger("tke");
 }
@@ -69,7 +69,7 @@ void tke::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	// ----
 
 	// Current time and level as given to this thread
-	int paramStep = 1;  // myTargetInfo->Param().Aggregation().TimeResolutionValue();
+	int paramStep = 1;  // myTargetInfo->Find<param>().Aggregation().TimeResolutionValue();
 	HPTimeResolution timeResolution = myTargetInfo->Time().StepResolution();
 
 	forecast_time forecastTime = myTargetInfo->Time();
@@ -108,7 +108,7 @@ void tke::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	// determine length of forecast step to calculate surface heat flux in W/m2
 	double forecastStepSize;
 
-	if (itsConfiguration->SourceProducer().Id() != 199)
+	if (forecastTime.StepResolution() == kHourResolution)
 	{
 		forecastStepSize = itsConfiguration->ForecastStep() * 3600;  // step size in seconds
 	}

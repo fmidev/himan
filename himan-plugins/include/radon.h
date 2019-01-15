@@ -25,6 +25,7 @@
 
 #include "NFmiRadonDB.h"
 #include "auxiliary_plugin.h"
+#include "info.h"
 #include "search_options.h"
 
 namespace himan
@@ -56,15 +57,12 @@ class radon : public auxiliary_plugin
 	{
 		return kAuxiliary;
 	}
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(0, 1);
-	}
+
 	/**
 	 * @brief Return filename of a field
 	 */
 
-	std::vector<std::string> Files(search_options& options);
+	std::pair<std::vector<std::string>, std::string> Files(search_options& options);
 
 	/**
 	 * @brief Return previ data in CSV format
@@ -76,7 +74,10 @@ class radon : public auxiliary_plugin
 	 * @brief Save either file metadata or previ information to database.
 	 */
 
-	bool Save(const info& resultInfo, const std::string& theFileName,  const std::string& targetGeomName);
+	template <typename T>
+	bool Save(const info<T>& resultInfo, const std::string& theFileName, const std::string& targetGeomName);
+
+	bool Save(const info<double>& resultInfo, const std::string& theFileName, const std::string& targetGeomName);
 
 	/**
 	 * @brief Function to expose the NFmiRadonDB interface
@@ -97,8 +98,11 @@ class radon : public auxiliary_plugin
 	 */
 
 	void Init();
-	bool SaveGrid(const info& resultInfo, const std::string& theFileName, const std::string& targetGeomName);
-	bool SavePrevi(const info& resultInfo);
+	template <typename T>
+	bool SaveGrid(const info<T>& resultInfo, const std::string& theFileName, const std::string& targetGeomName);
+
+	template <typename T>
+	bool SavePrevi(const info<T>& resultInfo);
 
 	bool itsInit;                             //!< Holds the initialization status of the database connection
 	std::unique_ptr<NFmiRadonDB> itsRadonDB;  //<! The actual database class instance

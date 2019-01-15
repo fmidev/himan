@@ -3,7 +3,6 @@
  */
 
 #include "modifier.h"
-#include "NFmiInterpolation.h"
 #include "numerical_functions.h"
 
 using namespace himan;
@@ -142,11 +141,11 @@ void modifier::UpperHeight(const std::vector<double>& theUpperHeight)
 #endif
 }
 
-size_t modifier::FindNth() const
+int modifier::FindNth() const
 {
 	return itsFindNthValue;
 }
-void modifier::FindNth(size_t theNth)
+void modifier::FindNth(int theNth)
 {
 	itsFindNthValue = theNth;
 }
@@ -393,7 +392,7 @@ void modifier_max::Calculate(double theValue, double theHeight, double thePrevio
 	else if (LeavingHeightZone(theHeight, thePreviousHeight, upperLimit))
 	{
 		double exactUpper = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
-		theValue = fmax(exactUpper, theValue);
+		theValue = fmax(exactUpper, Value());
 		itsOutOfBoundHeights[itsIndex] = true;
 	}
 
@@ -424,7 +423,7 @@ void modifier_min::Calculate(double theValue, double theHeight, double thePrevio
 	else if (LeavingHeightZone(theHeight, thePreviousHeight, upperLimit))
 	{
 		double exactUpper = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
-		theValue = fmin(exactUpper, theValue);
+		theValue = fmin(exactUpper, Value());
 		itsOutOfBoundHeights[itsIndex] = true;
 	}
 
@@ -474,8 +473,8 @@ void modifier_maxmin::Calculate(double theValue, double theHeight, double thePre
 	{
 		double exactUpper = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, upperLimit);
 
-		smaller = fmin(exactUpper, theValue);
-		bigger = fmax(exactUpper, theValue);
+		smaller = fmin(exactUpper, Value());
+		bigger = fmax(exactUpper, Value());
 
 		itsOutOfBoundHeights[itsIndex] = true;
 	}
@@ -659,7 +658,7 @@ bool modifier_findheight::CalculationFinished() const
 {
 	return (itsResult.size() && (itsValuesFound == itsResult.size() ||
 	                             static_cast<size_t>(count(itsOutOfBoundHeights.begin(), itsOutOfBoundHeights.end(),
-	                                                       true)) == itsResult.size()));
+	                                                       true)) == itsFindValue.size()));
 }
 
 void modifier_findheight::Init(const std::vector<double>& theData, const std::vector<double>& theHeights)
@@ -741,6 +740,14 @@ void modifier_findheight::Calculate(double theValue, double theHeight, double th
 					itsValuesFound++;
 					itsOutOfBoundHeights[itsIndex] = true;
 				}
+				else if (itsFindNthValue == -1)
+				{
+					if (itsResult.size() < itsFindValue.size() * itsFoundNValues[itsIndex])
+					{
+						itsResult.resize(itsFindValue.size() * itsFoundNValues[itsIndex], himan::MissingDouble());
+					}
+					itsResult[itsIndex + (itsFoundNValues[itsIndex] - 1) * itsFindValue.size()] = actualHeight;
+				}
 			}
 			else
 			{
@@ -753,7 +760,7 @@ void modifier_findheight::Calculate(double theValue, double theHeight, double th
 
 /* ----------------- */
 
-void modifier_findheight_gt::FindNth(size_t theNth)
+void modifier_findheight_gt::FindNth(int theNth)
 {
 	if (theNth > 1)
 	{
@@ -809,7 +816,7 @@ void modifier_findheight_gt::Calculate(double theValue, double theHeight, double
 	}
 
 	// Entering area
-	if (theValue > findValue && (thePreviousValue < findValue || IsMissing(thePreviousValue)))
+	if (theValue > findValue && (thePreviousValue <= findValue || IsMissing(thePreviousValue)))
 	{
 		// if last value is searched, pick actual level value
 		if (itsFindNthValue == 0)
@@ -869,7 +876,7 @@ void modifier_findheight_gt::Calculate(double theValue, double theHeight, double
 
 /* ----------------- */
 
-void modifier_findheight_lt::FindNth(size_t theNth)
+void modifier_findheight_lt::FindNth(int theNth)
 {
 	if (theNth != 0 && theNth != 1)
 	{
@@ -924,7 +931,7 @@ void modifier_findheight_lt::Calculate(double theValue, double theHeight, double
 	}
 
 	// Entering area
-	if (theValue < findValue && thePreviousValue > findValue)
+	if (theValue < findValue && thePreviousValue >= findValue)
 	{
 		// if last value is searched, pick actual level value
 		if (itsFindNthValue == 0)

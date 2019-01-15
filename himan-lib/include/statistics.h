@@ -6,14 +6,8 @@
 #ifndef STATISTICS_H
 #define STATISTICS_H
 
-#include "raw_time.h"
-#include "timer.h"
-
-#if !defined __clang__ && defined __GNUC__ && (__GNUC__ == 4 && __GNUC_MINOR__ < 5)
-#include <cstdatomic>
-#else
 #include <atomic>
-#endif
+#include <string>
 
 namespace himan
 {
@@ -37,10 +31,11 @@ class statistics
 
 	void AddToMissingCount(size_t theMissingCount);
 	void AddToValueCount(size_t theValueCount);
-	void AddToFetchingTime(size_t theFetchingTime);
-	void AddToProcessingTime(size_t theProcessingTime);
-	void AddToWritingTime(size_t theWritingTime);
-	void AddToInitTime(size_t theInitTime);
+	void AddToTotalTime(int64_t theTotalTime);
+	void AddToFetchingTime(int64_t theFetchingTime);
+	void AddToProcessingTime(int64_t theProcessingTime);
+	void AddToWritingTime(int64_t theWritingTime);
+	void AddToInitTime(int64_t theInitTime);
 	void AddToCacheMissCount(size_t theCacheMissCount);
 	void AddToCacheHitCount(size_t theCacheHitCount);
 
@@ -50,28 +45,24 @@ class statistics
 	bool Enabled() const;
 
 	void UsedThreadCount(short theThreadCount);
-	void UsedGPUCount(short theGPUCount);
 
-	size_t FetchingTime() const;
+	int64_t FetchingTime() const;
 
    private:
-	void Init();
 	bool StoreToDatabase();
 	bool StoreToFile();
 
-	timer itsTimer;
-
 	std::atomic<size_t> itsValueCount;
 	std::atomic<size_t> itsMissingValueCount;
-	std::atomic<size_t> itsFetchingTime;
-	std::atomic<size_t> itsWritingTime;
-	std::atomic<size_t> itsProcessingTime;
-	std::atomic<size_t> itsInitTime;
+	std::atomic<int64_t> itsTotalTime;
+	std::atomic<int64_t> itsFetchingTime;
+	std::atomic<int64_t> itsWritingTime;
+	std::atomic<int64_t> itsProcessingTime;
+	std::atomic<int64_t> itsInitTime;
 	std::atomic<size_t> itsCacheMissCount;
 	std::atomic<size_t> itsCacheHitCount;
 
 	short itsUsedThreadCount;
-	short itsUsedGPUCount;
 };
 
 }  // namespace himan

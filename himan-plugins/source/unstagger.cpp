@@ -76,7 +76,7 @@ void unstagger::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void unstagger::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	auto myThreadedLogger = logger("unstagger Thread #" + to_string(threadIndex));
 
@@ -111,11 +111,9 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 		                 itsConfiguration->UseCudaForPacking());
 
 #ifdef HAVE_CUDA
-		if (UInfo->Grid()->IsPackedData())
+		if (UInfo->PackedData()->HasData())
 		{
-			ASSERT(UInfo->Grid()->PackedData().ClassName() == "simple_packed");
-
-			util::Unpack({UInfo->Grid(), VInfo->Grid()});
+			util::Unpack<double>({UInfo, VInfo}, false);
 		}
 #endif
 	}
@@ -133,10 +131,10 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 	// If calculating for hybrid levels, A/B vertical coordinates must be set
 	// (copied from source)
 
-	myTargetInfo->ParamIndex(0);
+	myTargetInfo->Index<param>(0);
 	SetAB(myTargetInfo, UInfo);
 
-	myTargetInfo->ParamIndex(1);
+	myTargetInfo->Index<param>(1);
 	SetAB(myTargetInfo, VInfo);
 
 	string deviceType;
@@ -148,11 +146,11 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 		std::pair<std::vector<double>, std::vector<double>> unstaggered_UV;
 		unstaggered_UV = unstagger_cuda::Process(UInfo->Data().Values(), VInfo->Data().Values());
 
-		myTargetInfo->ParamIndex(0);
-		myTargetInfo->Grid()->Data().Set(unstaggered_UV.first);
+		myTargetInfo->Index<param>(0);
+		myTargetInfo->Data().Set(unstaggered_UV.first);
 
-		myTargetInfo->ParamIndex(1);
-		myTargetInfo->Grid()->Data().Set(unstaggered_UV.second);
+		myTargetInfo->Index<param>(1);
+		myTargetInfo->Data().Set(unstaggered_UV.second);
 	}
 	else
 #endif
@@ -164,8 +162,10 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 		himan::matrix<double> unstaggered_U = numerical_functions::Filter2D(UInfo->Data(), filter_kernel_U);
 
-		myTargetInfo->ParamIndex(0);
-		myTargetInfo->Grid()->Data(unstaggered_U);
+		myTargetInfo->Index<param>(0);
+
+		auto b = myTargetInfo->Base();
+		b->data = move(unstaggered_U);
 
 		// calculate for V
 		himan::matrix<double> filter_kernel_V(1, 2, 1, MissingDouble());
@@ -173,12 +173,13 @@ void unstagger::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIn
 
 		himan::matrix<double> unstaggered_V = numerical_functions::Filter2D(VInfo->Data(), filter_kernel_V);
 
-		myTargetInfo->ParamIndex(1);
-		myTargetInfo->Grid()->Data(unstaggered_V);
+		myTargetInfo->Index<param>(1);
+		b = myTargetInfo->Base();
+		b->data = move(unstaggered_V);
 	}
 
-	myTargetInfo->ParamIndex(0);
+	myTargetInfo->Index<param>(0);
 	myTargetInfo->Grid()->UVRelativeToGrid(UInfo->Grid()->UVRelativeToGrid());
-	myTargetInfo->ParamIndex(1);
+	myTargetInfo->Index<param>(1);
 	myTargetInfo->Grid()->UVRelativeToGrid(VInfo->Grid()->UVRelativeToGrid());
 }

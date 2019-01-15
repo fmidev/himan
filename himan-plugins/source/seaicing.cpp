@@ -41,7 +41,7 @@ void seaicing::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadIndex)
+void seaicing::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short theThreadIndex)
 {
 	const params TParam = {param("T-K"), param("TG-K")};
 	const level TLevel(himan::kHeight, 2, "HEIGHT");
@@ -56,7 +56,7 @@ void seaicing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThread
 		saltinessIndex = 1.5;
 	}
 
-	if (itsConfiguration->SourceProducer().Id() == 131 || itsConfiguration->SourceProducer().Id() == 134)
+	if (itsConfiguration->TargetProducer().Id() == 240 || itsConfiguration->TargetProducer().Id() == 243)
 	{
 		ground = level(himan::kGroundDepth, 0, 7);
 	}

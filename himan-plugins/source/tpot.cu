@@ -1,50 +1,52 @@
 #include "cuda_plugin_helper.h"
-
 #include "lift.h"
-#include "tpot.cuh"
 
-__global__ void himan::plugin::tpot_cuda::Calculate(const double* __restrict__ d_t, const double* __restrict__ d_p,
-                                                    const double* __restrict__ d_td, double* __restrict__ d_tp,
-                                                    double* __restrict__ d_tpw, double* __restrict__ d_tpe,
-                                                    options opts)
+#include <thrust/device_vector.h>
+#include <thrust/fill.h>
+#include <thrust/functional.h>
+#include <thrust/system/cuda/execution_policy.h>
+#include <thrust/transform.h>
+
+using namespace himan;
+
+template <typename T>
+__global__ void ThetaKernel(const T* __restrict__ d_t, const T* __restrict__ d_p, T* __restrict__ d_tp, size_t N)
 {
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	if (idx < opts.N)
+	if (idx < N)
 	{
-		double P = (opts.is_constant_pressure) ? opts.p_const : d_p[idx];
-
-		if (opts.theta)
-		{
-			d_tp[idx] = Theta(opts.t_base + d_t[idx], P * opts.p_scale, opts);
-		}
-		if (opts.thetaw)
-		{
-			d_tpw[idx] = ThetaW(opts.t_base + d_t[idx], opts.p_scale * P, opts.td_base + d_td[idx], opts);
-		}
-		if (opts.thetae)
-		{
-			d_tpe[idx] = ThetaE(opts.t_base + d_t[idx], opts.p_scale * P, opts.td_base + d_td[idx], opts);
-		}
+		d_tp[idx] = metutil::Theta_<T>(d_t[idx], d_p[idx]);
 	}
 }
-__device__ double himan::plugin::tpot_cuda::Theta(double T, double P, options opts)
-{
-	return metutil::Theta_<double>(T, P);
-}
-__device__ double himan::plugin::tpot_cuda::ThetaW(double T, double P, double TD, options opts)
-{
-	double thetaE = ThetaE(T, P, TD, opts);
 
-	return metutil::ThetaW_<double>(thetaE);
-}
-
-__device__ double himan::plugin::tpot_cuda::ThetaE(double T, double P, double TD, options opts)
+template <typename T>
+__global__ void ThetaWKernel(const T* __restrict__ d_tpe, T* __restrict__ d_tpw, size_t N)
 {
-	return metutil::ThetaE_<double>(T, TD, P);
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < N)
+	{
+		d_tpw[idx] = metutil::ThetaW_<T>(d_tpe[idx]);
+	}
 }
 
-void himan::plugin::tpot_cuda::Process(options& opts)
+template <typename T>
+__global__ void ThetaEKernel(const T* __restrict__ d_t, const T* __restrict__ d_p, const T* __restrict__ d_td,
+                             T* __restrict__ d_tpe, size_t N)
+{
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < N)
+	{
+		d_tpe[idx] = metutil::ThetaE_<T>(d_t[idx], d_td[idx], d_p[idx]);
+	}
+}
+
+namespace tpotgpu
+{
+void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info<double>> myTargetInfo, bool theta,
+             bool thetaw, bool thetae)
 {
 	cudaStream_t stream;
 	CUDA_CHECK(cudaStreamCreate(&stream));
@@ -56,56 +58,88 @@ void himan::plugin::tpot_cuda::Process(options& opts)
 	double* d_tpw = 0;
 	double* d_tpe = 0;
 
-	size_t memsize = opts.N * sizeof(double);
+	const size_t N = myTargetInfo->SizeLocations();
+	const size_t memsize = N * sizeof(double);
 
 	// dims
 
 	const int blockSize = 512;
-	const int gridSize = opts.N / blockSize + (opts.N % blockSize == 0 ? 0 : 1);
+	const int gridSize = N / blockSize + (N % blockSize == 0 ? 0 : 1);
 
-	// Allocate memory on device
+	info_t TDInfo;
 
-	if (opts.theta)
+	auto TInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("T-K"),
+	                                 myTargetInfo->ForecastType());
+
+	if (!TInfo)
 	{
-		CUDA_CHECK(cudaMalloc((void**)&d_tp, memsize));
-		PrepareInfo(opts.tp);
+		return;
 	}
 
-	if (opts.thetaw)
+	if (thetae || thetaw)
 	{
-		CUDA_CHECK(cudaMalloc((void**)&d_tpw, memsize));
-		PrepareInfo(opts.tpw);
+		TDInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("TD-K"),
+		                             myTargetInfo->ForecastType());
+
+		if (!TDInfo)
+		{
+			return;
+		}
 	}
 
-	if (opts.thetae)
+	if (myTargetInfo->Level().Type() != kPressure)
 	{
-		CUDA_CHECK(cudaMalloc((void**)&d_tpe, memsize));
-		PrepareInfo(opts.tpe);
+		auto PInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("P-HPA"),
+		                                 myTargetInfo->ForecastType());
+
+		if (!PInfo)
+		{
+			return;
+		}
+
+		CUDA_CHECK(cudaMalloc((void**)&d_p, memsize));
+		cuda::PrepareInfo(PInfo, d_p, stream);
+
+		if (PInfo->Param().Unit() == kHPa || PInfo->Param().Name() == "P-HPA")
+		{
+			thrust::device_ptr<double> dt_p = thrust::device_pointer_cast(d_p);
+			thrust::transform(thrust::cuda::par.on(stream), dt_p, dt_p + N, dt_p,
+			                  [] __device__(double d) { return d * 100; });
+		}
+	}
+	else
+	{
+		CUDA_CHECK(cudaMalloc((void**)&d_p, memsize));
+		thrust::device_ptr<double> dt_p = thrust::device_pointer_cast(d_p);
+		thrust::fill_n(thrust::cuda::par.on(stream), dt_p, N, myTargetInfo->Level().Value() * 100);
 	}
 
 	CUDA_CHECK(cudaMalloc((void**)&d_t, memsize));
+	cuda::PrepareInfo(TInfo, d_t, stream);
 
-	PrepareInfo(opts.t, d_t, stream);
-
-	if (!opts.is_constant_pressure)
-	{
-		CUDA_CHECK(cudaMalloc((void**)&d_p, memsize));
-
-		PrepareInfo(opts.p, d_p, stream);
-	}
-
-	// td
-
-	if (opts.thetaw || opts.thetae)
+	if (TDInfo)
 	{
 		CUDA_CHECK(cudaMalloc((void**)&d_td, memsize));
-
-		PrepareInfo(opts.td, d_td, stream);
+		cuda::PrepareInfo(TDInfo, d_td, stream);
 	}
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
-	Calculate<<<gridSize, blockSize, 0, stream>>>(d_t, d_p, d_td, d_tp, d_tpw, d_tpe, opts);
+	if (theta)
+	{
+		CUDA_CHECK(cudaMalloc((void**)&d_tp, memsize));
+		ThetaKernel<double><<<gridSize, blockSize, 0, stream>>>(d_t, d_p, d_tp, N);
+	}
+	if (thetae || thetaw)
+	{
+		CUDA_CHECK(cudaMalloc((void**)&d_tpe, memsize));
+		ThetaEKernel<double><<<gridSize, blockSize, 0, stream>>>(d_t, d_p, d_td, d_tpe, N);
+	}
+	if (thetaw)
+	{
+		CUDA_CHECK(cudaMalloc((void**)&d_tpw, memsize));
+		ThetaWKernel<double><<<gridSize, blockSize, 0, stream>>>(d_tpe, d_tpw, N);
+	}
 
 	// block until the device has completed
 	CUDA_CHECK(cudaStreamSynchronize(stream));
@@ -116,38 +150,39 @@ void himan::plugin::tpot_cuda::Process(options& opts)
 
 	// Retrieve result from device
 
-	if (opts.theta)
+	if (theta)
 	{
-		ReleaseInfo(opts.tp, d_tp, stream);
+		myTargetInfo->Find<param>(param("TP-K"));
+		cuda::ReleaseInfo(myTargetInfo, d_tp, stream);
+	}
+
+	if (thetaw)
+	{
+		myTargetInfo->Find<param>(param("TPW-K"));
+		cuda::ReleaseInfo(myTargetInfo, d_tpw, stream);
+	}
+
+	if (thetae)
+	{
+		myTargetInfo->Find<param>(param("TPE-K"));
+		cuda::ReleaseInfo(myTargetInfo, d_tpe, stream);
+	}
+
+	CUDA_CHECK(cudaStreamSynchronize(stream));
+
+	if (d_tp)
 		CUDA_CHECK(cudaFree(d_tp));
-	}
-
-	if (opts.thetaw)
-	{
-		ReleaseInfo(opts.tpw, d_tpw, stream);
+	if (d_tpw)
 		CUDA_CHECK(cudaFree(d_tpw));
-	}
-
-	if (opts.thetae)
-	{
-		ReleaseInfo(opts.tpe, d_tpe, stream);
+	if (d_tpe)
 		CUDA_CHECK(cudaFree(d_tpe));
-	}
 
 	CUDA_CHECK(cudaFree(d_t));
-	ReleaseInfo(opts.t);
-
-	if (d_p)
-	{
-		CUDA_CHECK(cudaFree(d_p));
-		ReleaseInfo(opts.p);
-	}
+	CUDA_CHECK(cudaFree(d_p));
 
 	if (d_td)
-	{
 		CUDA_CHECK(cudaFree(d_td));
-		ReleaseInfo(opts.td);
-	}
 
 	CUDA_CHECK(cudaStreamDestroy(stream));
+}
 }

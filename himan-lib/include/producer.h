@@ -22,9 +22,8 @@ class producer
 	producer(long theCentre, long theProcess);
 	producer(long theFmiProducerId, long theCentre, long theProcess, const std::string& theNeonsName);
 
-	~producer()
-	{
-	}
+	~producer() = default;
+
 	std::string ClassName() const
 	{
 		return "himan::producer";

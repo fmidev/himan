@@ -2,8 +2,8 @@
  * @file json_parser.cpp
  *
  */
-
 #include "json_parser.h"
+#include "interpolate.h"
 #include "lambert_conformal_grid.h"
 #include "latitude_longitude_grid.h"
 #include "plugin_factory.h"
@@ -14,7 +14,6 @@
 #include "util.h"
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/property_tree/json_parser.hpp>
-#include <boost/regex.hpp>
 #include <map>
 #include <stdexcept>
 #include <utility>
@@ -29,14 +28,14 @@
 using namespace himan;
 using namespace std;
 
-unique_ptr<grid> ParseAreaAndGridFromPoints(configuration& conf, const boost::property_tree::ptree& pt);
+unique_ptr<grid> ParseAreaAndGridFromPoints(const boost::property_tree::ptree& pt);
 unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::property_tree::ptree& pt);
-void ParseLevels(shared_ptr<info> anInfo, const boost::property_tree::ptree& pt);
-void ParseSourceProducer(shared_ptr<configuration> conf, shared_ptr<info> anInfo,
-                         const boost::property_tree::ptree& pt);
-void ParseTargetProducer(shared_ptr<configuration> conf, shared_ptr<info> anInfo,
-                         const boost::property_tree::ptree& pt);
+vector<level> ParseLevels(const boost::property_tree::ptree& pt);
+vector<producer> ParseSourceProducer(const shared_ptr<configuration>& conf, const boost::property_tree::ptree& pt);
+producer ParseTargetProducer(const shared_ptr<configuration>& conf, const boost::property_tree::ptree& pt);
 vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt);
+unique_ptr<grid> ParseAreaAndGrid(const std::shared_ptr<configuration>& conf, const boost::property_tree::ptree& pt);
+vector<forecast_time> ParseTime(std::shared_ptr<configuration> conf, const boost::property_tree::ptree& pt);
 
 vector<level> LevelsFromString(const string& levelType, const string& levelValues);
 
@@ -98,29 +97,19 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	}
 
 	vector<shared_ptr<plugin_configuration>> pluginContainer;
-	/* Create our base info */
-
-	auto baseInfo = make_shared<info>();
 
 	/* Check producers */
 
-	ParseSourceProducer(conf, baseInfo, pt);
-	ParseTargetProducer(conf, baseInfo, pt);
+	conf->SourceProducers(ParseSourceProducer(conf, pt));
+	conf->TargetProducer(ParseTargetProducer(conf, pt));
 
 	/* Check area definitions */
 
-	auto g = ParseAreaAndGrid(conf, pt);
-
-	baseInfo->itsBaseGrid = move(g);
+	auto g_targetGrid = ParseAreaAndGrid(conf, pt);
 
 	/* Check time definitions */
 
-	conf->FirstSourceProducer();
-	ParseTime(conf, baseInfo, pt);
-
-	/* Check levels */
-
-	// ParseLevels(baseInfo, pt);
+	const auto g_times = ParseTime(conf, pt);
 
 	/* Check file_write */
 
@@ -296,15 +285,13 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 	// Check global forecast_type option
 
-	auto forecastTypes = ParseForecastTypes(pt);
+	auto g_forecastTypes = ParseForecastTypes(pt);
 
-	if (forecastTypes.empty())
+	if (g_forecastTypes.empty())
 	{
 		// Default to deterministic
-		forecastTypes.push_back(forecast_type(kDeterministic));
+		g_forecastTypes.push_back(forecast_type(kDeterministic));
 	}
-
-	baseInfo->ForecastTypes(forecastTypes);
 
 	/* Check dynamic_memory_allocation */
 
@@ -342,11 +329,12 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 	for (boost::property_tree::ptree::value_type& element : pq)
 	{
-		auto anInfo = make_shared<info>(*baseInfo);
+		auto times = g_times;
+		auto targetGrid = unique_ptr<grid>(g_targetGrid->Clone());
 
 		try
 		{
-			ParseTime(conf, anInfo, element.second);
+			times = ParseTime(conf, element.second);
 		}
 		catch (...)
 		{
@@ -355,18 +343,18 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 		try
 		{
-			g = ParseAreaAndGrid(conf, element.second);
-
-			anInfo->itsBaseGrid = move(g);
+			targetGrid = ParseAreaAndGrid(conf, element.second);
 		}
 		catch (...)
 		{
 			// do nothing
 		}
 
+		vector<level> g_levels;
+
 		try
 		{
-			ParseLevels(anInfo, element.second);
+			g_levels = ParseLevels(element.second);
 		}
 		catch (exception& e)
 		{
@@ -489,11 +477,11 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 		// Check local forecast_type option
 
-		forecastTypes = ParseForecastTypes(element.second);
+		auto forecastTypes = ParseForecastTypes(element.second);
 
-		if (!forecastTypes.empty())
+		if (forecastTypes.empty())
 		{
-			anInfo->ForecastTypes(forecastTypes);
+			forecastTypes = g_forecastTypes;
 		}
 
 		boost::property_tree::ptree& plugins = element.second.get_child("plugins");
@@ -502,7 +490,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 		try
 		{
-			ParseSourceProducer(conf, anInfo, element.second);
+			conf->SourceProducers(ParseSourceProducer(conf, element.second));
 		}
 		catch (...)
 		{
@@ -510,7 +498,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 		try
 		{
-			ParseTargetProducer(conf, anInfo, element.second);
+			conf->TargetProducer(ParseTargetProducer(conf, element.second));
 		}
 		catch (...)
 		{
@@ -525,6 +513,11 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		{
 			shared_ptr<plugin_configuration> pc = make_shared<plugin_configuration>(*conf);
 
+			pc->itsTimes = times;
+			pc->itsForecastTypes = forecastTypes;
+			pc->itsLevels = g_levels;
+
+			pc->itsBaseGrid = unique_ptr<grid>(targetGrid->Clone());
 			pc->UseCache(delayedUseCache);
 			pc->itsOutputFileType = delayedFileType;
 			pc->FileWriteOption(delayedFileWrite);
@@ -620,9 +613,6 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 				throw runtime_error(ClassName() + ": plugin name not found from configuration");
 			}
 
-			pc->Info(make_shared<info>(*anInfo));  // We have to have a copy for all configs.
-			                                       // Each plugin will later on create a data backend.
-
 			ASSERT(pc.unique());
 
 			pluginContainer.push_back(pc);
@@ -639,16 +629,18 @@ raw_time GetLatestOriginDateTime(const shared_ptr<configuration> conf, const str
 
 	auto strlist = himan::util::Split(latest, "-", false);
 
-	int offset = 0;
+	unsigned int offset = 0;
 
 	if (strlist.size() == 2)
 	{
 		// will throw if origintime is not in the form "latest-X", where X : integer >= 0
-		offset = stoi(strlist[1]);
+		offset = static_cast<unsigned>(stoi(strlist[1]));
 	}
 
-	HPDatabaseType dbtype = conf->DatabaseType();
-	producer sourceProducer = conf->SourceProducer();
+	ASSERT(conf->SourceProducers().empty() == false);
+
+	const HPDatabaseType dbtype = conf->DatabaseType();
+	const producer sourceProducer = conf->SourceProducer(0);
 
 	raw_time latestOriginDateTime;
 
@@ -665,9 +657,10 @@ raw_time GetLatestOriginDateTime(const shared_ptr<configuration> conf, const str
 	                    to_string(sourceProducer.Id()));
 }
 
-void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info> anInfo,
-                            const boost::property_tree::ptree& pt)
+vector<forecast_time> ParseTime(shared_ptr<configuration> conf, const boost::property_tree::ptree& pt)
 {
+	vector<forecast_time> theTimes;
+
 	/* Check origin time */
 	const string mask = "%Y-%m-%d %H:%M:%S";
 
@@ -679,7 +672,7 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 
 		boost::algorithm::to_lower(originDateTime);
 
-		if (boost::regex_search(originDateTime, boost::regex("latest")))
+		if (originDateTime.find("latest") != string::npos)
 		{
 			if (conf->DatabaseType() == kNoDatabase)
 			{
@@ -710,7 +703,7 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 	}
 	catch (exception& e)
 	{
-		throw runtime_error(ClassName() + ": " + string("Error parsing origin time information: ") + e.what());
+		throw runtime_error(string("Error parsing origin time information: ") + e.what());
 	}
 
 	ASSERT(!originDateTimes.empty());
@@ -738,8 +731,6 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 
 		sort(times.begin(), times.end());
 
-		vector<forecast_time> theTimes;
-
 		// Create forecast_time with both times origintime, then adjust the validtime
 
 		for (const auto& originDateTime : originDateTimes)
@@ -754,16 +745,14 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 			}
 		}
 
-		anInfo->Times(theTimes);
-
-		return;
+		return theTimes;
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
 	}
 	catch (exception& e)
 	{
-		throw runtime_error(ClassName() + ": " + string("Error parsing time information from 'times': ") + e.what());
+		throw runtime_error(string("Error parsing time information from 'times': ") + e.what());
 	}
 
 	// hours was not specified
@@ -794,11 +783,9 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 			throw runtime_error("step size must be > 0");
 		}
 
-		conf->itsForecastStep = step;
+		conf->ForecastStep(step);
 
 		HPTimeResolution stepResolution = kHourResolution;
-
-		vector<forecast_time> theTimes;
 
 		for (const auto& originDateTime : originDateTimes)
 		{
@@ -819,17 +806,14 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 			} while (curtime <= stop);
 		}
 
-		anInfo->Times(theTimes);
-
-		return;
+		return theTimes;
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
 	}
 	catch (exception& e)
 	{
-		throw runtime_error(ClassName() + ": " + string("Error parsing time information from 'start_hour': ") +
-		                    e.what());
+		throw runtime_error(string("Error parsing time information from 'start_hour': ") + e.what());
 	}
 
 	try
@@ -840,13 +824,11 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 		int stop = pt.get<int>("stop_minute");
 		int step = pt.get<int>("step");
 
-		conf->itsForecastStep = step;
+		conf->ForecastStep(step);
 
 		HPTimeResolution stepResolution = kMinuteResolution;
 
 		int curtime = start;
-
-		vector<forecast_time> theTimes;
 
 		for (const auto& originDateTime : originDateTimes)
 		{
@@ -864,13 +846,13 @@ void json_parser::ParseTime(shared_ptr<configuration> conf, std::shared_ptr<info
 
 			} while (curtime <= stop);
 		}
-
-		anInfo->Times(theTimes);
 	}
 	catch (exception& e)
 	{
-		throw runtime_error(ClassName() + ": " + string("Error parsing time information: ") + e.what());
+		throw runtime_error(string("Error parsing time information: ") + e.what());
 	}
+
+	return theTimes;
 }
 
 unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::property_tree::ptree& pt)
@@ -880,222 +862,13 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 
 	unique_ptr<grid> g;
 
-	logger log("json_parser");
-
 	try
 	{
 		string geom = pt.get<string>("target_geom_name");
 
 		conf.TargetGeomName(geom);
 
-		double scale = 1;
-
-		auto r = GET_PLUGIN(radon);
-
-		auto geominfo = r->RadonDB().GetGeometryDefinition(geom);
-
-		if (geominfo.empty())
-		{
-			log.Fatal("Unknown geometry '" + geom + "' found");
-			himan::Abort();
-		}
-
-		const auto scmode = HPScanningModeFromString.at(geominfo["scanning_mode"]);
-
-		if (geominfo["grid_type_id"] == "1")
-		{
-			g = unique_ptr<latitude_longitude_grid>(new latitude_longitude_grid);
-			latitude_longitude_grid* const llg = dynamic_cast<latitude_longitude_grid*>(g.get());
-
-			const double di = scale * stod(geominfo["pas_longitude"]);
-			const double dj = scale * stod(geominfo["pas_latitude"]);
-
-			llg->Ni(static_cast<size_t>(stol(geominfo["col_cnt"])));
-			llg->Nj(static_cast<size_t>(stol(geominfo["row_cnt"])));
-			llg->Di(di);
-			llg->Dj(dj);
-			llg->ScanningMode(scmode);
-
-			const double X0 = stod(geominfo["long_orig"]) * scale;
-			const double Y0 = stod(geominfo["lat_orig"]) * scale;
-
-			const double X1 = fmod(X0 + static_cast<double>(llg->Ni() - 1) * di, 360);
-
-			double Y1 = kHPMissingValue;
-
-			switch (llg->ScanningMode())
-			{
-				case kTopLeft:
-					Y1 = Y0 - static_cast<double>(llg->Nj() - 1) * dj;
-					break;
-				case kBottomLeft:
-					Y1 = Y0 + static_cast<double>(llg->Nj() - 1) * dj;
-					break;
-				default:
-					break;
-			}
-
-			llg->FirstPoint(point(X0, Y0));
-			llg->LastPoint(point(X1, Y1));
-		}
-		else if (geominfo["grid_type_id"] == "4")
-		{
-			g = unique_ptr<rotated_latitude_longitude_grid>(new rotated_latitude_longitude_grid);
-			rotated_latitude_longitude_grid* const rllg = dynamic_cast<rotated_latitude_longitude_grid*>(g.get());
-
-			const double di = scale * stod(geominfo["pas_longitude"]);
-			const double dj = scale * stod(geominfo["pas_latitude"]);
-
-			rllg->Ni(static_cast<size_t>(stol(geominfo["col_cnt"])));
-			rllg->Nj(static_cast<size_t>(stol(geominfo["row_cnt"])));
-			rllg->Di(di);
-			rllg->Dj(dj);
-			rllg->ScanningMode(scmode);
-
-			rllg->SouthPole(point(stod(geominfo["geom_parm_2"]) * scale, stod(geominfo["geom_parm_1"]) * scale));
-
-			const double X0 = stod(geominfo["long_orig"]) * scale;
-			const double Y0 = stod(geominfo["lat_orig"]) * scale;
-
-			const double X1 = fmod(X0 + static_cast<double>(rllg->Ni() - 1) * di, 360);
-
-			double Y1 = kHPMissingValue;
-
-			switch (rllg->ScanningMode())
-			{
-				case kTopLeft:
-					Y1 = Y0 - static_cast<double>(rllg->Nj() - 1) * dj;
-					break;
-				case kBottomLeft:
-					Y1 = Y0 + static_cast<double>(rllg->Nj() - 1) * dj;
-					break;
-				default:
-					break;
-			}
-
-			rllg->FirstPoint(point(X0, Y0));
-			rllg->LastPoint(point(X1, Y1));
-		}
-		else if (geominfo["grid_type_id"] == "2")
-		{
-			g = unique_ptr<stereographic_grid>(new stereographic_grid);
-			stereographic_grid* const sg = dynamic_cast<stereographic_grid*>(g.get());
-
-			const double di = stod(geominfo["pas_longitude"]);
-			const double dj = stod(geominfo["pas_latitude"]);
-
-			sg->Orientation(stod(geominfo["geom_parm_1"]) * scale);
-			sg->Di(di);
-			sg->Dj(dj);
-
-			sg->Ni(static_cast<size_t>(stol(geominfo["col_cnt"])));
-			sg->Nj(static_cast<size_t>(stol(geominfo["row_cnt"])));
-			sg->ScanningMode(scmode);
-
-			const double X0 = stod(geominfo["long_orig"]) * scale;
-			const double Y0 = stod(geominfo["lat_orig"]) * scale;
-
-			sg->FirstPoint(point(X0, Y0));
-		}
-		else if (geominfo["grid_type_id"] == "6")
-		{
-			g = unique_ptr<reduced_gaussian_grid>(new reduced_gaussian_grid);
-			reduced_gaussian_grid* const gg = dynamic_cast<reduced_gaussian_grid*>(g.get());
-
-			gg->N(stoi(geominfo["n"]));
-			gg->Nj(stoi(geominfo["nj"]));
-
-			auto strlongitudes = himan::util::Split(geominfo["longitudes_along_parallels"], ",", false);
-			vector<int> longitudes;
-
-			for (auto& l : strlongitudes)
-			{
-				longitudes.push_back(stoi(l));
-			}
-
-			gg->NumberOfPointsAlongParallels(longitudes);
-
-			ASSERT(static_cast<size_t>(stol(geominfo["n"])) * 2 == longitudes.size());
-
-			const point first(stod(geominfo["first_point_lon"]), stod(geominfo["first_point_lat"]));
-			const point last(stod(geominfo["last_point_lon"]), stod(geominfo["last_point_lat"]));
-
-			gg->ScanningMode(scmode);
-
-			if (geominfo["scanning_mode"] == "+x-y")
-			{
-				gg->BottomLeft(point(first.X(), last.Y()));
-				gg->TopRight(point(last.X(), first.Y()));
-				gg->TopLeft(first);
-				gg->BottomRight(last);
-			}
-			else if (geominfo["scanning_mode"] == "+x+y")
-			{
-				gg->BottomLeft(first);
-				gg->TopRight(last);
-				gg->TopLeft(point(first.X(), last.Y()));
-				gg->BottomRight(point(last.X(), first.Y()));
-			}
-			else
-			{
-				log.Fatal("Scanning mode " + geominfo["scanning_mode"] + " not supported yet");
-				himan::Abort();
-			}
-		}
-		else if (geominfo["grid_type_id"] == "5")
-		{
-			g = unique_ptr<lambert_conformal_grid>(new lambert_conformal_grid);
-			lambert_conformal_grid* const lcg = dynamic_cast<lambert_conformal_grid*>(g.get());
-
-			lcg->Ni(stoi(geominfo["ni"]));
-			lcg->Nj(stoi(geominfo["nj"]));
-
-			lcg->Di(stod(geominfo["di"]));
-			lcg->Dj(stod(geominfo["dj"]));
-
-			lcg->Orientation(stod(geominfo["orientation"]));
-
-			lcg->StandardParallel1(stod(geominfo["latin1"]));
-
-			if (geominfo["latin2"].empty())
-			{
-				lcg->StandardParallel2(lcg->StandardParallel1());
-			}
-			else
-			{
-				lcg->StandardParallel2(stod(geominfo["latin2"]));
-			}
-
-			if (!geominfo["south_pole_lon"].empty())
-			{
-				const point sp(stod(geominfo["south_pole_lon"]), stod(geominfo["south_pole_lat"]));
-
-				lcg->SouthPole(sp);
-			}
-
-			const point first(stod(geominfo["first_point_lon"]), stod(geominfo["first_point_lat"]));
-
-			lcg->ScanningMode(scmode);
-
-			if (geominfo["scanning_mode"] == "+x-y")
-			{
-				lcg->TopLeft(first);
-			}
-			else if (geominfo["scanning_mode"] == "+x+y")
-			{
-				lcg->BottomLeft(first);
-			}
-			else
-			{
-				log.Fatal("Scanning mode " + geominfo["scanning_mode"] + " not supported yet");
-				himan::Abort();
-			}
-		}
-		else
-		{
-			log.Fatal("Unknown projection: " + geominfo["name"]);
-			himan::Abort();
-		}
+		g = util::GridFromDatabase(geom);
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
@@ -1103,31 +876,14 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 	}
 	catch (exception& e)
 	{
-		log.Fatal(string("Error parsing area information: ") + e.what());
+		itsLogger.Fatal(string("Error parsing area information: ") + e.what());
 		himan::Abort();
-	}
-
-	// Until shape of earth is added to radon, hard code default value for all geoms
-	// in radon to sphere with radius 6371220, which is the one used in newbase
-	// (in most cases that's not *not* the one used by the weather model).
-	// Exception to this lambert conformal conic where we use radius 6367470.
-
-	if (g)
-	{
-		if (g->Type() == kLambertConformalConic)
-		{
-			g->EarthShape(earth_shape(6367470.));
-		}
-		else
-		{
-			g->EarthShape(earth_shape(6371220.));
-		}
 	}
 
 	return g;
 }
 
-unique_ptr<grid> ParseAreaAndGridFromPoints(configuration& conf, const boost::property_tree::ptree& pt)
+unique_ptr<grid> ParseAreaAndGridFromPoints(const boost::property_tree::ptree& pt)
 {
 	unique_ptr<grid> g;
 
@@ -1236,7 +992,7 @@ unique_ptr<grid> ParseAreaAndGridFromPoints(configuration& conf, const boost::pr
 	return g;
 }
 
-unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, const boost::property_tree::ptree& pt)
+unique_ptr<grid> ParseAreaAndGrid(const shared_ptr<configuration>& conf, const boost::property_tree::ptree& pt)
 {
 	/*
 	 * Parse area and grid from different possible options.
@@ -1283,7 +1039,7 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 
 	// 3. Points
 
-	auto ig = ParseAreaAndGridFromPoints(*conf, pt);
+	auto ig = ParseAreaAndGridFromPoints(pt);
 
 	if (ig)
 	{
@@ -1309,7 +1065,8 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 		dynamic_cast<latitude_longitude_grid*>(rg.get())->Ni(pt.get<size_t>("ni"));
 		dynamic_cast<latitude_longitude_grid*>(rg.get())->Nj(pt.get<size_t>("nj"));
 
-		rg->ScanningMode(HPScanningModeFromString.at(pt.get<string>("scanning_mode")));
+		dynamic_cast<latitude_longitude_grid*>(rg.get())->ScanningMode(
+		    HPScanningModeFromString.at(pt.get<string>("scanning_mode")));
 
 		return rg;
 	}
@@ -1329,8 +1086,7 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 
 		if (mode != kTopLeft && mode != kBottomLeft)
 		{
-			throw runtime_error(ClassName() + ": scanning mode " + HPScanningModeToString.at(mode) +
-			                    " not supported (ever)");
+			throw runtime_error("scanning mode " + HPScanningModeToString.at(mode) + " not supported (ever)");
 		}
 
 		string projection = pt.get<string>("projection");
@@ -1338,7 +1094,7 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 		if (projection == "latlon")
 		{
 			rg = unique_ptr<latitude_longitude_grid>(new latitude_longitude_grid);
-			rg->ScanningMode(mode);
+			dynamic_cast<latitude_longitude_grid*>(rg.get())->ScanningMode(mode);
 
 			dynamic_cast<latitude_longitude_grid*>(rg.get())->BottomLeft(
 			    point(pt.get<double>("bottom_left_longitude"), pt.get<double>("bottom_left_latitude")));
@@ -1350,7 +1106,7 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 		else if (projection == "rotated_latlon")
 		{
 			rg = unique_ptr<rotated_latitude_longitude_grid>(new rotated_latitude_longitude_grid);
-			rg->ScanningMode(mode);
+			dynamic_cast<rotated_latitude_longitude_grid*>(rg.get())->ScanningMode(mode);
 
 			dynamic_cast<rotated_latitude_longitude_grid*>(rg.get())->BottomLeft(
 			    point(pt.get<double>("bottom_left_longitude"), pt.get<double>("bottom_left_latitude")));
@@ -1364,7 +1120,7 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 		else if (projection == "stereographic")
 		{
 			rg = unique_ptr<stereographic_grid>(new stereographic_grid);
-			rg->ScanningMode(mode);
+			dynamic_cast<stereographic_grid*>(rg.get())->ScanningMode(mode);
 
 			dynamic_cast<stereographic_grid*>(rg.get())->FirstPoint(
 			    point(pt.get<double>("first_point_longitude"), pt.get<double>("first_point_latitude")));
@@ -1376,7 +1132,7 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 		}
 		else
 		{
-			throw runtime_error(ClassName() + ": Unknown type: " + projection);
+			throw runtime_error("Unknown type: " + projection);
 		}
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
@@ -1388,12 +1144,12 @@ unique_ptr<grid> json_parser::ParseAreaAndGrid(shared_ptr<configuration> conf, c
 		throw runtime_error(string("Error parsing area: ") + e.what());
 	}
 
-	rg->EarthShape(earth_shape(6371220.));
+	rg->EarthShape(earth_shape<double>(6371220.));
 
 	return rg;
 }
 
-void ParseSourceProducer(shared_ptr<configuration> conf, shared_ptr<info> anInfo, const boost::property_tree::ptree& pt)
+std::vector<producer> ParseSourceProducer(const shared_ptr<configuration>& conf, const boost::property_tree::ptree& pt)
 {
 	std::vector<producer> sourceProducers;
 	vector<string> sourceProducersStr = himan::util::Split(pt.get<string>("source_producer"), ",", false);
@@ -1445,10 +1201,10 @@ void ParseSourceProducer(shared_ptr<configuration> conf, shared_ptr<info> anInfo
 		}
 	}
 
-	conf->SourceProducers(sourceProducers);
+	return sourceProducers;
 }
 
-void ParseTargetProducer(shared_ptr<configuration> conf, shared_ptr<info> anInfo, const boost::property_tree::ptree& pt)
+producer ParseTargetProducer(const shared_ptr<configuration>& conf, const boost::property_tree::ptree& pt)
 {
 	const HPDatabaseType dbtype = conf->DatabaseType();
 
@@ -1491,20 +1247,17 @@ void ParseTargetProducer(shared_ptr<configuration> conf, shared_ptr<info> anInfo
 		itsLogger.Warning("Unknown target producer: " + pt.get<string>("target_producer"));
 	}
 
-	conf->TargetProducer(prod);
-	anInfo->Producer(prod);
+	return prod;
 }
 
-void ParseLevels(shared_ptr<info> anInfo, const boost::property_tree::ptree& pt)
+vector<level> ParseLevels(const boost::property_tree::ptree& pt)
 {
 	try
 	{
 		string levelTypeStr = pt.get<string>("leveltype");
 		string levelValuesStr = pt.get<string>("levels");
 
-		vector<level> levels = LevelsFromString(levelTypeStr, levelValuesStr);
-
-		anInfo->Levels(levels);
+		return LevelsFromString(levelTypeStr, levelValuesStr);
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
@@ -1567,7 +1320,7 @@ vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt)
 			boost::algorithm::to_lower(type);
 			HPForecastType forecastType;
 
-			if (boost::regex_search(type, boost::regex("pf")))
+			if (type.find("pf") != string::npos)
 			{
 				forecastType = kEpsPerturbation;
 				string list = "";

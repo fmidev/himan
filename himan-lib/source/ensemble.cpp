@@ -83,9 +83,6 @@ ensemble::ensemble()
 {
 }
 
-ensemble::~ensemble()
-{
-}
 ensemble::ensemble(const ensemble& other)
     : itsParam(other.itsParam),
       itsExpectedEnsembleSize(other.itsExpectedEnsembleSize),

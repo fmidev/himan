@@ -14,6 +14,8 @@
 #include "logger.h"
 #include "plugin_factory.h"
 #include "radon.h"
+#include "statistics.h"
+#include "timer.h"
 #include "util.h"
 #include <boost/program_options.hpp>
 #include <future>
@@ -29,11 +31,11 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv);
 struct plugin_timing
 {
 	std::string plugin_name;
-	int order_number;     // plugin order number (if called more than once))
-	size_t time_elapsed;  // elapsed time in ms
+	int order_number;      // plugin order number (if called more than once))
+	int64_t time_elapsed;  // elapsed time in ms
 };
 
-void UploadRunStatisticsToDatabase(shared_ptr<configuration> conf, const vector<plugin_timing>& pluginTimes)
+void UploadRunStatisticsToDatabase(const shared_ptr<configuration>& conf, const vector<plugin_timing>& pluginTimes)
 {
 	stringstream json, query;
 
@@ -42,7 +44,7 @@ void UploadRunStatisticsToDatabase(shared_ptr<configuration> conf, const vector<
 	string content((istreambuf_iterator<char>(ifs)), (istreambuf_iterator<char>()));
 
 	// create json out of timings
-	json << "{\n    'plugins' : [";
+	json << "{ \"plugins\" : [";
 
 	for (const auto& t : pluginTimes)
 	{
@@ -53,11 +55,11 @@ void UploadRunStatisticsToDatabase(shared_ptr<configuration> conf, const vector<
 			name += " #" + to_string(t.order_number);
 		}
 
-		json << "\n        { 'name' : '" << name << "' : 'elapsed_ms' : '" << (t.time_elapsed) << "' },";
+		json << " { \"name\" : \"" << name << "\", \"elapsed_ms\" : \"" << (t.time_elapsed) << "\" },";
 	}
 
 	json.seekp(-1, json.cur);  // remove comma from last element
-	json << "\n    ]\n}";
+	json << " ] }";
 
 	char* host = getenv("HOSTNAME");
 
@@ -71,8 +73,8 @@ void UploadRunStatisticsToDatabase(shared_ptr<configuration> conf, const vector<
 	      << "'" << host << "', "
 	      << "'" << timestr << "', "
 	      << "'" << conf->ConfigurationFile() << "', "
-	      << "to_json($$" << content << "$$::text), "
-	      << "to_json($$" << json.str() << "$$::text))";
+	      << "'" << content << "'::json, "
+	      << "'" << json.str() << "'::json)";
 
 	// clang-format on
 
@@ -98,14 +100,11 @@ int HighestOrderNumber(const vector<plugin_timing>& timingList, const std::strin
 {
 	int highest = 1;
 
-	for (size_t i = 0; i < timingList.size(); i++)
+	for (const auto& timing : timingList)
 	{
-		if (timingList[i].plugin_name == pluginName)
+		if (timing.plugin_name == pluginName && timing.order_number >= highest)
 		{
-			if (timingList[i].order_number >= highest)
-			{
-				highest = timingList[i].order_number + 1;
-			}
+			highest = timing.order_number + 1;
 		}
 	}
 
@@ -116,54 +115,43 @@ void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
 {
 	auto r = GET_PLUGIN(radon);
 
-	const auto res = pc->Info();
-	const auto producerId = res->Producer().Id();
-	const auto analysisTime = res->PeekTime(0).OriginDateTime().String();
+	const auto producerId = pc->TargetProducer().Id();
+	const auto analysisTime = pc->Times()[0].OriginDateTime().String();
 
 	logger log("himan");
-	stringstream ss;
 
-	ss << "SELECT id FROM geom WHERE name = '" << pc->TargetGeomName() << "'";
+	auto geomInfo = r->RadonDB().GetGeometryDefinition(pc->TargetGeomName());
 
-	r->RadonDB().Query(ss.str());
-
-	auto row = r->RadonDB().FetchRow();
-
-	if (row.empty())
+	if (geomInfo.empty())
 	{
-		log.Error("ss_state update failed: geometry id not found for name: " + pc->TargetGeomName());
+		log.Error("ss_state update failed: geomery information not found");
 		return;
 	}
 
-	const auto geometryId = stoi(row[0]);
+	const int geometryId = stoi(geomInfo["id"]);
 
-	ss.str("");
-	ss << "SELECT partition_name FROM as_grid WHERE producer_id = " << producerId << " AND analysis_time = '"
-	   << analysisTime << "' AND geometry_id = " << geometryId;
+	auto tableInfo = r->RadonDB().GetTableName(producerId, analysisTime, pc->TargetGeomName());
 
-	r->RadonDB().Query(ss.str());
-
-	row = r->RadonDB().FetchRow();
-
-	if (row.empty())
+	if (tableInfo.empty())
 	{
 		log.Error("ss_state update failed: table not found from as_grid");
 		return;
 	}
 
-	const auto partitionName = row[0];
 	int inserts = 0, updates = 0;
 
-	for (res->ResetForecastType(); res->NextForecastType();)
+	for (const auto& ftype : pc->ForecastTypes())
 	{
 		int forecastTypeValue = -1;  // default, deterministic/analysis
 
-		if (res->ForecastType().Type() > 2)
+		if (ftype.Type() > 2)
 		{
-			forecastTypeValue = static_cast<int>(res->ForecastType().Value());
+			forecastTypeValue = static_cast<int>(ftype.Value());
 		}
 
-		for (res->ResetTime(); res->NextTime();)
+		stringstream ss;
+
+		for (const auto& ftime : pc->Times())
 		{
 			try
 			{
@@ -171,9 +159,9 @@ void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
 				ss << "INSERT INTO ss_state (producer_id, geometry_id, analysis_time, forecast_period, "
 				      "forecast_type_id, forecast_type_value, table_name) VALUES ("
 				   << producerId << ", " << geometryId << ", "
-				   << "'" << analysisTime << "', '" << util::MakeSQLInterval(res->Time()) << "', "
-				   << static_cast<int>(res->ForecastType().Type()) << ", " << forecastTypeValue << ", "
-				   << "'" << partitionName << "')";
+				   << "'" << analysisTime << "', '" << util::MakeSQLInterval(ftime) << "', "
+				   << static_cast<int>(ftype.Type()) << ", " << forecastTypeValue << ", "
+				   << "'" << tableInfo["schema_name"] << "." << tableInfo["table_name"] << "')";
 
 				r->RadonDB().Execute(ss.str());
 				inserts++;
@@ -185,8 +173,8 @@ void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
 				   << "producer_id = " << producerId << " AND "
 				   << "geometry_id = " << geometryId << " AND "
 				   << "analysis_time = '" << analysisTime << "' AND "
-				   << "forecast_period = '" << util::MakeSQLInterval(res->Time()) << "' AND "
-				   << "forecast_type_id = " << static_cast<int>(res->ForecastType().Type()) << " AND "
+				   << "forecast_period = '" << util::MakeSQLInterval(ftime) << "' AND "
+				   << "forecast_type_id = " << static_cast<int>(ftype.Type()) << " AND "
 				   << "forecast_type_value = " << forecastTypeValue;
 
 				r->RadonDB().Execute(ss.str());
@@ -205,14 +193,10 @@ void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
 	log.Debug("Update of ss_state: " + to_string(inserts) + " inserts, " + to_string(updates) + " updates");
 }
 
-void ExecutePlugin(shared_ptr<plugin_configuration> pc, vector<plugin_timing>& pluginTimes)
+void ExecutePlugin(const shared_ptr<plugin_configuration>& pc, vector<plugin_timing>& pluginTimes)
 {
-	timer aTimer;
+	timer aTimer(true);
 	logger aLogger("himan");
-	if (pc->StatisticsEnabled())
-	{
-		aTimer.Start();
-	}
 
 	auto aPlugin = dynamic_pointer_cast<plugin::compiled_plugin>(plugin_factory::Instance()->Plugin(pc->Name()));
 
@@ -220,11 +204,6 @@ void ExecutePlugin(shared_ptr<plugin_configuration> pc, vector<plugin_timing>& p
 	{
 		aLogger.Error("Unable to declare plugin " + pc->Name());
 		return;
-	}
-
-	if (pc->StatisticsEnabled())
-	{
-		pc->StartStatistics();
 	}
 
 	aLogger.Info("Calculating " + pc->Name());
@@ -241,12 +220,14 @@ void ExecutePlugin(shared_ptr<plugin_configuration> pc, vector<plugin_timing>& p
 
 	if (pc->StatisticsEnabled())
 	{
+		aTimer.Stop();
+		const auto totalTime = aTimer.GetTime();
+		pc->Statistics()->AddToTotalTime(totalTime);
 		pc->WriteStatistics();
 
-		aTimer.Stop();
 		plugin_timing t;
 		t.plugin_name = pc->Name();
-		t.time_elapsed = aTimer.GetTime();
+		t.time_elapsed = totalTime;
 		t.order_number = HighestOrderNumber(pluginTimes, pc->Name());
 
 		pluginTimes.push_back(t);
@@ -257,8 +238,6 @@ void ExecutePlugin(shared_ptr<plugin_configuration> pc, vector<plugin_timing>& p
 		UpdateSSState(pc);
 	}
 
-	// Remove all data from info and release memory
-	pc->Info()->Clear();
 #if defined DEBUG and defined HAVE_CUDA
 	// For 'cuda-memcheck --leak-check full'
 	CUDA_CHECK(cudaDeviceReset());
@@ -359,7 +338,7 @@ int main(int argc, char** argv)
 			}
 		} while (!passed);
 
-		size_t totalTime = 0;
+		int64_t totalTime = 0;
 
 		for (const auto& time : pluginTimes)
 		{
@@ -372,35 +351,29 @@ int main(int argc, char** argv)
 		{
 			plugin_timing t = pluginTimes[i];
 
-			cout << t.plugin_name;
+			// c++ string formatting really is unnecessarily hard
+			stringstream ss;
+
+			ss << t.plugin_name;
 
 			if (t.order_number > 1)
 			{
-				cout << " #" << t.order_number;
+				ss << " #" << t.order_number;
 			}
 
-			string indent = "\t\t\t\t";
+			cout << setw(25) << left << ss.str();
 
-			if (t.plugin_name.length() < 6)
-			{
-				indent = "\t\t\t";
-			}
-			else if (t.plugin_name.length() < 12)
-			{
-				indent = "\t\t";
-			}
-			else if (t.plugin_name.length() < 18)
-			{
-				indent = "\t";
-			}
+			ss.str("");
 
-			cout << indent << t.time_elapsed << " ms\t("
-			     << static_cast<int>(((static_cast<double>(t.time_elapsed) / static_cast<double>(totalTime)) * 100))
-			     << "%)" << endl;
+			ss << "("
+			   << static_cast<int>(((static_cast<double>(t.time_elapsed) / static_cast<double>(totalTime)) * 100))
+			   << "%)";
+
+			cout << setw(8) << right << t.time_elapsed << " ms " << setw(5) << right << ss.str() << endl;
 		}
 
-		cout << "------------------------------------" << endl;
-		cout << "Total duration:\t\t" << totalTime << " ms" << endl;
+		cout << "-------------------------------------------" << endl;
+		cout << setw(25) << left << "Total duration:" << setw(8) << right << totalTime << " ms" << endl;
 
 		if (conf->DatabaseType() == kRadon && conf->FileWriteOption() == kDatabase)
 		{
@@ -573,6 +546,9 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	{
 		switch (logLevel)
 		{
+			default:
+				cerr << "Invalid debug level: " << logLevel << endl;
+				exit(1);
 			case 0:
 				debugState = kFatalMsg;
 				break;
@@ -742,15 +718,14 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	{
 		vector<shared_ptr<plugin::himan_plugin>> thePlugins = plugin_factory::Instance()->Plugins();
 
-		for (size_t i = 0; i < thePlugins.size(); i++)
+		for (const auto& plugin : thePlugins)
 		{
-			cout << "Plugin '" << thePlugins[i]->ClassName() << "'" << endl
-			     << "\tversion " << thePlugins[i]->Version() << endl;
+			cout << "Plugin '" << plugin->ClassName() << "'" << endl;
 
-			switch (thePlugins[i]->PluginClass())
+			switch (plugin->PluginClass())
 			{
 				case kCompiled:
-					if (dynamic_pointer_cast<plugin::compiled_plugin>(thePlugins[i])->CudaEnabledCalculation())
+					if (dynamic_pointer_cast<plugin::compiled_plugin>(plugin)->CudaEnabledCalculation())
 					{
 						cout << "\tcuda-enabled\n";
 					}

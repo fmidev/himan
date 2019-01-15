@@ -71,7 +71,7 @@ void qnh::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void qnh::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void qnh::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	/*
 	 * Required source parameters
@@ -96,7 +96,7 @@ void qnh::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 	level groundLevel(kHeight, 0);
 
-	if (itsConfiguration->SourceProducer().Id() == 131 || itsConfiguration->SourceProducer().Id() == 134)  // EC
+	if (itsConfiguration->TargetProducer().Id() == 240 || itsConfiguration->TargetProducer().Id() == 243)  // EC
 	{
 		groundLevel = level(himan::kGround, 0);
 	}
@@ -149,9 +149,9 @@ void qnh::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 		double msl = altitude - topo;
 
-		double qnh = p0 * pow(1 - L * msl * inv_T0, qnh_exponent);
+		double result = p0 * pow(1 - L * msl * inv_T0, qnh_exponent);
 
-		myTargetInfo->Value(qnh);
+		myTargetInfo->Value(result);
 	}
 
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +

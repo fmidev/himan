@@ -1,5 +1,6 @@
 #include "cuda_plugin_helper.h"
 #include "lift.h"
+#include "plugin_factory.h"
 #include "stability.cuh"
 #include <thrust/count.h>
 #include <thrust/device_vector.h>
@@ -9,6 +10,8 @@
 #include "hitool.h"
 #undef HIMAN_AUXILIARY_INCLUDE
 
+using namespace himan;
+
 himan::level himan::plugin::stability_cuda::itsBottomLevel;
 
 namespace STABILITY
@@ -17,10 +20,6 @@ extern std::vector<double> Shear(std::shared_ptr<himan::plugin::hitool>& h, cons
                                  double upperHeight, size_t N);
 std::vector<double> Shear(std::shared_ptr<himan::plugin::hitool>& h, const himan::param& par,
                           const std::vector<double>& lowerHeight, const std::vector<double>& upperHeight);
-
-extern himan::info_t Fetch(std::shared_ptr<const himan::plugin_configuration>& conf,
-                           std::shared_ptr<himan::info>& myTargetInfo, const himan::level& lev, const himan::param& par,
-                           bool returnPacked = true);
 }
 
 template <typename T>
@@ -71,11 +70,11 @@ static int gridSize;
 static int blockSize;
 
 __global__ void ThetaEKernel(cdarr_t d_tstart, cdarr_t d_rhstart, cdarr_t d_pstart, cdarr_t d_tstop, cdarr_t d_rhstop,
-                             cdarr_t d_pstop, darr_t d_thetaediff, himan::plugin::stability_cuda::options opts)
+                             cdarr_t d_pstop, darr_t d_thetaediff, size_t N)
 {
 	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	if (idx < opts.N)
+	if (idx < N)
 	{
 		const double tstart = d_tstart[idx];
 		const double rhstart = d_rhstart[idx];
@@ -93,12 +92,11 @@ __global__ void ThetaEKernel(cdarr_t d_tstart, cdarr_t d_rhstart, cdarr_t d_psta
 }
 
 __global__ void LiftedIndicesKernel(cdarr_t d_t850, cdarr_t d_t500, cdarr_t d_t500m, cdarr_t d_td850, cdarr_t d_td500m,
-                                    cdarr_t d_p500m, darr_t d_si, darr_t d_li,
-                                    himan::plugin::stability_cuda::options opts)
+                                    cdarr_t d_p500m, darr_t d_si, darr_t d_li, size_t N)
 {
 	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	if (idx < opts.N)
+	if (idx < N)
 	{
 		const double t_li = himan::metutil::Lift_(d_p500m[idx], d_t500m[idx], d_td500m[idx], 50000.);
 		const double t_si = himan::metutil::Lift_(85000., d_t850[idx], d_td850[idx], 50000.);
@@ -108,16 +106,29 @@ __global__ void LiftedIndicesKernel(cdarr_t d_t850, cdarr_t d_t500, cdarr_t d_t5
 	}
 }
 
-__global__ void BulkShearKernel(cdarr_t d_u, cdarr_t d_v, darr_t d_bs, himan::plugin::stability_cuda::options opts)
+__global__ void BulkShearKernel(cdarr_t d_u, cdarr_t d_v, darr_t d_bs, size_t N)
 {
 	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	if (idx < opts.N)
+	if (idx < N)
 	{
 		const double u = d_u[idx];
 		const double v = d_v[idx];
 
 		d_bs[idx] = __dsqrt_rn(u * u + v * v);
+	}
+}
+
+__global__ void CAPEShearKernel(cdarr_t d_cape, cdarr_t d_ebs, darr_t d_capes, size_t N)
+{
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < N)
+	{
+		const double cape = d_cape[idx];
+		const double ebs = d_ebs[idx];
+
+		d_capes[idx] = ebs * __dsqrt_rn(cape);
 	}
 }
 
@@ -197,81 +208,70 @@ __global__ void BRNKernel(cdarr_t d_cape, cdarr_t d_u6, cdarr_t d_v6, cdarr_t d_
 	}
 }
 
-void CalculateBulkShear(himan::plugin::stability_cuda::options& opts, cudaStream_t& stream)
+void CalculateBulkShear(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info<double>> myTargetInfo,
+                        std::shared_ptr<himan::plugin::hitool> h, cudaStream_t& stream)
 {
 	using namespace himan;
 
-	double* d_bs01 = 0;
-	double* d_bs03 = 0;
-	double* d_bs06 = 0;
-	double* d_ebs = 0;
-	double* d_u01 = 0;
-	double* d_v01 = 0;
-	double* d_u03 = 0;
-	double* d_v03 = 0;
-	double* d_u06 = 0;
-	double* d_v06 = 0;
-	double* d_uebs = 0;
-	double* d_vebs = 0;
-	double* d_el = 0;
-	double* d_lpl = 0;
+	double* d_bs = 0;
+	double* d_capes = 0;
+	double* d_u = 0;
+	double* d_v = 0;
+
+	CUDA_CHECK(cudaMalloc((void**)&d_bs, memsize));
+	CUDA_CHECK(cudaMalloc((void**)&d_capes, memsize));
+	CUDA_CHECK(cudaMalloc((void**)&d_u, memsize));
+	CUDA_CHECK(cudaMalloc((void**)&d_v, memsize));
+
+	const size_t N = myTargetInfo->SizeLocations();
 
 	try
 	{
-		CUDA_CHECK(cudaMalloc((void**)&d_bs01, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_bs03, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_bs06, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_ebs, memsize));
+		auto u = STABILITY::Shear(h, UParam, 10, 1000, N);
+		CUDA_CHECK(cudaMemcpyAsync((void*)d_u, (const void*)u.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		PrepareInfo(opts.bs01);
-		PrepareInfo(opts.bs03);
-		PrepareInfo(opts.bs06);
-		PrepareInfo(opts.ebs);
+		auto v = STABILITY::Shear(h, VParam, 10, 1000, N);
+		CUDA_CHECK(cudaMemcpyAsync((void*)d_v, (const void*)v.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		CUDA_CHECK(cudaMalloc((void**)&d_u01, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_v01, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_u03, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_v03, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_u06, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_v06, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_uebs, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_vebs, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_el, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_lpl, memsize));
+		BulkShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u, d_v, d_bs, N);
 
-		const auto u01 = STABILITY::Shear(opts.h, UParam, 10, 1000, opts.N);
-		CUDA_CHECK(cudaMemcpyAsync((void*)d_u01, (const void*)u01.data(), memsize, cudaMemcpyHostToDevice, stream));
+		myTargetInfo->Find<param>(BSParam);
+		myTargetInfo->Find<level>(OneKMLevel);
+		cuda::ReleaseInfo(myTargetInfo, d_bs, stream);
 
-		const auto v01 = STABILITY::Shear(opts.h, VParam, 10, 1000, opts.N);
-		CUDA_CHECK(cudaMemcpyAsync((void*)d_v01, (const void*)v01.data(), memsize, cudaMemcpyHostToDevice, stream));
+		u = STABILITY::Shear(h, UParam, 10, 3000, N);
+		CUDA_CHECK(cudaMemcpyAsync((void*)d_u, (const void*)u.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		BulkShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u01, d_v01, d_bs01, opts);
+		v = STABILITY::Shear(h, VParam, 10, 3000, N);
+		CUDA_CHECK(cudaMemcpyAsync((void*)d_v, (const void*)v.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		himan::ReleaseInfo(opts.bs01, d_bs01, stream);
+		BulkShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u, d_v, d_bs, N);
 
-		const auto u03 = STABILITY::Shear(opts.h, UParam, 10, 3000, opts.N);
-		CUDA_CHECK(cudaMemcpyAsync((void*)d_u03, (const void*)u03.data(), memsize, cudaMemcpyHostToDevice, stream));
+		myTargetInfo->Find<level>(ThreeKMLevel);
+		cuda::ReleaseInfo(myTargetInfo, d_bs, stream);
 
-		const auto v03 = STABILITY::Shear(opts.h, VParam, 10, 3000, opts.N);
-		CUDA_CHECK(cudaMemcpyAsync((void*)d_v03, (const void*)v03.data(), memsize, cudaMemcpyHostToDevice, stream));
+		u = STABILITY::Shear(h, UParam, 10, 6000, N);
+		CUDA_CHECK(cudaMemcpyAsync((void*)d_u, (const void*)u.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		BulkShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u03, d_v03, d_bs03, opts);
+		v = STABILITY::Shear(h, VParam, 10, 6000, N);
+		CUDA_CHECK(cudaMemcpyAsync((void*)d_v, (const void*)v.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		himan::ReleaseInfo(opts.bs03, d_bs03, stream);
+		BulkShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u, d_v, d_bs, N);
 
-		const auto u06 = STABILITY::Shear(opts.h, UParam, 10, 6000, opts.N);
-		CUDA_CHECK(cudaMemcpyAsync((void*)d_u06, (const void*)u06.data(), memsize, cudaMemcpyHostToDevice, stream));
+		myTargetInfo->Find<level>(SixKMLevel);
+		cuda::ReleaseInfo(myTargetInfo, d_bs, stream);
 
-		const auto v06 = STABILITY::Shear(opts.h, VParam, 10, 6000, opts.N);
-		CUDA_CHECK(cudaMemcpyAsync((void*)d_v06, (const void*)v06.data(), memsize, cudaMemcpyHostToDevice, stream));
+		// Effective bulk shear
 
-		BulkShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u06, d_v06, d_bs06, opts);
+		auto ELInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), level(kMaximumThetaE, 0), param("EL-LAST-M"),
+		                                  myTargetInfo->ForecastType(), false);
+		auto LPLInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), level(kMaximumThetaE, 0), param("LPL-M"),
+		                                   myTargetInfo->ForecastType(), false);
 
-		himan::ReleaseInfo(opts.bs06, d_bs06, stream);
-
-		auto ELInfo =
-		    STABILITY::Fetch(opts.conf, opts.myTargetInfo, level(kMaximumThetaE, 0), param("EL-LAST-M"), false);
-		auto LPLInfo = STABILITY::Fetch(opts.conf, opts.myTargetInfo, level(kMaximumThetaE, 0), param("LPL-M"), false);
+		if (!ELInfo || !LPLInfo)
+		{
+			throw himan::kFileDataNotFound;
+		}
 
 		const auto& el = VEC(ELInfo);
 		const auto& lpl = VEC(LPLInfo);
@@ -283,79 +283,59 @@ void CalculateBulkShear(himan::plugin::stability_cuda::options& opts, cudaStream
 			Midway[i] = 0.5 * (el[i] - lpl[i]) + lpl[i];
 		}
 
-		const auto uebs = STABILITY::Shear(opts.h, UParam, lpl, Midway);
-		CUDA_CHECK(cudaMemcpyAsync((void*)d_uebs, (const void*)uebs.data(), memsize, cudaMemcpyHostToDevice, stream));
+		u = STABILITY::Shear(h, UParam, lpl, Midway);
+		CUDA_CHECK(cudaMemcpyAsync((void*)d_u, (const void*)u.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		const auto vebs = STABILITY::Shear(opts.h, VParam, lpl, Midway);
-		CUDA_CHECK(cudaMemcpyAsync((void*)d_vebs, (const void*)vebs.data(), memsize, cudaMemcpyHostToDevice, stream));
+		v = STABILITY::Shear(h, VParam, lpl, Midway);
+		CUDA_CHECK(cudaMemcpyAsync((void*)d_v, (const void*)v.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		BulkShearKernel<<<gridSize, blockSize, 0, stream>>>(d_uebs, d_vebs, d_ebs, opts);
+		BulkShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u, d_v, d_bs, N);
 
-		himan::ReleaseInfo(opts.ebs, d_ebs, stream);
+		myTargetInfo->Find<level>(Height0Level);
+		myTargetInfo->Find<param>(EBSParam);
+		cuda::ReleaseInfo(myTargetInfo, d_bs, stream);
 
-		CUDA_CHECK(cudaStreamSynchronize(stream));
+		// CAPE shear
 
-		CUDA_CHECK(cudaFree(d_bs01));
-		CUDA_CHECK(cudaFree(d_bs03));
-		CUDA_CHECK(cudaFree(d_bs06));
-		CUDA_CHECK(cudaFree(d_ebs));
-		CUDA_CHECK(cudaFree(d_u01));
-		CUDA_CHECK(cudaFree(d_v01));
-		CUDA_CHECK(cudaFree(d_u03));
-		CUDA_CHECK(cudaFree(d_v03));
-		CUDA_CHECK(cudaFree(d_u06));
-		CUDA_CHECK(cudaFree(d_v06));
-		CUDA_CHECK(cudaFree(d_uebs));
-		CUDA_CHECK(cudaFree(d_vebs));
-		CUDA_CHECK(cudaFree(d_el));
-		CUDA_CHECK(cudaFree(d_lpl));
-	}
-	catch (const himan::HPExceptionType& e)
-	{
-		if (e == himan::kFileDataNotFound)
+		auto CAPEInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), level(kMaximumThetaE, 0), param("CAPE-JKG"),
+		                                    myTargetInfo->ForecastType(), false);
+
+		if (!CAPEInfo)
 		{
-			if (d_bs01)
-				CUDA_CHECK(cudaFree(d_bs01));
-			if (d_bs03)
-				CUDA_CHECK(cudaFree(d_bs03));
-			if (d_bs06)
-				CUDA_CHECK(cudaFree(d_bs06));
-			if (d_ebs)
-				CUDA_CHECK(cudaFree(d_ebs));
-			if (d_u01)
-				CUDA_CHECK(cudaFree(d_u01));
-			if (d_v01)
-				CUDA_CHECK(cudaFree(d_v01));
-			if (d_u03)
-				CUDA_CHECK(cudaFree(d_u03));
-			if (d_v03)
-				CUDA_CHECK(cudaFree(d_v03));
-			if (d_u06)
-				CUDA_CHECK(cudaFree(d_u06));
-			if (d_v06)
-				CUDA_CHECK(cudaFree(d_v06));
-			if (d_uebs)
-				CUDA_CHECK(cudaFree(d_uebs));
-			if (d_vebs)
-				CUDA_CHECK(cudaFree(d_vebs));
-			if (d_el)
-				CUDA_CHECK(cudaFree(d_el));
-			if (d_lpl)
-				CUDA_CHECK(cudaFree(d_lpl));
+			throw himan::kFileDataNotFound;
 		}
+
+		cuda::PrepareInfo(CAPEInfo, d_u, stream);
+
+		CAPEShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u, d_bs, d_capes, N);
+
+		myTargetInfo->Find<param>(CAPESParam);
+		cuda::ReleaseInfo(myTargetInfo, d_capes, stream);
 	}
+	catch (HPExceptionType& e)
+	{
+	}
+
+	if (d_bs)
+		CUDA_CHECK(cudaFree(d_bs));
+	if (d_capes)
+		CUDA_CHECK(cudaFree(d_capes));
+	if (d_u)
+		CUDA_CHECK(cudaFree(d_u));
+	if (d_v)
+		CUDA_CHECK(cudaFree(d_v));
 }
 
-void StormRelativeHelicity(himan::plugin::stability_cuda::options& opts, double* d_srh, double stopHeight,
+void StormRelativeHelicity(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info<double>> myTargetInfo,
+                           std::shared_ptr<himan::plugin::hitool> h, double* d_srh, double stopHeight,
                            cudaStream_t& stream)
 {
 	using namespace himan;
 	using himan::plugin::stability_cuda::itsBottomLevel;
 
-	const int blockSize = 512;
-	const int gridSize = opts.N / blockSize + (opts.N % blockSize == 0 ? 0 : 1);
+	const size_t N = myTargetInfo->SizeLocations();
 
-	InitializeArray<double>(d_srh, 0, opts.N, stream);
+	InitializeArray<double>(d_srh, 0, N, stream);
 
 	double* d_uid = 0;
 	double* d_vid = 0;
@@ -385,20 +365,28 @@ void StormRelativeHelicity(himan::plugin::stability_cuda::options& opts, double*
 		CUDA_CHECK(cudaMalloc((void**)&d_vshr, memsize));
 
 		// average wind
-		auto Uavg = opts.h->VerticalAverage(UParam, 10, 6000);
+		auto Uavg = h->VerticalAverage<double>(UParam, 10, 6000);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_uavg, (const void*)Uavg.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		auto Vavg = opts.h->VerticalAverage(VParam, 10, 6000);
+		auto Vavg = h->VerticalAverage<double>(VParam, 10, 6000);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_vavg, (const void*)Vavg.data(), memsize, cudaMemcpyHostToDevice, stream));
 
 		// shear
-		auto Ushear = STABILITY::Shear(opts.h, UParam, 10, 6000, Uavg.size());
+		auto Ushear = STABILITY::Shear(h, UParam, 10, 6000, Uavg.size());
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_ushr, (const void*)Ushear.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		auto Vshear = STABILITY::Shear(opts.h, VParam, 10, 6000, Uavg.size());
+		auto Vshear = STABILITY::Shear(h, VParam, 10, 6000, Uavg.size());
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_vshr, (const void*)Vshear.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		UVIdVectorKernel<<<gridSize, blockSize, 0, stream>>>(d_uid, d_vid, d_uavg, d_vavg, d_ushr, d_vshr, opts.N);
+		UVIdVectorKernel<<<gridSize, blockSize, 0, stream>>>(d_uid, d_vid, d_uavg, d_vavg, d_ushr, d_vshr, N);
+
+		CUDA_CHECK(cudaStreamSynchronize(stream));
+
+		// U&V id vector source data is not needed anymore
+		CUDA_CHECK(cudaFree(d_uavg));
+		CUDA_CHECK(cudaFree(d_vavg));
+		CUDA_CHECK(cudaFree(d_ushr));
+		CUDA_CHECK(cudaFree(d_vshr));
 	}
 	catch (const himan::HPExceptionType& e)
 	{
@@ -423,29 +411,25 @@ void StormRelativeHelicity(himan::plugin::stability_cuda::options& opts, double*
 		CUDA_CHECK(cudaMalloc((void**)&d_u, memsize));
 		CUDA_CHECK(cudaMalloc((void**)&d_v, memsize));
 		CUDA_CHECK(cudaMalloc((void**)&d_z, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_found, opts.N * sizeof(unsigned char)));
+		CUDA_CHECK(cudaMalloc((void**)&d_found, N * sizeof(unsigned char)));
 
-		CUDA_CHECK(cudaStreamSynchronize(stream));
+		InitializeArray<unsigned char>(d_found, 0, N, stream);
 
-		// U&V id vector source data is not needed anymore
-		CUDA_CHECK(cudaFree(d_uavg));
-		CUDA_CHECK(cudaFree(d_vavg));
-		CUDA_CHECK(cudaFree(d_ushr));
-		CUDA_CHECK(cudaFree(d_vshr));
+		auto prevUInfo =
+		    cuda::Fetch<double>(conf, myTargetInfo->Time(), itsBottomLevel, UParam, myTargetInfo->ForecastType());
+		auto prevVInfo =
+		    cuda::Fetch<double>(conf, myTargetInfo->Time(), itsBottomLevel, VParam, myTargetInfo->ForecastType());
+		auto prevZInfo =
+		    cuda::Fetch<double>(conf, myTargetInfo->Time(), itsBottomLevel, HLParam, myTargetInfo->ForecastType());
 
-		InitializeArray<unsigned char>(d_found, 0, opts.N, stream);
+		if (!prevUInfo || !prevVInfo || !prevZInfo)
+		{
+			throw himan::kFileDataNotFound;
+		}
 
-		auto prevUInfo = STABILITY::Fetch(opts.conf, opts.myTargetInfo, itsBottomLevel, UParam);
-		CUDA_CHECK(cudaMemcpyAsync((void*)d_pu, (const void*)prevUInfo->Data().ValuesAsPOD(), memsize,
-		                           cudaMemcpyHostToDevice, stream));
-
-		auto prevVInfo = STABILITY::Fetch(opts.conf, opts.myTargetInfo, itsBottomLevel, VParam);
-		CUDA_CHECK(cudaMemcpyAsync((void*)d_pv, (const void*)prevVInfo->Data().ValuesAsPOD(), memsize,
-		                           cudaMemcpyHostToDevice, stream));
-
-		auto prevZInfo = STABILITY::Fetch(opts.conf, opts.myTargetInfo, itsBottomLevel, param("HL-M"));
-		CUDA_CHECK(cudaMemcpyAsync((void*)d_pz, (const void*)prevZInfo->Data().ValuesAsPOD(), memsize,
-		                           cudaMemcpyHostToDevice, stream));
+		cuda::PrepareInfo(prevUInfo, d_pu, stream);
+		cuda::PrepareInfo(prevVInfo, d_pv, stream);
+		cuda::PrepareInfo(prevZInfo, d_pz, stream);
 
 		thrust::device_ptr<unsigned char> dt_found = thrust::device_pointer_cast(d_found);
 
@@ -455,25 +439,29 @@ void StormRelativeHelicity(himan::plugin::stability_cuda::options& opts, double*
 		{
 			curLevel.Value(curLevel.Value() - 1);
 
-			auto UInfo = STABILITY::Fetch(opts.conf, opts.myTargetInfo, curLevel, UParam);
-			CUDA_CHECK(cudaMemcpyAsync((void*)d_u, (const void*)UInfo->Data().ValuesAsPOD(), memsize,
-			                           cudaMemcpyHostToDevice, stream));
+			auto UInfo =
+			    cuda::Fetch<double>(conf, myTargetInfo->Time(), curLevel, UParam, myTargetInfo->ForecastType());
+			auto VInfo =
+			    cuda::Fetch<double>(conf, myTargetInfo->Time(), curLevel, VParam, myTargetInfo->ForecastType());
+			auto ZInfo =
+			    cuda::Fetch<double>(conf, myTargetInfo->Time(), curLevel, HLParam, myTargetInfo->ForecastType());
 
-			auto VInfo = STABILITY::Fetch(opts.conf, opts.myTargetInfo, curLevel, VParam);
-			CUDA_CHECK(cudaMemcpyAsync((void*)d_v, (const void*)VInfo->Data().ValuesAsPOD(), memsize,
-			                           cudaMemcpyHostToDevice, stream));
+			if (!UInfo || !VInfo || !ZInfo)
+			{
+				break;
+			}
 
-			auto ZInfo = STABILITY::Fetch(opts.conf, opts.myTargetInfo, curLevel, param("HL-M"));
-			CUDA_CHECK(cudaMemcpyAsync((void*)d_z, (const void*)ZInfo->Data().ValuesAsPOD(), memsize,
-			                           cudaMemcpyHostToDevice, stream));
+			cuda::PrepareInfo(UInfo, d_u, stream);
+			cuda::PrepareInfo(VInfo, d_v, stream);
+			cuda::PrepareInfo(ZInfo, d_z, stream);
 
 			StormRelativeHelicityKernel<<<gridSize, blockSize, 0, stream>>>(d_srh, d_u, d_v, d_pu, d_pv, d_uid, d_vid,
-			                                                                d_z, d_pz, d_found, stopHeight, opts.N);
+			                                                                d_z, d_pz, d_found, stopHeight, N);
 
-			size_t foundCount = thrust::count(thrust::cuda::par.on(stream), dt_found, dt_found + opts.N, 1);
+			size_t foundCount = thrust::count(thrust::cuda::par.on(stream), dt_found, dt_found + N, 1);
 			CUDA_CHECK(cudaStreamSynchronize(stream));
 
-			if (foundCount == opts.N)
+			if (foundCount == N)
 			{
 				break;
 			}
@@ -497,57 +485,47 @@ void StormRelativeHelicity(himan::plugin::stability_cuda::options& opts, double*
 	{
 		if (e == himan::kFileDataNotFound)
 		{
-			if (d_uid)
-				CUDA_CHECK(cudaFree(d_uid));
-			if (d_vid)
-				CUDA_CHECK(cudaFree(d_vid));
-			if (d_pu)
-				CUDA_CHECK(cudaFree(d_pu));
-			if (d_pv)
-				CUDA_CHECK(cudaFree(d_pv));
-			if (d_pt)
-				CUDA_CHECK(cudaFree(d_pt));
-			if (d_pz)
-				CUDA_CHECK(cudaFree(d_pz));
-			if (d_u)
-				CUDA_CHECK(cudaFree(d_u));
-			if (d_v)
-				CUDA_CHECK(cudaFree(d_v));
-			if (d_z)
-				CUDA_CHECK(cudaFree(d_z));
+			CUDA_CHECK(cudaFree(d_uid));
+			CUDA_CHECK(cudaFree(d_vid));
+			CUDA_CHECK(cudaFree(d_pu));
+			CUDA_CHECK(cudaFree(d_pv));
+			CUDA_CHECK(cudaFree(d_pt));
+			CUDA_CHECK(cudaFree(d_pz));
+			CUDA_CHECK(cudaFree(d_u));
+			CUDA_CHECK(cudaFree(d_v));
+			CUDA_CHECK(cudaFree(d_z));
+		}
+		else
+		{
+			throw;
 		}
 	}
 
 	thrust::device_ptr<double> dt_srh = thrust::device_pointer_cast(d_srh);
-	thrust::replace(dt_srh, dt_srh + opts.N, 0., himan::MissingDouble());
+	thrust::replace(dt_srh, dt_srh + N, 0., himan::MissingDouble());
 }
 
-void EnergyHelicityIndex(himan::plugin::stability_cuda::options& opts, double* d_srh01, cudaStream_t& stream)
+void EnergyHelicityIndex(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info<double>> myTargetInfo,
+                         double* d_srh, double* d_ehi, cudaStream_t& stream)
 {
-	double* d_ehi = 0;
 	double* d_cape = 0;
 
 	try
 	{
-		auto CAPEInfo = STABILITY::Fetch(opts.conf, opts.myTargetInfo, himan::level(himan::kHeightLayer, 500, 0),
-		                                 himan::param("CAPE-JKG"));
-		auto h_cape = CAPEInfo->ToSimple();
+		auto CAPEInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), himan::level(himan::kHeightLayer, 500, 0),
+		                                    himan::param("CAPE-JKG"), myTargetInfo->ForecastType());
+
+		if (!CAPEInfo)
+		{
+			return;
+		}
 
 		CUDA_CHECK(cudaMalloc((void**)&d_cape, memsize));
 
-		himan::PrepareInfo(opts.ehi);
-		himan::PrepareInfo(h_cape, d_cape, stream);
+		cuda::PrepareInfo(CAPEInfo, d_cape, stream);
 
-		CUDA_CHECK(cudaMalloc((void**)&d_ehi, memsize));
+		EHIKernel<<<gridSize, blockSize, 0, stream>>>(d_cape, d_srh, d_ehi, myTargetInfo->SizeLocations());
 
-		EHIKernel<<<gridSize, blockSize, 0, stream>>>(d_cape, d_srh01, d_ehi, opts.N);
-
-		himan::ReleaseInfo(opts.ehi, d_ehi, stream);
-		himan::ReleaseInfo(h_cape);
-		delete h_cape;
-
-		CUDA_CHECK(cudaStreamSynchronize(stream));
-		CUDA_CHECK(cudaFree(d_ehi));
 		CUDA_CHECK(cudaFree(d_cape));
 	}
 	catch (const himan::HPExceptionType& e)
@@ -558,34 +536,38 @@ void EnergyHelicityIndex(himan::plugin::stability_cuda::options& opts, double* d
 	}
 }
 
-void CalculateHelicity(himan::plugin::stability_cuda::options& opts, cudaStream_t& stream)
+void CalculateHelicity(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info<double>> myTargetInfo,
+                       std::shared_ptr<himan::plugin::hitool> h, cudaStream_t& stream)
 {
-	double* d_srh01 = 0;
-	double* d_srh03 = 0;
+	double* d_srh = 0;
+	double* d_ehi = 0;
 
-	himan::PrepareInfo(opts.srh01);
+	CUDA_CHECK(cudaMalloc((void**)&d_srh, memsize));
+	CUDA_CHECK(cudaMalloc((void**)&d_ehi, memsize));
 
-	CUDA_CHECK(cudaMalloc((void**)&d_srh01, memsize));
-	CUDA_CHECK(cudaMalloc((void**)&d_srh03, memsize));
+	myTargetInfo->Find<param>(SRHParam);
+	myTargetInfo->Find<level>(ThreeKMLevel);
 
-	StormRelativeHelicity(opts, d_srh01, 1000, stream);
+	StormRelativeHelicity(conf, myTargetInfo, h, d_srh, 3000, stream);
+	cuda::ReleaseInfo(myTargetInfo, d_srh, stream);
 
-	himan::ReleaseInfo(opts.srh01, d_srh01, stream);
+	myTargetInfo->Find<level>(OneKMLevel);
 
-	himan::PrepareInfo(opts.srh03);
+	StormRelativeHelicity(conf, myTargetInfo, h, d_srh, 1000, stream);
+	cuda::ReleaseInfo(myTargetInfo, d_srh, stream);
 
-	StormRelativeHelicity(opts, d_srh03, 3000, stream);
+	myTargetInfo->Find<param>(EHIParam);
 
-	himan::ReleaseInfo(opts.srh03, d_srh03, stream);
+	EnergyHelicityIndex(conf, myTargetInfo, d_srh, d_ehi, stream);
+	cuda::ReleaseInfo(myTargetInfo, d_ehi, stream);
 
-	EnergyHelicityIndex(opts, d_srh01, stream);
-
-	CUDA_CHECK(cudaStreamSynchronize(stream));
-	CUDA_CHECK(cudaFree(d_srh01));
-	CUDA_CHECK(cudaFree(d_srh03));
+	CUDA_CHECK(cudaFree(d_srh));
+	CUDA_CHECK(cudaFree(d_ehi));
 }
 
-void CalculateBulkRichardsonNumber(himan::plugin::stability_cuda::options& opts, cudaStream_t& stream)
+void CalculateBulkRichardsonNumber(std::shared_ptr<const plugin_configuration> conf,
+                                   std::shared_ptr<info<double>> myTargetInfo, std::shared_ptr<himan::plugin::hitool> h,
+                                   cudaStream_t& stream)
 {
 	double* d_brn = 0;
 	double* d_cape = 0;
@@ -596,9 +578,13 @@ void CalculateBulkRichardsonNumber(himan::plugin::stability_cuda::options& opts,
 
 	try
 	{
-		auto CAPEInfo = STABILITY::Fetch(opts.conf, opts.myTargetInfo, himan::level(himan::kHeightLayer, 500, 0),
-		                                 himan::param("CAPE-JKG"));
-		auto h_cape = CAPEInfo->ToSimple();
+		auto CAPEInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), himan::level(himan::kHeightLayer, 500, 0),
+		                                    himan::param("CAPE-JKG"), myTargetInfo->ForecastType());
+
+		if (!CAPEInfo)
+		{
+			return;
+		}
 
 		CUDA_CHECK(cudaMalloc((void**)&d_cape, memsize));
 		CUDA_CHECK(cudaMalloc((void**)&d_u6, memsize));
@@ -606,30 +592,30 @@ void CalculateBulkRichardsonNumber(himan::plugin::stability_cuda::options& opts,
 		CUDA_CHECK(cudaMalloc((void**)&d_u05, memsize));
 		CUDA_CHECK(cudaMalloc((void**)&d_v05, memsize));
 
-		himan::PrepareInfo(opts.brn);
-		himan::PrepareInfo(h_cape, d_cape, stream);
+		cuda::PrepareInfo(CAPEInfo, d_cape, stream);
 
-		auto U6 = opts.h->VerticalAverage(UParam, 10, 6000);
+		auto U6 = h->VerticalAverage<double>(UParam, 10, 6000);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_u6, (const void*)U6.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		auto V6 = opts.h->VerticalAverage(VParam, 10, 6000);
+		auto V6 = h->VerticalAverage<double>(VParam, 10, 6000);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_v6, (const void*)V6.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		auto U05 = opts.h->VerticalAverage(UParam, 10, 500);
+		auto U05 = h->VerticalAverage<double>(UParam, 10, 500);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_u05, (const void*)U05.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		auto V05 = opts.h->VerticalAverage(VParam, 10, 500);
+		auto V05 = h->VerticalAverage<double>(VParam, 10, 500);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_v05, (const void*)V05.data(), memsize, cudaMemcpyHostToDevice, stream));
 
 		CUDA_CHECK(cudaMalloc((void**)&d_brn, memsize));
 
-		BRNKernel<<<gridSize, blockSize, 0, stream>>>(d_cape, d_u6, d_v6, d_u05, d_v05, d_brn, opts.N);
+		BRNKernel<<<gridSize, blockSize, 0, stream>>>(d_cape, d_u6, d_v6, d_u05, d_v05, d_brn,
+		                                              myTargetInfo->SizeLocations());
 
-		himan::ReleaseInfo(opts.brn, d_brn, stream);
-		himan::ReleaseInfo(h_cape);
-		delete h_cape;
+		myTargetInfo->Find<param>(BRNParam);
+		myTargetInfo->Find<level>(SixKMLevel);
 
-		CUDA_CHECK(cudaStreamSynchronize(stream));
+		cuda::ReleaseInfo(myTargetInfo, d_brn, stream);
+
 		CUDA_CHECK(cudaFree(d_brn));
 		CUDA_CHECK(cudaFree(d_cape));
 		CUDA_CHECK(cudaFree(d_u6));
@@ -655,7 +641,9 @@ void CalculateBulkRichardsonNumber(himan::plugin::stability_cuda::options& opts,
 	}
 }
 
-void CalculateLiftedIndices(himan::plugin::stability_cuda::options& opts, cudaStream_t& stream)
+void CalculateLiftedIndices(std::shared_ptr<const plugin_configuration> conf,
+                            std::shared_ptr<info<double>> myTargetInfo, std::shared_ptr<himan::plugin::hitool> h,
+                            cudaStream_t& stream)
 {
 	double* d_si = 0;
 	double* d_li = 0;
@@ -666,122 +654,95 @@ void CalculateLiftedIndices(himan::plugin::stability_cuda::options& opts, cudaSt
 	double* d_t850 = 0;
 	double* d_td850 = 0;
 
+	auto T850Info = cuda::Fetch<double>(conf, myTargetInfo->Time(), P850Level, TParam, myTargetInfo->ForecastType());
+	auto T500Info = cuda::Fetch<double>(conf, myTargetInfo->Time(), P500Level, TParam, myTargetInfo->ForecastType());
+	auto TD850Info = cuda::Fetch<double>(conf, myTargetInfo->Time(), P850Level, TDParam, myTargetInfo->ForecastType());
+
+	if (!T850Info || !T500Info || !TD850Info)
+	{
+		return;
+	}
+
+	CUDA_CHECK(cudaMalloc((void**)&d_t500, memsize));
+	CUDA_CHECK(cudaMalloc((void**)&d_t850, memsize));
+	CUDA_CHECK(cudaMalloc((void**)&d_td850, memsize));
+	CUDA_CHECK(cudaMalloc((void**)&d_si, memsize));
+	CUDA_CHECK(cudaMalloc((void**)&d_li, memsize));
+	CUDA_CHECK(cudaMalloc((void**)&d_t500m, memsize));
+	CUDA_CHECK(cudaMalloc((void**)&d_td500m, memsize));
+	CUDA_CHECK(cudaMalloc((void**)&d_p500m, memsize));
+
+	cuda::PrepareInfo(T850Info, d_t850, stream);
+	cuda::PrepareInfo(T500Info, d_t500, stream);
+	cuda::PrepareInfo(TD850Info, d_td850, stream);
+
+	const size_t N = myTargetInfo->SizeLocations();
+
+	// CUDA_CHECK(cudaStreamSynchronize(stream));
+
+	auto T500m = h->VerticalAverage<double>(TParam, 0, 500.);
+	CUDA_CHECK(cudaMemcpyAsync((void*)d_t500m, (const void*)T500m.data(), memsize, cudaMemcpyHostToDevice, stream));
+
+	auto P500m = h->VerticalAverage<double>(PParam, 0., 500.);
+	CUDA_CHECK(cudaMemcpyAsync((void*)d_p500m, (const void*)P500m.data(), memsize, cudaMemcpyHostToDevice, stream));
+
+	std::vector<double> TD500m;
+
 	try
 	{
-		auto T850Info = STABILITY::Fetch(opts.conf, opts.myTargetInfo, P850Level, TParam);
-		auto T500Info = STABILITY::Fetch(opts.conf, opts.myTargetInfo, P500Level, TParam);
-		auto TD850Info = STABILITY::Fetch(opts.conf, opts.myTargetInfo, P850Level, TDParam);
-
-		CUDA_CHECK(cudaMalloc((void**)&d_t500, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_t850, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_td850, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_si, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_li, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_t500m, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_td500m, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_p500m, memsize));
-
-		auto h_t850 = T850Info->ToSimple();
-		auto h_t500 = T500Info->ToSimple();
-		auto h_td850 = TD850Info->ToSimple();
-
-		PrepareInfo(h_t500, d_t500, stream);
-		PrepareInfo(h_t850, d_t850, stream);
-		PrepareInfo(h_td850, d_td850, stream);
-
-		CUDA_CHECK(cudaStreamSynchronize(stream));
-
-		himan::ReleaseInfo(h_t500);
-		himan::ReleaseInfo(h_t850);
-		himan::ReleaseInfo(h_td850);
-
-		delete h_t500;
-		delete h_t850;
-		delete h_td850;
-
-		auto T500m = opts.h->VerticalAverage(TParam, 0, 500.);
-		CUDA_CHECK(cudaMemcpyAsync((void*)d_t500m, (const void*)T500m.data(), memsize, cudaMemcpyHostToDevice, stream));
-
-		auto P500m = opts.h->VerticalAverage(PParam, 0., 500.);
-		CUDA_CHECK(cudaMemcpyAsync((void*)d_p500m, (const void*)P500m.data(), memsize, cudaMemcpyHostToDevice, stream));
-
-		std::vector<double> TD500m;
-
-		try
-		{
-			TD500m = opts.h->VerticalAverage(himan::param("TD-K"), 0, 500.);
-			CUDA_CHECK(
-			    cudaMemcpyAsync((void*)d_td500m, (const void*)TD500m.data(), memsize, cudaMemcpyHostToDevice, stream));
-		}
-		catch (const himan::HPExceptionType& e)
-		{
-			if (e == himan::kFileDataNotFound)
-			{
-				try
-				{
-					TD500m = opts.h->VerticalAverage(RHParam, 0, 500.);
-					CUDA_CHECK(cudaMemcpyAsync((void*)d_td500m, (const void*)TD500m.data(), memsize,
-					                           cudaMemcpyHostToDevice, stream));
-
-					RHToTDKernel<<<gridSize, blockSize, 0, stream>>>(d_t500m, d_td500m, TD500m.size());
-				}
-				catch (const himan::HPExceptionType& e)
-				{
-					if (e == himan::kFileDataNotFound)
-					{
-						return;
-					}
-				}
-			}
-		}
-
-		if (P500m[0] < 1500)
-		{
-			MultiplyWith<double>(d_p500m, 100, opts.N, stream);
-		}
-
-		PrepareInfo(opts.li);
-		PrepareInfo(opts.si);
-
-		LiftedIndicesKernel<<<gridSize, blockSize, 0, stream>>>(d_t850, d_t500, d_t500m, d_td850, d_td500m, d_p500m,
-		                                                        d_si, d_li, opts);
-
-		himan::ReleaseInfo(opts.li, d_li, stream);
-		himan::ReleaseInfo(opts.si, d_si, stream);
-
-		CUDA_CHECK(cudaStreamSynchronize(stream));
-
-		CUDA_CHECK(cudaFree(d_t850));
-		CUDA_CHECK(cudaFree(d_t500));
-		CUDA_CHECK(cudaFree(d_td850));
-		CUDA_CHECK(cudaFree(d_li));
-		CUDA_CHECK(cudaFree(d_si));
-		CUDA_CHECK(cudaFree(d_t500m));
-		CUDA_CHECK(cudaFree(d_td500m));
-		CUDA_CHECK(cudaFree(d_p500m));
+		TD500m = h->VerticalAverage<double>(himan::param("TD-K"), 0, 500.);
+		CUDA_CHECK(
+		    cudaMemcpyAsync((void*)d_td500m, (const void*)TD500m.data(), memsize, cudaMemcpyHostToDevice, stream));
 	}
 	catch (const himan::HPExceptionType& e)
 	{
-		if (d_li)
-			CUDA_CHECK(cudaFree(d_li));
-		if (d_si)
-			CUDA_CHECK(cudaFree(d_si));
-		if (d_t500m)
-			CUDA_CHECK(cudaFree(d_t500m));
-		if (d_td500m)
-			CUDA_CHECK(cudaFree(d_td500m));
-		if (d_p500m)
-			CUDA_CHECK(cudaFree(d_p500m));
-		if (d_t850)
-			CUDA_CHECK(cudaFree(d_t850));
-		if (d_t500)
-			CUDA_CHECK(cudaFree(d_t500));
-		if (d_td850)
-			CUDA_CHECK(cudaFree(d_td850));
+		if (e == himan::kFileDataNotFound)
+		{
+			try
+			{
+				TD500m = h->VerticalAverage<double>(RHParam, 0, 500.);
+				CUDA_CHECK(cudaMemcpyAsync((void*)d_td500m, (const void*)TD500m.data(), memsize, cudaMemcpyHostToDevice,
+				                           stream));
+
+				RHToTDKernel<<<gridSize, blockSize, 0, stream>>>(d_t500m, d_td500m, TD500m.size());
+			}
+			catch (const himan::HPExceptionType& e)
+			{
+				if (e == himan::kFileDataNotFound)
+				{
+					return;
+				}
+			}
+		}
 	}
+
+	if (P500m[0] < 1500)
+	{
+		MultiplyWith<double>(d_p500m, 100, N, stream);
+	}
+
+	LiftedIndicesKernel<<<gridSize, blockSize, 0, stream>>>(d_t850, d_t500, d_t500m, d_td850, d_td500m, d_p500m, d_si,
+	                                                        d_li, N);
+
+	myTargetInfo->Find<level>(Height0Level);
+	myTargetInfo->Find<param>(LIParam);
+	cuda::ReleaseInfo(myTargetInfo, d_li, stream);
+
+	myTargetInfo->Find<param>(SIParam);
+	cuda::ReleaseInfo(myTargetInfo, d_si, stream);
+
+	CUDA_CHECK(cudaFree(d_t850));
+	CUDA_CHECK(cudaFree(d_t500));
+	CUDA_CHECK(cudaFree(d_td850));
+	CUDA_CHECK(cudaFree(d_li));
+	CUDA_CHECK(cudaFree(d_si));
+	CUDA_CHECK(cudaFree(d_t500m));
+	CUDA_CHECK(cudaFree(d_td500m));
+	CUDA_CHECK(cudaFree(d_p500m));
 }
 
-void CalculateThetaEIndices(himan::plugin::stability_cuda::options& opts, cudaStream_t& stream)
+void CalculateThetaEIndices(std::shared_ptr<info<double>> myTargetInfo, std::shared_ptr<himan::plugin::hitool> h,
+                            cudaStream_t& stream)
 {
 	double* d_tstart = 0;
 	double* d_rhstart = 0;
@@ -803,33 +764,31 @@ void CalculateThetaEIndices(himan::plugin::stability_cuda::options& opts, cudaSt
 
 		CUDA_CHECK(cudaMalloc((void**)&d_thetaediff, memsize));
 
-		auto T3000 = opts.h->VerticalValue(TParam, 3000.);
+		auto T3000 = h->VerticalValue<double>(TParam, 3000.);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_tstop, (const void*)T3000.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		auto RH3000 = opts.h->VerticalValue(RHParam, 3000.);
+		auto RH3000 = h->VerticalValue<double>(RHParam, 3000.);
 		CUDA_CHECK(
 		    cudaMemcpyAsync((void*)d_rhstop, (const void*)RH3000.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		auto P3000 = opts.h->VerticalValue(PParam, 3000.);
+		auto P3000 = h->VerticalValue<double>(PParam, 3000.);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_pstop, (const void*)P3000.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		auto T2 = opts.h->VerticalValue(TParam, 2.);
+		auto T2 = h->VerticalValue<double>(TParam, 2.);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_tstart, (const void*)T2.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		auto RH2 = opts.h->VerticalValue(RHParam, 2.);
+		auto RH2 = h->VerticalValue<double>(RHParam, 2.);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_rhstart, (const void*)RH2.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		auto P2 = opts.h->VerticalValue(PParam, 2.);
+		auto P2 = h->VerticalValue<double>(PParam, 2.);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_pstart, (const void*)P2.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		PrepareInfo(opts.thetae3);
-
 		ThetaEKernel<<<gridSize, blockSize, 0, stream>>>(d_tstart, d_rhstart, d_pstart, d_tstop, d_rhstop, d_pstop,
-		                                                 d_thetaediff, opts);
+		                                                 d_thetaediff, myTargetInfo->SizeLocations());
 
-		himan::ReleaseInfo(opts.thetae3, d_thetaediff, stream);
-
-		CUDA_CHECK(cudaStreamSynchronize(stream));
+		myTargetInfo->Find<level>(ThreeKMLevel);
+		myTargetInfo->Find<param>(TPEParam);
+		cuda::ReleaseInfo(myTargetInfo, d_thetaediff, stream);
 
 		CUDA_CHECK(cudaFree(d_tstop));
 		CUDA_CHECK(cudaFree(d_rhstop));
@@ -849,66 +808,72 @@ void CalculateThetaEIndices(himan::plugin::stability_cuda::options& opts, cudaSt
 	}
 }
 
-void himan::plugin::stability_cuda::Process(options& opts)
+namespace stabilitygpu
+{
+void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info<double>> myTargetInfo)
 {
 	cudaStream_t stream;
 
 	CUDA_CHECK(cudaStreamCreate(&stream));
 
-	memsize = opts.N * sizeof(double);
+	const size_t N = myTargetInfo->SizeLocations();
+
+	memsize = N * sizeof(double);
 	blockSize = 512;
-	gridSize = opts.N / blockSize + (opts.N % blockSize == 0 ? 0 : 1);
+	gridSize = N / blockSize + (N % blockSize == 0 ? 0 : 1);
+
+	auto h = GET_PLUGIN(hitool);
+	h->Configuration(conf);
+	h->Time(myTargetInfo->Time());
+	h->ForecastType(myTargetInfo->ForecastType());
 
 	/* =====================================
 	 * |                                   |
 	 * |        LIFTED INDICES             |
 	 * |                                   |
 	 * =====================================
-	*/
+	 */
 
-	CalculateLiftedIndices(opts, stream);
+	CalculateLiftedIndices(conf, myTargetInfo, h, stream);
 
 	/* =====================================
 	 * |                                   |
 	 * |            THETAE                 |
 	 * |                                   |
 	 * =====================================
-	*/
+	 */
 
-	CalculateThetaEIndices(opts, stream);
+	CalculateThetaEIndices(myTargetInfo, h, stream);
 
 	/* =====================================
 	 * |                                   |
 	 * |          BULK SHEAR               |
 	 * |                                   |
 	 * =====================================
-	*/
+	 */
 
-	CalculateBulkShear(opts, stream);
+	CalculateBulkShear(conf, myTargetInfo, h, stream);
 
 	/* =====================================
 	 * |                                   |
 	 * |            HELICITY               |
 	 * |                                   |
 	 * =====================================
-	*/
+	 */
 
-	CalculateHelicity(opts, stream);
+	CalculateHelicity(conf, myTargetInfo, h, stream);
 
 	/* =====================================
 	 * |                                   |
 	 * |       BULK-RICHARDSON NUMBER      |
 	 * |                                   |
 	 * =====================================
-	*/
+	 */
 
-	CalculateBulkRichardsonNumber(opts, stream);
+	CalculateBulkRichardsonNumber(conf, myTargetInfo, h, stream);
 
 	// FINISHED
 
-	CUDA_CHECK(cudaStreamSynchronize(stream));
-
-	// Free device memory
-
 	CUDA_CHECK(cudaStreamDestroy(stream));
+}
 }

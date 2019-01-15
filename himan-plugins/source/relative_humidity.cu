@@ -76,7 +76,7 @@ __global__ void CalculateTQ(const Type* __restrict__ d_T, const Type* __restrict
 	}
 }
 
-void ProcessHumidityGPU(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info> myTargetInfo)
+void ProcessHumidityGPU(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info<float>> myTargetInfo)
 {
 	cudaStream_t stream;
 
@@ -93,8 +93,8 @@ void ProcessHumidityGPU(std::shared_ptr<const plugin_configuration> conf, std::s
 
 	// Allocate memory on device
 
-	info_t TInfo =
-	    cuda::Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("T-K"), myTargetInfo->ForecastType());
+	auto TInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("T-K"),
+	                                myTargetInfo->ForecastType());
 
 	if (!TInfo)
 	{
@@ -106,22 +106,10 @@ void ProcessHumidityGPU(std::shared_ptr<const plugin_configuration> conf, std::s
 
 	cuda::PrepareInfo(TInfo, d_T, stream);
 
-	if (myTargetInfo->Level().Type() == kHybrid)
-	{
-		const size_t paramIndex = myTargetInfo->ParamIndex();
-
-		for (myTargetInfo->ResetParam(); myTargetInfo->NextParam();)
-		{
-			myTargetInfo->Grid()->AB(TInfo->Grid()->AB());
-		}
-
-		myTargetInfo->ParamIndex(paramIndex);
-	}
-
 	// First try to calculate using Q and P
 
-	info_t QInfo =
-	    cuda::Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("Q-KGKG"), myTargetInfo->ForecastType());
+	auto QInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("Q-KGKG"),
+	                                myTargetInfo->ForecastType());
 
 	const int blockSize = 512;
 	const int gridSize = N / blockSize + (N % blockSize == 0 ? 0 : 1);
@@ -136,8 +124,13 @@ void ProcessHumidityGPU(std::shared_ptr<const plugin_configuration> conf, std::s
 
 		CUDA_CHECK(cudaMalloc((void**)&d_TD, memsize));
 
-		info_t TDInfo =
-		    cuda::Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("TD-K"), myTargetInfo->ForecastType());
+		auto TDInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("TD-K"),
+		                                 myTargetInfo->ForecastType());
+
+		if (!TDInfo)
+		{
+			return;
+		}
 
 		// Copy data to device
 
@@ -155,8 +148,8 @@ void ProcessHumidityGPU(std::shared_ptr<const plugin_configuration> conf, std::s
 	}
 	else if (myTargetInfo->Level().Type() != kPressure)
 	{
-		info_t PInfo = cuda::Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level(),
-		                           params({param("P-HPA"), param("P-PA")}), myTargetInfo->ForecastType());
+		auto PInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), myTargetInfo->Level(),
+		                                params({param("P-HPA"), param("P-PA")}), myTargetInfo->ForecastType());
 
 		if (!PInfo)
 		{
@@ -226,4 +219,16 @@ void ProcessHumidityGPU(std::shared_ptr<const plugin_configuration> conf, std::s
 	CUDA_CHECK(cudaFree(d_RH));
 
 	cudaStreamDestroy(stream);
+
+	if (myTargetInfo->Level().Type() == kHybrid)
+	{
+		const size_t paramIndex = myTargetInfo->Index<param>();
+
+		for (myTargetInfo->Reset<param>(); myTargetInfo->Next<param>();)
+		{
+			myTargetInfo->Set<level>(TInfo->Level());
+		}
+
+		myTargetInfo->Index<param>(paramIndex);
+	}
 }

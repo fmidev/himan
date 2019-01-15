@@ -57,10 +57,6 @@ void time_series::Fetch(std::shared_ptr<const plugin_configuration> config, fore
 	}
 }
 
-void time_series::Param(param theParam)
-{
-	itsParam = theParam;
-}
 /*
  *
  * function definitions for "modifier" functions
@@ -439,13 +435,44 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		return;
 	}
 
+	const double smallRadius = 35;
+	const double largeRadius = 62;
+
+	int smallFilterSizeX = 3;
+	int smallFilterSizeY = 3;
+	int largeFilterSizeX = 5;
+	int largeFilterSizeY = 5;
+
+	const double di = dynamic_pointer_cast<regular_grid>(myTargetInfo->Grid())->Di();
+	const double dj = dynamic_pointer_cast<regular_grid>(myTargetInfo->Grid())->Dj();
+
+	switch (myTargetInfo->Grid()->Type())
+	{
+		case kLatitudeLongitude:
+		case kRotatedLatitudeLongitude:
+			smallFilterSizeX = static_cast<int>((smallRadius / di / 111.0));
+			smallFilterSizeY = static_cast<int>((smallRadius / dj / 111.0));
+			largeFilterSizeX = static_cast<int>((largeRadius / di / 111.0));
+			largeFilterSizeY = static_cast<int>((largeRadius / dj / 111.0));
+			break;
+		case kStereographic:
+		case kLambertConformalConic:
+			smallFilterSizeX = static_cast<int>(round(smallRadius / di * 1000.0));
+			smallFilterSizeY = static_cast<int>(round(smallRadius / dj * 1000.0));
+			largeFilterSizeX = static_cast<int>(round(largeRadius / di * 1000.0));
+			largeFilterSizeY = static_cast<int>(round(largeRadius / dj * 1000.0));
+			break;
+		default:
+			break;
+	}
+
 	// filters
-	himan::matrix<double> small_filter_kernel(3, 3, 1, MissingDouble(), 1.0);
-	himan::matrix<double> large_filter_kernel(5, 5, 1, MissingDouble(), 1.0 / 25.0);
+	himan::matrix<double> small_filter_kernel(smallFilterSizeX, smallFilterSizeY, 1, MissingDouble(), 1.0);
+	himan::matrix<double> large_filter_kernel(largeFilterSizeX, largeFilterSizeY, 1, MissingDouble(),
+	                                          1.0 / (largeFilterSizeX * largeFilterSizeY));
 
 	// Cape filtering
 	himan::matrix<double> filtered_CAPE = numerical_functions::Max2D(CAPEMaxInfo->Data(), small_filter_kernel);
-	CAPEMaxInfo->Grid()->Data(filtered_CAPE);
 
 	// Cb_top filtering
 	himan::matrix<double> filtered_CbTop = numerical_functions::Max2D(CbTopMaxInfo->Data(), small_filter_kernel);
@@ -463,7 +490,21 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	h->Time(myTargetInfo->Time());
 	h->ForecastType(myTargetInfo->ForecastType());
 
-	auto CbTopTemp = h->VerticalValue(param("T-K"), filtered_CbTop.Values());
+	vector<double> CbTopTemp;
+
+	try
+	{
+		CbTopTemp = h->VerticalValue<double>(param("T-K"), filtered_CbTop.Values());
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e == kFileDataNotFound)
+		{
+			return;
+		}
+
+		throw;
+	}
 
 	string deviceType = "CPU";
 

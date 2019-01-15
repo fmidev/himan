@@ -30,7 +30,7 @@ const double stMaxH = 305.;
 
 const himan::params PFParams({himan::param("PRECFORM2-N"), himan::param("PRECFORM-N")});
 const himan::params RHParam({himan::param("RH-PRCNT"), himan::param("RH-0TO1")});
-const himan::params RRParam({himan::param("RR-1-MM"), himan::param("RRR-KGM2")});
+const himan::params RRParam({himan::param("RRR-KGM2"), himan::param("RR-1-MM")});
 const himan::params NParam({himan::param("N-PRCNT"), himan::param("N-0TO1")});
 
 // ..and their levels
@@ -60,7 +60,7 @@ void visibility::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void visibility::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	auto myThreadedLogger = logger("visibilityThread #" + to_string(threadIndex));
 
@@ -82,13 +82,7 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 		return;
 	}
 
-	double RHScale = 1;
-
-	if (itsConfiguration->SourceProducer().Id() == 1 || itsConfiguration->SourceProducer().Id() == 199 ||
-	    itsConfiguration->SourceProducer().Id() == 4)
-	{
-		RHScale = 100;
-	}
+	const double RHScale = (RHInfo->Param().Name() == "RH-PRCNT" ? 1. : 100.);
 
 	auto h = GET_PLUGIN(hitool);
 
@@ -97,21 +91,21 @@ void visibility::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	h->ForecastType(myTargetInfo->ForecastType());
 
 	// Alle 304m (1000ft) sumupilven (max) määrä [0..1]
-	auto stN = h->VerticalMaximum(NParam, 0, stMaxH);
+	auto stN = h->VerticalMaximum<double>(NParam, 0, stMaxH);
 
 	// Stratus <15m (~0-50ft)
-	auto st15 = h->VerticalAverage(NParam, 0, 15);
+	auto st15 = h->VerticalAverage<double>(NParam, 0, 15);
 
 	// Stratus 15-45m (~50-150ft)
-	auto st45 = h->VerticalAverage(NParam, 15, 45);
+	auto st45 = h->VerticalAverage<double>(NParam, 15, 45);
 
 	// Sumupilven korkeus [m]
-	auto stH = h->VerticalHeightGreaterThan(NParam, 0, stMaxH, stLimit);
+	auto stH = h->VerticalHeightGreaterThan<double>(NParam, 0, stMaxH, stLimit);
 
 	// Jos sumupilveä ohut kerros (vain) ~alimmalla mallipinnalla, jätetään alin kerros huomioimatta
 	// (ehkä mieluummin ylempää keskiarvo, jottei tällöin mahdollinen ylempi st-kerros huononna näkyvyyttä liikaa?)
-	auto stHup = h->VerticalHeightGreaterThan(NParam, 25, stMaxH, stLimit);
-	auto stNup = h->VerticalAverage(NParam, 15, stMaxH);
+	auto stHup = h->VerticalHeightGreaterThan<double>(NParam, 25, stMaxH, stLimit);
+	auto stNup = h->VerticalAverage<double>(NParam, 15, stMaxH);
 
 	ASSERT(stH.size() == stHup.size());
 	ASSERT(st15.size() == stH.size());

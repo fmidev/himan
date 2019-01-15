@@ -16,7 +16,6 @@
 #include "himan_common.h"
 #include "logger.h"
 #include "matrix.h"
-#include "packed_data.h"
 #include "point.h"
 #include "serialization.h"
 
@@ -27,13 +26,11 @@ class grid
    public:
 	grid();
 	grid(const std::string& WKT);
-	grid(HPGridClass theGridClass, HPGridType theGridType);
-	grid(HPGridClass theGridClass, HPGridType theGridType, HPScanningMode theScanningMode);
 
-	virtual ~grid();
+	virtual ~grid() = default;
 
-	grid(const grid& other);
-	grid& operator=(const grid& other) = delete;
+	grid(const grid& other) = default;
+	grid& operator=(const grid& other) = default;
 
 	virtual std::string ClassName() const
 	{
@@ -44,7 +41,7 @@ class grid
 
 	virtual std::ostream& Write(std::ostream& file) const;
 
-	virtual grid* Clone() const = 0;
+	virtual std::unique_ptr<grid> Clone() const = 0;
 
 	/*
 	 * Functions that are common and valid to all types of grids,
@@ -56,9 +53,6 @@ class grid
 
 	HPGridClass Class() const;
 	void Class(HPGridClass theGridClass);
-
-	matrix<double>& Data();
-	void Data(const matrix<double>& d);
 
 	std::vector<double> AB() const;
 	void AB(const std::vector<double>& theAB);
@@ -76,14 +70,64 @@ class grid
 
 	virtual size_t Size() const;
 
-	virtual void Value(size_t locationIndex, double theValue);
-	virtual double Value(size_t locationIndex) const;
-
 	virtual point FirstPoint() const = 0;
 	virtual point LastPoint() const = 0;
 
 	/* Return latlon coordinates of a given grid point */
 	virtual point LatLon(size_t locationIndex) const = 0;
+
+	/* Return a unique key */
+	virtual size_t Hash() const = 0;
+
+	bool UVRelativeToGrid() const;
+	void UVRelativeToGrid(bool theUVRelativeToGrid);
+
+	earth_shape<double> EarthShape() const;
+	void EarthShape(const earth_shape<double>& theEarthShape);
+
+	std::string WKT() const;
+	std::string Proj4() const;
+
+   protected:
+	bool EqualsTo(const grid& other) const;
+
+	HPGridClass itsGridClass;
+	HPGridType itsGridType;
+
+	std::vector<double> itsAB;
+
+	logger itsLogger;
+
+	/**
+	 * True if parameter UV components are grid relative, false if they are earth-relative.
+	 * This has  no meaning for:
+	 * - parameters what are not vector components
+	 * - non-projected data
+	 */
+
+	bool itsUVRelativeToGrid;
+
+	earth_shape<double> itsEarthShape;
+
+#ifdef SERIALIZATION
+	friend class cereal::access;
+
+	template <class Archive>
+	void serialize(Archive& ar)
+	{
+		ar(CEREAL_NVP(itsGridClass), CEREAL_NVP(itsGridType), CEREAL_NVP(itsAB), CEREAL_NVP(itsLogger),
+		   CEREAL_NVP(itsIdentifier), CEREAL_NVP(itsUVRelativeToGrid), CEREAL_NVP(itsEarthShape));
+	}
+#endif
+};
+
+class regular_grid : public grid
+{
+   public:
+	regular_grid();
+	~regular_grid();
+	regular_grid(const regular_grid&);
+	regular_grid& operator=(const regular_grid& other) = delete;
 
 	/* Return grid point value (incl. fractions) of a given latlon point */
 	virtual point XY(const point& latlon) const = 0;
@@ -100,52 +144,37 @@ class grid
 	virtual HPScanningMode ScanningMode() const;
 	virtual void ScanningMode(HPScanningMode theScanningMode);
 
-	virtual bool IsPackedData() const;
-	void PackedData(std::unique_ptr<packed_data> thePackedData);
-	packed_data& PackedData();
-
-	virtual bool Swap(HPScanningMode newScanningMode) = 0;
-
 	virtual size_t Ni() const = 0;
 	virtual size_t Nj() const = 0;
 
 	virtual double Di() const = 0;
 	virtual double Dj() const = 0;
 
-	bool UVRelativeToGrid() const;
-	void UVRelativeToGrid(bool theUVRelativeToGrid);
-
-	earth_shape EarthShape() const;
-	void EarthShape(const earth_shape& theEarthShape);
-
-	std::string WKT() const;
-	std::string Proj4() const;
-
    protected:
-	bool EqualsTo(const grid& other) const;
-
-	matrix<double> itsData;  //<! Variable to hold unpacked data
-
-	HPGridClass itsGridClass;
-	HPGridType itsGridType;
-
-	std::vector<double> itsAB;
-
-	logger itsLogger;
+	bool EqualsTo(const regular_grid& other) const;
 
 	HPScanningMode itsScanningMode;
-	std::unique_ptr<packed_data> itsPackedData;  //<! Variable to hold packed data
+#ifdef SERIALIZATION
+	friend class cereal::access;
 
-	/**
-	 * True if parameter UV components are grid relative, false if they are earth-relative.
-	 * This has  no meaning for:
-	 * - parameters what are not vector components
-	 * - non-projected data
-	 */
+	template <class Archive>
+	void serialize(Archive& ar)
+	{
+		ar(cereal::base_class<grid>(this), CEREAL_NVP(itsScanningMode));
+	}
+#endif
+};
 
-	bool itsUVRelativeToGrid;
+class irregular_grid : public grid
+{
+   public:
+	irregular_grid();
+	~irregular_grid();
+	irregular_grid(const irregular_grid&);
+	irregular_grid& operator=(const irregular_grid& other) = delete;
 
-	earth_shape itsEarthShape;
+   protected:
+	bool EqualsTo(const irregular_grid& other) const;
 
 #ifdef SERIALIZATION
 	friend class cereal::access;
@@ -153,9 +182,7 @@ class grid
 	template <class Archive>
 	void serialize(Archive& ar)
 	{
-		ar(CEREAL_NVP(itsData), CEREAL_NVP(itsGridClass), CEREAL_NVP(itsGridType), CEREAL_NVP(itsAB),
-		   CEREAL_NVP(itsLogger), CEREAL_NVP(itsScanningMode), CEREAL_NVP(itsPackedData),
-		   CEREAL_NVP(itsUVRelativeToGrid), CEREAL_NVP(itsEarthShape));
+		ar(cereal::base_class<grid>(this));
 	}
 #endif
 };
@@ -164,6 +191,7 @@ inline std::ostream& operator<<(std::ostream& file, const grid& ob)
 {
 	return ob.Write(file);
 }
+
 }  // namespace himan
 
 #endif /* GRID_H */

@@ -1,8 +1,3 @@
-/**
- * @file hybrid_height.h
- *
- */
-
 #ifndef HYBRID_HEIGHT_H
 #define HYBRID_HEIGHT_H
 
@@ -19,7 +14,7 @@ class hybrid_height : public compiled_plugin, private compiled_plugin_base
    public:
 	hybrid_height();
 
-	virtual ~hybrid_height();
+	virtual ~hybrid_height() = default;
 
 	hybrid_height(const hybrid_height& other) = delete;
 	hybrid_height& operator=(const hybrid_height& other) = delete;
@@ -34,19 +29,15 @@ class hybrid_height : public compiled_plugin, private compiled_plugin_base
 	{
 		return kCompiled;
 	}
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(1, 2);
-	}
 
-   protected:
-	void RunTimeDimension(himan::info_t myTargetInfo, unsigned short threadIndex) override;
+	void WriteToFile(const std::shared_ptr<info<float>> targetInfo, write_options opts = write_options()) override;
 
    private:
-	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
-	bool WithHypsometricEquation(info_t& myTargetInfo);
-	bool WithGeopotential(info_t& myTargetInfo);
-	std::shared_ptr<himan::info> GetSurfacePressure(std::shared_ptr<himan::info>& myTargetInfo);
+	virtual void Calculate(std::shared_ptr<info<float>> myTargetInfo, unsigned short threadIndex) override;
+	void WriteSingleGridToFile(const std::shared_ptr<info<float>> targetInfo);
+	bool WithHypsometricEquation(std::shared_ptr<info<float>>& myTargetInfo);
+	bool WithGeopotential(std::shared_ptr<info<float>>& myTargetInfo);
+	std::shared_ptr<himan::info<float>> GetSurfacePressure(std::shared_ptr<himan::info<float>>& myTargetInfo);
 
 	int itsBottomLevel;
 	bool itsUseGeopotential;

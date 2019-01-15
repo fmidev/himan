@@ -8,8 +8,7 @@
 
 #include "forecast_time.h"
 #include "himan_common.h"
-#include "level.h"
-#include "param.h"
+#include "info.h"
 #include "plugin_configuration.h"
 
 namespace himan
@@ -30,7 +29,7 @@ class ensemble
 
 	ensemble();
 
-	virtual ~ensemble();
+	virtual ~ensemble() = default;
 
 	ensemble(const ensemble& other);
 

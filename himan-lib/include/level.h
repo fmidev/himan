@@ -46,6 +46,9 @@ class level
 	std::string Name() const;
 	void Name(const std::string& theName);
 
+	void AB(const std::vector<double>& theAB);
+	std::vector<double> AB() const;
+
 	std::ostream& Write(std::ostream& file) const;
 
    private:
@@ -77,6 +80,7 @@ class level
 	double itsValue2;
 	int itsIndex;  // Level index, ie. the number of level in a file for example
 	std::string itsName;
+	std::vector<double> itsAB;
 
 #ifdef SERIALIZATION
 	friend class cereal::access;

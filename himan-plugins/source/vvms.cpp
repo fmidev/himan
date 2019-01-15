@@ -11,8 +11,11 @@ using namespace std;
 using namespace himan::plugin;
 
 #ifdef HAVE_CUDA
-extern void ProcessGPU(std::shared_ptr<const himan::plugin_configuration> conf,
-                       std::shared_ptr<himan::info> myTargetInfo);
+namespace vvmsgpu
+{
+extern void Process(std::shared_ptr<const himan::plugin_configuration> conf,
+                    std::shared_ptr<himan::info<double>> myTargetInfo);
+}
 #endif
 // Required source parameters
 
@@ -54,7 +57,7 @@ void vvms::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void vvms::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void vvms::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	auto myThreadedLogger = logger("vvmsThread #" + to_string(threadIndex));
 
@@ -73,7 +76,7 @@ void vvms::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	{
 		deviceType = "GPU";
 
-		ProcessGPU(itsConfiguration, myTargetInfo);
+		vvmsgpu::Process(itsConfiguration, myTargetInfo);
 	}
 	else
 #endif

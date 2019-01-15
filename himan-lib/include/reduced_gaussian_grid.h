@@ -7,6 +7,7 @@
 
 #include "grid.h"
 #include "serialization.h"
+#include <map>
 
 #if defined __GNUC__ && (__GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ <= 6))
 #define override  // override specifier not support until 4.8
@@ -14,7 +15,7 @@
 
 namespace himan
 {
-class reduced_gaussian_grid : public grid
+class reduced_gaussian_grid : public irregular_grid
 {
    public:
 	reduced_gaussian_grid();
@@ -28,76 +29,56 @@ class reduced_gaussian_grid : public grid
 	{
 		return "himan::gaussian_grid";
 	}
-	point BottomLeft() const override;
-	point TopRight() const override;
-	point TopLeft() const;
-	point BottomRight() const;
-
-	void BottomLeft(const point& theBottomLeft);
-	void TopRight(const point& theTopRight);
-	void BottomRight(const point& theBottomRight);
-	void TopLeft(const point& theTopLeft);
 
 	int N() const;
 	void N(int theN);
 
-	void Nj(size_t theNj);
-
-	size_t Ni() const override;
-	size_t Nj() const override;
 	size_t Size() const override;
-
-	double Di() const override;
-	double Dj() const override;
-	bool Swap(HPScanningMode newScanningMode) override;
 
 	std::vector<int> NumberOfPointsAlongParallels() const;
 	void NumberOfPointsAlongParallels(const std::vector<int>& theNumberOfPointsAlongParallels);
 
-	reduced_gaussian_grid* Clone() const override;
+	std::vector<size_t> AccumulatedPointsAlongParallels() const;
+
+	std::vector<double> Latitudes() const;
+
+	point FirstPoint() const override;
+	point LastPoint() const override;
+
+	std::unique_ptr<grid> Clone() const override;
 
 	std::ostream& Write(std::ostream& file) const;
 
 	bool operator==(const grid& other) const;
 	bool operator!=(const grid& other) const;
 
-	point XY(const point& latlon) const override;
-	point LatLon(size_t locationIndex) const;
+	point LatLon(size_t locationIndex) const override;
 
-	point FirstPoint() const;
-	point LastPoint() const;
+	size_t Hash() const override;
 
-	/**
-	 * @brief Return value of given grid point coordinates
-	 */
-
-	double Value(size_t x, size_t y) const;
+	point LatLon(size_t x, size_t y) const;
+	size_t LocationIndex(size_t x, size_t y) const;
 
    private:
+	static std::vector<double> GetLatitudes(int theN);
 	bool EqualsTo(const reduced_gaussian_grid& other) const;
-	point LatLon(size_t x, size_t y) const;
-	void UpdateCoordinates() const;
+
+	std::vector<int> itsNumberOfPointsAlongParallels;
+	std::vector<size_t> itsAccumulatedPointsAlongParallels;
+	std::vector<double> itsLatitudes;
 
 	int itsN;
-	std::vector<int> itsNumberOfPointsAlongParallels;
 
-	size_t itsNj;
+	static std::map<int, std::vector<double>> cachedLatitudes;
 
-	mutable point itsBottomLeft;
-	mutable point itsTopRight;
-	mutable point itsBottomRight;
-	mutable point itsTopLeft;
-
-	mutable double itsDj;
 #ifdef SERIALIZATION
 	friend class cereal::access;
 
 	template <class Archive>
 	void serialize(Archive& ar)
 	{
-		ar(cereal::base_class<grid>(this), CEREAL_NVP(itsN), CEREAL_NVP(itsNumberOfPointsAlongParallels),
-		   CEREAL_NVP(itsNj), CEREAL_NVP(itsBottomLeft), CEREAL_NVP(itsTopRight), CEREAL_NVP(itsBottomRight),
-		   CEREAL_NVP(itsTopLeft), CEREAL_NVP(itsDj));
+		ar(cereal::base_class<irregular_grid>(this), CEREAL_NVP(itsN), CEREAL_NVP(itsNumberOfPointsAlongParallels),
+		   CEREAL_NVP(itsN), CEREAL_NVP(itsAccumulatedPointsAlongParallels));
 	}
 #endif
 };

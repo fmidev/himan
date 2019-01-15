@@ -32,7 +32,7 @@ void weather_code_2::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void weather_code_2::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadIndex)
+void weather_code_2::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short theThreadIndex)
 {
 	// Required source parameters
 	// new parameters used...
@@ -47,12 +47,20 @@ void weather_code_2::Calculate(shared_ptr<info> myTargetInfo, unsigned short the
 
 	// parameters to check convection
 	const param TParam("T-K");
+	param TGParam = TParam;
 	const param KParam("KINDEX-N");
 
 	level HLevel(himan::kHeight, 0, "HEIGHT");
 
 	// levels to check convection
 	level T0mLevel(himan::kHeight, 0, "HEIGHT");
+
+	if (myTargetInfo->Producer().Id() == 240)
+	{
+		TGParam = param("TG-K");
+		T0mLevel = level(himan::kGroundDepth, 0, 7);
+	}
+
 	level RH850Level(himan::kPressure, 850, "PRESSURE");
 
 	auto myThreadedLogger = logger("weather_code_2Thread #" + to_string(theThreadIndex));
@@ -72,7 +80,7 @@ void weather_code_2::Calculate(shared_ptr<info> myTargetInfo, unsigned short the
 	info_t MedCloudCoverInfo = Fetch(forecastTime, HLevel, MedCloudCoverParam, forecastType, false);
 	info_t HighCloudCoverInfo = Fetch(forecastTime, HLevel, HighCloudCoverParam, forecastType, false);
 	info_t FogInfo = Fetch(forecastTime, HLevel, FogParam, forecastType, false);
-	info_t T0mInfo = Fetch(forecastTime, T0mLevel, TParam, forecastType, false);
+	info_t T0mInfo = Fetch(forecastTime, T0mLevel, TGParam, forecastType, false);
 	info_t T850Info = Fetch(forecastTime, RH850Level, TParam, forecastType, false);
 	info_t KInfo = Fetch(forecastTime, HLevel, KParam, forecastType, false);
 
@@ -275,29 +283,32 @@ void weather_code_2::Calculate(shared_ptr<info> myTargetInfo, unsigned short the
 
 double weather_code_2::rain_type(double kIndex, double T0m, double T850)
 {
-	double rain_type;
+	double raintype;
 	if (kIndex > 15)
-		rain_type = 2;  // check for convection
+		raintype = 2;  // check for convection
 	else if (metutil::LowConvection_(T0m, T850) == 0)
-		rain_type = 1;  // check for shallow convection
+		raintype = 1;  // check for shallow convection
 	else
-		rain_type = 2;
+		raintype = 2;
 
-	return rain_type;
+	return raintype;
 }
 
 double weather_code_2::thunder_prob(double kIndex, double cloud)
 {
-	double thunder_prob = 0;  // initialize thunder probability to 0%
+	double thunderprob = 0;  // initialize thunder probability to 0%
 	if (cloud == 3309 || cloud == 2303 || cloud == 2302 || cloud == 1309 || cloud == 1303 || cloud == 1302)
 	{
 		if (kIndex >= 37)
-			thunder_prob = 60;  // heavy thunder, set thunder probability to a value over 50% (to be replaced by a more
-		                        // scientific way to determine thunder probability in the future)
+		{
+			thunderprob = 60;  // heavy thunder, set thunder probability to a value over 50% (to be replaced by a more
+		}                      // scientific way to determine thunder probability in the future)
 		else if (kIndex >= 27)
-			thunder_prob = 40;  // thunder, set thunder probability to a value between 30% and 50% (to be replaced by a
-		                        // more scientific way to determine thunder probability in the future)
+		{
+			thunderprob = 40;  // thunder, set thunder probability to a value between 30% and 50% (to be replaced by a
+			                   // more scientific way to determine thunder probability in the future)
+		}
 	}
 
-	return thunder_prob;
+	return thunderprob;
 }

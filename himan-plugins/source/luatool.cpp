@@ -11,7 +11,7 @@
 #include "numerical_functions_impl.h"
 #include "plugin_factory.h"
 #include "radon.h"
-#include "reduced_gaussian_grid.h"
+#include "statistics.h"
 #include "stereographic_grid.h"
 #include <boost/filesystem.hpp>
 #include <boost/thread.hpp>
@@ -59,10 +59,42 @@ void luatool::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	SetParams({param("DUMMY")});
 
+	if (!itsConfiguration->GetValue("ThreadDistribution").empty())
+	{
+		if (itsConfiguration->GetValue("ThreadDistribution") == "kThreadForAny")
+                {
+                        itsThreadDistribution = ThreadDistribution::kThreadForAny;
+                }
+                else if (itsConfiguration->GetValue("ThreadDistribution") == "kThreadForForecastTypeAndTime")
+		{
+			itsThreadDistribution = ThreadDistribution::kThreadForForecastTypeAndTime;
+		}
+                else if (itsConfiguration->GetValue("ThreadDistribution") == "kThreadForForecastTypeAndLevel")
+                {
+                        itsThreadDistribution = ThreadDistribution::kThreadForForecastTypeAndLevel;
+                }
+                else if (itsConfiguration->GetValue("ThreadDistribution") == "kThreadForTimeAndLevel")
+                {
+                        itsThreadDistribution = ThreadDistribution::kThreadForTimeAndLevel;
+                }
+		else if (itsConfiguration->GetValue("ThreadDistribution") == "kThreadForForecastType")
+		{
+			itsThreadDistribution = ThreadDistribution::kThreadForForecastType;
+		}
+		else if (itsConfiguration->GetValue("ThreadDistribution") == "kThreadForTime")
+		{
+			itsThreadDistribution = ThreadDistribution::kThreadForTime;
+		}
+		else if (itsConfiguration->GetValue("ThreadDistribution") == "kThreadForLevel")
+		{
+			itsThreadDistribution = ThreadDistribution::kThreadForLevel;
+		}
+	}
+
 	Start();
 }
 
-void luatool::Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void luatool::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	auto myThreadedLogger = logger("luatoolThread #" + std::to_string(threadIndex));
 
@@ -117,15 +149,25 @@ void luatool::ResetVariables(info_t myTargetInfo)
 
 	const auto L = myL.get();
 
+	// luatool is recycling info when data is written, this causes problems with
+	// cache as the data in the cache might be overwritten by another script.
+	// Therefore re-create the info here which means a memory copy.
+	auto newInfo = std::make_shared<info<double>>(*myTargetInfo);
+	newInfo->Create(myTargetInfo->Base());
+	newInfo->Iterator<forecast_type>().Index(myTargetInfo->Index<forecast_type>());
+	newInfo->Iterator<forecast_time>().Index(myTargetInfo->Index<forecast_time>());
+	newInfo->Iterator<level>().Index(myTargetInfo->Index<level>());
+	newInfo->Iterator<param>().Index(myTargetInfo->Index<param>());
+
 	globals(L)["luatool"] = boost::ref(*this);
-	globals(L)["result"] = myTargetInfo;
+	globals(L)["result"] = newInfo;
 	globals(L)["configuration"] = itsConfiguration;
 	globals(L)["write_options"] = boost::ref(itsWriteOptions);
 
 	// Useful variables
-	globals(L)["current_time"] = forecast_time(myTargetInfo->Time());
-	globals(L)["current_level"] = level(myTargetInfo->Level());
-	globals(L)["current_forecast_type"] = forecast_type(myTargetInfo->ForecastType());
+	globals(L)["current_time"] = forecast_time(newInfo->Time());
+	globals(L)["current_level"] = level(newInfo->Level());
+	globals(L)["current_forecast_type"] = forecast_type(newInfo->ForecastType());
 	globals(L)["missing"] = MissingDouble();
 
 	globals(L)["kKelvin"] = constants::kKelvin;
@@ -133,8 +175,8 @@ void luatool::ResetVariables(info_t myTargetInfo)
 	auto h = GET_PLUGIN(hitool);
 
 	h->Configuration(itsConfiguration);
-	h->Time(forecast_time(myTargetInfo->Time()));
-	h->ForecastType(forecast_type(myTargetInfo->ForecastType()));
+	h->Time(forecast_time(newInfo->Time()));
+	h->ForecastType(forecast_type(newInfo->ForecastType()));
 
 	auto r = GET_PLUGIN(radon);
 
@@ -153,12 +195,15 @@ bool luatool::ReadFile(const std::string& luaFile)
 
 	try
 	{
+		timer t(true);
 		ASSERT(myL.get());
 		if (luaL_dofile(myL.get(), luaFile.c_str()))
 		{
 			itsLogger.Error(lua_tostring(myL.get(), -1));
 			return false;
 		}
+		t.Stop();
+		itsLogger.Debug("Script " + luaFile + " executed in " + std::to_string(t.GetTime()) + " ms");
 	}
 	catch (const error& e)
 	{
@@ -289,45 +334,45 @@ namespace info_wrapper
 {
 // These are convenience functions for accessing info class contents
 
-void SetValue(std::shared_ptr<info>& anInfo, int index, double value)
+void SetValue(std::shared_ptr<info<double>>& anInfo, int index, double value)
 {
-	anInfo->Grid()->Value(--index, value);
+	anInfo->Data().Set(--index, value);
 }
-double GetValue(std::shared_ptr<info>& anInfo, int index)
+double GetValue(std::shared_ptr<info<double>>& anInfo, int index)
 {
-	return anInfo->Grid()->Value(--index);
+	return anInfo->Data().At(--index);
 }
-size_t GetLocationIndex(std::shared_ptr<info> anInfo)
+size_t GetLocationIndex(std::shared_ptr<info<double>> anInfo)
 {
 	return anInfo->LocationIndex() + 1;
 }
-size_t GetTimeIndex(std::shared_ptr<info> anInfo)
+size_t GetTimeIndex(std::shared_ptr<info<double>> anInfo)
 {
-	return anInfo->TimeIndex() + 1;
+	return anInfo->Index<forecast_time>() + 1;
 }
-size_t GetParamIndex(std::shared_ptr<info> anInfo)
+size_t GetParamIndex(std::shared_ptr<info<double>> anInfo)
 {
-	return anInfo->ParamIndex() + 1;
+	return anInfo->Index<param>() + 1;
 }
-size_t GetLevelIndex(std::shared_ptr<info> anInfo)
+size_t GetLevelIndex(std::shared_ptr<info<double>> anInfo)
 {
-	return anInfo->LevelIndex() + 1;
+	return anInfo->Index<level>() + 1;
 }
-void SetLocationIndex(std::shared_ptr<info> anInfo, size_t theIndex)
+void SetLocationIndex(std::shared_ptr<info<double>> anInfo, size_t theIndex)
 {
 	anInfo->LocationIndex(--theIndex);
 }
-void SetTimeIndex(std::shared_ptr<info> anInfo, size_t theIndex)
+void SetTimeIndex(std::shared_ptr<info<double>> anInfo, size_t theIndex)
 {
-	anInfo->TimeIndex(--theIndex);
+	anInfo->Index<forecast_time>(--theIndex);
 }
-void SetParamIndex(std::shared_ptr<info> anInfo, size_t theIndex)
+void SetParamIndex(std::shared_ptr<info<double>> anInfo, size_t theIndex)
 {
-	anInfo->ParamIndex(--theIndex);
+	anInfo->Index<param>(--theIndex);
 }
-void SetLevelIndex(std::shared_ptr<info> anInfo, size_t theIndex)
+void SetLevelIndex(std::shared_ptr<info<double>> anInfo, size_t theIndex)
 {
-	anInfo->LevelIndex(--theIndex);
+	anInfo->Index<level>(--theIndex);
 }
 void SetValues(info_t& anInfo, const object& table)
 {
@@ -375,7 +420,7 @@ void SetParam(info_t& anInfo, const param& par)
 
 	param newpar(par);
 
-	const auto lvl = anInfo->PeekLevel(0);
+	const auto lvl = anInfo->Peek<level>(0);
 	auto paramInfo =
 	    r->RadonDB().GetParameterFromDatabaseName(anInfo->Producer().Id(), par.Name(), lvl.Type(), lvl.Value());
 
@@ -389,7 +434,7 @@ void SetParam(info_t& anInfo, const param& par)
 		}
 	}
 
-	anInfo->SetParam(newpar);
+	anInfo->Set<param>(newpar);
 }
 }  // namespace info_wrapper
 
@@ -406,7 +451,7 @@ object VerticalMaximumGrid(std::shared_ptr<hitool> h, const param& theParam, con
 	try
 	{
 		return VectorToTable(
-		    h->VerticalMaximum(theParam, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
+		    h->VerticalMaximum<double>(theParam, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -423,7 +468,7 @@ object VerticalMaximum(std::shared_ptr<hitool> h, const param& theParam, double 
 {
 	try
 	{
-		return VectorToTable(h->VerticalMaximum(theParam, firstLevelValue, lastLevelValue));
+		return VectorToTable(h->VerticalMaximum<double>(theParam, firstLevelValue, lastLevelValue));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -442,7 +487,7 @@ object VerticalMinimumGrid(std::shared_ptr<hitool> h, const param& theParam, con
 	try
 	{
 		return VectorToTable(
-		    h->VerticalMinimum(theParam, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
+		    h->VerticalMinimum<double>(theParam, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -459,7 +504,7 @@ object VerticalMinimum(std::shared_ptr<hitool> h, const param& theParam, double 
 {
 	try
 	{
-		return VectorToTable(h->VerticalMinimum(theParam, firstLevelValue, lastLevelValue));
+		return VectorToTable(h->VerticalMinimum<double>(theParam, firstLevelValue, lastLevelValue));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -477,7 +522,8 @@ object VerticalSumGrid(std::shared_ptr<hitool> h, const param& theParam, const o
 {
 	try
 	{
-		return VectorToTable(h->VerticalSum(theParam, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
+		return VectorToTable(
+		    h->VerticalSum<double>(theParam, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -494,7 +540,7 @@ object VerticalSum(std::shared_ptr<hitool> h, const param& theParam, double firs
 {
 	try
 	{
-		return VectorToTable(h->VerticalSum(theParam, firstLevelValue, lastLevelValue));
+		return VectorToTable(h->VerticalSum<double>(theParam, firstLevelValue, lastLevelValue));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -513,7 +559,7 @@ object VerticalAverageGrid(std::shared_ptr<hitool> h, const param& theParam, con
 	try
 	{
 		return VectorToTable(
-		    h->VerticalAverage(theParam, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
+		    h->VerticalAverage<double>(theParam, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -530,7 +576,7 @@ object VerticalAverage(std::shared_ptr<hitool> h, const param& theParams, double
 {
 	try
 	{
-		return VectorToTable(h->VerticalAverage(theParams, firstLevelValue, lastLevelValue));
+		return VectorToTable(h->VerticalAverage<double>(theParams, firstLevelValue, lastLevelValue));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -548,8 +594,8 @@ object VerticalCountGrid(std::shared_ptr<hitool> h, const param& theParams, cons
 {
 	try
 	{
-		return VectorToTable(h->VerticalCount(theParams, TableToVector(firstLevelValue), TableToVector(lastLevelValue),
-		                                      TableToVector(findValue)));
+		return VectorToTable(h->VerticalCount<double>(theParams, TableToVector(firstLevelValue),
+		                                              TableToVector(lastLevelValue), TableToVector(findValue)));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -567,7 +613,7 @@ object VerticalCount(std::shared_ptr<hitool> h, const param& theParams, double f
 {
 	try
 	{
-		return VectorToTable(h->VerticalCount(theParams, firstLevelValue, lastLevelValue, findValue));
+		return VectorToTable(h->VerticalCount<double>(theParams, firstLevelValue, lastLevelValue, findValue));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -581,87 +627,11 @@ object VerticalCount(std::shared_ptr<hitool> h, const param& theParams, double f
 }
 
 object VerticalHeightGrid(std::shared_ptr<hitool> h, const param& theParam, const object& firstLevelValue,
-                          const object& lastLevelValue, const object& findValue, size_t findNth)
+                          const object& lastLevelValue, const object& findValue, int findNth)
 {
 	try
 	{
-		return VectorToTable(h->VerticalHeight(theParam, TableToVector(firstLevelValue), TableToVector(lastLevelValue),
-		                                       TableToVector(findValue), findNth));
-	}
-	catch (const HPExceptionType& e)
-	{
-		if (e != kFileDataNotFound)
-		{
-			throw;
-		}
-	}
-
-	return object();
-}
-
-object VerticalHeight(std::shared_ptr<hitool> h, const param& theParams, double firstLevelValue, double lastLevelValue,
-                      double findValue, size_t findNth)
-{
-	try
-	{
-		return VectorToTable(h->VerticalHeight(theParams, firstLevelValue, lastLevelValue, findValue, findNth));
-	}
-	catch (const HPExceptionType& e)
-	{
-		if (e != kFileDataNotFound)
-		{
-			throw;
-		}
-	}
-
-	return object();
-}
-
-object VerticalHeightGreaterThanGrid(std::shared_ptr<hitool> h, const param& theParam, const object& firstLevelValue,
-                                     const object& lastLevelValue, const object& findValue, size_t findNth)
-{
-	try
-	{
-		return VectorToTable(h->VerticalHeightGreaterThan(theParam, TableToVector(firstLevelValue),
-		                                                  TableToVector(lastLevelValue), TableToVector(findValue),
-		                                                  findNth));
-	}
-	catch (const HPExceptionType& e)
-	{
-		if (e != kFileDataNotFound)
-		{
-			throw;
-		}
-	}
-
-	return object();
-}
-
-object VerticalHeightGreaterThan(std::shared_ptr<hitool> h, const param& theParams, double firstLevelValue,
-                                 double lastLevelValue, double findValue, size_t findNth)
-{
-	try
-	{
-		return VectorToTable(
-		    h->VerticalHeightGreaterThan(theParams, firstLevelValue, lastLevelValue, findValue, findNth));
-	}
-	catch (const HPExceptionType& e)
-	{
-		if (e != kFileDataNotFound)
-		{
-			throw;
-		}
-	}
-
-	return object();
-}
-
-object VerticalHeightLessThanGrid(std::shared_ptr<hitool> h, const param& theParam, const object& firstLevelValue,
-                                  const object& lastLevelValue, const object& findValue, size_t findNth)
-{
-	try
-	{
-		return VectorToTable(h->VerticalHeightLessThan(theParam, TableToVector(firstLevelValue),
+		return VectorToTable(h->VerticalHeight<double>(theParam, TableToVector(firstLevelValue),
 		                                               TableToVector(lastLevelValue), TableToVector(findValue),
 		                                               findNth));
 	}
@@ -676,12 +646,90 @@ object VerticalHeightLessThanGrid(std::shared_ptr<hitool> h, const param& thePar
 	return object();
 }
 
-object VerticalHeightLessThan(std::shared_ptr<hitool> h, const param& theParams, double firstLevelValue,
-                              double lastLevelValue, double findValue, size_t findNth)
+object VerticalHeight(std::shared_ptr<hitool> h, const param& theParams, double firstLevelValue, double lastLevelValue,
+                      double findValue, int findNth)
 {
 	try
 	{
-		return VectorToTable(h->VerticalHeightLessThan(theParams, firstLevelValue, lastLevelValue, findValue, findNth));
+		return VectorToTable(h->VerticalHeight<double>(theParams, firstLevelValue, lastLevelValue, findValue, findNth));
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw;
+		}
+	}
+
+	return object();
+}
+
+object VerticalHeightGreaterThanGrid(std::shared_ptr<hitool> h, const param& theParam, const object& firstLevelValue,
+                                     const object& lastLevelValue, const object& findValue, int findNth)
+{
+	try
+	{
+		return VectorToTable(h->VerticalHeightGreaterThan<double>(theParam, TableToVector(firstLevelValue),
+		                                                          TableToVector(lastLevelValue),
+		                                                          TableToVector(findValue), findNth));
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw;
+		}
+	}
+
+	return object();
+}
+
+object VerticalHeightGreaterThan(std::shared_ptr<hitool> h, const param& theParams, double firstLevelValue,
+                                 double lastLevelValue, double findValue, int findNth)
+{
+	try
+	{
+		return VectorToTable(
+		    h->VerticalHeightGreaterThan<double>(theParams, firstLevelValue, lastLevelValue, findValue, findNth));
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw;
+		}
+	}
+
+	return object();
+}
+
+object VerticalHeightLessThanGrid(std::shared_ptr<hitool> h, const param& theParam, const object& firstLevelValue,
+                                  const object& lastLevelValue, const object& findValue, int findNth)
+{
+	try
+	{
+		return VectorToTable(h->VerticalHeightLessThan<double>(theParam, TableToVector(firstLevelValue),
+		                                                       TableToVector(lastLevelValue), TableToVector(findValue),
+		                                                       findNth));
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e != kFileDataNotFound)
+		{
+			throw;
+		}
+	}
+
+	return object();
+}
+
+object VerticalHeightLessThan(std::shared_ptr<hitool> h, const param& theParams, double firstLevelValue,
+                              double lastLevelValue, double findValue, int findNth)
+{
+	try
+	{
+		return VectorToTable(
+		    h->VerticalHeightLessThan<double>(theParams, firstLevelValue, lastLevelValue, findValue, findNth));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -698,7 +746,7 @@ object VerticalValueGrid(std::shared_ptr<hitool> h, const param& theParam, const
 {
 	try
 	{
-		return VectorToTable(h->VerticalValue(theParam, TableToVector(findValue)));
+		return VectorToTable(h->VerticalValue<double>(theParam, TableToVector(findValue)));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -715,7 +763,7 @@ object VerticalValue(std::shared_ptr<hitool> h, const param& theParam, double fi
 {
 	try
 	{
-		return VectorToTable(h->VerticalValue(theParam, findValue));
+		return VectorToTable(h->VerticalValue<double>(theParam, findValue));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -734,7 +782,7 @@ object VerticalPlusMinusAreaGrid(std::shared_ptr<hitool> h, const param& thePara
 	try
 	{
 		return VectorToTable(
-		    h->PlusMinusArea(theParams, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
+		    h->PlusMinusArea<double>(theParams, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -752,7 +800,7 @@ object VerticalPlusMinusArea(std::shared_ptr<hitool> h, const param& theParams, 
 {
 	try
 	{
-		return VectorToTable(h->PlusMinusArea(theParams, firstLevelValue, lastLevelValue));
+		return VectorToTable(h->PlusMinusArea<double>(theParams, firstLevelValue, lastLevelValue));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -964,29 +1012,29 @@ matrix<double> ProbLimitEq2D(const matrix<double>& A, const matrix<double>& B, d
 
 void BindLib(lua_State* L)
 {
-	module(L)[class_<himan::info, std::shared_ptr<himan::info>>("info")
+	module(L)[class_<himan::info<double>, std::shared_ptr<himan::info<double>>>("info")
 	              .def(constructor<>())
-	              .def("ClassName", &info::ClassName)
-	              .def("First", &info::First)
-	              .def("ResetParam", &info::ResetParam)
-	              .def("FirstParam", &info::FirstParam)
-	              .def("NextParam", &info::NextParam)
-	              .def("ResetLevel", &info::ResetLevel)
-	              .def("FirstLevel", &info::FirstLevel)
-	              .def("NextLevel", &info::NextLevel)
-	              .def("ResetTime", &info::ResetTime)
-	              .def("FirstTime", &info::FirstTime)
-	              .def("NextTime", &info::NextTime)
-	              .def("SizeLocations", LUA_CMEMFN(size_t, info, SizeLocations, void))
-	              .def("SizeTimes", LUA_CMEMFN(size_t, info, SizeTimes, void))
-	              .def("SizeParams", LUA_CMEMFN(size_t, info, SizeParams, void))
-	              .def("SizeLevels", LUA_CMEMFN(size_t, info, SizeLevels, void))
-	              .def("GetLevel", LUA_CMEMFN(level, info, Level, void))
-	              .def("GetTime", LUA_CMEMFN(forecast_time, info, Time, void))
-	              .def("GetParam", LUA_CMEMFN(param, info, Param, void))
-	              .def("GetGrid", LUA_CMEMFN(grid*, info, Grid, void))
-	              .def("SetTime", LUA_MEMFN(void, info, SetTime, const forecast_time&))
-	              .def("SetLevel", LUA_MEMFN(void, info, SetLevel, const level&))
+	              .def("ClassName", &info<double>::ClassName)
+//	              .def("First", &info::First)
+	              .def("ResetParam", &info<double>::Reset<param>)
+	              .def("FirstParam", &info<double>::First<param>)
+	              .def("NextParam", &info<double>::Next<param>)
+	              .def("ResetLevel", &info<double>::Reset<level>)
+	              .def("FirstLevel", &info<double>::First<level>)
+	              .def("NextLevel", &info<double>::Next<level>)
+	              .def("ResetTime", &info<double>::Reset<forecast_time>)
+	              .def("FirstTime", &info<double>::First<forecast_time>)
+	              .def("NextTime", &info<double>::Next<forecast_time>)
+	              .def("SizeLocations", LUA_CMEMFN(size_t, info<double>, SizeLocations, void))
+	              .def("SizeTimes", LUA_CMEMFN(size_t, info<double>, Size<forecast_time>, void))
+	              .def("SizeParams", LUA_CMEMFN(size_t, info<double>, Size<param>, void))
+	              .def("SizeLevels", LUA_CMEMFN(size_t, info<double>, Size<level>, void))
+	              .def("GetLevel", LUA_CMEMFN(const level&, info<double>, Level, void))
+	              .def("GetTime", LUA_CMEMFN(const forecast_time&, info<double>, Time, void))
+	              .def("GetParam", LUA_CMEMFN(const param&, info<double>, Param, void))
+	              .def("GetGrid", LUA_CMEMFN(std::shared_ptr<grid>, info<double>, Grid, void))
+	              .def("SetTime", LUA_MEMFN(void, info<double>, Set<forecast_time>, const forecast_time&))
+	              .def("SetLevel", LUA_MEMFN(void, info<double>, Set<level>, const level&))
 	              //.def("SetParam", LUA_MEMFN(void, info, SetParam, const param&))
 	              // These are local functions to luatool
 	              .def("SetParam", &info_wrapper::SetParam)
@@ -1006,7 +1054,7 @@ void BindLib(lua_State* L)
 	              .def("GetData", &info_wrapper::GetData),
 	          class_<grid, std::shared_ptr<grid>>("grid")
 	              .def("ClassName", &grid::ClassName)
-	              .def("GetScanningMode", LUA_CMEMFN(HPScanningMode, grid, ScanningMode, void))
+	              //.def("GetScanningMode", LUA_CMEMFN(HPScanningMode, grid, ScanningMode, void))
 	              .def("GetGridType", LUA_CMEMFN(HPGridType, grid, Type, void))
 	              .def("GetGridClass", LUA_CMEMFN(HPGridClass, grid, Class, void))
 	              .def("GetAB", LUA_CMEMFN(std::vector<double>, grid, AB, void))
@@ -1047,20 +1095,16 @@ void BindLib(lua_State* L)
 	              .def("GetLastPoint", LUA_CMEMFN(point, stereographic_grid, LastPoint, void))
 	              .def("GetOrientation", LUA_CMEMFN(double, stereographic_grid, Orientation, void))
 	              .def("SetOrientation", LUA_MEMFN(void, stereographic_grid, Orientation, double)),
+#if 0
 	          class_<reduced_gaussian_grid, grid, std::shared_ptr<reduced_gaussian_grid>>("reduced_gaussian_grid")
 	              .def(constructor<>())
 	              .def("ClassName", &reduced_gaussian_grid::ClassName)
-	              .def("GetNj", LUA_CMEMFN(size_t, reduced_gaussian_grid, Nj, void))
-	              .def("GetDj", LUA_CMEMFN(double, reduced_gaussian_grid, Dj, void))
 	              .def("GetN", LUA_CMEMFN(int, reduced_gaussian_grid, N, void))
 	              .def("SetN", LUA_MEMFN(void, reduced_gaussian_grid, N, int))
-	              .def("GetBottomLeft", LUA_CMEMFN(point, reduced_gaussian_grid, BottomLeft, void))
-	              .def("SetBottomLeft", LUA_MEMFN(void, reduced_gaussian_grid, BottomLeft, const point&))
-	              .def("GetTopRight", LUA_CMEMFN(point, reduced_gaussian_grid, TopRight, void))
-	              .def("SetTopRight", LUA_MEMFN(void, reduced_gaussian_grid, BottomLeft, const point&))
 	              .def("GetFirstPoint", LUA_CMEMFN(point, reduced_gaussian_grid, FirstPoint, void))
 	              .def("GetLastPoint", LUA_CMEMFN(point, reduced_gaussian_grid, LastPoint, void))
 	          ,
+#endif
 	          class_<matrix<double>>("matrix")
 	              .def(constructor<size_t, size_t, size_t, double>())
 	              .def("SetValues", &matrix_wrapper::SetValues)
@@ -1166,7 +1210,7 @@ void BindLib(lua_State* L)
 	              .def("GetOutputFileType", LUA_CMEMFN(HPFileType, configuration, OutputFileType, void))
 	              .def("GetSourceProducer", LUA_CMEMFN(const producer&, configuration, SourceProducer, size_t))
 	              .def("GetTargetProducer", LUA_CMEMFN(const producer&, configuration, TargetProducer, void))
-	              .def("GetForecastStep", &configuration::ForecastStep)
+	              .def("GetForecastStep", LUA_CMEMFN(int, configuration, ForecastStep, void))
 	              ,
 	          class_<plugin_configuration, configuration, std::shared_ptr<plugin_configuration>>("plugin_configuration")
 	              .def(constructor<>())
@@ -1227,8 +1271,8 @@ void BindLib(lua_State* L)
 		      .def("SetUpperHeightGrid", &modifier_wrapper::SetUpperHeightGrid)
 		      .def("GetFindValue", &modifier_wrapper::GetFindValueGrid)
 		      .def("SetFindValue", &modifier_wrapper::SetFindValueGrid)
-		      .def("SetFindNth", LUA_MEMFN(void, modifier, FindNth, size_t))
-		      .def("GetFindNth", LUA_CMEMFN(size_t, modifier, FindNth, void)),
+		      .def("SetFindNth", LUA_MEMFN(void, modifier, FindNth, int))
+		      .def("GetFindNth", LUA_CMEMFN(int, modifier, FindNth, void)),
 		  class_<modifier_findvalue, modifier>("modifier_findvalue")
 		      .def(constructor<>())
 		      .def("ClassName", &modifier_findvalue::ClassName)
@@ -1294,8 +1338,8 @@ void BindPlugins(lua_State* L)
 	          class_<luatool, compiled_plugin_base>("luatool")
 	              .def(constructor<>())
 	              .def("ClassName", &luatool::ClassName)
-	              .def("FetchInfo", LUA_CMEMFN(std::shared_ptr<himan::info>, luatool, FetchInfo, const forecast_time&, const level&, const param&))
-                      .def("FetchInfoWithType", LUA_CMEMFN(std::shared_ptr<himan::info>, luatool, FetchInfo, const forecast_time&, const level&,
+	              .def("FetchInfo", LUA_CMEMFN(std::shared_ptr<himan::info<double>>, luatool, FetchInfo, const forecast_time&, const level&, const param&))
+                      .def("FetchInfoWithType", LUA_CMEMFN(std::shared_ptr<himan::info<double>>, luatool, FetchInfo, const forecast_time&, const level&,
                                                            const param&, const forecast_type&))
 	              .def("Fetch", LUA_CMEMFN(object, luatool, Fetch, const forecast_time&, const level&, const param&))
 	              .def("FetchWithType", LUA_CMEMFN(object, luatool, Fetch, const forecast_time&, const level&,
@@ -1333,37 +1377,14 @@ void BindPlugins(lua_State* L)
 
 // clang-format on
 
-void luatool::Run(info_t myTargetInfo, unsigned short threadIndex)
-{
-	while (Next(*myTargetInfo))
-	{
-		Calculate(myTargetInfo, threadIndex);
-
-		if (itsConfiguration->StatisticsEnabled())
-		{
-			itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Data().MissingCount());
-			itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data().Size());
-		}
-	}
-}
-
-void luatool::Finish()
-{
-	if (itsConfiguration->StatisticsEnabled())
-	{
-		itsTimer.Stop();
-		itsConfiguration->Statistics()->AddToProcessingTime(itsTimer.GetTime());
-	}
-}
-
-std::shared_ptr<info> luatool::FetchInfo(const forecast_time& theTime, const level& theLevel,
-                                         const param& theParam) const
+std::shared_ptr<info<double>> luatool::FetchInfo(const forecast_time& theTime, const level& theLevel,
+                                                 const param& theParam) const
 {
 	return compiled_plugin_base::Fetch(theTime, theLevel, theParam, forecast_type(kDeterministic), false);
 }
 
-std::shared_ptr<info> luatool::FetchInfo(const forecast_time& theTime, const level& theLevel, const param& theParam,
-                                         const forecast_type& theType) const
+std::shared_ptr<info<double>> luatool::FetchInfo(const forecast_time& theTime, const level& theLevel,
+                                                 const param& theParam, const forecast_type& theType) const
 {
 	return compiled_plugin_base::Fetch(theTime, theLevel, theParam, theType, false);
 }
@@ -1382,7 +1403,6 @@ luabind::object luatool::Fetch(const forecast_time& theTime, const level& theLev
 	{
 		return object();
 	}
-
 	return VectorToTable(x->Data().Values());
 }
 
@@ -1440,17 +1460,17 @@ void luatool::WriteToFile(const info_t targetInfo, write_options writeOptions)
 	// Do nothing, override is needed to prevent double write
 }
 
-void luatool::WriteToFile(const info_t targetInfo)
+void luatool::WriteToFile(const info_t myTargetInfo)
 {
-	// luatool is recycling info when data is written, this causes problems with
-	// cache as the data in the cache might be overwritten by another script.
-	// Therefore re-create the info here which means a memory copy.
-	auto newInfo = std::make_shared<info>(*targetInfo);
-	newInfo->Create(targetInfo->Grid());
-	newInfo->ForecastTypeIterator().Set(targetInfo->ForecastTypeIndex());
-	newInfo->TimeIterator().Set(targetInfo->TimeIndex());
-	newInfo->LevelIterator().Set(targetInfo->LevelIndex());
-	newInfo->ParamIterator().Set(targetInfo->ParamIndex());
+	// When data is inserted to cache, it is not copied. Therefore we have to copy
+	// data here because luatool is recycling the info (otherwise the contents of
+	// the cache would change).
+	auto newInfo = std::make_shared<info<double>>(*myTargetInfo);
+	newInfo->Create(myTargetInfo->Base());
+	newInfo->Iterator<forecast_type>().Index(myTargetInfo->Index<forecast_type>());
+	newInfo->Iterator<forecast_time>().Index(myTargetInfo->Index<forecast_time>());
+	newInfo->Iterator<level>().Index(myTargetInfo->Index<level>());
+	newInfo->Iterator<param>().Index(myTargetInfo->Index<param>());
 
 	compiled_plugin_base::WriteToFile(newInfo, itsWriteOptions);
 }

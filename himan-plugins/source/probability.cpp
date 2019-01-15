@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <exception>
 
+#include "point_list.h"
 #include "radon.h"
 
 using namespace PROB;
@@ -38,7 +39,7 @@ param GetParamFromDatabase(const std::string& paramName, const std::shared_ptr<c
 	param p;
 	auto r = GET_PLUGIN(radon);
 
-	auto paraminfo = r->RadonDB().GetParameterFromDatabaseName(conf->Info()->Producer().Id(), paramName);
+	auto paraminfo = r->RadonDB().GetParameterFromDatabaseName(conf->TargetProducer().Id(), paramName);
 
 	if (paraminfo.empty())
 	{
@@ -146,32 +147,34 @@ static param GetConfigurationParameter(const std::string& name, const std::share
 	return himan::param(name);
 }
 
-static void FetchRemainingLimitsForStations(info_t tempInfo,
+static void FetchRemainingLimitsForStations(const grid* targetGrid,
                                             std::vector<PROB::partial_param_configuration>& paramConfigurations,
                                             logger& log)
 {
 	// Make sure that limit exists for all stations (if source data is stations)
-	tempInfo->First();
 
-	if (tempInfo->Grid()->Type() == kPointList)
+	if (targetGrid->Type() == kPointList)
 	{
 		for (auto& pc : paramConfigurations)
 		{
 			if (pc.thresholds.size() == 0)
 			{
-				pc.thresholds.resize(tempInfo->SizeLocations());
+				pc.thresholds.resize(targetGrid->Size());
 			}
 		}
+
+		const auto stations = dynamic_cast<const point_list*>(targetGrid)->Stations();
 
 		// Find limit for each station defined.
 		// If value is defined in configuration file, use that. Otherwise
 		// check from database.
 
 		auto r = GET_PLUGIN(radon);
-		for (tempInfo->ResetLocation(); tempInfo->NextLocation();)
-		{
-			const auto st = tempInfo->Station();
 
+		int i = -1;
+		for (const auto& st : stations)
+		{
+			i++;
 			for (auto& pc : paramConfigurations)
 			{
 				auto it = pc.stationThresholds.find(st.Id());
@@ -190,14 +193,14 @@ static void FetchRemainingLimitsForStations(info_t tempInfo,
 					log.Trace("Threshold for param " + pc.output.Name() + ", station " + std::to_string(st.Id()) +
 					          " is " + std::to_string(limit));
 
-					pc.thresholds[tempInfo->LocationIndex()] = std::to_string(limit);
+					pc.thresholds[i] = std::to_string(limit);
 				}
 				else
 				{
 					log.Trace("Threshold for param " + pc.output.Name() + ", station " + std::to_string(st.Id()) +
 					          " is " + it->second);
 
-					pc.thresholds[tempInfo->LocationIndex()] = it->second;
+					pc.thresholds[i] = it->second;
 				}
 			}
 		}
@@ -238,7 +241,7 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 	else
 	{
 		auto r = GET_PLUGIN(radon);
-		auto ensSize = r->RadonDB().GetProducerMetaData(conf->Info()->Producer().Id(), "ensemble size");
+		auto ensSize = r->RadonDB().GetProducerMetaData(conf->TargetProducer().Id(), "ensemble size");
 
 		if (ensSize.empty())
 		{
@@ -333,7 +336,7 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 
 	SetParams(calculatedParams);
 
-	FetchRemainingLimitsForStations(std::make_shared<himan::info>(*conf->Info()), itsParamConfigurations, itsLogger);
+	FetchRemainingLimitsForStations(conf->BaseGrid(), itsParamConfigurations, itsLogger);
 
 	Start();
 }

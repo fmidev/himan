@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 18.5.2
+Version: 18.11.7
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -13,10 +13,11 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 18.3.26
+Requires: himan-lib >= 18.11.1
 Requires: himan-plugins
 Requires: gdal >= 1.11.0
 Requires: zlib
+Requires: libfmidb
 BuildRequires: boost-devel >= 1.66
 
 %if %{defined suse_version}
@@ -62,9 +63,24 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Wed Nov  7 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.7-1.fmi
+- More timing output formatting improvements
+* Thu Nov  1 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.1-1.fmi
+- Timing output formatting improvements
+- Remove HPVersionNumber
+* Tue Oct 16 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.16-1.fmi
+- Improved statistics upload
+* Mon Oct 15 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.15-1.fmi
+- ss_state table changes
+* Wed Oct 10 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.10-1.fmi
+- Refactoring plugin_configuration
+* Fri Oct  5 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.5-1.fmi
+- Fix for invalid statistics json
+* Tue Aug  7 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.7-1.fmi
+- RHEL7.5 build
 * Wed May  2 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.5.2-1.fmi
 - Stricter compiler warning flags
-* Tue Apr 16 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.4.16-1.fmi
+* Mon Apr 16 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.4.16-1.fmi
 - Built with cuda 9.1
 * Tue Apr 10 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.4.10-1.fmi
 - New boost

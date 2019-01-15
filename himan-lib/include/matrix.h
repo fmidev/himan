@@ -20,6 +20,7 @@ class grid;
 namespace util
 {
 extern void DumpVector(const std::vector<double>& vec, const std::string& name);
+extern void DumpVector(const std::vector<float>& vec, const std::string& name);
 }
 
 /**
@@ -74,7 +75,7 @@ class matrix
 	{
 	}
 
-	matrix(const matrix& other)
+	explicit matrix(const matrix& other)
 	    : itsData(other.itsData)  // Copy contents!
 	      ,
 	      itsWidth(other.itsWidth),
@@ -83,6 +84,21 @@ class matrix
 	      itsMissingValue(other.itsMissingValue)
 	{
 	}
+
+	template <typename U>
+	matrix(const matrix<U>& other)
+	    : itsWidth(other.SizeX()),
+	      itsHeight(other.SizeY()),
+	      itsDepth(other.SizeZ()),
+	      itsMissingValue(himan::IsMissing(other.MissingValue()) ? himan::MissingValue<T>()
+	                                                             : static_cast<T>(other.MissingValue()))
+	{
+		itsData.resize(other.Size());
+		std::replace_copy_if(other.Values().begin(), other.Values().end(), itsData.begin(),
+		                     [=](const U& val) { return Compare(val, other.MissingValue()); }, itsMissingValue);
+	}
+
+	matrix(matrix&&) = default;
 
 	matrix& operator=(const matrix& other)
 	{
@@ -94,6 +110,8 @@ class matrix
 
 		return *this;
 	}
+
+	matrix& operator=(matrix&& other) = default;
 
 	bool operator==(const matrix& other) const
 	{
@@ -140,32 +158,16 @@ class matrix
 	}
 	std::ostream& Write(std::ostream& file) const
 	{
-		file << "<" << ClassName() << ">" << std::endl;
-		file << "__itsWidth__ " << itsWidth << std::endl;
-		file << "__itsHeight__ " << itsHeight << std::endl;
-		file << "__itsDepth__ " << itsDepth << std::endl;
-		file << "__itsSize__ " << itsData.size() << std::endl;
+		file << "<" << ClassName() << ">" << std::endl
+		     << "__itsWidth__ " << itsWidth << std::endl
+		     << "__itsHeight__ " << itsHeight << std::endl
+		     << "__itsDepth__ " << itsDepth << std::endl
+		     << "__itsSize__ " << itsData.size() << std::endl
+		     << "__itsMissingValue__ " << itsMissingValue << std::endl;
 
-		PrintData(file, itsData);
+		util::DumpVector(itsData, "");
 
 		return file;
-	}
-
-	/**
-	 * @brief Print information on contents if T == double
-	 *
-	 */
-	void PrintData(std::ostream& file, const std::vector<double>& theValues) const
-	{
-		if (!theValues.size())
-		{
-			file << "__no-data__" << std::endl;
-			return;
-		}
-
-		ASSERT(theValues.size() > 0);
-
-		util::DumpVector(theValues, "");
 	}
 
 	size_t Size() const
@@ -221,6 +223,12 @@ class matrix
 	{
 		return itsData;
 	}
+
+	const std::vector<T>& Values() const
+	{
+		return itsData;
+	}
+
 	friend std::ostream& operator<<(std::ostream& file, const matrix<T>& ob)
 	{
 		return ob.Write(file);

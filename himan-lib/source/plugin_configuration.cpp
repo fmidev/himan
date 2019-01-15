@@ -6,6 +6,7 @@
 #include "plugin_configuration.h"
 #include "forecast_time.h"
 #include "level.h"
+#include "statistics.h"
 #include "util.h"
 
 #include <algorithm>
@@ -24,7 +25,6 @@ plugin_configuration::plugin_configuration(const configuration& theConfiguration
       itsName(""),
       itsOptions(),
       itsPreconfiguredParams(),
-      itsInfo(new info),
       itsStatistics(new statistics)
 {
 }
@@ -34,8 +34,8 @@ plugin_configuration::plugin_configuration(const plugin_configuration& other)
       itsName(other.itsName),
       itsOptions(other.itsOptions),
       itsPreconfiguredParams(other.itsPreconfiguredParams),
-      itsInfo(new info(*other.itsInfo)),
-      itsStatistics(new statistics(*other.itsStatistics))
+      itsStatistics(new statistics(*other.itsStatistics)),
+      itsBaseGrid(other.itsBaseGrid->Clone())
 {
 }
 
@@ -128,14 +128,6 @@ const vector<pair<string, string>>& plugin_configuration::GetParameterOptions(co
 	return iter->second;
 }
 
-shared_ptr<info> plugin_configuration::Info() const
-{
-	return itsInfo;
-}
-void plugin_configuration::Info(shared_ptr<info> theInfo)
-{
-	itsInfo = theInfo;
-}
 shared_ptr<statistics> plugin_configuration::Statistics() const
 {
 	return itsStatistics;
@@ -144,15 +136,9 @@ bool plugin_configuration::StatisticsEnabled() const
 {
 	return !(itsStatisticsLabel.empty());
 }
-void plugin_configuration::StartStatistics()
-{
-	itsStatistics->Start();
-}
 void plugin_configuration::WriteStatistics()
 {
-	itsStatistics->itsTimer.Stop();
-
-	cout << "*** STATISTICS FOR " << itsStatisticsLabel << " ***" << endl;
+	cout << "*** STATISTICS ***" << endl;
 
 	cout << "Plugin:\t\t\t" << itsName << endl;
 	cout << "Use cache:\t\t" << (itsUseCache ? "true" : "false") << endl;
@@ -164,19 +150,17 @@ void plugin_configuration::WriteStatistics()
 	cout << "Target geom_name:\t" << itsTargetGeomName << endl;
 	cout << "Source geom_name:\t" << util::Join(itsSourceGeomNames, ",") << endl;
 
-	if (itsInfo->DimensionSize() > 0)
+	if (itsLevels.empty() != false)
 	{
-		itsInfo->First();
+		cout << "Level type:\t\t" << HPLevelTypeToString.at(itsLevels[0].Type()) << endl;
+		cout << "Level count:\t\t" << itsLevels.size() << endl;
+	}
 
-		cout << "Level type:\t\t" << HPLevelTypeToString.at(itsInfo->Level().Type()) << endl;
-		cout << "Level count:\t\t" << itsInfo->SizeLevels() << endl;
-		cout << "Level order:\t\t" << HPLevelOrderToString.at(itsInfo->LevelOrder()) << endl;
-
-		// assuming even time step
-
-		cout << "Time step:\t\t" << itsInfo->Time().Step() << endl;
-		cout << "Time step unit:\t\t" << HPTimeResolutionToString.at(itsInfo->Time().StepResolution()) << endl;
-		cout << "Time count:\t\t" << itsInfo->SizeTimes() << endl;
+	if (itsTimes.empty() != false)
+	{
+		cout << "Time step:\t\t" << itsTimes[0].Step() << endl;
+		cout << "Time step unit:\t\t" << HPTimeResolutionToString.at(itsTimes[0].StepResolution()) << endl;
+		cout << "Time count:\t\t" << itsTimes.size() << endl;
 	}
 
 	cout << "Outfile type:\t\t" << HPFileTypeToString.at(itsOutputFileType) << endl;
@@ -185,12 +169,11 @@ void plugin_configuration::WriteStatistics()
 	cout << "Read from database:\t" << (itsReadDataFromDatabase ? "true" : "false") << endl;
 
 	string sourceProducers = "";
-	FirstSourceProducer();
 
-	do
+	for (const auto& prod : itsSourceProducers)
 	{
-		sourceProducers += to_string(SourceProducer().Id()) + ",";
-	} while (NextSourceProducer());
+		sourceProducers += to_string(prod.Id()) + ",";
+	}
 
 	sourceProducers.pop_back();
 
@@ -201,18 +184,18 @@ void plugin_configuration::WriteStatistics()
 
 	// total elapsed time
 
-	size_t elapsedTime = static_cast<size_t>(itsStatistics->itsTimer.GetTime());
+	const auto elapsedTime = static_cast<double>(itsStatistics->itsTotalTime);
 
-	int fetchingTimePercentage =
+	const int fetchingTimePercentage =
 	    static_cast<int>(100 * static_cast<double>(itsStatistics->itsFetchingTime) /
-	                     static_cast<double>(itsStatistics->itsUsedThreadCount) / static_cast<double>(elapsedTime));
-	int processingTimePercentage =
+	                     static_cast<double>(itsStatistics->itsUsedThreadCount) / elapsedTime);
+	const int processingTimePercentage =
 	    static_cast<int>(100 *
 	                     static_cast<double>(itsStatistics->itsProcessingTime -
 	                                         itsStatistics->itsFetchingTime / itsStatistics->itsUsedThreadCount) /
-	                     static_cast<double>(elapsedTime));
-	int initTimePercentage =
-	    static_cast<int>(100 * static_cast<double>(itsStatistics->itsInitTime) / static_cast<double>(elapsedTime));
+	                     elapsedTime);
+	const int initTimePercentage =
+	    static_cast<int>(100 * static_cast<double>(itsStatistics->itsInitTime) / elapsedTime);
 
 	int writingTimePercentage = 0;
 
@@ -235,10 +218,9 @@ void plugin_configuration::WriteStatistics()
 	ASSERT(itsStatistics->itsValueCount >= itsStatistics->itsMissingValueCount);
 
 	cout << "Thread count:\t\t" << itsStatistics->itsUsedThreadCount << endl
-	     << "Used GPU count:\t\t" << itsStatistics->itsUsedGPUCount << endl
 	     << "Cache hit count:\t" << itsStatistics->itsCacheHitCount << endl
 	     << "Cache miss count:\t" << itsStatistics->itsCacheMissCount << endl
-	     << "Elapsed time:\t\t" << elapsedTime << " milliseconds" << endl
+	     << "Elapsed time:\t\t" << itsStatistics->itsTotalTime << " milliseconds" << endl
 	     << "Plugin init time\t" << itsStatistics->itsInitTime << " milliseconds, single thread (" << initTimePercentage
 	     << "%)" << endl
 	     << "Fetching time:\t\t" << itsStatistics->itsFetchingTime / itsStatistics->itsUsedThreadCount

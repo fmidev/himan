@@ -24,9 +24,7 @@ namespace himan
 class forecast_type
 {
    public:
-	forecast_type()
-	{
-	}
+	forecast_type() = default;
 	explicit forecast_type(HPForecastType theType);
 	forecast_type(HPForecastType theType, double theValue);
 

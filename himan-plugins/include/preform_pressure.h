@@ -69,13 +69,9 @@ class preform_pressure : public compiled_plugin, private compiled_plugin_base
 	{
 		return kCompiled;
 	}
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(1, 1);
-	}
 
    private:
-	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
+	virtual void Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex);
 };
 
 // the class factory

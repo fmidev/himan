@@ -8,8 +8,8 @@
 
 #include "grid.h"
 #include "logger.h"
-#include "packed_data.h"
 #include "point.h"
+#include "rotation.h"
 #include "serialization.h"
 #include <mutex>
 #include <string>
@@ -17,7 +17,7 @@
 class NFmiRotatedLatLonArea;
 namespace himan
 {
-class latitude_longitude_grid : public grid
+class latitude_longitude_grid : public regular_grid
 {
    public:
 	latitude_longitude_grid();
@@ -95,18 +95,17 @@ class latitude_longitude_grid : public grid
 	point FirstPoint() const;
 	point LastPoint() const;
 
+	bool IsGlobal() const;
+
 	bool operator==(const grid& other) const;
 	bool operator!=(const grid& other) const;
-
-	void PackedData(std::unique_ptr<packed_data> thePackedData);
-	packed_data& PackedData();
-
-	bool Swap(HPScanningMode newScanningMode) override;
 
 	point XY(const point& latlon) const override;
 	point LatLon(size_t locationIndex) const override;
 
-	latitude_longitude_grid* Clone() const override;
+	size_t Hash() const override;
+
+	std::unique_ptr<grid> Clone() const override;
 
    protected:
 	void UpdateCoordinates() const;
@@ -124,15 +123,13 @@ class latitude_longitude_grid : public grid
 	size_t itsNj;
 
    private:
-	mutable bool itsIsGlobal;
-
 #ifdef SERIALIZATION
 	friend class cereal::access;
 
 	template <class Archive>
 	void serialize(Archive& ar)
 	{
-		ar(cereal::base_class<grid>(this), CEREAL_NVP(itsBottomLeft), CEREAL_NVP(itsBottomRight),
+		ar(cereal::base_class<regular_grid>(this), CEREAL_NVP(itsBottomLeft), CEREAL_NVP(itsBottomRight),
 		   CEREAL_NVP(itsTopLeft), CEREAL_NVP(itsTopRight), CEREAL_NVP(itsDi), CEREAL_NVP(itsDj), CEREAL_NVP(itsNi),
 		   CEREAL_NVP(itsNj), CEREAL_NVP(itsIsGlobal));
 	}
@@ -163,7 +160,7 @@ class rotated_latitude_longitude_grid : public latitude_longitude_grid
 	{
 		return "himan::rotated_latitude_longitude_grid";
 	}
-	rotated_latitude_longitude_grid* Clone() const override;
+	std::unique_ptr<grid> Clone() const override;
 
 	point SouthPole() const;
 	void SouthPole(const point& theSouthPole);
@@ -172,14 +169,14 @@ class rotated_latitude_longitude_grid : public latitude_longitude_grid
 	point LatLon(size_t locationIndex) const override;
 	point RotatedLatLon(size_t locationIndex) const;
 
+	size_t Hash() const override;
+
    private:
 	bool EqualsTo(const rotated_latitude_longitude_grid& other) const;
-	void InitNewbaseArea() const;
-
-	mutable std::unique_ptr<NFmiRotatedLatLonArea> itsRotLatLonArea;
-
-	mutable std::once_flag itsNewbaseAreaFlag;
 	point itsSouthPole;
+
+	himan::geoutil::rotation<double> itsFromRotLatLon;
+	himan::geoutil::rotation<double> itsToRotLatLon;
 
 #ifdef SERIALIZATION
 	friend class cereal::access;

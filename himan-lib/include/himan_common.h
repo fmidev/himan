@@ -311,19 +311,6 @@ const boost::unordered_map<HPScanningMode, std::string> HPScanningModeToString =
 	(kBottomLeft, "+x+y")
 	(kBottomRight, "-x-y");
 
-enum HPLevelOrder
-{
-	kUnknownLevelOrder = 0,
-	kTopToBottom = 1,
-	kBottomToTop = 2
-};
-
-const boost::unordered_map<HPLevelOrder, std::string> HPLevelOrderToString =
-    ba::map_list_of
-	(kUnknownLevelOrder, "unknown")
-	(kTopToBottom, "top to bottom")
-	(kBottomToTop, "bottom to top");
-
 enum HPExceptionType
 {
 	kUnknownException = 0,
@@ -331,41 +318,6 @@ enum HPExceptionType
 	kFileDataNotFound,
 	kFunctionNotImplemented
 };
-
-/**
- * @enum HPDimensionType
- *
- * @brief Define all dimension types
- *
- * When looping over data, we can choose between a few dimensions.
- */
-enum HPDimensionType
-{
-	kUnknownDimension = 0,
-	kTimeDimension,
-	kLevelDimension,
-	kParamDimension,
-	kLocationDimension,
-	kForecastTypeDimension
-};
-
-const boost::unordered_map<HPDimensionType, std::string> HPDimensionTypeToString =
-    ba::map_list_of
-	(kUnknownDimension, "unknown")
-	(kTimeDimension, "time dimension")
-	(kLevelDimension, "level dimension")
-	(kParamDimension, "param dimension")
-	(kLocationDimension, "location dimension")
-	(kForecastTypeDimension, "forecast type dimension");
-
-const boost::unordered_map<std::string, HPDimensionType> HPStringToDimensionType =
-    ba::map_list_of
-	("unknown", kUnknownDimension)
-	("time", kTimeDimension)
-	("level", kLevelDimension)
-	("param", kParamDimension)
-	("location", kLocationDimension)
-	("forecast_type", kForecastTypeDimension);
 
 enum HPTimeResolution
 {
@@ -571,35 +523,6 @@ const boost::unordered_map<std::string, HPProducerClass> HPStringToProducerClass
 	("previ", kPreviClass)
 	;
 
-
-/**
- * @struct HPVersionNumber
- *
- * @brief Simple struct to hold plugin version number with major and minor digit.
- *
- */
-
-struct HPVersionNumber
-{
-	unsigned short itsMajorVersion;
-	unsigned short itsMinorVersion;
-
-	unsigned short Minor() { return itsMinorVersion; }
-	unsigned short Major() { return itsMajorVersion; }
-	HPVersionNumber(unsigned short theMajorVersion, unsigned short theMinorVersion)
-	{
-		itsMinorVersion = theMinorVersion;
-		itsMajorVersion = theMajorVersion;
-	}
-
-	std::ostream& Write(std::ostream& file) const
-	{
-		file << itsMajorVersion << "." << itsMinorVersion;
-		return file;
-	}
-};
-
-inline std::ostream& operator<<(std::ostream& file, const HPVersionNumber& vers) { return vers.Write(file); }
 // clang-format on
 
 namespace constants

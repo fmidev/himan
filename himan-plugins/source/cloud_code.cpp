@@ -34,11 +34,13 @@ void cloud_code::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void cloud_code::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void cloud_code::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	// Required source parameters
 
 	const param TParam("T-K");
+	param TGParam = TParam;
+
 	const params RHParam = {param("RH-0TO1"), param("RH-PRCNT")};
 	const params NParams = {param("N-0TO1"), param("N-PRCNT")};
 	const param KParam("KINDEX-N");
@@ -49,6 +51,12 @@ void cloud_code::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	level RH700Level(himan::kPressure, 700, "PRESSURE");
 	level RH500Level(himan::kPressure, 500, "PRESSURE");
 
+	if (myTargetInfo->Producer().Id() == 240)
+	{
+		T0mLevel = level(kGroundDepth, 0, 7);
+		TGParam = param("TG-K");
+	}
+
 	auto myThreadedLogger = logger(itsName + "Thread #" + to_string(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
@@ -58,7 +66,7 @@ void cloud_code::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 	                      static_cast<string>(forecastLevel));
 
-	info_t T0mInfo = Fetch(forecastTime, T0mLevel, TParam, forecastType, false);
+	info_t T0mInfo = Fetch(forecastTime, T0mLevel, TGParam, forecastType, false);
 	info_t NInfo = Fetch(forecastTime, NKLevel, NParams, forecastType, false);
 	info_t KInfo = Fetch(forecastTime, NKLevel, KParam, forecastType, false);
 	info_t T850Info = Fetch(forecastTime, RH850Level, TParam, forecastType, false);

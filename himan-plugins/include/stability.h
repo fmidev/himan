@@ -42,16 +42,12 @@ class stability : public compiled_plugin, private compiled_plugin_base
 	{
 		return kCompiled;
 	}
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(2, 0);
-	}
-  protected:
-	void RunTimeDimension(info_t myTargetInfo, unsigned short threadIndex) override;
+
+   protected:
 	void WriteToFile(const info_t targetInfo, write_options writeOptions = write_options()) override;
 
    private:
-	void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
+	void Calculate(std::shared_ptr<info<double>> theTargetInfo, unsigned short theThreadIndex);
 };
 
 // the class factory

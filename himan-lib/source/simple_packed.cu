@@ -3,121 +3,52 @@
  *
  */
 
-#include "simple_packed.h"
-
-#include <NFmiGribPacking.h>
-#include <grib_api.h>
-#include <thrust/device_ptr.h>
-#include <thrust/extrema.h>
-
 #include "cuda_helper.h"
+#include "packed_data.h"
+#include <thrust/device_ptr.h>
+#include <thrust/fill.h>
 
 using namespace himan;
 
-long get_binary_scale_fact(double max, double min, long bpval)
-{
-	ASSERT(max >= min);
-	double range = max - min;
-	double zs = 1;
-	long scale = 0;
-	const long last = 127; /* Depends on edition, should be parameter */
-
-	unsigned long maxint = packed_data_util::GetGribPower(bpval, 2) - 1;
-	double dmaxint = (double)maxint;
-
-	ASSERT(bpval >= 1);
-
-	if (range == 0)
-		return 0;
-
-	/* range -= 1e-10; */
-	while ((range * zs) <= dmaxint)
-	{
-		scale--;
-		zs *= 2;
-	}
-
-	while ((range * zs) > dmaxint)
-	{
-		scale++;
-		zs /= 2;
-	}
-
-	while ((unsigned long)(range * zs + 0.5) <= maxint)
-	{
-		scale--;
-		zs *= 2;
-	}
-
-	while ((unsigned long)(range * zs + 0.5) > maxint)
-	{
-		scale++;
-		zs /= 2;
-	}
-
-	if (scale < -last)
-	{
-		printf("grib_get_binary_scale_fact: max=%g min=%g\n", max, min);
-		scale = -last;
-	}
-	ASSERT(scale <= last);
-
-	return scale;
-}
-
-long get_decimal_scale_fact(double max, double min, long bpval, long binary_scale)
-{
-	ASSERT(max >= min);
-
-	double range = max - min;
-	const long last = 127; /* Depends on edition, should be parameter */
-	double decimal_scale_factor = 0;
-	double f;
-	double minrange = 0, maxrange = 0;
-	double decimal = 1;
-	long bits_per_value = bpval;
-
-	double unscaled_min = min;
-	double unscaled_max = max;
-
-	f = packed_data_util::GetGribPower(bits_per_value, 2) - 1;
-	minrange = packed_data_util::GetGribPower(-last, 2) * f;
-	maxrange = packed_data_util::GetGribPower(last, 2) * f;
-
-	while (range < minrange)
-	{
-		decimal_scale_factor += 1;
-		decimal *= 10;
-		min = unscaled_min * decimal;
-		max = unscaled_max * decimal;
-		range = (max - min);
-	}
-	while (range > maxrange)
-	{
-		decimal_scale_factor -= 1;
-		decimal /= 10;
-		min = unscaled_min * decimal;
-		max = unscaled_max * decimal;
-		range = (max - min);
-	}
-
-	return decimal_scale_factor;
-}
-
 template <typename T>
-__host__ T simple_packed::Max(T* d_arr, size_t N, cudaStream_t& stream)
+bool IsHostPointer(T* ptr)
 {
-	T* ret = thrust::max_element(thrust::cuda::par.on(stream), d_arr, d_arr + N);
+	cudaPointerAttributes attributes;
+	cudaError_t err = cudaPointerGetAttributes(&attributes, ptr);
 
-	return *ret;
+	bool ret;
+
+	if (err == cudaErrorInvalidValue && ptr)
+	{
+		// memoery allocated with malloc
+		ret = true;
+
+		// Clear error buffer
+		cudaGetLastError();
+	}
+	else if (err == cudaSuccess)
+	{
+		if (attributes.memoryType == cudaMemoryTypeHost)
+		{
+			ret = true;
+		}
+		else
+		{
+			ret = false;
+		}
+	}
+	else
+	{
+		throw std::runtime_error("");
+	}
+
+	return ret;
 }
 
-template <typename T>
-__host__ T simple_packed::Min(T* d_arr, size_t N, cudaStream_t& stream)
+__device__ void GetBitValue(unsigned char* p, long bitp, int* val)
 {
-	T* ret = thrust::min_element(thrust::cuda::par.on(stream), d_arr, d_arr + N);
-
-	return *ret;
+	p += (bitp >> 3);
+	*val = (*p & (1 << (7 - (bitp % 8))));
 }
 
 template <typename T>
@@ -134,280 +65,9 @@ __global__ void CopyWithBitmap(T* d_arr, int* d_b, T value, size_t N)
 	}
 }
 
-__host__ void simple_packed::Unpack(double* arr, size_t N, cudaStream_t* stream)
-{
-	ASSERT(arr);
-	ASSERT(N > 0);
-
-	const int blockSize = 512;
-	const int gridSize = unpackedLength / blockSize + (unpackedLength % blockSize == 0 ? 0 : 1);
-
-	bool destroyStream = false;
-
-	if (!stream)
-	{
-		stream = new cudaStream_t;
-		CUDA_CHECK(cudaStreamCreate(stream));
-		destroyStream = true;
-	}
-
-	if (packedLength == 0 && coefficients.bitsPerValue == 0)
-	{
-		// Special case for static grid
-
-		// For empty grid (all values missing), grib_api gives reference value 1!
-		double fillValue = coefficients.referenceValue;
-
-		if (HasBitmap())
-		{
-			if (NFmiGribPacking::IsHostPointer(arr))
-			{
-				// too lazy to write this now
-				throw std::runtime_error("Host pointer, static grid and bitmap code is missing");
-			}
-
-			int* d_b = 0;
-			CUDA_CHECK(cudaMalloc((void**)(&d_b), bitmapLength * sizeof(int)));
-			CUDA_CHECK(cudaMemcpyAsync(d_b, bitmap, bitmapLength * sizeof(int), cudaMemcpyHostToDevice, *stream));
-
-			CopyWithBitmap<<<blockSize, gridSize, 0, *stream>>>(arr, d_b, fillValue, N);
-
-			CUDA_CHECK(cudaStreamSynchronize(*stream));
-			CUDA_CHECK(cudaFree(d_b));
-		}
-		else
-		{
-			if (NFmiGribPacking::IsHostPointer(arr))
-			{
-				std::fill(arr, arr + N, fillValue);
-			}
-			else
-			{
-				NFmiGribPacking::Fill(arr, N, fillValue);
-			}
-		}
-
-		return;
-	}
-
-	if (N != unpackedLength)
-	{
-		std::cerr << "Error::" << ClassName() << " Allocated memory size is different from data: " << N << " vs "
-		          << unpackedLength << std::endl;
-		return;
-	}
-
-	// Allocate memory on device for packed data
-
-	unsigned char* d_p = 0;  // device-packed data
-
-	CUDA_CHECK(cudaMalloc((void**)(&d_p), packedLength * sizeof(unsigned char)));
-	CUDA_CHECK(cudaMemcpyAsync(d_p, data, packedLength * sizeof(unsigned char), cudaMemcpyHostToDevice, *stream));
-
-	// Allocate memory on device for unpacked data
-
-	double* d_arr = 0;
-
-	bool releaseUnpackedDeviceMemory = false;
-
-	if (NFmiGribPacking::IsHostPointer(arr))
-	{
-		CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_arr), sizeof(double) * N));
-		releaseUnpackedDeviceMemory = true;
-	}
-	else
-	{
-		d_arr = arr;
-	}
-
-	int* d_b = 0;  // device-bitmap
-
-	if (HasBitmap())
-	{
-		CUDA_CHECK(cudaMalloc((void**)(&d_b), bitmapLength * sizeof(int)));
-		CUDA_CHECK(cudaMemcpyAsync(d_b, bitmap, bitmapLength * sizeof(int), cudaMemcpyHostToDevice, *stream));
-		CUDA_CHECK(cudaStreamSynchronize(*stream));
-	}
-
-	simple_packed_util::Unpack<<<gridSize, blockSize, 0, *stream>>>(d_p, d_arr, d_b, coefficients, HasBitmap(),
-	                                                                unpackedLength);
-
-	if (releaseUnpackedDeviceMemory)
-	{
-		CUDA_CHECK(cudaMemcpyAsync(arr, d_arr, sizeof(double) * N, cudaMemcpyDeviceToHost, *stream));
-		CUDA_CHECK(cudaStreamSynchronize(*stream));
-		CUDA_CHECK(cudaFree(d_arr));
-	}
-
-	CUDA_CHECK(cudaStreamSynchronize(*stream));
-	CUDA_CHECK(cudaFree(d_p));
-
-	if (HasBitmap())
-	{
-		CUDA_CHECK(cudaFree(d_b));
-	}
-
-	if (destroyStream)
-	{
-		CUDA_CHECK(cudaStreamDestroy(*stream));
-		delete stream;
-	}
-}
-
-CUDA_HOST
-void simple_packed::Pack(double* d_arr, size_t N, cudaStream_t* stream)
-{
-#ifdef GRIB_WRITE_PACKED_DATA
-
-	if (packedLength)
-	{
-		std::cerr << "Data already packed" << std::endl;
-		return;
-	}
-
-	if (!d_arr)
-	{
-		std::cerr << "Memory not allocated for unpacked data" << std::endl;
-		return;
-	}
-
-	// We need to create a stream if no stream is specified since dereferencing
-	// a null pointer is, well, not a good thing.
-
-	bool destroyStream = false;
-
-	if (!stream)
-	{
-		stream = new cudaStream_t;
-		CUDA_CHECK(cudaStreamCreate(stream));
-		destroyStream = true;
-	}
-
-	// Allocate memory on host
-
-	if (!data)
-	{
-		packedLength = ((coefficients.bitsPerValue * N) + 7) / 8;
-		unpackedLength = N;
-
-		CUDA_CHECK(cudaMallocHost((void**)&data, packedLength * sizeof(unsigned char)));
-	}
-	else
-	{
-		std::cerr << "Data not packed but memory already allocated?" << std::endl;
-		return;
-	}
-
-	// Allocate memory on device for packed data and transfer data to device
-
-	unsigned char* d_p = 0;  // device-packed data
-	CUDA_CHECK(cudaMalloc((void**)(&d_p), packedLength * sizeof(unsigned char)));
-
-	/*
-	 * 1. Get unpacked data range
-	 * 2. Calculate coefficients
-	 * 3. Reduce
-	 */
-
-	// 1. Get unpacked data range
-
-	ASSERT(d_arr);
-
-	double max = Max(d_arr, N, *stream);
-	double min = Min(d_arr, N, *stream);
-
-	ASSERT(isfinite(max) && isfinite(min));
-
-#ifdef DEBUG
-	std::cout << "min: " << min << " max: " << max << std::endl;
-#endif
-
-	int blockSize = 512;
-	int gridSize = unpackedLength / blockSize + (unpackedLength % blockSize == 0 ? 0 : 1);
-
-	// 2. Calculate coefficients
-
-	coefficients.binaryScaleFactor = get_binary_scale_fact(max, min, coefficients.bitsPerValue);
-	coefficients.decimalScaleFactor =
-	    get_decimal_scale_fact(max, min, coefficients.bitsPerValue, coefficients.binaryScaleFactor);
-
-	grib_handle* h = grib_handle_new_from_samples(0, "GRIB1");
-	GRIB_CHECK(grib_get_reference_value(h, min, &coefficients.referenceValue), 0);
-	GRIB_CHECK(grib_handle_delete(h), 0);
-
-	if (HasBitmap())
-	{
-		std::cerr << "bitmap packing not supported yet" << std::endl;
-		himan::Abort();
-	}
-
-	// 3. Reduce
-
-	simple_packed_util::Pack<<<gridSize, blockSize, 0, *stream>>>(d_p, d_arr, 0, coefficients, 0, unpackedLength);
-
-	CUDA_CHECK(cudaStreamSynchronize(*stream));
-	CUDA_CHECK_ERROR_MSG("Kernel invocation");
-
-	CUDA_CHECK(cudaMemcpyAsync(data, d_p, sizeof(unsigned char) * packedLength, cudaMemcpyDeviceToHost, *stream));
-	CUDA_CHECK(cudaStreamSynchronize(*stream));
-
-	CUDA_CHECK(cudaFree(d_p));
-
-	if (destroyStream)
-	{
-		CUDA_CHECK(cudaStreamDestroy(*stream));
-		delete stream;
-	}
-#else
-	std::cerr << "PACKING NOT SUPPORTED" << std::endl;
-#endif
-}
-
-__global__ void simple_packed_util::Unpack(unsigned char* d_p, double* d_u, int* d_b, simple_packed_coefficients coeff,
-                                           bool hasBitmap, size_t N)
-{
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-	if (idx < N)
-	{
-		if (coeff.bitsPerValue %
-		    8)  // modulo is expensive but "Compiler will convert literal power-of-2 divides to bitwise shifts"
-		{
-			UnpackUnevenBytes(d_p, d_u, d_b, coeff, hasBitmap, idx);
-		}
-		else
-		{
-			UnpackFullBytes(d_p, d_u, d_b, coeff, hasBitmap, idx);
-		}
-	}
-}
-/*
-__host__ __device__
-double simple_packed_util::GetGribPower(long s,long n)
-{
-    double divisor = 1.0;
-    while(s < 0)
-    {
-        divisor /= n;
-        s++;
-    }
-    while(s > 0)
-    {
-        divisor *= n;
-        s--;
-    }
-    return divisor;
-}
-*/
-__device__ void simple_packed_util::GetBitValue(unsigned char* p, long bitp, int* val)
-{
-	p += (bitp >> 3);
-	*val = (*p & (1 << (7 - (bitp % 8))));
-}
-
-__device__ void simple_packed_util::UnpackFullBytes(unsigned char* __restrict__ d_p, double* __restrict__ d_u,
-                                                    int* __restrict__ d_b, simple_packed_coefficients coeff,
-                                                    bool hasBitmap, int idx)
+template <typename T>
+__device__ void UnpackFullBytes(unsigned char* __restrict__ d_p, T* __restrict__ d_u, int* __restrict__ d_b,
+                                packing_coefficients coeff, bool hasBitmap, int idx)
 {
 	int bc;
 	unsigned long lvalue;
@@ -450,9 +110,9 @@ __device__ void simple_packed_util::UnpackFullBytes(unsigned char* __restrict__ 
 	}
 }
 
-__device__ void simple_packed_util::UnpackUnevenBytes(unsigned char* __restrict__ d_p, double* __restrict__ d_u,
-                                                      int* __restrict__ d_b, simple_packed_coefficients coeff,
-                                                      bool hasBitmap, int idx)
+template <typename T>
+__device__ void UnpackUnevenBytes(unsigned char* __restrict__ d_p, T* __restrict__ d_u, int* __restrict__ d_b,
+                                  packing_coefficients coeff, bool hasBitmap, int idx)
 {
 	int j = 0;
 	unsigned long lvalue;
@@ -508,82 +168,162 @@ __device__ void simple_packed_util::UnpackUnevenBytes(unsigned char* __restrict_
 	}
 }
 
-__device__ void simple_packed_util::PackUnevenBytes(unsigned char* __restrict__ d_p, const double* __restrict__ d_u,
-                                                    size_t values_len, simple_packed_coefficients coeff, int idx)
+template <typename T>
+__global__ void UnpackKernel(unsigned char* d_p, T* d_u, int* d_b, packing_coefficients coeff, bool hasBitmap, size_t N)
 {
-	double decimal = packed_data_util::GetGribPower(-coeff.decimalScaleFactor, 10);
-	double divisor = packed_data_util::GetGribPower(-coeff.binaryScaleFactor, 2);
-
-	double x = (((d_u[idx] * decimal) - coeff.referenceValue) * divisor) + 0.5;
-	unsigned long unsigned_val = static_cast<unsigned long>(x);
-
-	long bitp = coeff.bitsPerValue * idx;
-
-	long i = 0;
-
-	for (i = coeff.bitsPerValue - 1; i >= 0; i--)
-	{
-		if (BitTest(unsigned_val, i))
-		{
-			SetBitOn(d_p, bitp);
-		}
-		else
-		{
-			SetBitOff(d_p, bitp);
-		}
-
-		bitp++;
-	}
-}
-
-__device__ void simple_packed_util::PackFullBytes(unsigned char* __restrict__ d_p, const double* __restrict__ d_u,
-                                                  size_t values_len, simple_packed_coefficients coeff, int idx)
-{
-	double decimal = packed_data_util::GetGribPower(-coeff.decimalScaleFactor, 10);
-	double divisor = packed_data_util::GetGribPower(-coeff.binaryScaleFactor, 2);
-
-	// unsigned char* encoded = d_p + idx * static_cast<int> (coefficients.bpv/8);
-
-	double x = ((((d_u[idx] * decimal) - coeff.referenceValue) * divisor) + 0.5);
-	unsigned long unsigned_val = static_cast<unsigned long>(x);
-
-	unsigned char* encoded = &d_p[idx * static_cast<int>(coeff.bitsPerValue / 8)];
-
-	while (coeff.bitsPerValue >= 8)
-	{
-		coeff.bitsPerValue -= 8;
-		*encoded = (unsigned_val >> coeff.bitsPerValue);
-		encoded++;
-	}
-}
-
-__global__ void simple_packed_util::Pack(unsigned char* d_p, double* d_u, int* d_b, simple_packed_coefficients coeff,
-                                         bool hasBitmap, size_t N)
-{
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < N)
 	{
 		if (coeff.bitsPerValue %
 		    8)  // modulo is expensive but "Compiler will convert literal power-of-2 divides to bitwise shifts"
 		{
-			PackUnevenBytes(d_p, d_u, N, coeff, idx);
+			UnpackUnevenBytes<T>(d_p, d_u, d_b, coeff, hasBitmap, idx);
 		}
 		else
 		{
-			PackFullBytes(d_p, d_u, N, coeff, idx);
+			UnpackFullBytes<T>(d_p, d_u, d_b, coeff, hasBitmap, idx);
 		}
 	}
 }
 
-__device__ void simple_packed_util::SetBitOn(unsigned char* p, long bitp)
+template <typename T>
+__host__ void FillStaticGrid(const simple_packed* src, T* dst, cudaStream_t* stream)
 {
-	p += bitp / 8;
-	*p |= (1u << (7 - ((bitp) % 8)));
+	// For empty grid (all values missing), grib_api gives reference value 1!
+	const double fillValue = src->coefficients.referenceValue;
+	const size_t N = src->unpackedLength;
+
+	const int blockSize = 512;
+	const int gridSize = N / blockSize + (N % blockSize == 0 ? 0 : 1);
+
+	if (src->HasBitmap())
+	{
+		if (IsHostPointer(dst))
+		{
+			for (size_t i = 0; i < N; i++)
+			{
+				if (src->bitmap[i])
+				{
+					dst[i] = static_cast<T>(fillValue);
+				}
+			}
+		}
+		else
+		{
+			int* d_b = 0;
+			CUDA_CHECK(cudaMalloc((void**)(&d_b), src->bitmapLength * sizeof(int)));
+			CUDA_CHECK(
+			    cudaMemcpyAsync(d_b, src->bitmap, src->bitmapLength * sizeof(int), cudaMemcpyHostToDevice, *stream));
+
+			CopyWithBitmap<T><<<blockSize, gridSize, 0, *stream>>>(dst, d_b, fillValue, N);
+
+			CUDA_CHECK(cudaStreamSynchronize(*stream));
+			CUDA_CHECK(cudaFree(d_b));
+		}
+	}
+	else
+	{
+		if (IsHostPointer(dst))
+		{
+			std::fill(dst, dst + N, fillValue);
+		}
+		else
+		{
+			thrust::device_ptr<T> ptr = thrust::device_pointer_cast(dst);
+			thrust::fill(ptr, ptr + N, fillValue);
+		}
+	}
 }
 
-__device__ void simple_packed_util::SetBitOff(unsigned char* p, long bitp)
+template <typename T>
+__host__ void packing::Unpack(const simple_packed* src, T* dst, cudaStream_t* stream)
 {
-	p += bitp / 8;
-	*p &= ~(1u << (7 - ((bitp) % 8)));
+	ASSERT(dst);
+
+	const size_t N = src->unpackedLength;
+
+	ASSERT(N > 0);
+
+	const int blockSize = 512;
+	const int gridSize = src->unpackedLength / blockSize + (src->unpackedLength % blockSize == 0 ? 0 : 1);
+
+	bool destroyStream = false;
+
+	if (!stream)
+	{
+		stream = new cudaStream_t;
+		CUDA_CHECK(cudaStreamCreate(stream));
+		destroyStream = true;
+	}
+
+	if (src->packedLength == 0 && src->coefficients.bitsPerValue == 0)
+	{
+		// Special case for static grid
+		FillStaticGrid<T>(src, dst, stream);
+
+		if (destroyStream)
+		{
+			CUDA_CHECK(cudaStreamDestroy(*stream));
+		}
+
+		return;
+	}
+
+	unsigned char* d_p = 0;  // device-packed data
+
+	CUDA_CHECK(cudaMalloc((void**)(&d_p), src->packedLength * sizeof(unsigned char)));
+	CUDA_CHECK(
+	    cudaMemcpyAsync(d_p, src->data, src->packedLength * sizeof(unsigned char), cudaMemcpyHostToDevice, *stream));
+
+	// Allocate memory on device for unpacked data
+
+	T* d_dst = 0;
+
+	bool releaseUnpackedDeviceMemory = false;
+
+	if (IsHostPointer(dst))
+	{
+		CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&d_dst), sizeof(T) * N));
+		releaseUnpackedDeviceMemory = true;
+	}
+	else
+	{
+		d_dst = dst;
+	}
+
+	int* d_b = 0;  // device-bitmap
+
+	if (src->HasBitmap())
+	{
+		CUDA_CHECK(cudaMalloc((void**)(&d_b), src->bitmapLength * sizeof(int)));
+		CUDA_CHECK(cudaMemcpyAsync(d_b, src->bitmap, src->bitmapLength * sizeof(int), cudaMemcpyHostToDevice, *stream));
+		CUDA_CHECK(cudaStreamSynchronize(*stream));
+	}
+
+	UnpackKernel<T><<<gridSize, blockSize, 0, *stream>>>(d_p, d_dst, d_b, src->coefficients, src->HasBitmap(), N);
+
+	if (releaseUnpackedDeviceMemory)
+	{
+		CUDA_CHECK(cudaMemcpyAsync(dst, d_dst, sizeof(T) * N, cudaMemcpyDeviceToHost, *stream));
+		CUDA_CHECK(cudaStreamSynchronize(*stream));
+		CUDA_CHECK(cudaFree(d_dst));
+	}
+
+	CUDA_CHECK(cudaStreamSynchronize(*stream));
+	CUDA_CHECK(cudaFree(d_p));
+
+	if (d_b)
+	{
+		CUDA_CHECK(cudaFree(d_b));
+	}
+
+	if (destroyStream)
+	{
+		CUDA_CHECK(cudaStreamDestroy(*stream));
+		delete stream;
+	}
 }
+
+template __host__ void packing::Unpack<double>(const simple_packed*, double*, cudaStream_t*);
+template __host__ void packing::Unpack<float>(const simple_packed*, float*, cudaStream_t*);

@@ -33,7 +33,7 @@ void hybrid_pressure::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	SetParams({p});
 
-	Start();
+	Start<float>();
 }
 
 /*
@@ -42,13 +42,13 @@ void hybrid_pressure::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadIndex)
+void hybrid_pressure::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short theThreadIndex)
 {
 	params PParam{param("P-PA"), param("P-HPA")};
 	const param TParam("T-K");
 	level PLevel(himan::kHeight, 0, "HEIGHT");
 
-	bool isECMWF = (itsConfiguration->SourceProducer().Id() == 131 || itsConfiguration->SourceProducer().Id() == 134);
+	bool isECMWF = (itsConfiguration->TargetProducer().Id() == 240 || itsConfiguration->TargetProducer().Id() == 243);
 
 	auto myThreadedLogger = logger("hybrid_pressureThread #" + to_string(theThreadIndex));
 
@@ -59,7 +59,7 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 	                      static_cast<string>(forecastLevel));
 
-	info_t PInfo;
+	shared_ptr<info<float>> PInfo;
 
 	double PScale = 1;
 
@@ -75,17 +75,17 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 
 		// Double-check pattern
 
-		PInfo = Fetch(forecastTime, PLevel, param("LNSP-HPA"), forecastType, false);
+		PInfo = Fetch<float>(forecastTime, PLevel, param("LNSP-HPA"), forecastType, false);
 
 		if (!PInfo)
 		{
 			lock_guard<mutex> lock(lnspMutex);
 
-			PInfo = Fetch(forecastTime, PLevel, param("LNSP-HPA"), forecastType, false);
+			PInfo = Fetch<float>(forecastTime, PLevel, param("LNSP-HPA"), forecastType, false);
 
 			if (!PInfo)
 			{
-				auto lnspn = Fetch(forecastTime, PLevel, PParam, forecastType, false);
+				auto lnspn = Fetch<float>(forecastTime, PLevel, PParam, forecastType, false);
 
 				if (!lnspn)
 				{
@@ -96,13 +96,13 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 
 				myThreadedLogger.Info("Transforming LNSP to HPa for step " + to_string(forecastTime.Step()));
 
-				auto newInfo = make_shared<info>(*lnspn);
-				newInfo->SetParam(param("LNSP-HPA"));
-				newInfo->Create(lnspn->Grid());
+				auto newInfo = make_shared<info<float>>(*lnspn);
+				newInfo->Set<param>(param("LNSP-HPA"));
+				newInfo->Create(lnspn->Base());
 
 				for (auto& val : VEC(newInfo))
 				{
-					val = 0.01 * exp(val);
+					val = 0.01f * exp(val);
 				}
 
 				auto c = GET_PLUGIN(cache);
@@ -110,15 +110,15 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 			}
 		}
 
-		PInfo = Fetch(forecastTime, PLevel, param("LNSP-HPA"), forecastType, false);
+		PInfo = Fetch<float>(forecastTime, PLevel, param("LNSP-HPA"), forecastType, false);
 		PScale = 100;
 	}
 	else
 	{
-		PInfo = Fetch(forecastTime, PLevel, PParam, forecastType, false);
+		PInfo = Fetch<float>(forecastTime, PLevel, PParam, forecastType, false);
 	}
 
-	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, false);
+	auto TInfo = Fetch<float>(forecastTime, forecastLevel, TParam, forecastType, false);
 
 	if (!PInfo || !TInfo)
 	{
@@ -135,7 +135,7 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 	 * For Harmonie and ECMWF interpolation is done, when reading data from the grib-file. (NFmiGribMessage::PV)
 	 */
 
-	vector<double> ab = TInfo->Grid()->AB();
+	vector<double> ab = TInfo->Level().AB();
 
 	double A, B;
 
@@ -160,19 +160,12 @@ void hybrid_pressure::Calculate(shared_ptr<info> myTargetInfo, unsigned short th
 
 	for (auto&& tup : zip_range(target, VEC(PInfo)))
 	{
-		double& result = tup.get<0>();
-		double P = tup.get<1>();
+		float& result = tup.get<0>();
+		float P = tup.get<1>();
 
-		result = 0.01 * (A + P * PScale * B);
+		result = 0.01f * static_cast<float>(A + P * PScale * B);
 	}
 
 	myThreadedLogger.Info("[CPU] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) + "/" +
 	                      to_string(myTargetInfo->Data().Size()));
-}
-
-void hybrid_pressure::WriteToFile(const info_t targetInfo, write_options writeOptions)
-{
-	writeOptions.write_empty_grid = false;
-
-	compiled_plugin_base::WriteToFile(targetInfo, writeOptions);
 }

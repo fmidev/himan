@@ -22,22 +22,26 @@ static level itsBottomLevel;
 
 typedef vector<double> vec;
 
-pair<vec, vec> GetSRHSourceData(const shared_ptr<info>& myTargetInfo, shared_ptr<hitool> h);
+pair<vec, vec> GetSRHSourceData(const shared_ptr<info<double>>& myTargetInfo, shared_ptr<hitool> h);
 
 #ifdef HAVE_CUDA
-void RunCuda(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo, shared_ptr<hitool>& h);
+namespace stabilitygpu
+{
+void Process(shared_ptr<const plugin_configuration> conf, info_t myTargetInfo);
+}
 #endif
 
 namespace STABILITY
 {
-himan::info_t Fetch(std::shared_ptr<const plugin_configuration>& conf, std::shared_ptr<himan::info>& myTargetInfo,
-                    const himan::level& lev, const himan::param& par, bool returnPacked = false);
+himan::info_t Fetch(std::shared_ptr<const plugin_configuration>& conf,
+                    std::shared_ptr<himan::info<double>>& myTargetInfo, const himan::level& lev,
+                    const himan::param& par, bool returnPacked = false);
 
 vec Shear(std::shared_ptr<himan::plugin::hitool>& h, const himan::param& par, const vec& lowerHeight,
           const vec& upperHeight)
 {
-	const auto lowerValues = h->VerticalValue(par, lowerHeight);
-	const auto upperValues = h->VerticalValue(par, upperHeight);
+	const auto lowerValues = h->VerticalValue<double>(par, lowerHeight);
+	const auto upperValues = h->VerticalValue<double>(par, upperHeight);
 
 	vec ret(lowerValues.size(), himan::MissingDouble());
 
@@ -58,8 +62,9 @@ vec Shear(std::shared_ptr<himan::plugin::hitool>& h, const himan::param& par, do
 	return Shear(h, par, lower, upper);
 }
 
-himan::info_t Fetch(std::shared_ptr<const plugin_configuration>& conf, std::shared_ptr<himan::info>& myTargetInfo,
-                    const himan::level& lev, const himan::param& par, bool useCuda)
+himan::info_t Fetch(std::shared_ptr<const plugin_configuration>& conf,
+                    std::shared_ptr<himan::info<double>>& myTargetInfo, const himan::level& lev,
+                    const himan::param& par, bool useCuda)
 {
 	const forecast_time forecastTime = myTargetInfo->Time();
 	const forecast_type forecastType = myTargetInfo->ForecastType();
@@ -80,18 +85,18 @@ void stability::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	auto r = GET_PLUGIN(radon);
 
-	itsBottomLevel = level(kHybrid, stoi(r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer().Id(),
+	itsBottomLevel = level(kHybrid, stoi(r->RadonDB().GetProducerMetaData(itsConfiguration->TargetProducer().Id(),
 	                                                                      "last hybrid level number")));
 
 #ifdef HAVE_CUDA
 	stability_cuda::itsBottomLevel = itsBottomLevel;
 #endif
 
-	PrimaryDimension(kTimeDimension);
+	itsThreadDistribution = ThreadDistribution::kThreadForForecastTypeAndTime;
 
-	itsInfo->LevelIterator().Clear();
+	itsLevelIterator.Clear();
 
-	SetParams({EBSParam, LIParam, SIParam}, {Height0Level});
+	SetParams({EBSParam, LIParam, SIParam, CAPESParam}, {Height0Level});
 	SetParams({BSParam}, {OneKMLevel, ThreeKMLevel, SixKMLevel});
 	SetParams({SRHParam}, {OneKMLevel, ThreeKMLevel});
 	SetParams({TPEParam}, {ThreeKMLevel});
@@ -113,7 +118,7 @@ vec CalculateStormRelativeHelicity(shared_ptr<const plugin_configuration> conf, 
 
 	auto prevUInfo = STABILITY::Fetch(conf, myTargetInfo, itsBottomLevel, UParam);
 	auto prevVInfo = STABILITY::Fetch(conf, myTargetInfo, itsBottomLevel, VParam);
-	auto prevZInfo = STABILITY::Fetch(conf, myTargetInfo, itsBottomLevel, param("HL-M"));
+	auto prevZInfo = STABILITY::Fetch(conf, myTargetInfo, itsBottomLevel, HLParam);
 
 	vector<bool> found(SRH.size(), false);
 
@@ -125,7 +130,7 @@ vec CalculateStormRelativeHelicity(shared_ptr<const plugin_configuration> conf, 
 
 		auto UInfo = STABILITY::Fetch(conf, myTargetInfo, curLevel, UParam);
 		auto VInfo = STABILITY::Fetch(conf, myTargetInfo, curLevel, VParam);
-		auto ZInfo = STABILITY::Fetch(conf, myTargetInfo, curLevel, param("HL-M"));
+		auto ZInfo = STABILITY::Fetch(conf, myTargetInfo, curLevel, HLParam);
 
 		const auto& U = VEC(UInfo);
 		const auto& V = VEC(VInfo);
@@ -194,11 +199,11 @@ vec CalculateBulkRichardsonNumber(shared_ptr<const plugin_configuration> conf, i
 	auto CAPEInfo = STABILITY::Fetch(conf, myTargetInfo, level(kHeightLayer, 500, 0), param("CAPE-JKG"));
 	const auto& CAPE = VEC(CAPEInfo);
 
-	auto U6 = h->VerticalAverage(UParam, 10, 6000);
-	auto V6 = h->VerticalAverage(VParam, 10, 6000);
+	auto U6 = h->VerticalAverage<double>(UParam, 10, 6000);
+	auto V6 = h->VerticalAverage<double>(VParam, 10, 6000);
 
-	auto U05 = h->VerticalAverage(UParam, 10, 500);
-	auto V05 = h->VerticalAverage(VParam, 10, 500);
+	auto U05 = h->VerticalAverage<double>(UParam, 10, 500);
+	auto V05 = h->VerticalAverage<double>(VParam, 10, 500);
 
 	vec BRN(CAPE.size(), MissingDouble());
 
@@ -231,22 +236,22 @@ void CalculateHelicityIndices(shared_ptr<const plugin_configuration> conf, info_
 {
 	auto UVId = GetSRHSourceData(myTargetInfo, h);
 
-	myTargetInfo->Param(SRHParam);
+	myTargetInfo->Find<param>(SRHParam);
 
-	myTargetInfo->Level(ThreeKMLevel);
+	myTargetInfo->Find<level>(ThreeKMLevel);
 	const auto SRH03 = CalculateStormRelativeHelicity(conf, myTargetInfo, h, 3000, UVId);
 	myTargetInfo->Data().Set(SRH03);
 
-	myTargetInfo->Level(OneKMLevel);
+	myTargetInfo->Find<level>(OneKMLevel);
 	const auto SRH01 = CalculateStormRelativeHelicity(conf, myTargetInfo, h, 1000, UVId);
 	myTargetInfo->Data().Set(SRH01);
 
 	const auto EHI01 = CalculateEnergyHelicityIndex(conf, myTargetInfo);
-	myTargetInfo->Param(EHIParam);
+	myTargetInfo->Find<param>(EHIParam);
 	myTargetInfo->Data().Set(EHI01);
 
-	myTargetInfo->Level(SixKMLevel);
-	myTargetInfo->Param(BRNParam);
+	myTargetInfo->Find<level>(SixKMLevel);
+	myTargetInfo->Find<param>(BRNParam);
 	const auto BRN = CalculateBulkRichardsonNumber(conf, myTargetInfo, h);
 	myTargetInfo->Data().Set(BRN);
 }
@@ -254,20 +259,20 @@ void CalculateHelicityIndices(shared_ptr<const plugin_configuration> conf, info_
 tuple<vec, vec, vec, info_t, info_t, info_t> GetLiftedIndicesSourceData(shared_ptr<const plugin_configuration>& conf,
                                                                         info_t& myTargetInfo, shared_ptr<hitool>& h)
 {
-	auto T500 = h->VerticalAverage(TParam, 0., 500.);
-	auto P500 = h->VerticalAverage(PParam, 0., 500.);
+	auto T500 = h->VerticalAverage<double>(TParam, 0., 500.);
+	auto P500 = h->VerticalAverage<double>(PParam, 0., 500.);
 
 	vec TD500;
 
 	try
 	{
-		TD500 = h->VerticalAverage(param("TD-K"), 0., 500.);
+		TD500 = h->VerticalAverage<double>(param("TD-K"), 0., 500.);
 	}
 	catch (const HPExceptionType& e)
 	{
 		if (e == kFileDataNotFound)
 		{
-			TD500 = h->VerticalAverage(RHParam, 0., 500.);
+			TD500 = h->VerticalAverage<double>(RHParam, 0., 500.);
 
 			for (auto&& tup : zip_range(TD500, T500))
 			{
@@ -293,13 +298,13 @@ tuple<vec, vec, vec, info_t, info_t, info_t> GetLiftedIndicesSourceData(shared_p
 
 vec CalculateThetaE(shared_ptr<hitool>& h, double startHeight, double stopHeight)
 {
-	auto Tstop = h->VerticalValue(TParam, stopHeight);
-	auto RHstop = h->VerticalValue(RHParam, stopHeight);
-	auto Pstop = h->VerticalValue(PParam, stopHeight);
+	auto Tstop = h->VerticalValue<double>(TParam, stopHeight);
+	auto RHstop = h->VerticalValue<double>(RHParam, stopHeight);
+	auto Pstop = h->VerticalValue<double>(PParam, stopHeight);
 
-	auto Tstart = h->VerticalValue(TParam, startHeight);
-	auto RHstart = h->VerticalValue(RHParam, startHeight);
-	auto Pstart = h->VerticalValue(PParam, startHeight);
+	auto Tstart = h->VerticalValue<double>(TParam, startHeight);
+	auto RHstart = h->VerticalValue<double>(RHParam, startHeight);
+	auto Pstart = h->VerticalValue<double>(PParam, startHeight);
 
 	vec ret(Tstop.size());
 
@@ -318,8 +323,8 @@ void CalculateThetaEIndices(shared_ptr<const plugin_configuration>& conf, info_t
 {
 	vec thetae = CalculateThetaE(h, 2, 3000);
 
-	myTargetInfo->Level(ThreeKMLevel);
-	myTargetInfo->Param(TPEParam);
+	myTargetInfo->Find<level>(ThreeKMLevel);
+	myTargetInfo->Find<param>(TPEParam);
 	myTargetInfo->Data().Set(thetae);
 }
 
@@ -327,12 +332,12 @@ void CalculateLiftedIndices(shared_ptr<const plugin_configuration>& conf, info_t
 {
 	auto src = GetLiftedIndicesSourceData(conf, myTargetInfo, h);
 
-	myTargetInfo->Level(Height0Level);
+	myTargetInfo->Find<level>(Height0Level);
 
-	myTargetInfo->Param(LIParam);
+	myTargetInfo->Find<param>(LIParam);
 	auto& LI = VEC(myTargetInfo);
 
-	myTargetInfo->Param(SIParam);
+	myTargetInfo->Find<param>(SIParam);
 	auto& SI = VEC(myTargetInfo);
 
 	const auto& t500m = get<0>(src);
@@ -406,30 +411,50 @@ vec CalculateEffectiveBulkShear(shared_ptr<const plugin_configuration>& conf, in
 	return BS;
 }
 
+vec CalculateCapeShear(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo, const vec& EBS)
+{
+	auto CAPEInfo = STABILITY::Fetch(conf, myTargetInfo, level(kMaximumThetaE, 0), param("CAPE-JKG"));
+
+	const auto& CAPE = VEC(CAPEInfo);
+
+	vec ret(EBS.size());
+
+	for (size_t i = 0; i < EBS.size(); i++)
+	{
+		ret[i] = EBS[i] * sqrt(CAPE[i]);
+	}
+
+	return ret;
+}
+
 void CalculateBulkShearIndices(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo,
                                shared_ptr<hitool>& h)
 {
-	myTargetInfo->Param(BSParam);
+	myTargetInfo->Find<param>(BSParam);
 
-	myTargetInfo->Level(OneKMLevel);
+	myTargetInfo->Find<level>(OneKMLevel);
 	const auto BS01 = CalculateBulkShear(myTargetInfo, h, 1000);
 	myTargetInfo->Data().Set(BS01);
 
-	myTargetInfo->Level(ThreeKMLevel);
+	myTargetInfo->Find<level>(ThreeKMLevel);
 	const auto BS03 = CalculateBulkShear(myTargetInfo, h, 3000);
 	myTargetInfo->Data().Set(BS03);
 
-	myTargetInfo->Level(SixKMLevel);
+	myTargetInfo->Find<level>(SixKMLevel);
 	const auto BS06 = CalculateBulkShear(myTargetInfo, h, 6000);
 	myTargetInfo->Data().Set(BS06);
 
-	myTargetInfo->Param(EBSParam);
-	myTargetInfo->Level(Height0Level);
+	myTargetInfo->Find<param>(EBSParam);
+	myTargetInfo->Find<level>(Height0Level);
 	const auto EBS = CalculateEffectiveBulkShear(conf, myTargetInfo, h);
 	myTargetInfo->Data().Set(EBS);
+
+	myTargetInfo->Find<param>(CAPESParam);
+	const auto CAPES = CalculateCapeShear(conf, myTargetInfo, EBS);
+	myTargetInfo->Data().Set(CAPES);
 }
 
-void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadIndex)
+void stability::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short theThreadIndex)
 {
 	auto myThreadedLogger = logger("stabilityThread #" + to_string(theThreadIndex));
 
@@ -448,10 +473,10 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 
 	try
 	{
-		vec FF1500 = h->VerticalValue(FFParam, 1500);
+		vec FF1500 = h->VerticalValue<double>(FFParam, 1500);
 
-		myTargetInfo->Param(FFParam);
-		myTargetInfo->Level(EuropeanMileLevel);
+		myTargetInfo->Find<param>(FFParam);
+		myTargetInfo->Find<level>(EuropeanMileLevel);
 		myTargetInfo->Data().Set(FF1500);
 	}
 	catch (const HPExceptionType& e)
@@ -463,10 +488,10 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 
 	try
 	{
-		vec Q500 = h->VerticalAverage(QParam, 0, 500);
+		vec Q500 = h->VerticalAverage<double>(QParam, 0, 500);
 
-		myTargetInfo->Param(QParam);
-		myTargetInfo->Level(HalfKMLevel);
+		myTargetInfo->Find<param>(QParam);
+		myTargetInfo->Find<level>(HalfKMLevel);
 		myTargetInfo->Data().Set(Q500);
 	}
 	catch (const HPExceptionType& e)
@@ -484,7 +509,7 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 	{
 		deviceType = "GPU";
 
-		RunCuda(itsConfiguration, myTargetInfo, h);
+		stabilitygpu::Process(itsConfiguration, myTargetInfo);
 	}
 	else
 #endif
@@ -547,7 +572,7 @@ void stability::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThrea
 	myThreadedLogger.Info("[" + deviceType + "] Missing: " + to_string(util::MissingPercent(*myTargetInfo)) + "%");
 }
 
-pair<vec, vec> GetSRHSourceData(const shared_ptr<info>& myTargetInfo, shared_ptr<hitool> h)
+pair<vec, vec> GetSRHSourceData(const shared_ptr<info<double>>& myTargetInfo, shared_ptr<hitool> h)
 {
 	// NOTES COPIED FROM SMARTTOOLS-LIBRARY
 
@@ -587,8 +612,8 @@ pair<vec, vec> GetSRHSourceData(const shared_ptr<info>& myTargetInfo, shared_ptr
 	*/  // **********  SRH calculation help from Pieter Groenemeijer ******************
 
 	// average wind
-	auto Uavg = h->VerticalAverage(UParam, 10, 6000);
-	auto Vavg = h->VerticalAverage(VParam, 10, 6000);
+	auto Uavg = h->VerticalAverage<double>(UParam, 10, 6000);
+	auto Vavg = h->VerticalAverage<double>(VParam, 10, 6000);
 
 	// shear
 	auto Ushear = STABILITY::Shear(h, UParam, 10, 6000, Uavg.size());
@@ -606,83 +631,6 @@ pair<vec, vec> GetSRHSourceData(const shared_ptr<info>& myTargetInfo, shared_ptr
 	return make_pair(Uid, Vid);
 }
 
-#ifdef HAVE_CUDA
-void RunCuda(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo, shared_ptr<hitool>& h)
-{
-	unique_ptr<stability_cuda::options> opts(new stability_cuda::options);
-
-	myTargetInfo->Level(Height0Level);
-
-	myTargetInfo->Param(LIParam);
-	opts->li = myTargetInfo->ToSimple();
-
-	myTargetInfo->Param(SIParam);
-	opts->si = myTargetInfo->ToSimple();
-
-	myTargetInfo->Param(BSParam);
-	myTargetInfo->Level(OneKMLevel);
-	opts->bs01 = myTargetInfo->ToSimple();
-
-	myTargetInfo->Level(ThreeKMLevel);
-	opts->bs03 = myTargetInfo->ToSimple();
-
-	myTargetInfo->Level(SixKMLevel);
-	opts->bs06 = myTargetInfo->ToSimple();
-
-	myTargetInfo->Param(EBSParam);
-	myTargetInfo->Level(Height0Level);
-	opts->ebs = myTargetInfo->ToSimple();
-
-	myTargetInfo->Param(SRHParam);
-	myTargetInfo->Level(OneKMLevel);
-	opts->srh01 = myTargetInfo->ToSimple();
-
-	myTargetInfo->Level(ThreeKMLevel);
-	opts->srh03 = myTargetInfo->ToSimple();
-
-	myTargetInfo->Param(TPEParam);
-	opts->thetae3 = myTargetInfo->ToSimple();
-
-	myTargetInfo->Param(EHIParam);
-	myTargetInfo->Level(OneKMLevel);
-	opts->ehi = myTargetInfo->ToSimple();
-
-	myTargetInfo->Param(BRNParam);
-	myTargetInfo->Level(SixKMLevel);
-	opts->brn = myTargetInfo->ToSimple();
-
-	opts->N = myTargetInfo->SizeLocations();
-	opts->h = h;
-	opts->conf = conf;
-	opts->myTargetInfo = make_shared<info>(*myTargetInfo);
-
-	stability_cuda::Process(*opts);
-}
-#endif
-
-void stability::RunTimeDimension(info_t myTargetInfo, unsigned short threadIndex)
-{
-	myTargetInfo->FirstLevel();
-	while (NextExcludingLevel(*myTargetInfo))
-	{
-		if (itsConfiguration->UseDynamicMemoryAllocation())
-		{
-			AllocateMemory(*myTargetInfo);
-		}
-
-		ASSERT(myTargetInfo->Data().Size() > 0);
-
-		Calculate(myTargetInfo, threadIndex);
-
-		if (itsConfiguration->StatisticsEnabled())
-		{
-			itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Data().MissingCount());
-			itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data().Size());
-		}
-	}
-	WriteToFile(myTargetInfo);
-}
-
 void stability::WriteToFile(const info_t targetInfo, write_options writeOptions)
 {
 	auto aWriter = GET_PLUGIN(writer);
@@ -691,13 +639,13 @@ void stability::WriteToFile(const info_t targetInfo, write_options writeOptions)
 
 	// writing might modify iterator positions --> create a copy
 
-	auto tempInfo = make_shared<info>(*targetInfo);
+	auto tempInfo = make_shared<info<double>>(*targetInfo);
 
-	tempInfo->ResetLevel();
+	tempInfo->Reset<level>();
 
-	while (tempInfo->NextLevel())
+	while (tempInfo->Next<level>())
 	{
-		for (tempInfo->ResetParam(); tempInfo->NextParam();)
+		for (tempInfo->Reset<param>(); tempInfo->Next<param>();)
 		{
 			if (!tempInfo->IsValidGrid())
 			{

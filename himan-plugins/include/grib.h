@@ -7,8 +7,10 @@
 #ifndef GRIB_H
 #define GRIB_H
 
-#include "NFmiGrib.h"
 #include "auxiliary_plugin.h"
+#include "info.h"
+
+class NFmiGrib;
 
 namespace himan
 {
@@ -33,10 +35,7 @@ class grib : public io_plugin
 	{
 		return kAuxiliary;
 	};
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(1, 1);
-	}
+
 	std::shared_ptr<NFmiGrib> Reader();
 
 	/**
@@ -59,8 +58,12 @@ class grib : public io_plugin
 	 * @return A vector of shared_ptr'd infos.
 	 */
 
-	std::vector<std::shared_ptr<info>> FromFile(const std::string& inputFile, const search_options& options,
-	                                            bool readContents, bool readPackedData, bool forceCaching) const;
+	template <typename T>
+	std::vector<std::shared_ptr<info<T>>> FromFile(const std::string& inputFile, const search_options& options,
+	                                               bool readContents, bool readPackedData, bool forceCaching) const;
+	std::vector<std::shared_ptr<info<double>>> FromFile(const std::string& inputFile, const search_options& options,
+	                                                    bool readContents, bool readPackedData,
+	                                                    bool forceCaching) const;
 
 	/**
 	 * @brief Return selected data from a grib index file.
@@ -77,18 +80,27 @@ class grib : public io_plugin
 	 * @return A vector of shared_ptr'd infos.
 	 */
 
-	std::vector<std::shared_ptr<info>> FromIndexFile(const std::string& inputFile, const search_options& options,
-	                                                 bool readContents, bool readPackedData, bool forceCaching) const;
+	template <typename T>
+	std::vector<std::shared_ptr<info<T>>> FromIndexFile(const std::string& inputFile, const search_options& options,
+	                                                    bool readContents, bool readPackedData,
+	                                                    bool forceCaching) const;
+	std::vector<std::shared_ptr<info<double>>> FromIndexFile(const std::string& inputFile,
+	                                                         const search_options& options, bool readContents,
+	                                                         bool readPackedData, bool forceCaching) const;
 
-	bool ToFile(info& anInfo, std::string& outputFile, bool appendToFile = false);
+	template <typename T>
+	bool ToFile(info<T>& anInfo, std::string& outputFile, bool appendToFile = false);
+	bool ToFile(info<double>& anInfo, std::string& outputFile, bool appendToFile = false);
 
    private:
-	void WriteAreaAndGrid(info& anInfo);
-	void WriteTime(info& anInfo);
-	void WriteParameter(info& anInfo);
-	void WriteLevel(info& anInfo);
+	void WriteAreaAndGrid(const std::shared_ptr<himan::grid>& grid, const producer& prod);
+	void WriteTime(const forecast_time& ftime, const producer& prod, const param& par);
+	void WriteParameter(const param& par, const producer& prod, const forecast_type& ftype);
+	void WriteLevel(const level& lev);
+
+	template <typename T>
 	bool CreateInfoFromGrib(const search_options& options, bool readPackedData, bool forceCaching,
-	                        std::shared_ptr<info> newInfo) const;
+	                        std::shared_ptr<info<T>> newInfo) const;
 
 	/**
 	 * @brief OptionsToKeys
@@ -106,7 +118,9 @@ class grib : public io_plugin
 	himan::forecast_time ReadTime() const;
 	himan::level ReadLevel(const search_options& options, const producer& prod) const;
 	himan::producer ReadProducer(const search_options& options) const;
-	void ReadData(info_t newInfo, bool readPackedData) const;
+
+	template <typename T>
+	void ReadData(std::shared_ptr<info<T>> newInfo, bool readPackedData) const;
 
 	/**
 	 * @brief UnpackBitmap

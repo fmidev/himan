@@ -1,13 +1,12 @@
 #include "lambert_conformal_grid.h"
 #include "info.h"
+#include <functional>
 #include <ogr_spatialref.h>
 
 using namespace himan;
 using namespace std;
 
 #ifdef HAVE_CUDA
-#include "simple_packed.h"
-
 // The following two functions are used for convenience in GPU specific code:
 // in grid rotation we need the standard parallels and orientation, but in order
 // to get those we need to include this file and ogr_spatialref.h, which is a
@@ -48,7 +47,7 @@ double GetOrientation(himan::grid* g)
 #endif
 
 lambert_conformal_grid::lambert_conformal_grid()
-    : grid(kRegularGrid, kLambertConformalConic),
+    : regular_grid(),
       itsBottomLeft(),
       itsTopLeft(),
       itsDi(kHPMissingValue),
@@ -61,10 +60,11 @@ lambert_conformal_grid::lambert_conformal_grid()
       itsSouthPole(0, -90)
 {
 	itsLogger = logger("lambert_conformal_grid");
+	Type(kLambertConformalConic);
 }
 
 lambert_conformal_grid::lambert_conformal_grid(HPScanningMode theScanningMode, point theFirstPoint)
-    : grid(kRegularGrid, kLambertConformalConic, theScanningMode),
+    : regular_grid(),
       itsBottomLeft(),
       itsTopLeft(),
       itsDi(kHPMissingValue),
@@ -77,7 +77,8 @@ lambert_conformal_grid::lambert_conformal_grid(HPScanningMode theScanningMode, p
       itsSouthPole(0, -90)
 {
 	itsLogger = logger("lambert_conformal_grid");
-
+	Type(kLambertConformalConic);
+	ScanningMode(theScanningMode);
 	switch (theScanningMode)
 	{
 		case kBottomLeft:
@@ -92,7 +93,7 @@ lambert_conformal_grid::lambert_conformal_grid(HPScanningMode theScanningMode, p
 }
 
 lambert_conformal_grid::lambert_conformal_grid(const lambert_conformal_grid& other)
-    : grid(other),
+    : regular_grid(other),
       itsBottomLeft(other.itsBottomLeft),
       itsTopLeft(other.itsTopLeft),
       itsDi(other.itsDi),
@@ -271,6 +272,11 @@ point lambert_conformal_grid::XY(const point& latlon) const
 	const double x = (projX / itsDi);
 	const double y = (projY / itsDj);
 
+	if (x < 0 || x > Ni() - 1 || y < 0 || y > Nj() - 1)
+	{
+		return point(MissingDouble(), MissingDouble());
+	}
+
 	return point(x, y);
 }
 
@@ -305,42 +311,20 @@ point lambert_conformal_grid::LatLon(size_t locationIndex) const
 	return point(x, y);
 }
 
-bool lambert_conformal_grid::Swap(HPScanningMode newScanningMode)
+size_t lambert_conformal_grid::Hash() const
 {
-	if (itsScanningMode == newScanningMode)
-	{
-		return true;
-	}
-
-	// Flip with regards to x axis
-
-	if ((itsScanningMode == kTopLeft && newScanningMode == kBottomLeft) ||
-	    (itsScanningMode == kBottomLeft && newScanningMode == kTopLeft))
-	{
-		size_t halfSize = static_cast<size_t>(floor(Nj() / 2));
-
-		for (size_t y = 0; y < halfSize; y++)
-		{
-			for (size_t x = 0; x < Ni(); x++)
-			{
-				double upper = itsData.At(x, y);
-				double lower = itsData.At(x, Nj() - 1 - y);
-
-				itsData.Set(x, y, 0, lower);
-				itsData.Set(x, Nj() - 1 - y, 0, upper);
-			}
-		}
-	}
-	else
-	{
-		itsLogger.Error("Swap from mode " + string(HPScanningModeToString.at(itsScanningMode)) + " to mode " +
-		                string(HPScanningModeToString.at(newScanningMode)) + " not implemented yet");
-		return false;
-	}
-
-	itsScanningMode = newScanningMode;
-
-	return true;
+	vector<size_t> hashes;
+	hashes.push_back(Type());
+	hashes.push_back(FirstPoint().Hash());
+	hashes.push_back(Ni());
+	hashes.push_back(Nj());
+	hashes.push_back(hash<double>{}(Di()));
+	hashes.push_back(hash<double>{}(Dj()));
+	hashes.push_back(ScanningMode());
+	hashes.push_back(hash<double>{}(Orientation()));
+	hashes.push_back(hash<double>{}(StandardParallel1()));
+	hashes.push_back(hash<double>{}(StandardParallel2()));
+	return boost::hash_range(hashes.begin(), hashes.end());
 }
 
 void lambert_conformal_grid::SouthPole(const point& theSouthPole)
@@ -409,7 +393,7 @@ bool lambert_conformal_grid::operator==(const grid& other) const
 
 bool lambert_conformal_grid::EqualsTo(const lambert_conformal_grid& other) const
 {
-	if (!grid::EqualsTo(other))
+	if (!regular_grid::EqualsTo(other))
 	{
 		return false;
 	}
@@ -482,10 +466,11 @@ bool lambert_conformal_grid::EqualsTo(const lambert_conformal_grid& other) const
 	return true;
 }
 
-lambert_conformal_grid* lambert_conformal_grid::Clone() const
+unique_ptr<grid> lambert_conformal_grid::Clone() const
 {
-	return new lambert_conformal_grid(*this);
+	return unique_ptr<grid>(new lambert_conformal_grid(*this));
 }
+
 ostream& lambert_conformal_grid::Write(std::ostream& file) const
 {
 	grid::Write(file);

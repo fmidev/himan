@@ -8,7 +8,6 @@
 
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
-#include "dewpoint.cuh"
 
 namespace himan
 {
@@ -43,17 +42,9 @@ class dewpoint : public compiled_plugin, private compiled_plugin_base
 	{
 		return kCompiled;
 	}
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(1, 0);
-	}
 
    private:
-	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
-#ifdef HAVE_CUDA
-	std::unique_ptr<dewpoint_cuda::options> CudaPrepare(std::shared_ptr<info> myTargetInfo, std::shared_ptr<info> TInfo,
-	                                                    std::shared_ptr<info> RHInfo);
-#endif
+	virtual void Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex);
 };
 
 // the class factory

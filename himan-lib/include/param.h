@@ -21,8 +21,6 @@
 
 namespace himan
 {
-class logger;
-
 class param
 {
    public:
@@ -37,10 +35,10 @@ class param
 	      HPInterpolationMethod theInterpolationMethod = kBiLinear);
 	param(const std::map<std::string, std::string>& databaseInfo);
 
-	~param();
+	~param() = default;
 
-	param(const param& other);
-	param& operator=(const param& other);
+	param(const param& other) = default;
+	param& operator=(const param& other) = default;
 
 	std::string ClassName() const
 	{

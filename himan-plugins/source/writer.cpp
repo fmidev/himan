@@ -1,11 +1,8 @@
-/*
- * writer.cpp
- *
- */
-
 #include "writer.h"
 #include "logger.h"
 #include "plugin_factory.h"
+#include "statistics.h"
+#include "timer.h"
 #include "util.h"
 #include <boost/filesystem.hpp>
 #include <fstream>
@@ -22,7 +19,9 @@ writer::writer() : itsWriteOptions()
 {
 	itsLogger = logger("writer");
 }
-bool writer::CreateFile(info& theInfo, std::shared_ptr<const plugin_configuration> conf, std::string& theOutputFile)
+
+template <typename T>
+bool writer::CreateFile(info<T>& theInfo, std::shared_ptr<const plugin_configuration> conf, std::string& theOutputFile)
 {
 	namespace fs = boost::filesystem;
 
@@ -65,7 +64,7 @@ bool writer::CreateFile(info& theInfo, std::shared_ptr<const plugin_configuratio
 			}
 
 			theGribWriter->WriteOptions(itsWriteOptions);
-			return theGribWriter->ToFile(
+			return theGribWriter->ToFile<T>(
 			    theInfo, theOutputFile,
 			    (itsWriteOptions.configuration->FileWriteOption() == kSingleFile) ? true : false);
 		}
@@ -82,7 +81,7 @@ bool writer::CreateFile(info& theInfo, std::shared_ptr<const plugin_configuratio
 
 			theOutputFile += ".fqd";
 
-			return theWriter->ToFile(theInfo, theOutputFile);
+			return theWriter->ToFile<T>(theInfo, theOutputFile);
 		}
 		case kNetCDF:
 			break;
@@ -94,7 +93,7 @@ bool writer::CreateFile(info& theInfo, std::shared_ptr<const plugin_configuratio
 
 			theOutputFile += ".csv";
 
-			return theWriter->ToFile(theInfo, theOutputFile);
+			return theWriter->ToFile<T>(theInfo, theOutputFile);
 		}
 		// Must have this or compiler complains
 		default:
@@ -106,7 +105,17 @@ bool writer::CreateFile(info& theInfo, std::shared_ptr<const plugin_configuratio
 	return false;
 }
 
-bool writer::ToFile(info_t theInfo, std::shared_ptr<const plugin_configuration> conf,
+template bool writer::CreateFile<double>(info<double>&, std::shared_ptr<const plugin_configuration>, std::string&);
+template bool writer::CreateFile<float>(info<float>&, std::shared_ptr<const plugin_configuration>, std::string&);
+
+bool writer::ToFile(std::shared_ptr<info<double>> theInfo, std::shared_ptr<const plugin_configuration> conf,
+                    const std::string& theOriginalOutputFile)
+{
+	return ToFile<double>(theInfo, conf, theOriginalOutputFile);
+}
+
+template <typename T>
+bool writer::ToFile(std::shared_ptr<info<T>> theInfo, std::shared_ptr<const plugin_configuration> conf,
                     const std::string& theOriginalOutputFile)
 {
 	timer t;
@@ -127,7 +136,7 @@ bool writer::ToFile(info_t theInfo, std::shared_ptr<const plugin_configuration> 
 		if (theInfo->Producer().Class() == kGridClass ||
 		    (theInfo->Producer().Class() == kPreviClass && conf->FileWriteOption() != kDatabase))
 		{
-			ret = CreateFile(*theInfo, conf, theOutputFile);
+			ret = CreateFile<T>(*theInfo, conf, theOutputFile);
 		}
 
 		if (ret && conf->FileWriteOption() == kDatabase)
@@ -141,7 +150,7 @@ bool writer::ToFile(info_t theInfo, std::shared_ptr<const plugin_configuration> 
 				// Try to save file information to radon
 				try
 				{
-					ret = r->Save(*theInfo, theOutputFile, conf->TargetGeomName());
+					ret = r->Save<T>(*theInfo, theOutputFile, conf->TargetGeomName());
 
 					if (!ret)
 					{
@@ -162,11 +171,11 @@ bool writer::ToFile(info_t theInfo, std::shared_ptr<const plugin_configuration> 
 
 	if (conf->UseCache())
 	{
-		std::shared_ptr<cache> c = GET_PLUGIN(cache);
+		auto c = GET_PLUGIN(cache);
 
 		// Pin those items that are not written to file at all
 		// so they can't be removed from cache if cache size is limited
-		c->Insert(theInfo, (conf->FileWriteOption() == kCacheOnly));
+		c->Insert<T>(theInfo, (conf->FileWriteOption() == kCacheOnly));
 	}
 
 	if (conf->StatisticsEnabled())
@@ -178,6 +187,11 @@ bool writer::ToFile(info_t theInfo, std::shared_ptr<const plugin_configuration> 
 
 	return ret;
 }
+
+template bool writer::ToFile<double>(std::shared_ptr<info<double>>, std::shared_ptr<const plugin_configuration>,
+                                     const std::string&);
+template bool writer::ToFile<float>(std::shared_ptr<info<float>>, std::shared_ptr<const plugin_configuration>,
+                                    const std::string&);
 
 write_options writer::WriteOptions() const
 {

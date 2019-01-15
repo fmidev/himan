@@ -50,8 +50,8 @@ class modifier
 
 	virtual bool CalculationFinished() const;
 
-	size_t FindNth() const;
-	virtual void FindNth(size_t theNth);
+	int FindNth() const;
+	virtual void FindNth(int theNth);
 
 	virtual void Process(const std::vector<double>& theData, const std::vector<double>& theHeights);
 
@@ -77,7 +77,7 @@ class modifier
 
 	/**
 	 * @brief Initialize lower and upper heights to some default values
-	     */
+	 */
 
 	virtual void InitializeHeights();
 
@@ -92,7 +92,7 @@ class modifier
 	std::vector<double> itsPreviousValue;
 	std::vector<double> itsPreviousHeight;
 
-	size_t itsFindNthValue;
+	int itsFindNthValue;
 
 	mutable std::vector<double> itsResult;  // variable is modified in some Result() const functions
 	size_t itsIndex;
@@ -333,7 +333,7 @@ class modifier_findheight : public modifier
 	}
 	virtual void Init(const std::vector<double>& theData, const std::vector<double>& theHeights) override;
 
-	std::vector<size_t> itsFoundNValues;
+	std::vector<int> itsFoundNValues;
 
 	size_t itsValuesFound;
 };
@@ -345,7 +345,7 @@ class modifier_findheight : public modifier
 class modifier_findheight_gt : public modifier_findheight
 {
    public:
-	modifier_findheight_gt() : modifier_findheight(kFindHeightLessThanModifier)
+	modifier_findheight_gt() : modifier_findheight(kFindHeightGreaterThanModifier)
 	{
 	}
 	virtual ~modifier_findheight_gt()
@@ -357,7 +357,7 @@ class modifier_findheight_gt : public modifier_findheight
 	}
 	virtual void Calculate(double theValue, double theHeight, double thePreviousValue,
 	                       double thePreviousHeight) override;
-	virtual void FindNth(size_t theNth) override;
+	virtual void FindNth(int theNth) override;
 };
 
 /**
@@ -367,7 +367,7 @@ class modifier_findheight_gt : public modifier_findheight
 class modifier_findheight_lt : public modifier_findheight
 {
    public:
-	modifier_findheight_lt() : modifier_findheight(kFindHeightGreaterThanModifier)
+	modifier_findheight_lt() : modifier_findheight(kFindHeightLessThanModifier)
 	{
 	}
 	virtual ~modifier_findheight_lt()
@@ -379,7 +379,7 @@ class modifier_findheight_lt : public modifier_findheight
 	}
 	virtual void Calculate(double theValue, double theHeight, double thePreviousValue,
 	                       double thePreviousHeight) override;
-	virtual void FindNth(size_t theNth) override;
+	virtual void FindNth(int theNth) override;
 };
 
 /**
@@ -417,7 +417,7 @@ class modifier_findvalue : public modifier
 class modifier_plusminusarea : public modifier
 {
    public:
-	modifier_plusminusarea() : modifier(kPlusMinusAreaModifier), itsValuesFound(0)
+	modifier_plusminusarea() : modifier(kPlusMinusAreaModifier)
 	{
 	}
 	virtual ~modifier_plusminusarea()
@@ -437,8 +437,6 @@ class modifier_plusminusarea : public modifier
 
 	mutable std::vector<double> itsPlusArea;
 	std::vector<double> itsMinusArea;
-
-	size_t itsValuesFound;
 };
 
 }  // namespace himan

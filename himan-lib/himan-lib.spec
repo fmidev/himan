@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 18.6.15
+Version: 19.1.14
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -16,6 +16,8 @@ Requires: libstdc++
 Requires: libfmidb >= 17.9.18
 Requires: libfmigrib >= 18.2.12
 Requires: gdal
+Requires: boost-iostreams
+Requires: boost-filesystem
 
 %if %{defined suse_version}
 BuildRequires: bzip2
@@ -31,7 +33,6 @@ BuildRequires: libfmidb-devel >= 17.9.18
 BuildRequires: libfmigrib-devel >= 18.2.12
 BuildRequires: zlib-devel
 BuildRequires: boost-devel >= 1.66
-BuildRequires: smartmet-library-newbase-devel >= 17.9.27
 BuildRequires: scons
 
 Provides: libhiman.so
@@ -59,6 +60,61 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Mon Jan 14 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.1.14-1.fmi
+- Minor bugfix for modifier
+* Mon Jan  7 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.1.7-1.fmi
+- Bugfix for modifier
+* Thu Dec 13 2018  Mikko Partio <mikko.partio@fmi.fi> - 18.12.13-1.fmi
+- New implementation of coordinate rotation
+* Mon Nov 26 2018  Mikko Partio <mikko.partio@fmi.fi> - 18.11.28-1.fmi
+- geoutil additions
+* Thu Nov 22 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.22-1.fmi
+- Fix interpolation method check
+* Tue Nov 13 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.13-1.fmi
+- modifier_fingheight support for find nth -1
+* Thu Nov  1 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.1-1.fmi
+- Remove HPVersionNumber
+- Fix invalid timing statistics at plugin_configuration
+* Wed Oct 31 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.31-1.fmi
+- Add float support for Himan core
+- Reworked thread work distribution
+* Mon Oct 29 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.29-1.fmi
+- Interpolation as template
+* Tue Oct 23 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.23-1.fmi
+- packing as template
+* Mon Oct 22 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.22-1.fmi
+- Minor matrix change
+* Thu Oct 18 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.18-1.fmi
+- Fetcher and writer as templates
+* Wed Oct 17 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.17-1.fmi
+- New release
+* Tue Oct 16 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.16-1.fmi
+- AB moved to level
+* Mon Oct 15 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.15-1.fmi
+- info-class as template
+* Wed Oct 10 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.10-1.fmi
+- Refactoring plugin_configuration
+* Fri Oct  5 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.5-1.fmi
+- Minor cleanup
+* Tue Oct  2 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.2-1.fmi
+- New interpolation scheme
+* Thu Sep 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.9.20-1.fmi
+- Moving data away from grid
+* Tue Sep  4 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.9.4-1.fmi
+- Minor fixes
+* Tue Aug 28 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.28-1.fmi
+- Chang in grid class inheritance structure
+* Mon Aug 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.20-1.fmi
+- Visibility changes to some interpolation functions
+* Thu Aug 16 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.16-2.fmi
+- Hotfixing issue if reading static grids of missing value
+* Thu Aug 16 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.16-1.fmi
+- Removing obsolete logger_factory
+* Tue Aug  7 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.7-1.fmi
+- Minor fixes
+- RHEL 7.5 build
+* Thu Jul  5 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.7.5-1.fmi
+- Additions to earth_shape functionality
 * Fri Jun 15 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.6.15-1.fmi
 - Minor tweak to plugin_configuration statistics logging
 * Thu Jun 14 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.6.14-1.fmi

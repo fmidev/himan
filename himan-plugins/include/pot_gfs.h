@@ -33,8 +33,11 @@ class time_series
 	{
 		return itsParam;
 	};
-	void Param(param theParam);
 
+	void Param(const param& theParam)
+	{
+		itsParam = theParam;
+	};
 	size_t Size() const
 	{
 		return itsInfos.size();
@@ -81,13 +84,9 @@ class pot_gfs : public compiled_plugin, private compiled_plugin_base
 	{
 		return kCompiled;
 	}
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(0, 1);
-	}
 
    private:
-	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
+	virtual void Calculate(std::shared_ptr<info<double>> theTargetInfo, unsigned short theThreadIndex);
 	bool itsStrictMode;
 };
 

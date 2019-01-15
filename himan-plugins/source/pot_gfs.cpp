@@ -56,10 +56,6 @@ void time_series::Fetch(std::shared_ptr<const plugin_configuration> config, fore
 	}
 }
 
-void time_series::Param(param theParam)
-{
-	itsParam = theParam;
-}
 /*
  *
  * function definitions for "modifier" functions
@@ -87,7 +83,10 @@ himan::info_t Max(InputIt begin, InputIt end)
 	}
 
 	// Set first field as first set of maximum values
-	auto maxInfo = make_shared<himan::info>((*begin)->Clone());
+	auto maxInfo = make_shared<himan::info<double>>(**begin);
+	maxInfo->Base(make_shared<himan::base<double>>(shared_ptr<himan::grid>(maxInfo->Grid()->Clone()),
+	                                               himan::matrix<double>(maxInfo->Data())));
+
 	++begin;
 
 	for (; begin != end; ++begin)
@@ -127,7 +126,10 @@ himan::info_t Mean(InputIt begin, InputIt end)
 	}
 
 	// Set first field as first set of mean values
-	auto meanInfo = make_shared<himan::info>((*begin)->Clone());
+	auto meanInfo = make_shared<himan::info<double>>(**begin);
+	meanInfo->Base(make_shared<himan::base<double>>(shared_ptr<himan::grid>(meanInfo->Grid()->Clone()),
+	                                                himan::matrix<double>(meanInfo->Data())));
+
 	++begin;
 
 	size_t count = 1;
@@ -164,9 +166,9 @@ himan::info_t Mean(InputIt begin, InputIt end)
 }
 
 /*
-*  plug-in definitions
-*
-* */
+ *  plug-in definitions
+ *
+ * */
 
 pot_gfs::pot_gfs() : itsStrictMode(false)
 {
@@ -209,7 +211,7 @@ void pot_gfs::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		// himan was mabe started with configuration option "hours"
 		// so step is not readily available
 
-		if (myTargetInfo->SizeTimes() > 1)
+		if (myTargetInfo->Size<forecast_time>() > 1)
 		{
 			// More than one time is calculated - check the difference to previous
 			// or next time
@@ -217,16 +219,16 @@ void pot_gfs::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			int leadtime = myTargetInfo->Time().Step();
 			int otherLeadtime;
 
-			if (myTargetInfo->PreviousTime())
+			if (myTargetInfo->Previous<forecast_time>())
 			{
 				otherLeadtime = myTargetInfo->Time().Step();
-				myTargetInfo->NextTime();  // return
+				myTargetInfo->Next<forecast_time>();  // return
 			}
 			else
 			{
-				myTargetInfo->NextTime();
+				myTargetInfo->Next<forecast_time>();
 				otherLeadtime = myTargetInfo->Time().Step();
-				myTargetInfo->PreviousTime();  // return
+				myTargetInfo->Previous<forecast_time>();  // return
 			}
 
 			step = abs(otherLeadtime - leadtime);
@@ -293,12 +295,13 @@ void pot_gfs::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	himan::matrix<double> filter_kernel(3, 3, 1, MissingDouble(), 1.0 / 9.0);
 	himan::matrix<double> filtered_CAPE = numerical_functions::Filter2D(CAPEMaxInfo->Data(), filter_kernel);
 
-	CAPEMaxInfo->Grid()->Data(filtered_CAPE);
+	auto b = CAPEMaxInfo->Base();
+	b->data = move(filtered_CAPE);
 
 	// filter RR
 	himan::matrix<double> filtered_RR = numerical_functions::Filter2D(RRMeanInfo->Data(), filter_kernel);
-
-	RRMeanInfo->Grid()->Data(filtered_RR);
+	b = RRMeanInfo->Base();
+	b->data = move(filtered_RR);
 
 	string deviceType = "CPU";
 

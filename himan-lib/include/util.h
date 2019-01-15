@@ -9,9 +9,11 @@
 #define UTIL_H_
 
 #include "configuration.h"
+#include "grid.h"
 #include "himan_common.h"
 #include "info.h"
 #include <boost/iterator/zip_iterator.hpp>
+#include <memory>
 #include <mutex>
 #include <tuple>
 
@@ -34,7 +36,8 @@ HPFileType FileType(const std::string& theFile);
  * @brief Creates a neons-style filename with path, but without file extension
  */
 
-std::string MakeFileName(HPFileWriteOption fileWriteOption, const info& info, const configuration& conf);
+template <typename T>
+std::string MakeFileName(HPFileWriteOption fileWriteOption, const info<T>& info, const configuration& conf);
 
 /**
  * @brief Splits a string and fills the gaps if requested
@@ -136,10 +139,11 @@ double ToPower(double value, double power);
  * This function can be called on CPU to unpack the data on CUDA and return
  * the results to CPU memory.
  *
- * @param grids List of grids that are unpacked.
+ * @param grids List of infos that are unpacked.
  */
 
-void Unpack(std::initializer_list<grid*> grids);
+template <typename T>
+void Unpack(std::vector<std::shared_ptr<info<T>>> infos, bool addToCache = true);
 
 /**
  * @brief Compute the x/y-derivative of input A
@@ -149,9 +153,9 @@ void Unpack(std::initializer_list<grid*> grids);
  * @return pair of dA/dx,dA/Dy
  */
 
-std::pair<himan::matrix<double>, himan::matrix<double>> CentralDifference(himan::matrix<double>& A,
-                                                                          std::vector<double>& dx,
-                                                                          std::vector<double>& dy);
+template <typename T>
+std::pair<himan::matrix<T>, himan::matrix<T>> CentralDifference(himan::matrix<T>& A, std::vector<T>& dx,
+                                                                std::vector<T>& dy);
 
 /**
  * @brief Round a double to requested precision
@@ -202,7 +206,10 @@ std::string Expand(const std::string& in);
  * @param name identifier for vector
  */
 
+template <typename T>
+void DumpVector(const std::vector<T>& arr, const std::string& name = "");
 void DumpVector(const std::vector<double>& arr, const std::string& name = "");
+void DumpVector(const std::vector<float>& arr, const std::string& name = "");
 
 /**
    @brief Get the value of the specified environment variable.
@@ -210,6 +217,7 @@ void DumpVector(const std::vector<double>& arr, const std::string& name = "");
 
    @return value of the supplied key
  */
+
 std::string GetEnv(const std::string& key);
 
 /**
@@ -224,19 +232,35 @@ std::string GetEnv(const std::string& key);
  * 134254,2017-04-13 00:00:00,2017-04-13 03:00:00,HEIGHT,0,-1,1,-1,T-K,5.3
  */
 
-info_t CSVToInfo(const std::vector<std::string>& csv);
+template <typename T>
+std::shared_ptr<info<T>> CSVToInfo(const std::vector<std::string>& csv);
 
 /**
  * @brief Return the percentage of missing values in info for all grids.
  */
 
-double MissingPercent(const himan::info& info);
+double MissingPercent(const himan::info<double>& info);
 
 /**
  * @brief Parse boolean value from string
  */
 
 bool ParseBoolean(const std::string& val);
+
+/**
+ * @brief create an empty grid for a given geom_name from db
+ */
+
+std::unique_ptr<grid> GridFromDatabase(const std::string& geom_name);
+
+/**
+ * @brief Flip matrix value around x-axis
+ *
+ * Used to be class function in grids called Swap().
+ */
+
+template <typename T>
+void Flip(matrix<T>& mat);
 
 template <class... Conts>
 inline auto zip_range(Conts&... conts)

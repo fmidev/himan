@@ -35,7 +35,7 @@ void density::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void density::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void density::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	// Required source parameters
 
@@ -76,7 +76,6 @@ void density::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadInde
 	}
 
 	SetAB(myTargetInfo, TInfo);
-
 	string deviceType = "CPU";
 
 	if (PInfo)

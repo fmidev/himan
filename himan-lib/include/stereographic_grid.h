@@ -20,7 +20,7 @@ class OGRSpatialReference;
 
 namespace himan
 {
-class stereographic_grid : public grid
+class stereographic_grid : public regular_grid
 {
    public:
 	stereographic_grid();
@@ -83,12 +83,12 @@ class stereographic_grid : public grid
 	bool operator==(const grid& other) const;
 	bool operator!=(const grid& other) const;
 
-	bool Swap(HPScanningMode newScanningMode) override;
-
 	point XY(const point& latlon) const override;
 	point LatLon(size_t locationIndex) const override;
 
-	stereographic_grid* Clone() const override;
+	size_t Hash() const override;
+
+	std::unique_ptr<grid> Clone() const override;
 
    private:
 	void CreateAreaAndGrid() const;
@@ -117,7 +117,7 @@ class stereographic_grid : public grid
 	template <class Archive>
 	void serialize(Archive& ar)
 	{
-		ar(cereal::base_class<grid>(this), CEREAL_NVP(itsBottomLeft), CEREAL_NVP(itsTopRight),
+		ar(cereal::base_class<regular_grid>(this), CEREAL_NVP(itsBottomLeft), CEREAL_NVP(itsTopRight),
 		   CEREAL_NVP(itsOrientation), CEREAL_NVP(itsDi), CEREAL_NVP(itsDj), CEREAL_NVP(itsNi), CEREAL_NVP(itsNj));
 	}
 #endif

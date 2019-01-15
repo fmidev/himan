@@ -4,17 +4,14 @@
 
 #include "windvector.h"
 #include "forecast_time.h"
-#include "lambert_conformal_grid.h"
-#include "latitude_longitude_grid.h"
+#include "interpolate.h"
 #include "level.h"
 #include "logger.h"
 #include "plugin_factory.h"
 #include "stereographic_grid.h"
 #include "util.h"
-#include <boost/thread.hpp>
 #include <iostream>
 #include <math.h>
-#include "interpolate.h"
 
 #include "cache.h"
 #include "fetcher.h"
@@ -25,8 +22,6 @@ using namespace himan::plugin;
 #include "cuda_helper.h"
 
 typedef tuple<double, double, double, double> coefficients;
-
-boost::thread_specific_ptr<map<size_t, coefficients>> myCoefficientCache;
 
 windvector::windvector() : itsCalculationTarget(kUnknownElement), itsVectorCalculation(false)
 {
@@ -127,13 +122,8 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void windvector::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
-	if (!myCoefficientCache.get())
-	{
-		myCoefficientCache.reset(new map<size_t, coefficients>());
-	}
-
 	// Required source parameters
 
 	param UParam;
@@ -180,49 +170,55 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 	                      static_cast<string>(forecastLevel));
 
-	info_t UInfo = Fetch(forecastTime, forecastLevel, UParam, forecastType, itsConfiguration->UseCudaForPacking());
-	info_t VInfo = Fetch(forecastTime, forecastLevel, VParam, forecastType, itsConfiguration->UseCudaForPacking());
-
-	if (!UInfo || !VInfo)
-	{
-		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
-		                         static_cast<string>(forecastLevel));
-		return;
-	}
-
-	ASSERT(UInfo->Grid()->AB() == VInfo->Grid()->AB());
-
-	for (myTargetInfo->ResetParam(); myTargetInfo->NextParam();)
-	{
-		SetAB(myTargetInfo, UInfo);
-	}
-
-	ASSERT(UInfo->Grid()->Type() == VInfo->Grid()->Type());
-
 	string deviceType;
 
-	interpolate::RotateVectorComponents(*UInfo, *VInfo, itsConfiguration->UseCuda() && itsConfiguration->UseCudaForInterpolation());
-
 #ifdef HAVE_CUDA
-	if (itsConfiguration->UseCuda() &&
-	    (UInfo->Grid()->Type() == kLatitudeLongitude || UInfo->Grid()->Type() == kRotatedLatitudeLongitude ||
-	     UInfo->Grid()->Type() == kLambertConformalConic))
+	if (itsConfiguration->UseCuda())
 	{
 		deviceType = "GPU";
 
-		auto opts = CudaPrepare(myTargetInfo, UInfo, VInfo);
-
-		windvector_cuda::Process(*opts);
+		windvector_cuda::RunCuda(itsConfiguration, myTargetInfo, UParam, VParam, itsCalculationTarget);
 	}
 	else
 #endif
 	{
 		deviceType = "CPU";
 
+		info_t UInfo = Fetch(forecastTime, forecastLevel, UParam, forecastType, itsConfiguration->UseCudaForPacking());
+		info_t VInfo = Fetch(forecastTime, forecastLevel, VParam, forecastType, itsConfiguration->UseCudaForPacking());
+
+		if (!UInfo || !VInfo)
+		{
+			myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+			                         static_cast<string>(forecastLevel));
+			return;
+		}
+
+		ASSERT(UInfo->Grid()->AB() == VInfo->Grid()->AB());
+
+		for (myTargetInfo->Reset<param>(); myTargetInfo->Next<param>();)
+		{
+			SetAB(myTargetInfo, UInfo);
+		}
+
+		ASSERT(UInfo->Grid()->Type() == VInfo->Grid()->Type());
+
 #ifdef HAVE_CUDA
-		Unpack({UInfo, VInfo});
+		if (UInfo->PackedData()->HasData())
+		{
+			util::Unpack<double>({UInfo, VInfo}, false);
+		}
 #endif
-		myTargetInfo->ParamIndex(0);
+
+		interpolate::RotateVectorComponents(*UInfo, *VInfo,
+		                                    itsConfiguration->UseCuda() && itsConfiguration->UseCudaForInterpolation());
+
+		auto c = GET_PLUGIN(cache);
+
+		c->Replace(UInfo);
+		c->Replace(VInfo);
+
+		myTargetInfo->Index<param>(0);
 
 		auto& FFVec = VEC(myTargetInfo);
 		vector<double> DDVec(FFVec.size(), MissingDouble());
@@ -255,9 +251,9 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 			dir = round(fmod((dir + 360), 360));
 		}
 
-		if (myTargetInfo->SizeParams() > 1)
+		if (myTargetInfo->Size<param>() > 1)
 		{
-			myTargetInfo->ParamIndex(1);
+			myTargetInfo->Index<param>(1);
 			myTargetInfo->Data().Set(DDVec);
 		}
 	}
@@ -266,8 +262,9 @@ void windvector::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadI
 	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
 
-shared_ptr<himan::info> windvector::Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam,
-                                          const forecast_type& theType, bool returnPacked) const
+shared_ptr<himan::info<double>> windvector::Fetch(const forecast_time& theTime, const level& theLevel,
+                                                  const param& theParam, const forecast_type& theType,
+                                                  bool returnPacked) const
 {
 	auto f = GET_PLUGIN(fetcher);
 	f->DoVectorComponentRotation(true);
@@ -279,11 +276,9 @@ shared_ptr<himan::info> windvector::Fetch(const forecast_time& theTime, const le
 		ret = f->Fetch(itsConfiguration, theTime, theLevel, theParam, theType, itsConfiguration->UseCudaForPacking());
 
 #ifdef HAVE_CUDA
-		if (!returnPacked && ret->Grid()->IsPackedData())
+		if (!returnPacked && ret->PackedData()->HasData())
 		{
-			ASSERT(ret->Grid()->PackedData().ClassName() == "simple_packed");
-
-			util::Unpack({ret->Grid()});
+			util::Unpack<double>({ret}, false);
 
 			auto c = GET_PLUGIN(cache);
 
@@ -301,31 +296,3 @@ shared_ptr<himan::info> windvector::Fetch(const forecast_time& theTime, const le
 
 	return ret;
 }
-
-#ifdef HAVE_CUDA
-
-unique_ptr<windvector_cuda::options> windvector::CudaPrepare(shared_ptr<info> myTargetInfo, shared_ptr<info> UInfo,
-                                                             shared_ptr<info> VInfo)
-{
-	unique_ptr<windvector_cuda::options> opts(new windvector_cuda::options);
-
-	opts->N = UInfo->Grid()->Size();
-
-	opts->target_type = itsCalculationTarget;
-
-	opts->u = UInfo->ToSimple();
-	opts->v = VInfo->ToSimple();
-
-	myTargetInfo->ParamIndex(0);
-	opts->speed = myTargetInfo->ToSimple();
-
-	if (opts->target_type != kGust)
-	{
-		myTargetInfo->ParamIndex(1);
-		opts->dir = myTargetInfo->ToSimple();
-	}
-
-	return opts;
-}
-
-#endif

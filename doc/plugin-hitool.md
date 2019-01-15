@@ -102,6 +102,7 @@ Example: Find the wind speed at boundary layer height.
 ## Height
 
 Return the height where some parameters' value crosses the user given threshold. By default the last occurence will be returned, but that can adjusted with argument Nth.
+If 'Nth' has value -1, all found values are returned.
 
     VerticalHeight(vector<param>, double lowerHeight, double upperHeight, vector<double> searchValue, int Nth)
     VerticalHeight(vector<param>, vector<double> lowerHeight, vector<double> upperHeight, vector<double> searchValue, int Nth)

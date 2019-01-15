@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.6.18
+Version: 19.1.15
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -13,13 +13,15 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 18.4.9
+Requires: himan-lib >= 18.11.13
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 18.2.12
-Requires: libfmidb >= 18.2.8
+Requires: libfmidb >= 18.10.5
 Requires: smartmet-library-newbase >= 17.12.1
 Requires: libpqxx
+Requires: boost-iostreams
+Requires: boost-thread
 
 %if %{defined suse_version}
 Requires: libjasper
@@ -34,13 +36,14 @@ BuildRequires: cuda-cusp-9-1 >= 0.5.1
 Requires: jasper-libs
 Requires: eccodes
 %endif
-BuildRequires: libfmidb-devel >= 17.9.18
+BuildRequires: libfmidb-devel >= 18.10.5
 BuildRequires: libfmigrib-devel >= 18.2.12
 BuildRequires: smartmet-library-newbase-devel >= 17.12.1
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: boost-devel >= 1.66
 BuildRequires: scons
+BuildRequires: eigen >= 3.3.4
 
 %description
 Himan -- hilojen manipulaatio -- plugin collection
@@ -95,6 +98,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libradon.so
 %{_libdir}/himan-plugins/librelative_humidity.so
 %{_libdir}/himan-plugins/libseaicing.so
+%{_libdir}/himan-plugins/libsnow_drift.so
 %{_libdir}/himan-plugins/libsplit_sum.so
 %{_libdir}/himan-plugins/libstability.so
 %{_libdir}/himan-plugins/libstability_simple.so
@@ -111,6 +115,114 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Jan 15 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.1.15-1.fmi
+- Allow lua scripts to change thread distribution type
+* Mon Jan 14 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.1.14-1.fmi
+- Fixes to blend
+* Mon Jan  7 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.1.7-1.fmi
+- cape gpu memory optimization
+* Wed Jan  2 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.1.2-1.fmi
+- Fixing hybrid_height perf regression
+* Thu Dec 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.12.20-1.fmi
+- cape-plugin: LFC max height lowered to ~250hPa
+* Wed Dec 19 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.12.19-1.fmi
+- Even more snow_drift tuning
+* Thu Dec 13 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.12.13-1.fmi
+- More snow_drift tuning
+* Tue Dec 11 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.12.11-1.fmi
+- snow_drift analysis producer to 107 (LAPS FIN)
+* Mon Nov 26 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.26-2.fmi
+- Minor addition to snow_drif
+* Mon Nov 26 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.26-1.fmi
+- New plugin snow_drift
+- Improved accuracy for grib2/stereographic projection dx&dy 
+- Reduce cape GPU memory requirements
+* Wed Nov 21 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.21-1.fmi
+- Minor fixes
+* Tue Nov 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.20-1.fmi
+- mucape algorithm changes
+* Mon Nov 19 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.19-1.fmi
+- More preform_hybrid optimization
+* Tue Nov 13 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.13-1.fmi
+- preform_hybrid optimization
+* Wed Nov  8 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.8-1.fmi
+- Updates to blend
+* Wed Nov  7 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.7-1.fmi
+- Updates to blend
+* Mon Nov  5 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.5-1.fmi
+- Single precision for hybrid_pressure, hybrid_height, relative-humidity
+- Fix for transformer / target forecast type
+* Thu Nov  1 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.1-1.fmi
+- Remove HPVersionNumber
+- (Integrated) single precision support for cape
+- Single precision for icing
+* Wed Oct 31 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.31-1.fmi
+- Add float support for Himan core
+- Reworked thread work distribution
+* Mon Oct 29 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.29-1.fmi
+- Minor changes to blend
+* Tue Oct 23 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.23-1.fmi
+- packing as template
+* Mon Oct 22 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.22-1.fmi
+- hitool as template
+- gust bugfix
+* Thu Oct 18 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.18-1.fmi
+- Fetcher and writer as templates
+* Tue Oct 16 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.16-2.fmi
+- Bugfix for relative_humidity
+* Tue Oct 16 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.16-1.fmi
+- AB moved to level
+* Mon Oct 15 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.15-1.fmi
+- info-class as template
+* Wed Oct 10 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.10-1.fmi
+- Refactoring plugin_configuration
+* Mon Oct  8 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.8-2.fmi
+- Use typeOfStatisticalProcessing to determine param_id in GRIB2
+* Mon Oct  8 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.8-1.fmi
+- Fixing missing data lookup
+* Fri Oct  5 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.5-1.fmi
+- Minor cleanup
+- Fix for strange case where wrong GPU processing function was called
+* Wed Oct  3 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.10.3-1.fmi
+- New interpolation scheme
+* Thu Sep 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.9.20-3.fmi
+- Fixing pot_gfs
+* Thu Sep 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.9.20-2.fmi
+- Fixing MNWC visibility
+* Thu Sep 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.9.20-1.fmi
+- Moving data away from grid
+* Fri Sep 14 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.9.14-1.fmi
+- Minor fix to visibility,preform_hybrid
+* Mon Sep 10 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.9.10-1.fmi
+- Minor fix to blend
+* Thu Sep  6 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.9.6-1.fmi
+- Minor fix to cape-plugin/CIN
+* Tue Sep  4 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.9.4-1.fmi
+- Minor fixes
+* Mon Sep  3 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.9.3-1.fmi
+- Bugfix to weather_code_2
+* Wed Aug 29 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.29-1.fmi
+- Changes in pot, blend
+* Tue Aug 28 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.28-1.fmi
+- Chang in grid class inheritance structure
+* Wed Aug 22 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.22-1.fmi
+- Fix memory leak in cuda functions
+* Mon Aug 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.20-2.fmi
+- More fixing to windvector
+* Mon Aug 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.20-1.fmi
+- Minorish optimization to icing, windvector
+* Fri Aug 17 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.17-1.fmi
+- pot fix
+* Thu Aug 16 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.16-1.fmi
+- Blend fixes
+- CAPE shear with MUCAPE
+- split_sum writes empty grids
+* Tue Aug  7 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.8.7-1.fmi
+- Blend fixes
+- Minor changes to cape
+- RHEL7.5 build
+* Thu Jul  5 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.7.5-1.fmi
+- Additions to earth_shape functionality
 * Mon Jun 18 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.6.18-1.fmi
 - Blend fixes
 - Luatool tweaking

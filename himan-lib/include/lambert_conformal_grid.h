@@ -12,18 +12,16 @@
 #include "serialization.h"
 #include <string>
 
-#include "packed_data.h"
-
 class OGRCoordinateTransformation;
 class OGRSpatialReference;
 
 namespace himan
 {
-class lambert_conformal_grid : public grid
+class lambert_conformal_grid : public regular_grid
 {
    public:
 	lambert_conformal_grid();
-	lambert_conformal_grid(HPScanningMode theScanningMode, point theFirsPoint);
+	lambert_conformal_grid(HPScanningMode theScanningMode, point theFirstPoint);
 
 	virtual ~lambert_conformal_grid();
 	lambert_conformal_grid(const lambert_conformal_grid& other);
@@ -86,15 +84,10 @@ class lambert_conformal_grid : public grid
 	bool operator==(const grid& other) const;
 	bool operator!=(const grid& other) const;
 
-	void PackedData(std::unique_ptr<packed_data> thePackedData);
-	packed_data& PackedData();
-
-	bool Swap(HPScanningMode newScanningMode) override;
-
 	point XY(const point& latlon) const override;
 	point LatLon(size_t locationIndex) const override;
 
-	lambert_conformal_grid* Clone() const override;
+	std::unique_ptr<grid> Clone() const override;
 
 	void Orientation(double theOrientation);
 	double Orientation() const;
@@ -109,6 +102,8 @@ class lambert_conformal_grid : public grid
 
 	point SouthPole() const;
 	void SouthPole(const point& theSouthPole);
+
+	size_t Hash() const override;
 
    private:
 	bool EqualsTo(const lambert_conformal_grid& other) const;
@@ -139,7 +134,7 @@ class lambert_conformal_grid : public grid
 	template <class Archive>
 	void serialize(Archive& ar)
 	{
-		ar(cereal::base_class<grid>(this), CEREAL_NVP(itsBottomLeft), CEREAL_NVP(itsTopLeft), CEREAL_NVP(itsDi),
+		ar(cereal::base_class<regular_grid>(this), CEREAL_NVP(itsBottomLeft), CEREAL_NVP(itsTopLeft), CEREAL_NVP(itsDi),
 		   CEREAL_NVP(itsDj), CEREAL_NVP(itsNi), CEREAL_NVP(itsNj), CEREAL_NVP(itsOrientation),
 		   CEREAL_NVP(itsStandardParallel1), CEREAL_NVP(itsStandardParallel2), CEREAL_NVP(itsSouthPole));
 	}

@@ -63,7 +63,7 @@ param_configuration<std::vector<double>> ToParamConfiguration(const partial_para
 }
 
 template <typename T>
-T GetThreshold(std::shared_ptr<himan::info>& targetInfo, const param_configuration<T>& paramConf, bool isGrid)
+T GetThreshold(std::shared_ptr<himan::info<double>>& targetInfo, const param_configuration<T>& paramConf, bool isGrid)
 {
 	if (isGrid)
 	{
@@ -107,10 +107,10 @@ struct BTWNCompare : public std::binary_function<double, std::vector<double>, bo
 };
 
 template <typename T>
-void Probability(std::shared_ptr<himan::info> targetInfo, const param_configuration<T>& paramConf,
+void Probability(std::shared_ptr<himan::info<double>> targetInfo, const param_configuration<T>& paramConf,
                  std::unique_ptr<himan::ensemble>& ens, std::function<bool(double, T)> comp_op)
 {
-	targetInfo->Param(paramConf.output);
+	targetInfo->Find<himan::param>(paramConf.output);
 	targetInfo->ResetLocation();
 	ens->ResetLocation();
 
@@ -149,10 +149,10 @@ void Probability(std::shared_ptr<himan::info> targetInfo, const param_configurat
 }
 
 template <typename T>
-void ProbabilityWithGaussianSpread(std::shared_ptr<himan::info> targetInfo, const param_configuration<T>& paramConf,
-                                   std::unique_ptr<himan::ensemble>& ens)
+void ProbabilityWithGaussianSpread(std::shared_ptr<himan::info<double>> targetInfo,
+                                   const param_configuration<T>& paramConf, std::unique_ptr<himan::ensemble>& ens)
 {
-	targetInfo->Param(paramConf.output);
+	targetInfo->Find<himan::param>(paramConf.output);
 	targetInfo->ResetLocation();
 	ens->ResetLocation();
 

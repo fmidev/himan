@@ -31,9 +31,7 @@ struct deltaT
 	vector<double> deltaT_600;
 	vector<double> deltaT_700;
 
-	deltaT()
-	{
-	}
+	deltaT() = default;
 };
 
 struct deltaTot
@@ -46,9 +44,7 @@ struct deltaTot
 	vector<double> deltaTot_600;
 	vector<double> deltaTot_700;
 
-	deltaTot()
-	{
-	}
+	deltaTot() = default;
 };
 
 struct intT
@@ -61,9 +57,7 @@ struct intT
 	vector<double> intT_600;
 	vector<double> intT_700;
 
-	intT()
-	{
-	}
+	intT() = default;
 };
 
 struct intTot
@@ -76,18 +70,16 @@ struct intTot
 	vector<double> intTot_600;
 	vector<double> intTot_700;
 
-	intTot()
-	{
-	}
+	intTot() = default;
 };
 
-void DeltaT(shared_ptr<const plugin_configuration> conf, info_t T_lowestLevel, const forecast_time& ftime,
+void DeltaT(const shared_ptr<const plugin_configuration>& conf, info_t T_lowestLevel, const forecast_time& ftime,
             const forecast_type& ftype, size_t gridSize, deltaT& dT);
-void DeltaTot(deltaTot& dTot, info_t T_lowestLevel, size_t gridSize);
+void DeltaTot(deltaTot& dTot, const info_t& T_lowestLevel, size_t gridSize);
 void IntT(intT& iT, const deltaT& dT, size_t gridSize);
 void IntTot(intTot& iTot, const deltaTot& dTot, size_t gridSize);
-void LowAndMiddleClouds(vector<double>& lowAndMiddleClouds, info_t lowClouds, info_t middleClouds, info_t highClouds,
-                        info_t totalClouds);
+void LowAndMiddleClouds(vector<double>& lowAndMiddleClouds, const info_t& lowClouds, const info_t& middleClouds,
+                        const info_t& highClouds, const info_t& totalClouds);
 
 gust::gust()
 {
@@ -112,7 +104,7 @@ void gust::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void gust::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	NFmiMetTime theTime(static_cast<short>(stoi(myTargetInfo->Time().ValidDateTime().String("%Y"))),
 	                    static_cast<short>(stoi(myTargetInfo->Time().ValidDateTime().String("%m"))),
@@ -134,8 +126,8 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	const param TParam("T-K");                                            // temperature
 	const param TopoParam("Z-M2S2");                                      // geopotential height
 	const params LowCloudParam = {param("NL-0TO1"), param("NL-PRCNT")};   // low cloud cover
-	const params MidCloudParam = {param("NL-0TO1"), param("NM-PRCNT")};   // middle cloud cover
-	const params HighCloudParam = {param("NL-0TO1"), param("NH-PRCNT")};  // high cloud cover
+	const params MidCloudParam = {param("NM-0TO1"), param("NM-PRCNT")};   // middle cloud cover
+	const params HighCloudParam = {param("NH-0TO1"), param("NH-PRCNT")};  // high cloud cover
 	const params TotalCloudParam = {param("N-PRCNT"), param("N-0TO1")};   // total cloud cover
 
 	level H0, H10;
@@ -245,7 +237,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	vector<double> maxEstimate;
 	try
 	{
-		maxEstimate = h->VerticalAverage(WSParam, z_two_third_boundaryl, z_boundaryl);
+		maxEstimate = h->VerticalAverage<double>(WSParam, z_two_third_boundaryl, z_boundaryl);
 	}
 
 	catch (const HPExceptionType& e)
@@ -266,7 +258,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	vector<double> BLtop_ws;
 	try
 	{
-		BLtop_ws = h->VerticalAverage(WSParam, z_one_third_boundaryl, z_boundaryl);
+		BLtop_ws = h->VerticalAverage<double>(WSParam, z_one_third_boundaryl, z_boundaryl);
 	}
 
 	catch (const HPExceptionType& e)
@@ -287,7 +279,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	vector<double> meanWind;
 	try
 	{
-		meanWind = h->VerticalAverage(WSParam, z_zero, z_boundaryl);
+		meanWind = h->VerticalAverage<double>(WSParam, z_zero, z_boundaryl);
 	}
 
 	catch (const HPExceptionType& e)
@@ -308,7 +300,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	vector<double> t_diff;
 	try
 	{
-		t_diff = h->VerticalMaximum(TParam, 0, 200);
+		t_diff = h->VerticalMaximum<double>(TParam, 0, 200);
 		for (size_t i = 0; i < gridSize; ++i)
 		{
 			t_diff[i] = t_diff[i] - T_LowestLevelInfo->Data()[i];
@@ -333,7 +325,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 	vector<double> BLbottom_ws;
 	try
 	{
-		BLbottom_ws = h->VerticalAverage(WSParam, 0, 200);
+		BLbottom_ws = h->VerticalAverage<double>(WSParam, 0, 200);
 	}
 
 	catch (const HPExceptionType& e)
@@ -371,7 +363,7 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 		double topo = TopoInfo->Value();
 		double esto = himan::MissingDouble();
 		double esto_tot = himan::MissingDouble();
-		double gust = himan::MissingDouble();
+		double result = himan::MissingDouble();
 		double turb_lisa = 0;
 		double turb_kerroin = 0;
 		double pilvikerroin = 0;
@@ -425,42 +417,42 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 
 		if (z_boundaryl[i] >= 200 && esto >= 0 && esto <= esto_tot)
 		{
-			gust = ((BLbottom_ws[i] - BLtop_ws[i]) / esto_tot) * esto + BLtop_ws[i];
+			result = ((BLbottom_ws[i] - BLtop_ws[i]) / esto_tot) * esto + BLtop_ws[i];
 		}
 
 		if (z_boundaryl[i] >= 200 && esto <= 0 && esto >= -200)
 		{
-			gust = ((BLtop_ws[i] - maxEstimate[i]) / 200) * esto + BLtop_ws[i];
+			result = ((BLtop_ws[i] - maxEstimate[i]) / 200) * esto + BLtop_ws[i];
 		}
 
 		if (z_boundaryl[i] >= 200 && esto < -200)
 		{
-			gust = maxEstimate[i];
+			result = maxEstimate[i];
 		}
 
 		if (z_boundaryl[i] >= 200 && esto > esto_tot)
 		{
-			gust = BLbottom_ws[i];
+			result = BLbottom_ws[i];
 		}
 
 		if (z_boundaryl[i] < 200)
 		{
-			gust = meanWind[i];
+			result = meanWind[i];
 		}
 
-		if (IsMissing(gust) || gust < 1)
+		if (IsMissing(result) || result < 1)
 		{
-			gust = 1;
+			result = 1;
 		}
 
 		if (topo > 15 && topo < 400 && t_diff[i] > 0 && t_diff[i] <= 4 && BLbottom_ws[i] < 7 && elevationAngle < 15)
 		{
-			gust = ((1 - gust) / 4) * t_diff[i] + gust;
+			result = ((1 - result) / 4) * t_diff[i] + result;
 		}
 
 		if (topo > 15 && topo < 400 && t_diff[i] > 4 && BLbottom_ws[i] < 7)
 		{
-			gust = 1;
+			result = 1;
 		}
 
 		if (cloudCover >= 30 && cloudCover <= 70)
@@ -482,38 +474,39 @@ void gust::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
 				turb_lisa = 4;
 			}
 
-			if (gust > 4 && gust <= 14)
+			if (result > 4 && result <= 14)
 			{
-				turb_kerroin = -0.1 * gust + 1.4;
+				turb_kerroin = -0.1 * result + 1.4;
 			}
 
-			if (gust <= 4)
+			if (result <= 4)
 			{
 				turb_kerroin = 1;
 			}
 		}
 
-		gust = gust + turb_lisa * turb_kerroin * pilvikerroin;
+		result = result + turb_lisa * turb_kerroin * pilvikerroin;
 
 		if (topo > 400 || IsMissing(T_LowestLevelInfo->Value()) || IsMissing(BLHInfo->Value()))
 		{
-			gust = GustInfo->Value() * 0.95;
+			result = GustInfo->Value() * 0.95;
 		}
 
-		myTargetInfo->Value(gust);
+		myTargetInfo->Value(result);
 	}
 
 	himan::matrix<double> filter_kernel(3, 3, 1, himan::MissingDouble());
 	filter_kernel.Fill(1.0 / 9.0);
 	himan::matrix<double> gust_filtered = numerical_functions::Filter2D(myTargetInfo->Data(), filter_kernel);
 
-	myTargetInfo->Grid()->Data(gust_filtered);
+	auto b = myTargetInfo->Base();
+	b->data = move(gust_filtered);
 
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
 	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
 
-void DeltaT(shared_ptr<const plugin_configuration> conf, info_t T_lowestLevel, const forecast_time& ftime,
+void DeltaT(const shared_ptr<const plugin_configuration>& conf, info_t T_lowestLevel, const forecast_time& ftime,
             const forecast_type& ftype, size_t gridSize, deltaT& dT)
 {
 	auto h = GET_PLUGIN(hitool);
@@ -527,13 +520,13 @@ void DeltaT(shared_ptr<const plugin_configuration> conf, info_t T_lowestLevel, c
 	try
 	{
 		// Potential temperature differences
-		dT.deltaT_100 = h->VerticalValue(TParam, 100);
-		dT.deltaT_200 = h->VerticalValue(TParam, 200);
-		dT.deltaT_300 = h->VerticalValue(TParam, 300);
-		dT.deltaT_400 = h->VerticalValue(TParam, 400);
-		dT.deltaT_500 = h->VerticalValue(TParam, 500);
-		dT.deltaT_600 = h->VerticalValue(TParam, 600);
-		dT.deltaT_700 = h->VerticalValue(TParam, 700);
+		dT.deltaT_100 = h->VerticalValue<double>(TParam, 100);
+		dT.deltaT_200 = h->VerticalValue<double>(TParam, 200);
+		dT.deltaT_300 = h->VerticalValue<double>(TParam, 300);
+		dT.deltaT_400 = h->VerticalValue<double>(TParam, 400);
+		dT.deltaT_500 = h->VerticalValue<double>(TParam, 500);
+		dT.deltaT_600 = h->VerticalValue<double>(TParam, 600);
+		dT.deltaT_700 = h->VerticalValue<double>(TParam, 700);
 
 		for (size_t i = 0; i < gridSize; ++i)
 		{
@@ -573,7 +566,7 @@ void DeltaT(shared_ptr<const plugin_configuration> conf, info_t T_lowestLevel, c
 	}
 }
 
-void DeltaTot(deltaTot& dTot, info_t T_lowestLevel, size_t gridSize)
+void DeltaTot(deltaTot& dTot, const info_t& T_lowestLevel, size_t gridSize)
 {
 	dTot.deltaTot_100 = vector<double>(gridSize, 0);
 	dTot.deltaTot_200 = vector<double>(gridSize, 0);
@@ -618,8 +611,8 @@ void IntT(intT& iT, const deltaT& dT, size_t gridSize)
 	{
 		if (!IsMissing(dT.deltaT_100[i]))
 			iT.intT_100[i] = 0.5 * dT.deltaT_100[i] * 100;  // why 0.5 * here? Would make sense in case of
-		                                                    // (dT.deltaT_100[i] + dT.deltaT_0[i]) if this is
-		                                                    // integration using trapezoidal rule
+			                                                // (dT.deltaT_100[i] + dT.deltaT_0[i]) if this is
+			                                                // integration using trapezoidal rule
 		if (!IsMissing(dT.deltaT_100[i]) && !IsMissing(dT.deltaT_200[i]))
 			iT.intT_200[i] = 0.5 * (dT.deltaT_200[i] + dT.deltaT_100[i]) * 100;
 		if (!IsMissing(dT.deltaT_200[i]) && !IsMissing(dT.deltaT_300[i]))
@@ -657,8 +650,8 @@ void IntTot(intTot& iTot, const deltaTot& dTot, size_t gridSize)
 	}
 }
 
-void LowAndMiddleClouds(vector<double>& lowAndMiddleClouds, info_t lowClouds, info_t middleClouds, info_t highClouds,
-                        info_t totalClouds)
+void LowAndMiddleClouds(vector<double>& lowAndMiddleClouds, const info_t& lowClouds, const info_t& middleClouds,
+                        const info_t& highClouds, const info_t& totalClouds)
 {
 	for (size_t i = 0; i < lowAndMiddleClouds.size(); ++i)
 	{

@@ -1,41 +1,40 @@
 #include "cuda_plugin_helper.h"
+#include "interpolate.h"
+#include "plugin_factory.h"
 #include "windvector.cuh"
 
-#define MIN(a, b) (((a) < (b)) ? (a) : (b))
-#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+#define HIMAN_AUXILIARY_INCLUDE
+
+#include "cache.h"
+
+#undef HIMAN_AUXILIARY_INCLUDE
 
 /*
  * Calculate results. At this point it as assumed that U and V are in correct form.
  */
 
 __global__ void Calculate(cdarr_t d_u, cdarr_t d_v, darr_t d_speed, darr_t d_dir,
-                          himan::plugin::windvector_cuda::options opts)
+                          himan::plugin::HPWindVectorTargetType targetType, size_t N)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	if (idx < opts.N)
+	if (idx < N)
 	{
-		double U = d_u[idx], V = d_v[idx];
-		d_speed[idx] = himan::MissingDouble();
-		if (d_dir)
-			d_dir[idx] = himan::MissingDouble();
+		const double U = d_u[idx];
+		const double V = d_v[idx];
 
-		double speed = sqrt(U * U + V * V);
+		d_speed[idx] = __dsqrt_rn(U * U + V * V);
 
-		d_speed[idx] = speed;
-
-		double dir = 0;
-
-		if (opts.target_type != himan::plugin::kGust)
+		if (targetType != himan::plugin::kGust)
 		{
 			int offset = 180;
 
-			if (opts.target_type == himan::plugin::kSea || opts.target_type == himan::plugin::kIce)
+			if (targetType == himan::plugin::kSea || targetType == himan::plugin::kIce)
 			{
 				offset = 0;
 			}
 
-			dir = himan::constants::kRad * atan2(U, V) + offset;
+			double dir = himan::constants::kRad * atan2(U, V) + offset;
 
 			// modulo operator is supposedly slow on cuda ?
 
@@ -65,7 +64,9 @@ __global__ void Calculate(cdarr_t d_u, cdarr_t d_v, darr_t d_speed, darr_t d_dir
 	}
 }
 
-void himan::plugin::windvector_cuda::Process(options& opts)
+void himan::plugin::windvector_cuda::RunCuda(std::shared_ptr<const plugin_configuration> conf,
+                                             std::shared_ptr<info<double>> myTargetInfo, const param& UParam,
+                                             const param& VParam, HPWindVectorTargetType itsTargetType)
 {
 	cudaStream_t stream;
 
@@ -77,36 +78,75 @@ void himan::plugin::windvector_cuda::Process(options& opts)
 	double* d_v = 0;
 	double* d_speed = 0;
 	double* d_dir = 0;
-	double* d_lon = 0;
-	double* d_lat = 0;
 
 	// Allocate memory on device
+	const size_t N = myTargetInfo->SizeLocations();
 
-	size_t memsize = opts.N * sizeof(double);
+	const size_t memsize = N * sizeof(double);
+
+	// Fetch U & V, unpack to device, do not copy to host
+
+	auto UInfo =
+	    cuda::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(), UParam, myTargetInfo->ForecastType());
+	auto VInfo =
+	    cuda::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(), VParam, myTargetInfo->ForecastType());
+
+	if (!UInfo || !VInfo)
+	{
+		return;
+	}
 
 	CUDA_CHECK(cudaMalloc((void**)&d_u, memsize));
 	CUDA_CHECK(cudaMalloc((void**)&d_v, memsize));
-
 	CUDA_CHECK(cudaMalloc((void**)&d_speed, memsize));
 
-	if (opts.target_type != kGust)
+	if (itsTargetType != kGust)
 	{
 		CUDA_CHECK(cudaMalloc((void**)&d_dir, memsize));
-		PrepareInfo(opts.dir);
 	}
 
-	// Copy data to device
+	cuda::Unpack(UInfo, stream, d_u);
+	cuda::Unpack(VInfo, stream, d_v);
 
-	PrepareInfo(opts.u, d_u, stream);
-	PrepareInfo(opts.v, d_v, stream);
-	PrepareInfo(opts.speed);
+	// Rotate components; data already at device memory
+
+	if (UInfo->Grid()->UVRelativeToGrid())
+	{
+		himan::interpolate::RotateVectorComponentsGPU(*UInfo, *VInfo, stream, d_u, d_v);
+		CUDA_CHECK(cudaStreamSynchronize(stream));
+	}
+
+	// Copy to host
+
+	CUDA_CHECK(cudaMemcpyAsync(UInfo->Data().ValuesAsPOD(), d_u, memsize, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(VInfo->Data().ValuesAsPOD(), d_v, memsize, cudaMemcpyDeviceToHost, stream));
+
+	CUDA_CHECK(cudaStreamSynchronize(stream));
+
+	// And finally insert to cache
+
+	auto c = GET_PLUGIN(cache);
+	c->Insert(UInfo);
+	c->Insert(VInfo);
+
+	if (myTargetInfo->Level().Type() == kHybrid)
+	{
+		const size_t paramIndex = myTargetInfo->Index<param>();
+
+		for (myTargetInfo->Reset<param>(); myTargetInfo->Next<param>();)
+		{
+			myTargetInfo->Set<level>(UInfo->Level());
+		}
+
+		myTargetInfo->Index<param>(paramIndex);
+	}
 
 	// dims
 
 	const int blockSize = 256;
-	const int gridSize = opts.N / blockSize + (opts.N % blockSize == 0 ? 0 : 1);
+	const int gridSize = N / blockSize + (N % blockSize == 0 ? 0 : 1);
 
-	Calculate<<<gridSize, blockSize, 0, stream>>>(d_u, d_v, d_speed, d_dir, opts);
+	Calculate<<<gridSize, blockSize, 0, stream>>>(d_u, d_v, d_speed, d_dir, itsTargetType, N);
 
 	// block until the stream has completed
 	CUDA_CHECK(cudaStreamSynchronize(stream));
@@ -115,13 +155,14 @@ void himan::plugin::windvector_cuda::Process(options& opts)
 
 	CUDA_CHECK_ERROR_MSG("Kernel invocation");
 
-	ReleaseInfo(opts.u);
-	ReleaseInfo(opts.v);
-	ReleaseInfo(opts.speed, d_speed, stream);
+	myTargetInfo->Index<param>(0);
 
-	if (opts.target_type != kGust)
+	cuda::ReleaseInfo(myTargetInfo, d_speed, stream);
+
+	if (itsTargetType != kGust)
 	{
-		ReleaseInfo(opts.dir, d_dir, stream);
+		myTargetInfo->Index<param>(1);
+		cuda::ReleaseInfo(myTargetInfo, d_dir, stream);
 	}
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
@@ -135,12 +176,6 @@ void himan::plugin::windvector_cuda::Process(options& opts)
 	if (d_dir)
 	{
 		CUDA_CHECK(cudaFree(d_dir));
-	}
-
-	if (d_lon)
-	{
-		CUDA_CHECK(cudaFree(d_lon));
-		CUDA_CHECK(cudaFree(d_lat));
 	}
 
 	CUDA_CHECK(cudaStreamDestroy(stream));

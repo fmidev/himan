@@ -20,10 +20,10 @@ void icing::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	SetParams({param("ICING-N", 480, 0, 19, 7)});
 
-	Start();
+	Start<float>();
 }
 
-void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadIndex)
+void icing::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short theThreadIndex)
 {
 	// Required source parameters
 
@@ -47,24 +47,24 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 	                      static_cast<string>(forecastLevel));
 
-	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, false);
-	info_t VvInfo = Fetch(forecastTime, forecastLevel, VvParam, forecastType, false);
-	info_t ClInfo = Fetch(forecastTime, forecastLevel, ClParam, forecastType, false);
-	info_t PrecFormInfo = Fetch(forecastTime, surface, PrecFormParam, forecastType, false);  // fetch from surface
-	info_t PrecInfo = Fetch(forecastTime, surface, PrecParam, forecastType, false);
-	info_t HeightInfo = Fetch(forecastTime, forecastLevel, HeightParam, forecastType, false);
+	auto TInfo = Fetch<float>(forecastTime, forecastLevel, TParam, forecastType, false);
+	auto VvInfo = Fetch<float>(forecastTime, forecastLevel, VvParam, forecastType, false);
+	auto ClInfo = Fetch<float>(forecastTime, forecastLevel, ClParam, forecastType, false);
+	auto PrecFormInfo = Fetch<float>(forecastTime, surface, PrecFormParam, forecastType, false);  // fetch from surface
+	auto PrecInfo = Fetch<float>(forecastTime, surface, PrecParam, forecastType, false);
+	auto HeightInfo = Fetch<float>(forecastTime, forecastLevel, HeightParam, forecastType, false);
 
-	info_t ZeroLevelInfo = Fetch(forecastTime, surface, ZeroLevelParam, forecastType, false);
+	auto ZeroLevelInfo = Fetch<float>(forecastTime, surface, ZeroLevelParam, forecastType, false);
 
 	if (!ZeroLevelInfo)
 	{
-		ZeroLevelInfo = Fetch(forecastTime, level(kIsothermal, 27315), param("HL-M"), forecastType, false);
+		ZeroLevelInfo = Fetch<float>(forecastTime, level(kIsothermal, 27315), param("HL-M"), forecastType, false);
 	}
 
 	level newLevel = forecastLevel;
 	newLevel.Value(newLevel.Value() + 2);
 
-	info_t HeightInfo2down = Fetch(forecastTime, newLevel, HeightParam, forecastType, false);
+	auto HeightInfo2down = Fetch<float>(forecastTime, newLevel, HeightParam, forecastType, false);
 
 	if (!HeightInfo2down)
 	{
@@ -72,7 +72,7 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 		// First try one level below, and if that's not found then pick the current level
 
 		newLevel.Value(newLevel.Value() - 1);
-		HeightInfo2down = Fetch(forecastTime, newLevel, HeightParam, forecastType, false);
+		HeightInfo2down = Fetch<float>(forecastTime, newLevel, HeightParam, forecastType, false);
 
 		if (!HeightInfo2down)
 		{
@@ -86,8 +86,8 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 		return;
 	}
 
-	double VvScale = 1;  // Assume we'll have VV-MMS
-	double ClScale = 1000;
+	float VvScale = 1;  // Assume we'll have VV-MMS
+	float ClScale = 1000;
 
 	if (VvInfo->Param().Name() == "VV-MS")
 	{
@@ -98,40 +98,40 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 
 	SetAB(myTargetInfo, TInfo);
 
-	auto h = dynamic_pointer_cast<hitool>(plugin_factory::Instance()->Plugin("hitool"));
+	auto h = GET_PLUGIN(hitool);
+
 	h->Configuration(itsConfiguration);
 	h->Time(myTargetInfo->Time());
 	h->ForecastType(myTargetInfo->ForecastType());
 
 	// Stratus cloud base [m] (0-300m=0-985ft, N>50%
-	auto base = h->VerticalHeightGreaterThan(NParam, 0, 305, 0.5);
+	auto base = h->VerticalHeightGreaterThan<float>(NParam, 0, 305, 0.5);
 
 	string deviceType = "CPU";
 
 	auto& target = VEC(myTargetInfo);
 
-	// LOCKSTEP(myTargetInfo, TInfo, VvInfo, ClInfo)
 	for (auto&& tup : zip_range(target, VEC(TInfo), VEC(VvInfo), VEC(ClInfo), VEC(PrecFormInfo), VEC(PrecInfo),
 	                            VEC(ZeroLevelInfo), VEC(HeightInfo), base, VEC(HeightInfo2down)))
 	{
-		double& result = tup.get<0>();
-		double T = tup.get<1>();
-		double Vv = tup.get<2>();
-		double Cl = tup.get<3>();
-		double Pf = tup.get<4>();
-		double Rr = tup.get<5>();
-		double Zl = tup.get<6>();
-		double Hl = tup.get<7>();
-		double StrBase = tup.get<8>();
-		double Hl2down = tup.get<9>();
+		auto& result = tup.get<0>();
+		auto T = tup.get<1>();
+		auto Vv = tup.get<2>();
+		auto Cl = tup.get<3>();
+		auto Pf = tup.get<4>();
+		auto Rr = tup.get<5>();
+		auto Zl = tup.get<6>();
+		auto Hl = tup.get<7>();
+		auto StrBase = tup.get<8>();
+		auto Hl2down = tup.get<9>();
 
 		if (IsMissingValue({T, Vv, Cl}))
 		{
 			continue;
 		}
 
-		double Icing;
-		double TBase = constants::kKelvin;
+		float Icing = 0;
+		float TBase = static_cast<float>(constants::kKelvin);
 		int vCor = kHPMissingInt;
 		int tCor = kHPMissingInt;
 
@@ -139,86 +139,74 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 		Vv *= VvScale;
 		Cl *= ClScale;
 
-		// Vertical velocity correction factor
+		if (Cl > 0 && T <= 0)
+		{
+			// Vertical velocity correction factor
 
-		if (Vv < 0)
-		{
-			vCor = -1;
-		}
-		else if ((Vv >= 0) && (Vv <= 50))
-		{
-			vCor = 0;
-		}
-		else if ((Vv >= 50) && (Vv <= 100))
-		{
-			vCor = 1;
-		}
-		else if ((Vv >= 100) && (Vv <= 200))
-		{
-			vCor = 2;
-		}
-		else if ((Vv >= 200) && (Vv <= 300))
-		{
-			vCor = 3;
-		}
-		else if ((Vv >= 300) && (Vv <= 1000))
-		{
-			vCor = 4;
-		}
-		else if (Vv > 1000)
-		{
-			vCor = 5;
-		}
+			vCor = 5;  // vv > 1000
 
-		// Temperature correction factor
+			if (Vv < 0)
+			{
+				vCor = -1;
+			}
+			else if (Vv <= 50)
+			{
+				vCor = 0;
+			}
+			else if (Vv <= 100)
+			{
+				vCor = 1;
+			}
+			else if (Vv <= 200)
+			{
+				vCor = 2;
+			}
+			else if (Vv <= 300)
+			{
+				vCor = 3;
+			}
+			else if (Vv <= 1000)
+			{
+				vCor = 4;
+			}
 
-		if ((T <= 0) && (T > -1))
-		{
-			tCor = -2;
-		}
-		else if ((T <= -1) && (T > -2))
-		{
-			tCor = -1;
-		}
-		else if ((T <= -2) && (T > -3))
-		{
-			tCor = 0;
-		}
-		else if ((T <= -3) && (T > -12))
-		{
-			tCor = 1;
-		}
-		else if ((T <= -12) && (T > -15))
-		{
-			tCor = 0;
-		}
-		else if ((T <= -15) && (T > -18))
-		{
-			tCor = -1;
-		}
-		else if (T < -18)
-		{
-			tCor = -2;
-		}
-		else
-		{
-			tCor = 0;
-		}
+			// Temperature correction factor
 
-		if ((Cl <= 0) || (T > 0))
-		{
-			Icing = 0;
-		}
-		else
-		{
-			Icing = round(log(Cl) + 6) + vCor + tCor;
+			tCor = 0;  // T > 0
+
+			if (T > -1 || T < -18)
+			{
+				tCor = -2;
+			}
+			else if (T > -2)
+			{
+				tCor = -1;
+			}
+			else if (T > -3)
+			{
+				tCor = 0;
+			}
+			else if (T > -12)
+			{
+				tCor = 1;
+			}
+			else if (T > -15)
+			{
+				tCor = 0;
+			}
+			else if (T > -18)
+			{
+				tCor = -1;
+			}
+
+			Icing = round(log(Cl) + 6) + static_cast<float>(vCor) + static_cast<float>(tCor);
 		}
 
 		// freezing drizzle, values applied to all model levels below two hybrid level above
 		// base of the stratus cloud,
 		if (Pf == 4 && !IsMissing(StrBase))
 		{
-			const double IzingFZDZ = 6 + Rr * 10;
+			const float IzingFZDZ = 6 + Rr * 10;
 
 			if (Hl <= StrBase)
 			{
@@ -241,20 +229,13 @@ void icing::Calculate(shared_ptr<info> myTargetInfo, unsigned short theThreadInd
 		// freezing rain, values applied to all model levels in the surface sub-zero layer
 		else if (Pf == 5 && Hl < Zl)
 		{
-			Icing = 7 + Rr * 1.5;
+			Icing = 7 + Rr * 1.5f;
 		}
 
-		// Maximum and minimum values for index
+		// Maximum (15) and minimum (0) values for index
 
-		if (Icing > 15)
-		{
-			Icing = 15;
-		}
-
-		if (Icing < 0)
-		{
-			Icing = 0;
-		}
+		Icing = fminf(15., Icing);
+		Icing = fmaxf(0., Icing);
 
 		result = Icing;
 	}

@@ -22,14 +22,14 @@ class logger;
 class forecast_time
 {
    public:
-	forecast_time();
+	forecast_time() = default;
 	forecast_time(const raw_time& theOriginDateTime, const raw_time& theValidDateTime);
 	forecast_time(const std::string& theOriginDateTime, const std::string& theValidDateTime,
 	              const std::string& theDateMask = "%Y-%m-%d %H:%M:%S");
 
 	~forecast_time() = default;
-	forecast_time(const forecast_time& other);
-	forecast_time& operator=(const forecast_time& other);
+	forecast_time(const forecast_time& other) = default;
+	forecast_time& operator=(const forecast_time& other) = default;
 
 	std::string ClassName() const
 	{

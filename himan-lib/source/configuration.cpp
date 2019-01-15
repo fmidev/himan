@@ -9,7 +9,7 @@
 using namespace himan;
 
 configuration::configuration()
-    : itsSourceProducerIterator(new producer_iter()),
+    : itsSourceProducers(),
       itsOutputFileType(kGRIB1),
       itsFileWriteOption(kSingleFile),
       itsFileCompression(kNoCompression),
@@ -39,41 +39,6 @@ configuration::configuration()
       itsUpdateSSStateTable(true),
       itsUploadStatistics(true)
 {
-}
-
-configuration::configuration(const configuration& other)
-    : itsSourceProducerIterator(std::unique_ptr<producer_iter>(new producer_iter(*other.itsSourceProducerIterator))),
-      itsOutputFileType(other.itsOutputFileType),
-      itsFileWriteOption(other.itsFileWriteOption),
-      itsFileCompression(other.itsFileCompression),
-      itsDatabaseType(other.itsDatabaseType),
-      itsConfigurationFile(other.itsConfigurationFile),
-      itsAuxiliaryFiles(other.itsAuxiliaryFiles),
-      itsOriginTime(other.itsOriginTime),
-      itsReadDataFromDatabase(other.itsReadDataFromDatabase),
-      itsThreadCount(other.itsThreadCount),
-      itsTargetGeomName(other.itsTargetGeomName),
-      itsSourceGeomNames(other.itsSourceGeomNames),
-      itsStatisticsLabel(other.itsStatisticsLabel),
-      itsTargetProducer(other.itsTargetProducer),
-      itsUseCuda(other.itsUseCuda),
-      itsUseCudaForPacking(other.itsUseCudaForPacking),
-      itsUseCudaForUnpacking(other.itsUseCudaForUnpacking),
-      itsUseCudaForInterpolation(other.itsUseCudaForInterpolation),
-      itsUseCache(other.itsUseCache),
-      itsUseDynamicMemoryAllocation(other.itsUseDynamicMemoryAllocation),
-      itsReadAllAuxiliaryFilesToCache(other.itsReadAllAuxiliaryFilesToCache),
-      itsCudaDeviceCount(other.itsCudaDeviceCount),
-      itsCudaDeviceId(other.itsCudaDeviceId),
-      itsForecastStep(other.itsForecastStep),
-      itsCacheLimit(other.itsCacheLimit),
-      itsParamFile(other.itsParamFile),
-      itsAsyncExecution(other.itsAsyncExecution),
-      itsUpdateSSStateTable(other.itsUpdateSSStateTable),
-      itsUploadStatistics(other.itsUploadStatistics)
-{
-	ASSERT(itsSourceProducerIterator);
-	itsSourceProducerIterator->Set(other.itsSourceProducerIterator->Index());
 }
 
 std::ostream& configuration::Write(std::ostream& file) const
@@ -191,44 +156,17 @@ void configuration::ConfigurationFile(const std::string& theConfigurationFile)
 {
 	itsConfigurationFile = theConfigurationFile;
 }
-
-void configuration::SourceProducers(const std::vector<producer> theSourceProducers)
+const std::vector<producer>& configuration::SourceProducers() const
 {
-	itsSourceProducerIterator = std::unique_ptr<producer_iter>(new producer_iter(theSourceProducers));
+	return itsSourceProducers;
 }
-
-bool configuration::SourceProducer(const producer& theSourceProducer)
+void configuration::SourceProducers(const std::vector<producer>& theSourceProducers)
 {
-	return itsSourceProducerIterator->Set(theSourceProducer);
-}
-
-bool configuration::NextSourceProducer()
-{
-	return itsSourceProducerIterator->Next();
-}
-bool configuration::FirstSourceProducer()
-{
-	return itsSourceProducerIterator->First();
-}
-void configuration::ResetSourceProducer()
-{
-	itsSourceProducerIterator->Reset();
+	itsSourceProducers = theSourceProducers;
 }
 const producer& configuration::SourceProducer(size_t theIndexNumber) const
 {
-	if (theIndexNumber != static_cast<size_t>(kHPMissingInt))
-	{
-		return itsSourceProducerIterator->At(theIndexNumber);
-	}
-	else
-	{
-		return itsSourceProducerIterator->At();
-	}
-}
-
-size_t configuration::SizeSourceProducers() const
-{
-	return itsSourceProducerIterator->Size();
+	return itsSourceProducers[theIndexNumber];
 }
 const producer& configuration::TargetProducer() const
 {
@@ -311,6 +249,10 @@ void configuration::CudaDeviceId(int theCudaDeviceId)
 int configuration::ForecastStep() const
 {
 	return itsForecastStep;
+}
+void configuration::ForecastStep(int theForecastStep)
+{
+	itsForecastStep = theForecastStep;
 }
 HPDatabaseType configuration::DatabaseType() const
 {

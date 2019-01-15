@@ -7,10 +7,14 @@
 #include "util.h"
 #include "cuda_helper.h"
 #include "forecast_time.h"
+#include "lambert_conformal_grid.h"
+#include "latitude_longitude_grid.h"
 #include "level.h"
 #include "param.h"
+#include "plugin_factory.h"
 #include "point_list.h"
-#include <NFmiStereographicArea.h>
+#include "reduced_gaussian_grid.h"
+#include "stereographic_grid.h"
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/math/constants/constants.hpp>
@@ -18,13 +22,24 @@
 #include <sstream>
 #include <wordexp.h>
 
+#define HIMAN_AUXILIARY_INCLUDE
+#include "cache.h"
+#include "radon.h"
+#undef HIMAN_AUXILIARY_INCLUDE
+
 using namespace himan;
 using namespace std;
 
-string util::MakeFileName(HPFileWriteOption fileWriteOption, const info& info, const configuration& conf)
+template <typename T>
+string util::MakeFileName(HPFileWriteOption fileWriteOption, const info<T>& info, const configuration& conf)
 {
 	ostringstream fileName;
 	ostringstream base;
+
+	const auto ftype = info.template Value<forecast_type>();
+	const auto ftime = info.template Value<forecast_time>();
+	const auto lvl = info.template Value<level>();
+	const auto par = info.template Value<param>();
 
 	base.str(".");
 
@@ -46,35 +61,33 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, const info& info, c
 			cout << "Warning::util MASALA_PROCESSED_DATA_BASE not set" << endl;
 		}
 
-		base << "/" << info.Producer().Centre() << "_" << info.Producer().Process() << "/"
-		     << info.Time().OriginDateTime().String("%Y%m%d%H%M") << "/" << conf.TargetGeomName() << "/"
-
-		     << info.Time().Step();
+		base << "/" << info.Producer().Id() << "/" << ftime.OriginDateTime().String("%Y%m%d%H%M") << "/"
+		     << conf.TargetGeomName() << "/" << ftime.Step();
 	}
 
 	// Create a unique file name when creating multiple files from one info
 
 	if (fileWriteOption == kDatabase || fileWriteOption == kMultipleFiles)
 	{
-		fileName << base.str() << "/" << info.Param().Name() << "_" << HPLevelTypeToString.at(info.Level().Type())
-		         << "_" << info.Level().Value();
+		fileName << base.str() << "/" << par.Name() << "_" << HPLevelTypeToString.at(lvl.Type()) << "_" << lvl.Value();
 
-		if (!IsKHPMissingValue(info.Level().Value2()))
+		if (!IsKHPMissingValue(lvl.Value2()))
 		{
-			fileName << "-" << info.Level().Value2();
+			fileName << "-" << lvl.Value2();
 		}
 
 		fileName << "_" << HPGridTypeToString.at(info.Grid()->Type());
 
 		if (info.Grid()->Class() == kRegularGrid)
 		{
-			fileName << "_" << info.Grid()->Ni() << "_" << info.Grid()->Nj();
+			fileName << "_" << dynamic_pointer_cast<regular_grid>(info.Grid())->Ni() << "_"
+			         << dynamic_pointer_cast<regular_grid>(info.Grid())->Nj();
 		}
 
-		fileName << "_0_" << setw(3) << setfill('0') << info.Time().Step();
-		if (static_cast<int>(info.ForecastType().Type()) > 2)
+		fileName << "_0_" << setw(3) << setfill('0') << ftime.Step();
+		if (static_cast<int>(ftype.Type()) > 2)
 		{
-			fileName << "_" << static_cast<int>(info.ForecastType().Type()) << "_" << info.ForecastType().Value();
+			fileName << "_" << static_cast<int>(ftype.Type()) << "_" << ftype.Value();
 		}
 	}
 	else
@@ -87,6 +100,9 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, const info& info, c
 
 	return fileName.str();
 }
+
+template string util::MakeFileName<double>(HPFileWriteOption, const info<double>&, const configuration&);
+template string util::MakeFileName<float>(HPFileWriteOption, const info<float>&, const configuration&);
 
 himan::HPFileType util::FileType(const string& theFile)
 {
@@ -366,10 +382,11 @@ double util::ToPower(double value, double power)
 	return divisor;
 }
 
-pair<matrix<double>, matrix<double>> util::CentralDifference(matrix<double>& A, vector<double>& dx, vector<double>& dy)
+template <typename T>
+pair<matrix<T>, matrix<T>> util::CentralDifference(matrix<T>& A, vector<T>& dx, vector<T>& dy)
 {
-	matrix<double> dA_dx(A.SizeX(), A.SizeY(), 1, A.MissingValue());
-	matrix<double> dA_dy(A.SizeX(), A.SizeY(), 1, A.MissingValue());
+	matrix<T> dA_dx(A.SizeX(), A.SizeY(), 1, A.MissingValue());
+	matrix<T> dA_dy(A.SizeX(), A.SizeY(), 1, A.MissingValue());
 
 	int ASizeX = int(A.SizeX());
 	int ASizeY = int(A.SizeY());
@@ -444,9 +461,14 @@ pair<matrix<double>, matrix<double>> util::CentralDifference(matrix<double>& A, 
 	          (A.At(ASizeX - 1, ASizeY - 1, 0) - A.At(ASizeX - 1, ASizeY - 2, 0)) /
 	              dy[ASizeX - 1]);  // backward difference in y-direction
 
-	pair<matrix<double>, matrix<double>> ret(dA_dx, dA_dy);
+	pair<matrix<T>, matrix<T>> ret(dA_dx, dA_dy);
 	return ret;
 }
+
+template pair<matrix<double>, matrix<double>> util::CentralDifference<double>(matrix<double>& A, vector<double>& dx,
+                                                                              vector<double>& dy);
+template pair<matrix<float>, matrix<float>> util::CentralDifference<float>(matrix<float>& A, vector<float>& dx,
+                                                                           vector<float>& dy);
 
 double util::LatitudeLength(double phi)
 {
@@ -507,14 +529,31 @@ string util::Expand(const string& in)
 
 void util::DumpVector(const vector<double>& vec, const string& name)
 {
-	double min = 1e38, max = -1e38, sum = 0;
-	size_t count = 0, missing = 0;
+	return DumpVector<double>(vec, name);
+}
 
-	for (const double& val : vec)
+void util::DumpVector(const vector<float>& vec, const string& name)
+{
+	return DumpVector<float>(vec, name);
+}
+
+template <typename T>
+void util::DumpVector(const vector<T>& vec, const string& name)
+{
+	T min = numeric_limits<T>::max(), max = numeric_limits<T>::lowest(), sum = 0;
+	size_t count = 0, missing = 0, nan = 0;
+
+	for (const T& val : vec)
 	{
 		if (IsMissing(val))
 		{
 			missing++;
+			continue;
+		}
+
+		if (std::isnan(val))
+		{
+			nan++;
 			continue;
 		}
 
@@ -524,11 +563,11 @@ void util::DumpVector(const vector<double>& vec, const string& name)
 		sum += val;
 	}
 
-	double mean = numeric_limits<double>::quiet_NaN();
+	T mean = numeric_limits<T>::quiet_NaN();
 
 	if (count > 0)
 	{
-		mean = sum / static_cast<double>(count);
+		mean = sum / static_cast<T>(count);
 	}
 
 	if (!name.empty())
@@ -536,27 +575,28 @@ void util::DumpVector(const vector<double>& vec, const string& name)
 		cout << name << "\t";
 	}
 
-	cout << "min " << min << " max " << max << " mean " << mean << " count " << count << " missing " << missing << endl;
+	cout << "min " << min << " max " << max << " mean " << mean << " count " << count << " nan " << nan << " missing "
+	     << missing << endl;
 
 	if (min != max && count > 0)
 	{
 		long binn = (count < 10) ? count : 10;
 
-		double binw = (max - min) / static_cast<double>(binn);
+		T binw = (max - min) / static_cast<T>(binn);
 
-		double binmin = min;
-		double binmax = binmin + binw;
+		T binmin = min;
+		T binmax = binmin + binw;
 
 		cout << "distribution (bins=" << binn << "):" << endl;
 
 		for (int i = 1; i <= binn; i++)
 		{
 			if (i == binn)
-				binmax += 0.001;
+				binmax += 0.001f;
 
 			count = 0;
 
-			for (const double& val : vec)
+			for (const T& val : vec)
 			{
 				if (IsMissing(val))
 					continue;
@@ -568,7 +608,7 @@ void util::DumpVector(const vector<double>& vec, const string& name)
 			}
 
 			if (i == binn)
-				binmax -= 0.001;
+				binmax -= 0.001f;
 
 			cout << binmin << ":" << binmax << " " << count << std::endl;
 
@@ -577,6 +617,9 @@ void util::DumpVector(const vector<double>& vec, const string& name)
 		}
 	}
 }
+
+template void util::DumpVector<double>(const vector<double>&, const string&);
+template void util::DumpVector<float>(const vector<float>&, const string&);
 
 string util::GetEnv(const string& key)
 {
@@ -588,10 +631,9 @@ string util::GetEnv(const string& key)
 	return string(var);
 }
 
-info_t util::CSVToInfo(const vector<string>& csv)
+template <typename T>
+shared_ptr<info<T>> util::CSVToInfo(const vector<string>& csv)
 {
-	info_t ret;
-
 	vector<forecast_time> times;
 	vector<param> params;
 	vector<level> levels;
@@ -704,27 +746,20 @@ info_t util::CSVToInfo(const vector<string>& csv)
 
 	if (times.size() == 0 || params.size() == 0 || levels.size() == 0 || ftypes.size() == 0)
 	{
-		return ret;
+		return nullptr;
 	}
 
-	ret = make_shared<info>();
+	auto ret = make_shared<info<T>>();
 
 	ret->Producer(prod);
-	ret->Times(times);
-	ret->Params(params);
-	ret->Levels(levels);
-	ret->ForecastTypes(ftypes);
+	ret->template Set<forecast_time>(times);
+	ret->template Set<param>(params);
+	ret->template Set<level>(levels);
+	ret->template Set<forecast_type>(ftypes);
 
-	auto base = unique_ptr<grid>(new point_list());  // placeholder
-	ret->Create(base.get(), true);
-
-	ret->First();
-	ret->ResetParam();
-
-	while (ret->Next())
-	{
-		dynamic_cast<point_list*>(ret->Grid())->Stations(stats);
-	}
+	auto b = make_shared<base<T>>();
+	b->grid = shared_ptr<grid>(new point_list(stats));
+	ret->Create(b, true);
 
 	for (auto line : csv)
 	{
@@ -786,13 +821,13 @@ info_t util::CSVToInfo(const vector<string>& csv)
 
 		const station s(stationId, elems[3], longitude, latitude);
 
-		if (!ret->Param(p))
+		if (!ret->template Find<param>(p))
 			continue;
-		if (!ret->Time(f))
+		if (!ret->template Find<forecast_time>(f))
 			continue;
-		if (!ret->Level(l))
+		if (!ret->template Find<level>(l))
 			continue;
-		if (!ret->ForecastType(ftype))
+		if (!ret->template Find<forecast_type>(ftype))
 			continue;
 
 		for (size_t i = 0; i < stats.size(); i++)
@@ -800,7 +835,7 @@ info_t util::CSVToInfo(const vector<string>& csv)
 			if (s == stats[i])
 			{
 				// Add the data point
-				ret->Grid()->Value(i, stod(elems[13]));
+				ret->Data().Set(i, static_cast<T>(stod(elems[13])));
 			}
 		}
 	}
@@ -808,26 +843,31 @@ info_t util::CSVToInfo(const vector<string>& csv)
 	return ret;
 }
 
-double util::MissingPercent(const himan::info& info)
+template shared_ptr<info<double>> util::CSVToInfo<double>(const vector<string>&);
+template shared_ptr<info<float>> util::CSVToInfo<float>(const vector<string>&);
+
+double util::MissingPercent(const himan::info<double>& info)
 {
 	auto cp = info;
 
-	cp.FirstForecastType();
-	cp.FirstTime();
-	cp.FirstLevel();
-	cp.ResetParam();
+	cp.First<forecast_type>();
+	cp.First<forecast_time>();
+	cp.First<level>();
+	cp.Reset<param>();
 
 	size_t missing = 0, total = 0;
 
 	while (cp.Next())
 	{
-		const auto* g = cp.Grid();
-
-		if (g)
+		if (cp.IsValidGrid() == false)
 		{
-			missing += cp.Data().MissingCount();
-			total += cp.Data().Size();
+			continue;
 		}
+
+		const auto g = cp.Grid();
+
+		missing += cp.Data().MissingCount();
+		total += cp.Data().Size();
 	}
 
 	return (total == 0) ? himan::MissingDouble()
@@ -854,48 +894,278 @@ bool util::ParseBoolean(const string& val)
 }
 
 #ifdef HAVE_CUDA
-void util::Unpack(initializer_list<grid*> grids)
+template <typename T>
+void util::Unpack(vector<shared_ptr<info<T>>> infos, bool addToCache)
 {
-	vector<cudaStream_t*> streams;
+	cudaStream_t stream;
+	CUDA_CHECK(cudaStreamCreate(&stream));
 
-	for (auto it = grids.begin(); it != grids.end(); ++it)
+	auto c = GET_PLUGIN(cache);
+
+	for (auto& info : infos)
 	{
-		// regular_grid* tempGrid = dynamic_cast<regular_grid*> (*it);
+		auto& data = info->Data();
+		auto pdata = info->PackedData();
 
-		if (!(*it)->IsPackedData())
+		if (pdata == nullptr || pdata->HasData() == false)
 		{
 			// Safeguard: This particular info does not have packed data
 			continue;
 		}
 
-		ASSERT((*it)->PackedData().ClassName() == "simple_packed" || (*it)->PackedData().ClassName() == "jpeg_packed");
+		ASSERT(pdata->packingType == kSimplePacking);
 
-		double* arr = 0;
-		size_t N = (*it)->PackedData().unpackedLength;
+		T* arr = 0;
+		const size_t N = pdata->unpackedLength;
 
 		ASSERT(N > 0);
+		ASSERT(data.Size() == N);
 
-		cudaStream_t* stream = new cudaStream_t;
-		CUDA_CHECK(cudaStreamCreate(stream));
-		streams.push_back(stream);
+		arr = const_cast<T*>(data.ValuesAsPOD());
 
-		ASSERT((*it)->Data().Size() == N);
-		arr = const_cast<double*>((*it)->Data().ValuesAsPOD());
-
-		CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(arr), sizeof(double) * N, 0));
+		CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(arr), sizeof(T) * N, 0));
 
 		ASSERT(arr);
 
-		(*it)->PackedData().Unpack(arr, N, stream);
+		packing::Unpack<T>(dynamic_pointer_cast<simple_packed>(pdata).get(), arr, &stream);
 
 		CUDA_CHECK(cudaHostUnregister(arr));
+		CUDA_CHECK(cudaStreamSynchronize(stream));
 
-		(*it)->PackedData().Clear();
+		pdata->Clear();
+
+		if (addToCache)
+		{
+			c->Insert(info);
+		}
+	}
+	CUDA_CHECK(cudaStreamDestroy(stream));
+}
+
+template void util::Unpack<double>(vector<shared_ptr<info<double>>>, bool);
+template void util::Unpack<float>(vector<shared_ptr<info<float>>>, bool);
+
+#endif
+
+unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
+{
+	using himan::kBottomLeft;
+	using himan::kTopLeft;
+
+	unique_ptr<grid> g;
+
+	auto r = GET_PLUGIN(radon);
+
+	auto geominfo = r->RadonDB().GetGeometryDefinition(geom_name);
+
+	if (geominfo.empty())
+	{
+		throw invalid_argument(geom_name + " not found from database.");
 	}
 
-	for (size_t i = 0; i < streams.size(); i++)
+	const auto scmode = HPScanningModeFromString.at(geominfo["scanning_mode"]);
+
+	if (geominfo["grid_type_id"] == "1")
 	{
-		CUDA_CHECK(cudaStreamDestroy(*streams[i]));
+		g = unique_ptr<latitude_longitude_grid>(new latitude_longitude_grid);
+		latitude_longitude_grid* const llg = dynamic_cast<latitude_longitude_grid*>(g.get());
+
+		const double di = stod(geominfo["pas_longitude"]);
+		const double dj = stod(geominfo["pas_latitude"]);
+
+		llg->Ni(static_cast<size_t>(stol(geominfo["col_cnt"])));
+		llg->Nj(static_cast<size_t>(stol(geominfo["row_cnt"])));
+		llg->Di(di);
+		llg->Dj(dj);
+		llg->ScanningMode(scmode);
+
+		const double X0 = stod(geominfo["long_orig"]);
+		const double Y0 = stod(geominfo["lat_orig"]);
+
+		const double X1 = fmod(X0 + static_cast<double>(llg->Ni() - 1) * di, 360);
+		double Y1 = kHPMissingValue;
+
+		switch (llg->ScanningMode())
+		{
+			case kTopLeft:
+				Y1 = Y0 - static_cast<double>(llg->Nj() - 1) * dj;
+				break;
+			case kBottomLeft:
+				Y1 = Y0 + static_cast<double>(llg->Nj() - 1) * dj;
+				break;
+			default:
+				break;
+		}
+
+		llg->FirstPoint(point(X0, Y0));
+		llg->LastPoint(point(X1, Y1));
+	}
+	else if (geominfo["grid_type_id"] == "4")
+	{
+		g = unique_ptr<rotated_latitude_longitude_grid>(new rotated_latitude_longitude_grid);
+		rotated_latitude_longitude_grid* const rllg = dynamic_cast<rotated_latitude_longitude_grid*>(g.get());
+
+		const double di = stod(geominfo["pas_longitude"]);
+		const double dj = stod(geominfo["pas_latitude"]);
+
+		rllg->Ni(static_cast<size_t>(stol(geominfo["col_cnt"])));
+		rllg->Nj(static_cast<size_t>(stol(geominfo["row_cnt"])));
+		rllg->Di(di);
+		rllg->Dj(dj);
+		rllg->ScanningMode(scmode);
+
+		rllg->SouthPole(point(stod(geominfo["geom_parm_2"]), stod(geominfo["geom_parm_1"])));
+
+		const double X0 = stod(geominfo["long_orig"]);
+		const double Y0 = stod(geominfo["lat_orig"]);
+
+		const double X1 = fmod(X0 + static_cast<double>(rllg->Ni() - 1) * di, 360);
+
+		double Y1 = kHPMissingValue;
+
+		switch (rllg->ScanningMode())
+		{
+			case kTopLeft:
+				Y1 = Y0 - static_cast<double>(rllg->Nj() - 1) * dj;
+				break;
+			case kBottomLeft:
+				Y1 = Y0 + static_cast<double>(rllg->Nj() - 1) * dj;
+				break;
+			default:
+				break;
+		}
+
+		rllg->FirstPoint(point(X0, Y0));
+		rllg->LastPoint(point(X1, Y1));
+	}
+	else if (geominfo["grid_type_id"] == "2")
+	{
+		g = unique_ptr<stereographic_grid>(new stereographic_grid);
+		stereographic_grid* const sg = dynamic_cast<stereographic_grid*>(g.get());
+
+		const double di = stod(geominfo["pas_longitude"]);
+		const double dj = stod(geominfo["pas_latitude"]);
+
+		sg->Orientation(stod(geominfo["geom_parm_1"]));
+		sg->Di(di);
+		sg->Dj(dj);
+
+		sg->Ni(static_cast<size_t>(stol(geominfo["col_cnt"])));
+		sg->Nj(static_cast<size_t>(stol(geominfo["row_cnt"])));
+		sg->ScanningMode(scmode);
+
+		const double X0 = stod(geominfo["long_orig"]);
+		const double Y0 = stod(geominfo["lat_orig"]);
+
+		sg->FirstPoint(point(X0, Y0));
+	}
+
+	else if (geominfo["grid_type_id"] == "6")
+	{
+		g = unique_ptr<reduced_gaussian_grid>(new reduced_gaussian_grid);
+		reduced_gaussian_grid* const gg = dynamic_cast<reduced_gaussian_grid*>(g.get());
+
+		gg->N(stoi(geominfo["n"]));
+
+		auto strlongitudes = himan::util::Split(geominfo["longitudes_along_parallels"], ",", false);
+		vector<int> longitudes;
+
+		for (auto& l : strlongitudes)
+		{
+			longitudes.push_back(stoi(l));
+		}
+
+		gg->NumberOfPointsAlongParallels(longitudes);
+	}
+
+	else if (geominfo["grid_type_id"] == "5")
+	{
+		g = unique_ptr<lambert_conformal_grid>(new lambert_conformal_grid);
+		lambert_conformal_grid* const lcg = dynamic_cast<lambert_conformal_grid*>(g.get());
+
+		lcg->Ni(stoi(geominfo["ni"]));
+		lcg->Nj(stoi(geominfo["nj"]));
+
+		lcg->Di(stod(geominfo["di"]));
+		lcg->Dj(stod(geominfo["dj"]));
+
+		lcg->Orientation(stod(geominfo["orientation"]));
+
+		lcg->StandardParallel1(stod(geominfo["latin1"]));
+
+		if (geominfo["latin2"].empty())
+		{
+			lcg->StandardParallel2(lcg->StandardParallel1());
+		}
+		else
+		{
+			lcg->StandardParallel2(stod(geominfo["latin2"]));
+		}
+
+		if (!geominfo["south_pole_lon"].empty())
+		{
+			const point sp(stod(geominfo["south_pole_lon"]), stod(geominfo["south_pole_lat"]));
+
+			lcg->SouthPole(sp);
+		}
+
+		const point first(stod(geominfo["first_point_lon"]), stod(geominfo["first_point_lat"]));
+
+		lcg->ScanningMode(scmode);
+
+		if (geominfo["scanning_mode"] == "+x-y")
+		{
+			lcg->TopLeft(first);
+		}
+		else if (geominfo["scanning_mode"] == "+x+y")
+		{
+			lcg->BottomLeft(first);
+		}
+	}
+
+	else
+	{
+		throw invalid_argument("Invalid grid type id for geometry " + geom_name);
+	}
+	// Until shape of earth is added to radon, hard code default value for all geoms
+	// in radon to sphere with radius 6371220, which is the one used in newbase
+	// (in most cases that's not *not* the one used by the weather model).
+	// Exception to this lambert conformal conic where we use radius 6367470.
+
+	if (g)
+	{
+		if (g->Type() == kLambertConformalConic)
+		{
+			g->EarthShape(earth_shape<double>(6367470.));
+		}
+		else
+		{
+			g->EarthShape(earth_shape<double>(6371220.));
+		}
+	}
+
+	return g;
+}
+
+template <typename T>
+void util::Flip(matrix<T>& mat)
+{
+	// Flip with regards to x axis
+
+	const size_t halfSize = static_cast<size_t>(floor(mat.SizeY() / 2));
+
+	for (size_t y = 0; y < halfSize; y++)
+	{
+		for (size_t x = 0; x < mat.SizeX(); x++)
+		{
+			T upper = mat.At(x, y);
+			T lower = mat.At(x, mat.SizeY() - 1 - y);
+
+			mat.Set(x, y, 0, lower);
+			mat.Set(x, mat.SizeY() - 1 - y, 0, upper);
+		}
 	}
 }
-#endif
+
+template void util::Flip<double>(matrix<double>&);
+template void util::Flip<float>(matrix<float>&);

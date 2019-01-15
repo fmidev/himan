@@ -48,13 +48,9 @@ class preform_hybrid : public compiled_plugin, private compiled_plugin_base
 	{
 		return kCompiled;
 	}
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(1, 1);
-	}
 
    protected:
-	virtual void Calculate(std::shared_ptr<info> myTargetInfo, unsigned short threadIndex);
+	virtual void Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex);
 
    private:
 	/**
@@ -63,14 +59,16 @@ class preform_hybrid : public compiled_plugin, private compiled_plugin_base
 	 */
 
 	void Stratus(std::shared_ptr<const plugin_configuration> conf, const forecast_time& ftime,
-	             const forecast_type& ftype, std::shared_ptr<info>& result, const grid* baseGrid);
+	             const forecast_type& ftype, std::shared_ptr<info<double>>& result,
+	             std::shared_ptr<base<double>> baseGrid);
 
 	/**
 	 * @brief Calculate freezing area information (number of zero level etc)
 	 */
 
 	void FreezingArea(std::shared_ptr<const plugin_configuration> conf, const forecast_time& ftime,
-	                  const forecast_type& ftype, std::shared_ptr<info>& result, const grid* baseGrid);
+	                  const forecast_type& ftype, std::shared_ptr<info<double>>& result,
+	                  std::shared_ptr<base<double>> baseGrid);
 };
 
 // the class factory

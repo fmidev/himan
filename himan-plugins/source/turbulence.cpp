@@ -105,20 +105,24 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	// If calculating for hybrid levels, A/B vertical coordinates must be set
 	// (copied from source)
-	myTargetInfo->ParamIndex(0);
+	myTargetInfo->Index<param>(0);
 	SetAB(myTargetInfo, HInfo);
 
-	myTargetInfo->ParamIndex(1);
+	myTargetInfo->Index<param>(1);
 	SetAB(myTargetInfo, HInfo);
 
 	string deviceType = "CPU";
 
-	double Di = myTargetInfo->Grid()->Di();
-	double Dj = myTargetInfo->Grid()->Dj();
+	ASSERT(myTargetInfo->Grid()->Class() == kRegularGrid);
+
+	auto gr = dynamic_pointer_cast<regular_grid>(myTargetInfo->Grid());
+
+	const double Di = gr->Di();
+	const double Dj = gr->Dj();
 	point firstPoint = myTargetInfo->Grid()->FirstPoint();
 
-	size_t Ni = myTargetInfo->Grid()->Ni();
-	size_t Nj = myTargetInfo->Grid()->Nj();
+	const size_t Ni = gr->Ni();
+	const size_t Nj = gr->Nj();
 
 	vector<double> dx, dy;
 
@@ -204,10 +208,10 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		double TI2 = S * VWS * (DEF + CVG);
 
 		// return result
-		myTargetInfo->ParamIndex(0);
+		myTargetInfo->Index<param>(0);
 		myTargetInfo->Value(TI);
 
-		myTargetInfo->ParamIndex(1);
+		myTargetInfo->Index<param>(1);
 		myTargetInfo->Value(TI2);
 	}
 

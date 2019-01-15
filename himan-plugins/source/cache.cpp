@@ -18,7 +18,9 @@ cache::cache()
 {
 	itsLogger = logger("cache");
 }
-string cache::UniqueName(const info& info)
+
+template <typename T>
+string cache::UniqueName(const info<T>& info)
 {
 	stringstream ss;
 
@@ -36,6 +38,9 @@ string cache::UniqueName(const info& info)
 
 	return ss.str();
 }
+
+template string cache::UniqueName(const info<double>&);
+template string cache::UniqueName(const info<float>&);
 
 string cache::UniqueNameFromOptions(search_options& options)
 {
@@ -57,13 +62,15 @@ string cache::UniqueNameFromOptions(search_options& options)
 	return ss.str();
 }
 
-void cache::Insert(info_t anInfo, bool pin)
+void cache::Insert(shared_ptr<info<double>> anInfo, bool pin)
 {
-	SplitToPool(anInfo, pin);
+	return Insert<double>(anInfo, pin);
 }
-void cache::SplitToPool(info_t anInfo, bool pin)
+
+template <typename T>
+void cache::Insert(shared_ptr<info<T>> anInfo, bool pin)
 {
-	auto localInfo = make_shared<info>(*anInfo);
+	auto localInfo = make_shared<info<T>>(*anInfo);
 
 	// Cached data is never replaced by another data that has
 	// the same uniqueName
@@ -72,6 +79,7 @@ void cache::SplitToPool(info_t anInfo, bool pin)
 
 	if (cache_pool::Instance()->Exists(uniqueName))
 	{
+		// TODO: should we replace existing item?
 		itsLogger.Trace("Data with key " + uniqueName + " already exists at cache");
 
 		// Update timestamp of this cache item
@@ -80,14 +88,14 @@ void cache::SplitToPool(info_t anInfo, bool pin)
 	}
 
 #ifdef HAVE_CUDA
-	if (localInfo->Grid()->IsPackedData())
+	if (localInfo->PackedData()->HasData())
 	{
 		itsLogger.Trace("Removing packed data from cached info");
-		localInfo->Grid()->PackedData().Clear();
+		localInfo->PackedData()->Clear();
 	}
 #endif
 
-	ASSERT(!localInfo->Grid()->IsPackedData());
+	ASSERT(localInfo->PackedData()->HasData() == false);
 
 	// localInfo might contain multiple grids. When adding data to cache, we need
 	// to make sure that single info contains only single grid.
@@ -95,31 +103,44 @@ void cache::SplitToPool(info_t anInfo, bool pin)
 	if (localInfo->DimensionSize() > 1)
 	{
 		auto newInfo =
-		    make_shared<info>(localInfo->ForecastType(), localInfo->Time(), localInfo->Level(), localInfo->Param());
-		newInfo->Grid(localInfo->SharedGrid());
+		    make_shared<info<T>>(localInfo->ForecastType(), localInfo->Time(), localInfo->Level(), localInfo->Param());
+		newInfo->Producer(localInfo->Producer());
+		newInfo->Base(localInfo->Base());
 		localInfo = newInfo;
 	}
 
 	ASSERT(localInfo->DimensionSize() == 1);
-	cache_pool::Instance()->Insert(uniqueName, localInfo, pin);
+	cache_pool::Instance()->Insert<T>(uniqueName, localInfo, pin);
 }
 
-vector<shared_ptr<himan::info>> cache::GetInfo(search_options& options)
+template void cache::Insert<double>(shared_ptr<info<double>>, bool);
+template void cache::Insert<float>(shared_ptr<info<float>>, bool);
+
+vector<shared_ptr<himan::info<double>>> cache::GetInfo(search_options& options, bool strict)
+{
+	return GetInfo<double>(options, strict);
+}
+
+template <typename T>
+vector<shared_ptr<himan::info<T>>> cache::GetInfo(search_options& options, bool strict)
 {
 	string uniqueName = UniqueNameFromOptions(options);
 
-	vector<shared_ptr<himan::info>> info;
+	vector<shared_ptr<himan::info<T>>> infos;
 
-	auto foundInfo = cache_pool::Instance()->GetInfo(uniqueName);
+	auto foundInfo = cache_pool::Instance()->GetInfo<T>(uniqueName, strict);
 	if (foundInfo)
 	{
-		info.push_back(foundInfo);
+		infos.push_back(foundInfo);
 	}
 
 	itsLogger.Trace("Data " + string(foundInfo ? "found" : "not found") + " for " + uniqueName);
 
-	return info;
+	return infos;
 }
+
+template vector<shared_ptr<himan::info<double>>> cache::GetInfo<double>(search_options&, bool);
+template vector<shared_ptr<himan::info<float>>> cache::GetInfo<float>(search_options&, bool);
 
 void cache::Clean()
 {
@@ -129,6 +150,32 @@ size_t cache::Size() const
 {
 	return cache_pool::Instance()->Size();
 }
+
+void cache::Replace(shared_ptr<info<double>> anInfo, bool pin)
+{
+	return Replace<double>(anInfo, pin);
+}
+
+template <typename T>
+void cache::Replace(shared_ptr<info<T>> anInfo, bool pin)
+{
+	auto localInfo = make_shared<info<T>>(*anInfo);
+
+	if (localInfo->DimensionSize() > 1)
+	{
+		auto newInfo =
+		    make_shared<info<T>>(localInfo->ForecastType(), localInfo->Time(), localInfo->Level(), localInfo->Param());
+		newInfo->Producer(localInfo->Producer());
+		newInfo->Base(localInfo->Base());
+		localInfo = newInfo;
+	}
+
+	cache_pool::Instance()->Replace<T>(UniqueName(*localInfo), localInfo, pin);
+}
+
+template void cache::Replace<double>(shared_ptr<info<double>>, bool);
+template void cache::Replace<float>(shared_ptr<info<float>>, bool);
+
 cache_pool* cache_pool::itsInstance = NULL;
 
 cache_pool::cache_pool() : itsCacheLimit(-1)
@@ -155,7 +202,9 @@ bool cache_pool::Exists(const string& uniqueName)
 	Lock lock(itsAccessMutex);
 	return itsCache.count(uniqueName) > 0;
 }
-void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info> anInfo, bool pin)
+
+template <typename T>
+void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info<T>> anInfo, bool pin)
 {
 	cache_item item;
 	item.info = anInfo;
@@ -175,6 +224,38 @@ void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info> anInfo
 		Clean();
 	}
 }
+
+template void cache_pool::Insert<double>(const string&, shared_ptr<himan::info<double>>, bool);
+template void cache_pool::Insert<float>(const string&, shared_ptr<himan::info<float>>, bool);
+
+template <typename T>
+void cache_pool::Replace(const string& uniqueName, shared_ptr<himan::info<T>> anInfo, bool pin)
+{
+	cache_item item;
+	item.info = anInfo;
+	item.access_time = time(nullptr);
+	item.pinned = pin;
+
+	// possible race condition ?
+
+	const auto it = itsCache.find(uniqueName);
+
+	if (it != itsCache.end())
+	{
+		{
+			Lock lock(itsAccessMutex);
+			itsCache[uniqueName] = item;
+		}
+		itsLogger.Trace("Data with name " + uniqueName + " replaced");
+	}
+	else
+	{
+		Insert<T>(uniqueName, anInfo, pin);
+	}
+}
+
+template void cache_pool::Replace<double>(const string&, shared_ptr<himan::info<double>>, bool);
+template void cache_pool::Replace<float>(const string&, shared_ptr<himan::info<float>>, bool);
 
 void cache_pool::UpdateTime(const std::string& uniqueName)
 {
@@ -213,17 +294,64 @@ void cache_pool::Clean()
 	itsLogger.Trace("Cache size: " + to_string(itsCache.size()));
 }
 
-shared_ptr<himan::info> cache_pool::GetInfo(const string& uniqueName)
+namespace
 {
-	Lock lock(itsAccessMutex);
-
-	auto it = itsCache.find(uniqueName);
-	if (it != itsCache.end())
+template <typename T>
+struct cache_visitor : public boost::static_visitor<std::shared_ptr<himan::info<T>>>
+{
+   public:
+	shared_ptr<himan::info<T>> operator()(shared_ptr<himan::info<double>>& fnd) const
 	{
-		return make_shared<info>(*it->second.info);
+		return make_shared<himan::info<T>>(*fnd);
 	}
+	shared_ptr<himan::info<T>> operator()(shared_ptr<himan::info<float>>& fnd) const
+	{
+		return make_shared<himan::info<T>>(*fnd);
+	}
+};
+}  // namespace
+
+template <typename T>
+shared_ptr<himan::info<T>> cache_pool::GetInfo(const string& uniqueName, bool strict)
+{
+	std::map<std::string, cache_item>::iterator it;
+
+	{
+		Lock lock(itsAccessMutex);
+		it = itsCache.find(uniqueName);
+	}
+
+	if (it == itsCache.end())
+	{
+		return nullptr;
+	}
+
+	try
+	{
+		// if data is directly found from cache with correct data type,
+		// return that
+		return make_shared<info<T>>(*boost::get<std::shared_ptr<info<T>>>(it->second.info));
+	}
+	catch (boost::bad_get& e)
+	{
+		if (strict)
+		{
+			return nullptr;
+		}
+
+		// convert to wanted data type
+		return boost::apply_visitor(cache_visitor<T>(), it->second.info);
+	}
+	catch (exception& e)
+	{
+		itsLogger.Error(e.what());
+	}
+
 	return nullptr;
 }
+
+template shared_ptr<himan::info<double>> cache_pool::GetInfo<double>(const string&, bool);
+template shared_ptr<himan::info<float>> cache_pool::GetInfo<float>(const string&, bool);
 
 size_t cache_pool::Size() const
 {

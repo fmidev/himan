@@ -35,13 +35,9 @@ class stability_simple : public compiled_plugin, private compiled_plugin_base
 	{
 		return kCompiled;
 	}
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(2, 0);
-	}
 
    private:
-	void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
+	void Calculate(std::shared_ptr<info<double>> theTargetInfo, unsigned short theThreadIndex);
 };
 
 // the class factory

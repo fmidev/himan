@@ -7,9 +7,12 @@
 #include "cache.h"
 #include "radon.h"
 #include "util.h"
+#include "writer.h"
 
 using namespace std;
 using namespace himan::plugin;
+
+extern mutex singleFileWriteMutex;
 
 const string itsName("hybrid_height");
 const himan::param PParam("P-HPA");
@@ -22,9 +25,6 @@ hybrid_height::hybrid_height() : itsBottomLevel(kHPMissingInt), itsUseGeopotenti
 	itsLogger = logger(itsName);
 }
 
-hybrid_height::~hybrid_height()
-{
-}
 void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
@@ -36,41 +36,22 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 		auto r = GET_PLUGIN(radon);
 
 		itsBottomLevel =
-		    stoi(r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer().Id(), "last hybrid level number"));
+		    stoi(r->RadonDB().GetProducerMetaData(itsConfiguration->TargetProducer().Id(), "last hybrid level number"));
 	}
 
-	if (itsConfiguration->Info()->Producer().Id() == 240 || itsConfiguration->Info()->Producer().Id() == 243)
+	if (itsConfiguration->TargetProducer().Id() == 240 || itsConfiguration->TargetProducer().Id() == 243)
 	{
 		itsUseGeopotential = false;
 
-		// Using separate writer threads is only efficient when we are calculating with iteration (ECMWF)
-		// and if we are using external packing like gzip or if the grid size is large (several million grid points)
-		// In those conditions spawning a separate thread to write the results should give according to initial tests
-		// a ~30% increase in total calculation speed.
-
-		PrimaryDimension(kTimeDimension);
-
-		/*
-		 * With iteration method, we must start from the lowest level.
-		 */
-
-		if (itsInfo->SizeLevels() > 1)
-		{
-			auto first = itsInfo->PeekLevel(0), second = itsInfo->PeekLevel(1);
-
-			if (first.Value() < second.Value())
-			{
-				itsInfo->LevelOrder(kBottomToTop);
-			}
-		}
+		itsThreadDistribution = ThreadDistribution::kThreadForForecastTypeAndTime;
 	}
 
 	SetParams({param(HParam)});
 
-	Start();
+	Start<float>();
 }
 
-void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void hybrid_height::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short threadIndex)
 {
 	auto myThreadedLogger = logger(itsName + "Thread #" + to_string(threadIndex));
 
@@ -100,12 +81,13 @@ void hybrid_height::Calculate(shared_ptr<info> myTargetInfo, unsigned short thre
 	                      to_string(myTargetInfo->Data().Size()));
 }
 
-bool hybrid_height::WithGeopotential(info_t& myTargetInfo)
+bool hybrid_height::WithGeopotential(shared_ptr<himan::info<float>>& myTargetInfo)
 {
 	const himan::level H0(himan::kHeight, 0);
 
-	auto GPInfo = Fetch(myTargetInfo->Time(), myTargetInfo->Level(), ZParam, myTargetInfo->ForecastType(), false);
-	auto zeroGPInfo = Fetch(myTargetInfo->Time(), H0, ZParam, myTargetInfo->ForecastType(), false);
+	auto GPInfo =
+	    Fetch<float>(myTargetInfo->Time(), myTargetInfo->Level(), ZParam, myTargetInfo->ForecastType(), false);
+	auto zeroGPInfo = Fetch<float>(myTargetInfo->Time(), H0, ZParam, myTargetInfo->ForecastType(), false);
 
 	if (!GPInfo || !zeroGPInfo)
 	{
@@ -120,45 +102,46 @@ bool hybrid_height::WithGeopotential(info_t& myTargetInfo)
 
 	for (auto&& tup : zip_range(target, GP, zeroGP))
 	{
-		double& result = tup.get<0>();
-		const double gp = tup.get<1>();
-		const double zerogp = tup.get<2>();
+		float& result = tup.get<0>();
+		const float gp = tup.get<1>();
+		const float zerogp = tup.get<2>();
 
-		result = (gp - zerogp) * himan::constants::kIg;
+		result = (gp - zerogp) * static_cast<float>(himan::constants::kIg);
 	}
 
+	WriteSingleGridToFile(myTargetInfo);
 	return true;
 }
 
-himan::info_t hybrid_height::GetSurfacePressure(himan::info_t& myTargetInfo)
+shared_ptr<himan::info<float>> hybrid_height::GetSurfacePressure(shared_ptr<himan::info<float>>& myTargetInfo)
 {
 	const auto forecastTime = myTargetInfo->Time();
 	const auto forecastType = myTargetInfo->ForecastType();
 
-	info_t ret;
+	shared_ptr<info<float>> ret;
 
 	if (myTargetInfo->Producer().Id() == 240 || myTargetInfo->Producer().Id() == 243)
 	{
 		// LNSP is always at level 1 for ECMWF
 
-		ret = Fetch(forecastTime, level(himan::kHybrid, 1), param("LNSP-HPA"), forecastType, false);
+		ret = Fetch<float>(forecastTime, level(himan::kHybrid, 1), param("LNSP-HPA"), forecastType, false);
 
 		if (!ret)
 		{
-			ret = Fetch(forecastTime, level(himan::kHybrid, 1), param("LNSP-N"), forecastType, false);
+			ret = Fetch<float>(forecastTime, level(himan::kHybrid, 1), param("LNSP-N"), forecastType, false);
 
 			if (ret)
 			{
 				// LNSP to regular pressure
 
-				auto newInfo = make_shared<info>(*ret);
-				newInfo->SetParam(param("LNSP-HPA"));
-				newInfo->Create(ret->Grid());
+				auto newInfo = make_shared<info<float>>(*ret);
+				newInfo->Set<param>(param("LNSP-HPA"));
+				newInfo->Create(ret->Base());
 
 				auto& target = VEC(newInfo);
-				for (double& val : target)
+				for (float& val : target)
 				{
-					val = 0.01 * exp(val);
+					val = 0.01f * exp(val);
 					ASSERT(isfinite(val));
 				}
 
@@ -168,13 +151,13 @@ himan::info_t hybrid_height::GetSurfacePressure(himan::info_t& myTargetInfo)
 	}
 	else
 	{
-		ret = Fetch(forecastTime, level(himan::kHeight, 0), PParam, forecastType, false);
+		ret = Fetch<float>(forecastTime, level(himan::kHeight, 0), PParam, forecastType, false);
 	}
 
 	return ret;
 }
 
-bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
+bool hybrid_height::WithHypsometricEquation(shared_ptr<himan::info<float>>& myTargetInfo)
 {
 	/*
 	 * Processing is done in two passes:
@@ -188,28 +171,40 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 	const auto forecastTime = myTargetInfo->Time();
 	const auto forecastType = myTargetInfo->ForecastType();
 
-	info_t prevPInfo, prevTInfo;
+	shared_ptr<info<float>> prevPInfo, prevTInfo;
 
 	bool firstLevel;
 
-	if (myTargetInfo->LevelOrder() == kTopToBottom)
+	bool topToBottom = false;
+
+	if (myTargetInfo->Size<level>() > 1)
 	{
-		firstLevel = myTargetInfo->PeekLevel(0).Value() == itsBottomLevel;
+		auto first = itsLevelIterator.At(0), second = itsLevelIterator.At(1);
+
+		if (first.Value() < second.Value())
+		{
+			topToBottom = true;
+		}
+	}
+
+	if (topToBottom == false)
+	{
+		firstLevel = myTargetInfo->Peek<level>(0).Value() == itsBottomLevel;
 	}
 	else
 	{
-		firstLevel = myTargetInfo->PeekLevel(myTargetInfo->SizeLevels() - 1).Value() == itsBottomLevel;
+		firstLevel = myTargetInfo->Peek<level>(myTargetInfo->Size<level>() - 1).Value() == itsBottomLevel;
 	}
 
 	if (firstLevel)
 	{
 		prevPInfo = GetSurfacePressure(myTargetInfo);
 
-		prevTInfo = Fetch(forecastTime, level(himan::kHeight, 2), TParam, forecastType, false);
+		prevTInfo = Fetch<float>(forecastTime, level(himan::kHeight, 2), TParam, forecastType, false);
 
 		if (!prevTInfo)
 		{
-			prevTInfo = Fetch(forecastTime, level(himan::kHybrid, itsBottomLevel), TParam, forecastType, false);
+			prevTInfo = Fetch<float>(forecastTime, level(himan::kHybrid, itsBottomLevel), TParam, forecastType, false);
 		}
 	}
 	else
@@ -217,15 +212,17 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 		level prevLevel(myTargetInfo->Level());
 		prevLevel.Value(myTargetInfo->Level().Value() + 1);
 
-		prevTInfo = Fetch(forecastTime, prevLevel, TParam, forecastType, false);
-		prevPInfo = Fetch(forecastTime, prevLevel, PParam, forecastType, false);
+		prevTInfo = Fetch<float>(forecastTime, prevLevel, TParam, forecastType, false);
+		prevPInfo = Fetch<float>(forecastTime, prevLevel, PParam, forecastType, false);
 	}
 
 	vector<future<void>> pool;
 
 	// First pass
 
-	for (myTargetInfo->ResetLevel(); myTargetInfo->NextLevel();)
+	topToBottom ? myTargetInfo->Last<level>() : myTargetInfo->First<level>();
+
+	while (true)
 	{
 		if (itsConfiguration->UseDynamicMemoryAllocation())
 		{
@@ -234,8 +231,8 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 
 		ASSERT(myTargetInfo->Data().Size() > 0);
 
-		auto PInfo = Fetch(forecastTime, myTargetInfo->Level(), PParam, forecastType, false);
-		auto TInfo = Fetch(forecastTime, myTargetInfo->Level(), TParam, forecastType, false);
+		auto PInfo = Fetch<float>(forecastTime, myTargetInfo->Level(), PParam, forecastType, false);
+		auto TInfo = Fetch<float>(forecastTime, myTargetInfo->Level(), TParam, forecastType, false);
 
 		if (!prevTInfo || !prevPInfo || !PInfo || !TInfo)
 		{
@@ -251,28 +248,30 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 		// out of scope and memory free'd while processing is still in progress
 
 		pool.push_back(async(launch::async,
-		                     [&](info_t myTargetInfo, info_t PInfo, info_t prevPInfo, info_t TInfo, info_t prevTInfo) {
-			                     auto& target = VEC(myTargetInfo);
-			                     const auto& PVec = VEC(PInfo);
-			                     const auto& prevPVec = VEC(prevPInfo);
-			                     const auto& TVec = VEC(TInfo);
-			                     const auto& prevTVec = VEC(prevTInfo);
+		                     [&](shared_ptr<himan::info<float>> _myTargetInfo, shared_ptr<himan::info<float>> _PInfo,
+		                         shared_ptr<himan::info<float>> _prevPInfo, shared_ptr<himan::info<float>> _TInfo,
+		                         shared_ptr<himan::info<float>> _prevTInfo) {
+			                     auto& target = VEC(_myTargetInfo);
+			                     const auto& PVec = VEC(_PInfo);
+			                     const auto& prevPVec = VEC(_prevPInfo);
+			                     const auto& TVec = VEC(_TInfo);
+			                     const auto& prevTVec = VEC(_prevTInfo);
 
 			                     for (auto&& tup : zip_range(target, PVec, prevPVec, TVec, prevTVec))
 			                     {
-				                     double& result = tup.get<0>();
+				                     float& result = tup.get<0>();
 
-				                     const double P = tup.get<1>();
-				                     const double prevP = tup.get<2>();
-				                     const double T = tup.get<3>();
-				                     const double prevT = tup.get<4>();
+				                     const float P = tup.get<1>();
+				                     const float prevP = tup.get<2>();
+				                     const float T = tup.get<3>();
+				                     const float prevT = tup.get<4>();
 
-				                     result = 14.628 * (prevT + T) * log(prevP / P);
+				                     result = 14.628f * (prevT + T) * log(prevP / P);
 
 				                     ASSERT(isfinite(result));
 			                     }
-			                 },
-		                     make_shared<info>(*myTargetInfo), PInfo, prevPInfo, TInfo, prevTInfo));
+		                     },
+		                     make_shared<info<float>>(*myTargetInfo), PInfo, prevPInfo, TInfo, prevTInfo));
 
 		if (pool.size() == 8)
 		{
@@ -286,6 +285,13 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 
 		prevPInfo = PInfo;
 		prevTInfo = TInfo;
+
+		const bool levelsRemaining = topToBottom ? myTargetInfo->Previous<level>() : myTargetInfo->Next<level>();
+
+		if (levelsRemaining == false)
+		{
+			break;
+		}
 	}
 
 	for (auto& f : pool)
@@ -295,9 +301,16 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 
 	// Second pass
 
+	// Using separate writer threads is efficient when we are calculating with iteration (ECMWF) and if
+	// we are using external packing like gzip or if the grid size is large (several million grid points)
+	// In those conditions spawning a separate thread to write the results should give according to initial tests
+	// a ~30%-50% increase in total calculation speed.
+
 	vector<future<void>> writers;
 
-	for (myTargetInfo->ResetLevel(); myTargetInfo->NextLevel();)
+	topToBottom ? myTargetInfo->Last<level>() : myTargetInfo->First<level>();
+
+	while (true)
 	{
 		// Check if we have data in grid. If all values are missing, it is impossible to continue
 		// processing any level above this one.
@@ -312,13 +325,15 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 		{
 			auto& cur = VEC(myTargetInfo);
 
-			if (myTargetInfo->PreviousLevel())
+			bool isFirst = topToBottom ? myTargetInfo->Next<level>() : myTargetInfo->Previous<level>();
+
+			if (isFirst)
 			{
 				const auto& prev = VEC(myTargetInfo);
 
-				transform(cur.begin(), cur.end(), prev.begin(), cur.begin(), plus<double>());
+				transform(cur.begin(), cur.end(), prev.begin(), cur.begin(), plus<float>());
 
-				myTargetInfo->NextLevel();
+				topToBottom ? myTargetInfo->Previous<level>() : myTargetInfo->Next<level>();
 			}
 			else
 			{
@@ -326,7 +341,7 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 				level prevLevel(myTargetInfo->Level());
 				prevLevel.Value(prevLevel.Value() + 1);
 
-				auto prevH = Fetch(forecastTime, prevLevel, HParam, forecastType, false);
+				auto prevH = Fetch<float>(forecastTime, prevLevel, HParam, forecastType, false);
 				if (!prevH)
 				{
 					itsLogger.Error("Unable to get height of level below level " +
@@ -336,24 +351,26 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 
 				const auto& prev = VEC(prevH);
 
-				transform(cur.begin(), cur.end(), prev.begin(), cur.begin(), plus<double>());
+				transform(cur.begin(), cur.end(), prev.begin(), cur.begin(), plus<float>());
 			}
 		}
 
 		if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
 		{
-			writers.push_back(async(launch::async, [this](info_t myTargetInfo) { WriteToFile(myTargetInfo); },
-			                        make_shared<info>(*myTargetInfo)));
+			writers.push_back(async(launch::async,
+			                        [this](shared_ptr<info<float>> tempInfo) { WriteSingleGridToFile(tempInfo); },
+			                        make_shared<info<float>>(*myTargetInfo)));
 		}
 		else
 		{
-			WriteToFile(myTargetInfo);
+			WriteSingleGridToFile(myTargetInfo);
 		}
 
-		if (itsConfiguration->StatisticsEnabled())
+		const bool levelsRemaining = topToBottom ? myTargetInfo->Previous<level>() : myTargetInfo->Next<level>();
+
+		if (levelsRemaining == false)
 		{
-			itsConfiguration->Statistics()->AddToMissingCount(myTargetInfo->Data().MissingCount());
-			itsConfiguration->Statistics()->AddToValueCount(myTargetInfo->Data().Size());
+			break;
 		}
 	}
 
@@ -365,12 +382,27 @@ bool hybrid_height::WithHypsometricEquation(info_t& myTargetInfo)
 	return true;
 }
 
-void hybrid_height::RunTimeDimension(info_t myTargetInfo, unsigned short threadIndex)
+void hybrid_height::WriteToFile(const shared_ptr<info<float>> targetInfo, write_options writeOptions)
 {
-	myTargetInfo->FirstLevel();
+}
 
-	while (NextExcludingLevel(*myTargetInfo))
+void hybrid_height::WriteSingleGridToFile(const shared_ptr<info<float>> targetInfo)
+{
+	auto aWriter = GET_PLUGIN(writer);
+
+	if (!targetInfo->IsValidGrid())
 	{
-		Calculate(myTargetInfo, threadIndex);
+		return;
+	}
+
+	if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
+	{
+		aWriter->ToFile<float>(targetInfo, itsConfiguration);
+	}
+	else
+	{
+		lock_guard<mutex> lock(singleFileWriteMutex);
+
+		aWriter->ToFile<float>(targetInfo, itsConfiguration, itsConfiguration->ConfigurationFile());
 	}
 }

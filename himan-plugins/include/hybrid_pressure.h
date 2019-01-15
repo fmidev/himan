@@ -24,10 +24,8 @@ class hybrid_pressure : public compiled_plugin, private compiled_plugin_base
 {
    public:
 	hybrid_pressure();
+	inline virtual ~hybrid_pressure() = default;
 
-	inline virtual ~hybrid_pressure()
-	{
-	}
 	hybrid_pressure(const hybrid_pressure& other) = delete;
 	hybrid_pressure& operator=(const hybrid_pressure& other) = delete;
 
@@ -41,21 +39,16 @@ class hybrid_pressure : public compiled_plugin, private compiled_plugin_base
 	{
 		return kCompiled;
 	}
-	virtual HPVersionNumber Version() const
-	{
-		return HPVersionNumber(0, 1);
-	}
-	virtual void WriteToFile(const info_t targetInfo, write_options opts = write_options()) override;
 
    private:
-	virtual void Calculate(std::shared_ptr<info> theTargetInfo, unsigned short theThreadIndex);
+	virtual void Calculate(std::shared_ptr<info<float>> theTargetInfo, unsigned short theThreadIndex) override;
 };
 
 // the class factory
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-	return std::shared_ptr<hybrid_pressure>(new hybrid_pressure());
+	return std::make_shared<hybrid_pressure>();
 }
 }  // namespace plugin
 }  // namespace himan

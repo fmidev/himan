@@ -6,6 +6,7 @@
 #include "radon.h"
 #include "logger.h"
 #include "plugin_factory.h"
+#include "point_list.h"
 #include "util.h"
 #include <sstream>
 #include <thread>
@@ -152,11 +153,17 @@ vector<std::string> radon::CSV(search_options& options)
 	      << "AND t.forecast_type_value = " << options.ftype.Value() << " "
 	      << "AND t.station_id IN (";
 
-	auto localInfo = make_shared<info>(*options.configuration->Info());
+	const point_list* list = dynamic_cast<const point_list*>(options.configuration->BaseGrid());
 
-	for (localInfo->ResetLocation(); localInfo->NextLocation();)
+	if (!list)
 	{
-		const auto station = localInfo->Station();
+		throw std::runtime_error("Input grid type is not point_list");
+	}
+
+	const auto stations = list->Stations();
+
+	for (const auto& station : stations)
+	{
 		query << station.Id() << ",";
 	}
 
@@ -275,7 +282,7 @@ string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<v
 
 	if (sameTableForAllGeometries)
 	{
-		query << "SELECT file_location, geometry_id FROM " << firstTable << "_v "
+		query << "SELECT file_location, geometry_id, geometry_name FROM " << firstTable << "_v "
 		      << "WHERE analysis_time = '" << analtime << "'"
 		      << " AND param_name = '" << parm_name << "'"
 		      << " AND level_name = upper('" << level_name << "')"
@@ -335,7 +342,7 @@ string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<v
 	return query.str();
 }
 
-vector<string> radon::Files(search_options& options)
+pair<vector<string>, string> radon::Files(search_options& options)
 {
 	Init();
 
@@ -345,14 +352,14 @@ vector<string> radon::Files(search_options& options)
 
 	if (gridgeoms.empty())
 	{
-		return files;
+		return make_pair(files, string());
 	}
 
 	const auto query = CreateFileSQLQuery(options, gridgeoms);
 
 	if (query.empty())
 	{
-		return files;
+		return make_pair(files, string());
 	}
 
 	try
@@ -378,17 +385,23 @@ vector<string> radon::Files(search_options& options)
 
 	if (values.empty())
 	{
-		return files;
+		return make_pair(files, string());
 	}
 
-	itsLogger.Trace("Found data for parameter " + options.param.Name() + " from radon geometry " + values[1]);
+	itsLogger.Trace("Found data for parameter " + options.param.Name() + " from radon geometry " + values[2]);
 
 	files.push_back(values[0]);
 
-	return files;
+	return make_pair(files, values[2]);
 }
 
-bool radon::Save(const info& resultInfo, const string& theFileName, const string& targetGeomName)
+bool radon::Save(const info<double>& resultInfo, const string& theFileName, const string& targetGeomName)
+{
+	return Save<double>(resultInfo, theFileName, targetGeomName);
+}
+
+template <typename T>
+bool radon::Save(const info<T>& resultInfo, const string& theFileName, const string& targetGeomName)
 {
 	Init();
 
@@ -404,7 +417,11 @@ bool radon::Save(const info& resultInfo, const string& theFileName, const string
 	return false;
 }
 
-bool radon::SavePrevi(const info& resultInfo)
+template bool radon::Save<double>(const info<double>&, const string&, const string&);
+template bool radon::Save<float>(const info<float>&, const string&, const string&);
+
+template <typename T>
+bool radon::SavePrevi(const info<T>& resultInfo)
 {
 	stringstream query;
 
@@ -461,9 +478,10 @@ bool radon::SavePrevi(const info& resultInfo)
 	{
 		query.str("");
 
-		query << "INSERT INTO data." << table_name << " (producer_id, station_id, analysis_time, param_id, level_id, "
-		                                              "level_value, level_value2, forecast_period, "
-		                                              "forecast_type_id, forecast_type_value, value) VALUES ("
+		query << "INSERT INTO data." << table_name
+		      << " (producer_id, station_id, analysis_time, param_id, level_id, "
+		         "level_value, level_value2, forecast_period, "
+		         "forecast_type_id, forecast_type_value, value) VALUES ("
 		      << localInfo.Producer().Id() << ", " << localInfo.Station().Id() << ", "
 		      << "'" << analysisTime << "', " << paraminfo["id"] << ", " << levelinfo["id"] << ", "
 		      << localInfo.Level().Value() << ", " << levelValue2 << ", "
@@ -503,7 +521,11 @@ bool radon::SavePrevi(const info& resultInfo)
 	return true;
 }
 
-bool radon::SaveGrid(const info& resultInfo, const string& theFileName, const string& targetGeomName)
+template bool radon::SavePrevi<double>(const info<double>&);
+template bool radon::SavePrevi<float>(const info<float>&);
+
+template <typename T>
+bool radon::SaveGrid(const info<T>& resultInfo, const string& theFileName, const string& targetGeomName)
 {
 	stringstream query;
 
@@ -564,9 +586,13 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName, const st
 
 	if (geominfo.empty())
 	{
-		geominfo = itsRadonDB->GetGeometryDefinition(
-			resultInfo.Grid()->Ni(), resultInfo.Grid()->Nj(), firstGridPoint.Y(), firstGridPoint.X(),
-			resultInfo.Grid()->Di(), resultInfo.Grid()->Dj(), gribVersion, gridType);
+		if (resultInfo.Grid()->Class() == kRegularGrid)
+		{
+			auto gr = dynamic_pointer_cast<regular_grid>(resultInfo.Grid());
+
+			geominfo = itsRadonDB->GetGeometryDefinition(gr->Ni(), gr->Nj(), firstGridPoint.Y(), firstGridPoint.X(),
+			                                             gr->Di(), gr->Dj(), gribVersion, gridType);
+		}
 	}
 
 	if (geominfo.empty())
@@ -692,3 +718,6 @@ bool radon::SaveGrid(const info& resultInfo, const string& theFileName, const st
 
 	return true;
 }
+
+template bool radon::SaveGrid<double>(const info<double>&, const string&, const string&);
+template bool radon::SaveGrid<float>(const info<float>&, const string&, const string&);

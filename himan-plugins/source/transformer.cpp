@@ -17,7 +17,12 @@ using namespace himan::plugin;
 
 mutex aggregationMutex;
 
-#include "cuda_helper.h"
+#ifdef HAVE_CUDA
+namespace transformergpu
+{
+void Process(himan::info_t myTargetInfo, himan::info_t sourceInfo, double scale, double base);
+}
+#endif
 
 transformer::transformer()
     : itsBase(0.0),
@@ -62,7 +67,7 @@ void transformer::SetAdditionalParameters()
 	}
 	else
 	{
-		itsLogger.Trace("Base not specified, using default value 0.0");
+		itsLogger.Trace("base not specified, using default value 0.0");
 	}
 
 	if (!itsConfiguration->GetValue("scale").empty())
@@ -71,7 +76,7 @@ void transformer::SetAdditionalParameters()
 	}
 	else
 	{
-		itsLogger.Trace("Scale not specified, using default value 1.0");
+		itsLogger.Trace("scale not specified, using default value 1.0");
 	}
 
 	if (itsConfiguration->Exists("rotation"))
@@ -114,7 +119,7 @@ void transformer::SetAdditionalParameters()
 	}
 	else
 	{
-		itsLogger.Trace("Source_level not specified, source_level set to target level");
+		itsLogger.Trace("source_level_type not specified, set to target level type");
 	}
 
 	if (!itsConfiguration->GetValue("source_levels").empty())
@@ -123,7 +128,7 @@ void transformer::SetAdditionalParameters()
 	}
 	else
 	{
-		itsLogger.Trace("Source_levels not specified, source_levels set to target levels");
+		itsLogger.Trace("source_levels not specified, set to target levels");
 	}
 
 	if (!itsConfiguration->GetValue("target_forecast_type").empty())
@@ -162,11 +167,7 @@ void transformer::SetAdditionalParameters()
 	else
 	{
 		// copy levels from target
-		auto x = make_shared<info>(*itsInfo);
-		for (x->ResetLevel(); x->NextLevel();)
-		{
-			itsSourceLevels.push_back(x->Level());
-		}
+		itsSourceLevels = itsLevelIterator.Values();
 	}
 
 	if (!targetForecastType.empty())
@@ -217,16 +218,16 @@ void transformer::Process(std::shared_ptr<const plugin_configuration> conf)
 	// Need to set this before starting Calculate, since we don't want to fetch with 'targetForecastType'.
 	if (itsTargetForecastType.Type() != kUnknownType)
 	{
-		if (itsInfo->ForecastTypeIterator().Size() > 1)
+		if (itsForecastTypeIterator.Size() > 1)
 		{
 			throw std::runtime_error("Forecast type iterator can only be set when there's only 1 source forecast type");
 		}
 		else
 		{
-			itsInfo->ForecastTypeIterator().First();
+			itsForecastTypeIterator.First();
 			// Copy the original so that we can fetch the right data.
-			itsSourceForecastType = itsInfo->ForecastType();
-			itsInfo->ForecastTypeIterator().Replace(itsTargetForecastType);
+			itsSourceForecastType = itsForecastTypeIterator.At();
+			itsForecastTypeIterator.Replace(itsTargetForecastType);
 		}
 	}
 
@@ -265,19 +266,19 @@ void transformer::Rotate(info_t myTargetInfo)
 	auto b = Fetch(myTargetInfo->Time(), myTargetInfo->Level(), param(itsSourceParam[1]), myTargetInfo->ForecastType(),
 	               false);
 
-	myTargetInfo->ParamIndex(0);
+	myTargetInfo->Index<param>(0);
 	myTargetInfo->Data().Set(VEC(a));
 	myTargetInfo->Grid()->UVRelativeToGrid(a->Grid()->UVRelativeToGrid());
 
-	auto secondInfo = make_shared<info>(*myTargetInfo);
-	secondInfo->ParamIndex(1);
+	auto secondInfo = make_shared<info<double>>(*myTargetInfo);
+	secondInfo->Index<param>(1);
 	secondInfo->Data().Set(VEC(b));
 	secondInfo->Grid()->UVRelativeToGrid(b->Grid()->UVRelativeToGrid());
 
 	interpolate::RotateVectorComponents(*myTargetInfo, *secondInfo, false);
 }
 
-void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short threadIndex)
+void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	auto myThreadedLogger = logger("transformerThread #" + to_string(threadIndex));
 
@@ -315,7 +316,7 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 
 	try
 	{
-		sourceInfo = f->Fetch(itsConfiguration, forecastTime, itsSourceLevels[myTargetInfo->LevelIndex()],
+		sourceInfo = f->Fetch(itsConfiguration, forecastTime, itsSourceLevels[myTargetInfo->Index<level>()],
 		                      param(itsSourceParam[0]), forecastType, itsConfiguration->UseCudaForPacking());
 	}
 	catch (HPExceptionType& e)
@@ -334,7 +335,7 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 
 		{
 			lock_guard<mutex> lock(aggregationMutex);
-			myTargetInfo->ParamIterator().Replace(p);
+			myTargetInfo->Iterator<param>().Replace(p);
 		}
 	}
 
@@ -349,9 +350,7 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 	{
 		deviceType = "GPU";
 
-		auto opts = CudaPrepare(myTargetInfo, sourceInfo);
-
-		transformer_cuda::Process(*opts);
+		transformergpu::Process(myTargetInfo, sourceInfo, itsScale, itsBase);
 	}
 	else
 #endif
@@ -368,22 +367,3 @@ void transformer::Calculate(shared_ptr<info> myTargetInfo, unsigned short thread
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
 	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
-
-#ifdef HAVE_CUDA
-
-unique_ptr<transformer_cuda::options> transformer::CudaPrepare(shared_ptr<info> myTargetInfo,
-                                                               shared_ptr<info> sourceInfo)
-{
-	unique_ptr<transformer_cuda::options> opts(new transformer_cuda::options);
-
-	opts->N = sourceInfo->Data().Size();
-
-	opts->base = itsBase;
-	opts->scale = itsScale;
-
-	opts->source = sourceInfo->ToSimple();
-	opts->dest = myTargetInfo->ToSimple();
-
-	return opts;
-}
-#endif
