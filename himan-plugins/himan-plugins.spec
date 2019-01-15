@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 18.12.13
+Version: 19.1.15
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -115,6 +115,18 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Jan 15 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.1.15-1.fmi
+- Allow lua scripts to change thread distribution type
+* Mon Jan 14 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.1.14-1.fmi
+- Fixes to blend
+* Mon Jan  7 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.1.7-1.fmi
+- cape gpu memory optimization
+* Wed Jan  2 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.1.2-1.fmi
+- Fixing hybrid_height perf regression
+* Thu Dec 20 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.12.20-1.fmi
+- cape-plugin: LFC max height lowered to ~250hPa
+* Wed Dec 19 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.12.19-1.fmi
+- Even more snow_drift tuning
 * Thu Dec 13 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.12.13-1.fmi
 - More snow_drift tuning
 * Tue Dec 11 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.12.11-1.fmi
