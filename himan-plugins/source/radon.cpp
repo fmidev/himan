@@ -303,10 +303,7 @@ string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<v
 
 		// Add custom sort order, as we want to preserve to order from conf file
 
-		// Note: with postgres >= 9.5 we could use:
-		// ... ORDER BY array_position([1, 2, 3], geometry_id)
-
-		query << ", idx(array[";
+		query << ", array_position(array[";
 
 		for (const auto& geom : gridgeoms)
 		{
@@ -314,7 +311,6 @@ string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<v
 		}
 
 		query.seekp(-1, ios_base::end);
-
 		query << "], geometry_id::text)";
 	}
 	else
