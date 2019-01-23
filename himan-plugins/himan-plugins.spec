@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 19.1.15
+Version: 19.1.23
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -115,6 +115,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Jan 23 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.1.23-1.fmi
+- Fixes to blend, radon
 * Tue Jan 15 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.1.15-1.fmi
 - Allow lua scripts to change thread distribution type
 * Mon Jan 14 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.1.14-1.fmi
