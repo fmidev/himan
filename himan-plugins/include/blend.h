@@ -82,6 +82,12 @@ class blend : public compiled_plugin, private compiled_plugin_base
 	                              const forecast_time& current, int maxStep, int originTimeStep);
 	bool ParseConfigurationOptions(const std::shared_ptr<const plugin_configuration>& conf);
 	std::vector<info_t> FetchRawGrids(std::shared_ptr<info<double>> targetInfo, unsigned short threadIdx) const;
+	std::vector<info_t> FetchMAEAndBiasGrids(std::shared_ptr<info<double>> targetInfo, unsigned short threadIdx,
+	                                         blend_mode type) const;
+
+	std::tuple<info_t, info_t, info_t, info_t> FetchMAEAndBiasSource(std::shared_ptr<info<double>>& targetInfo,
+	                                                                 const forecast_time& calcTime,
+	                                                                 blend_mode type) const;
 
 	blend_mode itsCalculationMode;
 	int itsNumHours;
