@@ -29,8 +29,8 @@ class grid
 
 	virtual ~grid() = default;
 
-	grid(const grid& other) = default;
-	grid& operator=(const grid& other) = default;
+	grid(const grid&) = default;
+	grid& operator=(const grid&) = default;
 
 	virtual std::string ClassName() const
 	{
