@@ -1278,8 +1278,7 @@ std::pair<std::vector<float>, std::vector<float>> cape_cuda::GetLFCGPU(
 
 std::vector<float> cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration>& conf,
                                         std::shared_ptr<info<float>> myTargetInfo, const std::vector<float>& Tsource,
-                                        const std::vector<float>& Psource, const std::vector<float>& TLCL,
-                                        const std::vector<float>& PLCL, const std::vector<float>& ZLCL,
+                                        const std::vector<float>& Psource, const std::vector<float>& PLCL, 
                                         const std::vector<float>& PLFC, const std::vector<float>& ZLFC)
 {
 	const params PParams({param("PGR-PA"), param("P-PA")});

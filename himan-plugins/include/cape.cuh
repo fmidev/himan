@@ -656,8 +656,7 @@ cape_source Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_configurati
                                         std::shared_ptr<info<float>> myTargetInfo);
 std::vector<float> GetCINGPU(const std::shared_ptr<const plugin_configuration>& conf,
                              std::shared_ptr<info<float>> myTargetInfo, const std::vector<float>& Tsource,
-                             const std::vector<float>& Psource, const std::vector<float>& TLCL,
-                             const std::vector<float>& PLCL, const std::vector<float>& ZLCL,
+                             const std::vector<float>& Psource, const std::vector<float>& PLCL, 
                              const std::vector<float>& PLFC, const std::vector<float>& ZLFC);
 CAPEdata GetCAPEGPU(const std::shared_ptr<const plugin_configuration>& conf, std::shared_ptr<info<float>> myTargetInfo,
                     const std::vector<float>& T, const std::vector<float>& P);
