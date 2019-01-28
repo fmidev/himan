@@ -68,13 +68,11 @@ class cape : public compiled_plugin, private compiled_plugin_base
 	                    const std::vector<float>& P) const;
 
 	std::vector<float> GetCIN(std::shared_ptr<info<float>> myTargetInfo, const std::vector<float>& Tsource,
-	                          const std::vector<float>& Psource, const std::vector<float>& TLCL,
-	                          const std::vector<float>& PLCL, const std::vector<float>& ZLCL,
+	                          const std::vector<float>& Psource, const std::vector<float>& PLCL,
 	                          const std::vector<float>& PLFC, const std::vector<float>& ZLFC) const;
 
 	std::vector<float> GetCINCPU(std::shared_ptr<info<float>> myTargetInfo, const std::vector<float>& Tsource,
-	                             const std::vector<float>& Psource, const std::vector<float>& TLCL,
-	                             const std::vector<float>& PLCL, const std::vector<float>& ZLCL,
+	                             const std::vector<float>& Psource, const std::vector<float>& PLCL,
 	                             const std::vector<float>& PLFC, const std::vector<float>& ZLFC) const;
 
 	void MostUnstableCAPE(std::shared_ptr<info<float>> myTargetInfo, short threadIndex) const;

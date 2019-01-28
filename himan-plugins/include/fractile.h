@@ -8,6 +8,7 @@
 
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
+#include "ensemble.h"
 
 #include <stdint.h>
 
@@ -38,13 +39,9 @@ class fractile : public compiled_plugin, private compiled_plugin_base
 
    private:
 	virtual void Calculate(std::shared_ptr<info<double>> myTargetInfo, uint16_t threadIndex);
-	std::string itsParamName;
-	int itsEnsembleSize;
-	HPEnsembleType itsEnsembleType;
 	std::vector<double> itsFractiles;
-	int itsLag;
-	int itsLaggedSteps;
-	int itsMaximumMissingForecasts;
+
+	std::unique_ptr<ensemble> itsEnsemble;
 };
 
 extern "C" std::shared_ptr<himan_plugin> create()

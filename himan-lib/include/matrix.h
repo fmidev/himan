@@ -111,7 +111,7 @@ class matrix
 		return *this;
 	}
 
-	matrix& operator=(matrix&& other) = default;
+	matrix& operator=(matrix&&) = default;
 
 	bool operator==(const matrix& other) const
 	{

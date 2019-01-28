@@ -25,7 +25,7 @@ level::level(HPLevelType theType, double theValue)
 }
 
 level::level(HPLevelType theType, double theValue, const std::string& theName)
-    : itsType(theType), itsValue(theValue), itsValue2(kHPMissingValue), itsIndex(kHPMissingInt), itsName(), itsAB()
+    : itsType(theType), itsValue(theValue), itsValue2(kHPMissingValue), itsIndex(kHPMissingInt), itsName(theName), itsAB()
 {
 }
 

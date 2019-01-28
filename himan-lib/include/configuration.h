@@ -25,8 +25,8 @@ class configuration
 	configuration();
 	virtual ~configuration() = default;
 
-	configuration(const configuration& other) = default;
-	configuration& operator=(const configuration& other) = default;
+	configuration(const configuration&) = default;
+	configuration& operator=(const configuration&) = default;
 
 	/**
 	 * @return Class name

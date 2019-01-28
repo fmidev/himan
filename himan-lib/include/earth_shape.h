@@ -16,7 +16,7 @@ class earth_shape
 	earth_shape(T r); // sphere
 	earth_shape(T theA, T theB);
 	~earth_shape() = default;
-	earth_shape(const earth_shape& other) = default;
+	earth_shape(const earth_shape&) = default;
 
 	bool operator==(const earth_shape& other) const;
 	bool operator!=(const earth_shape& other) const;

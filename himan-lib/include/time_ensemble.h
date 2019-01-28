@@ -16,13 +16,17 @@ class time_ensemble : public ensemble
 {
    public:
 	time_ensemble(const param& parameter);
-	time_ensemble(const param& parameter, size_t ensembleSize, HPTimeResolution timeSpan = kYearResolution);
+	time_ensemble(const param& parameter, size_t primaryTimeMaskLen, HPTimeResolution primaryTimeSpan,
+	              int secondaryTimeMaskLen, int secondaryTimeMaskStep, HPTimeResolution secondaryTimeSpan);
 
 	void Fetch(std::shared_ptr<const plugin_configuration> config, const forecast_time& time,
 	           const level& forecastLevel) override;
 
    private:
-	HPTimeResolution itsTimeSpan;
+	HPTimeResolution itsPrimaryTimeSpan;
+	int itsSecondaryTimeMaskLen = 0;
+	int itsSecondaryTimeMaskStep = 1;
+	HPTimeResolution itsSecondaryTimeSpan = kHourResolution;
 };
 }
 #endif /* TIME_ENSEMBLE_H */

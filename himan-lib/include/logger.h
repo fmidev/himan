@@ -18,12 +18,10 @@ class logger
 	logger();
 	explicit logger(const std::string& theUserName);
 	logger(const std::string& theUserName, HPDebugState theDebugState);
-	~logger()
-	{
-	}
+	~logger() = default;
 
-	logger(const logger& other) = default;
-	logger& operator=(const logger& other) = default;
+	logger(const logger&) = default;
+	logger& operator=(const logger&) = default;
 
 	void Trace(const std::string& msg) const
 	{

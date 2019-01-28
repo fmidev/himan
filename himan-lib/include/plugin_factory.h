@@ -18,12 +18,10 @@ namespace himan
 class plugin_factory
 {
    public:
-	~plugin_factory()
-	{
-	}
+	~plugin_factory() = default;
 	static plugin_factory* Instance();
 
-	std::vector<std::shared_ptr<plugin::himan_plugin>> Plugins(HPPluginClass = kUnknownPlugin);  // Kinda ugly
+	std::vector<std::shared_ptr<plugin::himan_plugin>> Plugins();
 
 	/**
 	 * @brief Return instance of the requested plugin if found. Caller must cast

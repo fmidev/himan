@@ -28,8 +28,8 @@ class forecast_time
 	              const std::string& theDateMask = "%Y-%m-%d %H:%M:%S");
 
 	~forecast_time() = default;
-	forecast_time(const forecast_time& other) = default;
-	forecast_time& operator=(const forecast_time& other) = default;
+	forecast_time(const forecast_time&) = default;
+	forecast_time& operator=(const forecast_time&) = default;
 
 	std::string ClassName() const
 	{
