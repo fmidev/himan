@@ -49,7 +49,33 @@ void AdjustTimes(forecast_time& ftime, HPTimeResolution timeSpan, int value)
 	ASSERT(ftime.Step() >= 0);
 }
 
-time_ensemble::time_ensemble(const param& parameter) : itsTimeSpan(kYearResolution)
+std::vector<forecast_time> CreateTimeList(const forecast_time& origtime, size_t primaryTimeMaskLen,
+                                          HPTimeResolution primaryTimeSpan, int secondaryTimeMaskLen,
+                                          HPTimeResolution secondaryTimeSpan, int secondaryTimeMaskStep)
+{
+	std::vector<forecast_time> ret;
+
+	auto ftime = origtime;
+
+	for (size_t i = 0; i < primaryTimeMaskLen; i++)
+	{
+		for (int j = secondaryTimeMaskLen; j >= -secondaryTimeMaskLen; j -= secondaryTimeMaskStep)
+		{
+			auto curtime = ftime;
+
+			// TODO: more general way to check these?
+			curtime.OriginDateTime().Adjust(secondaryTimeSpan, j);
+			curtime.ValidDateTime().Adjust(secondaryTimeSpan, j);
+			ret.push_back(curtime);
+		}
+
+		AdjustTimes(ftime, primaryTimeSpan, -1);
+	}
+
+	return ret;
+}
+
+time_ensemble::time_ensemble(const param& parameter) : itsPrimaryTimeSpan(kYearResolution)
 {
 	itsParam = parameter;
 	itsExpectedEnsembleSize = 0;
@@ -58,16 +84,21 @@ time_ensemble::time_ensemble(const param& parameter) : itsTimeSpan(kYearResoluti
 	itsLogger = logger("time_ensemble");
 }
 
-time_ensemble::time_ensemble(const param& parameter, size_t expectedEnsembleSize, HPTimeResolution theTimeSpan)
-    : itsTimeSpan(theTimeSpan)
+time_ensemble::time_ensemble(const param& parameter, size_t primaryTimeMaskLen, HPTimeResolution primaryTimeSpan,
+                             int secondaryTimeMaskLen, int secondaryTimeMaskStep, HPTimeResolution secondaryTimeSpan)
+    : itsPrimaryTimeSpan(primaryTimeSpan),
+      itsSecondaryTimeMaskLen(secondaryTimeMaskLen),
+      itsSecondaryTimeMaskStep(secondaryTimeMaskStep),
+      itsSecondaryTimeSpan(secondaryTimeSpan)
 {
 	itsParam = parameter;
-	itsExpectedEnsembleSize = expectedEnsembleSize;
+	itsExpectedEnsembleSize = primaryTimeMaskLen;
 	itsEnsembleType = kTimeEnsemble;
 
 	// itsDesiredForecasts is not used in time_ensemble directly,
 	// but ensemble uses it at least in VerifyValidForecastCount()
-	itsDesiredForecasts.resize(itsExpectedEnsembleSize);
+	itsDesiredForecasts.resize(itsExpectedEnsembleSize *
+	                           (2 * (itsSecondaryTimeMaskLen / itsSecondaryTimeMaskStep) + 1));
 
 	itsLogger = logger("time_ensemble");
 }
@@ -82,13 +113,14 @@ void time_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, co
 	itsForecasts.clear();
 	int numMissingForecasts = 0;
 
-	for (size_t i = 0; i < itsExpectedEnsembleSize; i++)
+	auto timeList = CreateTimeList(ftime, itsExpectedEnsembleSize, itsPrimaryTimeSpan, itsSecondaryTimeMaskLen,
+	                               itsSecondaryTimeSpan, itsSecondaryTimeMaskStep);
+
+	for (const auto& tm : timeList)
 	{
 		try
 		{
-			auto info = f->Fetch(config, ftime, forecastLevel, itsParam);
-
-			AdjustTimes(ftime, itsTimeSpan, -1);
+			auto info = f->Fetch(config, tm, forecastLevel, itsParam);
 
 			itsForecasts.push_back(info);
 		}
@@ -102,8 +134,6 @@ void time_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, co
 			else
 			{
 				numMissingForecasts++;
-
-				AdjustTimes(ftime, itsTimeSpan, -1);
 			}
 		}
 	}
