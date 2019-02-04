@@ -275,7 +275,7 @@ tuple<info_t, info_t, info_t, info_t> blend::FetchMAEAndBiasSource(shared_ptr<in
 	return make_tuple(nullptr, nullptr, nullptr, nullptr);
 }
 
-matrix<double> blend::CalculateBias(logger& log, shared_ptr<info<double>> targetInfo, const forecast_time& calcTime)
+matrix<double> blend::CalculateBias(shared_ptr<info<double>> targetInfo, const forecast_time& calcTime)
 {
 	auto source = FetchMAEAndBiasSource(targetInfo, calcTime, kCalculateBias);
 
@@ -329,7 +329,7 @@ matrix<double> blend::CalculateBias(logger& log, shared_ptr<info<double>> target
 }
 
 // Follows largely the same format as CalculateBias
-matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info<double>> targetInfo, const forecast_time& calcTime)
+matrix<double> blend::CalculateMAE(shared_ptr<info<double>> targetInfo, const forecast_time& calcTime)
 {
 	auto source = FetchMAEAndBiasSource(targetInfo, calcTime, kCalculateMAE);
 
@@ -460,11 +460,11 @@ void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short 
 
 		if (mode == kCalculateBias)
 		{
-			d = CalculateBias(log, targetInfo, ftime);
+			d = CalculateBias(targetInfo, ftime);
 		}
 		else
 		{
-			d = CalculateMAE(log, targetInfo, ftime);
+			d = CalculateMAE(targetInfo, ftime);
 		}
 
 		if (d.Size() > 0)
