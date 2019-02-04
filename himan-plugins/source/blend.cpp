@@ -275,7 +275,7 @@ tuple<info_t, info_t, info_t, info_t> blend::FetchMAEAndBiasSource(shared_ptr<in
 	return make_tuple(nullptr, nullptr, nullptr, nullptr);
 }
 
-matrix<double> blend::CalculateBias(logger& log, shared_ptr<info<double>> targetInfo, const forecast_time& calcTime)
+matrix<double> blend::CalculateBias(shared_ptr<info<double>> targetInfo, const forecast_time& calcTime)
 {
 	auto source = FetchMAEAndBiasSource(targetInfo, calcTime, kCalculateBias);
 
@@ -329,7 +329,7 @@ matrix<double> blend::CalculateBias(logger& log, shared_ptr<info<double>> target
 }
 
 // Follows largely the same format as CalculateBias
-matrix<double> blend::CalculateMAE(logger& log, shared_ptr<info<double>> targetInfo, const forecast_time& calcTime)
+matrix<double> blend::CalculateMAE(shared_ptr<info<double>> targetInfo, const forecast_time& calcTime)
 {
 	auto source = FetchMAEAndBiasSource(targetInfo, calcTime, kCalculateMAE);
 
@@ -408,10 +408,7 @@ void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short 
 	const level targetLevel = targetInfo->Level();
 	const forecast_time current = targetInfo->Time();
 
-	const raw_time latestOrigin = current.OriginDateTime();
-
-	log.Info("Latest origin time for producer " + to_string(itsConfiguration->SourceProducers()[0].Id()) +
-	         " ftype val: " + to_string(static_cast<int>(forecastType.Value())) + ": " + latestOrigin.String());
+	const raw_time originDateTime = current.OriginDateTime();
 
 	// Start from the 'earliest' (set below) point in time, and proceed to current time.
 
@@ -433,7 +430,7 @@ void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short 
 		Info->Producer(kBlendWeightProd);
 	}
 
-	SetupOutputForecastTimes(Info, latestOrigin, current, maxStep, originTimeStep);
+	SetupOutputForecastTimes(Info, originDateTime, current, maxStep, originTimeStep);
 	Info->Set<forecast_type>(ftypes);
 	Info->Create(targetInfo->Base(), true);
 	Info->First();
@@ -451,7 +448,7 @@ void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short 
 		log.Info("Calculating for analysis hour " + ftime.OriginDateTime().String("%H") + " step " +
 		         to_string(ftime.Step()));
 
-		if (ftime.OriginDateTime() > current.OriginDateTime() || ftime.OriginDateTime() > latestOrigin)
+		if (ftime.OriginDateTime() > current.OriginDateTime() || ftime.OriginDateTime() > originDateTime)
 		{
 			break;
 		}
@@ -460,11 +457,11 @@ void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short 
 
 		if (mode == kCalculateBias)
 		{
-			d = CalculateBias(log, targetInfo, ftime);
+			d = CalculateBias(targetInfo, ftime);
 		}
 		else
 		{
-			d = CalculateMAE(log, targetInfo, ftime);
+			d = CalculateMAE(targetInfo, ftime);
 		}
 
 		if (d.Size() > 0)
@@ -473,11 +470,14 @@ void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short 
 			{
 				auto newI = make_shared<info<double>>(*Info);
 				// Adjust origin date time so that it is from "today"
-				newI->Time().OriginDateTime(latestOrigin);
+				newI->Time().OriginDateTime(originDateTime);
 
 				int offset = 0;
 
-				if (latestOrigin.String("%H") == "00" && ftime.OriginDateTime().String("%H") == "12")
+				const int latestH = std::stoi(originDateTime.String("%H"));
+				const int currentH = std::stoi(ftime.OriginDateTime().String("%H"));
+
+				if ((latestH == 0 && currentH == 12) || (latestH == 12 && currentH == 0))
 				{
 					newI->Time().OriginDateTime().Adjust(kHourResolution, -12);
 					offset = 12;
@@ -485,6 +485,8 @@ void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short 
 
 				// Adjust valid date time so that step values remains the same
 				newI->Time().ValidDateTime().Adjust(kHourResolution, ftime.Step() - current.Step() - offset);
+
+				ASSERT(ftime.OriginDateTime().String("%H") == newI->Time().OriginDateTime().String("%H"));
 				auto b = newI->Base();
 				b->data = std::move(d);
 
