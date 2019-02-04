@@ -282,13 +282,19 @@ string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<v
 
 	if (sameTableForAllGeometries)
 	{
-		query << "SELECT file_location, geometry_id, geometry_name FROM " << firstTable << "_v "
-		      << "WHERE analysis_time = '" << analtime << "'"
-		      << " AND param_name = '" << parm_name << "'"
-		      << " AND level_name = upper('" << level_name << "')"
-		      << " AND level_value = " << levelValue << " AND level_value2 = " << levelValue2
-		      << " AND forecast_period = '" << himan::util::MakeSQLInterval(options.time) << "'"
-		      << "AND geometry_id IN (";
+		const std::string partition = gridgeoms[0][5];
+		const std::string schema = gridgeoms[0][4];
+		query << "SELECT t.file_location, g.name FROM " << schema << "." << partition << " t, geom g, param p, level l"
+		      << " WHERE t.geometry_id = g.id"
+		      << " AND t.param_id = p.id"
+		      << " AND l.id = t.level_id"
+		      << " AND t.analysis_time = '" << analtime << "'"
+		      << " AND p.name = '" << parm_name << "'"
+		      << " AND l.name = upper('" << level_name << "')"
+		      << " AND t.level_value = " << levelValue << " AND t.level_value2 = " << levelValue2
+		      << " AND t.forecast_period = '" << himan::util::MakeSQLInterval(options.time) << "'"
+		      << " AND forecast_type_id IN (" << forecastTypeId << ")"
+		      << " AND forecast_type_value = " << forecastTypeValue << " AND g.id IN (";
 
 		for (const auto& geom : gridgeoms)
 		{
@@ -297,13 +303,10 @@ string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<v
 
 		query.seekp(-1, ios_base::end);
 
-		query << ") AND forecast_type_id IN (" << forecastTypeId << ")"
-		      << " AND forecast_type_value = " << forecastTypeValue
-		      << " ORDER BY forecast_period, level_id, level_value";
-
 		// Add custom sort order, as we want to preserve to order from conf file
 
-		query << ", array_position(array[";
+		query << ") ORDER BY forecast_period, level_id, level_value"
+		      << ", array_position(array[";
 
 		for (const auto& geom : gridgeoms)
 		{
@@ -320,7 +323,7 @@ string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<v
 			string tablename = gridgeoms[i][1];
 			string geomid = gridgeoms[i][0];
 
-			query << "SELECT file_location, geometry_id "
+			query << "SELECT file_location, geometry_name "
 			      << "FROM " << tablename << "_v "
 			      << "WHERE analysis_time = '" << analtime << "'"
 			      << " AND param_name = '" << parm_name << "'"
@@ -384,11 +387,11 @@ pair<vector<string>, string> radon::Files(search_options& options)
 		return make_pair(files, string());
 	}
 
-	itsLogger.Trace("Found data for parameter " + options.param.Name() + " from radon geometry " + values[2]);
+	itsLogger.Trace("Found data for parameter " + options.param.Name() + " from radon geometry " + values[1]);
 
 	files.push_back(values[0]);
 
-	return make_pair(files, values[2]);
+	return make_pair(files, values[1]);
 }
 
 bool radon::Save(const info<double>& resultInfo, const string& theFileName, const string& targetGeomName)
