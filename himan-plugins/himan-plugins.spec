@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 19.1.15
+Version: 19.2.4
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 18.11.13
+Requires: himan-lib >= 19.1.28
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 18.2.12
@@ -115,6 +115,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Feb  4 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.2.4-1.fmi
+- Fidex to blend
+* Mon Jan 28 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.1.28-1.fmi
+- fractile changes
+* Wed Jan 23 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.1.23-1.fmi
+- Fixes to blend, radon
 * Tue Jan 15 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.1.15-1.fmi
 - Allow lua scripts to change thread distribution type
 * Mon Jan 14 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.1.14-1.fmi

@@ -34,12 +34,6 @@ std::unique_ptr<ensemble> CreateEnsemble(const std::shared_ptr<const plugin_conf
 
 	std::string paramName = conf->GetValue("param");
 
-	if (paramName.empty())
-	{
-		log.Fatal("param not specified");
-		himan::Abort();
-	}
-
 	auto ensTypestr = conf->GetValue("ensemble_type");
 	HPEnsembleType ensType = kPerturbedEnsemble;
 
@@ -163,8 +157,6 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 
-	itsEnsemble = CreateEnsemble(conf);
-
 	auto fractiles = itsConfiguration->GetValue("fractiles");
 
 	if (!fractiles.empty())
@@ -189,14 +181,21 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 	}
 
 	params calculatedParams;
+	std::string paramName = conf->GetValue("param");
+
+	if (paramName.empty())
+	{
+		itsLogger.Fatal("param not specified");
+		himan::Abort();
+	}
 
 	for (double frac : itsFractiles)
 	{
-		auto name = "F" + boost::lexical_cast<std::string>(frac) + "-" + itsEnsemble->Param().Name();
+		auto name = "F" + boost::lexical_cast<std::string>(frac) + "-" + paramName;
 		calculatedParams.push_back(param(name));
 	}
 
-	auto name = util::Split(itsEnsemble->Param().Name(), "-", false);
+	auto name = util::Split(paramName, "-", false);
 	calculatedParams.push_back(param(name[0] + "-MEAN-" + name[1]));    // mean
 	calculatedParams.push_back(param(name[0] + "-STDDEV-" + name[1]));  // standard deviation
 
@@ -208,6 +207,7 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 void fractile::Calculate(std::shared_ptr<info<double>> myTargetInfo, uint16_t threadIndex)
 {
 	const std::string deviceType = "CPU";
+	auto ens = CreateEnsemble(itsConfiguration);
 
 	auto threadedLogger = logger("fractileThread # " + std::to_string(threadIndex));
 
@@ -219,7 +219,7 @@ void fractile::Calculate(std::shared_ptr<info<double>> myTargetInfo, uint16_t th
 
 	try
 	{
-		itsEnsemble->Fetch(itsConfiguration, forecastTime, forecastLevel);
+		ens->Fetch(itsConfiguration, forecastTime, forecastLevel);
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -231,11 +231,11 @@ void fractile::Calculate(std::shared_ptr<info<double>> myTargetInfo, uint16_t th
 	}
 
 	myTargetInfo->ResetLocation();
-	itsEnsemble->ResetLocation();
+	ens->ResetLocation();
 
-	while (myTargetInfo->NextLocation() && itsEnsemble->NextLocation())
+	while (myTargetInfo->NextLocation() && ens->NextLocation())
 	{
-		auto sortedValues = itsEnsemble->SortedValues();
+		auto sortedValues = ens->SortedValues();
 		const size_t ensembleSize = sortedValues.size();
 
 		// Skip this step if we didn't get any valid fields
@@ -283,13 +283,13 @@ void fractile::Calculate(std::shared_ptr<info<double>> myTargetInfo, uint16_t th
 			++targetInfoIndex;
 		}
 
-		double mean = itsEnsemble->Mean();
+		double mean = ens->Mean();
 		if (!std::isfinite(mean))
 		{
 			mean = MissingDouble();
 		}
 
-		double var = std::sqrt(itsEnsemble->Variance());
+		double var = std::sqrt(ens->Variance());
 		if (!std::isfinite(var))
 		{
 			var = MissingDouble();
