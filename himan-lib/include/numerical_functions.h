@@ -236,6 +236,22 @@ std::vector<std::vector<T>> Linspace(const std::vector<T>& start, const std::vec
 template <typename T>
 std::pair<std::vector<T>, std::vector<T>> LegGauss(size_t N, bool computeWeights = true);
 
+/**
+ * Return unweighted mean value of vector
+ */
+
+template <typename T>
+T Mean(const std::vector<T>& data);
+
+/**
+ * Return variance of vector
+ *
+ * https://en.wikipedia.org/wiki/Variance
+ */
+
+template <typename T>
+T Variance(const std::vector<T>& data);
+
 namespace interpolation
 {
 /*

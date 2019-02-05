@@ -1,7 +1,3 @@
-/**
- * @file fractile.cpp
- *
- **/
 #include "fractile.h"
 
 #include <algorithm>
@@ -16,6 +12,7 @@
 #include "fetcher.h"
 #include "radon.h"
 
+#include "numerical_functions.h"
 #include "util.h"
 
 namespace himan
@@ -243,12 +240,24 @@ void fractile::Calculate(std::shared_ptr<info<double>> myTargetInfo, uint16_t th
 		{
 			continue;
 		}
+
+		// process mean&var before hanging size of sortedValues
+		double mean = numerical_functions::Mean<double>(sortedValues);
+		if (!std::isfinite(mean))
+		{
+			mean = MissingDouble();
+		}
+
+		double var = std::sqrt(numerical_functions::Variance<double>(sortedValues));
+		if (!std::isfinite(var))
+		{
+			var = MissingDouble();
+		}
+
 		// sortedValues needs to have one element at the back for correct array indexing
 		// NOTE: `ensembleSize` stays the same
-		else
-		{
-			sortedValues.push_back(0.0);
-		}
+
+		sortedValues.push_back(0.0);
 
 		ASSERT(!itsFractiles.empty());
 
@@ -283,18 +292,6 @@ void fractile::Calculate(std::shared_ptr<info<double>> myTargetInfo, uint16_t th
 			++targetInfoIndex;
 		}
 
-		double mean = ens->Mean();
-		if (!std::isfinite(mean))
-		{
-			mean = MissingDouble();
-		}
-
-		double var = std::sqrt(ens->Variance());
-		if (!std::isfinite(var))
-		{
-			var = MissingDouble();
-		}
-
 		myTargetInfo->Index<param>(targetInfoIndex);
 		myTargetInfo->Value(mean);
 		++targetInfoIndex;
@@ -307,5 +304,4 @@ void fractile::Calculate(std::shared_ptr<info<double>> myTargetInfo, uint16_t th
 }
 
 }  // plugin
-
 }  // namespace
