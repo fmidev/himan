@@ -96,3 +96,41 @@ std::pair<std::vector<T>, std::vector<T>> numerical_functions::LegGauss(size_t N
 }
 template std::pair<std::vector<float>, std::vector<float>> numerical_functions::LegGauss(size_t, bool);
 template std::pair<std::vector<double>, std::vector<double>> numerical_functions::LegGauss(size_t, bool);
+
+template <typename T>
+T numerical_functions::Mean(const std::vector<T>& data)
+{
+	if (data.size() == 0)
+	{
+		return himan::MissingValue<T>();
+	}
+
+	return std::accumulate(data.begin(), data.end(), 0.0f) / static_cast<T>(data.size());
+}
+
+template double numerical_functions::Mean(const std::vector<double>&);
+template float numerical_functions::Mean(const std::vector<float>&);
+
+template <typename T>
+T numerical_functions::Variance(const std::vector<T>& data)
+{
+	if (data.size() == 0)
+	{
+		return himan::MissingValue<T>();
+	}
+
+	const auto mean = Mean(data);
+
+	T sum = 0.0f;
+
+	for (const auto& x : data)
+	{
+		const auto t = x - mean;
+		sum += t * t;
+	}
+
+	return sum / static_cast<T>(data.size());
+}
+
+template double numerical_functions::Variance(const std::vector<double>&);
+template float numerical_functions::Variance(const std::vector<float>&);

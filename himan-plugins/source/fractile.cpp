@@ -1,7 +1,3 @@
-/**
- * @file fractile.cpp
- *
- **/
 #include "fractile.h"
 
 #include <algorithm>
@@ -10,122 +6,153 @@
 #include "logger.h"
 #include "plugin_factory.h"
 
-#include "ensemble.h"
 #include "lagged_ensemble.h"
 #include "time_ensemble.h"
 
 #include "fetcher.h"
 #include "radon.h"
 
+#include "numerical_functions.h"
 #include "util.h"
 
 namespace himan
 {
 namespace plugin
 {
-fractile::fractile()
-    : itsEnsembleSize(0),
-      itsEnsembleType(kPerturbedEnsemble),
-      itsFractiles({0., 10., 25., 50., 75., 90., 100.}),
-      itsLag(0),
-      itsLaggedSteps(0),
-      itsMaximumMissingForecasts(0)
+fractile::fractile() : itsFractiles({0., 10., 25., 50., 75., 90., 100.})
 {
 	itsCudaEnabledCalculation = false;
 	itsLogger = logger("fractile");
 }
 
-void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
+std::unique_ptr<ensemble> CreateEnsemble(const std::shared_ptr<const plugin_configuration> conf)
 {
-	Init(conf);
+	logger log("fractile");
 
-	if (!itsConfiguration->GetValue("param").empty())
-	{
-		itsParamName = itsConfiguration->GetValue("param");
-	}
-	else
-	{
-		itsLogger.Error("Param not specified");
-		return;
-	}
+	std::string paramName = conf->GetValue("param");
 
-	auto ensType = itsConfiguration->GetValue("ensemble_type");
+	auto ensTypestr = conf->GetValue("ensemble_type");
+	HPEnsembleType ensType = kPerturbedEnsemble;
 
-	if (!ensType.empty())
+	if (!ensTypestr.empty())
 	{
-		itsEnsembleType = HPStringToEnsembleType.at(ensType);
+		ensType = HPStringToEnsembleType.at(ensTypestr);
 	}
 
-	auto ensSize = itsConfiguration->GetValue("ensemble_size");
+	size_t ensSize = 0;
 
-	if (!ensSize.empty())
+	if (conf->Exists("ensemble_size"))
 	{
-		itsEnsembleSize = std::stoi(ensSize);
+		ensSize = std::stoi(conf->GetValue("ensemble_size"));
 	}
-
-	auto maximumMissing = itsConfiguration->GetValue("max_missing_forecasts");
-
-	if (!maximumMissing.empty())
-	{
-		itsMaximumMissingForecasts = std::stoi(maximumMissing);
-	}
-
-	if (itsEnsembleType == kLaggedEnsemble)
-	{
-		if (itsConfiguration->Exists("lag"))
-		{
-			int lag = std::stoi(itsConfiguration->GetValue("lag"));
-			if (lag == 0)
-			{
-				throw std::runtime_error(ClassName() + ": specify lag < 0");
-			}
-			else if (lag > 0)
-			{
-				itsLogger.Warning("negating lag value " + std::to_string(-lag));
-				lag = -lag;
-			}
-
-			itsLag = lag;
-		}
-		else
-		{
-			throw std::runtime_error(ClassName() + ": specify lag value for lagged_ensemble");
-		}
-
-		// How many lagged steps to include in the calculation
-		if (itsConfiguration->Exists("lagged_steps"))
-		{
-			const int steps = std::stoi(itsConfiguration->GetValue("lagged_steps"));
-			if (steps <= 0)
-			{
-				throw std::runtime_error(ClassName() + ": invalid lagged_steps value. Allowed range >= 0");
-			}
-			itsLaggedSteps = steps + 1;
-		}
-		else
-		{
-			throw std::runtime_error(ClassName() + ": specify lagged_steps when using time lagging ('lag')");
-		}
-	}
-
-	if (itsEnsembleSize == 0 && (itsEnsembleType == kPerturbedEnsemble || itsEnsembleType == kLaggedEnsemble))
+	else if (ensType == kPerturbedEnsemble || ensType == kLaggedEnsemble)
 	{
 		// Regular ensemble size is static, get it from database if user
 		// hasn't specified any size
 
 		auto r = GET_PLUGIN(radon);
 
-		std::string ensembleSizeStr =
-		    r->RadonDB().GetProducerMetaData(itsConfiguration->SourceProducer(0).Id(), "ensemble size");
+		std::string ensembleSizeStr = r->RadonDB().GetProducerMetaData(conf->SourceProducer(0).Id(), "ensemble size");
 
 		if (ensembleSizeStr.empty())
 		{
-			itsLogger.Error("Unable to find ensemble size from database");
-			return;
+			log.Error("Unable to find ensemble size from database");
+			himan::Abort();
 		}
 
-		itsEnsembleSize = std::stoi(ensembleSizeStr);
+		ensSize = std::stoi(ensembleSizeStr);
 	}
+
+	std::unique_ptr<ensemble> ens = nullptr;
+
+	switch (ensType)
+	{
+		case kPerturbedEnsemble:
+			ens = std::unique_ptr<ensemble>(new ensemble(param(paramName), ensSize));
+			break;
+		case kTimeEnsemble:
+		{
+			int secondaryLen = 0, secondaryStep = 1;
+			HPTimeResolution secondarySpan = kHourResolution;
+
+			if (conf->Exists(("secondary_time_len")))
+			{
+				secondaryLen = std::stoi(conf->GetValue("secondary_time_len"));
+			}
+			if (conf->Exists(("secondary_time_step")))
+			{
+				secondaryStep = std::stoi(conf->GetValue("secondary_time_step"));
+			}
+			if (conf->Exists(("secondary_time_span")))
+			{
+				secondarySpan = HPStringToTimeResolution.at(conf->GetValue("secondary_time_span"));
+			}
+
+			ens = std::unique_ptr<time_ensemble>(new time_ensemble(param(paramName), ensSize, kYearResolution,
+			                                                       secondaryLen, secondaryStep, secondarySpan));
+		}
+		break;
+		case kLaggedEnsemble:
+		{
+			auto lagstr = conf->GetValue("lag");
+
+			if (lagstr.empty())
+			{
+				log.Fatal("specify lag value for lagged_ensemble");
+				himan::Abort();
+			}
+
+			int lag = std::stoi(conf->GetValue("lag"));
+
+			if (lag == 0)
+			{
+				log.Fatal("lag value needs to be negative integer");
+				himan::Abort();
+			}
+			else if (lag > 0)
+			{
+				log.Warning("negating lag value " + std::to_string(-lag));
+				lag = -lag;
+			}
+
+			auto stepsstr = conf->GetValue("lagged_steps");
+
+			if (stepsstr.empty())
+			{
+				log.Fatal("specify lagged_steps value for lagged_ensemble");
+				himan::Abort();
+			}
+
+			int steps = std::stoi(conf->GetValue("lagged_steps"));
+
+			if (steps <= 0)
+			{
+				log.Fatal("invalid lagged_steps value. Allowed range >= 0");
+				himan::Abort();
+			}
+
+			steps++;
+
+			ens = std::unique_ptr<lagged_ensemble>(
+			    new lagged_ensemble(param(paramName), ensSize, kHourResolution, lag, steps));
+		}
+		break;
+		default:
+			log.Fatal("Unknown ensemble type: " + ensType);
+			himan::Abort();
+	}
+
+	if (conf->Exists("max_missing_forecasts"))
+	{
+		ens->MaximumMissingForecasts(std::stoi(conf->GetValue("max_missing_forecasts")));
+	}
+
+	return std::move(ens);
+}
+
+void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
+{
+	Init(conf);
 
 	auto fractiles = itsConfiguration->GetValue("fractiles");
 
@@ -151,14 +178,21 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 	}
 
 	params calculatedParams;
+	std::string paramName = conf->GetValue("param");
+
+	if (paramName.empty())
+	{
+		itsLogger.Fatal("param not specified");
+		himan::Abort();
+	}
 
 	for (double frac : itsFractiles)
 	{
-		auto name = "F" + boost::lexical_cast<std::string>(frac) + "-" + itsParamName;
+		auto name = "F" + boost::lexical_cast<std::string>(frac) + "-" + paramName;
 		calculatedParams.push_back(param(name));
 	}
 
-	auto name = util::Split(itsParamName, "-", false);
+	auto name = util::Split(paramName, "-", false);
 	calculatedParams.push_back(param(name[0] + "-MEAN-" + name[1]));    // mean
 	calculatedParams.push_back(param(name[0] + "-STDDEV-" + name[1]));  // standard deviation
 
@@ -170,6 +204,7 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 void fractile::Calculate(std::shared_ptr<info<double>> myTargetInfo, uint16_t threadIndex)
 {
 	const std::string deviceType = "CPU";
+	auto ens = CreateEnsemble(itsConfiguration);
 
 	auto threadedLogger = logger("fractileThread # " + std::to_string(threadIndex));
 
@@ -178,27 +213,6 @@ void fractile::Calculate(std::shared_ptr<info<double>> myTargetInfo, uint16_t th
 
 	threadedLogger.Info("Calculating time " + static_cast<std::string>(forecastTime.ValidDateTime()) + " level " +
 	                    static_cast<std::string>(forecastLevel));
-
-	std::unique_ptr<ensemble> ens;
-
-	switch (itsEnsembleType)
-	{
-		case kPerturbedEnsemble:
-			ens = std::unique_ptr<ensemble>(new ensemble(param(itsParamName), itsEnsembleSize));
-			break;
-		case kTimeEnsemble:
-			ens = std::unique_ptr<time_ensemble>(new time_ensemble(param(itsParamName), itsEnsembleSize));
-			break;
-		case kLaggedEnsemble:
-			ens = std::unique_ptr<lagged_ensemble>(
-			    new lagged_ensemble(param(itsParamName), itsEnsembleSize, kHourResolution, itsLag, itsLaggedSteps));
-			break;
-		default:
-			itsLogger.Fatal("Unknown ensemble type: " + HPEnsembleTypeToString.at(itsEnsembleType));
-			himan::Abort();
-	}
-
-	ens->MaximumMissingForecasts(itsMaximumMissingForecasts);
 
 	try
 	{
@@ -226,12 +240,24 @@ void fractile::Calculate(std::shared_ptr<info<double>> myTargetInfo, uint16_t th
 		{
 			continue;
 		}
+
+		// process mean&var before hanging size of sortedValues
+		double mean = numerical_functions::Mean<double>(sortedValues);
+		if (!std::isfinite(mean))
+		{
+			mean = MissingDouble();
+		}
+
+		double var = std::sqrt(numerical_functions::Variance<double>(sortedValues));
+		if (!std::isfinite(var))
+		{
+			var = MissingDouble();
+		}
+
 		// sortedValues needs to have one element at the back for correct array indexing
 		// NOTE: `ensembleSize` stays the same
-		else
-		{
-			sortedValues.push_back(0.0);
-		}
+
+		sortedValues.push_back(0.0);
 
 		ASSERT(!itsFractiles.empty());
 
@@ -266,18 +292,6 @@ void fractile::Calculate(std::shared_ptr<info<double>> myTargetInfo, uint16_t th
 			++targetInfoIndex;
 		}
 
-		double mean = ens->Mean();
-		if (!std::isfinite(mean))
-		{
-			mean = MissingDouble();
-		}
-
-		double var = std::sqrt(ens->Variance());
-		if (!std::isfinite(var))
-		{
-			var = MissingDouble();
-		}
-
 		myTargetInfo->Index<param>(targetInfoIndex);
 		myTargetInfo->Value(mean);
 		++targetInfoIndex;
@@ -290,5 +304,4 @@ void fractile::Calculate(std::shared_ptr<info<double>> myTargetInfo, uint16_t th
 }
 
 }  // plugin
-
 }  // namespace

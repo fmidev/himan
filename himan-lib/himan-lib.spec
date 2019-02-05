@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 19.1.14
+Version: 19.2.5
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -60,6 +60,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Tue Feb  5 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.2.5-1.fmi
+- ensemble optimization
+* Mon Jan 28 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.1.28-1.fmi
+- Changes to time_ensemble
+- API change for plugin_factory
 * Mon Jan 14 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.1.14-1.fmi
 - Minor bugfix for modifier
 * Mon Jan  7 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.1.7-1.fmi

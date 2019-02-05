@@ -156,7 +156,8 @@ info-class combines all different pieces of metadata into one. This class instan
 | | SetTime | forecast_time | Sets (replaces) current time |
 | point | GetLatLon | number | Returns latlon coordinates of given grid point |
 | table | GetValues | | Returns grid data contents |
-| | SetValues | table | Sets grid data contents |
+| | SetValues | table | Sets grid data contents from a lua table |
+| | SetValuesFromMatrix | matrix | Sets grid data contents from a Himan matrix |
 | number | GetMissingValue | | Returns missing value |
 | | SetMissingValue | number | Sets missing value |
 

@@ -1,11 +1,7 @@
-//
-// @file ensemble.cpp
-//
-//
-
 #include "ensemble.h"
 #include "plugin_factory.h"
 
+#include "numerical_functions.h"
 #include <numeric>
 #include <stddef.h>
 #include <stdint.h>
@@ -223,33 +219,12 @@ std::vector<double> ensemble::SortedValues() const
 
 double ensemble::Mean() const
 {
-	std::vector<double> v = RemoveMissingValues(Values());
-	if (v.size() == 0)
-	{
-		return MissingDouble();
-	}
-
-	return std::accumulate(v.begin(), v.end(), 0.0) / static_cast<double>(v.size());
+	return numerical_functions::Mean<double>(RemoveMissingValues(Values()));
 }
 
 double ensemble::Variance() const
 {
-	std::vector<double> values = RemoveMissingValues(Values());
-	if (values.size() == 0)
-	{
-		return MissingDouble();
-	}
-
-	const double mean = std::accumulate(values.begin(), values.end(), 0.0) / static_cast<double>(values.size());
-
-	double sum = 0.0;
-	for (const auto& x : values)
-	{
-		const double t = x - mean;
-		sum += t * t;
-	}
-
-	return sum / static_cast<double>(values.size());
+	return numerical_functions::Variance<double>(RemoveMissingValues(Values()));
 }
 
 double ensemble::CentralMoment(int N) const
@@ -257,7 +232,7 @@ double ensemble::CentralMoment(int N) const
 	std::vector<double> v = RemoveMissingValues(Values());
 	double mu = Mean();
 	std::for_each(v.begin(), v.end(), [=](double& d) { d = std::pow(d - mu, N); });
-	return std::accumulate(v.begin(), v.end(), 0.0) / static_cast<double>(v.size());
+	return numerical_functions::Mean<double>(v);
 }
 
 HPEnsembleType ensemble::EnsembleType() const

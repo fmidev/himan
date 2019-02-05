@@ -37,8 +37,8 @@ class param
 
 	~param() = default;
 
-	param(const param& other) = default;
-	param& operator=(const param& other) = default;
+	param(const param&) = default;
+	param& operator=(const param&) = default;
 
 	std::string ClassName() const
 	{

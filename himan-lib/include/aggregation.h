@@ -20,8 +20,8 @@ class aggregation
 	            int theFirstTimeValue);
 
 	~aggregation() = default;
-	aggregation(const aggregation& other) = default;
-	aggregation& operator=(const aggregation& other) = default;
+	aggregation(const aggregation&) = default;
+	aggregation& operator=(const aggregation&) = default;
 
 	bool operator==(const aggregation& other) const;
 	bool operator!=(const aggregation& other) const;

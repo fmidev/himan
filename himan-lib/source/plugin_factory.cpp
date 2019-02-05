@@ -48,7 +48,7 @@ plugin_factory::plugin_factory() : itsPluginSearchPath(), itsLogger(logger("plug
 	itsPluginSearchPath.push_back("/usr/lib64/himan-plugins");  // Default RPM location
 }
 
-std::vector<std::shared_ptr<himan_plugin>> plugin_factory::Plugins(HPPluginClass pluginClass)
+std::vector<std::shared_ptr<himan_plugin>> plugin_factory::Plugins()
 {
 	ReadPlugins();
 

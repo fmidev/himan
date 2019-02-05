@@ -528,7 +528,7 @@ void cape::MostUnstableCAPE(shared_ptr<info<float>> myTargetInfo, short threadIn
 	log.Debug("Processing CIN");
 
 	future<vector<float>> CINfut =
-	    async(launch::async, &cape::GetCIN, this, myTargetInfo, LPLT, LPLP, LCLT, LCLP, LCLZ, LFCP, LFCZ);
+	    async(launch::async, &cape::GetCIN, this, myTargetInfo, LPLT, LPLP, LCLP, LFCP, LFCZ);
 
 	log.Debug("Fetching LPL height");
 
@@ -666,7 +666,7 @@ void cape::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short thread
 	future<CAPEdata> CAPEfut = async(launch::async, &cape::GetCAPE, this, myTargetInfo, LFC);
 
 	future<vector<float>> CINfut = async(launch::async, &cape::GetCIN, this, myTargetInfo, get<0>(sourceValues),
-	                                     get<2>(sourceValues), LCL.first, LCL.second, LCLZ, LFC.second, LFCZ);
+	                                     get<2>(sourceValues), LCL.second, LFC.second, LFCZ);
 
 	auto CAPEresult = CAPEfut.get();
 	auto CIN = CINfut.get();
@@ -847,24 +847,24 @@ void ValidateData(vector<float>& LCLZ, vector<float>& LFCT, vector<float>& LFCP,
 }
 
 vector<float> cape::GetCIN(shared_ptr<info<float>> myTargetInfo, const vector<float>& Tsource,
-                           const vector<float>& Psource, const vector<float>& TLCL, const vector<float>& PLCL,
-                           const vector<float>& ZLCL, const vector<float>& PLFC, const vector<float>& ZLFC) const
+                           const vector<float>& Psource, const vector<float>& PLCL,
+                           const vector<float>& PLFC, const vector<float>& ZLFC) const
 {
 #ifdef HAVE_CUDA
 	if (itsConfiguration->UseCuda())
 	{
-		return cape_cuda::GetCINGPU(itsConfiguration, myTargetInfo, Tsource, Psource, TLCL, PLCL, ZLCL, PLFC, ZLFC);
+		return cape_cuda::GetCINGPU(itsConfiguration, myTargetInfo, Tsource, Psource, PLCL, PLFC, ZLFC);
 	}
 	else
 #endif
 	{
-		return GetCINCPU(myTargetInfo, Tsource, Psource, TLCL, PLCL, ZLCL, PLFC, ZLFC);
+		return GetCINCPU(myTargetInfo, Tsource, Psource, PLCL, PLFC, ZLFC);
 	}
 }
 
 vector<float> cape::GetCINCPU(shared_ptr<info<float>> myTargetInfo, const vector<float>& Tsource,
-                              const vector<float>& Psource, const vector<float>& TLCL, const vector<float>& PLCL,
-                              const vector<float>& ZLCL, const vector<float>& PLFC, const vector<float>& ZLFC) const
+                              const vector<float>& Psource, const vector<float>& PLCL,
+                              const vector<float>& PLFC, const vector<float>& ZLFC) const
 {
 	vector<bool> found(Tsource.size(), false);
 

@@ -62,21 +62,21 @@ void luatool::Process(std::shared_ptr<const plugin_configuration> conf)
 	if (!itsConfiguration->GetValue("ThreadDistribution").empty())
 	{
 		if (itsConfiguration->GetValue("ThreadDistribution") == "kThreadForAny")
-                {
-                        itsThreadDistribution = ThreadDistribution::kThreadForAny;
-                }
-                else if (itsConfiguration->GetValue("ThreadDistribution") == "kThreadForForecastTypeAndTime")
+		{
+			itsThreadDistribution = ThreadDistribution::kThreadForAny;
+		}
+		else if (itsConfiguration->GetValue("ThreadDistribution") == "kThreadForForecastTypeAndTime")
 		{
 			itsThreadDistribution = ThreadDistribution::kThreadForForecastTypeAndTime;
 		}
-                else if (itsConfiguration->GetValue("ThreadDistribution") == "kThreadForForecastTypeAndLevel")
-                {
-                        itsThreadDistribution = ThreadDistribution::kThreadForForecastTypeAndLevel;
-                }
-                else if (itsConfiguration->GetValue("ThreadDistribution") == "kThreadForTimeAndLevel")
-                {
-                        itsThreadDistribution = ThreadDistribution::kThreadForTimeAndLevel;
-                }
+		else if (itsConfiguration->GetValue("ThreadDistribution") == "kThreadForForecastTypeAndLevel")
+		{
+			itsThreadDistribution = ThreadDistribution::kThreadForForecastTypeAndLevel;
+		}
+		else if (itsConfiguration->GetValue("ThreadDistribution") == "kThreadForTimeAndLevel")
+		{
+			itsThreadDistribution = ThreadDistribution::kThreadForTimeAndLevel;
+		}
 		else if (itsConfiguration->GetValue("ThreadDistribution") == "kThreadForForecastType")
 		{
 			itsThreadDistribution = ThreadDistribution::kThreadForForecastType;
@@ -393,7 +393,18 @@ void SetValues(info_t& anInfo, const object& table)
 		anInfo->Data().Set(vals);
 	}
 }
-
+void SetValuesFromMatrix(info_t& anInfo, const matrix<double>& mat)
+{
+	if (mat.Size() != anInfo->Data().Size())
+	{
+		std::cerr << "Error::luatool input table size is not the same as grid size: " << mat.Size() << " vs "
+		          << anInfo->Data().Size() << std::endl;
+	}
+	else
+	{
+		anInfo->Data().Set(mat.Values());
+	}
+}
 object GetValues(info_t& anInfo)
 {
 	return VectorToTable(VEC(anInfo));
@@ -1047,6 +1058,7 @@ void BindLib(lua_State* L)
 	              .def("SetParamIndex", &info_wrapper::SetParamIndex)
 	              .def("SetLevelIndex", &info_wrapper::SetLevelIndex)
 	              .def("SetValues", &info_wrapper::SetValues)
+	              .def("SetValuesFromMatrix", &info_wrapper::SetValuesFromMatrix)
 	              .def("GetValues", &info_wrapper::GetValues)
 	              .def("GetLatLon", &info_wrapper::GetLatLon)
 	              .def("GetMissingValue", &info_wrapper::GetMissingValue)

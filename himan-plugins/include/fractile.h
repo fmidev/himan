@@ -38,13 +38,7 @@ class fractile : public compiled_plugin, private compiled_plugin_base
 
    private:
 	virtual void Calculate(std::shared_ptr<info<double>> myTargetInfo, uint16_t threadIndex);
-	std::string itsParamName;
-	int itsEnsembleSize;
-	HPEnsembleType itsEnsembleType;
 	std::vector<double> itsFractiles;
-	int itsLag;
-	int itsLaggedSteps;
-	int itsMaximumMissingForecasts;
 };
 
 extern "C" std::shared_ptr<himan_plugin> create()

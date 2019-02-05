@@ -103,7 +103,10 @@ void forecast_time::ValidDateTime(const std::string& theValidDateTime, const std
 {
 	itsValidDateTime = raw_time(theValidDateTime, theDateMask);
 }
-
+void forecast_time::ValidDateTime(const raw_time& theValidDateTime)
+{
+	itsValidDateTime = theValidDateTime;
+}
 HPTimeResolution forecast_time::StepResolution() const
 {
 	return itsStepResolution;

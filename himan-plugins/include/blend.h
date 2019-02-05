@@ -75,13 +75,19 @@ class blend : public compiled_plugin, private compiled_plugin_base
 	void CalculateBlend(std::shared_ptr<info<double>> targetInfo, unsigned short threadIndex);
 	void CalculateMember(std::shared_ptr<info<double>> targetInfo, unsigned short threadIndex, blend_mode mode);
 
-	matrix<double> CalculateMAE(logger& log, std::shared_ptr<info<double>> targetInfo, const forecast_time& calcTime);
-	matrix<double> CalculateBias(logger& log, std::shared_ptr<info<double>> targetInfo, const forecast_time& calcTime);
+	matrix<double> CalculateMAE(std::shared_ptr<info<double>> targetInfo, const forecast_time& calcTime);
+	matrix<double> CalculateBias(std::shared_ptr<info<double>> targetInfo, const forecast_time& calcTime);
 
 	void SetupOutputForecastTimes(std::shared_ptr<info<double>> Info, const raw_time& latestOrigin,
 	                              const forecast_time& current, int maxStep, int originTimeStep);
 	bool ParseConfigurationOptions(const std::shared_ptr<const plugin_configuration>& conf);
 	std::vector<info_t> FetchRawGrids(std::shared_ptr<info<double>> targetInfo, unsigned short threadIdx) const;
+	std::vector<info_t> FetchMAEAndBiasGrids(std::shared_ptr<info<double>> targetInfo, unsigned short threadIdx,
+	                                         blend_mode type) const;
+
+	std::tuple<info_t, info_t, info_t, info_t> FetchMAEAndBiasSource(std::shared_ptr<info<double>>& targetInfo,
+	                                                                 const forecast_time& calcTime,
+	                                                                 blend_mode type) const;
 
 	blend_mode itsCalculationMode;
 	int itsNumHours;
