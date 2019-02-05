@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 19.2.4
+Version: 19.2.5
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -17,7 +17,7 @@ Requires: himan-lib >= 19.1.28
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 18.2.12
-Requires: libfmidb >= 18.10.5
+Requires: libfmidb >= 19.2.4
 Requires: smartmet-library-newbase >= 17.12.1
 Requires: libpqxx
 Requires: boost-iostreams
@@ -115,8 +115,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Feb  5 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.2.5-1.fmi
+- fractile, radon optimization
 * Mon Feb  4 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.2.4-1.fmi
-- Fidex to blend
+- Fixes to blend
 * Mon Jan 28 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.1.28-1.fmi
 - fractile changes
 * Wed Jan 23 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.1.23-1.fmi
