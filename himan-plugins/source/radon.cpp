@@ -284,8 +284,12 @@ string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<v
 	{
 		const std::string partition = gridgeoms[0][5];
 		const std::string schema = gridgeoms[0][4];
+
+		// clang-format off
+
 		query << "SELECT t.file_location, g.name FROM " << schema << "." << partition << " t, geom g, param p, level l"
 		      << " WHERE t.geometry_id = g.id"
+		      << " AND t.producer_id = " << options.prod.Id()
 		      << " AND t.param_id = p.id"
 		      << " AND l.id = t.level_id"
 		      << " AND t.analysis_time = '" << analtime << "'"
@@ -295,6 +299,8 @@ string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<v
 		      << " AND t.forecast_period = '" << himan::util::MakeSQLInterval(options.time) << "'"
 		      << " AND forecast_type_id IN (" << forecastTypeId << ")"
 		      << " AND forecast_type_value = " << forecastTypeValue << " AND g.id IN (";
+
+		// clang-format on
 
 		for (const auto& geom : gridgeoms)
 		{
