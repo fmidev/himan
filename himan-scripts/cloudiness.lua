@@ -56,9 +56,9 @@ for i=1,#N300 do
   local RR = RRR[i]
   local PT = PRET[i]
 
-  local cl = missing
-  local cm = missing
-  local ch = missing
+  local cl = CL_EC
+  local cm = CM_EC
+  local ch = CH_EC
   local N = missing
 
 -- ALAPILVET (Käytetty painepintoja 850 ja 925)
@@ -168,12 +168,8 @@ Nmat:SetValues(TOTN)
 
 local Nfilt = Filter2D(Nmat, filter)
 
-result:SetParam(param("NH-PRCNT"))
-result:SetValuesFromMatrix(Nfilt)
-luatool:WriteToFile(result)
-
 result:SetParam(param("N-PRCNT"))
-result:SetValues(TOTN)
+result:SetValuesFromMatrix(Nfilt)
 luatool:WriteToFile(result)
 
 result:SetParam(param("NL-PRCNT"))
