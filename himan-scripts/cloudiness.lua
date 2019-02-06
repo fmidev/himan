@@ -121,28 +121,12 @@ for i=1,#N300 do
     ch = (CH_EC)*0.5+((RH_EC_500+RH_EC_300)/2)*0.4
   end
 
-  -- JOS ALAPILVISYYS SUUREMPI KUIN KESKIPILVISYYS TAI YLÄPILVISYYS
-
-  if (cl > cm and cl > ch) then
-    N = cl
-  end
-
-  -- JOS KESKIPILVISYYS ON SUUREMPI KUIN ALAPILVISYYS TAI YLÄPILVISYYS
-
-  if (cm > cl and cm > ch) then
-    N = cm
-  end
-
-  -- JOS YLÄPILVISYYS ON SUUREMPI
-
-  if (ch > cl  and ch > cm) then
-    N = ch
-  end
+  N = math.max(ch, cm, cl)
 
   -- YLÄPILVIEN OSALTA VÄHENNETÄÄN PILVISYYTTÄ, KUN YLÄPILVISYYS DOMINOI (10.7.2018 Lisätty) ; Karkea leikkaus
 
-  if (ch >= cl+cm and cl+cm < 60 ) then
-    N = ch/2 -- and ch = ch/2
+  if (ch >= cl+cm and cl+cm < 60) then
+    N = ch/2
   end
 
   -- PILVISYYDEN LISÄYS JOS SATAA
@@ -162,14 +146,15 @@ for i=1,#N300 do
 end 
 
 -- AIKA- JA HILATASOITUS
-local filter = matrix(3, 3, 1, 1/9)
+local filter = matrix(3, 3, 1, missing)
+filter:Fill(1/9)
 local Nmat = matrix(result:GetGrid():GetNi(), result:GetGrid():GetNj(), 1, 0)
 Nmat:SetValues(TOTN)
 
 local Nfilt = Filter2D(Nmat, filter)
 
 result:SetParam(param("N-PRCNT"))
-result:SetValuesFromMatrix(Nfilt)
+result:SetValues(Nfilt:GetValues())
 luatool:WriteToFile(result)
 
 result:SetParam(param("NL-PRCNT"))
