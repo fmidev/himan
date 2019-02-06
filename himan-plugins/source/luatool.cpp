@@ -1472,18 +1472,8 @@ void luatool::WriteToFile(const info_t targetInfo, write_options writeOptions)
 	// Do nothing, override is needed to prevent double write
 }
 
-void luatool::WriteToFile(const info_t myTargetInfo)
+void luatool::WriteToFile(const info_t targetInfo)
 {
-	// When data is inserted to cache, it is not copied. Therefore we have to copy
-	// data here because luatool is recycling the info (otherwise the contents of
-	// the cache would change).
-	auto newInfo = std::make_shared<info<double>>(*myTargetInfo);
-	newInfo->Create(myTargetInfo->Base());
-	newInfo->Iterator<forecast_type>().Index(myTargetInfo->Index<forecast_type>());
-	newInfo->Iterator<forecast_time>().Index(myTargetInfo->Index<forecast_time>());
-	newInfo->Iterator<level>().Index(myTargetInfo->Index<level>());
-	newInfo->Iterator<param>().Index(myTargetInfo->Index<param>());
-
-	compiled_plugin_base::WriteToFile(newInfo, itsWriteOptions);
+	compiled_plugin_base::WriteToFile(targetInfo, itsWriteOptions);
 }
 #endif  // __clang_analyzer__
