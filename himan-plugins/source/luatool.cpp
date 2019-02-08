@@ -151,25 +151,15 @@ void luatool::ResetVariables(info_t myTargetInfo)
 
 	const auto L = myL.get();
 
-	// luatool is recycling info when data is written, this causes problems with
-	// cache as the data in the cache might be overwritten by another script.
-	// Therefore re-create the info here which means a memory copy.
-	auto newInfo = std::make_shared<info<double>>(*myTargetInfo);
-	newInfo->Create(myTargetInfo->Base());
-	newInfo->Iterator<forecast_type>().Index(myTargetInfo->Index<forecast_type>());
-	newInfo->Iterator<forecast_time>().Index(myTargetInfo->Index<forecast_time>());
-	newInfo->Iterator<level>().Index(myTargetInfo->Index<level>());
-	newInfo->Iterator<param>().Index(myTargetInfo->Index<param>());
-
 	globals(L)["luatool"] = boost::ref(*this);
-	globals(L)["result"] = newInfo;
+	globals(L)["result"] = myTargetInfo;
 	globals(L)["configuration"] = itsConfiguration;
 	globals(L)["write_options"] = boost::ref(itsWriteOptions);
 
 	// Useful variables
-	globals(L)["current_time"] = forecast_time(newInfo->Time());
-	globals(L)["current_level"] = level(newInfo->Level());
-	globals(L)["current_forecast_type"] = forecast_type(newInfo->ForecastType());
+	globals(L)["current_time"] = forecast_time(myTargetInfo->Time());
+	globals(L)["current_level"] = level(myTargetInfo->Level());
+	globals(L)["current_forecast_type"] = forecast_type(myTargetInfo->ForecastType());
 	globals(L)["missing"] = MissingDouble();
 
 	globals(L)["kKelvin"] = constants::kKelvin;
@@ -177,8 +167,8 @@ void luatool::ResetVariables(info_t myTargetInfo)
 	auto h = GET_PLUGIN(hitool);
 
 	h->Configuration(itsConfiguration);
-	h->Time(forecast_time(newInfo->Time()));
-	h->ForecastType(forecast_type(newInfo->ForecastType()));
+	h->Time(forecast_time(myTargetInfo->Time()));
+	h->ForecastType(forecast_type(myTargetInfo->ForecastType()));
 
 	auto r = GET_PLUGIN(radon);
 
@@ -389,11 +379,19 @@ void SetValues(info_t& anInfo, const object& table)
 	{
 		std::cerr << "Error::luatool input table size is not the same as grid size: " << vals.size() << " vs "
 		          << anInfo->Data().Size() << std::endl;
+		return;
 	}
-	else
-	{
-		anInfo->Data().Set(vals);
-	}
+
+	// Reset data here also. If we would not reset, a single info *within in a script* would
+	// be recycled all along, which would mean that newer data would overwrite older data
+	// (that's already in cache!).
+
+	auto g = std::shared_ptr<grid>(anInfo->Grid()->Clone());
+	matrix<double> d(anInfo->Data().SizeX(), anInfo->Data().SizeY(), 1, himan::MissingDouble(), vals);
+
+	auto b = std::make_shared<base<double>>(g, d);
+
+	anInfo->Base(b);
 }
 void SetValuesFromMatrix(info_t& anInfo, const matrix<double>& mat)
 {

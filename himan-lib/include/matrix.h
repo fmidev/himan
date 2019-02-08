@@ -75,6 +75,17 @@ class matrix
 	{
 	}
 
+	matrix(size_t theWidth, size_t theHeight, size_t theDepth, T theMissingValue, const std::vector<T>& theData)
+	    : itsWidth(theWidth), itsHeight(theHeight), itsDepth(theDepth), itsMissingValue(theMissingValue)
+	{
+		itsData = theData;
+		if (theWidth * theHeight * theDepth != theData.size())
+		{
+			std::cerr << "Size of input data does not match dimensions" << std::endl;
+			himan::Abort();
+		}
+	}
+
 	explicit matrix(const matrix& other)
 	    : itsData(other.itsData)  // Copy contents!
 	      ,
