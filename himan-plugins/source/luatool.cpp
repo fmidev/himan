@@ -39,7 +39,9 @@ int BindErrorHandler(lua_State* L);
 void BindPlugins(lua_State* L);
 void BindLib(lua_State* L);
 
-object VectorToTable(const std::vector<double>& vec);
+template <typename T>
+object VectorToTable(const std::vector<T>& vec);
+
 std::vector<double> TableToVector(const object& table);
 
 boost::thread_specific_ptr<lua_State> myL;
@@ -407,7 +409,7 @@ void SetValuesFromMatrix(info_t& anInfo, const matrix<double>& mat)
 }
 object GetValues(info_t& anInfo)
 {
-	return VectorToTable(VEC(anInfo));
+	return VectorToTable<double>(VEC(anInfo));
 }
 point GetLatLon(info_t& anInfo, size_t theIndex)
 {
@@ -461,7 +463,7 @@ object VerticalMaximumGrid(std::shared_ptr<hitool> h, const param& theParam, con
 {
 	try
 	{
-		return VectorToTable(
+		return VectorToTable<double>(
 		    h->VerticalMaximum<double>(theParam, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
 	}
 	catch (const HPExceptionType& e)
@@ -479,7 +481,7 @@ object VerticalMaximum(std::shared_ptr<hitool> h, const param& theParam, double 
 {
 	try
 	{
-		return VectorToTable(h->VerticalMaximum<double>(theParam, firstLevelValue, lastLevelValue));
+		return VectorToTable<double>(h->VerticalMaximum<double>(theParam, firstLevelValue, lastLevelValue));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -497,7 +499,7 @@ object VerticalMinimumGrid(std::shared_ptr<hitool> h, const param& theParam, con
 {
 	try
 	{
-		return VectorToTable(
+		return VectorToTable<double>(
 		    h->VerticalMinimum<double>(theParam, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
 	}
 	catch (const HPExceptionType& e)
@@ -515,7 +517,7 @@ object VerticalMinimum(std::shared_ptr<hitool> h, const param& theParam, double 
 {
 	try
 	{
-		return VectorToTable(h->VerticalMinimum<double>(theParam, firstLevelValue, lastLevelValue));
+		return VectorToTable<double>(h->VerticalMinimum<double>(theParam, firstLevelValue, lastLevelValue));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -533,7 +535,7 @@ object VerticalSumGrid(std::shared_ptr<hitool> h, const param& theParam, const o
 {
 	try
 	{
-		return VectorToTable(
+		return VectorToTable<double>(
 		    h->VerticalSum<double>(theParam, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
 	}
 	catch (const HPExceptionType& e)
@@ -551,7 +553,7 @@ object VerticalSum(std::shared_ptr<hitool> h, const param& theParam, double firs
 {
 	try
 	{
-		return VectorToTable(h->VerticalSum<double>(theParam, firstLevelValue, lastLevelValue));
+		return VectorToTable<double>(h->VerticalSum<double>(theParam, firstLevelValue, lastLevelValue));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -569,7 +571,7 @@ object VerticalAverageGrid(std::shared_ptr<hitool> h, const param& theParam, con
 {
 	try
 	{
-		return VectorToTable(
+		return VectorToTable<double>(
 		    h->VerticalAverage<double>(theParam, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
 	}
 	catch (const HPExceptionType& e)
@@ -587,7 +589,7 @@ object VerticalAverage(std::shared_ptr<hitool> h, const param& theParams, double
 {
 	try
 	{
-		return VectorToTable(h->VerticalAverage<double>(theParams, firstLevelValue, lastLevelValue));
+		return VectorToTable<double>(h->VerticalAverage<double>(theParams, firstLevelValue, lastLevelValue));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -605,8 +607,8 @@ object VerticalCountGrid(std::shared_ptr<hitool> h, const param& theParams, cons
 {
 	try
 	{
-		return VectorToTable(h->VerticalCount<double>(theParams, TableToVector(firstLevelValue),
-		                                              TableToVector(lastLevelValue), TableToVector(findValue)));
+		return VectorToTable<double>(h->VerticalCount<double>(theParams, TableToVector(firstLevelValue),
+		                                                      TableToVector(lastLevelValue), TableToVector(findValue)));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -624,7 +626,7 @@ object VerticalCount(std::shared_ptr<hitool> h, const param& theParams, double f
 {
 	try
 	{
-		return VectorToTable(h->VerticalCount<double>(theParams, firstLevelValue, lastLevelValue, findValue));
+		return VectorToTable<double>(h->VerticalCount<double>(theParams, firstLevelValue, lastLevelValue, findValue));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -642,9 +644,9 @@ object VerticalHeightGrid(std::shared_ptr<hitool> h, const param& theParam, cons
 {
 	try
 	{
-		return VectorToTable(h->VerticalHeight<double>(theParam, TableToVector(firstLevelValue),
-		                                               TableToVector(lastLevelValue), TableToVector(findValue),
-		                                               findNth));
+		return VectorToTable<double>(h->VerticalHeight<double>(theParam, TableToVector(firstLevelValue),
+		                                                       TableToVector(lastLevelValue), TableToVector(findValue),
+		                                                       findNth));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -662,7 +664,8 @@ object VerticalHeight(std::shared_ptr<hitool> h, const param& theParams, double 
 {
 	try
 	{
-		return VectorToTable(h->VerticalHeight<double>(theParams, firstLevelValue, lastLevelValue, findValue, findNth));
+		return VectorToTable<double>(
+		    h->VerticalHeight<double>(theParams, firstLevelValue, lastLevelValue, findValue, findNth));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -680,9 +683,9 @@ object VerticalHeightGreaterThanGrid(std::shared_ptr<hitool> h, const param& the
 {
 	try
 	{
-		return VectorToTable(h->VerticalHeightGreaterThan<double>(theParam, TableToVector(firstLevelValue),
-		                                                          TableToVector(lastLevelValue),
-		                                                          TableToVector(findValue), findNth));
+		return VectorToTable<double>(h->VerticalHeightGreaterThan<double>(theParam, TableToVector(firstLevelValue),
+		                                                                  TableToVector(lastLevelValue),
+		                                                                  TableToVector(findValue), findNth));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -700,7 +703,7 @@ object VerticalHeightGreaterThan(std::shared_ptr<hitool> h, const param& thePara
 {
 	try
 	{
-		return VectorToTable(
+		return VectorToTable<double>(
 		    h->VerticalHeightGreaterThan<double>(theParams, firstLevelValue, lastLevelValue, findValue, findNth));
 	}
 	catch (const HPExceptionType& e)
@@ -719,9 +722,9 @@ object VerticalHeightLessThanGrid(std::shared_ptr<hitool> h, const param& thePar
 {
 	try
 	{
-		return VectorToTable(h->VerticalHeightLessThan<double>(theParam, TableToVector(firstLevelValue),
-		                                                       TableToVector(lastLevelValue), TableToVector(findValue),
-		                                                       findNth));
+		return VectorToTable<double>(h->VerticalHeightLessThan<double>(theParam, TableToVector(firstLevelValue),
+		                                                               TableToVector(lastLevelValue),
+		                                                               TableToVector(findValue), findNth));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -739,7 +742,7 @@ object VerticalHeightLessThan(std::shared_ptr<hitool> h, const param& theParams,
 {
 	try
 	{
-		return VectorToTable(
+		return VectorToTable<double>(
 		    h->VerticalHeightLessThan<double>(theParams, firstLevelValue, lastLevelValue, findValue, findNth));
 	}
 	catch (const HPExceptionType& e)
@@ -757,7 +760,7 @@ object VerticalValueGrid(std::shared_ptr<hitool> h, const param& theParam, const
 {
 	try
 	{
-		return VectorToTable(h->VerticalValue<double>(theParam, TableToVector(findValue)));
+		return VectorToTable<double>(h->VerticalValue<double>(theParam, TableToVector(findValue)));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -774,7 +777,7 @@ object VerticalValue(std::shared_ptr<hitool> h, const param& theParam, double fi
 {
 	try
 	{
-		return VectorToTable(h->VerticalValue<double>(theParam, findValue));
+		return VectorToTable<double>(h->VerticalValue<double>(theParam, findValue));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -792,7 +795,7 @@ object VerticalPlusMinusAreaGrid(std::shared_ptr<hitool> h, const param& thePara
 {
 	try
 	{
-		return VectorToTable(
+		return VectorToTable<double>(
 		    h->PlusMinusArea<double>(theParams, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
 	}
 	catch (const HPExceptionType& e)
@@ -811,7 +814,7 @@ object VerticalPlusMinusArea(std::shared_ptr<hitool> h, const param& theParams, 
 {
 	try
 	{
-		return VectorToTable(h->PlusMinusArea<double>(theParams, firstLevelValue, lastLevelValue));
+		return VectorToTable<double>(h->PlusMinusArea<double>(theParams, firstLevelValue, lastLevelValue));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -846,7 +849,7 @@ void SetLowerHeightGrid(modifier& mod, const object& lowerHeight)
 }
 object GetLowerHeightGrid(modifier& mod)
 {
-	return VectorToTable(mod.LowerHeight());
+	return VectorToTable<double>(mod.LowerHeight());
 }
 void SetUpperHeightGrid(modifier& mod, const object& upperHeight)
 {
@@ -854,7 +857,7 @@ void SetUpperHeightGrid(modifier& mod, const object& upperHeight)
 }
 object GetUpperHeightGrid(modifier& mod)
 {
-	return VectorToTable(mod.UpperHeight());
+	return VectorToTable<double>(mod.UpperHeight());
 }
 void SetFindValueGrid(modifier& mod, const object& findValue)
 {
@@ -862,11 +865,11 @@ void SetFindValueGrid(modifier& mod, const object& findValue)
 }
 object GetFindValueGrid(modifier& mod)
 {
-	return VectorToTable(mod.FindValue());
+	return VectorToTable<double>(mod.FindValue());
 }
 object Result(modifier& mod)
 {
-	return VectorToTable(mod.Result());
+	return VectorToTable<double>(mod.Result());
 }
 namespace findvalue
 {
@@ -936,7 +939,7 @@ namespace mean
 {
 object Result(modifier_mean& mod)
 {
-	return VectorToTable(mod.Result());
+	return VectorToTable<double>(mod.Result());
 }
 void Process(modifier_mean& mod, const object& data, const object& height)
 {
@@ -959,11 +962,11 @@ namespace ensemble_wrapper
 {
 object Values(const ensemble& ens)
 {
-	return VectorToTable(ens.Values());
+	return VectorToTable<float>(ens.Values());
 }
 object SortedValues(const ensemble& ens)
 {
-	return VectorToTable(ens.SortedValues());
+	return VectorToTable<float>(ens.SortedValues());
 }
 }  // ensemble_wrapper
 
@@ -971,11 +974,11 @@ namespace lagged_ensemble_wrapper
 {
 object Values(const lagged_ensemble& ens)
 {
-	return VectorToTable(ens.Values());
+	return VectorToTable<float>(ens.Values());
 }
 object SortedValues(const lagged_ensemble& ens)
 {
-	return VectorToTable(ens.SortedValues());
+	return VectorToTable<float>(ens.SortedValues());
 }
 }  // lagged_ensemble_wrapper
 
@@ -987,7 +990,7 @@ void SetValues(matrix<double>& mat, const object& values)
 }
 object GetValues(matrix<double>& mat)
 {
-	return VectorToTable(std::vector<double>(mat.Values()));
+	return VectorToTable<double>(std::vector<double>(mat.Values()));
 }
 void Fill(matrix<double>& mat, double value)
 {
@@ -1250,7 +1253,7 @@ void BindLib(lua_State* L)
 		      .def("Value", &ensemble::Value)
 		      .def("Mean", &ensemble::Mean)
 		      .def("Variance", &ensemble::Variance)
-		      .def("CentralMoment", LUA_CMEMFN(double,ensemble,CentralMoment, int))
+		      .def("CentralMoment", LUA_CMEMFN(float,ensemble,CentralMoment, int))
 		      .def("Size", &ensemble::Size)
 		      .def("ExpectedSize", &ensemble::ExpectedSize)
 		      .def("SetMaximumMissingForecasts", LUA_MEMFN(void, ensemble, MaximumMissingForecasts, int))
@@ -1415,17 +1418,18 @@ luabind::object luatool::Fetch(const forecast_time& theTime, const level& theLev
 	{
 		return object();
 	}
-	return VectorToTable(x->Data().Values());
+	return VectorToTable<double>(x->Data().Values());
 }
 
-object VectorToTable(const std::vector<double>& vec)
+template <typename T>
+object VectorToTable(const std::vector<T>& vec)
 {
 	ASSERT(myL.get());
 
 	object ret = newtable(myL.get());
 
 	size_t i = 0;
-	for (const double& val : vec)
+	for (const T& val : vec)
 	{
 		ret[++i] = val;
 
@@ -1435,6 +1439,9 @@ object VectorToTable(const std::vector<double>& vec)
 
 	return ret;
 }
+
+template object VectorToTable(const std::vector<double>&);
+template object VectorToTable(const std::vector<float>&);
 
 std::vector<double> TableToVector(const object& table)
 {

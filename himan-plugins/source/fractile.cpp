@@ -167,7 +167,7 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 			boost::trim(val);
 			try
 			{
-				itsFractiles.push_back(std::stod(val));
+				itsFractiles.push_back(std::stof(val));
 			}
 			catch (const std::invalid_argument& e)
 			{
@@ -186,7 +186,7 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 		himan::Abort();
 	}
 
-	for (double frac : itsFractiles)
+	for (float frac : itsFractiles)
 	{
 		auto name = "F" + boost::lexical_cast<std::string>(frac) + "-" + paramName;
 		calculatedParams.push_back(param(name));
@@ -198,10 +198,10 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 
 	SetParams(calculatedParams);
 
-	Start();
+	Start<float>();
 }
 
-void fractile::Calculate(std::shared_ptr<info<double>> myTargetInfo, uint16_t threadIndex)
+void fractile::Calculate(std::shared_ptr<info<float>> myTargetInfo, uint16_t threadIndex)
 {
 	const std::string deviceType = "CPU";
 	auto ens = CreateEnsemble(itsConfiguration);
@@ -242,16 +242,16 @@ void fractile::Calculate(std::shared_ptr<info<double>> myTargetInfo, uint16_t th
 		}
 
 		// process mean&var before hanging size of sortedValues
-		double mean = numerical_functions::Mean<double>(sortedValues);
+		float mean = numerical_functions::Mean<float>(sortedValues);
 		if (!std::isfinite(mean))
 		{
-			mean = MissingDouble();
+			mean = MissingFloat();
 		}
 
-		double var = std::sqrt(numerical_functions::Variance<double>(sortedValues));
+		float var = std::sqrt(numerical_functions::Variance<float>(sortedValues));
 		if (!std::isfinite(var))
 		{
-			var = MissingDouble();
+			var = MissingFloat();
 		}
 
 		// sortedValues needs to have one element at the back for correct array indexing
@@ -266,29 +266,29 @@ void fractile::Calculate(std::shared_ptr<info<double>> myTargetInfo, uint16_t th
 		{
 			// use the linear interpolation between closest ranks method recommended by NIST
 			// http://www.itl.nist.gov/div898/handbook/prc/section2/prc262.htm
-			double x;
+			float x;
 
 			// check lower corner case p E [0,1/(N+1)]
-			if (P / 100.0 <= 1.0 / static_cast<double>(ensembleSize + 1))
+			if (P / 100.0 <= 1.0 / static_cast<float>(ensembleSize + 1))
 			{
 				x = 1;
 			}
 			// check upper corner case p E [N/(N+1),1]
-			else if (P / 100.0 >= static_cast<double>(ensembleSize) / static_cast<double>(ensembleSize + 1))
+			else if (P / 100.0f >= static_cast<float>(ensembleSize) / static_cast<float>(ensembleSize + 1))
 			{
-				x = static_cast<double>(ensembleSize);
+				x = static_cast<float>(ensembleSize);
 			}
 			// everything that happens on the interval between
 			else
 			{
-				x = P / 100.0 * static_cast<double>(ensembleSize + 1);
+				x = P / 100.0f * static_cast<float>(ensembleSize + 1);
 			}
 			// floor x explicitly before casting to int
 			int i = static_cast<int>(std::floor(x));
 
 			myTargetInfo->Index<param>(targetInfoIndex);
 
-			myTargetInfo->Value(sortedValues[i - 1] + std::fmod(x, 1.0) * (sortedValues[i] - sortedValues[i - 1]));
+			myTargetInfo->Value(sortedValues[i - 1] + std::fmod(x, 1.0f) * (sortedValues[i] - sortedValues[i - 1]));
 			++targetInfoIndex;
 		}
 

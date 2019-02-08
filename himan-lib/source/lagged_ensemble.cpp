@@ -28,7 +28,7 @@ lagged_ensemble::lagged_ensemble(const param& parameter, size_t expectedEnsemble
 
 	for (size_t i = 1; i < itsDesiredForecasts.capacity(); i++)
 	{
-		itsDesiredForecasts.push_back(forecast_type(kEpsPerturbation, static_cast<double>(i)));
+		itsDesiredForecasts.push_back(forecast_type(kEpsPerturbation, static_cast<float>(i)));
 	}
 
 	itsLogger = logger("lagged_ensemble");
@@ -68,7 +68,7 @@ void lagged_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, 
 		{
 			try
 			{
-				auto Info = f->Fetch(config, ftime, forecastLevel, itsParam, desired, false);
+				auto Info = f->Fetch<float>(config, ftime, forecastLevel, itsParam, desired, false);
 				itsForecasts.push_back(Info);
 
 				if (currentStep == 0)

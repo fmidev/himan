@@ -338,10 +338,10 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 
 	FetchRemainingLimitsForStations(conf->BaseGrid(), itsParamConfigurations, itsLogger);
 
-	Start();
+	Start<float>();
 }
 
-void probability::Calculate(info_t myTargetInfo, unsigned short threadIndex)
+void probability::Calculate(std::shared_ptr<info<float>> myTargetInfo, unsigned short threadIndex)
 {
 	auto threadedLogger = logger("probabilityThread # " + std::to_string(threadIndex));
 
@@ -387,7 +387,7 @@ void probability::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		if (pc.useGaussianSpread)
 		{
 			threadedLogger.Debug("Gaussian spread is enabled");
-			ProbabilityWithGaussianSpread<double>(myTargetInfo, ToParamConfiguration<double>(pc), ens);
+			ProbabilityWithGaussianSpread<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens);
 		}
 		else
 		{
@@ -395,26 +395,24 @@ void probability::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			switch (pc.comparison)
 			{
 				case comparison_op::LTEQ:
-					Probability<double>(myTargetInfo, ToParamConfiguration<double>(pc), ens, std::less_equal<double>());
+					Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::less_equal<float>());
 					break;
 				case comparison_op::GTEQ:
-					Probability<double>(myTargetInfo, ToParamConfiguration<double>(pc), ens,
-					                    std::greater_equal<double>());
+					Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::greater_equal<float>());
 					break;
 				case comparison_op::EQ:
-					Probability<double>(myTargetInfo, ToParamConfiguration<double>(pc), ens, std::equal_to<double>());
+					Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::equal_to<float>());
 					break;
 				case comparison_op::NEQ:
-					Probability<double>(myTargetInfo, ToParamConfiguration<double>(pc), ens,
-					                    std::not_equal_to<double>());
+					Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::not_equal_to<float>());
 					break;
 				case comparison_op::EQIN:
-					Probability<std::vector<double>>(myTargetInfo, ToParamConfiguration<std::vector<double>>(pc), ens,
-					                                 EQINCompare());
+					Probability<std::vector<float>>(myTargetInfo, ToParamConfiguration<std::vector<float>>(pc), ens,
+					                                EQINCompare());
 					break;
 				case comparison_op::BTWN:
-					Probability<std::vector<double>>(myTargetInfo, ToParamConfiguration<std::vector<double>>(pc), ens,
-					                                 BTWNCompare());
+					Probability<std::vector<float>>(myTargetInfo, ToParamConfiguration<std::vector<float>>(pc), ens,
+					                                BTWNCompare());
 					break;
 				default:
 					threadedLogger.Error("Unsupported comparison operator");

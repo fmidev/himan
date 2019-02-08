@@ -17,9 +17,9 @@ template <typename T>
 param_configuration<T> ToParamConfiguration(const partial_param_configuration& partial);
 
 template <>
-param_configuration<double> ToParamConfiguration(const partial_param_configuration& partial)
+param_configuration<float> ToParamConfiguration(const partial_param_configuration& partial)
 {
-	param_configuration<double> pc;
+	param_configuration<float> pc;
 
 	pc.comparison = partial.comparison;
 	pc.output = partial.output;
@@ -29,7 +29,7 @@ param_configuration<double> ToParamConfiguration(const partial_param_configurati
 
 	for (const auto& v : partial.thresholds)
 	{
-		pc.thresholds.push_back(stod(v));
+		pc.thresholds.push_back(stof(v));
 	}
 
 	pc.useGaussianSpread = partial.useGaussianSpread;
@@ -38,9 +38,9 @@ param_configuration<double> ToParamConfiguration(const partial_param_configurati
 }
 
 template <>
-param_configuration<std::vector<double>> ToParamConfiguration(const partial_param_configuration& partial)
+param_configuration<std::vector<float>> ToParamConfiguration(const partial_param_configuration& partial)
 {
-	param_configuration<std::vector<double>> pc;
+	param_configuration<std::vector<float>> pc;
 
 	pc.comparison = partial.comparison;
 	pc.output = partial.output;
@@ -50,10 +50,10 @@ param_configuration<std::vector<double>> ToParamConfiguration(const partial_para
 	for (const auto& v : partial.thresholds)
 	{
 		const auto elems = himan::util::Split(v, ",", false);
-		std::vector<double> x;
+		std::vector<float> x;
 		for (const auto& vv : elems)
 		{
-			x.push_back(stod(vv));
+			x.push_back(stof(vv));
 		}
 
 		pc.thresholds.push_back(x);
@@ -63,7 +63,7 @@ param_configuration<std::vector<double>> ToParamConfiguration(const partial_para
 }
 
 template <typename T>
-T GetThreshold(std::shared_ptr<himan::info<double>>& targetInfo, const param_configuration<T>& paramConf, bool isGrid)
+T GetThreshold(std::shared_ptr<himan::info<float>>& targetInfo, const param_configuration<T>& paramConf, bool isGrid)
 {
 	if (isGrid)
 	{
@@ -82,9 +82,9 @@ T GetThreshold(std::shared_ptr<himan::info<double>>& targetInfo, const param_con
  * is in a set of values.
  */
 
-struct EQINCompare : public std::binary_function<double, std::vector<double>, bool>
+struct EQINCompare : public std::binary_function<float, std::vector<float>, bool>
 {
-	bool operator()(double a, const std::vector<double>& b) const
+	bool operator()(float a, const std::vector<float>& b) const
 	{
 		return std::find(b.begin(), b.end(), a) != b.end();
 	}
@@ -97,9 +97,9 @@ struct EQINCompare : public std::binary_function<double, std::vector<double>, bo
  * is within a range bounded by [lower value,upper value]
  */
 
-struct BTWNCompare : public std::binary_function<double, std::vector<double>, bool>
+struct BTWNCompare : public std::binary_function<float, std::vector<float>, bool>
 {
-	bool operator()(double a, const std::vector<double>& b) const
+	bool operator()(float a, const std::vector<float>& b) const
 	{
 		ASSERT(b.size() == 2);
 		return (a >= b[0] && a < b[1]);
@@ -107,8 +107,8 @@ struct BTWNCompare : public std::binary_function<double, std::vector<double>, bo
 };
 
 template <typename T>
-void Probability(std::shared_ptr<himan::info<double>> targetInfo, const param_configuration<T>& paramConf,
-                 std::unique_ptr<himan::ensemble>& ens, std::function<bool(double, T)> comp_op)
+void Probability(std::shared_ptr<himan::info<float>> targetInfo, const param_configuration<T>& paramConf,
+                 std::unique_ptr<himan::ensemble>& ens, std::function<bool(float, T)> comp_op)
 {
 	targetInfo->Find<himan::param>(paramConf.output);
 	targetInfo->ResetLocation();
@@ -129,30 +129,30 @@ void Probability(std::shared_ptr<himan::info<double>> targetInfo, const param_co
 		if (allowMissing == false)
 		{
 			values.erase(
-			    std::remove_if(values.begin(), values.end(), [](const double& v) { return himan::IsMissingDouble(v); }),
+			    std::remove_if(values.begin(), values.end(), [](const float& v) { return himan::IsMissing(v); }),
 			    values.end());
 		}
 
 		if (values.empty())
 		{
-			targetInfo->Value(himan::MissingDouble());
+			targetInfo->Value(himan::MissingFloat());
 			continue;
 		}
 
 		const T threshold = GetThreshold<T>(targetInfo, paramConf, isGrid);
 
 		const long int cnt = std::count_if(values.begin(), values.end(), std::bind2nd(comp_op, threshold));
-		const double probability = static_cast<double>(cnt) / static_cast<double>(values.size());
+		const float probability = static_cast<float>(cnt) / static_cast<float>(values.size());
 
 		targetInfo->Value(probability);
 	}
 }
 
 template <typename T>
-void ProbabilityWithGaussianSpread(std::shared_ptr<himan::info<double>> targetInfo,
-                                   const param_configuration<T>& paramConf, std::unique_ptr<himan::ensemble>& ens)
+void ProbabilityWithGaussianSpread(std::shared_ptr<himan::info<T>> targetInfo, const param_configuration<T>& paramConf,
+                                   std::unique_ptr<himan::ensemble>& ens)
 {
-	targetInfo->Find<himan::param>(paramConf.output);
+	targetInfo->template Find<himan::param>(paramConf.output);
 	targetInfo->ResetLocation();
 	ens->ResetLocation();
 
@@ -160,20 +160,22 @@ void ProbabilityWithGaussianSpread(std::shared_ptr<himan::info<double>> targetIn
 
 	while (targetInfo->NextLocation() && ens->NextLocation())
 	{
-		const double mean = ens->Mean();
+		const float mean = ens->Mean();
 
 		if (himan::IsMissing(mean))
 		{
 			continue;
 		}
 
-		const double stde = sqrt(ens->Variance());
+		const float stde = sqrtf(ens->Variance());
 		const T threshold = GetThreshold<T>(targetInfo, paramConf, isGrid);
 
-		const double norm = (threshold - mean) / stde;           // normalize to normal distribution mean=0, stde=1
-		double probability = 0.5 * (1 + erf(norm * M_SQRT1_2));  // cdf and error function:
-		                                                         // https://www.johndcook.com/erf_and_normal_cdf.pdf
-		                                                         // probability is now -∞ -> threshold
+		const float norm = (threshold - mean) / stde;  // normalize to normal distribution mean=0, stde=1
+		float probability =
+		    0.5f *
+		    (1 + erff(norm * static_cast<float>(M_SQRT1_2)));  // cdf and error function:
+		                                                       // https://www.johndcook.com/erf_and_normal_cdf.pdf
+		                                                       // probability is now -∞ -> threshold
 
 		if (paramConf.comparison == comparison_op::GTEQ)
 		{
