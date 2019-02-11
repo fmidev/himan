@@ -387,7 +387,7 @@ void SetValues(info_t& anInfo, const object& table)
 	// (that's already in cache!).
 
 	auto g = std::shared_ptr<grid>(anInfo->Grid()->Clone());
-	matrix<double> d(anInfo->Data().SizeX(), anInfo->Data().SizeY(), 1, himan::MissingDouble(), vals);
+	matrix<double> d(anInfo->Data().SizeX(), anInfo->Data().SizeY(), 1, anInfo->Data().MissingValue(), vals);
 
 	auto b = std::make_shared<base<double>>(g, d);
 
