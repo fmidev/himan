@@ -40,7 +40,6 @@ class csv : public io_plugin
 	 *
 	 * @param file Input file name
 	 * @param options Search options (param, level, time)
-	 * @param readContents Specify if data should also be read (and not only metadata)
 	 *
 	 * @return A vector of shared_ptr'd infos. Vector size is always 0 or 1.
 	 */

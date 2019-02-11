@@ -2078,15 +2078,14 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 template bool grib::CreateInfoFromGrib<double>(const search_options&, bool, bool, shared_ptr<info<double>>) const;
 
 vector<shared_ptr<himan::info<double>>> grib::FromFile(const string& theInputFile, const search_options& options,
-                                                       bool readContents, bool readPackedData,
-                                                       bool readIfNotMatching) const
+                                                       bool readPackedData, bool readIfNotMatching) const
 {
-	return FromFile<double>(theInputFile, options, readContents, readPackedData, readIfNotMatching);
+	return FromFile<double>(theInputFile, options, readPackedData, readIfNotMatching);
 }
 
 template <typename T>
 vector<shared_ptr<himan::info<T>>> grib::FromFile(const string& theInputFile, const search_options& options,
-                                                  bool readContents, bool readPackedData, bool readIfNotMatching) const
+                                                  bool readPackedData, bool readIfNotMatching) const
 {
 	vector<shared_ptr<himan::info<T>>> infos;
 
@@ -2137,21 +2136,19 @@ vector<shared_ptr<himan::info<T>>> grib::FromFile(const string& theInputFile, co
 }
 
 template vector<shared_ptr<himan::info<double>>> grib::FromFile<double>(const string&, const search_options&, bool,
-                                                                        bool, bool) const;
-template vector<shared_ptr<himan::info<float>>> grib::FromFile<float>(const string&, const search_options&, bool, bool,
+                                                                        bool) const;
+template vector<shared_ptr<himan::info<float>>> grib::FromFile<float>(const string&, const search_options&, bool,
                                                                       bool) const;
 
 vector<shared_ptr<himan::info<double>>> grib::FromIndexFile(const string& theInputFile, const search_options& options,
-                                                            bool readContents, bool readPackedData,
-                                                            bool readIfNotMatching) const
+                                                            bool readPackedData, bool readIfNotMatching) const
 {
-	return FromIndexFile<double>(theInputFile, options, readContents, readPackedData, readIfNotMatching);
+	return FromIndexFile<double>(theInputFile, options, readPackedData, readIfNotMatching);
 }
 
 template <typename T>
 vector<shared_ptr<himan::info<T>>> grib::FromIndexFile(const string& theInputFile, const search_options& options,
-                                                       bool readContents, bool readPackedData,
-                                                       bool readIfNotMatching) const
+                                                       bool readPackedData, bool readIfNotMatching) const
 {
 	vector<shared_ptr<himan::info<T>>> infos;
 
@@ -2191,9 +2188,9 @@ vector<shared_ptr<himan::info<T>>> grib::FromIndexFile(const string& theInputFil
 }
 
 template vector<shared_ptr<himan::info<double>>> grib::FromIndexFile<double>(const string&, const search_options&, bool,
-                                                                             bool, bool) const;
+                                                                             bool) const;
 template vector<shared_ptr<himan::info<float>>> grib::FromIndexFile<float>(const string&, const search_options&, bool,
-                                                                           bool, bool) const;
+                                                                           bool) const;
 
 void grib::UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restrict__ unpacked, size_t len,
                         size_t unpackedLen) const
