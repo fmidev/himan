@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 19.2.5
+Version: 19.2.11
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -115,6 +115,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Feb 11 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.2.11-1.fmi
+- fractile, probability in single precision
+- Fix for luatool info cycling issue
 * Tue Feb  5 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.2.5-1.fmi
 - fractile, radon optimization
 * Mon Feb  4 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.2.4-1.fmi
