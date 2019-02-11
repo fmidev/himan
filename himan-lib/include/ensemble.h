@@ -53,22 +53,22 @@ class ensemble
 	bool NextLocation();
 
 	/// @brief Returns the current value of the specified forecast of the ensemble
-	double Value(size_t forecastIndex) const;
+	float Value(size_t forecastIndex) const;
 
 	/// @brief Returns the current values of the ensemble
-	std::vector<double> Values() const;
+	std::vector<float> Values() const;
 
 	/// @brief Returns the current values of the ensemble sorted in increasing order, missing values are removed
-	std::vector<double> SortedValues() const;
+	std::vector<float> SortedValues() const;
 
 	/// @brief Returns the mean value of the ensemble
-	double Mean() const;
+	float Mean() const;
 
 	/// @brief Returns the variance of the ensemble
-	double Variance() const;
+	float Variance() const;
 
 	/// @brief Returns Nth central moment of the ensemble
-	double CentralMoment(int N) const;
+	float CentralMoment(int N) const;
 
 	/// @brief Returns the size of the currently fetched ensemble
 	size_t Size() const;
@@ -88,7 +88,7 @@ class ensemble
 	void MaximumMissingForecasts(int maximumMissing);
 
 	/// @brief Return all data for given ensemble member
-	info_t Forecast(size_t i);
+	std::shared_ptr<info<float>> Forecast(size_t i);
 
    protected:
 	/// @brief Verifies that we have the required number of valid forecasts, else abort execution.
@@ -104,7 +104,7 @@ class ensemble
 	std::vector<forecast_type> itsDesiredForecasts;
 
 	/// @brief Forecasts acquired with Fetch(), each call of Fetch() will overwrite the previous results
-	std::vector<info_t> itsForecasts;
+	std::vector<std::shared_ptr<info<float>>> itsForecasts;
 
 	HPEnsembleType itsEnsembleType;
 
@@ -114,7 +114,7 @@ class ensemble
 	int itsMaximumMissingForecasts;
 };
 
-inline double ensemble::Value(size_t forecastIndex) const
+inline float ensemble::Value(size_t forecastIndex) const
 {
 	return itsForecasts[forecastIndex]->Value();
 }

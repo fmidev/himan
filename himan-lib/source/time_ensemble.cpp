@@ -120,7 +120,7 @@ void time_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, co
 	{
 		try
 		{
-			auto info = f->Fetch(config, tm, forecastLevel, itsParam);
+			auto info = f->Fetch<float>(config, tm, forecastLevel, itsParam);
 
 			itsForecasts.push_back(info);
 		}
