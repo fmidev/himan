@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 19.2.11
+Version: 19.2.12
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -16,9 +16,9 @@ Requires: libstdc++
 Requires: himan-lib >= 19.1.28
 Requires: lua >= 5.1.4
 Requires: unixODBC
-Requires: libfmigrib >= 18.2.12
-Requires: libfmidb >= 19.2.4
-Requires: smartmet-library-newbase >= 17.12.1
+Requires: libfmigrib >= 19.2.12
+Requires: libfmidb >= 19.2.12
+Requires: smartmet-library-newbase >= 18.7.23
 Requires: libpqxx
 Requires: boost-iostreams
 Requires: boost-thread
@@ -37,8 +37,8 @@ Requires: jasper-libs
 Requires: eccodes
 %endif
 BuildRequires: libfmidb-devel >= 18.10.5
-BuildRequires: libfmigrib-devel >= 18.2.12
-BuildRequires: smartmet-library-newbase-devel >= 17.12.1
+BuildRequires: libfmigrib-devel >= 19.2.12
+BuildRequires: smartmet-library-newbase-devel >= 18.7.23
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: boost-devel >= 1.66
@@ -115,6 +115,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Feb 12 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.2.12-1.fmi
+- Minor changes to grib plugin
 * Mon Feb 11 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.2.11-1.fmi
 - fractile, probability in single precision
 - Fix for luatool info cycling issue
