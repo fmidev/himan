@@ -162,7 +162,6 @@ class fetcher : public auxiliary_plugin
 	 *
 	 * @param files The files that are read
 	 * @param options A struct holding the search criteria
-	 * @param readContents Specify if data should also be read (and not only metadata)
 	 * @param readPackedData Whether to read packed data. Caller must do unpacking.
 	 * @param forceCaching Force caching of data even if it does not match searched data
 	 *
@@ -171,8 +170,7 @@ class fetcher : public auxiliary_plugin
 
 	template <typename T>
 	std::vector<std::shared_ptr<info<T>>> FromFile(const std::vector<std::string>& files, search_options& options,
-	                                               bool readContents = true, bool readPackedData = false,
-	                                               bool forceCaching = false);
+	                                               bool readPackedData = false, bool forceCaching = false);
 
 	/**
 	 * @brief Map level definitions between models and our expected levels.
