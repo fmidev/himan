@@ -98,16 +98,7 @@ class grib : public io_plugin
 	bool CreateInfoFromGrib(const search_options& options, bool readPackedData, bool forceCaching,
 	                        std::shared_ptr<info<T>> newInfo) const;
 
-	/**
-	 * @brief OptionsToKeys
-	 *
-	 * Converts the search options struct into a map of key-value pairs that are used to select a grib message from a
-	 * grib
-	 * index file
-	 * @param options Search options (param, level, time)
-	 */
-
-	std::map<std::string, long> OptionsToKeys(const search_options& options) const;
+	std::map<std::string, long> OptionsToKeys(const search_options& options, long edition) const;
 
 	std::unique_ptr<grid> ReadAreaAndGrid() const;
 	himan::param ReadParam(const search_options& options, const producer& prod) const;
