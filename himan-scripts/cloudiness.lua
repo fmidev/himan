@@ -135,7 +135,7 @@ for i=1,#N300 do
     N = 50
   end
 
-  if (RR > 0.2 and PRET == 1 and N < 100) then
+  if (RR > 0.2 and PT == 1 and N < 100) then
     N = 100
   end
 
