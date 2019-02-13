@@ -195,19 +195,11 @@ void blend::Calculate(shared_ptr<info<double>> targetInfo, unsigned short thread
 	switch (itsCalculationMode)
 	{
 		case kCalculateBlend:
-			log.Info("Calculating blend for " + currentParam.Name() + " " +
-			         static_cast<string>(currentTime.ValidDateTime()));
 			CalculateBlend(targetInfo, threadIndex);
 			break;
 		case kCalculateMAE:
-			log.Info("Calculating weights for " + currentParam.Name() + " " +
-			         static_cast<string>(currentTime.ValidDateTime()));
-			CalculateMember(targetInfo, threadIndex, kCalculateMAE);
-			break;
 		case kCalculateBias:
-			log.Info("Calculating bias corrected grids for " + currentParam.Name() + " " +
-			         static_cast<string>(currentTime.ValidDateTime()));
-			CalculateMember(targetInfo, threadIndex, kCalculateBias);
+			CalculateMember(targetInfo, threadIndex, itsCalculationMode);
 			break;
 		default:
 			log.Error("Invalid calculation mode");
@@ -229,11 +221,16 @@ tuple<info_t, info_t, info_t, info_t> blend::FetchMAEAndBiasSource(shared_ptr<in
 		return make_tuple(nullptr, nullptr, nullptr, nullptr);
 	}
 
-	forecast_time leadTime(calcTime);
+	// rawTime is the time from where we fetch the raw data
+	// it must be always the *latest* raw data from either ahour 00 or 12
+	// (matching ahour of calcTime)
+	forecast_time rawTime(calcTime);
 
-	ASSERT(leadTime.OriginDateTime().String("%H") == "00" || leadTime.OriginDateTime().String("%H") == "12");
+	ASSERT(rawTime.OriginDateTime().String("%H") == "00" || rawTime.OriginDateTime().String("%H") == "12");
 
-	info_t forecast = Fetch(leadTime, currentLevel, currentParam, itsBlendProducer.type);
+	itsLogger.Debug("Fetching RAW");
+
+	info_t forecast = Fetch(rawTime, currentLevel, currentParam, itsBlendProducer.type);
 
 	if (!forecast)
 	{
@@ -242,16 +239,37 @@ tuple<info_t, info_t, info_t, info_t> blend::FetchMAEAndBiasSource(shared_ptr<in
 
 	// Previous forecast's bias corrected data is optional. If the data is not found we'll set the grid to missing.
 	// (This happens, for example, during initialization.)
+
+	// previous time is always in relation to _current_ time, not "calcTime"
 	forecast_time prevTime(currentTime);
-	prevTime.OriginDateTime().Adjust(kHourResolution, -24);
+
+	if (prevTime.OriginDateTime().String("%H") != calcTime.OriginDateTime().String("%H"))
+	{
+		if (prevTime.OriginDateTime().String("%H") == "00")
+		{
+			prevTime.OriginDateTime().Adjust(kHourResolution, 12);
+			prevTime.ValidDateTime().Adjust(kHourResolution, 12);
+		}
+		else
+		{
+			prevTime.OriginDateTime().Adjust(kHourResolution, -12);
+			prevTime.ValidDateTime().Adjust(kHourResolution, -12);
+		}
+	}
 
 	// Adjust valid date time so that step is equivalent to step of calcTime
-	prevTime.ValidDateTime().Adjust(kHourResolution, calcTime.Step() - 24 - currentTime.Step());
+
+	prevTime.ValidDateTime().Adjust(kHourResolution, calcTime.Step() - currentTime.Step());
+	prevTime.OriginDateTime().Adjust(kHourResolution, -24);
+	prevTime.ValidDateTime().Adjust(kHourResolution, -24);
 
 	ASSERT(prevTime.Step() == calcTime.Step());
 
 	if (type == kCalculateBias)
 	{
+		itsLogger.Debug("Fetching previous BIAS");
+
+		ASSERT(prevTime.OriginDateTime().String("%H") == calcTime.OriginDateTime().String("%H"));
 		info_t prev = Fetch(prevTime, currentLevel, currentParam, itsBlendProducer.type,
 		                    {itsConfiguration->TargetGeomName()}, kBlendBiasProd);
 
@@ -259,6 +277,7 @@ tuple<info_t, info_t, info_t, info_t> blend::FetchMAEAndBiasSource(shared_ptr<in
 	}
 	else if (type == kCalculateMAE)
 	{
+		itsLogger.Debug("Fetching previous MAE");
 		info_t prev = Fetch(prevTime, currentLevel, currentParam, itsBlendProducer.type,
 		                    {itsConfiguration->TargetGeomName()}, kBlendWeightProd);
 
@@ -266,6 +285,7 @@ tuple<info_t, info_t, info_t, info_t> blend::FetchMAEAndBiasSource(shared_ptr<in
 		prevTime.OriginDateTime().Adjust(kHourResolution, 24);
 		prevTime.ValidDateTime().Adjust(kHourResolution, 24);
 
+		itsLogger.Info("Fetching latest BIAS");
 		info_t bias = Fetch(prevTime, currentLevel, currentParam, itsBlendProducer.type,
 		                    {itsConfiguration->TargetGeomName()}, kBlendBiasProd);
 
@@ -445,8 +465,8 @@ void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short 
 			break;
 		}
 
-		log.Info("Calculating for analysis hour " + ftime.OriginDateTime().String("%H") + " step " +
-		         to_string(ftime.Step()));
+		log.Info("Calculating for member " + std::to_string(static_cast<int>(Info->ForecastType().Value())) +
+		         " analysis hour " + ftime.OriginDateTime().String("%H") + " step " + to_string(ftime.Step()));
 
 		if (ftime.OriginDateTime() > current.OriginDateTime() || ftime.OriginDateTime() > originDateTime)
 		{
@@ -469,7 +489,7 @@ void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short 
 			if (Info->Find<forecast_type>(forecastType))
 			{
 				auto newI = make_shared<info<double>>(*Info);
-				// Adjust origin date time so that it is from "today"
+				// Adjust origin date time so that it is from "today" with correct ahour
 				newI->Time().OriginDateTime(originDateTime);
 
 				int offset = 0;
@@ -477,7 +497,12 @@ void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short 
 				const int latestH = std::stoi(originDateTime.String("%H"));
 				const int currentH = std::stoi(ftime.OriginDateTime().String("%H"));
 
-				if ((latestH == 0 && currentH == 12) || (latestH == 12 && currentH == 0))
+				if (latestH == 0 && currentH == 12)
+				{
+					newI->Time().OriginDateTime().Adjust(kHourResolution, 12);
+					offset = -12;
+				}
+				else if (latestH == 12 && currentH == 0)
 				{
 					newI->Time().OriginDateTime().Adjust(kHourResolution, -12);
 					offset = 12;
@@ -486,7 +511,9 @@ void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short 
 				// Adjust valid date time so that step values remains the same
 				newI->Time().ValidDateTime().Adjust(kHourResolution, ftime.Step() - current.Step() - offset);
 
+				ASSERT(originDateTime.String("%Y%m%d") == newI->Time().OriginDateTime().String("%Y%m%d"));
 				ASSERT(ftime.OriginDateTime().String("%H") == newI->Time().OriginDateTime().String("%H"));
+
 				auto b = newI->Base();
 				b->data = std::move(d);
 
