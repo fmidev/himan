@@ -2078,15 +2078,14 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 template bool grib::CreateInfoFromGrib<double>(const search_options&, bool, bool, shared_ptr<info<double>>) const;
 
 vector<shared_ptr<himan::info<double>>> grib::FromFile(const string& theInputFile, const search_options& options,
-                                                       bool readContents, bool readPackedData,
-                                                       bool readIfNotMatching) const
+                                                       bool readPackedData, bool readIfNotMatching) const
 {
-	return FromFile<double>(theInputFile, options, readContents, readPackedData, readIfNotMatching);
+	return FromFile<double>(theInputFile, options, readPackedData, readIfNotMatching);
 }
 
 template <typename T>
 vector<shared_ptr<himan::info<T>>> grib::FromFile(const string& theInputFile, const search_options& options,
-                                                  bool readContents, bool readPackedData, bool readIfNotMatching) const
+                                                  bool readPackedData, bool readIfNotMatching) const
 {
 	vector<shared_ptr<himan::info<T>>> infos;
 
@@ -2137,21 +2136,19 @@ vector<shared_ptr<himan::info<T>>> grib::FromFile(const string& theInputFile, co
 }
 
 template vector<shared_ptr<himan::info<double>>> grib::FromFile<double>(const string&, const search_options&, bool,
-                                                                        bool, bool) const;
-template vector<shared_ptr<himan::info<float>>> grib::FromFile<float>(const string&, const search_options&, bool, bool,
+                                                                        bool) const;
+template vector<shared_ptr<himan::info<float>>> grib::FromFile<float>(const string&, const search_options&, bool,
                                                                       bool) const;
 
 vector<shared_ptr<himan::info<double>>> grib::FromIndexFile(const string& theInputFile, const search_options& options,
-                                                            bool readContents, bool readPackedData,
-                                                            bool readIfNotMatching) const
+                                                            bool readPackedData, bool readIfNotMatching) const
 {
-	return FromIndexFile<double>(theInputFile, options, readContents, readPackedData, readIfNotMatching);
+	return FromIndexFile<double>(theInputFile, options, readPackedData, readIfNotMatching);
 }
 
 template <typename T>
 vector<shared_ptr<himan::info<T>>> grib::FromIndexFile(const string& theInputFile, const search_options& options,
-                                                       bool readContents, bool readPackedData,
-                                                       bool readIfNotMatching) const
+                                                       bool readPackedData, bool readIfNotMatching) const
 {
 	vector<shared_ptr<himan::info<T>>> infos;
 
@@ -2172,28 +2169,45 @@ vector<shared_ptr<himan::info<T>>> grib::FromIndexFile(const string& theInputFil
 	aTimer.Start();
 
 	// TODO need to check what happens when multiple idx files or idx + grib files are provided as input.
-	if (itsGrib->Message(OptionsToKeys(options)))
+
+	// Create map for index keys, ie. those keys that are common to both grib editions
+	map<string, long> indexKeys;
+	indexKeys["level"] = static_cast<long>(options.level.Value());
+	indexKeys["step"] = static_cast<long>(options.time.Step());
+	indexKeys["centre"] = static_cast<long>(options.prod.Centre());
+	indexKeys["generatingProcessIdentifier"] = static_cast<long>(options.prod.Process());
+	indexKeys["date"] = stol(options.time.OriginDateTime().String("%Y%m%d"));
+	indexKeys["time"] = stol(options.time.OriginDateTime().String("%H%M"));
+
+	auto newInfo = make_shared<info<T>>();
+
+	if ((itsGrib->Message(indexKeys, OptionsToKeys(options, 1)) ||
+	     itsGrib->Message(indexKeys, OptionsToKeys(options, 2))) &&
+	    CreateInfoFromGrib(options, readPackedData, readIfNotMatching, newInfo))
 	{
-		auto newInfo = make_shared<info<T>>();
-		if (CreateInfoFromGrib(options, readPackedData, readIfNotMatching, newInfo))
-		{
-			infos.push_back(newInfo);
-			newInfo->First();
-		}
+		infos.push_back(newInfo);
+		newInfo->First();
 	}
+
 	aTimer.Stop();
 
 	long duration = aTimer.GetTime();
 
-	itsLogger.Debug("Read message using grib index file '" + theInputFile + "' in " + to_string(duration) + " ms");
+	if (infos.size())
+	{
+		itsLogger.Debug("Read " + infos[0]->Param().Name() + " from " + static_cast<string>(infos[0]->Level()) +
+		                " at " + infos[0]->Time().OriginDateTime().String() + " step " +
+		                std::to_string(infos[0]->Time().Step()) + " using grib index file '" + theInputFile + "' in " +
+		                to_string(duration) + " ms");
+	}
 
 	return infos;
 }
 
 template vector<shared_ptr<himan::info<double>>> grib::FromIndexFile<double>(const string&, const search_options&, bool,
-                                                                             bool, bool) const;
+                                                                             bool) const;
 template vector<shared_ptr<himan::info<float>>> grib::FromIndexFile<float>(const string&, const search_options&, bool,
-                                                                           bool, bool) const;
+                                                                           bool) const;
 
 void grib::UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restrict__ unpacked, size_t len,
                         size_t unpackedLen) const
@@ -2226,7 +2240,7 @@ void grib::UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restric
 	}
 }
 
-std::map<string, long> grib::OptionsToKeys(const search_options& options) const
+std::map<string, long> grib::OptionsToKeys(const search_options& options, long edition) const
 {
 	// indicator of Parameter is not necessarily provided in search_options param
 	// look this information up from database instead
@@ -2244,33 +2258,26 @@ std::map<string, long> grib::OptionsToKeys(const search_options& options) const
 		                                                  stoi(levelInfo["id"]), options.level.Value());
 	}
 
-	auto time = options.time;
+	std::map<string, long> ret;
 
-	std::map<string, long> theKeyValueMap;
-
-	theKeyValueMap["level"] = static_cast<long>(options.level.Value());
-	theKeyValueMap["step"] = static_cast<long>(options.time.Step());
-	theKeyValueMap["centre"] = static_cast<long>(options.prod.Centre());
-	theKeyValueMap["generatingProcessIdentifier"] = static_cast<long>(options.prod.Process());
-	theKeyValueMap["date"] = stol(time.OriginDateTime().String("%Y%m%d"));
-	theKeyValueMap["time"] = stol(time.OriginDateTime().String("%H%M"));
-
-	//	if (param["version"] == "1")
+	if (edition == 1)
 	{
-		theKeyValueMap["indicatorOfTypeOfLevel"] = static_cast<long>(options.level.Type());
-		theKeyValueMap["indicatorOfParameter"] = stol(param["grib1_number"]);
+		ret["table2Version"] = stol(param["grib1_table_version"]);
+		ret["indicatorOfTypeOfLevel"] = static_cast<long>(options.level.Type());
+		ret["indicatorOfParameter"] = stol(param["grib1_number"]);
+		ret["timeRangeIndicator"] = stol(param["grib1_timerange_indicator"]);
 	}
-	/*
-	    else if (param["version"] == "2")
-	    {
-	        // TODO check if this is giving correct type number (Grib2 != Grib1)
-	        theKeyValueMap["typeOfFirstFixedSurface"] = static_cast<long>(options.level.Type());
-	        theKeyValueMap["discipline"] = stol(param["grib2_discipline"]);
-	        theKeyValueMap["parameterCategory"] = stol(param["grib2_category"]);
-	        theKeyValueMap["parameterNumber"] = stol(param["grib2_number"]);
-	    }
-	*/
-	return theKeyValueMap;
+	else if (edition == 2)
+	{
+		ret["typeOfFirstFixedSurface"] =
+		    static_cast<long>(itsGrib->Message().LevelTypeToAnotherEdition(options.level.Type(), 2));
+		ret["discipline"] = stol(param["grib2_discipline"]);
+		ret["parameterCategory"] = stol(param["grib2_category"]);
+		ret["parameterNumber"] = stol(param["grib2_number"]);
+		ret["typeOfStatisticalProcessing"] = stol(param["grib2_type_of_statistical_processing"]);
+	}
+
+	return ret;
 }
 
 std::string GetParamNameFromGribShortName(const std::string& paramFileName, const std::string& shortName)

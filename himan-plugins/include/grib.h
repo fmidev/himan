@@ -51,7 +51,6 @@ class grib : public io_plugin
 	 *
 	 * @param file Input file name
 	 * @param options Search options (param, level, time)
-	 * @param readContents Specify if data should also be read (and not only metadata)
 	 * @param readPackedData Whether to read packed data (from grib). Caller must do unpacking.
 	 * @param forceCaching Force caching of data even if it does not match searched data
 	 *
@@ -60,10 +59,9 @@ class grib : public io_plugin
 
 	template <typename T>
 	std::vector<std::shared_ptr<info<T>>> FromFile(const std::string& inputFile, const search_options& options,
-	                                               bool readContents, bool readPackedData, bool forceCaching) const;
+	                                               bool readPackedData, bool forceCaching) const;
 	std::vector<std::shared_ptr<info<double>>> FromFile(const std::string& inputFile, const search_options& options,
-	                                                    bool readContents, bool readPackedData,
-	                                                    bool forceCaching) const;
+	                                                    bool readPackedData, bool forceCaching) const;
 
 	/**
 	 * @brief Return selected data from a grib index file.
@@ -73,7 +71,6 @@ class grib : public io_plugin
 	 *
 	 * @param file Input file name
 	 * @param options Search options (param, level, time)
-	 * @param readContents Specify if data should also be read (and not only metadata)
 	 * @param readPackedData Whether to read packed data (from grib). Caller must do unpacking.
 	 * @param forceCaching Force caching of data even if it does not match searched data
 	 *
@@ -82,11 +79,10 @@ class grib : public io_plugin
 
 	template <typename T>
 	std::vector<std::shared_ptr<info<T>>> FromIndexFile(const std::string& inputFile, const search_options& options,
-	                                                    bool readContents, bool readPackedData,
-	                                                    bool forceCaching) const;
+	                                                    bool readPackedData, bool forceCaching) const;
 	std::vector<std::shared_ptr<info<double>>> FromIndexFile(const std::string& inputFile,
-	                                                         const search_options& options, bool readContents,
-	                                                         bool readPackedData, bool forceCaching) const;
+	                                                         const search_options& options, bool readPackedData,
+	                                                         bool forceCaching) const;
 
 	template <typename T>
 	bool ToFile(info<T>& anInfo, std::string& outputFile, bool appendToFile = false);
@@ -102,16 +98,7 @@ class grib : public io_plugin
 	bool CreateInfoFromGrib(const search_options& options, bool readPackedData, bool forceCaching,
 	                        std::shared_ptr<info<T>> newInfo) const;
 
-	/**
-	 * @brief OptionsToKeys
-	 *
-	 * Converts the search options struct into a map of key-value pairs that are used to select a grib message from a
-	 * grib
-	 * index file
-	 * @param options Search options (param, level, time)
-	 */
-
-	std::map<std::string, long> OptionsToKeys(const search_options& options) const;
+	std::map<std::string, long> OptionsToKeys(const search_options& options, long edition) const;
 
 	std::unique_ptr<grid> ReadAreaAndGrid() const;
 	himan::param ReadParam(const search_options& options, const producer& prod) const;

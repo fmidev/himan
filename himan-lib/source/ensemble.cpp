@@ -12,9 +12,9 @@
 
 namespace
 {
-std::vector<double> RemoveMissingValues(const std::vector<double>& vec)
+std::vector<float> RemoveMissingValues(const std::vector<float>& vec)
 {
-	std::vector<double> ret;
+	std::vector<float> ret;
 	ret.reserve(vec.size());
 
 	for (const auto& v : vec)
@@ -43,7 +43,7 @@ ensemble::ensemble(const param& parameter, size_t expectedEnsembleSize)
 
 	for (size_t i = 1; i < itsDesiredForecasts.capacity(); i++)
 	{
-		itsDesiredForecasts.push_back(forecast_type(kEpsPerturbation, static_cast<double>(i)));
+		itsDesiredForecasts.push_back(forecast_type(kEpsPerturbation, static_cast<float>(i)));
 	}
 }
 
@@ -67,7 +67,7 @@ ensemble::ensemble(const param& parameter, size_t expectedEnsembleSize,
 
 	for (size_t i = controlForecasts.size(); i < itsDesiredForecasts.capacity(); i++)
 	{
-		itsDesiredForecasts.push_back(forecast_type(kEpsPerturbation, static_cast<double>(i)));
+		itsDesiredForecasts.push_back(forecast_type(kEpsPerturbation, static_cast<float>(i)));
 	}
 }
 
@@ -120,7 +120,7 @@ void ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const f
 	{
 		try
 		{
-			auto info = f->Fetch(config, time, forecastLevel, itsParam, desired, false);
+			auto info = f->Fetch<float>(config, time, forecastLevel, itsParam, desired, false);
 			itsForecasts.push_back(info);
 		}
 		catch (HPExceptionType& e)
@@ -199,40 +199,40 @@ bool ensemble::NextLocation()
 	return true;
 }
 
-std::vector<double> ensemble::Values() const
+std::vector<float> ensemble::Values() const
 {
-	std::vector<double> ret;
+	std::vector<float> ret;
 	ret.reserve(Size());
 
 	std::for_each(itsForecasts.begin(), itsForecasts.end(),
-	              [&](const info_t& Info) { ret.emplace_back(Info->Value()); });
+	              [&](const std::shared_ptr<info<float>>& Info) { ret.emplace_back(Info->Value()); });
 
 	return ret;
 }
 
-std::vector<double> ensemble::SortedValues() const
+std::vector<float> ensemble::SortedValues() const
 {
-	std::vector<double> v = RemoveMissingValues(Values());
+	std::vector<float> v = RemoveMissingValues(Values());
 	std::sort(v.begin(), v.end());
 	return v;
 }
 
-double ensemble::Mean() const
+float ensemble::Mean() const
 {
-	return numerical_functions::Mean<double>(RemoveMissingValues(Values()));
+	return numerical_functions::Mean<float>(RemoveMissingValues(Values()));
 }
 
-double ensemble::Variance() const
+float ensemble::Variance() const
 {
-	return numerical_functions::Variance<double>(RemoveMissingValues(Values()));
+	return numerical_functions::Variance<float>(RemoveMissingValues(Values()));
 }
 
-double ensemble::CentralMoment(int N) const
+float ensemble::CentralMoment(int N) const
 {
-	std::vector<double> v = RemoveMissingValues(Values());
-	double mu = Mean();
-	std::for_each(v.begin(), v.end(), [=](double& d) { d = std::pow(d - mu, N); });
-	return numerical_functions::Mean<double>(v);
+	std::vector<float> v = RemoveMissingValues(Values());
+	float mu = Mean();
+	std::for_each(v.begin(), v.end(), [=](float& d) { d = powf(d - mu, static_cast<float>(N)); });
+	return numerical_functions::Mean<float>(v);
 }
 
 HPEnsembleType ensemble::EnsembleType() const
@@ -247,7 +247,7 @@ size_t ensemble::ExpectedSize() const
 {
 	return itsExpectedEnsembleSize;
 }
-info_t ensemble::Forecast(size_t i)
+std::shared_ptr<info<float>> ensemble::Forecast(size_t i)
 {
 	if (itsForecasts.size() <= i)
 	{

@@ -321,8 +321,8 @@ template shared_ptr<info<float>> fetcher::Fetch<float>(shared_ptr<const plugin_c
                                                        param, forecast_type, bool, bool);
 
 template <typename T>
-vector<shared_ptr<info<T>>> fetcher::FromFile(const vector<string>& files, search_options& options, bool readContents,
-                                              bool readPackedData, bool readIfNotMatching)
+vector<shared_ptr<info<T>>> fetcher::FromFile(const vector<string>& files, search_options& options, bool readPackedData,
+                                              bool readIfNotMatching)
 {
 	vector<shared_ptr<info<T>>> allInfos;
 
@@ -345,13 +345,13 @@ vector<shared_ptr<info<T>>> fetcher::FromFile(const vector<string>& files, searc
 			case kGRIB2:
 			{
 				auto g = GET_PLUGIN(grib);
-				curInfos = g->FromFile<T>(inputFile, options, readContents, readPackedData, readIfNotMatching);
+				curInfos = g->FromFile<T>(inputFile, options, readPackedData, readIfNotMatching);
 				break;
 			}
 			case kGRIBIndex:
 			{
 				auto g = GET_PLUGIN(grib);
-				curInfos = g->FromIndexFile<T>(inputFile, options, readContents, readPackedData, readIfNotMatching);
+				curInfos = g->FromIndexFile<T>(inputFile, options, readPackedData, readIfNotMatching);
 				break;
 			}
 
@@ -615,7 +615,7 @@ pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAuxili
 
 				timer t(true);
 
-				ret = FromFile<double>(files, opts, true, readPackedData, true);
+				ret = FromFile<double>(files, opts, readPackedData, true);
 
 				AuxiliaryFilesRotateAndInterpolate(opts, ret);
 
@@ -646,7 +646,7 @@ pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAuxili
 		}
 		else
 		{
-			ret = FromFile<double>(files, opts, true, readPackedData, false);
+			ret = FromFile<double>(files, opts, readPackedData, false);
 		}
 
 		if (!ret.empty())
@@ -704,7 +704,7 @@ vector<shared_ptr<info<T>>> fetcher::FetchFromDatabase(search_options& opts, boo
 		}
 		else
 		{
-			ret = FromFile<T>(files.first, opts, true, readPackedData);
+			ret = FromFile<T>(files.first, opts, readPackedData, true);
 
 			if (dynamic_pointer_cast<const plugin_configuration>(opts.configuration)->StatisticsEnabled())
 			{
