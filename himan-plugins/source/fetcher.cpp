@@ -704,7 +704,7 @@ vector<shared_ptr<info<T>>> fetcher::FetchFromDatabase(search_options& opts, boo
 		}
 		else
 		{
-			ret = FromFile<T>(files.first, opts, true, readPackedData);
+			ret = FromFile<T>(files.first, opts, readPackedData, true);
 
 			if (dynamic_pointer_cast<const plugin_configuration>(opts.configuration)->StatisticsEnabled())
 			{
