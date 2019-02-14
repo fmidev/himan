@@ -23,8 +23,8 @@ double DriftIndex(double sv);
 double MobilityIndex(double da, double sa);
 
 void CalculateSnowDriftIndex(info_t& myTargetInfo, const std::vector<double>& T, const std::vector<double>& FF,
-                             const std::vector<double>& SF, const std::vector<double>& pSA,
-                             const std::vector<double>& pDA)
+                             const std::vector<double>& FFG, const std::vector<double>& SF,
+                             const std::vector<double>& pSA, const std::vector<double>& pDA)
 {
 	myTargetInfo->Find<param>(SDIParam);
 	auto& SI = VEC(myTargetInfo);
@@ -33,16 +33,17 @@ void CalculateSnowDriftIndex(info_t& myTargetInfo, const std::vector<double>& T,
 	myTargetInfo->Find<param>(DAParam);
 	auto& DA = VEC(myTargetInfo);
 
-	for (auto&& tup : zip_range(SI, SA, DA, T, FF, SF, pSA, pDA))
+	for (auto&& tup : zip_range(SI, SA, DA, T, FF, FFG, SF, pSA, pDA))
 	{
 		auto& si = tup.get<0>();        // snow drift index
 		auto& sa = tup.get<1>();        // accumulated snow cover age
 		auto& da = tup.get<2>();        // accumulated snowdrift value
 		const auto t = tup.get<3>();    // temperature
 		const auto ff = tup.get<4>();   // wind speed
-		const auto sf = tup.get<5>();   // snow fall rate (mm/h)
-		const auto psa = tup.get<6>();  // previous accumulated snow cover age
-		const auto pda = tup.get<7>();  // previous accumulated snowdrift value
+		const auto ffg = tup.get<5>();  // wind gust speed
+		const auto sf = tup.get<6>();   // snow fall rate (mm/h)
+		const auto psa = tup.get<7>();  // previous accumulated snow cover age
+		const auto pda = tup.get<8>();  // previous accumulated snowdrift value
 
 		if (IsMissing(t) || IsMissing(ff) || IsMissing(sf) || IsMissing(psa) || IsMissing(pda))
 		{
@@ -66,10 +67,17 @@ void CalculateSnowDriftIndex(info_t& myTargetInfo, const std::vector<double>& T,
 		        }
 		*/
 
+		double eff = ff;  // effective wind speed, factors in gustyness
+
+		if ((ffg / ff) > 1.6)
+		{
+			eff = ((ffg / ff) - 1.6) * ff + ff;
+		}
+
 		if (sf > SFLimit)
 		{
 			// during snow fall
-			si = DriftIndex(DriftMagnitude(ff, 1.0));
+			si = DriftIndex(DriftMagnitude(eff, 1.0));
 			sa = 0;
 			da = 0;
 		}
@@ -78,14 +86,14 @@ void CalculateSnowDriftIndex(info_t& myTargetInfo, const std::vector<double>& T,
 			// after snow fall
 			sa = psa + 1;  // add one hour to snowcover age
 
-			if (ff < 6)
+			if (eff < 6)
 			{
 				si = 0;
 				da = pda;
 			}
 			else
 			{
-				const double sv = DriftMagnitude(ff, MobilityIndex(pda, sa));
+				const double sv = DriftMagnitude(eff, MobilityIndex(pda, sa));
 				da = pda + sv;
 				si = DriftIndex(sv);
 			}
@@ -142,6 +150,7 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 
 		auto TInfo = Fetch(forecastTime, level(kHeight, 2), param("T-K"), forecastType, false);
 		auto FFInfo = Fetch(forecastTime, level(kHeight, 10), param("FF-MS"), forecastType, false);
+		auto FFGInfo = Fetch(forecastTime, level(kHeight, 10), param("FFG-MS"), forecastType, false);
 		auto SFInfo = Fetch(forecastTime, level(kHeight, 0), param("SNR-KGM2"), forecastType, false);
 
 		if (!TInfo || !FFInfo || !SFInfo)
@@ -194,7 +203,10 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 				std::vector<double> pDA = pSA;
 
 				myThreadedLogger.Warning("Spinup phase, producing only DA and SA");
-				CalculateSnowDriftIndex(myTargetInfo, VEC(TInfo), VEC(FFInfo), VEC(SFInfo), pSA, pDA);
+
+				// LAPS does not provide FFG
+				std::vector<double> FFG(pDA.size(), MissingDouble());
+				CalculateSnowDriftIndex(myTargetInfo, VEC(TInfo), VEC(FFInfo), FFG, VEC(SFInfo), pSA, pDA);
 
 				myTargetInfo->Find<param>(SDIParam);
 				myTargetInfo->Data().Fill(MissingDouble());
@@ -208,7 +220,19 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 		}
 		else
 		{
-			CalculateSnowDriftIndex(myTargetInfo, VEC(TInfo), VEC(FFInfo), VEC(SFInfo), VEC(pSAInfo), VEC(pDAInfo));
+			std::vector<double> FFG;
+
+			if (FFGInfo)
+			{
+				FFG = VEC(FFGInfo);
+			}
+			else
+			{
+				FFG.resize(myTargetInfo->SizeLocations(), MissingDouble());
+			}
+
+			CalculateSnowDriftIndex(myTargetInfo, VEC(TInfo), VEC(FFInfo), VEC(FFGInfo), VEC(SFInfo), VEC(pSAInfo),
+			                        VEC(pDAInfo));
 		}
 
 		myTargetInfo->Find<param>(SAParam);
