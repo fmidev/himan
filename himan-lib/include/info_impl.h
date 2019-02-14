@@ -194,9 +194,7 @@ void info<T>::Create(std::shared_ptr<base<T>> baseGrid, bool createDataBackend)
 				// Create empty placeholders
 				{
 					auto g = std::shared_ptr<grid>(baseGrid->grid->Clone());
-					auto d = matrix<T>(baseGrid->data);
-
-					auto b = std::make_shared<base<T>>(g, d);
+					auto b = std::make_shared<base<T>>(g, matrix<T>(baseGrid->data));
 
 					Base(b);
 
