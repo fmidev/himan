@@ -75,6 +75,26 @@ forecast_time MakeAnalysisTime(const forecast_time& currentTime, int analysisHou
 	return analysisFetchTime;
 }
 
+// for logging purposes
+std::string IdToName(size_t id)
+{
+	switch (id)
+	{
+		case 1:
+			return "MOS";
+		case 2:
+			return "ECMWF";
+		case 3:
+			return "HIRLAM";
+		case 4:
+			return "MEPS";
+		case 5:
+			return "GFS";
+		default:
+			return "UNKNOWN";
+	}
+}
+
 // Read the configuration and set plugin properties:
 // - calculation mode (bias, mae, blend) that is to be dispatched in Calculate()
 // - producer for bias and mae
@@ -546,42 +566,23 @@ std::vector<info_t> blend::FetchRawGrids(shared_ptr<info<double>> targetInfo, un
 	const param& currentParam = targetInfo->Param();
 	const level& currentLevel = targetInfo->Level();
 
-	info_t mosRaw = Fetch(currentTime, currentLevel, currentParam, MOS.type);
-	info_t ecRaw = Fetch(currentTime, currentLevel, currentParam, ECMWF.type);
-	info_t mepsRaw = Fetch(currentTime, currentLevel, currentParam, MEPS.type);
-	info_t hirlamRaw = Fetch(currentTime, currentLevel, currentParam, HIRLAM.type);
-	info_t gfsRaw = Fetch(currentTime, currentLevel, currentParam, GFS.type);
+	std::vector<forecast_type> types = {MOS.type, ECMWF.type, HIRLAM.type, MEPS.type, GFS.type};
+	std::vector<info_t> ret(5);
 
-	//
-	// We want to return nullptrs here so that we can skip over these entries in the Calculate-loop.
-	//
+	for (size_t i = 0; i < types.size(); i++)
+	{
+		info_t raw = Fetch(currentTime, currentLevel, currentParam, types[i]);
 
-	if (mosRaw)
-		log.Info("MOS_raw missing count: " + to_string(mosRaw->Data().MissingCount()));
-	else
-		log.Info("MOS_raw missing completely");
+		ret[i] = raw;
+	}
 
-	if (ecRaw)
-		log.Info("EC_raw missing count: " + to_string(ecRaw->Data().MissingCount()));
-	else
-		log.Info("EC_raw missing completely");
+	for (size_t i = 0; i < ret.size(); i++)
+	{
+		log.Info(IdToName(i + 1) + " RAW missing " +
+		         ((ret[i]) ? to_string(ret[i]->Data().MissingCount()) : "completely"));
+	}
 
-	if (mepsRaw)
-		log.Info("MEPS_raw missing count: " + to_string(mepsRaw->Data().MissingCount()));
-	else
-		log.Info("MEPS_raw missing completely");
-
-	if (hirlamRaw)
-		log.Info("HIRLAM_raw missing count: " + to_string(hirlamRaw->Data().MissingCount()));
-	else
-		log.Info("HIRLAM_raw missing completely");
-
-	if (gfsRaw)
-		log.Info("GFS_raw missing count: " + to_string(gfsRaw->Data().MissingCount()));
-	else
-		log.Info("GFS_raw missing completely");
-
-	return std::vector<info_t>{mosRaw, ecRaw, mepsRaw, hirlamRaw, gfsRaw};
+	return ret;
 }
 
 std::vector<info_t> blend::FetchMAEAndBiasGrids(shared_ptr<info<double>> targetInfo, unsigned short threadIdx,
@@ -594,29 +595,39 @@ std::vector<info_t> blend::FetchMAEAndBiasGrids(shared_ptr<info<double>> targetI
 
 	logger log("calculateBlend_Fetch" + typestr + "Grids#" + to_string(threadIdx));
 
-	auto time = targetInfo->Time();
-	time.OriginDateTime().Adjust(kHourResolution, -24);
-	time.ValidDateTime().Adjust(kHourResolution, -24);
+	std::vector<forecast_type> types = {MOS.type, ECMWF.type, HIRLAM.type, MEPS.type, GFS.type};
+	std::vector<info_t> ret(5);
 
-	auto mos =
-	    Fetch(time, targetInfo->Level(), targetInfo->Param(), MOS.type, itsConfiguration->SourceGeomNames(), prod);
-	auto ec =
-	    Fetch(time, targetInfo->Level(), targetInfo->Param(), ECMWF.type, itsConfiguration->SourceGeomNames(), prod);
-	auto hirlam =
-	    Fetch(time, targetInfo->Level(), targetInfo->Param(), HIRLAM.type, itsConfiguration->SourceGeomNames(), prod);
-	auto meps =
-	    Fetch(time, targetInfo->Level(), targetInfo->Param(), MEPS.type, itsConfiguration->SourceGeomNames(), prod);
-	auto gfs =
-	    Fetch(time, targetInfo->Level(), targetInfo->Param(), GFS.type, itsConfiguration->SourceGeomNames(), prod);
+	// try to fetch bias/mae fields from current day or day before that, ie
+	// newest or second newest
+	for (size_t i = 0; i < types.size(); i++)
+	{
+		auto time = targetInfo->Time();
 
-	log.Info("MOS " + typestr + " missing" + ((mos) ? ": " + to_string(mos->Data().MissingCount()) : " completely"));
-	log.Info("EC " + typestr + " missing" + ((ec) ? ": " + to_string(ec->Data().MissingCount()) : " completely"));
-	log.Info("MEPS " + typestr + " missing" + ((meps) ? ": " + to_string(meps->Data().MissingCount()) : " completely"));
-	log.Info("HIRLAM " + typestr + " missing" +
-	         ((hirlam) ? ": " + to_string(hirlam->Data().MissingCount()) : " completely"));
-	log.Info("GFS " + typestr + " missing" + ((gfs) ? ": " + to_string(gfs->Data().MissingCount()) : " completely"));
+		for (size_t j = 0; j < 2; j++)
+		{
+			auto info = Fetch(time, targetInfo->Level(), targetInfo->Param(), types[i],
+			                  itsConfiguration->SourceGeomNames(), prod);
 
-	return std::vector<info_t>{mos, ec, meps, hirlam, gfs};
+			if (!info)
+			{
+				time.OriginDateTime().Adjust(kHourResolution, -24);
+				time.ValidDateTime().Adjust(kHourResolution, -24);
+				continue;
+			}
+
+			ret[i] = info;
+			break;
+		}
+	}
+
+	for (size_t i = 0; i < ret.size(); i++)
+	{
+		log.Info(IdToName(i + 1) + " " + typestr + " missing" +
+		         ((ret[i]) ? ": " + to_string(ret[i]->Data().MissingCount()) : " completely"));
+	}
+
+	return ret;
 }
 
 void blend::CalculateBlend(shared_ptr<info<double>> targetInfo, unsigned short threadIdx)
