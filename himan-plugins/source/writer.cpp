@@ -169,7 +169,7 @@ bool writer::ToFile(std::shared_ptr<info<T>> theInfo, std::shared_ptr<const plug
 		}
 	}
 
-	if (conf->UseCache())
+	if (conf->UseCacheForWrites())
 	{
 		auto c = GET_PLUGIN(cache);
 

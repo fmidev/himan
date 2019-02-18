@@ -415,15 +415,31 @@ Example:
 
 ## Memory usage
 
-Himan uses an in-memory cache for all read and written data. The cache can be turned off with key `use_cache`. Default value is `true`.
+Himan uses an in-memory cache for all read and written data.
 
-    "use_cache" : "true | false",
+The cache for writes can be turned off with key `use_cache_for_writes`. Default value is `true`.
+If set to false, no calculated data is inserted to cache.
+
+    "use_cache_for_writes" : "true | false",
 
 Key can be set in the global or processqueue scope.
 
 Example:
 
-    "use_cache" : false,
+    "use_cache_for_writes" : false,
+
+The cache for reads can be turned off with key `use_cache_for_reads`. Default value is `true`.
+If set to false, no data read is inserted to cache.
+
+    "use_cache_for_reads" : "true | false",
+
+Key can be set in the global or processqueue scope.
+
+Example:
+
+    "use_cache_for_reads" : false,
+
+Note: this key was previously called `use_cache`, and that is still supported for backwards compatibility.
 
 Memory cache size can be controlled with key `cache_limit`. The value of the key specifies the maximum number of fields (grids) Himan will hold in memory. When the limit is reached, data is evicted using an LRU algorithm. Valid values for key are >= 1. The actual size of the cache in bytes depends on the size of the grids. 
 
