@@ -141,7 +141,8 @@ void plugin_configuration::WriteStatistics()
 	cout << "*** STATISTICS ***" << endl;
 
 	cout << "Plugin:\t\t\t" << itsName << endl;
-	cout << "Use cache:\t\t" << (itsUseCache ? "true" : "false") << endl;
+	cout << "Use cache for reads:\t" << (itsUseCacheForReads ? "true" : "false") << endl;
+	cout << "Use cache for writes:\t" << (itsUseCacheForWrites ? "true" : "false") << endl;
 	cout << "Use cuda:\t\t" << (itsUseCuda ? "true" : "false") << endl;
 	cout << "Use cuda packing:\t" << (itsUseCudaForPacking ? "true" : "false") << endl;
 	cout << "Use cuda unpacking:\t" << (itsUseCudaForUnpacking ? "true" : "false") << endl;

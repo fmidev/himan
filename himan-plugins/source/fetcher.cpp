@@ -188,7 +188,7 @@ shared_ptr<info<T>> fetcher::FetchFromProducer(search_options& opts, bool readPa
 	 * 3. Data is not packed
 	 */
 
-	if (ret.first != HPDataFoundFrom::kCache && itsUseCache && opts.configuration->UseCache() &&
+	if (ret.first != HPDataFoundFrom::kCache && itsUseCache && opts.configuration->UseCacheForReads() &&
 	    !theInfos[0]->PackedData()->HasData())
 	{
 		auto c = GET_PLUGIN(cache);
@@ -566,7 +566,7 @@ vector<shared_ptr<info<T>>> fetcher::FetchFromCache(search_options& opts)
 {
 	vector<shared_ptr<info<T>>> ret;
 
-	if (itsUseCache && opts.configuration->UseCache())
+	if (itsUseCache && opts.configuration->UseCacheForReads())
 	{
 		// 1. Fetch data from cache
 		ret = FromCache<T>(opts);
@@ -598,7 +598,7 @@ pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAuxili
 	{
 		auto files = opts.configuration->AuxiliaryFiles();
 
-		if (itsUseCache && opts.configuration->UseCache() && opts.configuration->ReadAllAuxiliaryFilesToCache())
+		if (itsUseCache && opts.configuration->UseCacheForReads() && opts.configuration->ReadAllAuxiliaryFilesToCache())
 		{
 			if (itsApplyLandSeaMask)
 			{
@@ -969,7 +969,7 @@ void fetcher::RotateVectorComponents(vector<shared_ptr<info<T>>>& components, co
 			std::vector<shared_ptr<info<T>>> list({other});
 			if (itsDoInterpolation && interpolate::Interpolate(target, list, config->UseCudaForInterpolation()))
 			{
-				if (itsUseCache && config->UseCache() && !other->PackedData()->HasData())
+				if (itsUseCache && config->UseCacheForReads() && !other->PackedData()->HasData())
 				{
 					auto c = GET_PLUGIN(cache);
 					c->Insert<T>(other);

@@ -705,7 +705,7 @@ shared_ptr<info<T>> compiled_plugin_base::Fetch(const forecast_time& theTime, co
 #ifdef HAVE_CUDA
 		if (!returnPacked && ret->PackedData()->HasData())
 		{
-			util::Unpack<T>({ret}, itsConfiguration->UseCache());
+			util::Unpack<T>({ret}, itsConfiguration->UseCacheForReads());
 		}
 #endif
 	}
@@ -749,7 +749,7 @@ shared_ptr<info<T>> compiled_plugin_base::Fetch(const forecast_time& theTime, co
 #ifdef HAVE_CUDA
 		if (!returnPacked && ret->PackedData()->HasData())
 		{
-			util::Unpack<T>({ret}, itsConfiguration->UseCache());
+			util::Unpack<T>({ret}, itsConfiguration->UseCacheForReads());
 		}
 #endif
 	}
@@ -791,7 +791,7 @@ shared_ptr<info<T>> compiled_plugin_base::Fetch(const forecast_time& theTime, co
 #ifdef HAVE_CUDA
 		if (!returnPacked && ret->PackedData()->HasData())
 		{
-			util::Unpack<T>({ret}, cnf->UseCache());
+			util::Unpack<T>({ret}, cnf->UseCacheForReads());
 		}
 #endif
 	}
