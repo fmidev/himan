@@ -1,6 +1,6 @@
 logger:Info("Calculating LVP (Low Visibility Procedures) probability")
 
-local Missing = missing
+local Missing = missingf
 
 local probLVP = {}
 

@@ -42,7 +42,8 @@ void BindLib(lua_State* L);
 template <typename T>
 object VectorToTable(const std::vector<T>& vec);
 
-std::vector<double> TableToVector(const object& table);
+template <typename T>
+std::vector<T> TableToVector(const object& table);
 
 boost::thread_specific_ptr<lua_State> myL;
 
@@ -161,6 +162,7 @@ void luatool::ResetVariables(info_t myTargetInfo)
 	globals(L)["current_level"] = level(myTargetInfo->Level());
 	globals(L)["current_forecast_type"] = forecast_type(myTargetInfo->ForecastType());
 	globals(L)["missing"] = MissingDouble();
+	globals(L)["missingf"] = MissingFloat();
 
 	globals(L)["kKelvin"] = constants::kKelvin;
 
@@ -326,49 +328,60 @@ namespace info_wrapper
 {
 // These are convenience functions for accessing info class contents
 
-void SetValue(std::shared_ptr<info<double>>& anInfo, int index, double value)
+template <typename T>
+void SetValue(std::shared_ptr<info<T>>& anInfo, int index, double value)
 {
-	anInfo->Data().Set(--index, value);
+	anInfo->Data().Set(--index, static_cast<T>(value));
 }
-double GetValue(std::shared_ptr<info<double>>& anInfo, int index)
+template <typename T>
+double GetValue(std::shared_ptr<info<T>>& anInfo, int index)
 {
 	return anInfo->Data().At(--index);
 }
-size_t GetLocationIndex(std::shared_ptr<info<double>> anInfo)
+template <typename T>
+size_t GetLocationIndex(std::shared_ptr<info<T>> anInfo)
 {
 	return anInfo->LocationIndex() + 1;
 }
-size_t GetTimeIndex(std::shared_ptr<info<double>> anInfo)
+template <typename T>
+size_t GetTimeIndex(std::shared_ptr<info<T>> anInfo)
 {
-	return anInfo->Index<forecast_time>() + 1;
+	return anInfo->template Index<forecast_time>() + 1;
 }
-size_t GetParamIndex(std::shared_ptr<info<double>> anInfo)
+template <typename T>
+size_t GetParamIndex(std::shared_ptr<info<T>> anInfo)
 {
-	return anInfo->Index<param>() + 1;
+	return anInfo->template Index<param>() + 1;
 }
-size_t GetLevelIndex(std::shared_ptr<info<double>> anInfo)
+template <typename T>
+size_t GetLevelIndex(std::shared_ptr<info<T>> anInfo)
 {
-	return anInfo->Index<level>() + 1;
+	return anInfo->template Index<level>() + 1;
 }
-void SetLocationIndex(std::shared_ptr<info<double>> anInfo, size_t theIndex)
+template <typename T>
+void SetLocationIndex(std::shared_ptr<info<T>> anInfo, size_t theIndex)
 {
-	anInfo->LocationIndex(--theIndex);
+	anInfo->template LocationIndex(--theIndex);
 }
-void SetTimeIndex(std::shared_ptr<info<double>> anInfo, size_t theIndex)
+template <typename T>
+void SetTimeIndex(std::shared_ptr<info<T>> anInfo, size_t theIndex)
 {
-	anInfo->Index<forecast_time>(--theIndex);
+	anInfo->template Index<forecast_time>(--theIndex);
 }
-void SetParamIndex(std::shared_ptr<info<double>> anInfo, size_t theIndex)
+template <typename T>
+void SetParamIndex(std::shared_ptr<info<T>> anInfo, size_t theIndex)
 {
-	anInfo->Index<param>(--theIndex);
+	anInfo->template Index<param>(--theIndex);
 }
-void SetLevelIndex(std::shared_ptr<info<double>> anInfo, size_t theIndex)
+template <typename T>
+void SetLevelIndex(std::shared_ptr<info<T>> anInfo, size_t theIndex)
 {
-	anInfo->Index<level>(--theIndex);
+	anInfo->template Index<level>(--theIndex);
 }
-void SetValues(info_t& anInfo, const object& table)
+template <typename T>
+void SetValues(std::shared_ptr<info<T>>& anInfo, const object& table)
 {
-	std::vector<double> vals = TableToVector(table);
+	std::vector<T> vals = TableToVector<T>(table);
 
 	if (vals.empty())
 	{
@@ -387,13 +400,12 @@ void SetValues(info_t& anInfo, const object& table)
 	// (that's already in cache!).
 
 	auto g = std::shared_ptr<grid>(anInfo->Grid()->Clone());
-	matrix<double> d(anInfo->Data().SizeX(), anInfo->Data().SizeY(), 1, anInfo->Data().MissingValue(), vals);
+	matrix<T> d(anInfo->Data().SizeX(), anInfo->Data().SizeY(), 1, anInfo->Data().MissingValue(), vals);
 
-	auto b = std::make_shared<base<double>>(g, d);
-
-	anInfo->Base(b);
+	anInfo->Base(std::make_shared<base<T>>(g, d));
 }
-void SetValuesFromMatrix(info_t& anInfo, const matrix<double>& mat)
+template <typename T>
+void SetValuesFromMatrix(std::shared_ptr<info<T>>& anInfo, const matrix<T>& mat)
 {
 	if (mat.Size() != anInfo->Data().Size())
 	{
@@ -405,33 +417,39 @@ void SetValuesFromMatrix(info_t& anInfo, const matrix<double>& mat)
 		anInfo->Data().Set(mat.Values());
 	}
 }
+template <typename T>
 object GetValues(info_t& anInfo)
 {
 	return VectorToTable<double>(VEC(anInfo));
 }
-point GetLatLon(info_t& anInfo, size_t theIndex)
+template <typename T>
+point GetLatLon(std::shared_ptr<info<T>>& anInfo, size_t theIndex)
 {
 	return anInfo->Grid()->LatLon(--theIndex);
 }
-double GetMissingValue(info_t& anInfo)
+template <typename T>
+double GetMissingValue(std::shared_ptr<info<T>>& anInfo)
 {
 	return anInfo->Data().MissingValue();
 }
-void SetMissingValue(info_t& anInfo, double missingValue)
+template <typename T>
+void SetMissingValue(std::shared_ptr<info<T>>& anInfo, T missingValue)
 {
 	anInfo->Data().MissingValue(missingValue);
 }
-matrix<double> GetData(info_t& anInfo)
+template <typename T>
+matrix<T> GetData(std::shared_ptr<info<T>>& anInfo)
 {
 	return anInfo->Data();
 }
-void SetParam(info_t& anInfo, const param& par)
+template <typename T>
+void SetParam(std::shared_ptr<info<T>>& anInfo, const param& par)
 {
 	auto r = GET_PLUGIN(radon);
 
 	param newpar(par);
 
-	const auto lvl = anInfo->Peek<level>(0);
+	const auto lvl = anInfo->template Peek<level>(0);
 	auto paramInfo =
 	    r->RadonDB().GetParameterFromDatabaseName(anInfo->Producer().Id(), par.Name(), lvl.Type(), lvl.Value());
 
@@ -445,7 +463,7 @@ void SetParam(info_t& anInfo, const param& par)
 		}
 	}
 
-	anInfo->Set<param>(newpar);
+	anInfo->template Set<param>(newpar);
 }
 }  // namespace info_wrapper
 
@@ -461,8 +479,8 @@ object VerticalMaximumGrid(std::shared_ptr<hitool> h, const param& theParam, con
 {
 	try
 	{
-		return VectorToTable<double>(
-		    h->VerticalMaximum<double>(theParam, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
+		return VectorToTable<double>(h->VerticalMaximum<double>(theParam, TableToVector<double>(firstLevelValue),
+		                                                        TableToVector<double>(lastLevelValue)));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -497,8 +515,8 @@ object VerticalMinimumGrid(std::shared_ptr<hitool> h, const param& theParam, con
 {
 	try
 	{
-		return VectorToTable<double>(
-		    h->VerticalMinimum<double>(theParam, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
+		return VectorToTable<double>(h->VerticalMinimum<double>(theParam, TableToVector<double>(firstLevelValue),
+		                                                        TableToVector<double>(lastLevelValue)));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -533,8 +551,8 @@ object VerticalSumGrid(std::shared_ptr<hitool> h, const param& theParam, const o
 {
 	try
 	{
-		return VectorToTable<double>(
-		    h->VerticalSum<double>(theParam, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
+		return VectorToTable<double>(h->VerticalSum<double>(theParam, TableToVector<double>(firstLevelValue),
+		                                                    TableToVector<double>(lastLevelValue)));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -569,8 +587,8 @@ object VerticalAverageGrid(std::shared_ptr<hitool> h, const param& theParam, con
 {
 	try
 	{
-		return VectorToTable<double>(
-		    h->VerticalAverage<double>(theParam, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
+		return VectorToTable<double>(h->VerticalAverage<double>(theParam, TableToVector<double>(firstLevelValue),
+		                                                        TableToVector<double>(lastLevelValue)));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -605,8 +623,9 @@ object VerticalCountGrid(std::shared_ptr<hitool> h, const param& theParams, cons
 {
 	try
 	{
-		return VectorToTable<double>(h->VerticalCount<double>(theParams, TableToVector(firstLevelValue),
-		                                                      TableToVector(lastLevelValue), TableToVector(findValue)));
+		return VectorToTable<double>(h->VerticalCount<double>(theParams, TableToVector<double>(firstLevelValue),
+		                                                      TableToVector<double>(lastLevelValue),
+		                                                      TableToVector<double>(findValue)));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -642,9 +661,9 @@ object VerticalHeightGrid(std::shared_ptr<hitool> h, const param& theParam, cons
 {
 	try
 	{
-		return VectorToTable<double>(h->VerticalHeight<double>(theParam, TableToVector(firstLevelValue),
-		                                                       TableToVector(lastLevelValue), TableToVector(findValue),
-		                                                       findNth));
+		return VectorToTable<double>(h->VerticalHeight<double>(theParam, TableToVector<double>(firstLevelValue),
+		                                                       TableToVector<double>(lastLevelValue),
+		                                                       TableToVector<double>(findValue), findNth));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -681,9 +700,9 @@ object VerticalHeightGreaterThanGrid(std::shared_ptr<hitool> h, const param& the
 {
 	try
 	{
-		return VectorToTable<double>(h->VerticalHeightGreaterThan<double>(theParam, TableToVector(firstLevelValue),
-		                                                                  TableToVector(lastLevelValue),
-		                                                                  TableToVector(findValue), findNth));
+		return VectorToTable<double>(h->VerticalHeightGreaterThan<double>(
+		    theParam, TableToVector<double>(firstLevelValue), TableToVector<double>(lastLevelValue),
+		    TableToVector<double>(findValue), findNth));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -720,9 +739,9 @@ object VerticalHeightLessThanGrid(std::shared_ptr<hitool> h, const param& thePar
 {
 	try
 	{
-		return VectorToTable<double>(h->VerticalHeightLessThan<double>(theParam, TableToVector(firstLevelValue),
-		                                                               TableToVector(lastLevelValue),
-		                                                               TableToVector(findValue), findNth));
+		return VectorToTable<double>(h->VerticalHeightLessThan<double>(theParam, TableToVector<double>(firstLevelValue),
+		                                                               TableToVector<double>(lastLevelValue),
+		                                                               TableToVector<double>(findValue), findNth));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -758,7 +777,7 @@ object VerticalValueGrid(std::shared_ptr<hitool> h, const param& theParam, const
 {
 	try
 	{
-		return VectorToTable<double>(h->VerticalValue<double>(theParam, TableToVector(findValue)));
+		return VectorToTable<double>(h->VerticalValue<double>(theParam, TableToVector<double>(findValue)));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -793,8 +812,8 @@ object VerticalPlusMinusAreaGrid(std::shared_ptr<hitool> h, const param& thePara
 {
 	try
 	{
-		return VectorToTable<double>(
-		    h->PlusMinusArea<double>(theParams, TableToVector(firstLevelValue), TableToVector(lastLevelValue)));
+		return VectorToTable<double>(h->PlusMinusArea<double>(theParams, TableToVector<double>(firstLevelValue),
+		                                                      TableToVector<double>(lastLevelValue)));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -843,7 +862,7 @@ namespace modifier_wrapper
 {
 void SetLowerHeightGrid(modifier& mod, const object& lowerHeight)
 {
-	mod.LowerHeight(TableToVector(lowerHeight));
+	mod.LowerHeight(TableToVector<double>(lowerHeight));
 }
 object GetLowerHeightGrid(modifier& mod)
 {
@@ -851,7 +870,7 @@ object GetLowerHeightGrid(modifier& mod)
 }
 void SetUpperHeightGrid(modifier& mod, const object& upperHeight)
 {
-	mod.UpperHeight(TableToVector(upperHeight));
+	mod.UpperHeight(TableToVector<double>(upperHeight));
 }
 object GetUpperHeightGrid(modifier& mod)
 {
@@ -859,7 +878,7 @@ object GetUpperHeightGrid(modifier& mod)
 }
 void SetFindValueGrid(modifier& mod, const object& findValue)
 {
-	mod.FindValue(TableToVector(findValue));
+	mod.FindValue(TableToVector<double>(findValue));
 }
 object GetFindValueGrid(modifier& mod)
 {
@@ -873,7 +892,7 @@ namespace findvalue
 {
 void Process(modifier_findvalue& mod, const object& data, const object& height)
 {
-	mod.Process(TableToVector(data), TableToVector(height));
+	mod.Process(TableToVector<double>(data), TableToVector<double>(height));
 }
 }  // namespace findvalue
 
@@ -881,7 +900,7 @@ namespace findheight
 {
 void Process(modifier_findheight& mod, const object& data, const object& height)
 {
-	mod.Process(TableToVector(data), TableToVector(height));
+	mod.Process(TableToVector<double>(data), TableToVector<double>(height));
 }
 }  // namespace findheight
 
@@ -889,7 +908,7 @@ namespace findheight_gt
 {
 void Process(modifier_findheight_gt& mod, const object& data, const object& height)
 {
-	mod.Process(TableToVector(data), TableToVector(height));
+	mod.Process(TableToVector<double>(data), TableToVector<double>(height));
 }
 }  // namespace findheight_gt
 
@@ -897,7 +916,7 @@ namespace findheight_lt
 {
 void Process(modifier_findheight_lt& mod, const object& data, const object& height)
 {
-	mod.Process(TableToVector(data), TableToVector(height));
+	mod.Process(TableToVector<double>(data), TableToVector<double>(height));
 }
 }  // namespace findheight_lt
 
@@ -905,7 +924,7 @@ namespace max
 {
 void Process(modifier_max& mod, const object& data, const object& height)
 {
-	mod.Process(TableToVector(data), TableToVector(height));
+	mod.Process(TableToVector<double>(data), TableToVector<double>(height));
 }
 }  // namespace max
 
@@ -913,7 +932,7 @@ namespace min
 {
 void Process(modifier_min& mod, const object& data, const object& height)
 {
-	mod.Process(TableToVector(data), TableToVector(height));
+	mod.Process(TableToVector<double>(data), TableToVector<double>(height));
 }
 }  // namespace min
 
@@ -921,7 +940,7 @@ namespace maxmin
 {
 void Process(modifier_maxmin& mod, const object& data, const object& height)
 {
-	mod.Process(TableToVector(data), TableToVector(height));
+	mod.Process(TableToVector<double>(data), TableToVector<double>(height));
 }
 }  // namespace maxmin
 
@@ -929,7 +948,7 @@ namespace count
 {
 void Process(modifier_count& mod, const object& data, const object& height)
 {
-	mod.Process(TableToVector(data), TableToVector(height));
+	mod.Process(TableToVector<double>(data), TableToVector<double>(height));
 }
 }  // namespace count
 
@@ -941,7 +960,7 @@ object Result(modifier_mean& mod)
 }
 void Process(modifier_mean& mod, const object& data, const object& height)
 {
-	mod.Process(TableToVector(data), TableToVector(height));
+	mod.Process(TableToVector<double>(data), TableToVector<double>(height));
 }
 }  // namespace mean
 
@@ -982,15 +1001,18 @@ object SortedValues(const lagged_ensemble& ens)
 
 namespace matrix_wrapper
 {
-void SetValues(matrix<double>& mat, const object& values)
+template <typename T>
+void SetValues(matrix<T>& mat, const object& values)
 {
-	mat.Set(TableToVector(values));
+	mat.Set(TableToVector<T>(values));
 }
-object GetValues(matrix<double>& mat)
+template <typename T>
+object GetValues(matrix<T>& mat)
 {
-	return VectorToTable<double>(std::vector<double>(mat.Values()));
+	return VectorToTable<T>(std::vector<T>(mat.Values()));
 }
-void Fill(matrix<double>& mat, double value)
+template <typename T>
+void Fill(matrix<T>& mat, T value)
 {
 	mat.Fill(value);
 }
@@ -998,7 +1020,8 @@ void Fill(matrix<double>& mat, double value)
 
 namespace luabind_workaround
 {
-matrix<double> ProbLimitGt2D(const matrix<double>& A, const matrix<double>& B, double limit)
+template <typename T>
+matrix<T> ProbLimitGt2D(const matrix<T>& A, const matrix<T>& B, double limit)
 {
 	return numerical_functions::Reduce2D(A, B,
 	                                     [=](double& val1, double& val2, const double& a, const double& b) {
@@ -1008,7 +1031,8 @@ matrix<double> ProbLimitGt2D(const matrix<double>& A, const matrix<double>& B, d
 	                                     [](const double& val1, const double& val2) { return (val1 >= 1) ? 1 : 0; },
 	                                     0.0, 0.0);
 }
-matrix<double> ProbLimitEq2D(const matrix<double>& A, const matrix<double>& B, double limit)
+template <typename T>
+matrix<T> ProbLimitEq2D(const matrix<double>& A, const matrix<double>& B, double limit)
 {
 	return numerical_functions::Reduce2D(A, B,
 	                                     [=](double& val1, double& val2, const double& a, const double& b) {
@@ -1022,12 +1046,14 @@ matrix<double> ProbLimitEq2D(const matrix<double>& A, const matrix<double>& B, d
 
 // clang-format off
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+
 void BindLib(lua_State* L)
 {
 	module(L)[class_<himan::info<double>, std::shared_ptr<himan::info<double>>>("info")
 	              .def(constructor<>())
 	              .def("ClassName", &info<double>::ClassName)
-//	              .def("First", &info::First)
 	              .def("ResetParam", &info<double>::Reset<param>)
 	              .def("FirstParam", &info<double>::First<param>)
 	              .def("NextParam", &info<double>::Next<param>)
@@ -1049,22 +1075,60 @@ void BindLib(lua_State* L)
 	              .def("SetLevel", LUA_MEMFN(void, info<double>, Set<level>, const level&))
 	              //.def("SetParam", LUA_MEMFN(void, info, SetParam, const param&))
 	              // These are local functions to luatool
-	              .def("SetParam", &info_wrapper::SetParam)
-	              .def("SetIndexValue", &info_wrapper::SetValue)
-	              .def("GetIndexValue", &info_wrapper::GetValue)
-	              .def("GetTimeIndex", &info_wrapper::GetTimeIndex)
-	              .def("GetParamIndex", &info_wrapper::GetParamIndex)
-	              .def("GetLevelIndex", &info_wrapper::GetLevelIndex)
-	              .def("SetTimeIndex", &info_wrapper::SetTimeIndex)
-	              .def("SetParamIndex", &info_wrapper::SetParamIndex)
-	              .def("SetLevelIndex", &info_wrapper::SetLevelIndex)
-	              .def("SetValues", &info_wrapper::SetValues)
-	              .def("SetValuesFromMatrix", &info_wrapper::SetValuesFromMatrix)
-	              .def("GetValues", &info_wrapper::GetValues)
-	              .def("GetLatLon", &info_wrapper::GetLatLon)
-	              .def("GetMissingValue", &info_wrapper::GetMissingValue)
-	              .def("SetMissingValue", &info_wrapper::SetMissingValue)
-	              .def("GetData", &info_wrapper::GetData),
+	              .def("SetParam", &info_wrapper::SetParam<double>)
+	              .def("SetIndexValue", &info_wrapper::SetValue<double>)
+	              .def("GetIndexValue", &info_wrapper::GetValue<double>)
+	              .def("GetTimeIndex", &info_wrapper::GetTimeIndex<double>)
+	              .def("GetParamIndex", &info_wrapper::GetParamIndex<double>)
+	              .def("GetLevelIndex", &info_wrapper::GetLevelIndex<double>)
+	              .def("SetTimeIndex", &info_wrapper::SetTimeIndex<double>)
+	              .def("SetParamIndex", &info_wrapper::SetParamIndex<double>)
+	              .def("SetLevelIndex", &info_wrapper::SetLevelIndex<double>)
+	              .def("SetValues", &info_wrapper::SetValues<double>)
+	              .def("SetValuesFromMatrix", &info_wrapper::SetValuesFromMatrix<double>)
+	              .def("GetValues", &info_wrapper::GetValues<double>)
+	              .def("GetLatLon", &info_wrapper::GetLatLon<double>)
+	              .def("GetMissingValue", &info_wrapper::GetMissingValue<double>)
+	              .def("SetMissingValue", &info_wrapper::SetMissingValue<double>)
+	              .def("GetData", &info_wrapper::GetData<double>),
+	          class_<himan::info<float>, std::shared_ptr<himan::info<float>>>("infof")
+	              .def(constructor<>())
+	              .def("ClassName", &info<float>::ClassName)
+	              .def("ResetParam", &info<float>::Reset<param>)
+	              .def("FirstParam", &info<float>::First<param>)
+	              .def("NextParam", &info<float>::Next<param>)
+	              .def("ResetLevel", &info<float>::Reset<level>)
+	              .def("FirstLevel", &info<float>::First<level>)
+	              .def("NextLevel", &info<float>::Next<level>)
+	              .def("ResetTime", &info<float>::Reset<forecast_time>)
+	              .def("FirstTime", &info<float>::First<forecast_time>)
+	              .def("NextTime", &info<float>::Next<forecast_time>)
+	              .def("SizeLocations", LUA_CMEMFN(size_t, info<float>, SizeLocations, void))
+	              .def("SizeTimes", LUA_CMEMFN(size_t, info<float>, Size<forecast_time>, void))
+	              .def("SizeParams", LUA_CMEMFN(size_t, info<float>, Size<param>, void))
+	              .def("SizeLevels", LUA_CMEMFN(size_t, info<float>, Size<level>, void))
+	              .def("GetLevel", LUA_CMEMFN(const level&, info<float>, Level, void))
+	              .def("GetTime", LUA_CMEMFN(const forecast_time&, info<float>, Time, void))
+	              .def("GetParam", LUA_CMEMFN(const param&, info<float>, Param, void))
+	              .def("GetGrid", LUA_CMEMFN(std::shared_ptr<grid>, info<float>, Grid, void))
+	              .def("SetTime", LUA_MEMFN(void, info<float>, Set<forecast_time>, const forecast_time&))
+	              .def("SetLevel", LUA_MEMFN(void, info<float>, Set<level>, const level&))
+	              .def("SetParam", &info_wrapper::SetParam<float>)
+	              .def("SetIndexValue", &info_wrapper::SetValue<float>)
+	              .def("GetIndexValue", &info_wrapper::GetValue<float>)
+	              .def("GetTimeIndex", &info_wrapper::GetTimeIndex<float>)
+	              .def("GetParamIndex", &info_wrapper::GetParamIndex<float>)
+	              .def("GetLevelIndex", &info_wrapper::GetLevelIndex<float>)
+	              .def("SetTimeIndex", &info_wrapper::SetTimeIndex<float>)
+	              .def("SetParamIndex", &info_wrapper::SetParamIndex<float>)
+	              .def("SetLevelIndex", &info_wrapper::SetLevelIndex<float>)
+	              .def("SetValues", &info_wrapper::SetValues<float>)
+	              .def("SetValuesFromMatrix", &info_wrapper::SetValuesFromMatrix<float>)
+	              .def("GetValues", &info_wrapper::GetValues<float>)
+	              .def("GetLatLon", &info_wrapper::GetLatLon<float>)
+	              .def("GetMissingValue", &info_wrapper::GetMissingValue<float>)
+	              .def("SetMissingValue", &info_wrapper::SetMissingValue<float>)
+	              .def("GetData", &info_wrapper::GetData<float>),
 	          class_<grid, std::shared_ptr<grid>>("grid")
 	              .def("ClassName", &grid::ClassName)
 	              //.def("GetScanningMode", LUA_CMEMFN(HPScanningMode, grid, ScanningMode, void))
@@ -1120,10 +1184,14 @@ void BindLib(lua_State* L)
 #endif
 	          class_<matrix<double>>("matrix")
 	              .def(constructor<size_t, size_t, size_t, double>())
-	              .def("SetValues", &matrix_wrapper::SetValues)
-	              .def("GetValues", &matrix_wrapper::GetValues)
-	              .def("Fill", &matrix_wrapper::Fill)
-	          ,
+	              .def("SetValues", &matrix_wrapper::SetValues<double>)
+	              .def("GetValues", &matrix_wrapper::GetValues<double>)
+	              .def("Fill", &matrix_wrapper::Fill<double>),
+	          class_<matrix<float>>("matrixf")
+	              .def(constructor<size_t, size_t, size_t, float>())
+	              .def("SetValues", &matrix_wrapper::SetValues<float>)
+	              .def("GetValues", &matrix_wrapper::GetValues<float>)
+	              .def("Fill", &matrix_wrapper::Fill<float>),
 	          class_<param>("param")
 	              .def(constructor<const std::string&>())
 	              .def("ClassName", &param::ClassName)
@@ -1327,8 +1395,10 @@ void BindLib(lua_State* L)
 	          def("Filter2D", &numerical_functions::Filter2D),
 	          def("Max2D", &numerical_functions::Max2D),
 	          def("Min2D", &numerical_functions::Min2D),
-                  def("ProbLimitGt2D", &luabind_workaround::ProbLimitGt2D),
-                  def("ProbLimitEq2D", &luabind_workaround::ProbLimitEq2D),
+                  def("ProbLimitGt2D", &luabind_workaround::ProbLimitGt2D<double>),
+                  def("ProbLimitGt2D", &luabind_workaround::ProbLimitGt2D<float>),
+                  def("ProbLimitEq2D", &luabind_workaround::ProbLimitEq2D<double>),
+                  def("ProbLimitEq2D", &luabind_workaround::ProbLimitEq2D<float>),
 	          // metutil namespace
 	          def("LCL_", &metutil::LCL_<double>), 
 	          def("Es_", &metutil::Es_<double>), 
@@ -1342,6 +1412,8 @@ void BindLib(lua_State* L)
 		  def("IsMissing", static_cast<bool(*)(double)>(&::IsMissing)),
 		  def("IsValid", static_cast<bool(*)(double)>(&::IsValid))];
 }
+
+#pragma GCC diagnostic pop
 
 void BindPlugins(lua_State* L)
 {
@@ -1441,32 +1513,32 @@ object VectorToTable(const std::vector<T>& vec)
 template object VectorToTable(const std::vector<double>&);
 template object VectorToTable(const std::vector<float>&);
 
-std::vector<double> TableToVector(const object& table)
+template <typename T>
+std::vector<T> TableToVector(const object& table)
 {
 	ASSERT(table.is_valid());
 
 	if (type(table) == 0)
 	{
 		// Input argument is nil (lua.h)
-		return std::vector<double>();
+		return std::vector<T>();
 	}
 
 	luabind::iterator iter(table), end;
 
 	auto size = std::distance(iter, end);
 
-	std::vector<double> ret(size, himan::MissingDouble());
+	std::vector<T> ret(size, himan::MissingValue<T>());
 
 	size_t i = 0;
 	for (; iter != end; ++iter, i++)
 	{
 		try
 		{
-			ret[i] = object_cast<double>(*iter);
+			ret[i] = object_cast<T>(*iter);
 		}
 		catch (cast_failed& e)
 		{
-			ret[i] = himan::MissingDouble();
 		}
 	}
 	return ret;
