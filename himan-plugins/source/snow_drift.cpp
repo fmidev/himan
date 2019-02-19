@@ -231,7 +231,7 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 				FFG.resize(myTargetInfo->SizeLocations(), MissingDouble());
 			}
 
-			CalculateSnowDriftIndex(myTargetInfo, VEC(TInfo), VEC(FFInfo), VEC(FFGInfo), VEC(SFInfo), VEC(pSAInfo),
+			CalculateSnowDriftIndex(myTargetInfo, VEC(TInfo), VEC(FFInfo), FFG, VEC(SFInfo), VEC(pSAInfo),
 			                        VEC(pDAInfo));
 		}
 
