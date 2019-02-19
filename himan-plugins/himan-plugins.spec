@@ -4,7 +4,7 @@
 Summary: himan-plugins library
 Name: %{LIBNAME}
 Version: 19.2.19
-Release: 1.el7.fmi
+Release: 2.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -115,6 +115,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Feb 19 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.2.19-2.fmi
+- luatool with preliminary single precision support
 * Tue Feb 19 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.2.19-1.fmi
 - configuration api change
 * Fri Feb 15 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.2.15-1.fmi
