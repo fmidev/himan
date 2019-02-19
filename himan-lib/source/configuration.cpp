@@ -27,7 +27,8 @@ configuration::configuration()
       itsUseCudaForPacking(true),
       itsUseCudaForUnpacking(true),
       itsUseCudaForInterpolation(true),
-      itsUseCache(true),
+      itsUseCacheForReads(true),
+      itsUseCacheForWrites(true),
       itsUseDynamicMemoryAllocation(false),
       itsReadAllAuxiliaryFilesToCache(true),
       itsCudaDeviceCount(-1),
@@ -71,7 +72,9 @@ std::ostream& configuration::Write(std::ostream& file) const
 	file << "__itsUseCudaForUnpacking__ " << itsUseCudaForUnpacking << std::endl;
 	file << "__itsUseCudaFoInterpolation__ " << itsUseCudaForInterpolation << std::endl;
 
-	file << "__itsUseCache__ " << itsUseCache << std::endl;
+	file << "__itsUseCacheForReads__ " << itsUseCacheForReads << std::endl;
+	file << "__itsUseCacheForWrites__ " << itsUseCacheForWrites << std::endl;
+
 	file << "__itsForecastStep__ " << itsForecastStep << std::endl;
 	file << "__itsCacheLimit__ " << itsCacheLimit << std::endl;
 	file << "__itsUseDynamicMemoryAllocation__ " << itsUseDynamicMemoryAllocation << std::endl;
@@ -210,14 +213,23 @@ void configuration::UseCudaForInterpolation(bool theUseCudaForInterpolation)
 	itsUseCudaForInterpolation = theUseCudaForInterpolation;
 }
 
-bool configuration::UseCache() const
+bool configuration::UseCacheForReads() const
 {
-	return itsUseCache;
+	return itsUseCacheForReads;
 }
-void configuration::UseCache(bool theUseCache)
+void configuration::UseCacheForReads(bool theUseCacheForReads)
 {
-	itsUseCache = theUseCache;
+	itsUseCacheForReads = theUseCacheForReads;
 }
+bool configuration::UseCacheForWrites() const
+{
+	return itsUseCacheForWrites;
+}
+void configuration::UseCacheForWrites(bool theUseCacheForWrites)
+{
+	itsUseCacheForWrites = theUseCacheForWrites;
+}
+
 void configuration::SourceGeomNames(const std::vector<std::string>& theNames)
 {
 	itsSourceGeomNames = theNames;

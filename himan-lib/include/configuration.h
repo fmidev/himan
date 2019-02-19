@@ -146,8 +146,11 @@ class configuration
 	bool UseCudaForInterpolation() const;
 	void UseCudaForInterpolation(bool theUseCudaForInterpolation);
 
-	bool UseCache() const;
-	void UseCache(bool theUseCache);
+	bool UseCacheForReads() const;
+	void UseCacheForReads(bool theUseCacheForReads);
+
+	bool UseCacheForWrites() const;
+	void UseCacheForWrites(bool theUseCacheForWrites);
 
 	void SourceGeomNames(const std::vector<std::string>& theNames);
 	std::vector<std::string> SourceGeomNames() const;
@@ -238,7 +241,8 @@ class configuration
 	bool itsUseCudaForPacking;
 	bool itsUseCudaForUnpacking;
 	bool itsUseCudaForInterpolation;
-	bool itsUseCache;
+	bool itsUseCacheForReads;
+	bool itsUseCacheForWrites;
 	bool itsUseDynamicMemoryAllocation;
 	bool itsReadAllAuxiliaryFilesToCache;
 

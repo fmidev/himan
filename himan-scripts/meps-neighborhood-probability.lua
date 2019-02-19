@@ -1,9 +1,9 @@
 -- Calculate probabilities from meps with area and time averaging
 --
 
-local MISS = missing
+local MISS = missingf
 
-local mask = matrix(33, 33, 1, MISS)
+local mask = matrixf(33, 33, 1, MISS)
 mask:Fill(1)
 
 function produceProbabilities(sourceparam, targetparam, op, limit)

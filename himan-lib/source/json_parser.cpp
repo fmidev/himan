@@ -202,15 +202,15 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		throw runtime_error(string("Error parsing key read_data_from_database: ") + e.what());
 	}
 
-	// Check global use_cache option
+	// Check global use_cache_for_writes option
 
 	try
 	{
-		string theUseCache = pt.get<string>("use_cache");
+		string theUseCacheForWrites = pt.get<string>("use_cache_for_writes");
 
-		if (!util::ParseBoolean(theUseCache))
+		if (!util::ParseBoolean(theUseCacheForWrites))
 		{
-			conf->UseCache(false);
+			conf->UseCacheForWrites(false);
 		}
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
@@ -219,7 +219,47 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	}
 	catch (exception& e)
 	{
+		throw runtime_error(string("Error parsing key use_cache_for_writes: ") + e.what());
+	}
+
+	// Check global use_cache option
+
+	// For backwards compatibility
+	try
+	{
+		string theUseCache = pt.get<string>("use_cache");
+
+		if (!util::ParseBoolean(theUseCache))
+		{
+			conf->UseCacheForReads(false);
+		}
+		itsLogger.Warning("Key 'use_cache' is deprecated. Rename it to 'use_cache_for_reads'");
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
 		throw runtime_error(string("Error parsing key use_cache: ") + e.what());
+	}
+
+	try
+	{
+		string theUseCache = pt.get<string>("use_cache_for_reads");
+
+		if (!util::ParseBoolean(theUseCache))
+		{
+			conf->UseCacheForReads(false);
+		}
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing key use_cache_for_reads: ") + e.what());
 	}
 
 	// Check global cache_limit option
@@ -244,7 +284,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	}
 	catch (exception& e)
 	{
-		throw runtime_error(string("Error parsing key use_cache: ") + e.what());
+		throw runtime_error(string("Error parsing key cache_limit: ") + e.what());
 	}
 
 	// Check global file_type option
@@ -361,15 +401,36 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 			throw runtime_error(string("Error parsing level information: ") + e.what());
 		}
 
+		// Check local use_cache_for_writes option
+
+		bool delayedUseCacheForWrites = conf->UseCacheForWrites();
+
+		try
+		{
+			string theUseCache = element.second.get<string>("use_cache_for_writes");
+
+			delayedUseCacheForWrites = util::ParseBoolean(theUseCache);
+		}
+		catch (boost::property_tree::ptree_bad_path& e)
+		{
+			// Something was not found; do nothing
+		}
+		catch (exception& e)
+		{
+			throw runtime_error(string("Error parsing use_cache_for_writes key: ") + e.what());
+		}
+
 		// Check local use_cache option
 
-		bool delayedUseCache = conf->UseCache();
+		bool delayedUseCacheForReads = conf->UseCacheForReads();
 
 		try
 		{
 			string theUseCache = element.second.get<string>("use_cache");
 
-			delayedUseCache = util::ParseBoolean(theUseCache);
+			delayedUseCacheForReads = util::ParseBoolean(theUseCache);
+
+			itsLogger.Warning("Key 'use_cache' is deprecated. Rename it to 'use_cache_for_reads'");
 		}
 		catch (boost::property_tree::ptree_bad_path& e)
 		{
@@ -378,6 +439,21 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		catch (exception& e)
 		{
 			throw runtime_error(string("Error parsing use_cache key: ") + e.what());
+		}
+
+		try
+		{
+			string theUseCache = element.second.get<string>("use_cache_for_reads");
+
+			delayedUseCacheForReads = util::ParseBoolean(theUseCache);
+		}
+		catch (boost::property_tree::ptree_bad_path& e)
+		{
+			// Something was not found; do nothing
+		}
+		catch (exception& e)
+		{
+			throw runtime_error(string("Error parsing use_cache_for_reads key: ") + e.what());
 		}
 
 		// Check local file_type option
@@ -518,7 +594,8 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 			pc->itsLevels = g_levels;
 
 			pc->itsBaseGrid = unique_ptr<grid>(targetGrid->Clone());
-			pc->UseCache(delayedUseCache);
+			pc->UseCacheForReads(delayedUseCacheForReads);
+			pc->UseCacheForWrites(delayedUseCacheForWrites);
 			pc->itsOutputFileType = delayedFileType;
 			pc->FileWriteOption(delayedFileWrite);
 
