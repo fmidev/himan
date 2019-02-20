@@ -7,6 +7,7 @@
 #include "info.h"
 #include "logger.h"
 #include "plugin_factory.h"
+#include "util.h"
 #include <time.h>
 
 using namespace std;
@@ -17,49 +18,6 @@ typedef lock_guard<mutex> Lock;
 cache::cache()
 {
 	itsLogger = logger("cache");
-}
-
-template <typename T>
-string cache::UniqueName(const info<T>& info)
-{
-	stringstream ss;
-
-	// clang-format off
-
-	ss << info.Producer().Id() << "_"
-	   << info.Time().OriginDateTime().String("%Y-%m-%d %H:%M:%S") << "_"
-	   << info.Time().ValidDateTime().String("%Y-%m-%d %H:%M:%S") << "_"
-	   << info.Param().Name() << "_"
-	   << static_cast<string>(info.Level()) << "_"
-	   << info.ForecastType().Type() << "_"
-	   << info.ForecastType().Value();
-
-	// clang-format on
-
-	return ss.str();
-}
-
-template string cache::UniqueName(const info<double>&);
-template string cache::UniqueName(const info<float>&);
-
-string cache::UniqueNameFromOptions(search_options& options)
-{
-	ASSERT(options.configuration->DatabaseType() == kNoDatabase || options.prod.Id() != kHPMissingInt);
-	stringstream ss;
-
-	// clang-format off
-
-	ss << options.prod.Id() << "_"
-	   << options.time.OriginDateTime().String("%Y-%m-%d %H:%M:%S") << "_"
-	   << options.time.ValidDateTime().String("%Y-%m-%d %H:%M:%S") << "_"
-	   << options.param.Name() << "_"
-	   << static_cast<string>(options.level) << "_"
-	   << options.ftype.Type() << "_"
-	   << options.ftype.Value();
-
-	// clang-format on
-
-	return ss.str();
 }
 
 void cache::Insert(shared_ptr<info<double>> anInfo, bool pin)
@@ -75,7 +33,7 @@ void cache::Insert(shared_ptr<info<T>> anInfo, bool pin)
 	// Cached data is never replaced by another data that has
 	// the same uniqueName
 
-	const string uniqueName = UniqueName(*localInfo);
+	const string uniqueName = util::UniqueName<T>(*localInfo);
 
 	if (cache_pool::Instance()->Exists(uniqueName))
 	{
@@ -124,7 +82,7 @@ vector<shared_ptr<himan::info<double>>> cache::GetInfo(search_options& options, 
 template <typename T>
 vector<shared_ptr<himan::info<T>>> cache::GetInfo(search_options& options, bool strict)
 {
-	string uniqueName = UniqueNameFromOptions(options);
+	const string uniqueName = util::UniqueName(options);
 
 	vector<shared_ptr<himan::info<T>>> infos;
 
@@ -170,7 +128,7 @@ void cache::Replace(shared_ptr<info<T>> anInfo, bool pin)
 		localInfo = newInfo;
 	}
 
-	cache_pool::Instance()->Replace<T>(UniqueName(*localInfo), localInfo, pin);
+	cache_pool::Instance()->Replace<T>(util::UniqueName<T>(*localInfo), localInfo, pin);
 }
 
 template void cache::Replace<double>(shared_ptr<info<double>>, bool);

@@ -12,6 +12,7 @@
 #include "grid.h"
 #include "himan_common.h"
 #include "info.h"
+#include "search_options.h"
 #include <boost/iterator/zip_iterator.hpp>
 #include <memory>
 #include <mutex>
@@ -261,6 +262,17 @@ std::unique_ptr<grid> GridFromDatabase(const std::string& geom_name);
 
 template <typename T>
 void Flip(matrix<T>& mat);
+
+/**
+ *
+ * @brief Create unique string identifier from search_options or info
+ *
+ */
+
+std::string UniqueName(const plugin::search_options& options);
+
+template <typename T>
+std::string UniqueName(const info<T>& info);
 
 template <class... Conts>
 inline auto zip_range(Conts&... conts)

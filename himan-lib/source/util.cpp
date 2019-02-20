@@ -1169,3 +1169,46 @@ void util::Flip(matrix<T>& mat)
 
 template void util::Flip<double>(matrix<double>&);
 template void util::Flip<float>(matrix<float>&);
+
+string util::UniqueName(const plugin::search_options& options)
+{
+	ASSERT(options.configuration->DatabaseType() == kNoDatabase || options.prod.Id() != kHPMissingInt);
+	stringstream ss;
+
+	// clang-format off
+
+        ss << options.prod.Id() << "_"
+           << options.time.OriginDateTime().String("%Y-%m-%d %H:%M:%S") << "_"
+           << options.time.ValidDateTime().String("%Y-%m-%d %H:%M:%S") << "_"
+           << options.param.Name() << "_"
+           << static_cast<string>(options.level) << "_"
+           << options.ftype.Type() << "_"
+           << options.ftype.Value();
+
+	// clang-format on
+
+	return ss.str();
+}
+
+template <typename T>
+string util::UniqueName(const info<T>& info)
+{
+	stringstream ss;
+
+	// clang-format off
+
+        ss << info.Producer().Id() << "_"
+           << info.Time().OriginDateTime().String("%Y-%m-%d %H:%M:%S") << "_"
+           << info.Time().ValidDateTime().String("%Y-%m-%d %H:%M:%S") << "_"
+           << info.Param().Name() << "_"
+           << static_cast<string>(info.Level()) << "_"
+           << info.ForecastType().Type() << "_"
+           << info.ForecastType().Value();
+
+	// clang-format on
+
+	return ss.str();
+}
+
+template string util::UniqueName(const info<double>&);
+template string util::UniqueName(const info<float>&);
