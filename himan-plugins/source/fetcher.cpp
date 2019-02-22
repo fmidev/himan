@@ -52,7 +52,7 @@ string CreateNotFoundString(const vector<producer>& prods, const forecast_type& 
 
 	for (const auto& prod : prods)
 	{
-		str << prod.Id() + ",";
+		str << prod.Id() << ",";
 	}
 
 	str.seekp(-1, ios_base::end);
@@ -66,7 +66,7 @@ string CreateNotFoundString(const vector<producer>& prods, const forecast_type& 
 
 	str.seekp(-1, ios_base::end);
 
-	str << " level: " << static_cast<string>(lev) << " forecast type: " << ftype;
+	str << " level: " << static_cast<string>(lev) << " forecast type: " << static_cast<string>(ftype);
 
 	return str.str();
 }
