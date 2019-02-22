@@ -135,6 +135,9 @@ void time_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, co
 	                               itsSecondaryTimeSpan, itsSecondaryTimeMaskStep,
 	                               (itsParam.Name() == "FFG-MS" || itsParam.Name() == "RRR-KGM2"));
 
+	// randomize timelist so that different threads start to fetch different data
+	std::random_shuffle(timeList.begin(), timeList.end());
+
 	for (const auto& tm : timeList)
 	{
 		try
