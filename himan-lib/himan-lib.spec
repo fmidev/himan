@@ -15,24 +15,26 @@ Requires: libgcc
 Requires: libstdc++
 Requires: libfmidb >= 17.9.18
 Requires: libfmigrib >= 18.2.12
-Requires: gdal
-Requires: boost-iostreams
-Requires: boost-filesystem
 
 %if %{defined suse_version}
 BuildRequires: bzip2
-Requires: grib_api
+Requires: libboost_iostreams
+Requires: libboost_filesystem
 %else
 BuildRequires: bzip2-devel
 BuildRequires: redhat-rpm-config
 BuildRequires: cuda-9-1
 BuildRequires: gcc-c++ >= 4.8.2
+Requires: gdal
 Requires: eccodes
+Requires: boost-iostreams
+Requires: boost-filesystem
+
 %endif
 BuildRequires: libfmidb-devel >= 17.9.18
 BuildRequires: libfmigrib-devel >= 18.2.12
 BuildRequires: zlib-devel
-BuildRequires: boost-devel >= 1.66
+BuildRequires: boost-devel
 BuildRequires: scons
 
 Provides: libhiman.so

@@ -33,17 +33,17 @@ BuildRequires: cuda-9-1
 BuildRequires: eccodes-devel
 BuildRequires: redhat-rpm-config
 BuildRequires: cuda-cusp-9-1 >= 0.5.1
+BuildRequires: eigen >= 3.3.4
+
 Requires: jasper-libs
 Requires: eccodes
 %endif
-BuildRequires: libfmidb-devel >= 18.10.5
 BuildRequires: libfmigrib-devel >= 19.2.12
-BuildRequires: smartmet-library-newbase-devel >= 18.7.23
+#BuildRequires: smartmet-library-newbase-devel >= 18.7.23
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
-BuildRequires: boost-devel >= 1.66
+BuildRequires: boost-devel
 BuildRequires: scons
-BuildRequires: eigen >= 3.3.4
 
 %description
 Himan -- hilojen manipulaatio -- plugin collection
