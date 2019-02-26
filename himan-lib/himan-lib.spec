@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 19.2.19
+Version: 19.2.26
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -62,6 +62,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Tue Feb 26 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.2.26-1.fmi
+- Addition to util
 * Tue Feb 19 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.2.19-1.fmi
 - New configuration option 'use_cache_for_writes'
 * Mon Feb 11 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.2.11-1.fmi
