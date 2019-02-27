@@ -626,6 +626,8 @@ void grib::WriteTime(const forecast_time& ftime, const producer& prod, const par
 			case kAverage:
 			case kAccumulation:
 			case kDifference:
+			case kMinimum:
+			case kMaximum:
 				itsGrib->Message().SetLongKey("indicatorOfUnitForTimeRange", unitOfTimeRange);
 
 				long firstTime = static_cast<long>(par.Aggregation().FirstTimeValue());
