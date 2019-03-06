@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 19.2.26
+Version: 19.3.6
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -115,6 +115,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Mar  6 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.3.6-1.fmi
+- Changes to snow_drift
+- RHEL7.6 build
 * Tue Feb 26 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.2.26-1.fmi
 - ncl changed to use hitool
 * Tue Feb 19 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.2.19-2.fmi
