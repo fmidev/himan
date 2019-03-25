@@ -219,6 +219,9 @@ class fetcher : public auxiliary_plugin
 
 	template <typename T>
 	std::shared_ptr<himan::info<T>> FetchFromProducer(search_options& opts, bool readPackedData, bool suppressLogging);
+	template <typename T>
+	std::shared_ptr<himan::info<T>> FetchFromProducerSingle(search_options& opts, bool readPackedData,
+	                                                        bool suppressLogging);
 
 	HPFileType FileType(const std::string& theInputFile);
 	bool itsDoLevelTransform;           //<! Default true
