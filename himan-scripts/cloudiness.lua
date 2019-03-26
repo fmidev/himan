@@ -121,6 +121,9 @@ for i=1,#N300 do
     ch = (CH_EC)*0.5+((RH_EC_500+RH_EC_300)/2)*0.4
   end
 
+  ch = math.min(ch, 100)
+  cm = math.min(cm, 100)
+  cl = math.min(cl, 100)
   N = math.max(ch, cm, cl)
 
   -- YLÄPILVIEN OSALTA VÄHENNETÄÄN PILVISYYTTÄ, KUN YLÄPILVISYYS DOMINOI (10.7.2018 Lisätty) ; Karkea leikkaus
