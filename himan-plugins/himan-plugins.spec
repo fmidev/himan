@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 19.3.19
+Version: 19.3.26
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -115,6 +115,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Mar 26 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.3.26-1.fmi
+- snow_drift tweaking
 * Tue Mar 19 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.3.19-1.fmi
 - tropopause fix
 * Wed Mar  6 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.3.6-1.fmi
