@@ -676,22 +676,16 @@ bool radon::SaveGrid(const info<T>& resultInfo, const string& theFileName, const
 		itsRadonDB->Execute(query.str());
 		itsRadonDB->Commit();
 
-		// After first insert we have to analyze table manually. Otherwise Himan might not be
-		// able to fetch this inserted data in subsequent plugin calls, because it checks the
-		// record_count column from as_grid_v which is only updated by database ANALYZE calls.
-		// The database DOES do this automatically, but only after a certain threshold has been
-		// passed (by default 50 changed rows).
-		//
-		// In some cases this implementation might lead to multiple ANALYZE calls being made, when
-		// the first fields are insterted from multiple parallel threads. This does not matter,
-		// ANALYZE on a near-empty table should be fast enough.
+		// After first insert set record_count to 1, to mark that this partition has data
 
 		if (record_count == "0")
 		{
-			itsLogger.Trace("Analyzing table " + fullTableName + " due to first insert");
+			itsLogger.Trace("Updating as_grid record_count column for " + fullTableName);
 
 			query.str("");
-			query << "ANALYZE " << fullTableName;
+			query << "UPDATE as_grid SET record_count = 1 WHERE schema_name = '" << schema_name
+			      << "' AND partition_name = '" << table_name << "'";
+
 			itsRadonDB->Execute(query.str());
 		}
 	}
