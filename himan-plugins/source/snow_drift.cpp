@@ -17,6 +17,7 @@ const param SDIParam("SNOWDRIFT-N");
 const param SAParam("SNACC-H");
 const param DAParam("SNDACC-N");
 const double SFLimit = 0.09;
+const double GustFactor = 2.0;
 
 double DriftMagnitude(double ff, double mi);
 double DriftIndex(double sv);
@@ -71,9 +72,9 @@ void CalculateSnowDriftIndex(info_t& myTargetInfo, const std::vector<double>& T,
 
 		double eff = ff;  // effective wind speed, factors in gustyness
 
-		if ((ffg / ff) > 1.6)
+		if ((ffg / ff) > GustFactor)
 		{
-			eff = ((ffg / ff) - 1.6) * ff + ff;
+			eff = ((ffg / ff) - GustFactor) * ff + ff;
 		}
 
 		if (sf > SFLimit)
