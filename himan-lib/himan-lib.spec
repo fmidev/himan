@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 19.2.19
+Version: 19.2.26
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -15,24 +15,26 @@ Requires: libgcc
 Requires: libstdc++
 Requires: libfmidb >= 17.9.18
 Requires: libfmigrib >= 18.2.12
-Requires: gdal
-Requires: boost-iostreams
-Requires: boost-filesystem
 
 %if %{defined suse_version}
 BuildRequires: bzip2
-Requires: grib_api
+Requires: libboost_iostreams
+Requires: libboost_filesystem
 %else
 BuildRequires: bzip2-devel
 BuildRequires: redhat-rpm-config
 BuildRequires: cuda-9-1
 BuildRequires: gcc-c++ >= 4.8.2
+Requires: gdal
 Requires: eccodes
+Requires: boost-iostreams
+Requires: boost-filesystem
+
 %endif
 BuildRequires: libfmidb-devel >= 17.9.18
 BuildRequires: libfmigrib-devel >= 18.2.12
 BuildRequires: zlib-devel
-BuildRequires: boost-devel >= 1.66
+BuildRequires: boost-devel
 BuildRequires: scons
 
 Provides: libhiman.so
@@ -60,6 +62,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Tue Feb 26 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.2.26-1.fmi
+- Addition to util
 * Tue Feb 19 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.2.19-1.fmi
 - New configuration option 'use_cache_for_writes'
 * Mon Feb 11 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.2.11-1.fmi

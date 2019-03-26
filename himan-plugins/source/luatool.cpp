@@ -1032,7 +1032,7 @@ matrix<T> ProbLimitGt2D(const matrix<T>& A, const matrix<T>& B, double limit)
 	                                     0.0, 0.0);
 }
 template <typename T>
-matrix<T> ProbLimitEq2D(const matrix<double>& A, const matrix<double>& B, double limit)
+matrix<T> ProbLimitEq2D(const matrix<T>& A, const matrix<T>& B, double limit)
 {
 	return numerical_functions::Reduce2D(A, B,
 	                                     [=](double& val1, double& val2, const double& a, const double& b) {

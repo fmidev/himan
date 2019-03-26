@@ -36,6 +36,11 @@ This means that the plugin needs to be calculated to at least one observation
 analysis producer (ie. currently LAPS, METAN, MNWC, MESAN etc), and any number 
 of forecast producers.
 
+Ice cover data is read from observation analysis (Icemap2 in FMIs case) and
+if ice cover is less than 70%, snow drift is not calculated for that grid point.
+If ice cover value is missing (for example land point), snow drift is calculated
+normally. If ice coverage data is not found, land-sea mask is used with threshold 0.5.
+
 # Per-plugin configuration options
 
 None

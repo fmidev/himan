@@ -24,7 +24,8 @@ double MobilityIndex(double da, double sa);
 
 void CalculateSnowDriftIndex(info_t& myTargetInfo, const std::vector<double>& T, const std::vector<double>& FF,
                              const std::vector<double>& FFG, const std::vector<double>& SF,
-                             const std::vector<double>& pSA, const std::vector<double>& pDA)
+                             const std::vector<double>& pSA, const std::vector<double>& pDA,
+                             const std::vector<bool>& mask)
 {
 	myTargetInfo->Find<param>(SDIParam);
 	auto& SI = VEC(myTargetInfo);
@@ -33,7 +34,7 @@ void CalculateSnowDriftIndex(info_t& myTargetInfo, const std::vector<double>& T,
 	myTargetInfo->Find<param>(DAParam);
 	auto& DA = VEC(myTargetInfo);
 
-	for (auto&& tup : zip_range(SI, SA, DA, T, FF, FFG, SF, pSA, pDA))
+	for (auto&& tup : zip_range(SI, SA, DA, T, FF, FFG, SF, pSA, pDA, mask))
 	{
 		auto& si = tup.get<0>();        // snow drift index
 		auto& sa = tup.get<1>();        // accumulated snow cover age
@@ -44,8 +45,9 @@ void CalculateSnowDriftIndex(info_t& myTargetInfo, const std::vector<double>& T,
 		const auto sf = tup.get<6>();   // snow fall rate (mm/h)
 		const auto psa = tup.get<7>();  // previous accumulated snow cover age
 		const auto pda = tup.get<8>();  // previous accumulated snowdrift value
+		const auto m = tup.get<9>();    // mask value for this grid point (true: process grid point)
 
-		if (IsMissing(t) || IsMissing(ff) || IsMissing(sf) || IsMissing(psa) || IsMissing(pda))
+		if (IsMissing(t) || IsMissing(ff) || IsMissing(sf) || IsMissing(psa) || IsMissing(pda) || !m)
 		{
 			continue;
 		}
@@ -158,6 +160,48 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 			continue;
 		}
 
+		// Use ice coverage information to mask out points on the sea where there is no ice
+		auto iceTime = forecastTime;
+		iceTime.OriginDateTime().Adjust(kHourResolution, -std::stoi(iceTime.OriginDateTime().String("%H")));
+		iceTime.OriginDateTime().Adjust(kHourResolution, 12);
+		iceTime.ValidDateTime(iceTime.OriginDateTime());
+
+		const producer vanadis(105, 86, 11, "MTLICE");
+
+		auto MaskInfo = Fetch(iceTime, level(kHeight, 0), param("ICNCT-PRCNT"), forecast_type(kDeterministic),
+		                      itsConfiguration->SourceGeomNames(), vanadis, false);
+
+		if (!MaskInfo)
+		{
+			iceTime.OriginDateTime().Adjust(kHourResolution, -24);
+			iceTime.ValidDateTime().Adjust(kHourResolution, -24);
+
+			MaskInfo = Fetch(iceTime, level(kHeight, 0), param("ICNCT-PRCNT"), forecast_type(kDeterministic),
+			                 itsConfiguration->SourceGeomNames(), vanadis, false);
+		}
+
+		if (!MaskInfo)
+		{
+			// if ice coverage information is not found, use land-sea mask
+			MaskInfo = Fetch(forecastTime, level(kHeight, 0), param("LC-0TO1"), forecastType, false);
+		}
+
+		// Is mask value is true, grid point will be processed
+		// --> If no mask is found (Ice cover OR land sea mask), all grid points are accepted
+		std::vector<bool> mask(myTargetInfo->SizeLocations(), true);
+
+		if (MaskInfo)
+		{
+			const double threshold = (MaskInfo->Param().Name() == "ICNCT-PRCNT") ? 70 : 0.5;
+
+			const auto& vec = VEC(MaskInfo);
+
+			// grid point is accepted if: value of mask is missing (ie land point if ice cover data), or
+			// if value is over given threshold
+			std::transform(vec.begin(), vec.end(), mask.begin(),
+			               [&](double d) { return IsMissing(d) || d >= threshold; });
+		}
+
 		auto prevTime = forecastTime;
 		prevTime.ValidDateTime().Adjust(kHourResolution, -1);
 
@@ -206,7 +250,7 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 
 				// LAPS does not provide FFG
 				std::vector<double> FFG(pDA.size(), MissingDouble());
-				CalculateSnowDriftIndex(myTargetInfo, VEC(TInfo), VEC(FFInfo), FFG, VEC(SFInfo), pSA, pDA);
+				CalculateSnowDriftIndex(myTargetInfo, VEC(TInfo), VEC(FFInfo), FFG, VEC(SFInfo), pSA, pDA, mask);
 
 				myTargetInfo->Find<param>(SDIParam);
 				myTargetInfo->Data().Fill(MissingDouble());
@@ -231,8 +275,8 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 				FFG.resize(myTargetInfo->SizeLocations(), MissingDouble());
 			}
 
-			CalculateSnowDriftIndex(myTargetInfo, VEC(TInfo), VEC(FFInfo), FFG, VEC(SFInfo), VEC(pSAInfo),
-			                        VEC(pDAInfo));
+			CalculateSnowDriftIndex(myTargetInfo, VEC(TInfo), VEC(FFInfo), FFG, VEC(SFInfo), VEC(pSAInfo), VEC(pDAInfo),
+			                        mask);
 		}
 
 		myTargetInfo->Find<param>(SAParam);

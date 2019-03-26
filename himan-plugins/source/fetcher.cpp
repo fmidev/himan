@@ -1,8 +1,3 @@
-/**
- * @file fetcher.cpp
- *
- */
-
 #include "fetcher.h"
 #include "interpolate.h"
 #include "logger.h"
@@ -23,6 +18,8 @@
 using namespace himan;
 using namespace himan::plugin;
 using namespace std;
+
+// A flag to guard that we read auxiliary files only once
 
 static once_flag oflag;
 
@@ -45,6 +42,52 @@ std::string UniqueName(const himan::producer& prod, const himan::param& par, con
 
 static vector<string> stickyParamCache;
 static mutex stickyMutex;
+
+string CreateNotFoundString(const vector<producer>& prods, const forecast_type& ftype, const forecast_time& time,
+                            const level& lev, const vector<param>& params)
+{
+	stringstream str;
+
+	str << "No valid data found for producer(s): ";
+
+	for (const auto& prod : prods)
+	{
+		str << prod.Id() << ",";
+	}
+
+	str.seekp(-1, ios_base::end);
+
+	str << " origintime: " << time.OriginDateTime().String() << ", step: " << time.Step() << " param(s): ";
+
+	for (const auto& par : params)
+	{
+		str << par.Name() << ",";
+	}
+
+	str.seekp(-1, ios_base::end);
+
+	str << " level: " << static_cast<string>(lev) << " forecast type: " << static_cast<string>(ftype);
+
+	return str.str();
+}
+
+namespace
+{
+template <typename T>
+shared_ptr<info<T>> ConvertTo(shared_ptr<info<double>>&);
+
+template <>
+shared_ptr<info<double>> ConvertTo(shared_ptr<info<double>>& anInfo)
+{
+	return anInfo;
+}
+
+template <>
+shared_ptr<info<float>> ConvertTo(shared_ptr<info<double>>& anInfo)
+{
+	return make_shared<info<float>>(*anInfo);
+}
+}  // namespace
 
 fetcher::fetcher()
     : itsDoLevelTransform(true),
@@ -87,32 +130,8 @@ shared_ptr<info<T>> fetcher::Fetch(shared_ptr<const plugin_configuration> config
 		}
 	}
 
-	string optsStr = "producer(s): ";
-
-	for (const auto& prod : config->SourceProducers())
-	{
-		optsStr += to_string(prod.Id()) + ",";
-	}
-
-	optsStr = optsStr.substr(0, optsStr.size() - 1);
-
-	optsStr += " origintime: " + requestedTime.OriginDateTime().String() + ", step: " + to_string(requestedTime.Step());
-
-	optsStr += " param(s): ";
-
-	for (size_t i = 0; i < requestedParams.size(); i++)
-	{
-		optsStr += requestedParams[i].Name() + ",";
-	}
-
-	optsStr = optsStr.substr(0, optsStr.size() - 1) + " level: " + static_cast<std::string>(requestedLevel);
-
-	if (static_cast<int>(requestedType.Type()) > 2)
-	{
-		optsStr += " forecast type: " + static_cast<string>(requestedType);
-	}
-
-	itsLogger.Warning("No valid data found with given search options " + optsStr);
+	itsLogger.Warning(
+	    CreateNotFoundString(config->SourceProducers(), requestedType, requestedTime, requestedLevel, requestedParams));
 
 	throw kFileDataNotFound;
 }
@@ -121,6 +140,96 @@ template shared_ptr<info<double>> fetcher::Fetch<double>(shared_ptr<const plugin
                                                          const params&, forecast_type, bool);
 template shared_ptr<info<float>> fetcher::Fetch<float>(shared_ptr<const plugin_configuration>, forecast_time, level,
                                                        const params&, forecast_type, bool);
+
+shared_ptr<info<double>> fetcher::Fetch(shared_ptr<const plugin_configuration> config, forecast_time requestedTime,
+                                        level requestedLevel, param requestedParam, forecast_type requestedType,
+                                        bool readPackedData, bool suppressLogging)
+{
+	return Fetch<double>(config, requestedTime, requestedLevel, requestedParam, requestedType, readPackedData,
+	                     suppressLogging);
+}
+
+template <typename T>
+shared_ptr<info<T>> fetcher::Fetch(shared_ptr<const plugin_configuration> config, forecast_time requestedTime,
+                                   level requestedLevel, param requestedParam, forecast_type requestedType,
+                                   bool readPackedData, bool suppressLogging)
+{
+	timer t(true);
+
+	// Check sticky param cache first
+
+	shared_ptr<info<T>> ret;
+
+	for (const auto& prod : config->SourceProducers())
+	{
+		bool found = false;
+
+		{
+			lock_guard<mutex> lock(stickyMutex);
+
+			// Linear search, size of stickyParamCache should be relatively small
+			if (find(stickyParamCache.begin(), stickyParamCache.end(),
+			         UniqueName(prod, requestedParam, requestedLevel)) != stickyParamCache.end())
+			{
+				// oh,goody
+				found = true;
+			}
+		}
+
+		if (found)
+		{
+			search_options opts(requestedTime, requestedParam, requestedLevel, prod, requestedType, config);
+
+			ret = FetchFromProducer<T>(opts, readPackedData, suppressLogging);
+
+			if (ret)
+			{
+				break;
+			}
+		}
+	}
+
+	if (!ret)
+	{
+		// first time fetch (not in sticky cache)
+		for (const auto& prod : config->SourceProducers())
+		{
+			search_options opts(requestedTime, requestedParam, requestedLevel, prod, requestedType, config);
+
+			ret = FetchFromProducer<T>(opts, readPackedData, suppressLogging);
+
+			if (ret)
+			{
+				break;
+			}
+		}
+	}
+
+	if (config->StatisticsEnabled())
+	{
+		t.Stop();
+
+		config->Statistics()->AddToFetchingTime(t.GetTime());
+	}
+
+	if (!ret)
+	{
+		if (!suppressLogging)
+		{
+			itsLogger.Warning(CreateNotFoundString(config->SourceProducers(), requestedType, requestedTime,
+			                                       requestedLevel, {requestedParam}));
+		}
+
+		throw kFileDataNotFound;
+	}
+
+	return ret;
+}
+
+template shared_ptr<info<double>> fetcher::Fetch<double>(shared_ptr<const plugin_configuration>, forecast_time, level,
+                                                         param, forecast_type, bool, bool);
+template shared_ptr<info<float>> fetcher::Fetch<float>(shared_ptr<const plugin_configuration>, forecast_time, level,
+                                                       param, forecast_type, bool, bool);
 
 template <typename T>
 shared_ptr<info<T>> fetcher::FetchFromProducer(search_options& opts, bool readPackedData, bool suppressLogging)
@@ -169,16 +278,10 @@ shared_ptr<info<T>> fetcher::FetchFromProducer(search_options& opts, bool readPa
 
 	if (itsApplyLandSeaMask)
 	{
-		itsLogger.Trace("Applying land-sea mask with threshold " + to_string(itsLandSeaMaskThreshold));
-
-		itsApplyLandSeaMask = false;
-
 		if (!ApplyLandSeaMask<T>(opts.configuration, theInfos[0], opts.time, opts.ftype))
 		{
 			itsLogger.Warning("Land sea mask apply failed");
 		}
-
-		itsApplyLandSeaMask = true;
 	}
 
 	/*
@@ -196,7 +299,6 @@ shared_ptr<info<T>> fetcher::FetchFromProducer(search_options& opts, bool readPa
 	}
 
 	ASSERT((theInfos[0]->Time()) == opts.time);
-
 	ASSERT((theInfos[0]->Param()) == opts.param);
 
 	return theInfos[0];
@@ -204,121 +306,6 @@ shared_ptr<info<T>> fetcher::FetchFromProducer(search_options& opts, bool readPa
 
 template shared_ptr<info<double>> fetcher::FetchFromProducer<double>(search_options&, bool, bool);
 template shared_ptr<info<float>> fetcher::FetchFromProducer<float>(search_options&, bool, bool);
-
-shared_ptr<info<double>> fetcher::Fetch(shared_ptr<const plugin_configuration> config, forecast_time requestedTime,
-                                        level requestedLevel, param requestedParam, forecast_type requestedType,
-                                        bool readPackedData, bool suppressLogging)
-{
-	return Fetch<double>(config, requestedTime, requestedLevel, requestedParam, requestedType, readPackedData,
-	                     suppressLogging);
-}
-
-template <typename T>
-shared_ptr<info<T>> fetcher::Fetch(shared_ptr<const plugin_configuration> config, forecast_time requestedTime,
-                                   level requestedLevel, param requestedParam, forecast_type requestedType,
-                                   bool readPackedData, bool suppressLogging)
-{
-	timer t(true);
-
-	// Check sticky param cache first
-
-	shared_ptr<info<T>> ret;
-
-	for (const auto& prod : config->SourceProducers())
-	{
-		bool found = false;
-
-		{
-			lock_guard<mutex> lock(stickyMutex);
-
-			// Linear search, size of stickyParamCache should be relatively small
-			if (find(stickyParamCache.begin(), stickyParamCache.end(),
-			         UniqueName(prod, requestedParam, requestedLevel)) != stickyParamCache.end())
-			{
-				// oh,goody
-				found = true;
-			}
-		}
-
-		if (found)
-		{
-			search_options opts(requestedTime, requestedParam, requestedLevel, prod, requestedType, config);
-
-			ret = FetchFromProducer<T>(opts, readPackedData, suppressLogging);
-
-			if (ret)
-			{
-				break;
-			}
-
-			itsLogger.Trace("Sticky cache failed, trying all producers just to be sure");
-		}
-	}
-
-	if (!ret)
-	{
-		for (const auto& prod : config->SourceProducers())
-		{
-			search_options opts(requestedTime, requestedParam, requestedLevel, prod, requestedType, config);
-
-			ret = FetchFromProducer<T>(opts, readPackedData, suppressLogging);
-
-			if (ret)
-			{
-				break;
-			}
-		}
-	}
-
-	if (config->StatisticsEnabled())
-	{
-		t.Stop();
-
-		config->Statistics()->AddToFetchingTime(t.GetTime());
-	}
-
-	/*
-	 *  Safeguard; later in the code we do not check whether the data requested
-	 *  was actually what was requested.
-	 */
-
-	if (!ret)
-	{
-		if (!suppressLogging)
-		{
-			string optsStr = "producer(s): ";
-
-			for (const auto& prod : config->SourceProducers())
-			{
-				optsStr += to_string(prod.Id()) + ",";
-			}
-
-			optsStr = optsStr.substr(0, optsStr.size() - 1);
-
-			optsStr += " origintime: " + requestedTime.OriginDateTime().String() +
-			           ", step: " + to_string(requestedTime.Step());
-			optsStr += " param: " + requestedParam.Name();
-			optsStr += " level: " + static_cast<string>(requestedLevel);
-
-			if (static_cast<int>(requestedType.Type()) > 2)
-			{
-				optsStr += " forecast type: " + string(himan::HPForecastTypeToString.at(requestedType.Type())) + "/" +
-				           to_string(static_cast<int>(requestedType.Value()));
-			}
-
-			itsLogger.Warning("No valid data found with given search options " + optsStr);
-		}
-
-		throw kFileDataNotFound;
-	}
-
-	return ret;
-}
-
-template shared_ptr<info<double>> fetcher::Fetch<double>(shared_ptr<const plugin_configuration>, forecast_time, level,
-                                                         param, forecast_type, bool, bool);
-template shared_ptr<info<float>> fetcher::Fetch<float>(shared_ptr<const plugin_configuration>, forecast_time, level,
-                                                       param, forecast_type, bool, bool);
 
 template <typename T>
 vector<shared_ptr<info<T>>> fetcher::FromFile(const vector<string>& files, search_options& options, bool readPackedData,
@@ -472,6 +459,218 @@ bool fetcher::UseCache() const
 {
 	return itsUseCache;
 }
+
+template <typename T>
+pair<HPDataFoundFrom, vector<shared_ptr<info<T>>>> fetcher::FetchFromAllSources(search_options& opts,
+                                                                                bool readPackedData)
+{
+	auto ret = FetchFromCache<T>(opts);
+
+	if (!ret.empty())
+	{
+		return make_pair(HPDataFoundFrom::kCache, ret);
+	}
+
+	if (!auxiliaryFilesRead)
+	{
+		// second ret, different from first
+		auto _ret = FetchFromAuxiliaryFiles(opts, readPackedData);
+
+		if (!_ret.second.empty())
+		{
+			return make_pair(_ret.first, vector<shared_ptr<info<T>>>({ConvertTo<T>(_ret.second[0])}));
+		}
+	}
+
+	return make_pair(HPDataFoundFrom::kDatabase, FetchFromDatabase<T>(opts, readPackedData));
+}
+
+template pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAllSources<double>(search_options&,
+                                                                                                      bool);
+template pair<HPDataFoundFrom, vector<shared_ptr<info<float>>>> fetcher::FetchFromAllSources<float>(search_options&,
+                                                                                                    bool);
+
+template <typename T>
+vector<shared_ptr<info<T>>> fetcher::FetchFromCache(search_options& opts)
+{
+	vector<shared_ptr<info<T>>> ret;
+
+	if (itsUseCache && opts.configuration->UseCacheForReads())
+	{
+		// 1. Fetch data from cache
+		ret = FromCache<T>(opts);
+
+		if (ret.size())
+		{
+			if (dynamic_pointer_cast<const plugin_configuration>(opts.configuration)->StatisticsEnabled())
+			{
+				dynamic_pointer_cast<const plugin_configuration>(opts.configuration)
+				    ->Statistics()
+				    ->AddToCacheHitCount(1);
+			}
+		}
+	}
+
+	return ret;
+}
+
+template vector<shared_ptr<info<double>>> fetcher::FetchFromCache<double>(search_options&);
+template vector<shared_ptr<info<float>>> fetcher::FetchFromCache<float>(search_options&);
+
+template <typename T>
+vector<shared_ptr<info<T>>> fetcher::FetchFromDatabase(search_options& opts, bool readPackedData)
+{
+	vector<shared_ptr<info<T>>> ret;
+
+	HPDatabaseType dbtype = opts.configuration->DatabaseType();
+
+	if (!opts.configuration->ReadDataFromDatabase() || dbtype == kNoDatabase)
+	{
+		return ret;
+	}
+
+	if (opts.prod.Class() == kGridClass)
+	{
+		pair<vector<string>, string> files;
+
+		if (dbtype == kRadon)
+		{
+			auto r = GET_PLUGIN(radon);
+
+			files = r->Files(opts);
+		}
+
+		if (files.first.empty())
+		{
+			const string ref_prod = opts.prod.Name();
+			const string analtime = opts.time.OriginDateTime().String("%Y%m%d%H%M%S");
+			const vector<string> sourceGeoms = opts.configuration->SourceGeomNames();
+			itsLogger.Trace("No geometries found for producer " + ref_prod + ", analysistime " + analtime +
+			                ", source geom name(s) '" + util::Join(sourceGeoms, ",") + "', param " + opts.param.Name());
+		}
+		else
+		{
+			ret = FromFile<T>(files.first, opts, readPackedData, true);
+
+			if (dynamic_pointer_cast<const plugin_configuration>(opts.configuration)->StatisticsEnabled())
+			{
+				dynamic_pointer_cast<const plugin_configuration>(opts.configuration)
+				    ->Statistics()
+				    ->AddToCacheMissCount(1);
+			}
+
+			auto uName = UniqueName(opts.prod, opts.param, opts.level);
+
+			lock_guard<mutex> lock(stickyMutex);
+			if (find(stickyParamCache.begin(), stickyParamCache.end(), uName) == stickyParamCache.end())
+			{
+				itsLogger.Trace("Updating sticky param cache: " + UniqueName(opts.prod, opts.param, opts.level));
+				stickyParamCache.push_back(uName);
+			}
+
+			return ret;
+		}
+	}
+	else if (opts.prod.Class() == kPreviClass)
+	{
+		auto r = GET_PLUGIN(radon);
+
+		auto csv_forecasts = r->CSV(opts);
+		auto _ret = util::CSVToInfo<T>(csv_forecasts);
+
+		if (_ret)
+		{
+			ret.push_back(_ret);
+		}
+	}
+
+	return ret;
+}
+
+template vector<shared_ptr<info<double>>> fetcher::FetchFromDatabase<double>(search_options&, bool);
+template vector<shared_ptr<info<float>>> fetcher::FetchFromDatabase<float>(search_options&, bool);
+
+pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAuxiliaryFiles(search_options& opts,
+                                                                                         bool readPackedData)
+{
+	vector<info_t> ret;
+	HPDataFoundFrom source = HPDataFoundFrom::kAuxFile;
+
+	if (!opts.configuration->AuxiliaryFiles().empty())
+	{
+		auto files = opts.configuration->AuxiliaryFiles();
+
+		if (itsUseCache && opts.configuration->UseCacheForReads() && opts.configuration->ReadAllAuxiliaryFilesToCache())
+		{
+			if (itsApplyLandSeaMask)
+			{
+				itsLogger.Fatal("Land sea mask cannot be applied when reading all auxiliary files to cache");
+				itsLogger.Fatal("Restart himan with command line option --no-auxiliary-file-full-cache-read");
+				himan::Abort();
+			}
+
+			auto c = GET_PLUGIN(cache);
+
+			call_once(oflag, [&]() {
+
+				itsLogger.Debug("Start full auxiliary files read");
+
+				timer t(true);
+
+				ret = FromFile<double>(files, opts, readPackedData, true);
+
+				AuxiliaryFilesRotateAndInterpolate(opts, ret);
+
+#ifdef HAVE_CUDA
+				util::Unpack<double>(ret, false);
+#endif
+
+				for (const auto& info : ret)
+				{
+					info->First();
+					info->Reset<param>();
+
+					while (info->Next())
+					{
+						c->Insert(info);
+					}
+				}
+
+				t.Stop();
+				itsLogger.Debug("Auxiliary files read finished in " + to_string(t.GetTime()) +
+				                "ms, cache size: " + to_string(c->Size()));
+			});
+
+			auxiliaryFilesRead = true;
+			source = HPDataFoundFrom::kCache;
+
+			ret = FromCache<double>(opts);
+		}
+		else
+		{
+			ret = FromFile<double>(files, opts, readPackedData, false);
+		}
+
+		if (!ret.empty())
+		{
+			itsLogger.Trace("Data found from auxiliary file(s)");
+
+			if (dynamic_pointer_cast<const plugin_configuration>(opts.configuration)->StatisticsEnabled())
+			{
+				dynamic_pointer_cast<const plugin_configuration>(opts.configuration)
+				    ->Statistics()
+				    ->AddToCacheMissCount(1);
+			}
+		}
+		else
+		{
+			itsLogger.Trace("Data not found from auxiliary file(s)");
+		}
+	}
+
+	return make_pair(source, ret);
+}
+
 void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vector<info_t>& infos)
 {
 	// Step 1. Rotate if needed
@@ -562,243 +761,13 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vec
 }
 
 template <typename T>
-vector<shared_ptr<info<T>>> fetcher::FetchFromCache(search_options& opts)
-{
-	vector<shared_ptr<info<T>>> ret;
-
-	if (itsUseCache && opts.configuration->UseCacheForReads())
-	{
-		// 1. Fetch data from cache
-		ret = FromCache<T>(opts);
-
-		if (ret.size())
-		{
-			if (dynamic_pointer_cast<const plugin_configuration>(opts.configuration)->StatisticsEnabled())
-			{
-				dynamic_pointer_cast<const plugin_configuration>(opts.configuration)
-				    ->Statistics()
-				    ->AddToCacheHitCount(1);
-			}
-		}
-	}
-
-	return ret;
-}
-
-template vector<shared_ptr<info<double>>> fetcher::FetchFromCache<double>(search_options&);
-template vector<shared_ptr<info<float>>> fetcher::FetchFromCache<float>(search_options&);
-
-pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAuxiliaryFiles(search_options& opts,
-                                                                                         bool readPackedData)
-{
-	vector<info_t> ret;
-	HPDataFoundFrom source = HPDataFoundFrom::kAuxFile;
-
-	if (!opts.configuration->AuxiliaryFiles().empty())
-	{
-		auto files = opts.configuration->AuxiliaryFiles();
-
-		if (itsUseCache && opts.configuration->UseCacheForReads() && opts.configuration->ReadAllAuxiliaryFilesToCache())
-		{
-			if (itsApplyLandSeaMask)
-			{
-				itsLogger.Fatal("Land sea mask cannot be applied when reading all auxiliary files to cache");
-				itsLogger.Fatal("Restart himan with command line option --no-auxiliary-file-full-cache-read");
-				himan::Abort();
-			}
-
-			auto c = GET_PLUGIN(cache);
-
-			call_once(oflag, [&]() {
-
-				itsLogger.Debug("Start full auxiliary files read");
-
-				timer t(true);
-
-				ret = FromFile<double>(files, opts, readPackedData, true);
-
-				AuxiliaryFilesRotateAndInterpolate(opts, ret);
-
-#ifdef HAVE_CUDA
-				util::Unpack<double>(ret, false);
-#endif
-
-				for (const auto& info : ret)
-				{
-					info->First();
-					info->Reset<param>();
-
-					while (info->Next())
-					{
-						c->Insert(info);
-					}
-				}
-
-				t.Stop();
-				itsLogger.Debug("Auxiliary files read finished in " + to_string(t.GetTime()) +
-				                "ms, cache size: " + to_string(c->Size()));
-			});
-
-			auxiliaryFilesRead = true;
-			source = HPDataFoundFrom::kCache;
-
-			ret = FromCache<double>(opts);
-		}
-		else
-		{
-			ret = FromFile<double>(files, opts, readPackedData, false);
-		}
-
-		if (!ret.empty())
-		{
-			itsLogger.Trace("Data found from auxiliary file(s)");
-
-			if (dynamic_pointer_cast<const plugin_configuration>(opts.configuration)->StatisticsEnabled())
-			{
-				dynamic_pointer_cast<const plugin_configuration>(opts.configuration)
-				    ->Statistics()
-				    ->AddToCacheMissCount(1);
-			}
-		}
-		else
-		{
-			itsLogger.Trace("Data not found from auxiliary file(s)");
-		}
-	}
-
-	return make_pair(source, ret);
-}
-
-template <typename T>
-vector<shared_ptr<info<T>>> fetcher::FetchFromDatabase(search_options& opts, bool readPackedData)
-{
-	vector<shared_ptr<info<T>>> ret;
-
-	HPDatabaseType dbtype = opts.configuration->DatabaseType();
-
-	if (!opts.configuration->ReadDataFromDatabase() || dbtype == kNoDatabase)
-	{
-		return ret;
-	}
-
-	if (opts.prod.Class() == kGridClass)
-	{
-		pair<vector<string>, string> files;
-
-		if (dbtype == kRadon)
-		{
-			auto r = GET_PLUGIN(radon);
-
-			itsLogger.Trace("Accessing Radon database");
-
-			files = r->Files(opts);
-		}
-
-		if (files.first.empty())
-		{
-			const string ref_prod = opts.prod.Name();
-			const string analtime = opts.time.OriginDateTime().String("%Y%m%d%H%M%S");
-			const vector<string> sourceGeoms = opts.configuration->SourceGeomNames();
-			itsLogger.Trace("No geometries found for producer " + ref_prod + ", analysistime " + analtime +
-			                ", source geom name(s) '" + util::Join(sourceGeoms, ",") + "', param " + opts.param.Name());
-		}
-		else
-		{
-			ret = FromFile<T>(files.first, opts, readPackedData, true);
-
-			if (dynamic_pointer_cast<const plugin_configuration>(opts.configuration)->StatisticsEnabled())
-			{
-				dynamic_pointer_cast<const plugin_configuration>(opts.configuration)
-				    ->Statistics()
-				    ->AddToCacheMissCount(1);
-			}
-
-			lock_guard<mutex> lock(stickyMutex);
-			auto uName = UniqueName(opts.prod, opts.param, opts.level);
-			if (find(stickyParamCache.begin(), stickyParamCache.end(), uName) == stickyParamCache.end())
-			{
-				itsLogger.Trace("Updating sticky param cache: " + UniqueName(opts.prod, opts.param, opts.level));
-				stickyParamCache.push_back(uName);
-			}
-
-			return ret;
-		}
-	}
-	else if (opts.prod.Class() == kPreviClass)
-	{
-		auto r = GET_PLUGIN(radon);
-
-		itsLogger.Trace("Accessing Radon database for previ data");
-
-		auto csv_forecasts = r->CSV(opts);
-		auto _ret = util::CSVToInfo<T>(csv_forecasts);
-
-		if (_ret)
-		{
-			ret.push_back(_ret);
-		}
-	}
-
-	return ret;
-}
-
-template vector<shared_ptr<info<double>>> fetcher::FetchFromDatabase<double>(search_options&, bool);
-template vector<shared_ptr<info<float>>> fetcher::FetchFromDatabase<float>(search_options&, bool);
-
-namespace
-{
-template <typename T>
-shared_ptr<info<T>> ConvertTo(shared_ptr<info<double>>&);
-
-template <>
-shared_ptr<info<double>> ConvertTo(shared_ptr<info<double>>& anInfo)
-{
-	return anInfo;
-}
-
-template <>
-shared_ptr<info<float>> ConvertTo(shared_ptr<info<double>>& anInfo)
-{
-	return make_shared<info<float>>(*anInfo);
-}
-}  // namespace
-
-template <typename T>
-pair<HPDataFoundFrom, vector<shared_ptr<info<T>>>> fetcher::FetchFromAllSources(search_options& opts,
-                                                                                bool readPackedData)
-{
-	auto ret = FetchFromCache<T>(opts);
-
-	if (!ret.empty())
-	{
-		return make_pair(HPDataFoundFrom::kCache, ret);
-	}
-
-	if (!auxiliaryFilesRead)
-	{
-		// second ret, different from first
-		auto _ret = FetchFromAuxiliaryFiles(opts, readPackedData);
-
-		if (!_ret.second.empty())
-		{
-			return make_pair(_ret.first, vector<shared_ptr<info<T>>>({ConvertTo<T>(_ret.second[0])}));
-		}
-	}
-
-	return make_pair(HPDataFoundFrom::kDatabase, FetchFromDatabase<T>(opts, readPackedData));
-}
-
-template pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAllSources<double>(search_options&,
-                                                                                                      bool);
-template pair<HPDataFoundFrom, vector<shared_ptr<info<float>>>> fetcher::FetchFromAllSources<float>(search_options&,
-                                                                                                    bool);
-
-template <typename T>
 bool fetcher::ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> config, shared_ptr<info<T>> theInfo,
                                const forecast_time& requestedTime, const forecast_type& requestedType)
 {
 	raw_time originTime = requestedTime.OriginDateTime();
 	forecast_time firstTime(originTime, originTime);
+
+	itsLogger.Trace("Applying land-sea mask with threshold " + to_string(itsLandSeaMaskThreshold));
 
 	try
 	{

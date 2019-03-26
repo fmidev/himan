@@ -50,8 +50,8 @@ void tropopause::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	myThreadedLogger.Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()));
 
-	size_t firstLevel = static_cast<size_t>(FL140.second.Value());
-	size_t lastLevel = static_cast<size_t>(FL530.first.Value());
+	size_t firstLevel = static_cast<size_t>(FL140.first.Value());
+	size_t lastLevel = static_cast<size_t>(FL530.second.Value());
 
 	size_t lvl_size = firstLevel - lastLevel;
 
@@ -92,6 +92,10 @@ void tropopause::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		// within 2km above is also smaller 2K/km
 		for (size_t j = 0; j < lvl_size - 1; ++j)
 		{
+			// Search is limited to the interval FL140-FL530 i.e. 600-100 HPa
+			if (pres[j][i] < 100. || pres[j][i] > 600.)
+				continue;
+
 			const double lapseRate = -1000.0 * (temp[j + 1][i] - temp[j][i]) / (height[j + 1][i] - height[j][i]);
 			if (lapseRate <= 2.0)
 			{

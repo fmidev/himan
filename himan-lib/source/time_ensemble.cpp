@@ -51,7 +51,8 @@ void AdjustTimes(forecast_time& ftime, HPTimeResolution timeSpan, int value)
 
 std::vector<forecast_time> CreateTimeList(const forecast_time& origtime, size_t primaryTimeMaskLen,
                                           HPTimeResolution primaryTimeSpan, int secondaryTimeMaskLen,
-                                          HPTimeResolution secondaryTimeSpan, int secondaryTimeMaskStep)
+                                          HPTimeResolution secondaryTimeSpan, int secondaryTimeMaskStep,
+                                          bool isCumulative)
 {
 	std::vector<forecast_time> ret;
 
@@ -63,9 +64,26 @@ std::vector<forecast_time> CreateTimeList(const forecast_time& origtime, size_t 
 		{
 			auto curtime = ftime;
 
-			// TODO: more general way to check these?
-			curtime.OriginDateTime().Adjust(secondaryTimeSpan, j);
 			curtime.ValidDateTime().Adjust(secondaryTimeSpan, j);
+
+			if (isCumulative)
+			{
+				ASSERT(secondaryTimeSpan == kHourResolution);
+				while (curtime.Step() < 1)
+				{
+					curtime.OriginDateTime().Adjust(secondaryTimeSpan, -12);
+				}
+
+				while (curtime.Step() > 12)
+				{
+					curtime.OriginDateTime().Adjust(secondaryTimeSpan, 12);
+				}
+			}
+			else
+			{
+				curtime.OriginDateTime().Adjust(secondaryTimeSpan, j);
+			}
+
 			ret.push_back(curtime);
 		}
 
@@ -114,7 +132,11 @@ void time_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, co
 	int numMissingForecasts = 0;
 
 	auto timeList = CreateTimeList(ftime, itsExpectedEnsembleSize, itsPrimaryTimeSpan, itsSecondaryTimeMaskLen,
-	                               itsSecondaryTimeSpan, itsSecondaryTimeMaskStep);
+	                               itsSecondaryTimeSpan, itsSecondaryTimeMaskStep,
+	                               (itsParam.Name() == "FFG-MS" || itsParam.Name() == "RRR-KGM2"));
+
+	// randomize timelist so that different threads start to fetch different data
+	std::random_shuffle(timeList.begin(), timeList.end());
 
 	for (const auto& tm : timeList)
 	{

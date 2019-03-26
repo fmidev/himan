@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 19.2.19
-Release: 2.el7.fmi
+Version: 19.3.19
+Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 19.2.19
+Requires: himan-lib >= 19.2.26
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 19.2.12
@@ -33,17 +33,17 @@ BuildRequires: cuda-9-1
 BuildRequires: eccodes-devel
 BuildRequires: redhat-rpm-config
 BuildRequires: cuda-cusp-9-1 >= 0.5.1
+BuildRequires: eigen >= 3.3.4
+
 Requires: jasper-libs
 Requires: eccodes
 %endif
-BuildRequires: libfmidb-devel >= 18.10.5
 BuildRequires: libfmigrib-devel >= 19.2.12
-BuildRequires: smartmet-library-newbase-devel >= 18.7.23
+#BuildRequires: smartmet-library-newbase-devel >= 18.7.23
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
-BuildRequires: boost-devel >= 1.66
+BuildRequires: boost-devel
 BuildRequires: scons
-BuildRequires: eigen >= 3.3.4
 
 %description
 Himan -- hilojen manipulaatio -- plugin collection
@@ -115,6 +115,13 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Mar 19 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.3.19-1.fmi
+- tropopause fix
+* Wed Mar  6 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.3.6-1.fmi
+- Changes to snow_drift
+- RHEL7.6 build
+* Tue Feb 26 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.2.26-1.fmi
+- ncl changed to use hitool
 * Tue Feb 19 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.2.19-2.fmi
 - luatool with preliminary single precision support
 * Tue Feb 19 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.2.19-1.fmi
