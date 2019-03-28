@@ -8,7 +8,6 @@
 #include "logger.h"
 #include "metutil.h"
 #include "numerical_functions.h"
-#include "numerical_functions_impl.h"
 #include "plugin_factory.h"
 #include "radon.h"
 #include "statistics.h"

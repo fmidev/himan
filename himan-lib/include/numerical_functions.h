@@ -48,6 +48,10 @@ himan::matrix<double> Max2D(const himan::matrix<double>& A, const himan::matrix<
 
 himan::matrix<double> Min2D(const himan::matrix<double>& A, const himan::matrix<double>& B);
 
+template <class T, class S>
+himan::matrix<double> Reduce2D(const himan::matrix<double>& A, const himan::matrix<double>& B, T&& f, S&& g,
+                               double init1, double init2);
+
 /*
  * CUDA version of Filter2D
  */
@@ -294,5 +298,7 @@ CUDA_HOST CUDA_DEVICE inline Type BiLinear(Type dx, Type dy, Type a, Type b, Typ
 }  // namespace numerical_functions
 
 }  // namespace himan
+
+#include "numerical_functions_impl.h"
 
 #endif /* NUMERICAL_FUNCTIONS_H */
