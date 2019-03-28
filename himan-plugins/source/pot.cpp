@@ -48,7 +48,7 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	const param CapeParamHiman("CAPE1040-JKG");
 	const level MU(kMaximumThetaE, 0);
 	const param RainParam("RRR-KGM2");
-	const param ELHeight("EL-M");
+	const param ELHeight("EL-LAST-M");
 	const param LCLHeight("LCL-M");
 	const param LCLTemp("LCL-K");
 	const param LFCHeight("LFC-M");
