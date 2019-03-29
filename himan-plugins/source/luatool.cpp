@@ -252,9 +252,12 @@ void BindEnum(lua_State* L)
 	     class_<HPTimeResolution>("HPTimeResolution")
 	         .enum_(
 	             "constants")[
-					 value("kUnknownTimeResolution", kUnknownTimeResolution),
-					 value("kHourResolution", kHourResolution),
-					 value("kMinuteResolution", kMinuteResolution)],
+					value("kUnknownTimeResolution", kUnknownTimeResolution),
+					value("kHourResolution", kHourResolution),
+					value("kMinuteResolution", kMinuteResolution),
+					value("kDayResolution", kDayResolution),
+					value("kMonthResolution", kMonthResolution)],
+
 	     class_<HPFileType>("HPFileType")
 	         .enum_("constants")[
 				 value("kUnknownFile", kUnknownFile),
