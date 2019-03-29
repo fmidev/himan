@@ -88,6 +88,21 @@ void MultiplyWith(T* d_arr, T val, size_t N, cudaStream_t& stream)
 	MultiplyWith<T><<<gridSize, blockSize, 0, stream>>>(d_arr, val, N);
 }
 
+__global__ void LastLFCCopyKernel(const float* __restrict__ d_LFCT, const float* __restrict__ d_LFCP,
+                                  float* __restrict__ d_LastLFCT, float* __restrict__ d_LastLFCP, size_t N)
+{
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < N)
+	{
+		if (IsMissing(d_LastLFCT[idx]) || d_LastLFCP[idx] > d_LFCP[idx])
+		{
+			d_LastLFCT[idx] = d_LFCT[idx];
+			d_LastLFCP[idx] = d_LFCP[idx];
+		}
+	}
+}
+
 __global__ void CapELValuesKernel(const float* __restrict__ d_CAPE, float* __restrict__ d_ELT,
                                   float* __restrict__ d_ELP, float* __restrict__ d_ELZ, float* __restrict__ d_LastELT,
                                   float* __restrict__ d_LastELP, float* __restrict__ d_LastELZ,
@@ -375,8 +390,9 @@ __global__ void LFCKernel(const float* __restrict__ d_T, const float* __restrict
                           const float* __restrict__ d_prevT, const float* __restrict__ d_prevP,
                           float* __restrict__ d_Tparcel, const float* __restrict__ d_prevTparcel,
                           const float* __restrict__ d_LCLT, const float* __restrict__ d_LCLP,
-                          float* __restrict__ d_LFCT, float* __restrict__ d_LFCP, unsigned char* __restrict__ d_found,
-                          int d_curLevel, int d_breakLevel, size_t N)
+                          float* __restrict__ d_LFCT, float* __restrict__ d_LFCP, float* __restrict__ d_LastLFCT,
+                          float* __restrict__ d_LastLFCP, unsigned char* __restrict__ d_found, int d_curLevel,
+                          int d_breakLevel, size_t N)
 {
 	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -402,7 +418,7 @@ __global__ void LFCKernel(const float* __restrict__ d_T, const float* __restrict
 		ASSERT(prevPenv > 50.);
 		ASSERT(prevPenv < 1200.);
 
-		if (d_curLevel < d_breakLevel && (Tenv - Tparcel) > 30.)
+		if ((d_curLevel < d_breakLevel && (Tenv - Tparcel) > 30.) || (IsValid(d_LFCT[idx]) && Penv < 650.))
 		{
 			// Temperature gap between environment and parcel too large --> abort search.
 			// Only for values higher in the atmosphere, to avoid the effects of inversion
@@ -411,53 +427,57 @@ __global__ void LFCKernel(const float* __restrict__ d_T, const float* __restrict
 		}
 
 		const float diff = Tparcel - Tenv;
+		const float prevdiff = prevTparcel - prevTenv;
+		const bool isFirstLFC = (diff >= 0 || fabs(diff) < 1e-4) && IsMissing(prevdiff) && IsMissing(d_LFCT[idx]);
+		const bool isLastLFC = (diff >= 0 || fabs(diff) < 1e-4) && prevdiff < 0;
 
-		if (Penv < LCLP && (diff >= 0 || fabs(diff) < 1e-5))
+		if (d_found[idx] == 0 && Penv < LCLP && (isFirstLFC || isLastLFC))
 		{
-			d_found[idx] = 1;
-
 			if (IsMissing(prevTparcel))
 			{
 				prevTparcel = d_LCLT[idx];  // previous is LCL
 				ASSERT(!IsMissing(d_LCLT[idx]));
 			}
 
-			if (diff < 0.1)
+			float& Tresult = (IsMissing(d_LFCT[idx])) ? d_LFCT[idx] : d_LastLFCT[idx];
+			float& Presult = (IsMissing(d_LFCP[idx])) ? d_LFCP[idx] : d_LastLFCP[idx];
+
+			if (diff < 0.01)
 			{
-				d_LFCT[idx] = Tparcel;
-				d_LFCP[idx] = Penv;
+				Tresult = Tparcel;
+				Presult = Penv;
 			}
 			else if (prevTparcel - prevTenv >= 0)
 			{
-				d_LFCT[idx] = prevTparcel;
-				d_LFCP[idx] = prevPenv;
+				Tresult = prevTparcel;
+				Presult = prevPenv;
 			}
 			else
 			{
 				auto intersection = CAPE::GetPointOfIntersection(point(Tenv, Penv), point(prevTenv, prevPenv),
 				                                                 point(Tparcel, Penv), point(prevTparcel, prevPenv));
 
-				d_LFCT[idx] = intersection.X();
-				d_LFCP[idx] = intersection.Y();
+				Tresult = intersection.X();
+				Presult = intersection.Y();
 
-				if (d_LFCP[idx] > prevPenv)
+				if (Presult > prevPenv)
 				{
 					// Do not allow LFC to be below previous level; if intersection fails to put it in the correct
 					// "bin" (between previous and current pressure), use the only information that certain:
 					// the crossing has happened at least at current pressure
-					d_LFCT[idx] = Tparcel;
-					d_LFCP[idx] = Penv;
+					Tresult = Tparcel;
+					Presult = Penv;
 				}
-				else if (IsMissing(d_LFCT[idx]))
+				else if (IsMissing(Tresult))
 				{
 					// Intersection not found, use exact level value
-					d_LFCT[idx] = Tparcel;
-					d_LFCP[idx] = Penv;
+					Tresult = Tparcel;
+					Presult = Penv;
 				}
 			}
 
-			ASSERT(d_LFCT[idx] > 100);
-			ASSERT(d_LFCT[idx] < 350);
+			ASSERT(Tresult > 100);
+			ASSERT(Tresult < 350);
 		}
 	}
 }
@@ -893,31 +913,6 @@ cape_multi_source cape_cuda::GetNHighestThetaEValuesGPU(const std::shared_ptr<co
 			idxs[sidx - offset] = maxidx;
 		}
 
-#if 0
-		if (i == 9586)
-		{
-			printf("Num maxima for gp %ld: %ld\n", i, newMaximaN);
-			for (size_t j = 0; j < newMaximaN; j++)
-			{
-				printf("idxs[%ld] = %u\n", (s + j + 1),  idxs[s + j + 1]);
-			}
-
-			for (size_t j = 0; j < K; j++)
-			{
-                                std::string maxs = "MISS";
-                                for (size_t h = 0; h < newMaximaN; h++)
-                                {
-                                        if (idxs[s + h + 1] == static_cast<unsigned char> (j))
-                                                maxs = std::to_string(ThetaEProfile[i + j * N]);
-                                }
-
-				printf("%ld %f %f %s\n", j, PProfile[i + j * N], ThetaEProfile[i + j * N], maxs.c_str());
-			}
-			exit(1);
-		}
-
-#endif
-
 		for (size_t j = 0; j < min(static_cast<size_t>(n), newMaximaN); j++)
 		{
 			const size_t sidx = 1 + s + j;  // index in the array where maxima index is found
@@ -1116,7 +1111,7 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	return std::make_tuple(T, TD, VEC(Psurf));
 }
 
-std::pair<std::vector<float>, std::vector<float>> cape_cuda::GetLFCGPU(
+std::vector<std::pair<std::vector<float>, std::vector<float>>> cape_cuda::GetLFCGPU(
     const std::shared_ptr<const plugin_configuration>& conf, std::shared_ptr<info<float>> myTargetInfo,
     std::vector<float>& T, std::vector<float>& P, std::vector<float>& TenvLCL)
 {
@@ -1138,6 +1133,8 @@ std::pair<std::vector<float>, std::vector<float>> cape_cuda::GetLFCGPU(
 	float* d_LCLT = 0;
 	float* d_LFCT = 0;
 	float* d_LFCP = 0;
+	float* d_LastLFCT = 0;
+	float* d_LastLFCP = 0;
 	float* d_Tparcel = 0;
 	float* d_prevTparcel = 0;
 	float* d_Tenv = 0;
@@ -1151,6 +1148,8 @@ std::pair<std::vector<float>, std::vector<float>> cape_cuda::GetLFCGPU(
 	CUDA_CHECK(cudaMalloc((float**)&d_LCLP, sizeof(float) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_LFCT, sizeof(float) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_LFCP, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_LastLFCT, sizeof(float) * N));
+	CUDA_CHECK(cudaMalloc((float**)&d_LastLFCP, sizeof(float) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_found, sizeof(unsigned char) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_Tparcel, sizeof(float) * N));
 	CUDA_CHECK(cudaMalloc((float**)&d_prevTparcel, sizeof(float) * N));
@@ -1164,6 +1163,8 @@ std::pair<std::vector<float>, std::vector<float>> cape_cuda::GetLFCGPU(
 
 	InitializeArray<float>(d_LFCT, himan::MissingFloat(), N, stream);
 	InitializeArray<float>(d_LFCP, himan::MissingFloat(), N, stream);
+	InitializeArray<float>(d_LastLFCT, himan::MissingFloat(), N, stream);
+	InitializeArray<float>(d_LastLFCP, himan::MissingFloat(), N, stream);
 	InitializeArray<float>(d_prevTparcel, himan::MissingFloat(), N, stream);
 	InitializeArray<unsigned char>(d_found, 0, N, stream);
 
@@ -1190,6 +1191,8 @@ std::pair<std::vector<float>, std::vector<float>> cape_cuda::GetLFCGPU(
 	std::vector<unsigned char> found(N, 0);
 	std::vector<float> LFCT(N, himan::MissingFloat());
 	std::vector<float> LFCP(N, himan::MissingFloat());
+	std::vector<float> LastLFCT(N);
+	std::vector<float> LastLFCP(N);
 
 	thrust::device_ptr<unsigned char> dt_found = thrust::device_pointer_cast(d_found);
 
@@ -1197,7 +1200,6 @@ std::pair<std::vector<float>, std::vector<float>> cape_cuda::GetLFCGPU(
 	{
 		if ((T[i] - TenvLCL[i]) > 0.0001)
 		{
-			found[i] = 1;
 			LFCT[i] = T[i];
 			LFCP[i] = P[i];
 		}
@@ -1232,8 +1234,8 @@ std::pair<std::vector<float>, std::vector<float>> cape_cuda::GetLFCGPU(
 		MoistLiftKernel<<<gridSize, blockSize, 0, stream>>>(d_LCLT, d_LCLP, d_Penv, d_Tparcel, N);
 
 		LFCKernel<<<gridSize, blockSize, 0, stream>>>(d_Tenv, d_Penv, d_prevTenv, d_prevPenv, d_Tparcel, d_prevTparcel,
-		                                              d_LCLT, d_LCLP, d_LFCT, d_LFCP, d_found, curLevel.Value(),
-		                                              hPa450.first.Value(), N);
+		                                              d_LCLT, d_LCLP, d_LFCT, d_LFCP, d_LastLFCT, d_LastLFCP, d_found,
+		                                              curLevel.Value(), hPa450.first.Value(), N);
 
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
@@ -1253,8 +1255,12 @@ std::pair<std::vector<float>, std::vector<float>> cape_cuda::GetLFCGPU(
 		curLevel.Value(curLevel.Value() - 1);
 	}
 
+	LastLFCCopyKernel<<<gridSize, blockSize, 0, stream>>>(d_LFCT, d_LFCP, d_LastLFCT, d_LastLFCP, N);
+
 	CUDA_CHECK(cudaMemcpyAsync(LFCT.data(), d_LFCT, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
 	CUDA_CHECK(cudaMemcpyAsync(LFCP.data(), d_LFCP, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(LastLFCT.data(), d_LastLFCT, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
+	CUDA_CHECK(cudaMemcpyAsync(LastLFCP.data(), d_LastLFCP, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
 
 	CUDA_CHECK(cudaFree(d_LCLT));
 	CUDA_CHECK(cudaFree(d_LCLP));
@@ -1270,15 +1276,17 @@ std::pair<std::vector<float>, std::vector<float>> cape_cuda::GetLFCGPU(
 
 	CUDA_CHECK(cudaFree(d_LFCT));
 	CUDA_CHECK(cudaFree(d_LFCP));
+	CUDA_CHECK(cudaFree(d_LastLFCT));
+	CUDA_CHECK(cudaFree(d_LastLFCP));
 
 	CUDA_CHECK(cudaStreamDestroy(stream));
 
-	return std::make_pair(LFCT, LFCP);
+	return {std::make_pair(LFCT, LFCP), std::make_pair(LastLFCT, LastLFCP)};
 }
 
 std::vector<float> cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_configuration>& conf,
                                         std::shared_ptr<info<float>> myTargetInfo, const std::vector<float>& Tsource,
-                                        const std::vector<float>& Psource, const std::vector<float>& PLCL, 
+                                        const std::vector<float>& Psource, const std::vector<float>& PLCL,
                                         const std::vector<float>& PLFC, const std::vector<float>& ZLFC)
 {
 	const params PParams({param("PGR-PA"), param("P-PA")});
