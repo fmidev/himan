@@ -40,7 +40,7 @@ local HessaaTable = {}
 function Fetch(...)
   local first = true
   for i,param in ipairs(arg) do
-    if i == #arg then
+    if #arg > 1 and i == #arg then
       return nil
     end
 
