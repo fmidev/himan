@@ -40,6 +40,9 @@ local HessaaTable = {}
 function Fetch(...)
   local first = true
   for i,param in ipairs(arg) do
+    if #arg > 1 and i == #arg then
+      return nil
+    end
 
     ret = luatool:FetchWithType(current_time, current_level, param, current_forecast_type)
 

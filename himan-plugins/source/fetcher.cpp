@@ -5,6 +5,8 @@
 #include "statistics.h"
 #include "util.h"
 #include <boost/filesystem/operations.hpp>
+#include <boost/thread/locks.hpp>
+#include <boost/thread/shared_mutex.hpp>
 #include <fstream>
 #include <future>
 
@@ -42,6 +44,14 @@ std::string UniqueName(const himan::producer& prod, const himan::param& par, con
 
 static vector<string> stickyParamCache;
 static mutex stickyMutex;
+
+// Container to store shared mutexes for data fetch for a single grid.
+// The idea is that if multiple threads fetch the *same* data, they
+// will be synchronized so that one thread fetches the data and updates
+// cache while the other threads will wait for the completion of that task.
+
+static mutex singleFetcherMutex;
+map<string, boost::shared_mutex> singleFetcherMap;
 
 string CreateNotFoundString(const vector<producer>& prods, const forecast_type& ftype, const forecast_time& time,
                             const level& lev, const vector<param>& params)
@@ -232,7 +242,7 @@ template shared_ptr<info<float>> fetcher::Fetch<float>(shared_ptr<const plugin_c
                                                        param, forecast_type, bool, bool);
 
 template <typename T>
-shared_ptr<info<T>> fetcher::FetchFromProducer(search_options& opts, bool readPackedData, bool suppressLogging)
+shared_ptr<info<T>> fetcher::FetchFromProducerSingle(search_options& opts, bool readPackedData, bool suppressLogging)
 {
 	level newLevel = opts.level;
 
@@ -258,6 +268,10 @@ shared_ptr<info<T>> fetcher::FetchFromProducer(search_options& opts, bool readPa
 	if (theInfos.empty())
 	{
 		return shared_ptr<info<T>>();
+	}
+	else if (ret.first == HPDataFoundFrom::kCache)
+	{
+		return theInfos[0];
 	}
 
 	RotateVectorComponents<T>(theInfos, opts.configuration->BaseGrid(), opts.configuration, opts.prod);
@@ -302,6 +316,47 @@ shared_ptr<info<T>> fetcher::FetchFromProducer(search_options& opts, bool readPa
 	ASSERT((theInfos[0]->Param()) == opts.param);
 
 	return theInfos[0];
+}
+
+template shared_ptr<info<double>> fetcher::FetchFromProducerSingle<double>(search_options&, bool, bool);
+template shared_ptr<info<float>> fetcher::FetchFromProducerSingle<float>(search_options&, bool, bool);
+
+template <typename T>
+shared_ptr<info<T>> fetcher::FetchFromProducer(search_options& opts, bool readPackedData, bool suppressLogging)
+{
+	// When reading packed data, data is not pushed to cache because it's only unpacked
+	// later. Therefore there is no reason to synchronize thread access.
+	// TODO: *should* data be unpacked and pushed to cache (it's done so anyway later)?
+	if (readPackedData)
+	{
+		return FetchFromProducerSingle<T>(opts, readPackedData, suppressLogging);
+	}
+
+	const auto uname = util::UniqueName(opts);
+	pair<map<string, boost::shared_mutex>::iterator, bool> muret;
+
+	// First acquire mutex to (possibly) modify map
+	unique_lock<mutex> sflock(singleFetcherMutex);
+
+	muret = singleFetcherMap.emplace(piecewise_construct, forward_as_tuple(uname), forward_as_tuple());
+
+	if (muret.second == true)
+	{
+		// first time this data is being fetched: take exclusive lock to prevent
+		// other threads from fetching the same data at the same time
+		boost::unique_lock<boost::shared_mutex> uniqueLock(muret.first->second);
+		sflock.unlock();
+
+		return FetchFromProducerSingle<T>(opts, readPackedData, suppressLogging);
+	}
+
+	sflock.unlock();
+
+	// this data is being fetched right now by other thread, or it has been fetched
+	// earlier
+	boost::shared_lock<boost::shared_mutex> lock(muret.first->second);
+
+	return FetchFromProducerSingle<T>(opts, readPackedData, suppressLogging);
 }
 
 template shared_ptr<info<double>> fetcher::FetchFromProducer<double>(search_options&, bool, bool);

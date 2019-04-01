@@ -6,8 +6,6 @@
 #include <Eigen/Dense>
 #include <algorithm>
 
-#include "numerical_functions_impl.h"
-
 using namespace himan;
 using namespace numerical_functions;
 using namespace Eigen;
