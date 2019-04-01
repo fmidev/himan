@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 19.3.27
+Version: 19.4.1
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 19.2.26
+Requires: himan-lib >= 19.4.1
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 19.2.12
@@ -115,6 +115,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Apr  1 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.4.1-1.fmi
+- pot fix
 * Wed Mar 27 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.3.27-1.fmi
 - fetcher, radon tweaking
 * Tue Mar 26 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.3.26-1.fmi
