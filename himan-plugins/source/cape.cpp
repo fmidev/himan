@@ -399,15 +399,15 @@ void cape::MostUnstableCAPE(shared_ptr<info<float>> myTargetInfo, short threadIn
 
 	typedef tuple<vector<float>, vector<float>, vector<float>, vector<float>, vector<float>, vector<float>,
 	              vector<float>, vector<float>, vector<float>, vector<float>, vector<float>, vector<float>,
-	              vector<float>>
-	    tuple13f;
+	              vector<float>, vector<float>, vector<float>>
+	    tuple15f;
 
 	tmr.Start();
 
-	vector<future<tuple13f>> futures;
+	vector<future<tuple15f>> futures;
 
 	// This is where we store the results of the runs
-	vector<tuple13f> results;
+	vector<tuple15f> results;
 
 	// This is where we put thetae values so they are more convenient to read later on
 	vec2d refValues(N);
@@ -416,46 +416,39 @@ void cape::MostUnstableCAPE(shared_ptr<info<float>> myTargetInfo, short threadIn
 	{
 		log.Debug("Launching async task #" + to_string(taskIndex));
 
-		futures.push_back(
-		    async(launch::async,
-		          [&myTargetInfo, this](const cape_source& sourceValues, short threadId, size_t taskId) {
-			          logger tasklog("muCAPEThread#" + to_string(threadId) + "asyncTask#" + to_string(taskId));
+		futures.push_back(async(
+		    launch::async,
+		    [&myTargetInfo, this](const cape_source& sourceValues, short threadId, size_t taskId) {
+			    logger tasklog("muCAPEThread#" + to_string(threadId) + "asyncTask#" + to_string(taskId));
 
-			          timer tasktmr(true);
-			          auto LCL = GetLCL(sourceValues);
-			          tasktmr.Stop();
-			          tasklog.Debug("LCL in " + to_string(tasktmr.GetTime()) + "ms");
+			    timer tasktmr(true);
+			    auto LCL = GetLCL(sourceValues);
+			    tasktmr.Stop();
+			    tasklog.Debug("LCL in " + to_string(tasktmr.GetTime()) + "ms");
 
-			          tasktmr.Start();
-			          auto LFC = GetLFC(myTargetInfo, LCL.first, LCL.second);
-			          tasktmr.Stop();
-			          tasklog.Debug("LFC in " + to_string(tasktmr.GetTime()) + "ms");
+			    tasktmr.Start();
+			    auto LFC = GetLFC(myTargetInfo, LCL.first, LCL.second);
+			    tasktmr.Stop();
+			    tasklog.Debug("LFC in " + to_string(tasktmr.GetTime()) + "ms");
 
-			          const auto missingLFCcount =
-			              count_if(LFC.first.begin(), LFC.first.end(), [](const float& f) { return IsMissing(f); });
+			    const auto missingLFCcount =
+			        count_if(LFC[0].first.begin(), LFC[0].first.end(), [](const float& f) { return IsMissing(f); });
 
-			          if (LFC.first.empty() || static_cast<int>(LFC.first.size()) == missingLFCcount)
-			          {
-				          tasklog.Warning("LFC level not found");
-				          return tuple13f();
-			          }
+			    if (LFC[0].first.empty() || static_cast<int>(LFC[0].first.size()) == missingLFCcount)
+			    {
+				    tasklog.Warning("LFC level not found");
+				    return tuple15f();
+			    }
 
-			          tasktmr.Start();
-			          auto CAPE = GetCAPE(myTargetInfo, LFC);
-			          tasktmr.Stop();
-			          tasklog.Debug("CAPE in " + to_string(tasktmr.GetTime()) + "ms");
+			    tasktmr.Start();
+			    auto CAPE = GetCAPE(myTargetInfo, LFC[0]);
+			    tasktmr.Stop();
+			    tasklog.Debug("CAPE in " + to_string(tasktmr.GetTime()) + "ms");
 
-#if 0
-			                        int index = 9586;
-			                        cout << index << " " << get<2>(sourceValues)[index] << " " << get<6>(CAPE)[index]
-			                             << "\n";
+			    return tuple_cat(LCL, LFC[0], LFC[1], CAPE);
 
-#endif
-
-			          return tuple_cat(LCL, LFC, CAPE);
-
-		          },
-		          make_tuple(Ts[taskIndex], TDs[taskIndex], Ps[taskIndex]), threadIndex, taskIndex));
+		    },
+		    make_tuple(Ts[taskIndex], TDs[taskIndex], Ps[taskIndex]), threadIndex, taskIndex));
 	}
 
 	for (size_t i = 0; i < futures.size(); i++)
@@ -469,7 +462,7 @@ void cape::MostUnstableCAPE(shared_ptr<info<float>> myTargetInfo, short threadIn
 
 		results.push_back(res);
 
-		const auto& muCAPE = get<10>(res);
+		const auto& muCAPE = get<12>(res);
 
 		for (size_t j = 0; j < N; j++)
 		{
@@ -480,8 +473,8 @@ void cape::MostUnstableCAPE(shared_ptr<info<float>> myTargetInfo, short threadIn
 	tmr.Stop();
 	log.Debug("MUCape produced in " + to_string(tmr.GetTime()) + " ms");
 
-	vector<float> LPLT(N), LPLP(N), LCLT(N), LCLP(N), LFCT(N), LFCP(N), ELT(N), ELP(N), ELZ(N), LastELT(N), LastELP(N),
-	    LastELZ(N), CAPE(N), CAPE1040(N), CAPE3km(N);
+	vector<float> LPLT(N), LPLP(N), LCLT(N), LCLP(N), LFCT(N), LFCP(N), LastLFCT(N), LastLFCP(N), ELT(N), ELP(N),
+	    ELZ(N), LastELT(N), LastELP(N), LastELZ(N), CAPE(N), CAPE1040(N), CAPE3km(N);
 
 	// cache trashing
 	for (size_t i = 0; i < N; i++)
@@ -497,15 +490,17 @@ void cape::MostUnstableCAPE(shared_ptr<info<float>> myTargetInfo, short threadIn
 		LCLP[i] = get<1>(results[pos])[i];
 		LFCT[i] = get<2>(results[pos])[i];
 		LFCP[i] = get<3>(results[pos])[i];
-		ELT[i] = get<4>(results[pos])[i];
-		ELP[i] = get<5>(results[pos])[i];
-		ELZ[i] = get<6>(results[pos])[i];
-		LastELT[i] = get<7>(results[pos])[i];
-		LastELP[i] = get<8>(results[pos])[i];
-		LastELZ[i] = get<9>(results[pos])[i];
-		CAPE[i] = get<10>(results[pos])[i];
-		CAPE1040[i] = get<11>(results[pos])[i];
-		CAPE3km[i] = get<12>(results[pos])[i];
+		LastLFCT[i] = get<4>(results[pos])[i];
+		LastLFCP[i] = get<5>(results[pos])[i];
+		ELT[i] = get<6>(results[pos])[i];
+		ELP[i] = get<7>(results[pos])[i];
+		ELZ[i] = get<8>(results[pos])[i];
+		LastELT[i] = get<9>(results[pos])[i];
+		LastELP[i] = get<10>(results[pos])[i];
+		LastELZ[i] = get<11>(results[pos])[i];
+		CAPE[i] = get<12>(results[pos])[i];
+		CAPE1040[i] = get<13>(results[pos])[i];
+		CAPE3km[i] = get<14>(results[pos])[i];
 	}
 
 	auto h = GET_PLUGIN(hitool);
@@ -519,16 +514,9 @@ void cape::MostUnstableCAPE(shared_ptr<info<float>> myTargetInfo, short threadIn
 	myTargetInfo->Find<param>(LPLPParam);
 	myTargetInfo->Data().Set(LPLP);
 
-	log.Debug("Fetching LCL height");
-	auto LCLZ = h->VerticalValue<float>(ZParam, LCLP);
-
 	log.Debug("Fetching LFC height");
 	auto LFCZ = h->VerticalValue<float>(ZParam, LFCP);
-
-	log.Debug("Processing CIN");
-
-	future<vector<float>> CINfut =
-	    async(launch::async, &cape::GetCIN, this, myTargetInfo, LPLT, LPLP, LCLP, LFCP, LFCZ);
+	auto LastLFCZ = h->VerticalValue<float>(ZParam, LastLFCP);
 
 	log.Debug("Fetching LPL height");
 
@@ -537,11 +525,39 @@ void cape::MostUnstableCAPE(shared_ptr<info<float>> myTargetInfo, short threadIn
 	myTargetInfo->Find<param>(LPLZParam);
 	myTargetInfo->Data().Set(LPLZ);
 
+	log.Debug("Processing CIN");
+
+	// Choose which LFC (first or last) to use for CIN processing
+	// If LPL is above 500meters, use lowest LFC
+	vector<float> CinLFCT(N), CinLFCP(N), CinLFCZ(N);
+
+	for (size_t i = 0; i < N; i++)
+	{
+		if (LPLZ[i] < 500.)
+		{
+			CinLFCT[i] = LastLFCT[i];
+			CinLFCP[i] = LastLFCP[i];
+			CinLFCZ[i] = LastLFCZ[i];
+		}
+		else
+		{
+			CinLFCT[i] = LFCT[i];
+			CinLFCP[i] = LFCP[i];
+			CinLFCZ[i] = LFCZ[i];
+		}
+	}
+
+	future<vector<float>> CINfut =
+	    async(launch::async, &cape::GetCIN, this, myTargetInfo, LPLT, LPLP, LCLP, CinLFCP, CinLFCZ);
+
+	log.Debug("Fetching LCL height");
+	auto LCLZ = h->VerticalValue<float>(ZParam, LCLP);
+
 	auto CIN = CINfut.get();
 
 	ValidateData(LCLZ, LFCT, LFCP, LFCZ, ELT, ELP, ELZ, CAPE, CAPE1040, CAPE3km, CIN);
-	SetDataToInfo(myTargetInfo, LCLT, LCLP, LCLZ, LFCT, LFCP, LFCZ, ELT, ELP, ELZ, LastELT, LastELP, LastELZ, CAPE,
-	              CAPE1040, CAPE3km, CIN);
+	SetDataToInfo(myTargetInfo, LCLT, LCLP, LCLZ, CinLFCT, CinLFCP, CinLFCZ, ELT, ELP, ELZ, LastELT, LastELP, LastELZ,
+	              CAPE, CAPE1040, CAPE3km, CIN);
 	SmoothData(myTargetInfo);
 }
 
@@ -638,35 +654,38 @@ void cape::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short thread
 	aTimer.Start();
 
 	auto LFC = GetLFC(myTargetInfo, LCL.first, LCL.second);
-	auto& LFCT = LFC.first;
-	auto& LFCP = LFC.second;
+	const auto& LFCT = LFC[0].first;
+	const auto& LFCP = LFC[0].second;
+	auto& LastLFCT = LFC[1].first;
+	auto& LastLFCP = LFC[1].second;
 
 	aTimer.Stop();
-
 	log.Info("LFC calculated in " + to_string(aTimer.GetTime()) + " ms");
 
-	const auto missingLFCcount =
-	    count_if(LFC.first.begin(), LFC.first.end(), [](const float& f) { return IsMissing(f); });
+	const auto missingLFCcount = count_if(LFCT.begin(), LFCT.end(), [](const float& f) { return IsMissing(f); });
 
-	if (LFC.first.empty() || static_cast<int>(LFC.first.size()) == missingLFCcount)
+	if (LFCT.empty() || static_cast<int>(LFCT.size()) == missingLFCcount)
 	{
 		log.Warning("LFC level not found");
 		return;
 	}
 
-	log.Debug("LFC temperature: " + ::PrintMean<float>(LFC.first));
-	log.Debug("LFC pressure: " + ::PrintMean<float>(LFC.second));
+	log.Debug("LFC temperature: " + ::PrintMean<float>(LFC[0].first));
+	log.Debug("LFC pressure: " + ::PrintMean<float>(LFC[0].second));
 
-	auto LFCZ = h->VerticalValue<float>(ZParam, LFC.second);
+	auto LFCZ = h->VerticalValue<float>(ZParam, LFCP);
+	auto LastLFCZ = h->VerticalValue<float>(ZParam, LastLFCP);
 
 	// 4. & 5.
 
 	aTimer.Start();
 
-	future<CAPEdata> CAPEfut = async(launch::async, &cape::GetCAPE, this, myTargetInfo, LFC);
+	// CAPE is integrated from lowest LFC
+	future<CAPEdata> CAPEfut = async(launch::async, &cape::GetCAPE, this, myTargetInfo, LFC[0]);
 
+	// CIN is integrated to highest LFC, because surface&500m mix LPL is always below 650hPa
 	future<vector<float>> CINfut = async(launch::async, &cape::GetCIN, this, myTargetInfo, get<0>(sourceValues),
-	                                     get<2>(sourceValues), LCL.second, LFC.second, LFCZ);
+	                                     get<2>(sourceValues), LCL.second, LastLFCP, LastLFCZ);
 
 	auto CAPEresult = CAPEfut.get();
 	auto CIN = CINfut.get();
@@ -685,9 +704,9 @@ void cape::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short thread
 	auto& CAPE1040 = get<7>(CAPEresult);
 	auto& CAPE3km = get<8>(CAPEresult);
 
-	ValidateData(LCLZ, LFCT, LFCP, LFCZ, ELT, ELP, ELZ, CAPE, CAPE1040, CAPE3km, CIN);
-	SetDataToInfo(myTargetInfo, LCLT, LCLP, LCLZ, LFCT, LFCP, LFCZ, ELT, ELP, ELZ, LastELT, LastELP, LastELZ, CAPE,
-	              CAPE1040, CAPE3km, CIN);
+	ValidateData(LCLZ, LastLFCT, LastLFCP, LastLFCZ, ELT, ELP, ELZ, CAPE, CAPE1040, CAPE3km, CIN);
+	SetDataToInfo(myTargetInfo, LCLT, LCLP, LCLZ, LastLFCT, LastLFCP, LastLFCZ, ELT, ELP, ELZ, LastELT,
+	              LastELP, LastELZ, CAPE, CAPE1040, CAPE3km, CIN);
 	SmoothData(myTargetInfo);
 
 	log.Debug("CAPE: " + ::PrintMean<float>(CAPE));
@@ -847,8 +866,8 @@ void ValidateData(vector<float>& LCLZ, vector<float>& LFCT, vector<float>& LFCP,
 }
 
 vector<float> cape::GetCIN(shared_ptr<info<float>> myTargetInfo, const vector<float>& Tsource,
-                           const vector<float>& Psource, const vector<float>& PLCL,
-                           const vector<float>& PLFC, const vector<float>& ZLFC) const
+                           const vector<float>& Psource, const vector<float>& PLCL, const vector<float>& PLFC,
+                           const vector<float>& ZLFC) const
 {
 #ifdef HAVE_CUDA
 	if (itsConfiguration->UseCuda())
@@ -863,8 +882,8 @@ vector<float> cape::GetCIN(shared_ptr<info<float>> myTargetInfo, const vector<fl
 }
 
 vector<float> cape::GetCINCPU(shared_ptr<info<float>> myTargetInfo, const vector<float>& Tsource,
-                              const vector<float>& Psource, const vector<float>& PLCL,
-                              const vector<float>& PLFC, const vector<float>& ZLFC) const
+                              const vector<float>& Psource, const vector<float>& PLCL, const vector<float>& PLFC,
+                              const vector<float>& ZLFC) const
 {
 	vector<bool> found(Tsource.size(), false);
 
@@ -988,6 +1007,7 @@ vector<float> cape::GetCINCPU(shared_ptr<info<float>> myTargetInfo, const vector
 				// Have not reached source level yet
 				continue;
 			}
+
 			else if (Penv <= PLFC[i])
 			{
 				// reached max height
@@ -1325,8 +1345,8 @@ CAPEdata cape::GetCAPECPU(shared_ptr<info<float>> myTargetInfo, const vector<flo
 	return make_tuple(ELT, ELP, ELZ, LastELT, LastELP, LastELZ, CAPE, CAPE1040, CAPE3km);
 }
 
-pair<vector<float>, vector<float>> cape::GetLFC(shared_ptr<info<float>> myTargetInfo, vector<float>& T,
-                                                vector<float>& P) const
+vector<pair<vector<float>, vector<float>>> cape::GetLFC(shared_ptr<info<float>> myTargetInfo, vector<float>& T,
+                                                        vector<float>& P) const
 {
 	auto h = GET_PLUGIN(hitool);
 
@@ -1349,7 +1369,7 @@ pair<vector<float>, vector<float>> cape::GetLFC(shared_ptr<info<float>> myTarget
 	{
 		if (e == kFileDataNotFound)
 		{
-			return make_pair(vector<float>(), vector<float>());
+			return {make_pair(vector<float>(), vector<float>()), make_pair(vector<float>(), vector<float>())};
 		}
 
 		throw;
@@ -1382,8 +1402,8 @@ pair<vector<float>, vector<float>> cape::GetLFC(shared_ptr<info<float>> myTarget
 	}
 }
 
-pair<vector<float>, vector<float>> cape::GetLFCCPU(shared_ptr<info<float>> myTargetInfo, vector<float>& T,
-                                                   vector<float>& P, vector<float>& TenvLCL) const
+vector<pair<vector<float>, vector<float>>> cape::GetLFCCPU(shared_ptr<info<float>> myTargetInfo, vector<float>& T,
+                                                           vector<float>& P, vector<float>& TenvLCL) const
 {
 	auto h = GET_PLUGIN(hitool);
 
@@ -1403,6 +1423,8 @@ pair<vector<float>, vector<float>> cape::GetLFCCPU(shared_ptr<info<float>> myTar
 
 	vector<float> LFCT(T.size(), MissingFloat());
 	vector<float> LFCP(T.size(), MissingFloat());
+	vector<float> LastLFCT(T.size(), MissingFloat());
+	vector<float> LastLFCP(T.size(), MissingFloat());
 
 	for (size_t i = 0; i < TenvLCL.size(); i++)
 	{
@@ -1413,16 +1435,10 @@ pair<vector<float>, vector<float>> cape::GetLFCCPU(shared_ptr<info<float>> myTar
 
 		if ((T[i] - TenvLCL[i]) > 0.0001)
 		{
-			found[i] = true;
 			LFCT[i] = T[i];
 			LFCP[i] = P[i];
-			Piter[i] = MissingFloat();
 		}
 	}
-
-	size_t foundCount = count(found.begin(), found.end(), true);
-
-	itsLogger.Debug("Found " + to_string(foundCount) + " gridpoints that have LCL=LFC");
 
 	// For each grid point find the hybrid level that's below LCL and then pick the lowest level
 	// among all grid points; most commonly it's the lowest hybrid level
@@ -1462,6 +1478,8 @@ pair<vector<float>, vector<float>> cape::GetLFCCPU(shared_ptr<info<float>> myTar
 	auto hPa450 = h->LevelForHeight(myTargetInfo->Producer(), 450.);
 	vector<float> prevTparcelVec(P.size(), MissingFloat());
 
+	size_t foundCount = 0;
+
 	while (curLevel.Value() > stopLevel.first.Value() && foundCount != found.size())
 	{
 		// Get environment temperature and pressure values for this level
@@ -1499,7 +1517,8 @@ pair<vector<float>, vector<float>> cape::GetLFCCPU(shared_ptr<info<float>> myTar
 		::MultiplyWith(PenvVec, 0.01f);
 
 		int i = -1;
-		for (auto&& tup : zip_range(TenvVec, PenvVec, prevPenvVec, prevTenvVec, TparcelVec, prevTparcelVec, LFCT, LFCP))
+		for (auto&& tup : zip_range(TenvVec, PenvVec, prevPenvVec, prevTenvVec, TparcelVec, prevTparcelVec, LFCT, LFCP,
+		                            LastLFCT, LastLFCP))
 		{
 			i++;
 
@@ -1527,25 +1546,32 @@ pair<vector<float>, vector<float>> cape::GetLFCCPU(shared_ptr<info<float>> myTar
 			float prevTparcel = tup.get<5>();  // K
 			ASSERT(Tparcel > 100. || IsMissing(Tparcel));
 
-			float& Tresult = tup.get<6>();
-			float& Presult = tup.get<7>();
+			if (IsValid(tup.get<6>()) && Penv < 650.)
+			{
+				found[i] = true;
+				continue;
+			}
 
+			float& Tresult = (IsMissing(tup.get<6>())) ? tup.get<6>() : tup.get<8>();
+			float& Presult = (IsMissing(tup.get<7>())) ? tup.get<7>() : tup.get<9>();
+
+			const float prevdiff = prevTparcel - prevTenv;
 			const float diff = Tparcel - Tenv;
+			const bool isFirstLFC = (diff >= 0 || fabs(diff) < 1e-4) && IsMissing(prevdiff) && IsMissing(tup.get<6>());
+			const bool isLastLFC = (diff >= 0 || fabs(diff) < 1e-4) && (prevdiff < 0 || fabs(prevdiff) < 1e-4);
 
-			if (diff >= 0 || fabs(diff) < 1e-5)
+			if (isFirstLFC || isLastLFC)
 			{
 				// Parcel is now warmer than environment, we have found LFC and entering CAPE zone
 
-				found[i] = true;
-
 				if (IsMissing(prevTparcel))
 				{
-					// Previous value is unknown: perhaps LFC is found very close to ground?
+					// Previous value is unknown: perhaps LFC is found very close to LCL?
 					// Use LCL for previous value.
 					prevTparcel = T[i];
 				}
 
-				if (diff < 0.1f)
+				if (diff < 0.01f)
 				{
 					// The passing of parcel to warmer side of sounding happened quite close
 					// to current environment height, use the environment pressure without
@@ -1553,14 +1579,13 @@ pair<vector<float>, vector<float>> cape::GetLFCCPU(shared_ptr<info<float>> myTar
 					Tresult = Tparcel;
 					Presult = Penv;
 				}
-				else if (prevTparcel - prevTenv >= 0)
+				else if (prevdiff >= 0)
 				{
 					// Previous environment and parcel temperature are the same: perhaps because
 					// we set it so earlier.
 					Tresult = prevTparcel;
 					Presult = prevPenv;
 				}
-
 				else
 				{
 					// Since Tparcel > Tenv, that means prevTenv > Tparcel > Ten
@@ -1620,7 +1645,20 @@ pair<vector<float>, vector<float>> cape::GetLFCCPU(shared_ptr<info<float>> myTar
 		}
 	}
 
-	return make_pair(LFCT, LFCP);
+	// If higher LFC is not found, set it to be the same as lower LFC. Also prevent that higher LFC is not actually
+	// closer to ground than lower LFC.
+	// This makes CIN integration setup easier later.
+
+	for (size_t i = 0; i < LFCT.size(); i++)
+	{
+		if (IsMissing(LastLFCT[i]) || LastLFCP[i] > LFCP[i])
+		{
+			LastLFCT[i] = LFCT[i];
+			LastLFCP[i] = LFCP[i];
+		}
+	}
+
+	return {make_pair(LFCT, LFCP), make_pair(LastLFCT, LastLFCP)};
 }
 
 pair<vector<float>, vector<float>> cape::GetLCL(const cape_source& sourceValues) const
@@ -2079,27 +2117,6 @@ cape_multi_source cape::GetNHighestThetaEValuesCPU(shared_ptr<info<float>> myTar
 		              [&](const pair<size_t, float>& a) { return PProfile[a.first][i] < mucape_maxima_search_limit; }),
 		    ml.end());
 
-#if 0
-		if (i == 9586)
-		{
-			printf("Num maxima for gp %ld: %ld\n", i, ml.size());
-			for (const auto& f : ml)
-				std::cout << f.first << " " << f.second << "\n";
-			for (size_t j = 0; j < ThetaE.size(); j++)
-			{
-				const float v = ThetaE[j];
-
-				string maxs = "MISS";
-				for (size_t h = 0; h < ml.size(); h++)
-				{
-					if (ml[h].first == j)
-						maxs = to_string(v);
-				}
-				printf("%ld %f %f %f %s\n", j, PProfile[j][i], v, max[j], maxs.c_str());
-			}
-			exit(1);
-		}
-#endif
 		// Copy values from max theta e levels for further processing
 
 		for (size_t j = 0; j < min(static_cast<size_t>(n), ml.size()); j++)

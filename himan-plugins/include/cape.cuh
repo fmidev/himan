@@ -648,15 +648,14 @@ namespace cape_cuda
 {
 cape_multi_source GetNHighestThetaEValuesGPU(const std::shared_ptr<const plugin_configuration>& conf,
                                              std::shared_ptr<info<float>> myTargetInfo, int N);
-std::pair<std::vector<float>, std::vector<float>> GetLFCGPU(const std::shared_ptr<const plugin_configuration>& conf,
-                                                            std::shared_ptr<info<float>> myTargetInfo,
-                                                            std::vector<float>& T, std::vector<float>& P,
-                                                            std::vector<float>& TenvLCL);
+std::vector<std::pair<std::vector<float>, std::vector<float>>> GetLFCGPU(
+    const std::shared_ptr<const plugin_configuration>& conf, std::shared_ptr<info<float>> myTargetInfo,
+    std::vector<float>& T, std::vector<float>& P, std::vector<float>& TenvLCL);
 cape_source Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_configuration>& conf,
                                         std::shared_ptr<info<float>> myTargetInfo);
 std::vector<float> GetCINGPU(const std::shared_ptr<const plugin_configuration>& conf,
                              std::shared_ptr<info<float>> myTargetInfo, const std::vector<float>& Tsource,
-                             const std::vector<float>& Psource, const std::vector<float>& PLCL, 
+                             const std::vector<float>& Psource, const std::vector<float>& PLCL,
                              const std::vector<float>& PLFC, const std::vector<float>& ZLFC);
 CAPEdata GetCAPEGPU(const std::shared_ptr<const plugin_configuration>& conf, std::shared_ptr<info<float>> myTargetInfo,
                     const std::vector<float>& T, const std::vector<float>& P);
