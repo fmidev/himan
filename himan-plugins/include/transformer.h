@@ -44,6 +44,8 @@ class transformer : public compiled_plugin, private compiled_plugin_base
 	void SetAdditionalParameters();
 	std::vector<level> LevelsFromString(const std::string& levelType, const std::string& levelValues) const;
 	void Rotate(himan::info_t myTargetInfo);
+	std::shared_ptr<info<double>> InterpolateTime(const forecast_time& ftime, const level& lev, const param& par,
+	                                              const forecast_type& ftype) const;
 
 	double itsBase;
 	double itsScale;
@@ -56,6 +58,7 @@ class transformer : public compiled_plugin, private compiled_plugin_base
 	forecast_type itsTargetForecastType;
 	forecast_type itsSourceForecastType;
 	bool itsRotateVectorComponents;
+	bool itsDoTimeInterpolation;
 };
 
 // the class factory

@@ -7,6 +7,7 @@
 #include "interpolate.h"
 #include "level.h"
 #include "logger.h"
+#include "numerical_functions.h"
 #include "plugin_factory.h"
 #include "util.h"
 
@@ -32,7 +33,8 @@ transformer::transformer()
       itsInterpolationMethod(kUnknownInterpolationMethod),
       itsTargetForecastType(kUnknownType),
       itsSourceForecastType(kUnknownType),
-      itsRotateVectorComponents(false)
+      itsRotateVectorComponents(false),
+      itsDoTimeInterpolation(false)
 {
 	itsCudaEnabledCalculation = true;
 
@@ -55,11 +57,69 @@ vector<himan::level> transformer::LevelsFromString(const string& levelType, cons
 	return levels;
 }
 
+shared_ptr<himan::info<double>> transformer::InterpolateTime(const forecast_time& ftime, const level& lev,
+                                                             const param& par, const forecast_type& ftype) const
+{
+	if (ftime.StepResolution() != kHourResolution)
+	{
+		itsLogger.Error("Time interpolation only supported for hour resolution");
+		return nullptr;
+	}
+
+	itsLogger.Debug("Starting time interpolation");
+
+	// fetch previous data, max 6 hours to past
+
+	forecast_time curtime = ftime;
+
+	shared_ptr<info<double>> prev = nullptr, next = nullptr;
+
+	do
+	{
+		curtime.ValidDateTime().Adjust(kHourResolution, -1);
+		prev = Fetch(curtime, lev, par, ftype, false);
+	} while (curtime.Step() >= max(0, ftime.Step() - 6) && prev == nullptr);
+
+	// fetch next data, max 6 hours to future
+
+	curtime = ftime;
+
+	do
+	{
+		curtime.ValidDateTime().Adjust(kHourResolution, 1);
+		next = Fetch(curtime, lev, par, ftype, false);
+	} while (curtime.Step() <= ftime.Step() + 6 && next == nullptr);
+
+	if (!prev || !next)
+	{
+		itsLogger.Error("Time interpolation failed: unable to find previous or next data");
+		return nullptr;
+	}
+
+	auto interpolated = make_shared<info<double>>(ftype, ftime, lev, par);
+	interpolated->Producer(prev->Producer());
+	interpolated->Create(prev->Base(), true);
+
+	const auto& prevdata = VEC(prev);
+	const auto& nextdata = VEC(next);
+	auto& interp = VEC(interpolated);
+
+	const double X = static_cast<double>(ftime.Step());
+	const double X1 = static_cast<double>(prev->Time().Step());
+	const double X2 = static_cast<double>(next->Time().Step());
+
+	for (size_t i = 0; i < prevdata.size(); i++)
+	{
+		interp[i] = numerical_functions::interpolation::Linear<double>(X, X1, X2, prevdata[i], nextdata[i]);
+	}
+
+	return interpolated;
+}
 void transformer::SetAdditionalParameters()
 {
-	std::string itsSourceLevelType;
-	std::string SourceLevels;
-	std::string targetForecastType;
+	string itsSourceLevelType;
+	string SourceLevels;
+	string targetForecastType;
 
 	if (!itsConfiguration->GetValue("base").empty())
 	{
@@ -189,14 +249,14 @@ void transformer::SetAdditionalParameters()
 			// should be 'pfNN'
 			auto pos = targetForecastType.find("pf");
 			int value = 0;
-			if (pos != std::string::npos)
+			if (pos != string::npos)
 			{
 				const string snum = targetForecastType.substr(pos + 2);
 				try
 				{
-					value = std::stoi(snum);
+					value = stoi(snum);
 				}
-				catch (std::invalid_argument& e)
+				catch (invalid_argument& e)
 				{
 					throw runtime_error("Transformer_plugin: failed to convert perturbation forecast number");
 				}
@@ -208,9 +268,14 @@ void transformer::SetAdditionalParameters()
 			itsTargetForecastType = forecast_type(kEpsPerturbation, value);
 		}
 	}
+
+	if (itsConfiguration->Exists("time_interpolation"))
+	{
+		itsDoTimeInterpolation = util::ParseBoolean(itsConfiguration->GetValue("time_interpolation"));
+	}
 }
 
-void transformer::Process(std::shared_ptr<const plugin_configuration> conf)
+void transformer::Process(shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 	SetAdditionalParameters();
@@ -220,7 +285,7 @@ void transformer::Process(std::shared_ptr<const plugin_configuration> conf)
 	{
 		if (itsForecastTypeIterator.Size() > 1)
 		{
-			throw std::runtime_error("Forecast type iterator can only be set when there's only 1 source forecast type");
+			throw runtime_error("Forecast type iterator can only be set when there's only 1 source forecast type");
 		}
 		else
 		{
@@ -251,7 +316,7 @@ void transformer::Process(std::shared_ptr<const plugin_configuration> conf)
 	Start();
 }
 
-void transformer::Rotate(info_t myTargetInfo)
+void transformer::Rotate(shared_ptr<info<double>> myTargetInfo)
 {
 	itsLogger.Trace("Rotating vector component");
 
@@ -321,9 +386,18 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 	}
 	catch (HPExceptionType& e)
 	{
-		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
-		                         static_cast<string>(forecastLevel));
-		return;
+		if (e == kFileDataNotFound && itsDoTimeInterpolation)
+		{
+			sourceInfo = InterpolateTime(forecastTime, itsSourceLevels[myTargetInfo->Index<level>()],
+			                             param(itsSourceParam[0]), forecastType);
+		}
+
+		if (!sourceInfo)
+		{
+			myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+			                         static_cast<string>(forecastLevel));
+			return;
+		}
 	}
 
 	if (itsSourceParam[0] == itsTargetParam[0] && sourceInfo->Param().Aggregation().Type() != kUnknownAggregationType)
