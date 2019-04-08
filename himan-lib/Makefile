@@ -13,24 +13,28 @@ rpmsourcedir=/tmp/$(shell whoami)/rpmbuild
 
 INSTALL_TARGET = /usr/lib64
 
+.SILENT:createlink
+
 # The rules
 
-all release: 
+all release: createlink
 	scons $(SCONS_FLAGS)
-debug: 
+debug: createlink
 	scons $(SCONS_FLAGS) --debug-build
-nocuda:
+nocuda: createlink
 	scons $(SCONS_FLAGS) --no-cuda-build
 clean:
-	scons -c ; scons --debug-build -c ; rm -f *~ source/*~ include/*~
-
-rpm:    clean
+	scons -c ; scons --debug-build -c ; rm -f *~ source/*~ include/*~ ; rm -f scons_common.py
+createlink:
+	if [ ! -e scons_common.py ]; then \
+	  ln -fs ../scons_common.py; \
+	fi;
+rpm:    clean createlink
 	mkdir -p $(rpmsourcedir) ; \
 	if [ -a $(LIB)-lib.spec ]; \
         then \
-          tar -C ../ --exclude .svn \
-                   -cf $(rpmsourcedir)/$(LIB)-lib.tar $(LIB)-lib ; \
-          gzip -f $(rpmsourcedir)/$(LIB)-lib.tar ; \
+          tar -C ../ --dereference --exclude-vcs \
+                   -zcf $(rpmsourcedir)/$(LIB)-lib.tar.gz $(LIB)-lib ; \
           rpmbuild -ta $(rpmsourcedir)/$(LIB)-lib.tar.gz ; \
         else \
           echo $(rpmerr); \

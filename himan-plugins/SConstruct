@@ -1,7 +1,7 @@
 import os
 import platform
 
-SConscript("../scons_common.py")
+SConscript("scons_common.py")
 
 Import('env build_dir')
 
