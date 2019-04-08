@@ -79,6 +79,13 @@ For maximum theta e level, source data equivalent potential temperature is calcu
 
 LCL values are calculated using Boltons approximations. For moist adiabatic lift of air parcel Wobus method is used. For CAPE and CIN integration, virtual temperature is used. Both, first and last, equilibrium levels are searched, although in most cases these two are equal.
 
+CIN integration is done using a dual-LFC-level tactique: 
+
+* if LPL is above 500 meters, CIN integration is stopped to the lowest LFC found (if multiple LFC levels exist)
+* if LPL is below 500 meters, CIN integration is continued past the first LFC (of course skipping possible CAPE areas) until the highest LFC that is below 650 hPa. 
+
+CAPE integration, on the other hand, is always started from the lowest LFC. The LFC values that are written out are following the CIN integration scheme.
+
 The final CAPE an CIN results are averaged over the nearest grid points.
 
 # Per-plugin configuration options
