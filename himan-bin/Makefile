@@ -25,6 +25,9 @@ debug: createlink
 	scons $(SCONS_FLAGS) --debug-build
 nocuda: createlink
 	scons $(SCONS_FLAGS) --no-cuda-build
+check: createlink
+	scons CPPCHECK
+	scons SCANBUILD
 clean:
 	scons -c ; scons --debug-build -c ; rm -f *~ source/*~ include/*~ ; rm -f scons_common.py
 createlink:
