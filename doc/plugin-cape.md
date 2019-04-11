@@ -86,7 +86,7 @@ CIN integration is done using a dual-LFC-level tactique:
 
 CAPE integration, on the other hand, is always started from the lowest LFC. The LFC values that are written out are following the CIN integration scheme.
 
-The final CAPE an CIN results are averaged over the nearest grid points.
+The final CAPE an CIN results are averaged over the nearest grid points. If CAPE value is less than 0.1 J/kg, it is set to zero and CIN/LFC/EL are set to missing.
 
 # Per-plugin configuration options
 

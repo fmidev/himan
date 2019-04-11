@@ -32,14 +32,16 @@ const himan::level M500(himan::kHeightLayer, 500, 0);
 const himan::level UNSTABLE(himan::kMaximumThetaE, 0);
 
 void SmoothData(shared_ptr<himan::info<float>> myTargetInfo);
-void ValidateData(vector<float>& LCLZ, vector<float>& LFCT, vector<float>& LFCP, vector<float>& LFCZ,
-                  vector<float>& ELT, vector<float>& ELP, vector<float>& ELZ, vector<float>& CAPE,
-                  vector<float>& CAPE1040, vector<float>& CAPE3km, vector<float>& CIN);
+void CheckDataConsistency(vector<float>& LCLZ, vector<float>& LFCT, vector<float>& LFCP, vector<float>& LFCZ,
+                      vector<float>& ELT, vector<float>& ELP, vector<float>& ELZ, vector<float>& LastELT,
+                      vector<float>& LastELP, vector<float>& LastELZ, vector<float>& CAPE, vector<float>& CAPE1040,
+                      vector<float>& CAPE3km, vector<float>& CIN);
 void SetDataToInfo(shared_ptr<himan::info<float>> myTargetInfo, vector<float>& LCLT, vector<float>& LCLP,
                    vector<float>& LCLZ, vector<float>& LFCT, vector<float>& LFCP, vector<float>& LFCZ,
                    vector<float>& ELT, vector<float>& ELP, vector<float>& ELZ, vector<float>& LastELT,
                    vector<float>& LastELP, vector<float>& LastELZ, vector<float>& CAPE, vector<float>& CAPE1040,
                    vector<float>& CAPE3km, vector<float>& CIN);
+void FinalizeData(shared_ptr<himan::info<float>> myTargetInfo);
 
 vector<float> Convert(const vector<double>& arr)
 {
@@ -554,11 +556,11 @@ void cape::MostUnstableCAPE(shared_ptr<info<float>> myTargetInfo, short threadIn
 	auto LCLZ = h->VerticalValue<float>(ZParam, LCLP);
 
 	auto CIN = CINfut.get();
-
-	ValidateData(LCLZ, LFCT, LFCP, LFCZ, ELT, ELP, ELZ, CAPE, CAPE1040, CAPE3km, CIN);
+	CheckDataConsistency(LCLZ, LFCT, LFCP, LFCZ, ELT, ELP, ELZ, LastELT, LastELP, LastELZ, CAPE, CAPE1040, CAPE3km, CIN);
 	SetDataToInfo(myTargetInfo, LCLT, LCLP, LCLZ, CinLFCT, CinLFCP, CinLFCZ, ELT, ELP, ELZ, LastELT, LastELP, LastELZ,
 	              CAPE, CAPE1040, CAPE3km, CIN);
 	SmoothData(myTargetInfo);
+	FinalizeData(myTargetInfo);
 }
 
 void cape::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short threadIndex)
@@ -704,15 +706,12 @@ void cape::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short thread
 	auto& CAPE1040 = get<7>(CAPEresult);
 	auto& CAPE3km = get<8>(CAPEresult);
 
-	ValidateData(LCLZ, LastLFCT, LastLFCP, LastLFCZ, ELT, ELP, ELZ, CAPE, CAPE1040, CAPE3km, CIN);
-	SetDataToInfo(myTargetInfo, LCLT, LCLP, LCLZ, LastLFCT, LastLFCP, LastLFCZ, ELT, ELP, ELZ, LastELT,
-	              LastELP, LastELZ, CAPE, CAPE1040, CAPE3km, CIN);
+	CheckDataConsistency(LCLZ, LastLFCT, LastLFCP, LastLFCZ, ELT, ELP, ELZ, LastELT, LastELP, LastELZ, CAPE, CAPE1040,
+	                 CAPE3km, CIN);
+	SetDataToInfo(myTargetInfo, LCLT, LCLP, LCLZ, LastLFCT, LastLFCP, LastLFCZ, ELT, ELP, ELZ, LastELT, LastELP,
+	              LastELZ, CAPE, CAPE1040, CAPE3km, CIN);
 	SmoothData(myTargetInfo);
-
-	log.Debug("CAPE: " + ::PrintMean<float>(CAPE));
-	log.Debug("CAPE1040: " + ::PrintMean<float>(CAPE1040));
-	log.Debug("CAPE3km: " + ::PrintMean<float>(CAPE3km));
-	log.Debug("CIN: " + ::PrintMean<float>(CIN));
+	FinalizeData(myTargetInfo);
 }
 
 void SetDataToInfo(shared_ptr<himan::info<float>> myTargetInfo, vector<float>& LCLT, vector<float>& LCLP,
@@ -782,20 +781,7 @@ void SmoothData(shared_ptr<himan::info<float>> myTargetInfo)
 		myTargetInfo->Find<himan::param>(par);
 		himan::matrix<float> filtered = himan::numerical_functions::Filter2D(myTargetInfo->Data(), filter_kernel);
 
-		// HIMAN-224: CAPE & CIN values smaller than 0.1 are rounded to zero
-
-		auto& vec = filtered.Values();
-
-		for (auto& v : vec)
-		{
-			if (fabs(v) < 0.1)
-			{
-				v = 0;
-			}
-		}
-
-		auto b = myTargetInfo->Base();
-		b->data = move(filtered);
+		myTargetInfo->Base()->data = move(filtered);
 	};
 
 	filter(CAPEParam);
@@ -804,17 +790,16 @@ void SmoothData(shared_ptr<himan::info<float>> myTargetInfo)
 	filter(CINParam);
 }
 
-void ValidateData(vector<float>& LCLZ, vector<float>& LFCT, vector<float>& LFCP, vector<float>& LFCZ,
-                  vector<float>& ELT, vector<float>& ELP, vector<float>& ELZ, vector<float>& CAPE,
-                  vector<float>& CAPE1040, vector<float>& CAPE3km, vector<float>& CIN)
+void CheckDataConsistency(vector<float>& LCLZ, vector<float>& LFCT, vector<float>& LFCP, vector<float>& LFCZ,
+                      vector<float>& ELT, vector<float>& ELP, vector<float>& ELZ, vector<float>& LastELT,
+                      vector<float>& LastELP, vector<float>& LastELZ, vector<float>& CAPE, vector<float>& CAPE1040,
+                      vector<float>& CAPE3km, vector<float>& CIN)
 {
-	// Sometimes CAPE area is infinitely small -- so that CAPE is zero but LFC is found. In this case set all
-	// derivative parameters missing.
+	// Check data physical consistency
 
 	for (size_t i = 0; i < LFCZ.size(); i++)
 	{
-		// If LFC was found but EL was not, set LFC to missing also to avoid
-		// unclosed CAPE ranges.
+		// Unclosed CAPE areas are not good
 
 		if (CAPE[i] == 0 && himan::IsMissing(ELZ[i]) && !himan::IsMissing(LFCZ[i]))
 		{
@@ -854,15 +839,85 @@ void ValidateData(vector<float>& LCLZ, vector<float>& LFCT, vector<float>& LFCP,
 		// * If both are present, LFC must be below EL
 		// * LFC must be above LCL or equal to it
 		// * CAPE must be zero or positive real value
-		// * CIN must be zero or negative real value
+		// * CIN must be missing, zero or negative real value
 
 		ASSERT((himan::IsMissing(LFCZ[i]) && himan::IsMissing(ELZ[i])) ||
 		       (!himan::IsMissing(LFCZ[i]) && !himan::IsMissing(ELZ[i]) && (LFCZ[i] <= ELZ[i])));
 		ASSERT(himan::IsMissing(LFCZ[i]) || (LFCZ[i] >= LCLZ[i] && !himan::IsMissing(LCLZ[i])));
 		ASSERT(CAPE[i] >= 0);
-		ASSERT(CIN[i] <= 0);
+		ASSERT(himan::IsMissing(CIN[i]) || CIN[i] <= 0);
 	}
 #endif
+}
+
+void FinalizeData(shared_ptr<himan::info<float>> myTargetInfo)
+{
+	// Do some final tuning for the data like changing zero values to missing
+	// based on some arbitrary rules, ie. nothing physical.
+
+	using himan::param;
+
+	myTargetInfo->Find<param>(LFCTParam);
+	auto& LFCT = VEC(myTargetInfo);
+
+	myTargetInfo->Find<param>(LFCPParam);
+	auto& LFCP = VEC(myTargetInfo);
+
+	myTargetInfo->Find<param>(LFCZParam);
+	auto& LFCZ = VEC(myTargetInfo);
+
+	myTargetInfo->Find<param>(ELTParam);
+	auto& ELT = VEC(myTargetInfo);
+
+	myTargetInfo->Find<param>(ELPParam);
+	auto& ELP = VEC(myTargetInfo);
+
+	myTargetInfo->Find<param>(ELZParam);
+	auto& ELZ = VEC(myTargetInfo);
+
+	myTargetInfo->Find<param>(LastELTParam);
+	auto& LastELT = VEC(myTargetInfo);
+
+	myTargetInfo->Find<param>(LastELPParam);
+	auto& LastELP = VEC(myTargetInfo);
+
+	myTargetInfo->Find<param>(LastELZParam);
+	auto& LastELZ = VEC(myTargetInfo);
+
+	myTargetInfo->Find<param>(CAPEParam);
+	auto& CAPE = VEC(myTargetInfo);
+
+	myTargetInfo->Find<param>(CAPE1040Param);
+	auto& CAPE1040 = VEC(myTargetInfo);
+
+	myTargetInfo->Find<param>(CAPE3kmParam);
+	auto& CAPE3km = VEC(myTargetInfo);
+
+	myTargetInfo->Find<param>(CINParam);
+	auto& CIN = VEC(myTargetInfo);
+
+	for (size_t i = 0; i < LFCZ.size(); i++)
+	{
+		// HIMAN-224: CAPE & CIN values smaller than 0.1 are rounded to zero
+		// STU-10036: If CAPE is zero set all level parameters and CIN to missing
+
+		if (CAPE[i] < 0.1f)
+		{
+			CAPE[i] = 0.f;
+			CAPE1040[i] = himan::IsMissing(CAPE1040[i]) ? himan::MissingFloat() : 0.f;
+			CAPE3km[i] = himan::IsMissing(CAPE3km[i]) ? himan::MissingFloat() : 0.f;
+			CIN[i] = himan::MissingFloat();
+			LFCZ[i] = himan::MissingFloat();
+			LFCP[i] = himan::MissingFloat();
+			LFCT[i] = himan::MissingFloat();
+			ELZ[i] = himan::MissingFloat();
+			ELP[i] = himan::MissingFloat();
+			ELT[i] = himan::MissingFloat();
+			LastELZ[i] = himan::MissingFloat();
+			LastELP[i] = himan::MissingFloat();
+			LastELT[i] = himan::MissingFloat();
+		}
+	}
 }
 
 vector<float> cape::GetCIN(shared_ptr<info<float>> myTargetInfo, const vector<float>& Tsource,
