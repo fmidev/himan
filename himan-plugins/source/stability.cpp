@@ -96,7 +96,7 @@ void stability::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	itsLevelIterator.Clear();
 
-	SetParams({EBSParam, LIParam, SIParam, CAPESParam}, {Height0Level});
+	SetParams({CSIParam, LIParam, SIParam, CAPESParam}, {Height0Level});
 	SetParams({BSParam}, {OneKMLevel, ThreeKMLevel, SixKMLevel});
 	SetParams({SRHParam}, {OneKMLevel, ThreeKMLevel});
 	SetParams({TPEParam}, {ThreeKMLevel});
@@ -104,6 +104,7 @@ void stability::Process(std::shared_ptr<const plugin_configuration> conf)
 	SetParams({BRNParam}, {SixKMLevel});
 	SetParams({FFParam}, {EuropeanMileLevel});
 	SetParams({QParam}, {HalfKMLevel});
+	SetParams({EBSParam}, {MaxWindLevel});
 
 	Start();
 }
@@ -387,19 +388,34 @@ vec CalculateEffectiveBulkShear(shared_ptr<const plugin_configuration>& conf, in
 	const auto& EL = VEC(ELInfo);
 	const auto& LPL = VEC(LPLInfo);
 
-	vec Midway(EL.size(), MissingDouble());
+	// Finding maximum wind between levels LPL + 0.5*(0.6EL - LPL) and 0.6E
+	// Hence, if LPL is on the surface, being ~0m, the search limits for maximum wind become 0.3EL ... 0.6EL
 
-	for (auto&& tup : zip_range(Midway, LPL, EL))
+	vec Bottom(EL.size(), MissingDouble());
+	vec Top = Bottom;
+
+	for (auto&& tup : zip_range(Bottom, Top, LPL, EL))
 	{
-		double& mid = tup.get<0>();
-		const double lpl = tup.get<1>();
-		const double el = tup.get<2>();
+		double& btm = tup.get<0>();
+		double& top = tup.get<1>();
+		const double lpl = tup.get<2>();
+		const double el = tup.get<3>();
 
-		mid = 0.5 * (el - lpl) + lpl;
+		btm = 0.5 * (0.6 * el - lpl) + lpl;
+		top = 0.6 * el;
+
+		if (top < btm)
+		{
+			swap(btm, top);
+		}
+		ASSERT(btm < top || (IsMissing(btm) && IsMissing(top)));
 	}
 
-	const auto U = STABILITY::Shear(h, UParam, LPL, Midway);
-	const auto V = STABILITY::Shear(h, VParam, LPL, Midway);
+	const auto maxWind = h->VerticalMaximum(FFParam, Bottom, Top);
+	const auto maxWindHeight = h->VerticalHeight(FFParam, Bottom, Top, maxWind);
+
+	const auto U = STABILITY::Shear(h, UParam, LPL, maxWindHeight);
+	const auto V = STABILITY::Shear(h, VParam, LPL, maxWindHeight);
 
 	vec BS(U.size(), MissingDouble());
 
@@ -445,13 +461,60 @@ void CalculateBulkShearIndices(shared_ptr<const plugin_configuration>& conf, inf
 	myTargetInfo->Data().Set(BS06);
 
 	myTargetInfo->Find<param>(EBSParam);
-	myTargetInfo->Find<level>(Height0Level);
+	myTargetInfo->Find<level>(MaxWindLevel);
 	const auto EBS = CalculateEffectiveBulkShear(conf, myTargetInfo, h);
 	myTargetInfo->Data().Set(EBS);
 
+	myTargetInfo->Find<level>(Height0Level);
 	myTargetInfo->Find<param>(CAPESParam);
 	const auto CAPES = CalculateCapeShear(conf, myTargetInfo, EBS);
 	myTargetInfo->Data().Set(CAPES);
+}
+
+void CalculateConvectiveStabilityIndex(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo,
+                                       shared_ptr<hitool>& h)
+{
+	auto muCAPEInfo = STABILITY::Fetch(conf, myTargetInfo, level(kMaximumThetaE, 0), param("CAPE-JKG"));
+	auto muLPLInfo = STABILITY::Fetch(conf, myTargetInfo, level(kMaximumThetaE, 0), param("LPL-M"));
+	auto muELInfo = STABILITY::Fetch(conf, myTargetInfo, level(kMaximumThetaE, 0), param("EL-LAST-M"));
+	auto mlCAPEInfo = STABILITY::Fetch(conf, myTargetInfo, HalfKMLevel, param("CAPE-JKG"));
+
+	myTargetInfo->Find<param>(EBSParam);
+	myTargetInfo->Find<level>(MaxWindLevel);
+
+	const auto& EBS = VEC(myTargetInfo);
+	const auto& muEL = VEC(muELInfo);
+	const auto& muLPL = VEC(muLPLInfo);
+	const auto& muCAPE = VEC(muCAPEInfo);
+	const auto& mlCAPE = VEC(mlCAPEInfo);
+
+	myTargetInfo->Find<param>(CSIParam);
+	myTargetInfo->Find<level>(Height0Level);
+
+	auto& CSI = VEC(myTargetInfo);
+
+	for (size_t i = 0; i < EBS.size(); i++)
+	{
+		auto cape = MissingDouble();
+
+		if (muLPL[i] >= 250. && muCAPE[i] > 10.)
+		{
+			cape = muCAPE[i];
+		}
+		else if (muLPL[i] < 250. && mlCAPE[i] > 10.)
+		{
+			cape = mlCAPE[i];
+		}
+
+		if (muEL[i] - muLPL[i] < 3000.)
+		{
+			CSI[i] = 0.0;
+		}
+		else
+		{
+			CSI[i] = (EBS[i] * sqrt(cape)) / 10. + 0.022 * cape;
+		}
+	}
 }
 
 void stability::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short theThreadIndex)
@@ -562,6 +625,18 @@ void stability::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short 
 		catch (const HPExceptionType& e)
 		{
 			itsLogger.Warning("Storm relative helicity calculation failed");
+
+			if (e != kFileDataNotFound)
+			{
+			}
+		}
+		try
+		{
+			CalculateConvectiveStabilityIndex(itsConfiguration, myTargetInfo, h);
+		}
+		catch (const HPExceptionType& e)
+		{
+			itsLogger.Warning("Convective stability index calculation failed");
 
 			if (e != kFileDataNotFound)
 			{

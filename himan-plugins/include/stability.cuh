@@ -27,6 +27,7 @@ const himan::param RHParam("RH-PRCNT");
 const himan::param QParam("Q-KGKG");
 const himan::param HLParam("HL-M");
 const himan::param CAPESParam("CAPES-JKG");
+const himan::param CSIParam("CSI-N");
 
 const himan::level P850Level(himan::kPressure, 850);
 const himan::level P700Level(himan::kPressure, 700);
@@ -37,6 +38,7 @@ const himan::level ThreeKMLevel(himan::kHeightLayer, 3000, 0);
 const himan::level EuropeanMileLevel(himan::kHeight, 1500);
 const himan::level Height0Level(himan::kHeight, 0);
 const himan::level HalfKMLevel(himan::kHeightLayer, 500, 0);
+const himan::level MaxWindLevel(himan::kMaximumWind, 0);
 
 namespace STABILITY
 {
