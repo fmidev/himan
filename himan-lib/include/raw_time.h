@@ -11,6 +11,7 @@
 
 #include "himan_common.h"
 #include "serialization.h"
+#include "time_duration.h"
 #include <boost/date_time.hpp>
 
 #ifdef SERIALIZATION
@@ -46,14 +47,18 @@ class raw_time
 	raw_time() : itsDateTime(boost::posix_time::not_a_date_time)
 	{
 	}
+	raw_time(const boost::posix_time::ptime& ptime);
 	raw_time(const std::string& theTime, const std::string& theTimeMask = "%Y-%m-%d %H:%M:%S");
+	~raw_time() = default;
 
-	~raw_time()
-	{
-	}
 	raw_time(const raw_time& other);
 	raw_time& operator=(const raw_time& other);
 	operator std::string() const;
+	raw_time operator+(const time_duration& duration) const;
+	raw_time operator-(const time_duration& duration) const;
+	raw_time& operator+=(const time_duration& duration);
+	raw_time& operator-=(const time_duration& duration);
+	time_duration operator-(const raw_time& other) const;
 
 	std::string String(const std::string& theTimeMask = "%Y-%m-%d %H:%M:%S") const;
 
@@ -70,7 +75,7 @@ class raw_time
 	bool operator>=(const raw_time& other) const;
 	bool operator<=(const raw_time& other) const;
 
-	bool Adjust(HPTimeResolution timeResolution, int theValue);
+	void Adjust(HPTimeResolution timeResolution, int theValue);
 
 	bool Empty() const;
 	bool IsLeapYear() const;

@@ -84,7 +84,7 @@ void relative_humidity::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned
 
 		if (!TInfo)
 		{
-			itsLogger.Warning("Skipping step " + to_string(myTargetInfo->Time().Step()) + ", level " +
+			itsLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
 			                  to_string(myTargetInfo->Level().Value()));
 			return;
 		}
@@ -101,7 +101,7 @@ void relative_humidity::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned
 
 			if (!TDInfo)
 			{
-				myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+				myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
 				                         static_cast<string>(forecastLevel));
 				return;
 			}
@@ -120,7 +120,7 @@ void relative_humidity::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned
 
 			if (!PInfo)
 			{
-				myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+				myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
 				                         static_cast<string>(forecastLevel));
 				return;
 			}

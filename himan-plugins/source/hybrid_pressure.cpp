@@ -89,12 +89,12 @@ void hybrid_pressure::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned s
 
 				if (!lnspn)
 				{
-					myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+					myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
 					                         static_cast<string>(forecastLevel));
 					return;
 				}
 
-				myThreadedLogger.Info("Transforming LNSP to HPa for step " + to_string(forecastTime.Step()));
+				myThreadedLogger.Info("Transforming LNSP to HPa for step " + static_cast<string>(forecastTime.Step()));
 
 				auto newInfo = make_shared<info<float>>(*lnspn);
 				newInfo->Set<param>(param("LNSP-HPA"));
@@ -122,7 +122,7 @@ void hybrid_pressure::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned s
 
 	if (!PInfo || !TInfo)
 	{
-		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+		myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
 		                         static_cast<string>(forecastLevel));
 		return;
 	}

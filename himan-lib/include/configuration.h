@@ -12,6 +12,7 @@
 #define CONFIGURATION_H
 
 #include "producer.h"
+#include "time_duration.h"
 
 namespace himan
 {
@@ -187,8 +188,8 @@ class configuration
 	 * @return Value of 'step' if present
 	 */
 
-	int ForecastStep() const;
-	void ForecastStep(int theForecastStep);
+	time_duration ForecastStep() const;
+	void ForecastStep(const time_duration& theForecastStep);
 
 	HPDatabaseType DatabaseType() const;
 	void DatabaseType(HPDatabaseType theDatabaseType);
@@ -249,7 +250,7 @@ class configuration
 	int itsCudaDeviceCount;
 	int itsCudaDeviceId;
 
-	int itsForecastStep;
+	time_duration itsForecastStep;
 
 	int itsCacheLimit;
 	std::string itsParamFile;

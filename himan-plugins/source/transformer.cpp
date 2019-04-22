@@ -60,11 +60,7 @@ vector<himan::level> transformer::LevelsFromString(const string& levelType, cons
 shared_ptr<himan::info<double>> transformer::InterpolateTime(const forecast_time& ftime, const level& lev,
                                                              const param& par, const forecast_type& ftype) const
 {
-	if (ftime.StepResolution() != kHourResolution)
-	{
-		itsLogger.Error("Time interpolation only supported for hour resolution");
-		return nullptr;
-	}
+	// Time interpolation only supported for hour resolution
 
 	itsLogger.Debug("Starting time interpolation");
 
@@ -78,7 +74,7 @@ shared_ptr<himan::info<double>> transformer::InterpolateTime(const forecast_time
 	{
 		curtime.ValidDateTime().Adjust(kHourResolution, -1);
 		prev = Fetch(curtime, lev, par, ftype, false);
-	} while (curtime.Step() >= max(0, ftime.Step() - 6) && prev == nullptr);
+	} while (curtime.Step().Hours() >= max(0l, ftime.Step().Hours() - 6l) && prev == nullptr);
 
 	// fetch next data, max 6 hours to future
 
@@ -88,7 +84,7 @@ shared_ptr<himan::info<double>> transformer::InterpolateTime(const forecast_time
 	{
 		curtime.ValidDateTime().Adjust(kHourResolution, 1);
 		next = Fetch(curtime, lev, par, ftype, false);
-	} while (curtime.Step() <= ftime.Step() + 6 && next == nullptr);
+	} while (curtime.Step().Hours() <= ftime.Step().Hours() + 6 && next == nullptr);
 
 	if (!prev || !next)
 	{
@@ -104,9 +100,9 @@ shared_ptr<himan::info<double>> transformer::InterpolateTime(const forecast_time
 	const auto& nextdata = VEC(next);
 	auto& interp = VEC(interpolated);
 
-	const double X = static_cast<double>(ftime.Step());
-	const double X1 = static_cast<double>(prev->Time().Step());
-	const double X2 = static_cast<double>(next->Time().Step());
+	const double X = static_cast<double>(ftime.Step().Hours());
+	const double X1 = static_cast<double>(prev->Time().Step().Hours());
+	const double X2 = static_cast<double>(next->Time().Step().Hours());
 
 	for (size_t i = 0; i < prevdata.size(); i++)
 	{
@@ -394,7 +390,7 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 
 		if (!sourceInfo)
 		{
-			myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+			myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
 			                         static_cast<string>(forecastLevel));
 			return;
 		}

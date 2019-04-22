@@ -128,12 +128,6 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 	const auto forecastType = myTargetInfo->ForecastType();
 	const auto prod = myTargetInfo->Producer();
 
-	if (myTargetInfo->Time().StepResolution() != kHourResolution || itsConfiguration->ForecastStep() != 1)
-	{
-		myThreadedLogger.Error("Snow drift can only be calculated with one hour resolution");
-		return;
-	}
-
 	const std::string deviceType = "CPU";
 
 	info_t pSAInfo, pDAInfo;  // data from previous time step
@@ -142,7 +136,7 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 	{
 		const auto forecastTime = myTargetInfo->Time();
 
-		if (forecastTime.Step() == 0 && prod.Id() != 107)
+		if (forecastTime.Step().Hours() == 0 && prod.Id() != 107)
 		{
 			// We only calculate analysis hour for LAPS
 			continue;
@@ -209,7 +203,7 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 		// In the start of the forecast fetch the latest sa and da
 		// values from LAPS producer.
 
-		if (prod.Id() == 107 || forecastTime.Step() == 1)
+		if (prod.Id() == 107 || forecastTime.Step().Hours() == 1)
 		{
 			prevTime.OriginDateTime(prevTime.ValidDateTime());
 
@@ -239,7 +233,7 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 
 		if (!pSAInfo || !pDAInfo)
 		{
-			if (forecastTime.Step() == 0)
+			if (forecastTime.Step().Hours() == 0)
 			{
 				// If we don't have a history of sa & da, start accumulating
 				// it but do not write snow index.

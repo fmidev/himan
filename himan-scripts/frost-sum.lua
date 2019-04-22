@@ -6,7 +6,7 @@
 -- Frost sum is: -16 (sic)
 --
 
-local step = current_time:GetStep()
+local step = current_time:GetStep():Hours()
 
 if step % 24 ~= 0 then
   logger:Info(string.format("Step is not a multiple of 24 (%d) -- skipping", step))
@@ -41,12 +41,12 @@ while true do
 
   curtime:GetValidDateTime():Adjust(HPTimeResolution.kHourResolution, -24)
 
-  if curtime:GetStep() <= 0 then
+  if curtime:GetStep():Hours() <= 0 then
     break
   end
 end
 
-local agg = aggregation(HPAggregationType.kAccumulation, HPTimeResolution.kHourResolution, current_time:GetStep(), 0)
+local agg = aggregation(HPAggregationType.kAccumulation, time_duration(HPTimeResolution.kHourResolution, current_time:GetStep():Hours()))
 local par = param("FROSTSUM-C")
 
 par:SetAggregation(agg)

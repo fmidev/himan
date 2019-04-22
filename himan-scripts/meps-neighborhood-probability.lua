@@ -16,7 +16,7 @@ function produceProbabilities(sourceparam, targetparam, op, limit)
 
   logger:Info("Producing area probabilities for " .. sourceparam:GetName())
 
-  local ens = lagged_ensemble(sourceparam, ensemble_size, HPTimeResolution.kHourResolution, -lag, steps)
+  local ens = lagged_ensemble(sourceparam, ensemble_size, time_duration(HPTimeResolution.kHourResolution, -lag), steps)
   ens:SetMaximumMissingForecasts(ensemble_size * steps)
 
   local curtime = forecast_time(current_time:GetOriginDateTime(), current_time:GetValidDateTime())

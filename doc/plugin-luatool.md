@@ -100,12 +100,8 @@ aggregation is a parameter component, defining for example that it is an accumul
 | string | ClassName | | Returns class name |
 | HPAggregationType | GetType | | Returns aggregation type (for example: cumulative) |
 |   | SetType | HPAggregationType  | Set aggregation type |
-| HPTimeResolution | GetTimeResolution | | Returns time resolution type (for example: hour) |
-|   | SetTimeResolution | HPTimeResolution  | Set time resolution type |
-| number | GetTimeResolution | | Returns time resolution value |
-|   | SetTimeResolution | number  | Set time resolution value |
-| number | GetFirstTimeValue | | Returns the starting time (leadtime) of the aggregation |
-|   | SetTimeResolution | number  | Sets the starting time (leadtime) of the aggregation |
+| time_duration | GetTimeDuration | | Returns the time duration of the aggregation (for example: one hour) |
+|   | SetTimeDuration | time_duration | Set time duration |
 
 ## forecast_time
 
@@ -123,9 +119,7 @@ forecast_time contains both analysis time and valid time.
 |   | SetOriginDateTime | raw_time  | Set origin date time |
 | raw_time | GetValidDateTime | | Returns valid date time (forecast "lead time") as full timestamp |
 |   | SetValidDateTime | raw_time  | Set valid date time |
-| number | GetStep | | Returns time step (valid time - origin time) |
-| HPTimeResolution | GetStepResolution | | Returns step time resolution type (minute, hour) |
-| | SetStepResolution | HPTimeResolution | Set step time resolution type|
+| number | GetStep | | Returns time step (valid time - origin time) as time_duration |
 
 ## info
 
@@ -287,7 +281,7 @@ plugin_configuration class instance is automatically assigned to a lua script. I
 | string | GetOutputFileType | | Returns the type of output file (grib, querydate, ...) |
 | producer | GetSourceProducer | number | Returns the configured source producer, indexing starts from 0 |
 | producer | GetTargetProducer | | Returns target producer |
-| number | GetForecastStep | | Returns the forecast step that's configured in the configuration file (if applicable) |
+| time_duration | GetForecastStep | | Returns the forecast step that's configured in the configuration file (if applicable) |
 
 ## producer
 
@@ -314,6 +308,20 @@ raw_time represents a timestamp and is a thin wrapper over boost::posix_time::pt
 | string | ClassName | | Returns class name |
 | string | String | string | Returns the time in user-given format (for format details see boost documentation) |
 | | Adjust | HPTimeResolution, number | Adjust time as needed |
+| bool | Empty | | Checks if time is valid |
+
+## time_duration
+
+time_duration represents a time interval or duration, and it's a thin wrapper over boost::posix_time::time_duration.
+
+    local td = time_duration("01:00") -- one hour
+    local td = time_duration(kHourResolution, 1)
+
+| Return value  | Name | Arguments | Description | 
+|---|---|---|---|
+| string | ClassName | | Returns class name |
+| number | Hours | | Return number of hours in time interval (not normalized) |
+| number | Minutes | | Return number of minutes in time interval (not normalized) |
 | bool | Empty | | Checks if time is valid |
 
 ## ensemble
@@ -360,8 +368,7 @@ lagged_ensemble is derived from ensemble.
 | bool | ResetLocation | | Reset the location iterator to undefined state |
 | bool | FirstLocation | | Set the location iterator to the first position |
 | bool | NextLocation | | Advance the location iterator |
-| HPTimeResolution | LagResolution | | Returns the lag time resolution |
-| number | Lag | | Returns the lag of the ensemble |w
+| time_duration | Lag | | Returns the lag of the ensemble |
 | number | Mean | | Returns the mean of the ensemble member values at the current location |
 | number | Variance | | Returns the variance of the ensemble member values at the current location |
 | number | CentralMoment | integer | Returns the Nth central moment of the ensemble member values at the current location |

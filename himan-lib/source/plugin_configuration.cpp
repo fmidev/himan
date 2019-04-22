@@ -159,9 +159,15 @@ void plugin_configuration::WriteStatistics()
 
 	if (itsTimes.empty() != false)
 	{
-		cout << "Time step:\t\t" << itsTimes[0].Step() << endl;
-		cout << "Time step unit:\t\t" << HPTimeResolutionToString.at(itsTimes[0].StepResolution()) << endl;
-		cout << "Time count:\t\t" << itsTimes.size() << endl;
+		cout << "Time steps:\t\t" << itsTimes[0].Step();
+
+		for (size_t i = 1; i < static_cast<size_t>(min(3ul, itsTimes.size())); i++)
+		{
+			cout << "," << itsTimes[i].Step();
+		}
+		if (itsTimes.size() > 3)
+			cout << "...";
+		cout << endl << "Time count:\t\t" << itsTimes.size() << endl;
 	}
 
 	cout << "Outfile type:\t\t" << HPFileTypeToString.at(itsOutputFileType) << endl;

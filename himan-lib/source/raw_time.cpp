@@ -10,6 +10,10 @@ static std::mutex formatMutex;
 
 using namespace himan;
 
+raw_time::raw_time(const boost::posix_time::ptime& ptime)
+{
+	itsDateTime = ptime;
+}
 raw_time::raw_time(const std::string& theDateTime, const std::string& theTimeMask)
 {
 	if (theTimeMask == "%Y-%m-%d %H:%M:%S")
@@ -79,11 +83,33 @@ bool raw_time::operator<=(const raw_time& other) const
 {
 	return itsDateTime <= other.itsDateTime;
 }
-
 raw_time::operator std::string() const
 {
 	return ToDatabaseTime();
 }
+raw_time raw_time::operator+(const time_duration& adjustment) const
+{
+	return raw_time(itsDateTime + adjustment.Raw());
+}
+raw_time raw_time::operator-(const time_duration& adjustment) const
+{
+	return raw_time(itsDateTime - adjustment.Raw());
+}
+raw_time& raw_time::operator+=(const time_duration& adjustment)
+{
+	itsDateTime += adjustment.Raw();
+	return *this;
+}
+raw_time& raw_time::operator-=(const time_duration& adjustment)
+{
+	itsDateTime -= adjustment.Raw();
+	return *this;
+}
+time_duration raw_time::operator-(const raw_time& other) const
+{
+	return time_duration(itsDateTime - other.itsDateTime);
+}
+
 std::string raw_time::String(const std::string& theTimeMask) const
 {
 	if (Empty())
@@ -121,7 +147,7 @@ std::string raw_time::FormatTime(const std::string& theTimeMask) const
 	return s.str();
 }
 
-bool raw_time::Adjust(HPTimeResolution timeResolution, int theValue)
+void raw_time::Adjust(HPTimeResolution timeResolution, int theValue)
 {
 	using namespace boost;
 
@@ -147,8 +173,6 @@ bool raw_time::Adjust(HPTimeResolution timeResolution, int theValue)
 		{
 			itsDateTime += gregorian::date_duration(-1);
 		}
-
-		return true;
 	}
 	else if (timeResolution == kDayResolution)
 	{
@@ -161,8 +185,6 @@ bool raw_time::Adjust(HPTimeResolution timeResolution, int theValue)
 		throw std::runtime_error(ClassName() + ": Invalid time adjustment unit: " + std::to_string(timeResolution) +
 		                         "'");
 	}
-
-	return true;
 }
 
 bool raw_time::Empty() const

@@ -81,7 +81,7 @@ void icing::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short theTh
 	}
 	if (!TInfo || !VvInfo || !ClInfo || !PrecFormInfo || !PrecInfo || !ZeroLevelInfo || !HeightInfo)
 	{
-		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+		myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
 		                         static_cast<string>(forecastLevel));
 		return;
 	}

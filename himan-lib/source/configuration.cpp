@@ -33,7 +33,7 @@ configuration::configuration()
       itsReadAllAuxiliaryFilesToCache(true),
       itsCudaDeviceCount(-1),
       itsCudaDeviceId(0),
-      itsForecastStep(kHPMissingInt),
+      itsForecastStep(),
       itsCacheLimit(-1),
       itsParamFile(),
       itsAsyncExecution(false),
@@ -258,11 +258,11 @@ void configuration::CudaDeviceId(int theCudaDeviceId)
 {
 	itsCudaDeviceId = theCudaDeviceId;
 }
-int configuration::ForecastStep() const
+time_duration configuration::ForecastStep() const
 {
 	return itsForecastStep;
 }
-void configuration::ForecastStep(int theForecastStep)
+void configuration::ForecastStep(const time_duration& theForecastStep)
 {
 	itsForecastStep = theForecastStep;
 }
