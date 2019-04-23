@@ -202,6 +202,7 @@ enum HPLevelType
 {
 	kUnknownLevel = 0,
 	kGround = 1,
+	kMaximumWind = 6,
 	kTopOfAtmosphere = 8,
 	kIsothermal = 20,
 	kLake = 21,
@@ -238,7 +239,8 @@ const boost::unordered_map<HPLevelType, std::string> HPLevelTypeToString =
 	(kEntireAtmosphere, "entatm")
 	(kEntireOcean, "entocean")
 	(kLake, "lake")
-	(kMaximumThetaE, "maxthetae");
+	(kMaximumThetaE, "maxthetae")
+	(kMaximumWind, "max_wind");
 
 const boost::unordered_map<std::string, HPLevelType> HPStringToLevelType =
 	ba::map_list_of

@@ -24,10 +24,11 @@ The indices are
   * between 0 and 3km
   * between 0 and 6km
   * https://en.wikipedia.org/wiki/Wind_shear
-* effective bulk shear
-  * http://www.spc.noaa.gov/exper/mesoanalysis/help/help_eshr.html
-  * Lifted parcel level is used as effective inflow base
-  * effective inflow top is found when going upwards from base up to 50% of EL height
+* effective bulk shear from maximum wind level
+  * effective bulk shear: http://www.spc.noaa.gov/exper/mesoanalysis/help/help_eshr.html
+  * maximum ebs is almost the same as normal ebs
+  * effective inflow base is lpl
+  * effective inflow top is the height of maximum wind speed between lpl + 0.5 * (0.6 * el - lpl) and 0.6 * el
 * cape shear
   * http://apps.ecmwf.int/codes/grib/param-db?id=228044
   * ebs is used as wind shear parameter
@@ -43,6 +44,11 @@ The indices are
 * bulk richardson number
   * http://glossary.ametsoc.org/wiki/Bulk_richardson_number
 * mean mixing ratio in the lowest 500m
+* convective stability index
+  * similar to cape shear
+  * comparing cape value to effective bulk shear from maximum wind level
+  * result is an index value from 0 .. 300
+  * values more than 100 are considered high
 
 Plugin is optimized for GPU use.
 
@@ -61,7 +67,7 @@ Parameters from stability plugin:
 
 Level (height, 0):
 
-* Effective bulk shear: EWSH-MS
+* Convective severity index: CSI-N
 * Lifted index: LI-N
 * Showalter index: SI-N
 * Cape shear: CAPES-JKG
@@ -90,6 +96,10 @@ Level (heightlayer, 0, 6000):
 
 * Bulk shear: BS-MS
 * Bulk richardson number: BRN-N
+
+Level (maxwind, 0):
+
+* Effective bulk shear: EWSH-MS
 
 # Method of calculation
 
