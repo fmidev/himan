@@ -240,7 +240,7 @@ const boost::unordered_map<HPLevelType, std::string> HPLevelTypeToString =
 	(kEntireOcean, "entocean")
 	(kLake, "lake")
 	(kMaximumThetaE, "maxthetae")
-	(kMaximumWind, "max_wind");
+	(kMaximumWind, "maxwind");
 
 const boost::unordered_map<std::string, HPLevelType> HPStringToLevelType =
 	ba::map_list_of
