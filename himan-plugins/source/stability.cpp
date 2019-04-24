@@ -401,13 +401,12 @@ vec CalculateEffectiveBulkShear(shared_ptr<const plugin_configuration>& conf, in
 		const double lpl = tup.get<2>();
 		const double el = tup.get<3>();
 
-		btm = 0.5 * (0.6 * el - lpl) + lpl;
-		top = 0.6 * el;
-
-		if (top < btm)
+		if (el - lpl >= 3000.)
 		{
-			swap(btm, top);
+			btm = 0.5 * (0.6 * el - lpl) + lpl;
+			top = 0.6 * el;
 		}
+
 		ASSERT(btm < top || (IsMissing(btm) && IsMissing(top)));
 	}
 
@@ -476,14 +475,12 @@ void CalculateConvectiveStabilityIndex(shared_ptr<const plugin_configuration>& c
 {
 	auto muCAPEInfo = STABILITY::Fetch(conf, myTargetInfo, level(kMaximumThetaE, 0), param("CAPE-JKG"));
 	auto muLPLInfo = STABILITY::Fetch(conf, myTargetInfo, level(kMaximumThetaE, 0), param("LPL-M"));
-	auto muELInfo = STABILITY::Fetch(conf, myTargetInfo, level(kMaximumThetaE, 0), param("EL-LAST-M"));
 	auto mlCAPEInfo = STABILITY::Fetch(conf, myTargetInfo, HalfKMLevel, param("CAPE-JKG"));
 
 	myTargetInfo->Find<param>(EBSParam);
 	myTargetInfo->Find<level>(MaxWindLevel);
 
 	const auto& EBS = VEC(myTargetInfo);
-	const auto& muEL = VEC(muELInfo);
 	const auto& muLPL = VEC(muLPLInfo);
 	const auto& muCAPE = VEC(muCAPEInfo);
 	const auto& mlCAPE = VEC(mlCAPEInfo);
@@ -506,13 +503,11 @@ void CalculateConvectiveStabilityIndex(shared_ptr<const plugin_configuration>& c
 			cape = mlCAPE[i];
 		}
 
-		if (muEL[i] - muLPL[i] < 3000.)
+		CSI[i] = (EBS[i] * sqrt(2 * cape)) * 0.1;
+
+		if (EBS[i] <= 15.)
 		{
-			CSI[i] = 0.0;
-		}
-		else
-		{
-			CSI[i] = (EBS[i] * sqrt(cape)) / 10. + 0.022 * cape;
+			CSI[i] += 0.025 * cape * (0.06666 * EBS[i] + 1);
 		}
 	}
 }

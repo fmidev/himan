@@ -208,8 +208,7 @@ __global__ void BRNKernel(cdarr_t d_cape, cdarr_t d_u6, cdarr_t d_v6, cdarr_t d_
 	}
 }
 
-__global__ void CSIKernel(cdarr_t d_mucape, cdarr_t d_mlcape, cdarr_t d_muel, cdarr_t d_mulpl, cdarr_t d_ebs,
-                          darr_t d_csi, size_t N)
+__global__ void CSIKernel(cdarr_t d_mucape, cdarr_t d_mlcape, cdarr_t d_mulpl, cdarr_t d_ebs, darr_t d_csi, size_t N)
 {
 	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -226,13 +225,11 @@ __global__ void CSIKernel(cdarr_t d_mucape, cdarr_t d_mlcape, cdarr_t d_muel, cd
 			cape = d_mlcape[idx];
 		}
 
-		if (d_muel[idx] - d_mulpl[idx] < 3000.)
+		d_csi[idx] = (d_ebs[idx] * sqrt(2 * cape)) * 0.1;
+
+		if (d_ebs[idx] <= 15.)
 		{
-			d_csi[idx] = 0.0;
-		}
-		else
-		{
-			d_csi[idx] = (d_ebs[idx] * sqrt(cape)) / 10. + 0.022 * cape;
+			d_csi[idx] += 0.025 * cape * (0.06666 * d_ebs[idx] + 1);
 		}
 	}
 }
@@ -310,12 +307,10 @@ void CalculateBulkShear(std::shared_ptr<const plugin_configuration> conf, std::s
 
 		for (size_t i = 0; i < el.size(); i++)
 		{
-			Bottom[i] = 0.5 * (0.6 * el[i] - lpl[i]) + lpl[i];
-			Top[i] = 0.6 * el[i];
-
-			if (Top[i] < Bottom[i])
+			if (el[i] - lpl[i] > 3000.)
 			{
-				std::swap(Bottom[i], Top[i]);
+				Bottom[i] = 0.5 * (0.6 * el[i] - lpl[i]) + lpl[i];
+				Top[i] = 0.6 * el[i];
 			}
 		}
 
@@ -854,7 +849,6 @@ void CalculateConvectiveSeverityIndex(std::shared_ptr<const plugin_configuration
 {
 	double* d_mucape = 0;
 	double* d_mlcape = 0;
-	double* d_muel = 0;
 	double* d_mulpl = 0;
 	double* d_ebs = 0;
 
@@ -866,8 +860,6 @@ void CalculateConvectiveSeverityIndex(std::shared_ptr<const plugin_configuration
 		                                      myTargetInfo->ForecastType());
 		auto muLPLInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), level(kMaximumThetaE, 0), param("LPL-M"),
 		                                     myTargetInfo->ForecastType());
-		auto muELInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), level(kMaximumThetaE, 0), param("EL-LAST-M"),
-		                                    myTargetInfo->ForecastType());
 		auto mlCAPEInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), HalfKMLevel, param("CAPE-JKG"),
 		                                      myTargetInfo->ForecastType());
 
@@ -875,14 +867,12 @@ void CalculateConvectiveSeverityIndex(std::shared_ptr<const plugin_configuration
 		myTargetInfo->Find<level>(MaxWindLevel);
 
 		const auto& EBS = VEC(myTargetInfo);
-		const auto& muEL = VEC(muELInfo);
 		const auto& muLPL = VEC(muLPLInfo);
 		const auto& muCAPE = VEC(muCAPEInfo);
 		const auto& mlCAPE = VEC(mlCAPEInfo);
 
 		CUDA_CHECK(cudaMalloc((void**)&d_mucape, memsize));
 		CUDA_CHECK(cudaMalloc((void**)&d_mlcape, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_muel, memsize));
 		CUDA_CHECK(cudaMalloc((void**)&d_mulpl, memsize));
 		CUDA_CHECK(cudaMalloc((void**)&d_ebs, memsize));
 
@@ -894,13 +884,11 @@ void CalculateConvectiveSeverityIndex(std::shared_ptr<const plugin_configuration
 		CUDA_CHECK(
 		    cudaMemcpyAsync((void*)d_mlcape, (const void*)mlCAPE.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		CUDA_CHECK(cudaMemcpyAsync((void*)d_muel, (const void*)muEL.data(), memsize, cudaMemcpyHostToDevice, stream));
-
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_mulpl, (const void*)muLPL.data(), memsize, cudaMemcpyHostToDevice, stream));
 
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_ebs, (const void*)EBS.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		CSIKernel<<<gridSize, blockSize, 0, stream>>>(d_mucape, d_mlcape, d_muel, d_mulpl, d_ebs, d_csi,
+		CSIKernel<<<gridSize, blockSize, 0, stream>>>(d_mucape, d_mlcape, d_mulpl, d_ebs, d_csi,
 		                                              myTargetInfo->SizeLocations());
 
 		myTargetInfo->Find<param>(CSIParam);
@@ -910,7 +898,6 @@ void CalculateConvectiveSeverityIndex(std::shared_ptr<const plugin_configuration
 
 		CUDA_CHECK(cudaFree(d_mucape));
 		CUDA_CHECK(cudaFree(d_mlcape));
-		CUDA_CHECK(cudaFree(d_muel));
 		CUDA_CHECK(cudaFree(d_mulpl));
 		CUDA_CHECK(cudaFree(d_ebs));
 
