@@ -29,6 +29,7 @@ The indices are
   * maximum ebs is almost the same as normal ebs
   * effective inflow base is lpl
   * effective inflow top is the height of maximum wind speed between lpl + 0.5 * (0.6 * el - lpl) and 0.6 * el
+  * only calculated if lfc zone width is more than 3000m
 * cape shear
   * http://apps.ecmwf.int/codes/grib/param-db?id=228044
   * ebs is used as wind shear parameter
