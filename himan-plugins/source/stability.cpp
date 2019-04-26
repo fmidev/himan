@@ -507,7 +507,7 @@ void CalculateConvectiveStabilityIndex(shared_ptr<const plugin_configuration>& c
 
 		if (EBS[i] <= 15.)
 		{
-			CSI[i] += 0.025 * cape * (0.06666 * EBS[i] + 1);
+			CSI[i] += 0.025 * cape * (-0.06666 * EBS[i] + 1);
 		}
 	}
 }
