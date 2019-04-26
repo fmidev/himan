@@ -470,8 +470,8 @@ void CalculateBulkShearIndices(shared_ptr<const plugin_configuration>& conf, inf
 	myTargetInfo->Data().Set(CAPES);
 }
 
-void CalculateConvectiveStabilityIndex(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo,
-                                       shared_ptr<hitool>& h)
+void CalculateConvectiveSeverityIndex(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo,
+                                      shared_ptr<hitool>& h)
 {
 	auto muCAPEInfo = STABILITY::Fetch(conf, myTargetInfo, level(kMaximumThetaE, 0), param("CAPE-JKG"));
 	auto muLPLInfo = STABILITY::Fetch(conf, myTargetInfo, level(kMaximumThetaE, 0), param("LPL-M"));
@@ -627,7 +627,7 @@ void stability::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short 
 		}
 		try
 		{
-			CalculateConvectiveStabilityIndex(itsConfiguration, myTargetInfo, h);
+			CalculateConvectiveSeverityIndex(itsConfiguration, myTargetInfo, h);
 		}
 		catch (const HPExceptionType& e)
 		{
