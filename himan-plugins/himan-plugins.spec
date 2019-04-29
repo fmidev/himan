@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 19.4.25
+Version: 19.4.29
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -115,6 +115,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Apr 29 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.4.29-1.fmi
+- cape plugin bugfix
+- Stability updates
 * Thu Apr 25 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.4.25-1.fmi
 - Stability updates
 * Wed Apr 24 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.4.24-1.fmi

@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 19.4.24
+Version: 19.4.29
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -62,6 +62,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Mon Apr 29 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.4.29-1.fmi
+- Minor bugfix in interpolate
 * Wed Apr 24 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.4.24-1.fmi
 - MAX_WIND level name change
 * Mon Apr  1 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.4.1-1.fmi
