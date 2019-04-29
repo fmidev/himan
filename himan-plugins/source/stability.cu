@@ -208,6 +208,32 @@ __global__ void BRNKernel(cdarr_t d_cape, cdarr_t d_u6, cdarr_t d_v6, cdarr_t d_
 	}
 }
 
+__global__ void CSIKernel(cdarr_t d_mucape, cdarr_t d_mlcape, cdarr_t d_mulpl, cdarr_t d_ebs, darr_t d_csi, size_t N)
+{
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < N)
+	{
+		double cape = MissingDouble();
+
+		if (d_mulpl[idx] >= 250. && d_mucape[idx] > 10.)
+		{
+			cape = d_mucape[idx];
+		}
+		else if (d_mulpl[idx] < 250. && d_mlcape[idx] > 10.)
+		{
+			cape = d_mlcape[idx];
+		}
+
+		d_csi[idx] = (d_ebs[idx] * sqrt(2 * cape)) * 0.1;
+
+		if (d_ebs[idx] <= 15.)
+		{
+			d_csi[idx] += 0.025 * cape * (-0.06666 * d_ebs[idx] + 1);
+		}
+	}
+}
+
 void CalculateBulkShear(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info<double>> myTargetInfo,
                         std::shared_ptr<himan::plugin::hitool> h, cudaStream_t& stream)
 {
@@ -276,22 +302,30 @@ void CalculateBulkShear(std::shared_ptr<const plugin_configuration> conf, std::s
 		const auto& el = VEC(ELInfo);
 		const auto& lpl = VEC(LPLInfo);
 
-		std::vector<double> Midway(el.size());
+		std::vector<double> Bottom(el.size(), MissingDouble());
+		std::vector<double> Top = Bottom;
 
 		for (size_t i = 0; i < el.size(); i++)
 		{
-			Midway[i] = 0.5 * (el[i] - lpl[i]) + lpl[i];
+			if (el[i] - lpl[i] > 3000.)
+			{
+				Bottom[i] = 0.5 * (0.6 * el[i] - lpl[i]) + lpl[i];
+				Top[i] = 0.6 * el[i];
+			}
 		}
 
-		u = STABILITY::Shear(h, UParam, lpl, Midway);
+		const auto maxWind = h->VerticalMaximum(FFParam, Bottom, Top);
+		const auto maxWindHeight = h->VerticalHeight(FFParam, Bottom, Top, maxWind);
+
+		u = STABILITY::Shear(h, UParam, lpl, maxWindHeight);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_u, (const void*)u.data(), memsize, cudaMemcpyHostToDevice, stream));
 
-		v = STABILITY::Shear(h, VParam, lpl, Midway);
+		v = STABILITY::Shear(h, VParam, lpl, maxWindHeight);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_v, (const void*)v.data(), memsize, cudaMemcpyHostToDevice, stream));
 
 		BulkShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u, d_v, d_bs, N);
 
-		myTargetInfo->Find<level>(Height0Level);
+		myTargetInfo->Find<level>(MaxWindLevel);
 		myTargetInfo->Find<param>(EBSParam);
 		cuda::ReleaseInfo(myTargetInfo, d_bs, stream);
 
@@ -310,6 +344,7 @@ void CalculateBulkShear(std::shared_ptr<const plugin_configuration> conf, std::s
 		CAPEShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u, d_bs, d_capes, N);
 
 		myTargetInfo->Find<param>(CAPESParam);
+		myTargetInfo->Find<level>(Height0Level);
 		cuda::ReleaseInfo(myTargetInfo, d_capes, stream);
 	}
 	catch (HPExceptionType& e)
@@ -808,6 +843,74 @@ void CalculateThetaEIndices(std::shared_ptr<info<double>> myTargetInfo, std::sha
 	}
 }
 
+void CalculateConvectiveSeverityIndex(std::shared_ptr<const plugin_configuration> conf,
+                                      std::shared_ptr<info<double>> myTargetInfo,
+                                      std::shared_ptr<himan::plugin::hitool> h, cudaStream_t& stream)
+{
+	double* d_mucape = 0;
+	double* d_mlcape = 0;
+	double* d_mulpl = 0;
+	double* d_ebs = 0;
+
+	double* d_csi = 0;
+
+	try
+	{
+		auto muCAPEInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), level(kMaximumThetaE, 0), param("CAPE-JKG"),
+		                                      myTargetInfo->ForecastType());
+		auto muLPLInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), level(kMaximumThetaE, 0), param("LPL-M"),
+		                                     myTargetInfo->ForecastType());
+		auto mlCAPEInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), HalfKMLevel, param("CAPE-JKG"),
+		                                      myTargetInfo->ForecastType());
+
+		myTargetInfo->Find<param>(EBSParam);
+		myTargetInfo->Find<level>(MaxWindLevel);
+
+		const auto& EBS = VEC(myTargetInfo);
+		const auto& muLPL = VEC(muLPLInfo);
+		const auto& muCAPE = VEC(muCAPEInfo);
+		const auto& mlCAPE = VEC(mlCAPEInfo);
+
+		CUDA_CHECK(cudaMalloc((void**)&d_mucape, memsize));
+		CUDA_CHECK(cudaMalloc((void**)&d_mlcape, memsize));
+		CUDA_CHECK(cudaMalloc((void**)&d_mulpl, memsize));
+		CUDA_CHECK(cudaMalloc((void**)&d_ebs, memsize));
+
+		CUDA_CHECK(cudaMalloc((void**)&d_csi, memsize));
+
+		CUDA_CHECK(
+		    cudaMemcpyAsync((void*)d_mucape, (const void*)muCAPE.data(), memsize, cudaMemcpyHostToDevice, stream));
+
+		CUDA_CHECK(
+		    cudaMemcpyAsync((void*)d_mlcape, (const void*)mlCAPE.data(), memsize, cudaMemcpyHostToDevice, stream));
+
+		CUDA_CHECK(cudaMemcpyAsync((void*)d_mulpl, (const void*)muLPL.data(), memsize, cudaMemcpyHostToDevice, stream));
+
+		CUDA_CHECK(cudaMemcpyAsync((void*)d_ebs, (const void*)EBS.data(), memsize, cudaMemcpyHostToDevice, stream));
+
+		CSIKernel<<<gridSize, blockSize, 0, stream>>>(d_mucape, d_mlcape, d_mulpl, d_ebs, d_csi,
+		                                              myTargetInfo->SizeLocations());
+
+		myTargetInfo->Find<param>(CSIParam);
+		myTargetInfo->Find<level>(Height0Level);
+
+		cuda::ReleaseInfo(myTargetInfo, d_csi, stream);
+
+		CUDA_CHECK(cudaFree(d_mucape));
+		CUDA_CHECK(cudaFree(d_mlcape));
+		CUDA_CHECK(cudaFree(d_mulpl));
+		CUDA_CHECK(cudaFree(d_ebs));
+
+		CUDA_CHECK(cudaFree(d_csi));
+	}
+	catch (const himan::HPExceptionType& e)
+	{
+		if (e == himan::kFileDataNotFound)
+		{
+			return;
+		}
+	}
+}
 namespace stabilitygpu
 {
 void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info<double>> myTargetInfo)
@@ -871,6 +974,15 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 	 */
 
 	CalculateBulkRichardsonNumber(conf, myTargetInfo, h, stream);
+
+	/* =====================================
+	 * |                                   |
+	 * |       CONVECTIVE SEVERITY INDEX   |
+	 * |                                   |
+	 * =====================================
+	 */
+
+	CalculateConvectiveSeverityIndex(conf, myTargetInfo, h, stream);
 
 	// FINISHED
 

@@ -46,11 +46,13 @@ class cape : public compiled_plugin, private compiled_plugin_base
 
 	std::pair<std::vector<float>, std::vector<float>> GetLCL(const cape_source& source) const;
 
-	std::pair<std::vector<float>, std::vector<float>> GetLFC(std::shared_ptr<info<float>> myTargetInfo,
-	                                                         std::vector<float>& T, std::vector<float>& P) const;
-	std::pair<std::vector<float>, std::vector<float>> GetLFCCPU(std::shared_ptr<info<float>> myTargetInfo,
-	                                                            std::vector<float>& T, std::vector<float>& P,
-	                                                            std::vector<float>& TenvLCL) const;
+	std::vector<std::pair<std::vector<float>, std::vector<float>>> GetLFC(std::shared_ptr<info<float>> myTargetInfo,
+	                                                                      std::vector<float>& T,
+	                                                                      std::vector<float>& P) const;
+	std::vector<std::pair<std::vector<float>, std::vector<float>>> GetLFCCPU(std::shared_ptr<info<float>> myTargetInfo,
+	                                                                         std::vector<float>& T,
+	                                                                         std::vector<float>& P,
+	                                                                         std::vector<float>& TenvLCL) const;
 
 	// Functions to fetch different kinds of source data
 

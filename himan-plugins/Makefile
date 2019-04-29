@@ -12,25 +12,32 @@ INSTALL_TARGET = /usr/lib64/himan-plugins
 
 rpmsourcedir = /tmp/$(shell whoami)/rpmbuild
 
+.SILENT:createlink
+
 # The rules
 
-all release: 
+all release: createlink
 	scons $(SCONS_FLAGS)
-debug: 
+debug: createlink
 	scons $(SCONS_FLAGS) --debug-build
-nocuda: 
+nocuda: createlink
 	scons $(SCONS_FLAGS) --no-cuda-build
-
+check: createlink
+	scons CPPCHECK
+	scons SCANBUILD
 clean:
-	scons -c ; scons --debug-build -c ; rm -f *~ source/*~ include/*~
+	scons -c ; scons --debug-build -c ; rm -f *~ source/*~ include/*~ ; rm -f scons_common.py
+createlink:
+	if [ ! -e scons_common.py ]; then \
+          ln -fs ../scons_common.py; \
+        fi;
 
-rpm:    clean
+rpm:    clean createlink
 	mkdir -p $(rpmsourcedir) ; \
 	if [ -a $(LIB).spec ]; \
         then \
-          tar -C ../ --exclude .svn \
-                   -cf $(rpmsourcedir)/$(LIB).tar $(LIB) ; \
-          gzip -f $(rpmsourcedir)/$(LIB).tar ; \
+          tar -C ../ --dereference --exclude-vcs \
+                   -zcf $(rpmsourcedir)/$(LIB).tar.gz $(LIB) ; \
           rpmbuild -ta $(rpmsourcedir)/$(LIB).tar.gz ; \
           rm -f $(rpmsourcedir)/$(LIB).tar.gz ; \
         else \

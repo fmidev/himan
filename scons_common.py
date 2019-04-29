@@ -68,9 +68,9 @@ env['RELEASE'] = RELEASE
 
 # Workspace
 
-env['WORKSPACE'] = os.getcwd()
+env['WORKSPACE'] = "%s/../" % os.getcwd()
 # rpm builds:
-#workspace = "/home/dev/weto/partio/himan"
+#env['WORKSPACE'] = "/home/dev/partio/himan"
 
 # cuda toolkit path
 

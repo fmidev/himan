@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 19.4.1
+Version: 19.4.29
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -115,6 +115,18 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Apr 29 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.4.29-1.fmi
+- cape plugin bugfix
+- Stability updates
+* Thu Apr 25 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.4.25-1.fmi
+- Stability updates
+* Wed Apr 24 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.4.24-1.fmi
+- Added convective severity index
+* Mon Apr 11 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.4.11-1.fmi
+- More cape tuning
+* Mon Apr  8 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.4.8-1.fmi
+- cape tuning
+- time interpolation support for transformer
 * Mon Apr  1 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.4.1-1.fmi
 - pot fix
 * Wed Mar 27 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.3.27-1.fmi

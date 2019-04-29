@@ -9,6 +9,7 @@ Possible transformations are:
 * land-sea mask apply
 * level change
 * forecast type change
+* time interpolation
 
 Plugin is optimized for GPU use.
 
@@ -66,6 +67,10 @@ target_forecast_type: define the target forecast type, if it differs from source
 
     "target_forecast_type" : "cf|deterministic|analysis|pfNN"
 
-rotation: specify which parameters (if any) should be rotated from projection north coordinate to earth-normal north, default: not done
+rotation: specify which parameters (if any) should be rotated from projection north coordinate to earth-normal north (default: not done)
 
     "rotation" : "U-MS,V-MS"
+
+time_interpolation: define if Himan should do time interpolation if data is not found for some leadtime (default: false). Himan will try to find neighboring data up to +/- 6 hours from current leadtime.
+
+    "time_interpolation" : true
