@@ -994,7 +994,7 @@ unique_ptr<grid> ParseAreaAndGridFromPoints(const boost::property_tree::ptree& p
 			boost::algorithm::trim(lon);
 			boost::trim(lat);
 
-			theStations.push_back(station(i, "point_" + to_string(i), stod(lon), stod(lat)));
+			theStations.push_back(station(kHPMissingInt, "", stod(lon), stod(lat)));
 
 			i++;
 		}
