@@ -229,7 +229,7 @@ __global__ void CSIKernel(cdarr_t d_mucape, cdarr_t d_mlcape, cdarr_t d_mulpl, c
 
 		if (d_ebs[idx] <= 15.)
 		{
-			d_csi[idx] += 0.025 * cape * (0.06666 * d_ebs[idx] + 1);
+			d_csi[idx] += 0.025 * cape * (-0.06666 * d_ebs[idx] + 1);
 		}
 	}
 }

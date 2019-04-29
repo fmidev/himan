@@ -24,7 +24,6 @@ namespace himan
 {
 namespace interpolate
 {
-
 // Function to return identifier for each supported datatype
 // In the interpolation weight cache we store weights separately
 // for each data type.
@@ -114,7 +113,7 @@ bool ReorderPoints(const grid* baseGrid, std::shared_ptr<info<T>> info)
 		return false;
 	}
 
-	// Worst case: cartesian product ie O(mn) ~ O(n^2)
+	// Worst case: cartesian product ie O(n^2)
 
 	auto targetStations = dynamic_cast<const point_list*>(baseGrid)->Stations();
 	auto sourceStations = std::dynamic_pointer_cast<point_list>(info->Grid())->Stations();
@@ -149,7 +148,7 @@ bool ReorderPoints(const grid* baseGrid, std::shared_ptr<info<T>> info)
 
 		if (!found)
 		{
-			// itsLogger->Trace("Failed, source data does not contain all the same points as target");
+			// throw std::runtime_error("Failed, source data does not contain all the same points as target");
 			return false;
 		}
 	}
@@ -243,7 +242,7 @@ bool Interpolate(const grid* baseGrid, std::vector<std::shared_ptr<info<T>>>& in
 		{
 			return false;
 		}
-		else if (needPointReordering && ReorderPoints<T>(baseGrid, info))
+		else if (needPointReordering && ReorderPoints<T>(baseGrid, info) == false)
 		{
 			return false;
 		}
@@ -765,8 +764,8 @@ bool interpolator<T>::Insert(const base<T>& source, const base<T>& target, HPInt
 	return cache.insert(std::move(insertValue)).second;
 }
 
-//template bool interpolator::Insert<double>(const base<double>&, const base<double>&, HPInterpolationMethod);
-//template bool interpolator::Insert<float>(const base<float>&, const base<float>&, HPInterpolationMethod);
+// template bool interpolator::Insert<double>(const base<double>&, const base<double>&, HPInterpolationMethod);
+// template bool interpolator::Insert<float>(const base<float>&, const base<float>&, HPInterpolationMethod);
 
 template <typename T>
 bool interpolator<T>::Interpolate(base<T>& source, base<T>& target, HPInterpolationMethod method)
@@ -795,8 +794,8 @@ bool interpolator<T>::Interpolate(base<T>& source, base<T>& target, HPInterpolat
 	}
 }
 
-//template bool interpolator::Interpolate<double>(base<double>&, base<double>&, HPInterpolationMethod);
-//template bool interpolator::Interpolate<float>(base<float>&, base<float>&, HPInterpolationMethod);
+// template bool interpolator::Interpolate<double>(base<double>&, base<double>&, HPInterpolationMethod);
+// template bool interpolator::Interpolate<float>(base<float>&, base<float>&, HPInterpolationMethod);
 
 }  // namespace interpolate
 }  // namespace himan
