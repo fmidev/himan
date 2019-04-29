@@ -608,7 +608,7 @@ inline float CalcCIN(float Tenv, float prevTenv, float Tparcel, float prevTparce
 
 	float cin = 0;
 
-	if (Tparcel < Tenv && prevTparcel < Tenv)
+	if (Tparcel < Tenv && prevTparcel < prevTenv)
 	{
 		// We are fully in a CIN zone
 		cin = static_cast<float>(himan::constants::kG) * (Zenv - prevZenv) * ((Tparcel - Tenv) / Tenv);
