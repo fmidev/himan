@@ -22,5 +22,5 @@
   end
 
   result:SetValues(acc)
-  result:SetParam(param("RR" .. acc_period .. "H-KGM2"))
+  result:SetParam(param("RR-" .. acc_period .. "-KGM2"))
   luatool:WriteToFile(result)
