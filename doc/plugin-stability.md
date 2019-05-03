@@ -32,7 +32,9 @@ The indices are
   * only calculated if lfc zone width is more than 3000m
 * cape shear
   * http://apps.ecmwf.int/codes/grib/param-db?id=228044
-  * ebs is used as wind shear parameter
+  * "normal" ebs is used as wind shear parameter
+    * lifted parcel level is used as effective inflow base
+    * effective inflow top is found when going upwards from base up to 50% of most unstable EL height
   * most unstable cape is the cape parameter
 * storm relative helicity
   * between 0 and 1km
