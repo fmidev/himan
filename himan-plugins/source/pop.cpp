@@ -465,7 +465,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	himan::matrix<double> filter_kernel(9, 9, 1, MissingDouble(), 1 / 81.);
 
-	area = numerical_functions::Filter2D(area, filter_kernel);
+	area = numerical_functions::Filter2D<double>(area, filter_kernel, itsConfiguration->UseCuda());
 
 	// 2. Calculate the probability of precipitation
 
@@ -532,7 +532,8 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	filter_kernel = himan::matrix<double>(7, 7, 1, MissingDouble(), 1);
 
-	auto max_result = numerical_functions::Max2D(myTargetInfo->Data(), filter_kernel);
+	auto max_result =
+	    numerical_functions::Max2D<double>(myTargetInfo->Data(), filter_kernel, itsConfiguration->UseCuda());
 
 	// 4. Fill the possible holes in the PoP coverage
 
@@ -566,7 +567,8 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	filter_kernel = himan::matrix<double>(5, 5, 1, MissingDouble(), 1 / 25.);
 
-	auto smoothenedResult = numerical_functions::Filter2D(myTargetInfo->Data(), filter_kernel);
+	auto smoothenedResult =
+	    numerical_functions::Filter2D<double>(myTargetInfo->Data(), filter_kernel, itsConfiguration->UseCuda());
 
 	auto b = myTargetInfo->Base();
 	b->data = move(smoothenedResult);

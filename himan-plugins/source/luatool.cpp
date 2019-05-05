@@ -44,7 +44,11 @@ object VectorToTable(const std::vector<T>& vec);
 template <typename T>
 std::vector<T> TableToVector(const object& table);
 
+namespace
+{
 boost::thread_specific_ptr<lua_State> myL;
+bool myUseCuda;
+}
 
 luatool::luatool() : itsWriteOptions()
 {
@@ -92,6 +96,8 @@ void luatool::Process(std::shared_ptr<const plugin_configuration> conf)
 			itsThreadDistribution = ThreadDistribution::kThreadForLevel;
 		}
 	}
+
+	myUseCuda = itsConfiguration->UseCuda();
 
 	Start();
 }
@@ -1021,26 +1027,37 @@ void Fill(matrix<T>& mat, T value)
 namespace luabind_workaround
 {
 template <typename T>
-matrix<T> ProbLimitGt2D(const matrix<T>& A, const matrix<T>& B, double limit)
+matrix<T> ProbLimitGt2D(const matrix<T>& A, const matrix<T>& B, T limit)
 {
-	return numerical_functions::Reduce2D(A, B,
-	                                     [=](double& val1, double& val2, const double& a, const double& b) {
-		                                     if (IsValid(a * b) && a * b > limit)
-			                                     val1 += 1;
-	                                     },
-	                                     [](const double& val1, const double& val2) { return (val1 >= 1) ? 1 : 0; },
-	                                     0.0, 0.0);
+	if (myUseCuda)
+	{
+		return numerical_functions::ProbLimitGt2DGPU<T>(A, B, limit);
+	}
+
+	return numerical_functions::Reduce2D<T>(A, B,
+	                                        [=](T& val1, T& val2, const T& a, const T& b) {
+		                                        if (IsValid(a * b) && a * b > limit)
+			                                        val1 += T(1);
+	                                        },
+	                                        [](const T& val1, const T& val2) { return (val1 >= T(1)) ? T(1) : T(0); },
+	                                        T(0), T(0));
 }
+
 template <typename T>
-matrix<T> ProbLimitEq2D(const matrix<T>& A, const matrix<T>& B, double limit)
+matrix<T> ProbLimitEq2D(const matrix<T>& A, const matrix<T>& B, T limit)
 {
-	return numerical_functions::Reduce2D(A, B,
-	                                     [=](double& val1, double& val2, const double& a, const double& b) {
-		                                     if (IsValid(a * b) && a * b == limit)
-			                                     val1 += 1;
-	                                     },
-	                                     [](const double& val1, const double& val2) { return (val1 >= 1) ? 1 : 0; },
-	                                     0.0, 0.0);
+	if (myUseCuda)
+	{
+		return numerical_functions::ProbLimitEq2DGPU<T>(A, B, limit);
+	}
+
+	return numerical_functions::Reduce2D<T>(A, B,
+	                                        [=](T& val1, T& val2, const T& a, const T& b) {
+		                                        if (IsValid(a * b) && a * b == limit)
+			                                        val1 += T(1);
+	                                        },
+	                                        [](const T& val1, const T& val2) { return (val1 >= T(1)) ? T(1) : T(0); },
+	                                        T(0), T(0));
 }
 }
 
@@ -1393,9 +1410,9 @@ void BindLib(lua_State* L)
 		      .def("Process", &modifier_wrapper::mean::Process)
 		      .def("Result", &modifier_wrapper::mean::Result),
 	          // numerical_functions namespace
-	          def("Filter2D", &numerical_functions::Filter2D),
-	          def("Max2D", &numerical_functions::Max2D),
-	          def("Min2D", &numerical_functions::Min2D),
+	          def("Filter2D", &numerical_functions::Filter2D<double>),
+	          def("Max2D", &numerical_functions::Max2D<double>),
+	          def("Min2D", &numerical_functions::Min2D<double>),
                   def("ProbLimitGt2D", &luabind_workaround::ProbLimitGt2D<double>),
                   def("ProbLimitGt2D", &luabind_workaround::ProbLimitGt2D<float>),
                   def("ProbLimitEq2D", &luabind_workaround::ProbLimitEq2D<double>),

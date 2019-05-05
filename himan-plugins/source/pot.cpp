@@ -118,23 +118,26 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	                                          1.0 / (largeFilterSizeX * largeFilterSizeY));
 
 	// Cape filtering
-	himan::matrix<double> filtered_CAPE = numerical_functions::Max2D(CAPEMaxInfo->Data(), small_filter_kernel);
+	himan::matrix<double> filtered_CAPE =
+	    numerical_functions::Max2D<double>(CAPEMaxInfo->Data(), small_filter_kernel, itsConfiguration->UseCuda());
 
 	// Cb_top filtering
-	himan::matrix<double> filtered_CbTop = numerical_functions::Max2D(CbTopMaxInfo->Data(), small_filter_kernel);
+	himan::matrix<double> filtered_CbTop =
+	    numerical_functions::Max2D<double>(CbTopMaxInfo->Data(), small_filter_kernel, itsConfiguration->UseCuda());
 
 	// LFC filtering
-	himan::matrix<double> filtered_LFC = numerical_functions::Min2D(LfcMinInfo->Data(), small_filter_kernel);
+	himan::matrix<double> filtered_LFC =
+	    numerical_functions::Min2D<double>(LfcMinInfo->Data(), small_filter_kernel, itsConfiguration->UseCuda());
 
 	// Lift filtering
 	himan::matrix<double> filtered_PoLift =
-	    numerical_functions::Reduce2D(RRInfo->Data(), large_filter_kernel,
-	                                  [=](double& val1, double& val2, const double& a, const double& b) {
-		                                  val2++;
-		                                  if (IsValid(a) && a >= 0.1)
-			                                  val1 += b;
-	                                  },
-	                                  [](const double& val1, const double& val2) { return val1; }, 0.0, 0.0);
+	    numerical_functions::Reduce2D<double>(RRInfo->Data(), large_filter_kernel,
+	                                          [=](double& val1, double& val2, const double& a, const double& b) {
+		                                          val2++;
+		                                          if (IsValid(a) && a >= 0.1)
+			                                          val1 += b;
+	                                          },
+	                                          [](const double& val1, const double& val2) { return val1; }, 0.0, 0.0);
 
 	// hitool to find Cb/LCL Top temps
 	auto h = GET_PLUGIN(hitool);

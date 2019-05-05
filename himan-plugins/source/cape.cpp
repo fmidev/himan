@@ -780,7 +780,7 @@ void SmoothData(shared_ptr<himan::info<float>> myTargetInfo)
 	auto filter = [&](const himan::param& par) {
 
 		myTargetInfo->Find<himan::param>(par);
-		himan::matrix<float> filtered = himan::numerical_functions::Filter2D(myTargetInfo->Data(), filter_kernel);
+		himan::matrix<float> filtered = himan::numerical_functions::Filter2D<double>(myTargetInfo->Data(), filter_kernel);
 
 		myTargetInfo->Base()->data = move(filtered);
 	};
