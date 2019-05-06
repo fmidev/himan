@@ -313,16 +313,6 @@ void CalculateBulkShear(std::shared_ptr<const plugin_configuration> conf, std::s
 
 		// CAPE shear
 
-		auto CAPEInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), MaxThetaELevel, param("CAPE-JKG"),
-		                                    myTargetInfo->ForecastType(), false);
-
-		if (!CAPEInfo)
-		{
-			throw himan::kFileDataNotFound;
-		}
-
-		cuda::PrepareInfo(CAPEInfo, d_u, stream);
-
 		const auto muEBSLevels = STABILITY::GetEBSLevelData(conf, myTargetInfo, h, MaxThetaELevel, Height0Level);
 
 		u = STABILITY::Shear(h, UParam, muEBSLevels.first, muEBSLevels.second);
@@ -332,6 +322,18 @@ void CalculateBulkShear(std::shared_ptr<const plugin_configuration> conf, std::s
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_v, (const void*)v.data(), memsize, cudaMemcpyHostToDevice, stream));
 
 		BulkShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u, d_v, d_bs, N);
+
+		auto CAPEInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), MaxThetaELevel, param("CAPE-JKG"),
+		                                    myTargetInfo->ForecastType(), false);
+
+		if (!CAPEInfo)
+		{
+			throw himan::kFileDataNotFound;
+		}
+
+		CUDA_CHECK(cudaStreamSynchronize(stream));
+		cuda::PrepareInfo(CAPEInfo, d_u, stream);
+
 		CAPEShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u, d_bs, d_capes, N);
 
 		myTargetInfo->Find<param>(CAPESParam);
@@ -865,6 +867,10 @@ void CalculateConvectiveSeverityIndex(std::shared_ptr<const plugin_configuration
 
 		const auto Levels = STABILITY::GetEBSLevelData(conf, myTargetInfo, h, HalfKMLevel, MaxWindLevel);
 
+		CUDA_CHECK(cudaMalloc((void**)&d_mucape, memsize));
+		CUDA_CHECK(cudaMalloc((void**)&d_mlcape, memsize));
+		CUDA_CHECK(cudaMalloc((void**)&d_mlebs, memsize));
+
 		// reusing mucape and mlcape variables
 		const auto u = STABILITY::Shear(h, UParam, Levels.first, Levels.second);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_mucape, (const void*)u.data(), memsize, cudaMemcpyHostToDevice, stream));
@@ -874,11 +880,8 @@ void CalculateConvectiveSeverityIndex(std::shared_ptr<const plugin_configuration
 
 		BulkShearKernel<<<gridSize, blockSize, 0, stream>>>(d_mucape, d_mlcape, d_mlebs, muEBS.size());
 
-		CUDA_CHECK(cudaMalloc((void**)&d_mucape, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_mlcape, memsize));
 		CUDA_CHECK(cudaMalloc((void**)&d_mulpl, memsize));
 		CUDA_CHECK(cudaMalloc((void**)&d_muebs, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_mlebs, memsize));
 
 		CUDA_CHECK(cudaMalloc((void**)&d_csi, memsize));
 
