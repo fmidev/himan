@@ -739,7 +739,7 @@ raw_time GetLatestOriginDateTime(const shared_ptr<configuration> conf, const str
 vector<forecast_time> ParseSteps(shared_ptr<configuration>& conf, const boost::property_tree::ptree& pt,
                                  const vector<raw_time>& originDateTimes)
 {
-	auto generateList = [&originDateTimes](const time_duration& start, const time_duration& stop,
+	auto GenerateList = [&originDateTimes](const time_duration& start, const time_duration& stop,
 	                                       const time_duration& step) {
 		vector<forecast_time> times;
 		for (const auto& originDateTime : originDateTimes)
@@ -799,7 +799,7 @@ vector<forecast_time> ParseSteps(shared_ptr<configuration>& conf, const boost::p
 
 		conf->ForecastStep(step);
 
-		return generateList(start, stop, step);
+		return GenerateList(start, stop, step);
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
@@ -843,7 +843,7 @@ vector<forecast_time> ParseSteps(shared_ptr<configuration>& conf, const boost::p
 
 		conf->ForecastStep(step);
 
-		return generateList(start, stop, step);
+		return GenerateList(start, stop, step);
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
@@ -863,7 +863,7 @@ vector<forecast_time> ParseSteps(shared_ptr<configuration>& conf, const boost::p
 
 		conf->ForecastStep(step);
 
-		return generateList(start, stop, step);
+		return GenerateList(start, stop, step);
 	}
 	catch (exception& e)
 	{

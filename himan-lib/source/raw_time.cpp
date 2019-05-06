@@ -89,20 +89,20 @@ raw_time::operator std::string() const
 }
 raw_time raw_time::operator+(const time_duration& adjustment) const
 {
-	return raw_time(itsDateTime + adjustment.Raw());
+	return raw_time(itsDateTime + boost::posix_time::minutes(adjustment.Minutes()));
 }
 raw_time raw_time::operator-(const time_duration& adjustment) const
 {
-	return raw_time(itsDateTime - adjustment.Raw());
+	return raw_time(itsDateTime - boost::posix_time::minutes(adjustment.Minutes()));
 }
 raw_time& raw_time::operator+=(const time_duration& adjustment)
 {
-	itsDateTime += adjustment.Raw();
+	itsDateTime += boost::posix_time::minutes(adjustment.Minutes());
 	return *this;
 }
 raw_time& raw_time::operator-=(const time_duration& adjustment)
 {
-	itsDateTime -= adjustment.Raw();
+	itsDateTime -= boost::posix_time::minutes(adjustment.Minutes());
 	return *this;
 }
 time_duration raw_time::operator-(const raw_time& other) const

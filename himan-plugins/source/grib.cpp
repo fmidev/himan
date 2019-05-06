@@ -524,7 +524,7 @@ void grib::WriteTime(const forecast_time& ftime, const producer& prod, const par
 	{
 		time_duration stepUnit = ONE_HOUR;
 
-		if (ftime.Step().Raw().minutes() != 0)
+		if (ftime.Step().Minutes() % 60 != 0)
 		{
 			if (ftime.Step().Minutes() % 15 != 0)
 			{
@@ -631,7 +631,7 @@ void grib::WriteTime(const forecast_time& ftime, const producer& prod, const par
 		long unitOfTimeRange = 1;  // hours
 		long stepValue = ftime.Step().Hours();
 
-		if (ftime.Step().Raw().minutes() != 0)
+		if (ftime.Step().Minutes() % 60 != 0)
 		{
 			unitOfTimeRange = 0;  // minutes
 			stepValue = ftime.Step().Minutes();
@@ -654,7 +654,7 @@ void grib::WriteTime(const forecast_time& ftime, const producer& prod, const par
 				long unitForTimeRange = 1;  // hours
 				long lengthOfTimeRange = par.Aggregation().TimeDuration().Hours();
 
-				if (par.Aggregation().TimeDuration().Raw().minutes() != 0)
+				if (par.Aggregation().TimeDuration().Minutes() % 60 != 0)
 				{
 					unitForTimeRange = 0;  // minutes
 					lengthOfTimeRange = par.Aggregation().TimeDuration().Minutes();

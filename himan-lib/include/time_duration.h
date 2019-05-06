@@ -35,8 +35,6 @@ class time_duration
 	time_duration& operator/=(int);
 
 	bool Empty() const;
-	boost::posix_time::time_duration& Raw();
-	const boost::posix_time::time_duration& Raw() const;
 
 	long Hours() const;
 	long Minutes() const;

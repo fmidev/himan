@@ -101,16 +101,6 @@ time_duration::operator std::string() const
 	return boost::posix_time::to_simple_string(itsDuration);
 }
 
-boost::posix_time::time_duration& time_duration::Raw()
-{
-	return itsDuration;
-}
-
-const boost::posix_time::time_duration& time_duration::Raw() const
-{
-	return itsDuration;
-}
-
 long time_duration::Hours() const
 {
 	return itsDuration.total_seconds() / 3600;
