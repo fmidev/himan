@@ -48,12 +48,9 @@ void monin_obukhov::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned sh
 
 	// Prev/current time and level
 
-	int paramStep = 1;
-	HPTimeResolution timeResolution = myTargetInfo->Time().StepResolution();
-
 	forecast_time forecastTime = myTargetInfo->Time();
 	forecast_time forecastTimePrev = myTargetInfo->Time();
-	forecastTimePrev.ValidDateTime().Adjust(timeResolution, -paramStep);
+	forecastTimePrev.ValidDateTime() -= ONE_HOUR;
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
 	level forecastLevel = level(himan::kHeight, 0, "Height");
@@ -69,20 +66,12 @@ void monin_obukhov::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned sh
 	info_t PInfo = Fetch(forecastTime, forecastLevel, PParam, forecastType, false);
 
 	// determine length of forecast step to calculate surface heat flux in W/m2
-	double forecastStepSize;
-
-	if (forecastTime.StepResolution() == kHourResolution)
-	{
-		forecastStepSize = itsConfiguration->ForecastStep() * 3600;  // step size in seconds
-	}
-	else
-	{
-		forecastStepSize = itsConfiguration->ForecastStep() * 60;  // step size in seconds
-	}
+	const double seconds =
+	    static_cast<double>((forecastTime.ValidDateTime() - forecastTimePrev.ValidDateTime()).Seconds());
 
 	if (!TInfo || !SHFInfo || !U_SInfo || !PInfo || !PrevSHFInfo || !LHFInfo || !PrevLHFInfo)
 	{
-		myThreadedLogger.Info("Skipping step " + std::to_string(forecastTime.Step()) + ", level " +
+		myThreadedLogger.Info("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
 		                      static_cast<string>(forecastLevel));
 		return;
 	}
@@ -100,8 +89,8 @@ void monin_obukhov::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned sh
 		double T_C = T - constants::kKelvin;  // Convert Temperature to Celvins
 		double mol = MissingDouble();
 
-		SHF /= forecastStepSize;  // divide by time step to obtain Watts/m2
-		LHF /= forecastStepSize;  // divide by time step to obtain Watts/m2
+		SHF /= seconds;  // divide by time step to obtain Watts/m2
+		LHF /= seconds;  // divide by time step to obtain Watts/m2
 
 		// Calculation of the inverse of Monin-Obukhov length to avoid division by 0
 

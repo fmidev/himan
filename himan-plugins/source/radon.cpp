@@ -254,7 +254,7 @@ string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<v
 
 	string forecastTypeId = boost::lexical_cast<string>(options.ftype.Type());
 
-	if (options.time.Step() == 0 && options.ftype.Type() == 1)
+	if (options.time.Step().Hours() == 0 && options.ftype.Type() == 1)
 	{
 		// ECMWF (and maybe others) use forecast type id == 2 for analysis hour
 		forecastTypeId += ",2";

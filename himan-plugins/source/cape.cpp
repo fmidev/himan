@@ -33,9 +33,9 @@ const himan::level UNSTABLE(himan::kMaximumThetaE, 0);
 
 void SmoothData(shared_ptr<himan::info<float>> myTargetInfo);
 void CheckDataConsistency(vector<float>& LCLZ, vector<float>& LFCT, vector<float>& LFCP, vector<float>& LFCZ,
-                      vector<float>& ELT, vector<float>& ELP, vector<float>& ELZ, vector<float>& LastELT,
-                      vector<float>& LastELP, vector<float>& LastELZ, vector<float>& CAPE, vector<float>& CAPE1040,
-                      vector<float>& CAPE3km, vector<float>& CIN);
+                          vector<float>& ELT, vector<float>& ELP, vector<float>& ELZ, vector<float>& LastELT,
+                          vector<float>& LastELP, vector<float>& LastELZ, vector<float>& CAPE, vector<float>& CAPE1040,
+                          vector<float>& CAPE3km, vector<float>& CIN);
 void SetDataToInfo(shared_ptr<himan::info<float>> myTargetInfo, vector<float>& LCLT, vector<float>& LCLP,
                    vector<float>& LCLZ, vector<float>& LFCT, vector<float>& LFCP, vector<float>& LFCZ,
                    vector<float>& ELT, vector<float>& ELP, vector<float>& ELZ, vector<float>& LastELT,
@@ -556,7 +556,8 @@ void cape::MostUnstableCAPE(shared_ptr<info<float>> myTargetInfo, short threadIn
 	auto LCLZ = h->VerticalValue<float>(ZParam, LCLP);
 
 	auto CIN = CINfut.get();
-	CheckDataConsistency(LCLZ, LFCT, LFCP, LFCZ, ELT, ELP, ELZ, LastELT, LastELP, LastELZ, CAPE, CAPE1040, CAPE3km, CIN);
+	CheckDataConsistency(LCLZ, LFCT, LFCP, LFCZ, ELT, ELP, ELZ, LastELT, LastELP, LastELZ, CAPE, CAPE1040, CAPE3km,
+	                     CIN);
 	SetDataToInfo(myTargetInfo, LCLT, LCLP, LCLZ, CinLFCT, CinLFCP, CinLFCZ, ELT, ELP, ELZ, LastELT, LastELP, LastELZ,
 	              CAPE, CAPE1040, CAPE3km, CIN);
 	SmoothData(myTargetInfo);
@@ -707,7 +708,7 @@ void cape::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short thread
 	auto& CAPE3km = get<8>(CAPEresult);
 
 	CheckDataConsistency(LCLZ, LastLFCT, LastLFCP, LastLFCZ, ELT, ELP, ELZ, LastELT, LastELP, LastELZ, CAPE, CAPE1040,
-	                 CAPE3km, CIN);
+	                     CAPE3km, CIN);
 	SetDataToInfo(myTargetInfo, LCLT, LCLP, LCLZ, LastLFCT, LastLFCP, LastLFCZ, ELT, ELP, ELZ, LastELT, LastELP,
 	              LastELZ, CAPE, CAPE1040, CAPE3km, CIN);
 	SmoothData(myTargetInfo);
@@ -791,9 +792,9 @@ void SmoothData(shared_ptr<himan::info<float>> myTargetInfo)
 }
 
 void CheckDataConsistency(vector<float>& LCLZ, vector<float>& LFCT, vector<float>& LFCP, vector<float>& LFCZ,
-                      vector<float>& ELT, vector<float>& ELP, vector<float>& ELZ, vector<float>& LastELT,
-                      vector<float>& LastELP, vector<float>& LastELZ, vector<float>& CAPE, vector<float>& CAPE1040,
-                      vector<float>& CAPE3km, vector<float>& CIN)
+                          vector<float>& ELT, vector<float>& ELP, vector<float>& ELZ, vector<float>& LastELT,
+                          vector<float>& LastELP, vector<float>& LastELZ, vector<float>& CAPE, vector<float>& CAPE1040,
+                          vector<float>& CAPE3km, vector<float>& CIN)
 {
 	// Check data physical consistency
 
@@ -836,13 +837,12 @@ void CheckDataConsistency(vector<float>& LCLZ, vector<float>& LFCT, vector<float
 		// Check:
 		// * If LFC is missing, EL is missing
 		// * If LFC is present, EL is present
-		// * If both are present, LFC must be below EL
 		// * LFC must be above LCL or equal to it
 		// * CAPE must be zero or positive real value
 		// * CIN must be missing, zero or negative real value
 
 		ASSERT((himan::IsMissing(LFCZ[i]) && himan::IsMissing(ELZ[i])) ||
-		       (!himan::IsMissing(LFCZ[i]) && !himan::IsMissing(ELZ[i]) && (LFCZ[i] <= ELZ[i])));
+		       (!himan::IsMissing(LFCZ[i]) && !himan::IsMissing(ELZ[i])));
 		ASSERT(himan::IsMissing(LFCZ[i]) || (LFCZ[i] >= LCLZ[i] && !himan::IsMissing(LCLZ[i])));
 		ASSERT(CAPE[i] >= 0);
 		ASSERT(himan::IsMissing(CIN[i]) || CIN[i] <= 0);

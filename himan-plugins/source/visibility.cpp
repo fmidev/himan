@@ -77,7 +77,7 @@ void visibility::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short
 
 	if (!RRInfo || !RHInfo || !PFInfo)
 	{
-		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+		myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
 		                         static_cast<string>(forecastLevel));
 		return;
 	}

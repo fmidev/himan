@@ -76,7 +76,7 @@ void cloud_code::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short
 
 	if (!T0mInfo || !NInfo || !KInfo || !T850Info || !RH850Info || !RH700Info || !RH500Info)
 	{
-		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+		myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
 		                         static_cast<string>(forecastLevel));
 		return;
 	}

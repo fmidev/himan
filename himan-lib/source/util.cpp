@@ -84,7 +84,25 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, const info<T>& info
 			         << dynamic_pointer_cast<regular_grid>(info.Grid())->Nj();
 		}
 
-		fileName << "_0_" << setw(3) << setfill('0') << ftime.Step();
+		const auto step = ftime.Step();
+
+		// backwards compatibility to FMI harmonie -- remove this later
+		// when ready to change all regression test results (filenames)
+
+		if (info.Producer().Id() == 210)
+		{
+			fileName << "_0_" << setw(3) << setfill('0') << step.Minutes();
+		}
+		else
+		{
+			fileName << "_0_" << setw(3) << setfill('0') << step.Hours();
+
+			if ((step.Minutes() - step.Hours() * 60) != 0)
+			{
+				fileName << 'h' << setw(2) << setfill('0') << (step.Minutes() - step.Hours() * 60) << "min";
+			}
+		}
+
 		if (static_cast<int>(ftype.Type()) > 2)
 		{
 			fileName << "_" << static_cast<int>(ftype.Type()) << "_" << ftype.Value();
@@ -484,30 +502,7 @@ double util::round(double val, unsigned short numdigits)
 
 string util::MakeSQLInterval(const himan::forecast_time& theTime)
 {
-	int step = theTime.Step();
-	string ret;
-
-	char i[11];
-
-	if (theTime.StepResolution() == himan::kHourResolution)
-	{
-		snprintf(i, 11, "%02d:00:00", step);
-
-		ret = i;
-	}
-	else
-	{
-		int hours, minutes;
-
-		hours = static_cast<int>(floor(static_cast<double>(step) / 60));
-		minutes = step - hours * 60;
-
-		snprintf(i, 11, "%02d:%02d:00", hours, minutes);
-
-		ret = i;
-	}
-
-	return ret;
+	return static_cast<string>(theTime.Step());
 }
 
 string util::Expand(const string& in)

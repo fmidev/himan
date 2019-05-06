@@ -87,7 +87,7 @@ void weather_code_2::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned s
 	if (!CloudInfo || !PrecformInfo || !TotalPrecInfo || !TotalCloudCoverInfo || !LowCloudCoverInfo ||
 	    !MedCloudCoverInfo || !HighCloudCoverInfo || !FogInfo || !T0mInfo || !T850Info || !KInfo)
 	{
-		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+		myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
 		                         static_cast<string>(forecastLevel));
 		return;
 	}

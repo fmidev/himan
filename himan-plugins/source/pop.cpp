@@ -297,8 +297,6 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	try
 	{
-		forecastTime.StepResolution(kHourResolution);
-
 		cnf->SourceGeomNames({itsGFSGeom});
 		cnf->SourceProducers({producer(250, 0, 0, "GFSMTA")});
 		auto GFSInfo = f->Fetch(cnf, forecastTime, forecastLevel, param("RRR-KGM2"), forecastType, false);
@@ -498,8 +496,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 		ASSERT(PoP <= 100.01);
 
-		long step = forecastTime.Step();
-		ASSERT(forecastTime.StepResolution() == kHourResolution);
+		long step = forecastTime.Step().Hours();
 
 		// AJALLISESTI KAUKAISTEN SUURTEN POPPIEN PIENENT�MIST� - Kohta 1
 

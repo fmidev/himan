@@ -8,7 +8,7 @@
 -- Daily (24h) mean t2m are: 5, 10, 7, 6, 3
 -- Growing degree days value is: 8
 
-local step = current_time:GetStep()
+local step = current_time:GetStep():Hours()
 
 if step % 24 ~= 0 then
   logger:Info(string.format("Step is not a multiple of 24 (%d) -- skipping", step))
@@ -21,7 +21,7 @@ local curtime = forecast_time(current_time:GetOriginDateTime(), current_time:Get
 
 while true do
 
-  logger:Info(string.format("Fetching mean temperature for a 24h period ending at %s", curtime:GetValidDateTime():String("%Y%m%d%H")))
+  logger:Info(string.format("Fetching mean temperature for a 24h period ending at %s (+%d)", curtime:GetValidDateTime():String("%Y%m%d%H"), curtime:GetStep():Hours()))
 
   local mean = luatool:FetchWithType(curtime, current_level, param("T-MEAN-K"), current_forecast_type)
 
@@ -42,13 +42,13 @@ while true do
 
   curtime:GetValidDateTime():Adjust(HPTimeResolution.kHourResolution, -24)
 
-  if curtime:GetStep() <= 0 then
+  if curtime:GetStep():Hours() <= 0 then
     break
   end
 
 end
 
-local agg = aggregation(HPAggregationType.kAccumulation, HPTimeResolution.kHourResolution, current_time:GetStep(), 0)
+local agg = aggregation(HPAggregationType.kAccumulation, time_duration(HPTimeResolution.kHourResolution, current_time:GetStep():Hours()))
 local par = param("GDD-C")
 
 par:SetAggregation(agg)

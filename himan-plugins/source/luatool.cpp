@@ -250,14 +250,12 @@ void BindEnum(lua_State* L)
 				 value("kMaximumThetaE", kMaximumThetaE),
 				 value("kHeightLayer", kHeightLayer)],
 	     class_<HPTimeResolution>("HPTimeResolution")
-	         .enum_(
-	             "constants")[
-					value("kUnknownTimeResolution", kUnknownTimeResolution),
-					value("kHourResolution", kHourResolution),
-					value("kMinuteResolution", kMinuteResolution),
-					value("kDayResolution", kDayResolution),
-					value("kMonthResolution", kMonthResolution)],
-
+	         .enum_("constants")[
+				 value("kUnknownTimeResolution", kUnknownTimeResolution),
+				 value("kHourResolution", kHourResolution),
+				 value("kMinuteResolution", kMinuteResolution),
+				 value("kDayResolution", kDayResolution),
+				 value("kMonthResolution", kMonthResolution)],
 	     class_<HPFileType>("HPFileType")
 	         .enum_("constants")[
 				 value("kUnknownFile", kUnknownFile),
@@ -284,7 +282,7 @@ void BindEnum(lua_State* L)
 	     class_<HPModifierType>("HPModifierType")
 	         .enum_("constants")
 	             [
-		value("kUnknownModifierType", kUnknownModifierType),
+				 value("kUnknownModifierType", kUnknownModifierType),
 				 value("kAverageModifier", kAverageModifier),
 				 value("kAccumulationModifier", kAccumulationModifier),
 				 value("kMaximumModifier", kMaximumModifier),
@@ -304,17 +302,17 @@ void BindEnum(lua_State* L)
 				 value("kRegularGrid", kRegularGrid),
 				 value("kIrregularGrid", kIrregularGrid)],
 	     class_<HPGridType>("HPGridType")
-	         .enum_(
-	             "constants")[value("kUnknownGridType", kUnknownGridType),
-	                          value("kLatitudeLongitude", kLatitudeLongitude),
-							  value("kStereographic", kStereographic),
-	                          value("kAzimuthalEquidistant", kAzimuthalEquidistant),
-	                          value("kRotatedLatitudeLongitude", kRotatedLatitudeLongitude),
-	                          value("kReducedGaussian", kReducedGaussian),
-							  value("kPointList", kPointList)],
+	         .enum_("constants")[
+				 value("kUnknownGridType", kUnknownGridType),
+	                         value("kLatitudeLongitude", kLatitudeLongitude),
+				 value("kStereographic", kStereographic),
+	                         value("kAzimuthalEquidistant", kAzimuthalEquidistant),
+	                         value("kRotatedLatitudeLongitude", kRotatedLatitudeLongitude),
+	                         value("kReducedGaussian", kReducedGaussian),
+				 value("kPointList", kPointList)],
 	     class_<HPParameterUnit>("HPParameterUnit").enum_("constants")[
-			 value("kM", kM),
-			 value("kHPa", kHPa)],
+				 value("kM", kM),
+				 value("kHPa", kHPa)],
 	     class_<HPForecastType>("HPForecastType")
 	         .enum_("constants")[
 				 value("kUnknownType", kUnknownType),
@@ -1237,9 +1235,7 @@ void BindLib(lua_State* L)
 	                   LUA_MEMFN(void, forecast_time, OriginDateTime, const std::string&, const std::string&))
 	              .def("SetValidDateTime",
 	                   LUA_MEMFN(void, forecast_time, ValidDateTime, const std::string&, const std::string&))
-	              .def("GetStep", LUA_CMEMFN(int, forecast_time, Step, void))
-	              .def("GetStepResolution", LUA_CMEMFN(HPTimeResolution, forecast_time, StepResolution, void))
-	              .def("SetStepResolution", LUA_MEMFN(void, forecast_time, StepResolution, HPTimeResolution)),
+	              .def("GetStep", LUA_CMEMFN(time_duration, forecast_time, Step, void)),
 	          class_<forecast_type>("forecast_type")
 	              .def(constructor<HPForecastType, double>())
 	              .def("ClassName", &forecast_type::ClassName)
@@ -1276,24 +1272,28 @@ void BindLib(lua_State* L)
 	              .def("Warning", &logger::Warning)
 	              .def("Error", &logger::Error)
 	              .def("Fatal", &logger::Fatal),
+		  class_<time_duration>("time_duration")
+		      .def(constructor<std::string>())
+		      .def(constructor<HPTimeResolution, int>())
+	              .def(tostring(self))
+		      .def("Hours", &time_duration::Hours)
+		      .def("Minutes", &time_duration::Minutes)
+		      .def("Seconds", &time_duration::Seconds)
+		      .def("Empty", &time_duration::Empty),
 	          class_<aggregation>("aggregation")
-	              .def(constructor<HPAggregationType, HPTimeResolution, int, int>())
+	              .def(constructor<HPAggregationType, const time_duration&>())
 	              .def("ClassName", &aggregation::ClassName)
 	              .def("GetType", LUA_CMEMFN(HPAggregationType, aggregation, Type, void))
 	              .def("SetType", LUA_MEMFN(void, aggregation, Type, HPAggregationType))
-	              .def("GetTimeResolution", LUA_CMEMFN(HPTimeResolution, aggregation, TimeResolution, void))
-	              .def("SetTimeResolution", LUA_MEMFN(void, aggregation, TimeResolution, HPTimeResolution))
-	              .def("GetTimeResolutionValue", LUA_CMEMFN(int, aggregation, TimeResolutionValue, void))
-	              .def("SetTimeResolutionValue", LUA_MEMFN(void, aggregation, TimeResolutionValue, int))
-	              .def("GetFirstTimeValue", LUA_CMEMFN(int, aggregation, FirstTimeValue, void))
-	              .def("SetFirstTimeValue", LUA_MEMFN(void, aggregation, FirstTimeValue, int)),
+	              .def("GetTimeDuration", LUA_CMEMFN(time_duration, aggregation, TimeDuration, void))
+	              .def("SetTimeDuration", LUA_MEMFN(void, aggregation, TimeDuration, const time_duration&)),
 	          class_<configuration, std::shared_ptr<configuration>>("configuration")
 	              .def(constructor<>())
 	              .def("ClassName", &configuration::ClassName)
 	              .def("GetOutputFileType", LUA_CMEMFN(HPFileType, configuration, OutputFileType, void))
 	              .def("GetSourceProducer", LUA_CMEMFN(const producer&, configuration, SourceProducer, size_t))
 	              .def("GetTargetProducer", LUA_CMEMFN(const producer&, configuration, TargetProducer, void))
-	              .def("GetForecastStep", LUA_CMEMFN(int, configuration, ForecastStep, void))
+	              .def("GetForecastStep", LUA_CMEMFN(time_duration, configuration, ForecastStep, void))
 	              ,
 	          class_<plugin_configuration, configuration, std::shared_ptr<plugin_configuration>>("plugin_configuration")
 	              .def(constructor<>())
@@ -1328,7 +1328,7 @@ void BindLib(lua_State* L)
 		      .def("GetMaximumMissingForecasts", LUA_CMEMFN(int, ensemble, MaximumMissingForecasts, void))
 		      .def("GetForecast", &ensemble::Forecast),
 		  class_<himan::lagged_ensemble, ensemble, std::shared_ptr<himan::lagged_ensemble>>("lagged_ensemble")
-		      .def(constructor<param, size_t, HPTimeResolution, int, size_t>())
+		      .def(constructor<param, size_t, const time_duration&, size_t>())
 		      .def("ClassName", &lagged_ensemble::ClassName)
 		      .def("Fetch", &lagged_ensemble::Fetch)
 		      .def("Value", &lagged_ensemble::Value)
@@ -1337,7 +1337,6 @@ void BindLib(lua_State* L)
 		      .def("ResetLocation", &lagged_ensemble::ResetLocation)
 		      .def("FirstLocation", &lagged_ensemble::FirstLocation)
 		      .def("NextLocation", &lagged_ensemble::NextLocation)
-		      .def("LagResolution", &lagged_ensemble::LagResolution)
 		      .def("Lag", &lagged_ensemble::Lag)
 		      .def("Size", &lagged_ensemble::Size)
 		      .def("ExpectedSize", &lagged_ensemble::ExpectedSize)

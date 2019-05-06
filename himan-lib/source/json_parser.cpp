@@ -736,6 +736,141 @@ raw_time GetLatestOriginDateTime(const shared_ptr<configuration> conf, const str
 	                    to_string(sourceProducer.Id()));
 }
 
+vector<forecast_time> ParseSteps(shared_ptr<configuration>& conf, const boost::property_tree::ptree& pt,
+                                 const vector<raw_time>& originDateTimes)
+{
+	auto GenerateList = [&originDateTimes](const time_duration& start, const time_duration& stop,
+	                                       const time_duration& step) {
+		vector<forecast_time> times;
+		for (const auto& originDateTime : originDateTimes)
+		{
+			auto curtime = start;
+
+			do
+			{
+				forecast_time theTime(originDateTime, curtime);
+				times.push_back(theTime);
+
+				curtime += step;
+
+			} while (curtime <= stop);
+		}
+		return times;
+	};
+
+	/*
+	 * Three DEPRECATED ways of providing information on steps:
+	 * - hours
+	 * - start_hour + stop_hour + step
+	 * - start_minute + stop_minute + step
+	 *
+	 * The new ways of specifying time are:
+	 * - times
+	 * - start_time + stop_time + step
+	 */
+
+	try
+	{
+		vector<string> timesStr = himan::util::Split(pt.get<string>("times"), ",", true);
+		vector<forecast_time> times;
+
+		for (const auto& originDateTime : originDateTimes)
+		{
+			for (const auto& str : timesStr)
+			{
+				times.push_back(forecast_time(originDateTime, time_duration(str)));
+			}
+		}
+		return times;
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing time information from 'times': ") + e.what());
+	}
+
+	try
+	{
+		auto start = time_duration(pt.get<string>("start_time"));
+		auto stop = time_duration(pt.get<string>("stop_time"));
+		auto step = time_duration(pt.get<string>("step"));
+
+		conf->ForecastStep(step);
+
+		return GenerateList(start, stop, step);
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing time information from 'start_hour': ") + e.what());
+	}
+
+	try
+	{
+		vector<string> timesStr = himan::util::Split(pt.get<string>("hours"), ",", true);
+		vector<forecast_time> times;
+
+		for (const auto& originDateTime : originDateTimes)
+		{
+			for (const auto& str : timesStr)
+			{
+				times.push_back(forecast_time(originDateTime, time_duration(str)));
+			}
+		}
+
+		return times;
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing time information from 'hours': ") + e.what());
+	}
+
+	// hours was not specified
+	// check if start/stop times are
+
+	try
+	{
+		auto start = time_duration(pt.get<string>("start_hour") + ":00");
+		auto stop = time_duration(pt.get<string>("stop_hour") + ":00");
+		auto step = time_duration(pt.get<string>("step") + ":00");
+
+		conf->ForecastStep(step);
+
+		return GenerateList(start, stop, step);
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing time information from 'start_hour': ") + e.what());
+	}
+
+	try
+	{
+		// try start_minute/stop_minute
+
+		auto start = time_duration("00:" + pt.get<string>("start_minute"));
+		auto stop = time_duration("00:" + pt.get<string>("stop_minute"));
+		auto step = time_duration("00:" + pt.get<string>("step"));
+
+		conf->ForecastStep(step);
+
+		return GenerateList(start, stop, step);
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing time information: ") + e.what());
+	}
+}
+
 vector<forecast_time> ParseTime(shared_ptr<configuration> conf, const boost::property_tree::ptree& pt)
 {
 	vector<forecast_time> theTimes;
@@ -789,149 +924,7 @@ vector<forecast_time> ParseTime(shared_ptr<configuration> conf, const boost::pro
 
 	/* Check time steps */
 
-	/*
-	 * Three ways of providing information on steps:
-	 * - hours
-	 * - start_hour + stop_hour + step
-	 * - start_minute + stop_minute + step
-	 */
-
-	try
-	{
-		string hours = pt.get<string>("hours");
-		vector<string> timesStr = himan::util::Split(hours, ",", true);
-
-		vector<int> times;
-
-		for (size_t i = 0; i < timesStr.size(); i++)
-		{
-			times.push_back(stoi(timesStr[i]));
-		}
-
-		sort(times.begin(), times.end());
-
-		// Create forecast_time with both times origintime, then adjust the validtime
-
-		for (const auto& originDateTime : originDateTimes)
-		{
-			for (int hour : times)
-			{
-				forecast_time theTime(originDateTime, originDateTime);
-
-				theTime.ValidDateTime().Adjust(kHourResolution, hour);
-
-				theTimes.push_back(theTime);
-			}
-		}
-
-		return theTimes;
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing time information from 'times': ") + e.what());
-	}
-
-	// hours was not specified
-	// check if start/stop times are
-
-	// First check step_unit which is deprecated and issue warning
-	try
-	{
-		string stepUnit = pt.get<string>("step_unit");
-
-		if (!stepUnit.empty())
-		{
-			itsLogger.Warning("Key 'step_unit' is deprecated");
-		}
-	}
-	catch (exception& e)
-	{
-	}
-
-	try
-	{
-		int start = pt.get<int>("start_hour");
-		int stop = pt.get<int>("stop_hour");
-		int step = pt.get<int>("step");
-
-		if (step <= 0)
-		{
-			throw runtime_error("step size must be > 0");
-		}
-
-		conf->ForecastStep(step);
-
-		HPTimeResolution stepResolution = kHourResolution;
-
-		for (const auto& originDateTime : originDateTimes)
-		{
-			int curtime = start;
-
-			do
-			{
-				forecast_time theTime(originDateTime, originDateTime);
-
-				theTime.ValidDateTime().Adjust(stepResolution, curtime);
-
-				theTime.StepResolution(stepResolution);
-
-				theTimes.push_back(theTime);
-
-				curtime += step;
-
-			} while (curtime <= stop);
-		}
-
-		return theTimes;
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing time information from 'start_hour': ") + e.what());
-	}
-
-	try
-	{
-		// try start_minute/stop_minute
-
-		int start = pt.get<int>("start_minute");
-		int stop = pt.get<int>("stop_minute");
-		int step = pt.get<int>("step");
-
-		conf->ForecastStep(step);
-
-		HPTimeResolution stepResolution = kMinuteResolution;
-
-		int curtime = start;
-
-		for (const auto& originDateTime : originDateTimes)
-		{
-			do
-			{
-				forecast_time theTime(originDateTime, originDateTime);
-
-				theTime.ValidDateTime().Adjust(stepResolution, curtime);
-
-				theTime.StepResolution(stepResolution);
-
-				theTimes.push_back(theTime);
-
-				curtime += step;
-
-			} while (curtime <= stop);
-		}
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing time information: ") + e.what());
-	}
-
-	return theTimes;
+	return ParseSteps(conf, pt, originDateTimes);
 }
 
 unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::property_tree::ptree& pt)
@@ -994,7 +987,7 @@ unique_ptr<grid> ParseAreaAndGridFromPoints(const boost::property_tree::ptree& p
 			boost::algorithm::trim(lon);
 			boost::trim(lat);
 
-			theStations.push_back(station(i, "point_" + to_string(i), stod(lon), stod(lat)));
+			theStations.push_back(station(kHPMissingInt, "", stod(lon), stod(lat)));
 
 			i++;
 		}

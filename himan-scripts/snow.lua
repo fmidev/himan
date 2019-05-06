@@ -12,11 +12,6 @@ par1 = param("SND-KGM3") -- Snow density
 par2 = param("SD-KGM2") -- Snow depth in water equivalent
 par3 = param("SD-M") -- Snow depth in m
 
-logger:Info("Current step: " .. current_time:GetStep())
-
-msg = string.format("Current level: %d/%d", current_level:GetType(), current_level:GetValue())
-logger:Info(msg)
-
 local lvl = level(HPLevelType.kHeight, 0)
 
 local snd_level = nil

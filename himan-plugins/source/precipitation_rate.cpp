@@ -68,7 +68,7 @@ void precipitation_rate::Calculate(shared_ptr<info<double>> myTargetInfo, unsign
 
 	if (!RhoInfo || !RainInfo || !SnowInfo || !GraupelInfo)
 	{
-		itsLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+		itsLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
 		                  static_cast<string>(forecastLevel));
 		return;
 	}

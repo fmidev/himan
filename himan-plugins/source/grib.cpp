@@ -195,6 +195,34 @@ void DecodePrecipitationFormFromGrib2(vector<T>& arr)
 	}
 }
 
+himan::time_duration DurationFromTimeRange(long unitOfTimeRange)
+{
+	using namespace himan;
+
+	switch (unitOfTimeRange)
+	{
+		case 1:
+			return ONE_HOUR;
+		case 10:
+			return THREE_HOURS;
+		case 11:
+			return SIX_HOURS;
+		case 12:
+			return TWELVE_HOURS;
+		case 0:
+			return time_duration("00:01:00");
+		case 254:
+		case 13:
+			return FIFTEEN_MINUTES;
+		case 14:
+			return time_duration("00:30:00");
+		case -999:
+			return time_duration();
+		default:
+			throw runtime_error("Unsupported unit of time range: " + to_string(unitOfTimeRange));
+	}
+}
+
 grib::grib()
 {
 	itsLogger = logger("grib");
@@ -492,66 +520,56 @@ void grib::WriteTime(const forecast_time& ftime, const producer& prod, const par
 	itsGrib->Message().DataDate(stol(ftime.OriginDateTime().String("%Y%m%d")));
 	itsGrib->Message().DataTime(stol(ftime.OriginDateTime().String("%H%M")));
 
-	double divisor = 1;
-	long unitOfTimeRange = 1;
-
-	if (prod.Id() == 210 || prod.Id() == 270)
-	{
-		unitOfTimeRange = 13;  // 15 minutes
-		divisor = 15;
-	}
-	else if (ftime.Step() > 255)  // Forecast with stepvalues that don't fit in one byte
-	{
-		const long step = ftime.Step();
-
-		if (step % 3 == 0 && step / 3 < 255)
-		{
-			unitOfTimeRange = 10;  // 3 hours
-			divisor = 3;
-		}
-		else if (step % 6 == 0 && step / 6 < 255)
-		{
-			unitOfTimeRange = 11;  // 6 hours
-			divisor = 6;
-		}
-		else if (step % 12 == 0 && step / 12 < 255)
-		{
-			unitOfTimeRange = 12;  // 12 hours
-			divisor = 12;
-		}
-		else
-		{
-			itsLogger.Fatal("Step too large, unable to continue");
-			himan::Abort();
-		}
-	}
-
-	long period = itsWriteOptions.configuration->ForecastStep();
-
-	if (par.Aggregation().TimeResolution() != kUnknownTimeResolution)
-	{
-		period = par.Aggregation().TimeResolutionValue();
-
-		// Time range and aggregation need to share a common time unit
-		if (par.Aggregation().TimeResolution() == kHourResolution && (unitOfTimeRange == 0 || unitOfTimeRange == 13))
-		{
-			period *= 60;
-		}
-	}
-
 	if (itsGrib->Message().Edition() == 1)
 	{
-		itsGrib->Message().UnitOfTimeRange(unitOfTimeRange);
+		time_duration stepUnit = ONE_HOUR;
 
-		long p1;
-
-		if (par.Aggregation().FirstTimeValue() != kHPMissingInt)
+		if (ftime.Step().Minutes() % 60 != 0)
 		{
-			p1 = par.Aggregation().FirstTimeValue();
+			if (ftime.Step().Minutes() % 15 != 0)
+			{
+				throw runtime_error("Minutes value not divisible with 15");
+			}
+			itsGrib->Message().UnitOfTimeRange(13);  // 15 minutes
+			stepUnit = FIFTEEN_MINUTES;
+		}
+		else if (ftime.Step().Hours() > 255)  // Forecast with stepvalues that don't fit in one byte
+		{
+			const long hours = ftime.Step().Hours();
+
+			if (hours % 3 == 0 && hours / 3 < 255)
+			{
+				itsGrib->Message().UnitOfTimeRange(10);  // 3 hours
+				stepUnit = THREE_HOURS;
+			}
+			else if (hours % 6 == 0 && hours / 6 < 255)
+			{
+				itsGrib->Message().UnitOfTimeRange(11);  // 6 hours
+				stepUnit = SIX_HOURS;
+			}
+			else if (hours % 12 == 0 && hours / 12 < 255)
+			{
+				itsGrib->Message().UnitOfTimeRange(12);  // 12 hours
+				stepUnit = TWELVE_HOURS;
+			}
+			else
+			{
+				itsLogger.Fatal("Step too large, unable to continue");
+				himan::Abort();
+			}
+		}
+
+		long p1, p2;
+
+		if (stepUnit == FIFTEEN_MINUTES)
+		{
+			p1 = ((ftime.Step() - par.Aggregation().TimeDuration()) / 15).Minutes();
+			p2 = (ftime.Step() / 15).Minutes();
 		}
 		else
 		{
-			p1 = static_cast<long>(static_cast<double>(ftime.Step() - period) / divisor);
+			p1 = ((ftime.Step() - par.Aggregation().TimeDuration()) / static_cast<int>(stepUnit.Hours())).Hours();
+			p2 = (ftime.Step() / static_cast<int>(stepUnit.Hours())).Hours();
 		}
 
 		switch (par.Aggregation().Type())
@@ -560,7 +578,7 @@ void grib::WriteTime(const forecast_time& ftime, const producer& prod, const par
 			case kUnknownAggregationType:
 				// Forecast product valid for reference time + P1 (P1 > 0)
 				itsGrib->Message().TimeRangeIndicator(0);
-				itsGrib->Message().P1(static_cast<int>(ftime.Step() / divisor));
+				itsGrib->Message().P1(p2);  // yes 'p2' is correct here!
 				break;
 			case kAverage:
 				// Average (reference time + P1 to reference time + P2)
@@ -573,7 +591,7 @@ void grib::WriteTime(const forecast_time& ftime, const producer& prod, const par
 				}
 
 				itsGrib->Message().P1(p1);
-				itsGrib->Message().P2(static_cast<long>(ftime.Step() / divisor));
+				itsGrib->Message().P2(p2);
 				break;
 			case kAccumulation:
 				// Accumulation (reference time + P1 to reference time + P2) product considered valid at reference time
@@ -587,7 +605,7 @@ void grib::WriteTime(const forecast_time& ftime, const producer& prod, const par
 				}
 
 				itsGrib->Message().P1(p1);
-				itsGrib->Message().P2(static_cast<long>(ftime.Step() / divisor));
+				itsGrib->Message().P2(p2);
 				break;
 			case kDifference:
 				// Difference (reference time + P2 minus reference time + P1) product considered valid at reference time
@@ -601,7 +619,7 @@ void grib::WriteTime(const forecast_time& ftime, const producer& prod, const par
 				}
 
 				itsGrib->Message().P1(p1);
-				itsGrib->Message().P2(static_cast<long>(ftime.Step() / divisor));
+				itsGrib->Message().P2(p2);
 				break;
 		}
 
@@ -609,10 +627,14 @@ void grib::WriteTime(const forecast_time& ftime, const producer& prod, const par
 	}
 	else
 	{
-		// GRIB2: http://www.nco.ncep.noaa.gov/pmb/docs/grib2/grib2_table4-4.shtml
-		if (unitOfTimeRange == 13)
+		// leadtime for this prognosis
+		long unitOfTimeRange = 1;  // hours
+		long stepValue = ftime.Step().Hours();
+
+		if (ftime.Step().Minutes() % 60 != 0)
 		{
-			unitOfTimeRange = 254;
+			unitOfTimeRange = 0;  // minutes
+			stepValue = ftime.Step().Minutes();
 		}
 
 		itsGrib->Message().UnitOfTimeRange(unitOfTimeRange);
@@ -621,28 +643,39 @@ void grib::WriteTime(const forecast_time& ftime, const producer& prod, const par
 		{
 			default:
 			case kUnknownAggregationType:
-				itsGrib->Message().ForecastTime(static_cast<int>(static_cast<double>(ftime.Step()) / divisor));
+				itsGrib->Message().ForecastTime(stepValue);
 				break;
 			case kAverage:
 			case kAccumulation:
 			case kDifference:
 			case kMinimum:
 			case kMaximum:
-				itsGrib->Message().SetLongKey("indicatorOfUnitForTimeRange", unitOfTimeRange);
+				// duration of the aggregation period
+				long unitForTimeRange = 1;  // hours
+				long lengthOfTimeRange = par.Aggregation().TimeDuration().Hours();
 
-				long firstTime = static_cast<long>(par.Aggregation().FirstTimeValue());
-
-				if (firstTime == kHPMissingInt)
+				if (par.Aggregation().TimeDuration().Minutes() % 60 != 0)
 				{
-					firstTime = static_cast<long>(static_cast<double>(ftime.Step() - period) / divisor);
+					unitForTimeRange = 0;  // minutes
+					lengthOfTimeRange = par.Aggregation().TimeDuration().Minutes();
 				}
 
-				itsGrib->Message().ForecastTime(firstTime);  // start step
+				if (unitOfTimeRange == unitForTimeRange)
 				{
-					// Accumulation period is known
-					// eg. RR-1-MM
-					itsGrib->Message().LengthOfTimeRange(static_cast<long>(par.Aggregation().TimeResolutionValue()));
+					stepValue -= lengthOfTimeRange;
 				}
+				else if (unitOfTimeRange == 1 && unitForTimeRange == 0)
+				{
+					stepValue -= lengthOfTimeRange / 60;
+				}
+				else if (unitOfTimeRange == 0 && unitForTimeRange == 1)
+				{
+					stepValue -= lengthOfTimeRange * 60;
+				}
+
+				itsGrib->Message().SetLongKey("indicatorOfUnitForTimeRange", unitForTimeRange);
+				itsGrib->Message().ForecastTime(stepValue);  // start step
+				itsGrib->Message().LengthOfTimeRange(lengthOfTimeRange);
 				break;
 		}
 	}
@@ -1423,7 +1456,6 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 		// Determine aggregation
 
 		aggregation a;
-		a.TimeResolution(kHourResolution);
 
 		switch (timeRangeIndicator)
 		{
@@ -1433,13 +1465,13 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 
 			case 3:  // average
 				a.Type(kAverage);
-				a.FirstTimeValue(static_cast<int>(itsGrib->Message().P1()));
-				a.TimeResolutionValue(static_cast<int>(itsGrib->Message().P2() - itsGrib->Message().P1()));
+				a.TimeDuration(DurationFromTimeRange(itsGrib->Message().UnitOfTimeRange()) *
+				               static_cast<int>(itsGrib->Message().P2() - itsGrib->Message().P1()));
 				break;
 			case 4:  // accumulation
 				a.Type(kAccumulation);
-				a.FirstTimeValue(static_cast<int>(itsGrib->Message().P1()));
-				a.TimeResolutionValue(static_cast<int>(itsGrib->Message().P2() - itsGrib->Message().P1()));
+				a.TimeDuration(DurationFromTimeRange(itsGrib->Message().UnitOfTimeRange()) *
+				               static_cast<int>(itsGrib->Message().P2() - itsGrib->Message().P1()));
 				break;
 		}
 
@@ -1495,35 +1527,34 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 		p.GribCategory(category);
 
 		aggregation a;
-		a.TimeResolution(kHourResolution);
+
+		const long unitForTimeRange = itsGrib->Message().GetLongKey("indicatorOfUnitForTimeRange");
+		const auto td =
+		    DurationFromTimeRange(unitForTimeRange) * static_cast<int>(itsGrib->Message().LengthOfTimeRange());
 		switch (itsGrib->Message().TypeOfStatisticalProcessing())
 		{
 			case 0:  // Average
 				a.Type(kAverage);
-				a.FirstTimeValue(static_cast<int>(itsGrib->Message().ForecastTime()));
-				a.TimeResolutionValue(static_cast<int>(itsGrib->Message().LengthOfTimeRange()));
+				a.TimeDuration(td);
 				break;
 
 			case 1:  // Accumulation
 				a.Type(kAccumulation);
-				a.FirstTimeValue(static_cast<int>(itsGrib->Message().ForecastTime()));
-				a.TimeResolutionValue(static_cast<int>(itsGrib->Message().LengthOfTimeRange()));
+				a.TimeDuration(td);
 				break;
 
 			case 2:  // Maximum
 				a.Type(kMaximum);
-				a.FirstTimeValue(static_cast<int>(itsGrib->Message().ForecastTime()));
-				a.TimeResolutionValue(static_cast<int>(itsGrib->Message().LengthOfTimeRange()));
+				a.TimeDuration(td);
 				break;
 
 			case 3:  // Minimum
 				a.Type(kMinimum);
-				a.FirstTimeValue(static_cast<int>(itsGrib->Message().ForecastTime()));
-				a.TimeResolutionValue(static_cast<int>(itsGrib->Message().LengthOfTimeRange()));
+				a.TimeDuration(td);
 				break;
 		}
 
-		if (a.TimeResolutionValue() != kHPMissingInt)
+		if (a.TimeDuration().Empty() == false)
 		{
 			p.Aggregation(a);
 		}
@@ -1631,8 +1662,6 @@ himan::forecast_time grib::ReadTime() const
 			itsLogger.Warning("Unsupported unit of time range: " + to_string(unitOfTimeRange));
 			break;
 	}
-
-	t.StepResolution(timeResolution);
 
 	t.ValidDateTime().Adjust(timeResolution, static_cast<int>(step));
 
@@ -1976,13 +2005,6 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 				                t.ValidDateTime().String() + " (found)");
 			}
 
-			if (optsTime.StepResolution() != t.StepResolution())
-			{
-				itsLogger.Trace("Step resolution: " + string(HPTimeResolutionToString.at(optsTime.StepResolution())) +
-				                " (requested) vs " + string(HPTimeResolutionToString.at(t.StepResolution())) +
-				                " (found)");
-			}
-
 			return false;
 		}
 	}
@@ -2175,7 +2197,7 @@ vector<shared_ptr<himan::info<T>>> grib::FromIndexFile(const string& theInputFil
 	// Create map for index keys, ie. those keys that are common to both grib editions
 	map<string, long> indexKeys;
 	indexKeys["level"] = static_cast<long>(options.level.Value());
-	indexKeys["step"] = static_cast<long>(options.time.Step());
+	indexKeys["step"] = static_cast<long>(options.time.Step().Hours());
 	indexKeys["centre"] = static_cast<long>(options.prod.Centre());
 	indexKeys["generatingProcessIdentifier"] = static_cast<long>(options.prod.Process());
 	indexKeys["date"] = stol(options.time.OriginDateTime().String("%Y%m%d"));
@@ -2199,8 +2221,8 @@ vector<shared_ptr<himan::info<T>>> grib::FromIndexFile(const string& theInputFil
 	{
 		itsLogger.Debug("Read " + infos[0]->Param().Name() + " from " + static_cast<string>(infos[0]->Level()) +
 		                " at " + infos[0]->Time().OriginDateTime().String() + " step " +
-		                std::to_string(infos[0]->Time().Step()) + " using grib index file '" + theInputFile + "' in " +
-		                to_string(duration) + " ms");
+		                static_cast<string>(infos[0]->Time().Step()) + " using grib index file '" + theInputFile +
+		                "' in " + to_string(duration) + " ms");
 	}
 
 	return infos;

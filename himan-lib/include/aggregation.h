@@ -9,6 +9,7 @@
 
 #include "himan_common.h"
 #include "serialization.h"
+#include "time_duration.h"
 
 namespace himan
 {
@@ -16,8 +17,8 @@ class aggregation
 {
    public:
 	aggregation();
-	aggregation(HPAggregationType theAggregationType, HPTimeResolution theTimeResolution, int theTimeResolutionValue,
-	            int theFirstTimeValue);
+	aggregation(HPAggregationType theAggregationType);
+	aggregation(HPAggregationType theAggregationType, const time_duration& theTimeInteval);
 
 	~aggregation() = default;
 	aggregation(const aggregation&) = default;
@@ -33,22 +34,14 @@ class aggregation
 	HPAggregationType Type() const;
 	void Type(HPAggregationType theType);
 
-	HPTimeResolution TimeResolution() const;
-	void TimeResolution(HPTimeResolution theTimeResolution);
-
-	int FirstTimeValue() const;
-	void FirstTimeValue(int theFirstTimeValue);
-
-	int TimeResolutionValue() const;
-	void TimeResolutionValue(int theTimeResolutionValue);
+	time_duration TimeDuration() const;
+	void TimeDuration(const time_duration& theTimeDuration);
 
 	std::ostream& Write(std::ostream& file) const;
 
    private:
 	HPAggregationType itsType;
-	HPTimeResolution itsTimeResolution;
-	int itsTimeResolutionValue;
-	int itsFirstTimeValue;
+	time_duration itsTimeDuration;
 
 #ifdef SERIALIZATION
 	friend class cereal::access;
@@ -56,8 +49,7 @@ class aggregation
 	template <class Archive>
 	void serialize(Archive& ar)
 	{
-		ar(CEREAL_NVP(itsType), CEREAL_NVP(itsTimeResolution), CEREAL_NVP(itsTimeResolutionValue),
-		   CEREAL_NVP(itsFirstTimeValue));
+		ar(CEREAL_NVP(itsType), CEREAL_NVP(itsTimeDuration));
 	}
 #endif
 };

@@ -23,6 +23,10 @@ static level itsBottomLevel;
 typedef vector<double> vec;
 
 pair<vec, vec> GetSRHSourceData(const shared_ptr<info<double>>& myTargetInfo, shared_ptr<hitool> h);
+vec CalculateBulkShear(const vec& U, const vec& V);
+vec CalculateBulkShear(info_t& myTargetInfo, shared_ptr<hitool>& h, double stopHeight);
+vec CalculateEffectiveBulkShear(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo,
+                                shared_ptr<hitool>& h, const level& sourceLevel, const level& targetLevel);
 
 #ifdef HAVE_CUDA
 namespace stabilitygpu
@@ -37,13 +41,9 @@ himan::info_t Fetch(std::shared_ptr<const plugin_configuration>& conf,
                     std::shared_ptr<himan::info<double>>& myTargetInfo, const himan::level& lev,
                     const himan::param& par, bool returnPacked = false);
 
-vec Shear(std::shared_ptr<himan::plugin::hitool>& h, const himan::param& par, const vec& lowerHeight,
-          const vec& upperHeight)
+vec Shear(const vec& lowerValues, const vec& upperValues)
 {
-	const auto lowerValues = h->VerticalValue<double>(par, lowerHeight);
-	const auto upperValues = h->VerticalValue<double>(par, upperHeight);
-
-	vec ret(lowerValues.size(), himan::MissingDouble());
+	vec ret(lowerValues.size());
 
 	for (size_t i = 0; i < lowerValues.size(); i++)
 	{
@@ -51,6 +51,15 @@ vec Shear(std::shared_ptr<himan::plugin::hitool>& h, const himan::param& par, co
 	}
 
 	return ret;
+}
+
+vec Shear(std::shared_ptr<himan::plugin::hitool>& h, const himan::param& par, const vec& lowerHeight,
+          const vec& upperHeight)
+{
+	const auto lowerValues = h->VerticalValue<double>(par, lowerHeight);
+	const auto upperValues = h->VerticalValue<double>(par, upperHeight);
+
+	return Shear(lowerValues, upperValues);
 }
 
 vec Shear(std::shared_ptr<himan::plugin::hitool>& h, const himan::param& par, double lowerHeight, double upperHeight,
@@ -72,6 +81,62 @@ himan::info_t Fetch(std::shared_ptr<const plugin_configuration>& conf,
 	auto f = GET_PLUGIN(fetcher);
 
 	return f->Fetch(conf, forecastTime, lev, par, forecastType, useCuda && conf->UseCudaForPacking());
+}
+
+pair<vec, vec> GetEBSLevelData(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo,
+                               shared_ptr<hitool>& h, const level& sourceLevel, const level& targetLevel)
+{
+	auto ELInfo = STABILITY::Fetch(conf, myTargetInfo, sourceLevel, param("EL-LAST-M"));
+	auto LPLInfo = STABILITY::Fetch(conf, myTargetInfo, sourceLevel, param("LPL-M"));
+
+	const auto& EL = VEC(ELInfo);
+	const auto& LPL = VEC(LPLInfo);
+
+	vec Top(EL.size(), MissingDouble());
+
+	if (targetLevel == Height0Level)
+	{
+		for (auto&& tup : zip_range(Top, LPL, EL))
+		{
+			double& top = tup.get<0>();
+			const double lpl = tup.get<1>();
+			const double el = tup.get<2>();
+
+			top = 0.5 * (el - lpl) + lpl;
+		}
+
+		return make_pair(VEC(LPLInfo), Top);
+	}
+	else if (targetLevel == MaxWindLevel)
+	{
+		vec Bottom = Top;
+
+		// Finding maximum wind between levels LPL + 0.5*(0.6EL - LPL) and 0.6E
+		// Hence, if LPL is on the surface, being ~0m, the search limits for maximum wind become 0.3EL ... 0.6EL
+
+		for (auto&& tup : zip_range(Bottom, Top, LPL, EL))
+		{
+			double& btm = tup.get<0>();
+			double& top = tup.get<1>();
+			const double lpl = tup.get<2>();
+			const double el = tup.get<3>();
+
+			if (el - lpl >= 3000.)
+			{
+				btm = 0.5 * (0.6 * el - lpl) + lpl;
+				top = 0.6 * el;
+			}
+
+			ASSERT(btm < top || (IsMissing(btm) && IsMissing(top)));
+		}
+
+		const auto maxWind = h->VerticalMaximum(FFParam, Bottom, Top);
+		const auto maxWindHeight = h->VerticalHeight(FFParam, Bottom, Top, maxWind);
+
+		return make_pair(VEC(LPLInfo), maxWindHeight);
+	}
+
+	throw runtime_error("Invalid target level: " + static_cast<string>(targetLevel));
 }
 }
 
@@ -364,71 +429,9 @@ void CalculateLiftedIndices(shared_ptr<const plugin_configuration>& conf, info_t
 	}
 }
 
-vec CalculateBulkShear(info_t& myTargetInfo, shared_ptr<hitool>& h, double stopHeight)
-{
-	const auto U = STABILITY::Shear(h, UParam, 10, stopHeight, myTargetInfo->SizeLocations());
-	const auto V = STABILITY::Shear(h, VParam, 10, stopHeight, myTargetInfo->SizeLocations());
-
-	vec BS(U.size(), MissingDouble());
-
-	for (size_t i = 0; i < U.size(); i++)
-	{
-		BS[i] = sqrt(U[i] * U[i] + V[i] * V[i]);
-	}
-
-	return BS;
-}
-
-vec CalculateEffectiveBulkShear(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo,
-                                shared_ptr<hitool>& h)
-{
-	auto ELInfo = STABILITY::Fetch(conf, myTargetInfo, level(kMaximumThetaE, 0), param("EL-LAST-M"));
-	auto LPLInfo = STABILITY::Fetch(conf, myTargetInfo, level(kMaximumThetaE, 0), param("LPL-M"));
-
-	const auto& EL = VEC(ELInfo);
-	const auto& LPL = VEC(LPLInfo);
-
-	// Finding maximum wind between levels LPL + 0.5*(0.6EL - LPL) and 0.6E
-	// Hence, if LPL is on the surface, being ~0m, the search limits for maximum wind become 0.3EL ... 0.6EL
-
-	vec Bottom(EL.size(), MissingDouble());
-	vec Top = Bottom;
-
-	for (auto&& tup : zip_range(Bottom, Top, LPL, EL))
-	{
-		double& btm = tup.get<0>();
-		double& top = tup.get<1>();
-		const double lpl = tup.get<2>();
-		const double el = tup.get<3>();
-
-		if (el - lpl >= 3000.)
-		{
-			btm = 0.5 * (0.6 * el - lpl) + lpl;
-			top = 0.6 * el;
-		}
-
-		ASSERT(btm < top || (IsMissing(btm) && IsMissing(top)));
-	}
-
-	const auto maxWind = h->VerticalMaximum(FFParam, Bottom, Top);
-	const auto maxWindHeight = h->VerticalHeight(FFParam, Bottom, Top, maxWind);
-
-	const auto U = STABILITY::Shear(h, UParam, LPL, maxWindHeight);
-	const auto V = STABILITY::Shear(h, VParam, LPL, maxWindHeight);
-
-	vec BS(U.size(), MissingDouble());
-
-	for (size_t i = 0; i < U.size(); i++)
-	{
-		BS[i] = sqrt(U[i] * U[i] + V[i] * V[i]);
-	}
-
-	return BS;
-}
-
 vec CalculateCapeShear(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo, const vec& EBS)
 {
-	auto CAPEInfo = STABILITY::Fetch(conf, myTargetInfo, level(kMaximumThetaE, 0), param("CAPE-JKG"));
+	auto CAPEInfo = STABILITY::Fetch(conf, myTargetInfo, MaxThetaELevel, param("CAPE-JKG"));
 
 	const auto& CAPE = VEC(CAPEInfo);
 
@@ -459,28 +462,34 @@ void CalculateBulkShearIndices(shared_ptr<const plugin_configuration>& conf, inf
 	const auto BS06 = CalculateBulkShear(myTargetInfo, h, 6000);
 	myTargetInfo->Data().Set(BS06);
 
-	myTargetInfo->Find<param>(EBSParam);
-	myTargetInfo->Find<level>(MaxWindLevel);
-	const auto EBS = CalculateEffectiveBulkShear(conf, myTargetInfo, h);
-	myTargetInfo->Data().Set(EBS);
-
+	// CAPE shear is calculated here too
+	const auto normEBS = CalculateEffectiveBulkShear(conf, myTargetInfo, h, MaxThetaELevel, Height0Level);
+	const auto CAPES = CalculateCapeShear(conf, myTargetInfo, normEBS);
 	myTargetInfo->Find<level>(Height0Level);
 	myTargetInfo->Find<param>(CAPESParam);
-	const auto CAPES = CalculateCapeShear(conf, myTargetInfo, EBS);
 	myTargetInfo->Data().Set(CAPES);
+
+	// Calculate maximum EBS
+	const auto muMaxEBS = CalculateEffectiveBulkShear(conf, myTargetInfo, h, MaxThetaELevel, MaxWindLevel);
+	myTargetInfo->Find<param>(EBSParam);
+	myTargetInfo->Find<level>(MaxWindLevel);
+	myTargetInfo->Data().Set(muMaxEBS);
 }
 
 void CalculateConvectiveSeverityIndex(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo,
                                       shared_ptr<hitool>& h)
 {
-	auto muCAPEInfo = STABILITY::Fetch(conf, myTargetInfo, level(kMaximumThetaE, 0), param("CAPE-JKG"));
-	auto muLPLInfo = STABILITY::Fetch(conf, myTargetInfo, level(kMaximumThetaE, 0), param("LPL-M"));
+	// For CSI we need mixed layer maximum EBS too, which is not needed anywhere else
+	const auto mlEBS = CalculateEffectiveBulkShear(conf, myTargetInfo, h, HalfKMLevel, MaxWindLevel);
+
+	auto muCAPEInfo = STABILITY::Fetch(conf, myTargetInfo, MaxThetaELevel, param("CAPE-JKG"));
+	auto muLPLInfo = STABILITY::Fetch(conf, myTargetInfo, MaxThetaELevel, param("LPL-M"));
 	auto mlCAPEInfo = STABILITY::Fetch(conf, myTargetInfo, HalfKMLevel, param("CAPE-JKG"));
 
 	myTargetInfo->Find<param>(EBSParam);
 	myTargetInfo->Find<level>(MaxWindLevel);
 
-	const auto& EBS = VEC(myTargetInfo);
+	const auto& muEBS = VEC(myTargetInfo);
 	const auto& muLPL = VEC(muLPLInfo);
 	const auto& muCAPE = VEC(muCAPEInfo);
 	const auto& mlCAPE = VEC(mlCAPEInfo);
@@ -490,24 +499,27 @@ void CalculateConvectiveSeverityIndex(shared_ptr<const plugin_configuration>& co
 
 	auto& CSI = VEC(myTargetInfo);
 
-	for (size_t i = 0; i < EBS.size(); i++)
+	for (size_t i = 0; i < muEBS.size(); i++)
 	{
 		auto cape = MissingDouble();
+		auto ebs = MissingDouble();
 
 		if (muLPL[i] >= 250. && muCAPE[i] > 10.)
 		{
 			cape = muCAPE[i];
+			ebs = muEBS[i];
 		}
 		else if (muLPL[i] < 250. && mlCAPE[i] > 10.)
 		{
 			cape = mlCAPE[i];
+			ebs = mlEBS[i];
 		}
 
-		CSI[i] = (EBS[i] * sqrt(2 * cape)) * 0.1;
+		CSI[i] = (ebs * sqrt(2 * cape)) * 0.1;
 
-		if (EBS[i] <= 15.)
+		if (ebs <= 15.)
 		{
-			CSI[i] += 0.025 * cape * (-0.06666 * EBS[i] + 1);
+			CSI[i] += 0.025 * cape * (-0.06666 * ebs + 1);
 		}
 	}
 }
@@ -737,4 +749,35 @@ void stability::WriteToFile(const info_t targetInfo, write_options writeOptions)
 	{
 		DeallocateMemory(*targetInfo);
 	}
+}
+
+vec CalculateBulkShear(const vec& U, const vec& V)
+{
+	vec BS(U.size());
+
+	for (size_t i = 0; i < U.size(); i++)
+	{
+		BS[i] = hypot(U[i], V[i]);
+	}
+
+	return BS;
+}
+
+vec CalculateBulkShear(info_t& myTargetInfo, shared_ptr<hitool>& h, double stopHeight)
+{
+	const auto U = STABILITY::Shear(h, UParam, 10, stopHeight, myTargetInfo->SizeLocations());
+	const auto V = STABILITY::Shear(h, VParam, 10, stopHeight, myTargetInfo->SizeLocations());
+
+	return CalculateBulkShear(U, V);
+}
+
+vec CalculateEffectiveBulkShear(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo,
+                                shared_ptr<hitool>& h, const level& sourceLevel, const level& targetLevel)
+{
+	const auto Levels = STABILITY::GetEBSLevelData(conf, myTargetInfo, h, sourceLevel, targetLevel);
+
+	const auto U = STABILITY::Shear(h, UParam, Levels.first, Levels.second);
+	const auto V = STABILITY::Shear(h, VParam, Levels.first, Levels.second);
+
+	return CalculateBulkShear(U, V);
 }

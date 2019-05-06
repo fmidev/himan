@@ -8,16 +8,20 @@
 using namespace himan;
 
 forecast_time::forecast_time(const raw_time& theOriginDateTime, const raw_time& theValidDateTime)
-    : itsOriginDateTime(theOriginDateTime), itsValidDateTime(theValidDateTime), itsStepResolution(kHourResolution)
+    : itsOriginDateTime(theOriginDateTime), itsValidDateTime(theValidDateTime)
+{
+}
+
+forecast_time::forecast_time(const raw_time& theOriginDateTime, const time_duration& theStep)
+    : itsOriginDateTime(theOriginDateTime), itsValidDateTime(theOriginDateTime + theStep)
 {
 }
 
 forecast_time::forecast_time(const std::string& theOriginDateTime, const std::string& theValidDateTime,
                              const std::string& theDateMask)
-    : itsStepResolution(kHourResolution)
+    : itsOriginDateTime(raw_time(theOriginDateTime, theDateMask)),
+      itsValidDateTime(raw_time(theValidDateTime, theDateMask))
 {
-	itsOriginDateTime = raw_time(theOriginDateTime, theDateMask);
-	itsValidDateTime = raw_time(theValidDateTime, theDateMask);
 }
 
 std::ostream& forecast_time::Write(std::ostream& file) const
@@ -25,7 +29,6 @@ std::ostream& forecast_time::Write(std::ostream& file) const
 	file << "<" << ClassName() << ">" << std::endl;
 	file << itsOriginDateTime;
 	file << itsValidDateTime;
-	file << "__itsStepResolution__ " << itsStepResolution << std::endl;
 
 	return file;
 }
@@ -37,41 +40,21 @@ bool forecast_time::operator==(const forecast_time& other) const
 		return true;
 	}
 
-	return ((itsOriginDateTime == other.itsOriginDateTime) && (itsValidDateTime == other.itsValidDateTime) &&
-	        itsStepResolution == other.itsStepResolution);
+	return (itsOriginDateTime == other.itsOriginDateTime) && (itsValidDateTime == other.itsValidDateTime);
 }
 
 bool forecast_time::operator!=(const forecast_time& other) const
 {
 	return !(*this == other);
 }
-int forecast_time::Step() const
+time_duration forecast_time::Step() const
 {
-	if (itsValidDateTime.itsDateTime != boost::date_time::not_a_date_time &&
-	    itsOriginDateTime.itsDateTime != boost::date_time::not_a_date_time)
+	if (itsValidDateTime.Empty() || itsOriginDateTime.Empty())
 	{
-		int step = kHPMissingInt;
-
-		switch (itsStepResolution)
-		{
-			case kHourResolution:
-				step = static_cast<int>((itsValidDateTime.itsDateTime - itsOriginDateTime.itsDateTime).hours());
-				break;
-
-			case kMinuteResolution:
-				step = static_cast<int>((itsValidDateTime.itsDateTime - itsOriginDateTime.itsDateTime).total_seconds() /
-				                        60);
-				break;
-
-			default:
-				throw std::runtime_error(ClassName() + ": unknown step resolution");
-				break;
-		}
-
-		return step;
+		return time_duration();
 	}
 
-	return kHPMissingInt;
+	return time_duration(itsValidDateTime - itsOriginDateTime);
 }
 
 raw_time& forecast_time::OriginDateTime()
@@ -106,12 +89,4 @@ void forecast_time::ValidDateTime(const std::string& theValidDateTime, const std
 void forecast_time::ValidDateTime(const raw_time& theValidDateTime)
 {
 	itsValidDateTime = theValidDateTime;
-}
-HPTimeResolution forecast_time::StepResolution() const
-{
-	return itsStepResolution;
-}
-void forecast_time::StepResolution(HPTimeResolution theStepResolution)
-{
-	itsStepResolution = theStepResolution;
 }

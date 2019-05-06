@@ -60,7 +60,7 @@ void absolute_humidity::Calculate(shared_ptr<info<double>> myTargetInfo, unsigne
 
 	if (!RhoInfo || !RainInfo || !SnowInfo || !GraupelInfo)
 	{
-		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+		myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
 		                         static_cast<string>(forecastLevel));
 		return;
 	}

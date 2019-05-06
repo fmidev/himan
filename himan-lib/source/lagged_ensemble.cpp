@@ -15,9 +15,9 @@ using namespace himan::util;
 
 namespace himan
 {
-lagged_ensemble::lagged_ensemble(const param& parameter, size_t expectedEnsembleSize, HPTimeResolution lagResolution,
-                                 int lag, size_t numberOfSteps)
-    : itsLagResolution(lagResolution), itsLag(lag), itsNumberOfSteps(numberOfSteps)
+lagged_ensemble::lagged_ensemble(const param& parameter, size_t expectedEnsembleSize, const time_duration& theLag,
+                                 size_t numberOfSteps)
+    : itsLag(theLag), itsNumberOfSteps(numberOfSteps)
 {
 	itsParam = parameter;
 	itsExpectedEnsembleSize = expectedEnsembleSize;
@@ -42,28 +42,25 @@ lagged_ensemble::lagged_ensemble(const param& parameter, size_t expectedEnsemble
 void lagged_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const forecast_time& time,
                             const level& forecastLevel)
 {
-	ASSERT(itsLag < 0);
+	ASSERT(itsLag.Hours() < 0);
 	ASSERT(itsNumberOfSteps > 0);
 
 	auto f = GET_PLUGIN(fetcher);
 
 	itsForecasts.clear();
 
-	const int lag = itsLag;
 	int missing = 0;
 	int loaded = 0;
+	unsigned int cnt = 0;
 
-	itsLogger.Info("Fetching for " + std::to_string(itsNumberOfSteps) + " timesteps with lag " + std::to_string(lag));
+	itsLogger.Info("Fetching for " + std::to_string(itsNumberOfSteps) + " timesteps with lag " +
+	               static_cast<std::string>(itsLag));
 
-	// Start from the 'earliest' origin time
-	for (int currentStep = static_cast<int>(itsNumberOfSteps) - 1; currentStep >= 0; currentStep--)
+	forecast_time ftime(time);
+
+	do
 	{
-		forecast_time ftime(time);
-
-		if (currentStep != 0)
-			ftime.OriginDateTime().Adjust(itsLagResolution, lag * currentStep);
-
-		// Missing forecasts are only checked for the current origin time, not for lagged
+		// Missing forecasts are checked for both the current origin time, and for lagged
 		for (const auto& desired : itsDesiredForecasts)
 		{
 			try
@@ -71,8 +68,7 @@ void lagged_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, 
 				auto Info = f->Fetch<float>(config, ftime, forecastLevel, itsParam, desired, false);
 				itsForecasts.push_back(Info);
 
-				if (currentStep == 0)
-					loaded++;
+				loaded++;
 			}
 			catch (HPExceptionType& e)
 			{
@@ -81,14 +77,13 @@ void lagged_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, 
 					itsLogger.Fatal("Unable to proceed");
 					himan::Abort();
 				}
-				else
-				{
-					if (currentStep == 0)
-						missing++;
-				}
+				missing++;
 			}
 		}
-	}
+		ftime.OriginDateTime() += itsLag;  // lag is negative
+		cnt++;
+	} while (cnt < itsNumberOfSteps);
+
 	VerifyValidForecastCount(loaded, missing);
 }
 
@@ -98,7 +93,7 @@ void lagged_ensemble::VerifyValidForecastCount(int numLoadedForecasts, int numMi
 	{
 		if (numMissingForecasts >= itsMaximumMissingForecasts)
 		{
-			itsLogger.Fatal("maximum number of missing fields " + std::to_string(numMissingForecasts) + "/" +
+			itsLogger.Fatal("Maximum number of missing fields " + std::to_string(numMissingForecasts) + "/" +
 			                std::to_string(itsMaximumMissingForecasts) + " reached, aborting");
 			throw kFileDataNotFound;
 		}
@@ -107,20 +102,16 @@ void lagged_ensemble::VerifyValidForecastCount(int numLoadedForecasts, int numMi
 	{
 		if (numMissingForecasts > 0)
 		{
-			itsLogger.Fatal("missing " + std::to_string(numMissingForecasts) + " of " +
+			itsLogger.Fatal("Missing " + std::to_string(numMissingForecasts) + " of " +
 			                std::to_string(itsMaximumMissingForecasts) + " allowed missing fields of data");
 			throw kFileDataNotFound;
 		}
 	}
 	itsLogger.Info("succesfully loaded " + std::to_string(numLoadedForecasts) + "/" +
-	               std::to_string(itsDesiredForecasts.size()) + " fields");
+	               std::to_string(itsDesiredForecasts.size() * itsNumberOfSteps) + " fields");
 }
 
-HPTimeResolution lagged_ensemble::LagResolution() const
-{
-	return itsLagResolution;
-}
-int lagged_ensemble::Lag() const
+time_duration lagged_ensemble::Lag() const
 {
 	return itsLag;
 }

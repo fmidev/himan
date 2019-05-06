@@ -9,7 +9,7 @@
 
 local MISS = missing
 local groundlevel = level(HPLevelType.kGround, 0)
-local step = current_time:GetStep()
+local step = current_time:GetStep():Hours()
 
 function GetSourceInfo(rrparam, adjustment)
   local validtime = current_time:GetValidDateTime()
@@ -44,13 +44,13 @@ function Rate(rrparam, targetparam)
     end
   end
 
-  local curstep = rrinfo:GetTime():GetStep()
+  local curstep = rrinfo:GetTime():GetStep():Hours()
 
   local rrdata = rrinfo:GetValues()
   local prevrrdata = {}
   local prevstep = 0
 
-  if current_time:GetStep() <= 6 then
+  if current_time:GetStep():Hours() <= 6 then
     for i = 1,#rrdata do
       prevrrdata[i] = 0
     end
@@ -75,13 +75,13 @@ function Rate(rrparam, targetparam)
     prevrrdata = prevrrinfo:GetValues()
 
     -- accumulation is 'zeroed' every 6 hours: 6, 12, 18, 24, ...
-    if prevrrinfo:GetTime():GetStep() % 6 == 0 then
+    if prevrrinfo:GetTime():GetStep():Hours() % 6 == 0 then
       for i = 1,#rrdata do
         prevrrdata[i] = 0
       end
     end
 
-    prevstep = prevrrinfo:GetTime():GetStep()
+    prevstep = prevrrinfo:GetTime():GetStep():Hours()
   end
 
 
@@ -102,7 +102,7 @@ function Rate(rrparam, targetparam)
 
   -- Set correct time range indicator (ie. aggregation type)
 
-  agg = aggregation(HPAggregationType.kAccumulation, HPTimeResolution.kHourResolution, 1, 999999)
+  agg = aggregation(HPAggregationType.kAccumulation, time_duration("01:00"))
   agg:SetType(HPAggregationType.kAccumulation)
 
   targetparam:SetAggregation(agg)

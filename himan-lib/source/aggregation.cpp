@@ -7,20 +7,16 @@
 
 using namespace himan;
 
-aggregation::aggregation()
-    : itsType(kUnknownAggregationType),
-      itsTimeResolution(kUnknownTimeResolution),
-      itsTimeResolutionValue(kHPMissingInt),
-      itsFirstTimeValue(kHPMissingInt)
+aggregation::aggregation() : itsType(kUnknownAggregationType), itsTimeDuration()
 {
 }
 
-aggregation::aggregation(HPAggregationType theType, HPTimeResolution theTimeResolution, int theTimeResolutionValue,
-                         int theFirstTimeValue)
-    : itsType(theType),
-      itsTimeResolution(theTimeResolution),
-      itsTimeResolutionValue(theTimeResolutionValue),
-      itsFirstTimeValue(theFirstTimeValue)
+aggregation::aggregation(HPAggregationType theAggregationType) : itsType(theAggregationType), itsTimeDuration()
+{
+}
+
+aggregation::aggregation(HPAggregationType theAggregationType, const time_duration& theTimeDuration)
+    : itsType(theAggregationType), itsTimeDuration(theTimeDuration)
 {
 }
 
@@ -36,17 +32,7 @@ bool aggregation::operator==(const aggregation& other) const
 		return false;
 	}
 
-	if (itsTimeResolution != other.itsTimeResolution)
-	{
-		return false;
-	}
-
-	if (itsFirstTimeValue != other.itsFirstTimeValue)
-	{
-		return false;
-	}
-
-	if (itsTimeResolutionValue != other.itsTimeResolutionValue)
+	if (itsTimeDuration != other.itsTimeDuration)
 	{
 		return false;
 	}
@@ -66,39 +52,20 @@ void aggregation::Type(HPAggregationType theType)
 {
 	itsType = theType;
 }
-HPTimeResolution aggregation::TimeResolution() const
+time_duration aggregation::TimeDuration() const
 {
-	return itsTimeResolution;
+	return itsTimeDuration;
 }
-void aggregation::TimeResolution(HPTimeResolution theTimeResolution)
+void aggregation::TimeDuration(const time_duration& theTimeDuration)
 {
-	itsTimeResolution = theTimeResolution;
-}
-int aggregation::TimeResolutionValue() const
-{
-	return itsTimeResolutionValue;
-}
-void aggregation::TimeResolutionValue(int theTimeResolutionValue)
-{
-	itsTimeResolutionValue = theTimeResolutionValue;
-}
-void aggregation::FirstTimeValue(int theFirstTimeValue)
-{
-	itsFirstTimeValue = theFirstTimeValue;
-}
-int aggregation::FirstTimeValue() const
-{
-	return itsFirstTimeValue;
+	itsTimeDuration = theTimeDuration;
 }
 std::ostream& aggregation::Write(std::ostream& file) const
 {
 	file << "<" << ClassName() << ">" << std::endl;
 
 	file << "__itsType__ " << itsType << " (" << HPAggregationTypeToString.at(itsType) << ")" << std::endl;
-	file << "__itsTimeResolution__ " << itsTimeResolution << " (" << HPTimeResolutionToString.at(itsTimeResolution)
-	     << ")" << std::endl;
-	file << "__itsTimeResolutionValue__ " << itsTimeResolutionValue << std::endl;
-	file << "__itsFirstTimeValue__ " << itsFirstTimeValue << std::endl;
+	file << "__itsTimeDuration__" << itsTimeDuration << std::endl;
 
 	return file;
 }

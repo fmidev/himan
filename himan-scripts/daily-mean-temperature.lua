@@ -4,8 +4,8 @@
 -- Function reads past 24h from given time. Works only with ECMWF data.
 
 function WriteMeanToFile(mean, ftime)
-  local start = ftime:GetStep() - 24
-  local agg = aggregation(HPAggregationType.kAverage, HPTimeResolution.kHourResolution, 24, 999999)
+  local start = ftime:GetStep():Hours() - 24
+  local agg = aggregation(HPAggregationType.kAverage, time_duration(HPTimeResolution.kHourResolution, 24))
   local par = param("T-MEAN-K")
   par:SetAggregation(agg)
 
@@ -16,7 +16,7 @@ end
 
 function DailyMeanTemperature(curTime)
 
-  local step = curTime:GetStep()
+  local step = curTime:GetStep():Hours()
 
   if step == 0 then
     return
@@ -26,7 +26,7 @@ function DailyMeanTemperature(curTime)
 
   local tsum = {}
 
-  local stopStep = math.max(curTime:GetStep() - 24, 0)
+  local stopStep = math.max(curTime:GetStep():Hours() - 24, 0)
 
   local count = 0
 
@@ -41,7 +41,7 @@ function DailyMeanTemperature(curTime)
 
     curTime:GetValidDateTime():Adjust(HPTimeResolution.kHourResolution, stepAdjustment)
 
-    if curTime:GetStep() < stopStep or curTime:GetStep() < 0 then
+    if curTime:GetStep():Hours() < stopStep or curTime:GetStep():Hours() < 0 then
       break
     end
 
@@ -60,7 +60,7 @@ function DailyMeanTemperature(curTime)
       count = count + 1
     end
 
-    step = curTime:GetStep()
+    step = curTime:GetStep():Hours()
   end
 
   if #tsum == 0 then  
@@ -79,7 +79,7 @@ function DailyMeanTemperature(curTime)
 
 end
 
-local step = current_time:GetStep()
+local step = current_time:GetStep():Hours()
 
 if step % 24 ~= 0 then
   logger:Info(string.format("Step is not a multiple of 24 (%d) -- skipping", step))

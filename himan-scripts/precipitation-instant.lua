@@ -13,11 +13,6 @@ par2 = param("GRI-KGM2") -- Instantaneous graupel rate in mm/s
 par3 = param("SNRI-KGM2") -- Instantaneous snowfall rate in mm/s
 par4 = param("PRI-KGM2") -- Instantaneous precipitation intensity in mm/h, (par1+par2+par3)*3600
 
-logger:Info("Current step: " .. current_time:GetStep())
-
-msg = string.format("Current level: %d/%d", current_level:GetType(), current_level:GetValue())
-logger:Info(msg)
-
 local rri = luatool:FetchWithType(current_time, current_level, par1, current_forecast_type)
 local gri = luatool:FetchWithType(current_time, current_level, par2, current_forecast_type)
 local snri = luatool:FetchWithType(current_time, current_level, par3, current_forecast_type)

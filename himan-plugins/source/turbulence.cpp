@@ -98,7 +98,7 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	if (!(prevHInfo && prevUInfo && prevVInfo && nextHInfo && nextUInfo && nextVInfo && HInfo && UInfo && VInfo))
 	{
-		myThreadedLogger.Info("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+		myThreadedLogger.Info("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
 		                      static_cast<string>(forecastLevel));
 		return;
 	}
