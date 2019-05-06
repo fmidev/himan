@@ -62,7 +62,16 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, const info<T>& info
 		}
 
 		base << "/" << info.Producer().Id() << "/" << ftime.OriginDateTime().String("%Y%m%d%H%M") << "/"
-		     << conf.TargetGeomName() << "/" << ftime.Step();
+		     << conf.TargetGeomName() << "/";
+
+		if (ftime.Step().Minutes() % 60 != 0)
+		{
+			base << ftime.Step().Minutes();
+		}
+		else
+		{
+			base << ftime.Step().Hours();
+		}
 	}
 
 	// Create a unique file name when creating multiple files from one info
