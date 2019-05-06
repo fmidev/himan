@@ -75,7 +75,6 @@ end
 local Missing = missing
 
 logger:Info("Calculating Snow load")
-logger:Info("Current step: " .. current_time:GetStep())
 
 Wetsnow = {}
 

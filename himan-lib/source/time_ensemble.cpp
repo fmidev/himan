@@ -30,7 +30,7 @@ void AdjustTimes(forecast_time& ftime, HPTimeResolution timeSpan, int value)
 		ftime.ValidDateTime().Adjust(kDayResolution, -1);
 	}
 
-	if (ftime.Step() < 0)
+	if (ftime.Step().Hours() < 0)
 	{
 		// to recover from a leap year extra day subtraction,
 		// to continue from previous example:
@@ -46,7 +46,7 @@ void AdjustTimes(forecast_time& ftime, HPTimeResolution timeSpan, int value)
 		ftime.ValidDateTime().Adjust(kDayResolution, 1);
 	}
 
-	ASSERT(ftime.Step() >= 0);
+	ASSERT(ftime.Step().Hours() >= 0);
 }
 
 std::vector<forecast_time> CreateTimeList(const forecast_time& origtime, size_t primaryTimeMaskLen,
@@ -69,12 +69,12 @@ std::vector<forecast_time> CreateTimeList(const forecast_time& origtime, size_t 
 			if (isCumulative)
 			{
 				ASSERT(secondaryTimeSpan == kHourResolution);
-				while (curtime.Step() < 1)
+				while (curtime.Step().Hours() < 1)
 				{
 					curtime.OriginDateTime().Adjust(secondaryTimeSpan, -12);
 				}
 
-				while (curtime.Step() > 12)
+				while (curtime.Step().Hours() > 12)
 				{
 					curtime.OriginDateTime().Adjust(secondaryTimeSpan, 12);
 				}

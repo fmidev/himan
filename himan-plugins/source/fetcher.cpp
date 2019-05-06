@@ -67,7 +67,8 @@ string CreateNotFoundString(const vector<producer>& prods, const forecast_type& 
 
 	str.seekp(-1, ios_base::end);
 
-	str << " origintime: " << time.OriginDateTime().String() << ", step: " << time.Step() << " param(s): ";
+	str << " origintime: " << time.OriginDateTime().String() << ", step: " << static_cast<string>(time.Step())
+	    << " param(s): ";
 
 	for (const auto& par : params)
 	{

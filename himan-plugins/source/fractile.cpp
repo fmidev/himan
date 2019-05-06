@@ -134,7 +134,7 @@ std::unique_ptr<ensemble> CreateEnsemble(const std::shared_ptr<const plugin_conf
 			steps++;
 
 			ens = std::unique_ptr<lagged_ensemble>(
-			    new lagged_ensemble(param(paramName), ensSize, kHourResolution, lag, steps));
+			    new lagged_ensemble(param(paramName), ensSize, time_duration(kHourResolution, lag), steps));
 		}
 		break;
 		default:

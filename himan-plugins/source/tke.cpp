@@ -69,12 +69,10 @@ void tke::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	// ----
 
 	// Current time and level as given to this thread
-	int paramStep = 1;  // myTargetInfo->Find<param>().Aggregation().TimeResolutionValue();
-	HPTimeResolution timeResolution = myTargetInfo->Time().StepResolution();
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	forecast_time forecastTimePrev = myTargetInfo->Time();
-	forecastTimePrev.ValidDateTime().Adjust(timeResolution, -paramStep);
+	forecastTimePrev.ValidDateTime() -= ONE_HOUR;
 
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
@@ -100,22 +98,13 @@ void tke::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	if (!(FrvelInfo && MoninObukhovInfo && MixHgtInfo && TGInfo && PGInfo && SHFInfo && SHFPrevInfo && LHFInfo &&
 	      LHFPrevInfo && ZInfo))
 	{
-		myThreadedLogger.Info("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+		myThreadedLogger.Info("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
 		                      static_cast<string>(forecastLevel));
 		return;
 	}
 
 	// determine length of forecast step to calculate surface heat flux in W/m2
-	double forecastStepSize;
-
-	if (forecastTime.StepResolution() == kHourResolution)
-	{
-		forecastStepSize = itsConfiguration->ForecastStep() * 3600;  // step size in seconds
-	}
-	else
-	{
-		forecastStepSize = itsConfiguration->ForecastStep() * 60;  // step size in seconds
-	}
+	const double forecastStepSize = static_cast<double>(itsConfiguration->ForecastStep().Seconds());
 
 	SetAB(myTargetInfo, ZInfo);
 

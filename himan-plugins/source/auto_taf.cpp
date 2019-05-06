@@ -125,7 +125,7 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	info_t LCL500 = Fetch(forecastTime, HL500, LCL, forecastType, false);
 	if (!LCL500)
 	{
-		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()));
+		myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()));
 		return;
 	}
 
@@ -150,7 +150,7 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	if (!TC || !Ceiling2)
 	{
-		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()));
+		myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()));
 		return;
 	}
 
@@ -192,7 +192,8 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 		if (!N || !Height)
 		{
-			myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " + to_string(j));
+			myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
+			                         to_string(j));
 			continue;
 		}
 

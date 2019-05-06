@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 19.4.29
+Version: 19.5.6
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 19.4.1
+Requires: himan-lib >= 19.5.6
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 19.2.12
@@ -115,6 +115,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon May  6 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.5.6-1.fmi
+- Add time_duration class
+- Stability updates
 * Mon Apr 29 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.4.29-1.fmi
 - cape plugin bugfix
 - Stability updates

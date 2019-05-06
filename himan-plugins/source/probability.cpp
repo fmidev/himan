@@ -352,8 +352,8 @@ void probability::Calculate(std::shared_ptr<info<float>> myTargetInfo, unsigned 
 		if (itsUseLaggedEnsemble)
 		{
 			threadedLogger.Info("Using lagged ensemble");
-			ens = std::unique_ptr<ensemble>(
-			    new lagged_ensemble(pc.parameter, itsEnsembleSize, kHourResolution, itsLag, itsLaggedSteps + 1));
+			ens = std::unique_ptr<ensemble>(new lagged_ensemble(
+			    pc.parameter, itsEnsembleSize, time_duration(kHourResolution, itsLag), itsLaggedSteps + 1));
 		}
 		else
 		{

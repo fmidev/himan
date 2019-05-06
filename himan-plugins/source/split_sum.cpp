@@ -81,7 +81,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("RR-1-MM", 353, 0, 1, 8);
 		parm.Unit(kMm);
 
-		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 1, kHPMissingInt));
+		parm.Aggregation(aggregation(kAccumulation, ONE_HOUR));
 
 		params.push_back(parm);
 	}
@@ -91,7 +91,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("RR-3-MM", 354, 0, 1, 8);
 		parm.Unit(kMm);
 
-		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 3, kHPMissingInt));
+		parm.Aggregation(aggregation(kAccumulation, THREE_HOURS));
 		params.push_back(parm);
 	}
 
@@ -100,7 +100,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("RR-6-MM", 355, 0, 1, 8);
 		parm.Unit(kMm);
 
-		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 6, kHPMissingInt));
+		parm.Aggregation(aggregation(kAccumulation, SIX_HOURS));
 
 		params.push_back(parm);
 	}
@@ -110,7 +110,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("RR-12-MM", 356, 0, 1, 8);
 		parm.Unit(kMm);
 
-		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 12, kHPMissingInt));
+		parm.Aggregation(aggregation(kAccumulation, TWELVE_HOURS));
 
 		params.push_back(parm);
 	}
@@ -120,7 +120,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("RR-24-MM", 53, 0, 1, 8);
 		parm.Unit(kMm);
 
-		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 24, kHPMissingInt));
+		parm.Aggregation(aggregation(kAccumulation, time_duration("24:00")));
 
 		params.push_back(parm);
 	}
@@ -130,7 +130,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("SN-3-MM");
 		parm.Unit(kMm);
 
-		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 3, kHPMissingInt));
+		parm.Aggregation(aggregation(kAccumulation, THREE_HOURS));
 
 		params.push_back(parm);
 	}
@@ -140,7 +140,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("SN-6-MM");
 		parm.Unit(kMm);
 
-		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 6, kHPMissingInt));
+		parm.Aggregation(aggregation(kAccumulation, SIX_HOURS));
 
 		params.push_back(parm);
 	}
@@ -150,7 +150,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("SN-24-MM", 766, 0, 1, 8);
 		parm.Unit(kMm);
 
-		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 24, kHPMissingInt));
+		parm.Aggregation(aggregation(kAccumulation, time_duration("24:00")));
 
 		params.push_back(parm);
 	}
@@ -160,7 +160,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("RRC-3-MM", 1025, 0, 1, 8);
 		parm.Unit(kMm);
 
-		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 3, kHPMissingInt));
+		parm.Aggregation(aggregation(kAccumulation, THREE_HOURS));
 		params.push_back(parm);
 	}
 
@@ -169,7 +169,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("RRR-KGM2", 49, 0, 1, 52);
 		parm.Unit(kKgm2);
 
-		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 1, kHPMissingInt));
+		parm.Aggregation(aggregation(kAccumulation, ONE_HOUR));
 
 		params.push_back(parm);
 	}
@@ -179,7 +179,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("RRRC-KGM2", 201, 0, 1, 196);
 		parm.Unit(kKgm2);
 
-		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 1, kHPMissingInt));
+		parm.Aggregation(aggregation(kAccumulation, ONE_HOUR));
 
 		params.push_back(parm);
 	}
@@ -189,7 +189,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("RRRL-KGM2", 200, 0, 1, 54);
 		parm.Unit(kKgm2);
 
-		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 1, kHPMissingInt));
+		parm.Aggregation(aggregation(kAccumulation, ONE_HOUR));
 
 		params.push_back(parm);
 	}
@@ -201,7 +201,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("GRR-MMH", 1168);
 		parm.Unit(kKgm2);
 
-		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 1, kHPMissingInt));
+		parm.Aggregation(aggregation(kAccumulation, ONE_HOUR));
 
 		params.push_back(parm);
 	}
@@ -213,7 +213,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("RRRS-KGM2", 1170);
 		parm.Unit(kKgm2);
 
-		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 1, kHPMissingInt));
+		parm.Aggregation(aggregation(kAccumulation, ONE_HOUR));
 
 		params.push_back(parm);
 	}
@@ -223,7 +223,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("RRS-3-MM");
 		parm.Unit(kKgm2);
 
-		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 3, kHPMissingInt));
+		parm.Aggregation(aggregation(kAccumulation, THREE_HOURS));
 
 		params.push_back(parm);
 	}
@@ -235,7 +235,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("SNR-KGM2", 264, 0, 1, 53);
 		parm.Unit(kKgm2);
 
-		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 1, kHPMissingInt));
+		parm.Aggregation(aggregation(kAccumulation, ONE_HOUR));
 
 		params.push_back(parm);
 	}
@@ -245,7 +245,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("SNRC-KGM2", 269, 0, 1, 55);
 		parm.Unit(kKgm2);
 
-		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 1, kHPMissingInt));
+		parm.Aggregation(aggregation(kAccumulation, ONE_HOUR));
 
 		params.push_back(parm);
 	}
@@ -255,7 +255,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		param parm("SNRL-KGM2", 268, 0, 1, 56);
 		parm.Unit(kKgm2);
 
-		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 1, kHPMissingInt));
+		parm.Aggregation(aggregation(kAccumulation, ONE_HOUR));
 
 		params.push_back(parm);
 	}
@@ -303,13 +303,8 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	if (params.empty())
 	{
-		itsLogger.Trace("No parameter definition given, defaulting to rr6h");
-
-		param parm("RR-6-MM", 355, 0, 1, 8);
-
-		parm.Aggregation(aggregation(kAccumulation, kHourResolution, 6, kHPMissingInt));
-
-		params.push_back(parm);
+		itsLogger.Error("No parameter definition given, abort");
+		return;
 	}
 
 	SetParams(params);
@@ -389,12 +384,12 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 	info_t curSumInfo;
 	info_t prevSumInfo;
 
-	if (myTargetInfo->Time().Step() == 0)
+	if (myTargetInfo->Time().Step().Minutes() == 0)
 	{
 		// This is the first time step, calculation can not be done
 
 		myThreadedLogger.Info("This is the first time step -- not calculating " + myParamName + " for step " +
-		                      to_string(forecastTime.Step()));
+		                      static_cast<string>(forecastTime.Step()));
 		return;
 	}
 
@@ -413,7 +408,7 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 	 * based on those values.
 	 */
 
-	int step = itsConfiguration->ForecastStep();
+	int step = static_cast<int>(itsConfiguration->ForecastStep().Hours());
 
 	if (isRateCalculation)
 	{
@@ -426,14 +421,8 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 	{
 		// Fetch data for previous step
 
-		int paramStep = myTargetInfo->Param().Aggregation().TimeResolutionValue();
-
-		if (myTargetInfo->Time().StepResolution() != kHourResolution)
-		{
-			ASSERT(myTargetInfo->Time().StepResolution() == kMinuteResolution);
-
-			paramStep *= 60;
-		}
+		// int paramStep = myTargetInfo->Param().Aggregation().TimeResolutionValue();
+		time_duration paramStep = myTargetInfo->Param().Aggregation().TimeDuration();
 
 		// Skip early steps if necessary
 
@@ -441,7 +430,7 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 		{
 			forecast_time prevTimeStep = myTargetInfo->Time();
 
-			prevTimeStep.ValidDateTime().Adjust(prevTimeStep.StepResolution(), -paramStep);
+			prevTimeStep.ValidDateTime() -= paramStep;
 
 			prevSumInfo = FetchSourceData(myTargetInfo, prevTimeStep);
 		}
@@ -460,12 +449,12 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 		// Data was not found
 
 		myThreadedLogger.Warning("Data not found: not calculating " + myTargetInfo->Param().Name() + " for step " +
-		                         to_string(myTargetInfo->Time().Step()));
+		                         static_cast<string>(myTargetInfo->Time().Step()));
 		return;
 	}
 
-	myThreadedLogger.Trace("Previous data step is " + to_string(prevSumInfo->Time().Step()));
-	myThreadedLogger.Trace("Current/next data step is " + to_string(curSumInfo->Time().Step()));
+	myThreadedLogger.Trace("Previous data step is " + static_cast<string>(prevSumInfo->Time().Step()));
+	myThreadedLogger.Trace("Current/next data step is " + static_cast<string>(curSumInfo->Time().Step()));
 
 	double scaleFactor = 1.;
 
@@ -480,7 +469,7 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 
 	string deviceType = "CPU";
 
-	step = static_cast<int>(curSumInfo->Time().Step() - prevSumInfo->Time().Step());
+	step = static_cast<int>(curSumInfo->Time().Step().Hours() - prevSumInfo->Time().Step().Hours());
 
 	if (isRadiationCalculation)
 	{
@@ -491,22 +480,9 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 		 * Step is always one hour or more, even in the case of Harmonie.
 		 */
 
-		if (myTargetInfo->Time().StepResolution() == kMinuteResolution)
-		{
-			step = 3600;
-		}
-		else if (myTargetInfo->Time().StepResolution() == kHourResolution)
-		{
-			step *= 3600;
-		}
-		else
-		{
-			myThreadedLogger.Error("Unknown time resolution: " +
-			                       string(HPTimeResolutionToString.at(myTargetInfo->Time().StepResolution())));
-			return;
-		}
+		step *= 3600;
 	}
-	else if (myTargetInfo->Time().StepResolution() == kMinuteResolution || !isRateCalculation)
+	else if (!isRateCalculation)
 	{
 		/*
 		 * If calculating for Harmonie, use hour as base time unit, or disable
@@ -546,8 +522,6 @@ pair<shared_ptr<himan::info<double>>, shared_ptr<himan::info<double>>> split_sum
 {
 	shared_ptr<info<double>> prevInfo, curInfo;
 
-	HPTimeResolution timeResolution = myTargetInfo->Time().StepResolution();
-
 	// 1. Assuming we *know* what the step is, fetch previous and current
 	// based on that step.
 
@@ -555,15 +529,15 @@ pair<shared_ptr<himan::info<double>>, shared_ptr<himan::info<double>>> split_sum
 	{
 		if (myTargetInfo->Producer().Id() == 210 || myTargetInfo->Producer().Id() == 270)
 		{
-			step = 60;  // Forecast step is 15 (Harmonie), but it has been agreed
-			            // with AKS that we'll use one hour since editor displays
-			            // only hourly data.
+			step = 1;  // Forecast step is 15 (Harmonie), but it has been agreed
+			           // with AKS that we'll use one hour since editor displays
+			           // only hourly data.
 		}
 
 		forecast_time wantedTimeStep(myTargetInfo->Time());
-		wantedTimeStep.ValidDateTime().Adjust(timeResolution, -step);
+		wantedTimeStep.ValidDateTime().Adjust(kHourResolution, -step);
 
-		if (wantedTimeStep.Step() >= 0)
+		if (wantedTimeStep.Step().Hours() >= 0)
 		{
 			prevInfo = FetchSourceData(myTargetInfo, wantedTimeStep);
 		}
@@ -582,16 +556,6 @@ pair<shared_ptr<himan::info<double>>, shared_ptr<himan::info<double>>> split_sum
 	int maxSteps = 6;  // by default look for 6 hours forward or backward
 	step = 1;          // by default the difference between time steps is one (ie. one hour))
 
-	if (myTargetInfo->Producer().Id() == 210 || myTargetInfo->Producer().Id() == 270)
-	{
-		step = 60;
-	}
-	else if (timeResolution != kHourResolution)
-	{
-		itsLogger.Fatal("Invalid time resolution value: " + HPTimeResolutionToString.at(timeResolution));
-		himan::Abort();
-	}
-
 	itsLogger.Trace("Target time is " + static_cast<string>(myTargetInfo->Time().ValidDateTime()));
 
 	if (!prevInfo)
@@ -605,9 +569,9 @@ pair<shared_ptr<himan::info<double>>, shared_ptr<himan::info<double>>> split_sum
 
 		for (int i = 0; !prevInfo && i <= maxSteps * step; i++)
 		{
-			wantedTimeStep.ValidDateTime().Adjust(timeResolution, -step);
+			wantedTimeStep.ValidDateTime().Adjust(kHourResolution, -step);
 
-			if (wantedTimeStep.Step() < 0)
+			if (wantedTimeStep.Step().Minutes() < 0)
 			{
 				continue;
 			}
@@ -639,7 +603,7 @@ pair<shared_ptr<himan::info<double>>, shared_ptr<himan::info<double>>> split_sum
 
 		for (int i = 0; !curInfo && i <= maxSteps * step; i++)
 		{
-			wantedTimeStep.ValidDateTime().Adjust(timeResolution, step);
+			wantedTimeStep.ValidDateTime().Adjust(kHourResolution, step);
 
 			itsLogger.Trace("Trying time " + static_cast<string>(wantedTimeStep.ValidDateTime()));
 			curInfo = FetchSourceData(myTargetInfo, wantedTimeStep);
@@ -677,7 +641,7 @@ shared_ptr<himan::info<double>> split_sum::FetchSourceData(shared_ptr<info<doubl
 	// If model does not provide data for timestep 0, emulate it
 	// by providing a zero-grid
 
-	if (!SumInfo && wantedTime.Step() == 0)
+	if (!SumInfo && wantedTime.Step().Minutes() == 0)
 	{
 		SumInfo = make_shared<info<double>>(*myTargetInfo);
 		vector<forecast_time> times = {wantedTime};

@@ -209,7 +209,6 @@ void blend::Calculate(shared_ptr<info<double>> targetInfo, unsigned short thread
 {
 	auto log = logger("blendThread#" + to_string(threadIndex));
 	const string deviceType = "CPU";
-	const forecast_time currentTime = targetInfo->Time();
 	const param currentParam = targetInfo->Param();
 
 	switch (itsCalculationMode)
@@ -279,7 +278,8 @@ tuple<info_t, info_t, info_t, info_t> blend::FetchMAEAndBiasSource(shared_ptr<in
 
 	// Adjust valid date time so that step is equivalent to step of calcTime
 
-	prevTime.ValidDateTime().Adjust(kHourResolution, calcTime.Step() - currentTime.Step());
+	prevTime.ValidDateTime().Adjust(kHourResolution,
+	                                static_cast<int>(calcTime.Step().Hours() - currentTime.Step().Hours()));
 	prevTime.OriginDateTime().Adjust(kHourResolution, -24);
 	prevTime.ValidDateTime().Adjust(kHourResolution, -24);
 
@@ -479,14 +479,15 @@ void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short 
 	{
 		auto ftime = Info->Value<forecast_time>();
 
-		if (ftime.Step() < 0)
+		if (ftime.Step().Hours() < 0)
 		{
 			log.Trace("End of forecast, breaking");
 			break;
 		}
 
 		log.Info("Calculating for member " + std::to_string(static_cast<int>(Info->ForecastType().Value())) +
-		         " analysis hour " + ftime.OriginDateTime().String("%H") + " step " + to_string(ftime.Step()));
+		         " analysis hour " + ftime.OriginDateTime().String("%H") + " step " +
+		         static_cast<string>(ftime.Step()));
 
 		if (ftime.OriginDateTime() > current.OriginDateTime() || ftime.OriginDateTime() > originDateTime)
 		{
@@ -512,7 +513,7 @@ void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short 
 				// Adjust origin date time so that it is from "today" with correct ahour
 				newI->Time().OriginDateTime(originDateTime);
 
-				int offset = 0;
+				long int offset = 0;
 
 				const int latestH = std::stoi(originDateTime.String("%H"));
 				const int currentH = std::stoi(ftime.OriginDateTime().String("%H"));
@@ -529,7 +530,8 @@ void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short 
 				}
 
 				// Adjust valid date time so that step values remains the same
-				newI->Time().ValidDateTime().Adjust(kHourResolution, ftime.Step() - current.Step() - offset);
+				newI->Time().ValidDateTime().Adjust(
+				    kHourResolution, static_cast<int>(ftime.Step().Hours() - current.Step().Hours() - offset));
 
 				ASSERT(originDateTime.String("%Y%m%d") == newI->Time().OriginDateTime().String("%Y%m%d"));
 				ASSERT(ftime.OriginDateTime().String("%H") == newI->Time().OriginDateTime().String("%H"));
@@ -635,7 +637,6 @@ void blend::CalculateBlend(shared_ptr<info<double>> targetInfo, unsigned short t
 	auto log = logger("calculateBlend#" + to_string(threadIdx));
 	const string deviceType = "CPU";
 
-	const forecast_time currentTime = targetInfo->Time();
 	const param currentParam = targetInfo->Param();
 
 	// NOTE: If one of the grids is missing, we should still put an empty grid there. Since all the stages assume that
@@ -859,7 +860,7 @@ void blend::SetupOutputForecastTimes(shared_ptr<info<double>> Info, const raw_ti
 	}
 	ftime.OriginDateTime().Adjust(kHourResolution, -numHours);
 
-	while (ftime.Step() > maxStep)
+	while (ftime.Step().Hours() > maxStep)
 	{
 		ftime.OriginDateTime().Adjust(kHourResolution, 12);
 	}

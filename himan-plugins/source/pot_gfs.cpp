@@ -204,7 +204,7 @@ void pot_gfs::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	const param RainParam("RRR-KGM2");
 
 	// Step from previous leadtime, taken from configuration file
-	int step = itsConfiguration->ForecastStep();
+	int step = static_cast<int>(itsConfiguration->ForecastStep().Hours());
 
 	if (step == kHPMissingInt)
 	{
@@ -216,18 +216,18 @@ void pot_gfs::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			// More than one time is calculated - check the difference to previous
 			// or next time
 
-			int leadtime = myTargetInfo->Time().Step();
+			int leadtime = static_cast<int>(myTargetInfo->Time().Step().Hours());
 			int otherLeadtime;
 
 			if (myTargetInfo->Previous<forecast_time>())
 			{
-				otherLeadtime = myTargetInfo->Time().Step();
+				otherLeadtime = static_cast<int>(myTargetInfo->Time().Step().Hours());
 				myTargetInfo->Next<forecast_time>();  // return
 			}
 			else
 			{
 				myTargetInfo->Next<forecast_time>();
-				otherLeadtime = myTargetInfo->Time().Step();
+				otherLeadtime = static_cast<int>(myTargetInfo->Time().Step().Hours());
 				myTargetInfo->Previous<forecast_time>();  // return
 			}
 
@@ -240,12 +240,10 @@ void pot_gfs::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		}
 	}
 
-	HPTimeResolution timeResolution = myTargetInfo->Time().StepResolution();
-
 	forecast_type forecastType = myTargetInfo->ForecastType();
 	forecast_time forecastTime = myTargetInfo->Time();
 	forecast_time forecastTimeNext = myTargetInfo->Time();
-	forecastTimeNext.ValidDateTime().Adjust(timeResolution, +step);
+	forecastTimeNext.ValidDateTime().Adjust(kHourResolution, +step);
 	level forecastLevel = myTargetInfo->Level();
 
 	auto myThreadedLogger = logger("pot_gfs_pluginThread #" + to_string(threadIndex));
@@ -265,7 +263,7 @@ void pot_gfs::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	{
 		if (itsStrictMode)
 		{
-			myThreadedLogger.Info("Cold cape not found, skipping step " + to_string(forecastTime.Step()));
+			myThreadedLogger.Info("Cold cape not found, skipping step " + static_cast<string>(forecastTime.Step()));
 			return;
 		}
 
@@ -287,7 +285,7 @@ void pot_gfs::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	if (!CAPEMaxInfo || !RRMeanInfo)
 	{
-		myThreadedLogger.Info("Missing source data. Skipping step " + to_string(forecastTime.Step()));
+		myThreadedLogger.Info("Missing source data. Skipping step " + static_cast<string>(forecastTime.Step()));
 		return;
 	}
 

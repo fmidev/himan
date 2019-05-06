@@ -26,6 +26,7 @@ class forecast_time
 	forecast_time(const raw_time& theOriginDateTime, const raw_time& theValidDateTime);
 	forecast_time(const std::string& theOriginDateTime, const std::string& theValidDateTime,
 	              const std::string& theDateMask = "%Y-%m-%d %H:%M:%S");
+	forecast_time(const raw_time& theOriginDateTime, const time_duration& theStep);
 
 	~forecast_time() = default;
 	forecast_time(const forecast_time&) = default;
@@ -40,8 +41,6 @@ class forecast_time
 	bool operator==(const forecast_time& other) const;
 	bool operator!=(const forecast_time& other) const;
 
-	int Step() const;
-
 	const raw_time& OriginDateTime() const;
 	raw_time& OriginDateTime();
 	void OriginDateTime(const raw_time& theOriginDateTime);
@@ -52,19 +51,11 @@ class forecast_time
 	void ValidDateTime(const raw_time& theValidDateTime);
 	void ValidDateTime(const std::string& theValidDateTime, const std::string& theDateMask = "%Y-%m-%d %H:%M:%S");
 
-	/**
-	 *
-	 * @return Time step resolution
-	 */
-
-	HPTimeResolution StepResolution() const;
-	void StepResolution(HPTimeResolution theStepResolution);
+	time_duration Step() const;
 
    private:
 	raw_time itsOriginDateTime;
 	raw_time itsValidDateTime;
-
-	HPTimeResolution itsStepResolution;
 
 #ifdef SERIALIZATION
 	friend class cereal::access;
@@ -72,7 +63,7 @@ class forecast_time
 	template <class Archive>
 	void serialize(Archive& ar)
 	{
-		ar(CEREAL_NVP(itsOriginDateTime), CEREAL_NVP(itsValidDateTime), CEREAL_NVP(itsStepResolution));
+		ar(CEREAL_NVP(itsOriginDateTime), CEREAL_NVP(itsValidDateTime));
 	}
 #endif
 };

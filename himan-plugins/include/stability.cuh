@@ -39,6 +39,7 @@ const himan::level EuropeanMileLevel(himan::kHeight, 1500);
 const himan::level Height0Level(himan::kHeight, 0);
 const himan::level HalfKMLevel(himan::kHeightLayer, 500, 0);
 const himan::level MaxWindLevel(himan::kMaximumWind, 0);
+const himan::level MaxThetaELevel(himan::kMaximumThetaE, 0);
 
 namespace STABILITY
 {

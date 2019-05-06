@@ -123,7 +123,7 @@ void unstagger::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short 
 		{
 			throw runtime_error(ClassName() + ": Unable to proceed");
 		}
-		myThreadedLogger.Info("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+		myThreadedLogger.Info("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
 		                      static_cast<string>(forecastLevel));
 		return;
 	}

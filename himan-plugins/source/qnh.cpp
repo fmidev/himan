@@ -119,7 +119,7 @@ void qnh::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 
 	if (!topoInfo || !pressureInfo)
 	{
-		myThreadedLogger.Info("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+		myThreadedLogger.Info("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
 		                      static_cast<string>(forecastLevel));
 
 		return;

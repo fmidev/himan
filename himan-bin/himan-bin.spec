@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 19.2.19
+Version: 19.5.6
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 18.11.1
+Requires: himan-lib >= 19.5.6
 Requires: himan-plugins
 Requires: gdal >= 1.11.0
 Requires: zlib
@@ -63,6 +63,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Mon May  6 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.5.6-1.fmi
+- Add class time_duration
 * Tue Feb 19 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.2.19-1.fmi
 - configuration api change
 * Wed Nov  7 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.7-1.fmi

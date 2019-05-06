@@ -76,7 +76,7 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	if (!CAPEMaxInfo || !CbTopMaxInfo || !LfcMinInfo || !LclInfo || !LclTempInfo || !RRInfo)
 	{
-		myThreadedLogger.Warning("Skipping step " + to_string(forecastTime.Step()) + ", level " +
+		myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
 		                         static_cast<string>(forecastLevel));
 		return;
 	}
