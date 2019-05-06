@@ -4,7 +4,7 @@
 Summary: himan core library
 Name: %{LIBNAME}
 Version: 19.5.6
-Release: 1.el7.fmi
+Release: 2.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -62,6 +62,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Mon May  6 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.5.6-2.fmi
+- Fix step formatting in directory path
 * Mon May  6 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.5.6-1.fmi
 - Add time_duration class
 * Mon Apr 29 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.4.29-1.fmi

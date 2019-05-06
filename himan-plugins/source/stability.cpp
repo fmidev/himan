@@ -87,10 +87,20 @@ pair<vec, vec> GetEBSLevelData(shared_ptr<const plugin_configuration>& conf, inf
                                shared_ptr<hitool>& h, const level& sourceLevel, const level& targetLevel)
 {
 	auto ELInfo = STABILITY::Fetch(conf, myTargetInfo, sourceLevel, param("EL-LAST-M"));
-	auto LPLInfo = STABILITY::Fetch(conf, myTargetInfo, sourceLevel, param("LPL-M"));
-
 	const auto& EL = VEC(ELInfo);
-	const auto& LPL = VEC(LPLInfo);
+
+	vec LPL;
+
+	// LPL only exists for Max theta e level
+	if (sourceLevel == MaxThetaELevel)
+	{
+		auto LPLInfo = STABILITY::Fetch(conf, myTargetInfo, sourceLevel, param("LPL-M"));
+		LPL = VEC(LPLInfo);
+	}
+	else
+	{
+		LPL.resize(EL.size(), 2);
+	}
 
 	vec Top(EL.size(), MissingDouble());
 
@@ -105,7 +115,7 @@ pair<vec, vec> GetEBSLevelData(shared_ptr<const plugin_configuration>& conf, inf
 			top = 0.5 * (el - lpl) + lpl;
 		}
 
-		return make_pair(VEC(LPLInfo), Top);
+		return make_pair(LPL, Top);
 	}
 	else if (targetLevel == MaxWindLevel)
 	{
@@ -133,7 +143,7 @@ pair<vec, vec> GetEBSLevelData(shared_ptr<const plugin_configuration>& conf, inf
 		const auto maxWind = h->VerticalMaximum(FFParam, Bottom, Top);
 		const auto maxWindHeight = h->VerticalHeight(FFParam, Bottom, Top, maxWind);
 
-		return make_pair(VEC(LPLInfo), maxWindHeight);
+		return make_pair(LPL, maxWindHeight);
 	}
 
 	throw runtime_error("Invalid target level: " + static_cast<string>(targetLevel));

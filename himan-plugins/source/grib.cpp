@@ -1496,7 +1496,7 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 			r = GET_PLUGIN(radon);
 
 			auto parminfo = r->RadonDB().GetParameterFromGrib2(
-			    prod.Id(), discipline, category, number, itsGrib->Message().NormalizedLevelType(),
+			    prod.Id(), discipline, category, number, itsGrib->Message().LevelType(),
 			    static_cast<double>(itsGrib->Message().LevelValue()), tosp);
 
 			if (parminfo.size())
