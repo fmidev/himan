@@ -3,8 +3,8 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 19.5.6
-Release: 2.el7.fmi
+Version: 19.5.7
+Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -62,6 +62,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Tue May  7 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.5.7-1.fmi
+- Minor bugfix to modifier
 * Mon May  6 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.5.6-2.fmi
 - Fix step formatting in directory path
 * Mon May  6 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.5.6-1.fmi
