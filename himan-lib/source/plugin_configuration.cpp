@@ -140,40 +140,17 @@ void plugin_configuration::WriteStatistics()
 {
 	cout << "*** STATISTICS ***" << endl;
 
-	cout << "Plugin:\t\t\t" << itsName << endl;
-	cout << "Use cache for reads:\t" << (itsUseCacheForReads ? "true" : "false") << endl;
-	cout << "Use cache for writes:\t" << (itsUseCacheForWrites ? "true" : "false") << endl;
-	cout << "Use cuda:\t\t" << (itsUseCuda ? "true" : "false") << endl;
-	cout << "Use cuda packing:\t" << (itsUseCudaForPacking ? "true" : "false") << endl;
-	cout << "Use cuda unpacking:\t" << (itsUseCudaForUnpacking ? "true" : "false") << endl;
-	cout << "Use cuda interpolation:\t" << (itsUseCudaForInterpolation ? "true" : "false") << endl;
-
-	cout << "Target geom_name:\t" << itsTargetGeomName << endl;
-	cout << "Source geom_name:\t" << util::Join(itsSourceGeomNames, ",") << endl;
-
-	if (itsLevels.empty() != false)
-	{
-		cout << "Level type:\t\t" << HPLevelTypeToString.at(itsLevels[0].Type()) << endl;
-		cout << "Level count:\t\t" << itsLevels.size() << endl;
-	}
-
-	if (itsTimes.empty() != false)
-	{
-		cout << "Time steps:\t\t" << itsTimes[0].Step();
-
-		for (size_t i = 1; i < static_cast<size_t>(min(3ul, itsTimes.size())); i++)
-		{
-			cout << "," << itsTimes[i].Step();
-		}
-		if (itsTimes.size() > 3)
-			cout << "...";
-		cout << endl << "Time count:\t\t" << itsTimes.size() << endl;
-	}
-
-	cout << "Outfile type:\t\t" << HPFileTypeToString.at(itsOutputFileType) << endl;
-	cout << "Compression type:\t" << HPFileCompressionToString.at(itsFileCompression) << endl;
-	cout << "File write:\t\t" << HPFileWriteOptionToString.at(itsFileWriteOption) << endl;
-	cout << "Read from database:\t" << (itsReadDataFromDatabase ? "true" : "false") << endl;
+	cout << setw(30) << left << "Plugin:" << itsName << endl
+	     << setw(30) << left << "Use cache for reads:" << (itsUseCacheForReads ? "true" : "false") << endl
+	     << setw(30) << left << "Use cache for writes:" << (itsUseCacheForWrites ? "true" : "false") << endl
+	     << setw(30) << left << "Use cuda:" << (itsUseCuda ? "true" : "false") << endl
+	     << setw(30) << left << "Use cuda unpacking:" << (itsUseCudaForUnpacking ? "true" : "false") << endl
+	     << setw(30) << left << "Target geom_name:" << itsTargetGeomName << endl
+	     << setw(30) << left << "Source geom_name:" << util::Join(itsSourceGeomNames, ",") << endl
+	     << setw(30) << left << "Outfile type:" << HPFileTypeToString.at(itsOutputFileType) << endl
+	     << setw(30) << left << "Compression type:" << HPFileCompressionToString.at(itsFileCompression) << endl
+	     << setw(30) << left << "File write:" << HPFileWriteOptionToString.at(itsFileWriteOption) << endl
+	     << setw(30) << left << "Read from database:" << (itsReadDataFromDatabase ? "true" : "false") << endl;
 
 	string sourceProducers = "";
 
@@ -184,65 +161,40 @@ void plugin_configuration::WriteStatistics()
 
 	sourceProducers.pop_back();
 
-	cout << "Source producer:\t" << sourceProducers << endl;
-	cout << "Target producer:\t" << TargetProducer().Id() << endl;
+	cout << setw(30) << left << "Source producer:" << sourceProducers << endl;
+	cout << setw(30) << left << "Target producer:" << TargetProducer().Id() << endl;
 
 	// Statistics from class statistics
 
-	// total elapsed time
-
-	const auto elapsedTime = static_cast<double>(itsStatistics->itsTotalTime);
-
-	const int fetchingTimePercentage =
-	    static_cast<int>(100 * static_cast<double>(itsStatistics->itsFetchingTime) /
-	                     static_cast<double>(itsStatistics->itsUsedThreadCount) / elapsedTime);
-	const int processingTimePercentage =
-	    static_cast<int>(100 *
-	                     static_cast<double>(itsStatistics->itsProcessingTime -
-	                                         itsStatistics->itsFetchingTime / itsStatistics->itsUsedThreadCount) /
-	                     elapsedTime);
-	const int initTimePercentage =
-	    static_cast<int>(100 * static_cast<double>(itsStatistics->itsInitTime) / elapsedTime);
-
-	int writingTimePercentage = 0;
-
-	string writingThreads;
-
-	if (itsFileWriteOption == kSingleFile)
-	{
-		writingTimePercentage = static_cast<int>(100 * static_cast<double>(itsStatistics->itsWritingTime) /
-		                                         static_cast<double>(elapsedTime));
-		writingThreads = ", single thread";
-	}
-	else
-	{
-		writingTimePercentage = static_cast<int>(
-		    100 * static_cast<double>(itsStatistics->itsWritingTime / itsStatistics->itsUsedThreadCount) /
-		    static_cast<double>(elapsedTime));
-		writingThreads = ", average over used threads";
-	}
-
 	ASSERT(itsStatistics->itsValueCount >= itsStatistics->itsMissingValueCount);
 
-	cout << "Thread count:\t\t" << itsStatistics->itsUsedThreadCount << endl
-	     << "Cache hit count:\t" << itsStatistics->itsCacheHitCount << endl
-	     << "Cache miss count:\t" << itsStatistics->itsCacheMissCount << endl
-	     << "Elapsed time:\t\t" << itsStatistics->itsTotalTime << " milliseconds" << endl
-	     << "Plugin init time\t" << itsStatistics->itsInitTime << " milliseconds, single thread (" << initTimePercentage
-	     << "%)" << endl
-	     << "Fetching time:\t\t" << itsStatistics->itsFetchingTime / itsStatistics->itsUsedThreadCount
-	     << " milliseconds, average over used threads (" << fetchingTimePercentage << "%)" << endl
-	     << "Process time:\t\t" << itsStatistics->itsProcessingTime / itsStatistics->itsUsedThreadCount
-	     << " milliseconds, total over used threads (" << processingTimePercentage << "%)" << endl
-	     << "Writing time:\t\t" << itsStatistics->itsWritingTime / itsStatistics->itsUsedThreadCount << " milliseconds"
-	     << writingThreads << " (" << writingTimePercentage << "%)" << endl
-	     << "Values:\t\t\t" << itsStatistics->itsValueCount << endl
-	     << "Missing values:\t\t" << itsStatistics->itsMissingValueCount << " ("
+	const double totalTime = static_cast<double>(itsStatistics->itsInitTime + itsStatistics->itsFetchingTime +
+	                                             itsStatistics->itsProcessingTime + itsStatistics->itsWritingTime);
+
+	const int initP = static_cast<int>(100. * static_cast<double>(itsStatistics->itsInitTime) / totalTime);
+	const int fetchP = static_cast<int>(100. * static_cast<double>(itsStatistics->itsFetchingTime) / totalTime);
+	const int procP = static_cast<int>(100. * static_cast<double>(itsStatistics->itsProcessingTime) / totalTime);
+	const int writeP = static_cast<int>(100. * static_cast<double>(itsStatistics->itsWritingTime) / totalTime);
+
+	cout << setw(30) << left << "Thread count:" << itsStatistics->itsUsedThreadCount << endl
+	     << setw(30) << left << "Cache hit count:" << itsStatistics->itsCacheHitCount << endl
+	     << setw(30) << left << "Cache miss count:" << itsStatistics->itsCacheMissCount << endl
+	     << setw(30) << left << "Elapsed wall time:" << setw(7) << right << itsStatistics->itsTotalTime << " ms" << endl
+	     << setw(30) << left << "Plugin init time (st):" << setw(7) << right << itsStatistics->itsInitTime << " ms ("
+	     << setw(2) << initP << "%)" << endl
+	     << setw(30) << left << "Fetching time (mt):" << setw(7) << right << itsStatistics->itsFetchingTime << " ms ("
+	     << setw(2) << fetchP << "%)" << endl
+	     << setw(30) << left << "Process time (mt):" << setw(7) << right << itsStatistics->itsProcessingTime << " ms ("
+	     << setw(2) << procP << "%)" << endl
+	     << setw(30) << left << "Writing time (mt):" << setw(7) << right << itsStatistics->itsWritingTime << " ms ("
+	     << setw(2) << writeP << "%)" << endl
+	     << setw(30) << left << "Values:" << itsStatistics->itsValueCount << endl
+	     << setw(30) << left << "Missing values:" << itsStatistics->itsMissingValueCount << " ("
 	     << static_cast<int>(100 * static_cast<double>(itsStatistics->itsMissingValueCount) /
 	                         static_cast<double>(itsStatistics->itsValueCount))
 	     << "%)" << endl
-	     << "Million PPS:\t\t"
-	     << static_cast<double>(itsStatistics->itsValueCount) / (static_cast<double>(elapsedTime) * 1e3)
+	     << setw(30) << left << "Million PPS:"
+	     << static_cast<double>(itsStatistics->itsValueCount) / (static_cast<double>(itsStatistics->itsTotalTime) * 1e3)
 	     << endl;  // million points per second
 }
 
