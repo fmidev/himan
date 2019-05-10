@@ -2,8 +2,8 @@ namespace himan
 {
 namespace numerical_functions
 {
-template <typename T, class S, class P>
-himan::matrix<T> Reduce2D(const himan::matrix<T>& A, const himan::matrix<T>& B, S&& f, P&& g, T init1, T init2)
+template <typename T, class F, class G>
+himan::matrix<T> Reduce2D(const himan::matrix<T>& A, const himan::matrix<T>& B, F&& f, G&& g, T init1, T init2)
 {
 	// find center position of kernel (half of kernel size)
 	himan::matrix<T> ret(A.SizeX(), A.SizeY(), 1, A.MissingValue());
@@ -183,8 +183,8 @@ himan::matrix<T> Reduce2D(const himan::matrix<T>& A, const himan::matrix<T>& B, 
 	return ret;
 }
 
-template <typename T, class S>
-himan::matrix<T> Prob2D(const himan::matrix<T>& A, const himan::matrix<T>& B, S&& f)
+template <typename T, class F>
+himan::matrix<T> Prob2D(const himan::matrix<T>& A, const himan::matrix<T>& B, F&& f)
 {
 	return Reduce2D(A, B,
 	                [=](T& val1, T& val2, const T& a, const T& b) {
@@ -209,8 +209,8 @@ CUDA_DEVICE CUDA_INLINE size_t CudaMatrixIndex(size_t x, size_t y, size_t z, siz
 	return z * W * H + y * W + x;
 }
 
-template <typename T, class S, class P>
-CUDA_KERNEL void Reduce2DGPUKernel(const T* __restrict__ A, const T* __restrict__ B, T* __restrict__ C, S f, P g,
+template <typename T, class F, class G>
+CUDA_KERNEL void Reduce2DGPUKernel(const T* __restrict__ A, const T* __restrict__ B, T* __restrict__ C, F f, G g,
                                    T init1, T init2, filter_opts opts)
 {
 	const int kCenterX = opts.bDimX / 2;
@@ -255,8 +255,8 @@ CUDA_KERNEL void Reduce2DGPUKernel(const T* __restrict__ A, const T* __restrict_
 	}
 }
 
-template <typename T, class S, class P>
-himan::matrix<T> Reduce2DGPU(const himan::matrix<T>& A, const himan::matrix<T>& B, S f, P g, T init1, T init2)
+template <typename T, class F, class G>
+himan::matrix<T> Reduce2DGPU(const himan::matrix<T>& A, const himan::matrix<T>& B, F&& f, G&& g, T init1, T init2)
 {
 	himan::matrix<T> C(A.SizeX(), A.SizeY(), 1, himan::MissingValue<T>());
 

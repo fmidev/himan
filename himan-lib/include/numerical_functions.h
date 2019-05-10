@@ -62,11 +62,11 @@ himan::matrix<T> Min2D(const himan::matrix<T>& A, const himan::matrix<T>& B, boo
  * @return Probability (0 to 1)
  */
 
-template <typename T, class S>
-himan::matrix<T> Prob2D(const himan::matrix<T>& A, const himan::matrix<T>& B, S&& f);
+template <typename T, class F>
+himan::matrix<T> Prob2D(const himan::matrix<T>& A, const himan::matrix<T>& B, F&& f);
 
-template <typename T, class S, class P>
-himan::matrix<T> Reduce2D(const himan::matrix<T>& A, const himan::matrix<T>& B, T&& f, S&& g, T init1, T init2);
+template <typename T, class F, class G>
+himan::matrix<T> Reduce2D(const himan::matrix<T>& A, const himan::matrix<T>& B, F&& f, G&& g, T init1, T init2);
 
 #ifdef HAVE_CUDA
 /**
@@ -99,8 +99,8 @@ himan::matrix<T> ProbLimitGt2DGPU(const matrix<T>& A, const matrix<T>& B, T limi
 template <typename T>
 himan::matrix<T> ProbLimitEq2DGPU(const matrix<T>& A, const matrix<T>& B, T limit);
 
-template <typename T, class S, class P>
-himan::matrix<T> Reduce2DGPU(const himan::matrix<T>& A, const himan::matrix<T>& B, S f, P g, T init1, T init2);
+template <typename T, class F, class G>
+himan::matrix<T> Reduce2DGPU(const himan::matrix<T>& A, const himan::matrix<T>& B, F&& f, G&& g, T init1, T init2);
 
 // HAVE_CUDA
 #endif
