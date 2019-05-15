@@ -23,16 +23,22 @@ In lua enumerators are accessed using a class prefix, like
 HPLevelType
     kUnknownLevel = 0
     kGround = 1
+    kMaximumWind = 6
     kTopOfAtmosphere = 8
+    kIsoThermal = 20
+    kLake = 21
     kPressure = 100
+    kPressureDelta = 101
     kMeanSea = 102
     kAltitude = 103
     kHeight = 105
+    kHeightLayer = 106
     kHybrid = 109
     kGroundDepth = 112
     kDepth = 160
     kEntireAtmosphere = 200
     kEntireOcean = 201
+    kMaximumThetaE = 246
 
 HPParameterUnit
     kHPa = 5 // hectopascal
@@ -42,6 +48,9 @@ HPTimeResolution
     kUnknownTimeResolution = 0
     kHourResolution = 1
     kMinuteResolution = 2
+    kYearResolution = 3
+    kMonthResulution = 4
+    kDayResolution = 5
 
 HPFileType
     kUnknownFile = 0
@@ -102,6 +111,20 @@ aggregation is a parameter component, defining for example that it is an accumul
 |   | SetType | HPAggregationType  | Set aggregation type |
 | time_duration | GetTimeDuration | | Returns the time duration of the aggregation (for example: one hour) |
 |   | SetTimeDuration | time_duration | Set time duration |
+
+## configuration
+
+configuration class instance is automatically assigned to a lua script. It represents the configuration created from command line options
+and without any plugin specific options. See also plugin_configuration.
+
+| Return value  | Name | Arguments | Description |
+|---|---|---|---|
+| string | ClassName | | Returns class name |
+| string | GetOutputFileType | | Returns the type of output file (grib, querydate, ...) |
+| producer | GetSourceProducer | number | Returns the configured source producer, indexing starts from 0 |
+| producer | GetTargetProducer | | Returns target producer |
+| time_duration | GetForecastStep | | Returns the forecast step that's configured in the configuration file (if applicable) |
+| bool | GetUseCuda | | Returns true if usage of gpu functions is not disabled |
 
 ## forecast_time
 
@@ -272,16 +295,13 @@ point represent an xy or latlon point.
 ## plugin_configuration
 
 plugin_configuration class instance is automatically assigned to a lua script. It represents the configuration that launched the calculation.
+This class is inheriting from configuration class.
 
 | Return value  | Name | Arguments | Description | 
 |---|---|---|---|
 | string | ClassName | | Returns class name |
 | string | GetValue | string | Return a per-plugin configuration value, if given in the plugin configuration file |
 | bool | Exists | string | Checks if some per-plugin configuration value is set in the plugin configuration file |
-| string | GetOutputFileType | | Returns the type of output file (grib, querydate, ...) |
-| producer | GetSourceProducer | number | Returns the configured source producer, indexing starts from 0 |
-| producer | GetTargetProducer | | Returns target producer |
-| time_duration | GetForecastStep | | Returns the forecast step that's configured in the configuration file (if applicable) |
 
 ## producer
 

@@ -497,7 +497,8 @@ void gust::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threa
 
 	himan::matrix<double> filter_kernel(3, 3, 1, himan::MissingDouble());
 	filter_kernel.Fill(1.0 / 9.0);
-	himan::matrix<double> gust_filtered = numerical_functions::Filter2D(myTargetInfo->Data(), filter_kernel);
+	himan::matrix<double> gust_filtered =
+	    numerical_functions::Filter2D<double>(myTargetInfo->Data(), filter_kernel, itsConfiguration->UseCuda());
 
 	auto b = myTargetInfo->Base();
 	b->data = move(gust_filtered);

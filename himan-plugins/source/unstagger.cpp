@@ -160,7 +160,7 @@ void unstagger::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short 
 		himan::matrix<double> filter_kernel_U(2, 1, 1, MissingDouble());
 		filter_kernel_U.Fill(0.5);
 
-		himan::matrix<double> unstaggered_U = numerical_functions::Filter2D(UInfo->Data(), filter_kernel_U);
+		himan::matrix<double> unstaggered_U = numerical_functions::Filter2D<double>(UInfo->Data(), filter_kernel_U);
 
 		myTargetInfo->Index<param>(0);
 
@@ -171,7 +171,7 @@ void unstagger::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short 
 		himan::matrix<double> filter_kernel_V(1, 2, 1, MissingDouble());
 		filter_kernel_V.Fill(0.5);
 
-		himan::matrix<double> unstaggered_V = numerical_functions::Filter2D(VInfo->Data(), filter_kernel_V);
+		himan::matrix<double> unstaggered_V = numerical_functions::Filter2D<double>(VInfo->Data(), filter_kernel_V);
 
 		myTargetInfo->Index<param>(1);
 		b = myTargetInfo->Base();

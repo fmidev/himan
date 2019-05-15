@@ -154,7 +154,7 @@ filter:Fill(1/9)
 local Nmat = matrix(result:GetGrid():GetNi(), result:GetGrid():GetNj(), 1, 0)
 Nmat:SetValues(TOTN)
 
-local Nfilt = Filter2D(Nmat, filter)
+local Nfilt = Filter2D(Nmat, filter, configuration:GetUseCuda())
 
 result:SetParam(param("N-PRCNT"))
 result:SetValues(Nfilt:GetValues())

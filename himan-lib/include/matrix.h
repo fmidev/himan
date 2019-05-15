@@ -230,6 +230,12 @@ class matrix
 		return itsData.data();
 	}
 
+	const T* ValuesAsPOD() const
+	{
+		ASSERT(itsData.size());
+		return itsData.data();
+	}
+
 	std::vector<T>& Values()
 	{
 		return itsData;

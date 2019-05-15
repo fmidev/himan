@@ -10,39 +10,66 @@ using namespace himan;
 using namespace numerical_functions;
 using namespace Eigen;
 
-matrix<double> numerical_functions::Filter2D(const matrix<double>& A, const matrix<double>& B)
+template <typename T>
+matrix<T> numerical_functions::Filter2D(const matrix<T>& A, const matrix<T>& B, bool useCuda)
 {
-	return Reduce2D(A, B,
-	                [](double& val1, double& val2, const double& a, const double& b) {
-		                if (IsValid(a * b))
-		                {
-			                val1 += a * b;
-			                val2 += b;
-		                }
-	                },
-	                [](const double& val1, const double& val2) { return val2 == 0.0 ? MissingDouble() : val1 / val2; },
-	                0.0, 0.0);
+	if (useCuda)
+	{
+		return Filter2DGPU(A, B);
+	}
+
+	return Reduce2D<T>(A, B,
+	                   [](T& val1, T& val2, const T& a, const T& b) {
+		                   if (IsValid(a * b))
+		                   {
+			                   val1 += a * b;
+			                   val2 += b;
+		                   }
+	                   },
+	                   [](const T& val1, const T& val2) { return val2 == T(0) ? MissingValue<T>() : val1 / val2; },
+	                   T(0), T(0));
 }
 
-matrix<double> numerical_functions::Max2D(const matrix<double>& A, const matrix<double>& B)
+template matrix<double> numerical_functions::Filter2D(const matrix<double>&, const matrix<double>& B, bool);
+template matrix<float> numerical_functions::Filter2D(const matrix<float>&, const matrix<float>& B, bool);
+
+template <typename T>
+matrix<T> numerical_functions::Max2D(const matrix<T>& A, const matrix<T>& B, bool useCuda)
 {
-	return Reduce2D(A, B,
-	                [](double& val1, double& val2, const double& a, const double& b) {
-		                if (IsValid(a * b))
-			                val1 = !(a * b <= val1) ? a : val1;
-	                },
-	                [](const double& val1, const double& val2) { return val1; }, MissingDouble(), 0.0);
+	if (useCuda)
+	{
+		return Max2DGPU(A, B);
+	}
+
+	return Reduce2D<T>(A, B,
+	                   [](T& val1, T& val2, const T& a, const T& b) {
+		                   if (IsValid(a * b))
+			                   val1 = !(a * b <= val1) ? a : val1;
+	                   },
+	                   [](const T& val1, const T& val2) { return val1; }, MissingValue<T>(), T(0));
 }
 
-matrix<double> numerical_functions::Min2D(const matrix<double>& A, const matrix<double>& B)
+template matrix<double> numerical_functions::Max2D(const matrix<double>&, const matrix<double>& B, bool);
+template matrix<float> numerical_functions::Max2D(const matrix<float>&, const matrix<float>& B, bool);
+
+template <typename T>
+matrix<T> numerical_functions::Min2D(const matrix<T>& A, const matrix<T>& B, bool useCuda)
 {
-	return Reduce2D(A, B,
-	                [](double& val1, double& val2, const double& a, const double& b) {
-		                if (IsValid(a * b))
-			                val1 = !(a * b >= val1) ? a : val1;
-	                },
-	                [](const double& val1, const double& val2) { return val1; }, MissingDouble(), 0.0);
+	if (useCuda)
+	{
+		return Min2DGPU(A, B);
+	}
+
+	return Reduce2D<T>(A, B,
+	                   [](T& val1, T& val2, const T& a, const T& b) {
+		                   if (IsValid(a * b))
+			                   val1 = !(a * b >= val1) ? a : val1;
+	                   },
+	                   [](const T& val1, const T& val2) { return val1; }, MissingValue<T>(), T(0));
 }
+
+template matrix<double> numerical_functions::Min2D(const matrix<double>&, const matrix<double>& B, bool);
+template matrix<float> numerical_functions::Min2D(const matrix<float>&, const matrix<float>& B, bool);
 
 template <typename T>
 std::pair<std::vector<T>, std::vector<T>> numerical_functions::LegGauss(size_t N, bool computeWeights)
