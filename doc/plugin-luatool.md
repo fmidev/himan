@@ -23,16 +23,22 @@ In lua enumerators are accessed using a class prefix, like
 HPLevelType
     kUnknownLevel = 0
     kGround = 1
+    kMaximumWind = 6
     kTopOfAtmosphere = 8
+    kIsoThermal = 20
+    kLake = 21
     kPressure = 100
+    kPressureDelta = 101
     kMeanSea = 102
     kAltitude = 103
     kHeight = 105
+    kHeightLayer = 106
     kHybrid = 109
     kGroundDepth = 112
     kDepth = 160
     kEntireAtmosphere = 200
     kEntireOcean = 201
+    kMaximumThetaE = 246
 
 HPParameterUnit
     kHPa = 5 // hectopascal
@@ -42,6 +48,9 @@ HPTimeResolution
     kUnknownTimeResolution = 0
     kHourResolution = 1
     kMinuteResolution = 2
+    kYearResolution = 3
+    kMonthResulution = 4
+    kDayResolution = 5
 
 HPFileType
     kUnknownFile = 0
