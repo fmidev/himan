@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 19.5.6
-Release: 2.el7.fmi
+Version: 19.5.15
+Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -115,6 +115,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed May 15 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.5.15-1.fmi
+- Reduce2DGPU added
 * Mon May  6 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.5.6-2.fmi
 - Stability crash bugfix
 * Mon May  6 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.5.6-1.fmi

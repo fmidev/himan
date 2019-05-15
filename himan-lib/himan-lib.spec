@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 19.5.7
+Version: 19.5.15
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -62,6 +62,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Wed May 15 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.5.15-1.fmi
+- Reduce2DGPU added
 * Tue May  7 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.5.7-1.fmi
 - Minor bugfix to modifier
 * Mon May  6 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.5.6-2.fmi
