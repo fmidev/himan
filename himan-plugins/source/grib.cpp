@@ -1929,6 +1929,7 @@ void grib::ReadData(shared_ptr<info<T>> newInfo, bool readPackedData) const
 
 		if (decodePrecipitationForm)
 		{
+			itsLogger.Trace("Decoding precipitation form grib2 values");
 			DecodePrecipitationFormFromGrib2(dm.Values());
 		}
 

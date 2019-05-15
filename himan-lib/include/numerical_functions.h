@@ -16,7 +16,8 @@ namespace numerical_functions
  * @return Data convolved by kernel
  */
 
-himan::matrix<double> Filter2D(const himan::matrix<double>& A, const himan::matrix<double>& B);
+template <typename T>
+himan::matrix<T> Filter2D(const himan::matrix<T>& A, const himan::matrix<T>& B, bool useCuda = false);
 
 /**
  * @brief Compute the maximum value in matrix A from the area specified by
@@ -31,7 +32,8 @@ himan::matrix<double> Filter2D(const himan::matrix<double>& A, const himan::matr
  * @return Maximum data
  */
 
-himan::matrix<double> Max2D(const himan::matrix<double>& A, const himan::matrix<double>& B);
+template <typename T>
+himan::matrix<T> Max2D(const himan::matrix<T>& A, const himan::matrix<T>& B, bool useCuda = false);
 
 /**
  * @brief Compute the minimum value in matrix A from the area specified by
@@ -43,25 +45,30 @@ himan::matrix<double> Max2D(const himan::matrix<double>& A, const himan::matrix<
  *
  * @param A Data
  * @param B Kernel
- * @return Miniimum data
+ * @return Minimum data
  */
 
-himan::matrix<double> Min2D(const himan::matrix<double>& A, const himan::matrix<double>& B);
+template <typename T>
+himan::matrix<T> Min2D(const himan::matrix<T>& A, const himan::matrix<T>& B, bool useCuda = false);
 
-template <class T, class S>
-himan::matrix<double> Reduce2D(const himan::matrix<double>& A, const himan::matrix<double>& B, T&& f, S&& g,
-                               double init1, double init2);
-
-/*
- * CUDA version of Filter2D
+/**
+ * @brief Compute the probability of some condition in matrix A from the area specified by
+ * matrix B
+ *
+ * Lambda function f is used to decide if given value fills the condition.
+ *
+ * @param A Data
+ * @param B Kernel
+ * @return Probability (0 to 1)
  */
+
+template <typename T, class F>
+himan::matrix<T> Prob2D(const himan::matrix<T>& A, const himan::matrix<T>& B, F&& f);
+
+template <typename T, class F, class G>
+himan::matrix<T> Reduce2D(const himan::matrix<T>& A, const himan::matrix<T>& B, F&& f, G&& g, T init1, T init2);
 
 #ifdef HAVE_CUDA
-
-/* Inline CUDA functions for accessing / setting the input matrix elements */
-CUDA_DEVICE size_t CudaMatrixIndex(size_t x, size_t y, size_t z, size_t W, size_t H);
-CUDA_DEVICE void CudaMatrixSet(darr_t C, size_t x, size_t y, size_t z, size_t W, size_t H, double v);
-
 /**
  * @brief Structure passed to CUDA Filter2D kernel containing the input matrix
  * sizes.
@@ -71,95 +78,29 @@ CUDA_DEVICE void CudaMatrixSet(darr_t C, size_t x, size_t y, size_t z, size_t W,
 
 struct filter_opts
 {
-	int aDimX;           /**< input matrix width */
-	int aDimY;           /**< input matrix height */
-	int bDimX;           /**< convolution kernel width */
-	int bDimY;           /**< convolution kernel height */
-	double missingValue; /**< input matrix missing value (used for detecting
-	                        missing values in the CUDA kernel) */
+	int aDimX; /**< input matrix width */
+	int aDimY; /**< input matrix height */
+	int bDimX; /**< convolution kernel width */
+	int bDimY; /**< convolution kernel height */
 };
 
-/**
- * @brief Filter2D CUDA Kernel
- * @param A Input data
- * @param B Convolution kernel
- * @param C Output matrix of the same size as A
- * @param opts Structure filled with the dimensions of the matrices A, B, C
- */
+template <typename T>
+himan::matrix<T> Filter2DGPU(const matrix<T>& A, const matrix<T>& B);
 
-#ifdef __CUDACC__
-CUDA_KERNEL void Filter2DCuda(cdarr_t A, cdarr_t B, darr_t C, filter_opts opts)
-{
-	const double missing = opts.missingValue;
+template <typename T>
+himan::matrix<T> Max2DGPU(const matrix<T>& A, const matrix<T>& B);
 
-	const int kCenterX = opts.bDimX / 2;
-	const int kCenterY = opts.bDimY / 2;
+template <typename T>
+himan::matrix<T> Min2DGPU(const matrix<T>& A, const matrix<T>& B);
 
-	const int M = opts.aDimX;
-	const int N = opts.aDimY;
+template <typename T>
+himan::matrix<T> ProbLimitGt2DGPU(const matrix<T>& A, const matrix<T>& B, T limit);
 
-	const int i = blockIdx.x * blockDim.x + threadIdx.x;
-	const int j = blockIdx.y * blockDim.y + threadIdx.y;
+template <typename T>
+himan::matrix<T> ProbLimitEq2DGPU(const matrix<T>& A, const matrix<T>& B, T limit);
 
-	if (i < M && j < N)
-	{
-		double convolutionValue = 0.0;
-		double kernelWeightSum = 0.0;
-
-		for (int n = 0; n < opts.bDimY; n++)
-		{
-			const int nn = opts.bDimY - 1 - n;
-
-			for (int m = 0; m < opts.bDimX; m++)
-			{
-				const int mm = opts.bDimX - 1 - m;
-
-				const int ii = i + (m - kCenterX);
-				const int jj = j + (n - kCenterY);
-
-				if (ii >= 0 && ii < M && jj >= 0 && jj < N)
-				{
-					const int aIdx = CudaMatrixIndex(ii, jj, 0, M, N);
-					const int bIdx = CudaMatrixIndex(mm, nn, 0, opts.bDimX, opts.bDimY);
-					const double aVal = A[aIdx];
-					const double bVal = B[bIdx];
-
-					if (aVal == missing || IsMissing(aVal))
-					{
-						continue;
-					}
-					convolutionValue += aVal * bVal;
-					kernelWeightSum += bVal;
-				}
-			}
-		}
-		CudaMatrixSet(C, i, j, 0, M, N, kernelWeightSum == 0 ? MissingDouble() : convolutionValue / kernelWeightSum);
-	}
-}
-
-/**
- * @brief himan::matrix indexing for identical behaviour with the CPU Filter2D
- * @param W width of the matrix
- * @param H height of the matrix
- */
-CUDA_DEVICE CUDA_INLINE size_t CudaMatrixIndex(size_t x, size_t y, size_t z, size_t W, size_t H)
-{
-	return z * W * H + y * W + x;
-}
-
-/**
- * @brief Set C at CudaMatrixIndex(x, y, z, W, H) to v
- * @param C matrix to be modified
- * @param v value to be placed at the index
- */
-CUDA_DEVICE CUDA_INLINE void CudaMatrixSet(darr_t C, size_t x, size_t y, size_t z, size_t W, size_t H, double v)
-{
-	const size_t index = CudaMatrixIndex(x, y, z, W, H);
-	C[index] = v;
-}
-
-// __CUDACC__
-#endif
+template <typename T, class F, class G>
+himan::matrix<T> Reduce2DGPU(const himan::matrix<T>& A, const himan::matrix<T>& B, F&& f, G&& g, T init1, T init2);
 
 // HAVE_CUDA
 #endif

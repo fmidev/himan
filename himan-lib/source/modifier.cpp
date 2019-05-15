@@ -719,8 +719,11 @@ void modifier_findheight::Calculate(double theValue, double theHeight, double th
 		itsOutOfBoundHeights[itsIndex] = true;
 	}
 
-	if ((thePreviousValue <= findValue && theValue >= findValue) ||
-	    (thePreviousValue > findValue && theValue <= findValue))
+	// We need to either cross the give threshold or start at the exact value
+	// The comparison operator positioning is important to avoid double-detection of
+	// some threshold value.
+	if (thePreviousValue == findValue || (thePreviousValue < findValue && theValue >= findValue) ||
+	    (thePreviousValue >= findValue && theValue < findValue))
 	{
 		double actualHeight =
 		    interpolation::Linear<double>(findValue, thePreviousValue, theValue, thePreviousHeight, theHeight);
