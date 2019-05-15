@@ -91,7 +91,7 @@ void lagged_ensemble::VerifyValidForecastCount(int numLoadedForecasts, int numMi
 {
 	if (itsMaximumMissingForecasts > 0)
 	{
-		if (numMissingForecasts >= itsMaximumMissingForecasts)
+		if (numMissingForecasts > itsMaximumMissingForecasts)
 		{
 			itsLogger.Fatal("Maximum number of missing fields " + std::to_string(numMissingForecasts) + "/" +
 			                std::to_string(itsMaximumMissingForecasts) + " reached, aborting");
