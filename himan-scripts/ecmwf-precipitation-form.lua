@@ -34,10 +34,10 @@ for i=1, #pf do
   elseif _pf == 3 then
     -- freezing rain
     res = 5
-  elseif _pf == 5 or _pf == 6 then
+  elseif _pf == 5 then
     -- snow
     res = 3
-  elseif _pf == 7 then
+  elseif _pf == 6 or _pf == 7 then
     -- sleet
     res = 2
   elseif _pf == 8 then
