@@ -499,31 +499,5 @@ CUDA_DEVICE Type Lift_(Type P, Type T, Type TD, Type targetP)
 	return MoistLift_<Type>(P, T, targetP);
 }
 
-namespace smarttool
-{
-/**
- * @brief Calculate equivalent potential temperature.
- *
- * Original:
- * double NFmiSoundingFunctions::CalcThetaE(double T, double Td, double P)
- *
- * Function has been modified so that it takes humidity as an argument;
- * the original function took dewpoint and calculated humidity from that.
- */
-
-template <typename Type>
-CUDA_DEVICE Type ThetaE_(Type T, Type RH, Type P)
-{
-	ASSERT((RH >= 0 && RH < 103) || IsMissing(RH));
-	ASSERT(T > 150 || IsMissing(T));
-	ASSERT(T < 350 || IsMissing(T));
-	ASSERT(P > 1500 || IsMissing(P));
-
-	const Type tpot = himan::metutil::Theta_<Type>(T, P);
-	const Type w = himan::metutil::smarttool::MixingRatio_<Type>(T, RH, P);
-	return tpot + 3 * w;
-}
-
-}  // namespace smarttool
 }  // namespace metutil
 }  // namespace himan
