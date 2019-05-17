@@ -21,8 +21,8 @@ namespace metutil
 template <typename Type>
 CUDA_DEVICE Type E_(Type R, Type P)
 {
-	ASSERT(P > 1000);
-	ASSERT(R > 0.001);
+	ASSERT(IsMissing(P) || P > 1000);
+	ASSERT(IsMissing(R) || R > 0.001);
 
 	// R is g/kg, converting it to g/g gives multiplier 1000
 
