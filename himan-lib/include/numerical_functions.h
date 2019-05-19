@@ -122,7 +122,7 @@ std::vector<std::vector<T>> Arange(const std::vector<T>& start, const std::vecto
 	{
 		const T length = (stop[i] - start[i]) / step;
 
-		if (length <= 0 || IsMissing(length))
+		if (length <= 0 || IsMissing(length) || length >= (std::numeric_limits<T>::max() - T(1)))
 		{
 			continue;
 		}
