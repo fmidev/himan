@@ -4,7 +4,7 @@
 Summary: himan-plugins library
 Name: %{LIBNAME}
 Version: 19.6.12
-Release: 1.el7.fmi
+Release: 2.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -115,6 +115,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Jun 12 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.6.12-2.fmi
+- hybrid_height: fallback method for MNWC sub-hour
 * Wed Jun 12 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.6.12-1.fmi
 - numerical_functions tweaking
 * Wed May 15 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.5.15-1.fmi
