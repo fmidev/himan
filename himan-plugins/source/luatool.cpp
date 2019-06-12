@@ -1412,8 +1412,11 @@ void BindLib(lua_State* L)
 		      .def("Result", &modifier_wrapper::mean::Result),
 	          // numerical_functions namespace
 	          def("Filter2D", &numerical_functions::Filter2D<double>),
+	          def("Filter2D", &numerical_functions::Filter2D<float>),
 	          def("Max2D", &numerical_functions::Max2D<double>),
+	          def("Max2D", &numerical_functions::Max2D<float>),
 	          def("Min2D", &numerical_functions::Min2D<double>),
+	          def("Min2D", &numerical_functions::Min2D<float>),
                   def("ProbLimitGt2D", &luabind_workaround::ProbLimitGt2D<double>),
                   def("ProbLimitGt2D", &luabind_workaround::ProbLimitGt2D<float>),
                   def("ProbLimitEq2D", &luabind_workaround::ProbLimitEq2D<double>),

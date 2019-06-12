@@ -64,6 +64,12 @@ void hybrid_height::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned sho
 	if (itsUseGeopotential)
 	{
 		ret = WithGeopotential(myTargetInfo);
+
+		// Workaround for MNWC which doesn't have geopotential for sub-hour data (as of 2019-06-12)
+		if (!ret && itsConfiguration->TargetProducer().Id() == 270)
+		{
+			ret = WithHypsometricEquation(myTargetInfo);
+		}
 	}
 	else
 	{
@@ -151,7 +157,19 @@ shared_ptr<himan::info<float>> hybrid_height::GetSurfacePressure(shared_ptr<hima
 	}
 	else
 	{
-		ret = Fetch<float>(forecastTime, level(himan::kHeight, 0), PParam, forecastType, false);
+		ret = Fetch<float>(forecastTime, level(himan::kHeight, 0), param("P-PA"), forecastType, false);
+
+		if (ret)
+		{
+			auto newInfo = make_shared<info<float>>(*ret);
+			newInfo->Set<param>(param("P-HPA"));
+			newInfo->Create(ret->Base());
+
+			auto& v = VEC(newInfo);
+			transform(v.begin(), v.end(), v.begin(), [](float vv) { return vv * 0.01f; });
+
+			ret = newInfo;
+		}
 	}
 
 	return ret;
