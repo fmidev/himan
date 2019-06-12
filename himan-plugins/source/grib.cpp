@@ -1798,7 +1798,7 @@ himan::producer grib::ReadProducer(const search_options& options) const
 		}
 		else
 		{
-			if (centre == 98 && (process <= 148 && process >= 142))
+			if (centre == 98 && (process <= 149 && process >= 142))
 			{
 				if (typeId == 1 || typeId == 2)
 				{
