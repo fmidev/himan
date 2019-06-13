@@ -194,8 +194,210 @@ himan::matrix<T> Prob2D(const himan::matrix<T>& A, const himan::matrix<T>& B, F&
 			                val2 += b;
 		                }
 	                },
-	                [=](const T& val1, const T& val2) { return val2 = T(0) ? MissingValue<T>() : val1 / val2; }, T(0),
+	                [=](const T& val1, const T& val2) { return T(0) ? MissingValue<T>() : val1 / val2; }, T(0),
 	                T(0));
+}
+
+template <typename T, class F>
+himan::matrix<size_t> FindIndex2D(const himan::matrix<T>& A, const himan::matrix<T>& B, F&& f,
+                               T init1)
+{
+        // find center position of kernel (half of kernel size)
+        himan::matrix<size_t> ret(A.SizeX(), A.SizeY(), 1, kHPMissingInt);
+
+        T current_value;  // 
+        size_t current_index;  // 
+                                   
+        int ASizeX = int(A.SizeX());
+        int ASizeY = int(A.SizeY());
+        int BSizeX = int(B.SizeX());
+        int BSizeY = int(B.SizeY());
+
+        int kCenterX = BSizeX / 2;
+        int kCenterY = BSizeY / 2;
+
+        for (int j = kCenterY; j < ASizeY - kCenterY; ++j)  // columns
+        {
+                for (int i = kCenterX; i < ASizeX - kCenterX; ++i)  // rows
+                {
+                        current_value = init1;
+                        current_index = 0;
+
+                        for (int n = 0; n < BSizeY; ++n)  // kernel columns
+                        {
+                                int nn = BSizeY - 1 - n;          // column index of flipped kernel
+                                for (int m = 0; m < BSizeX; ++m)  // kernel rows
+                                {
+                                        int mm = BSizeX - 1 - m;  // row index of flipped kernel
+
+                                        // index of input signal, used for checking boundary
+                                        int ii = i + (m - kCenterX);
+                                        int jj = j + (n - kCenterY);
+
+                                        const T a = A.At(ii, jj, 0);
+                                        const T b = B.At(mm, nn, 0);
+                                        if(f(current_value, a, b))
+					{
+						current_index = A.Index(ii,jj,0);
+						current_value = a;
+					}
+                                }
+                        }
+                        const size_t index = ret.Index(i, j, 0);
+                        ret[index] = current_index;
+                }
+        }
+        // treat boundaries separately
+        // weights get adjusted so that the sum of weights for the active part of the kernel remains 1
+        // calculate for upper boundary
+        for (int j = 0; j < kCenterY; ++j)  // columns
+        {
+                for (int i = 0; i < ASizeX; ++i)  // rows
+                {
+                        current_value = init1;
+                        current_index = 0;
+
+                        for (int n = 0; n < BSizeY; ++n)  // kernel columns
+                        {
+                                int nn = BSizeY - 1 - n;          // column index of flipped kernel
+                                for (int m = 0; m < BSizeX; ++m)  // kernel rows
+                                {
+                                        int mm = BSizeX - 1 - m;  // row index of flipped kernel
+
+                                        // index of input signal, used for checking boundary
+
+                                        int ii = i + (m - kCenterX);
+                                        int jj = j + (n - kCenterY);
+
+                                        // ignore input samples which are out of bound
+                                        if (ii >= 0 && ii < ASizeX && jj >= 0 && jj < ASizeY)
+                                        {
+                                                const T a = A.At(ii, jj, 0);
+                                                const T b = B.At(mm, nn, 0);
+						if(f(current_value, a, b))
+                                        	{
+                                                	current_index = A.Index(ii,jj,0);
+                                                	current_value = a;
+                                        	}
+                                        }
+                                }
+                        }
+                        const size_t index = ret.Index(i, j, 0);
+                        ret[index] = current_index;
+                }
+        }
+        // calculate for lower boundary
+        for (int j = ASizeY - kCenterY; j < ASizeY; ++j)  // columns
+        {
+                for (int i = 0; i < ASizeX; ++i)  // rows
+                {
+                        current_value = init1;
+                        current_index = 0;
+
+                        for (int n = 0; n < BSizeY; ++n)  // kernel columns
+                        {
+                                int nn = BSizeY - 1 - n;  // column index of flipped kernel
+
+                                for (int m = 0; m < BSizeX; ++m)  // kernel rows
+                                {
+                                        int mm = BSizeX - 1 - m;  // row index of flipped kernel
+
+                                        // index of input signal, used for checking boundary
+                                        int ii = i + (m - kCenterX);
+                                        int jj = j + (n - kCenterY);
+
+                                        // ignore input samples which are out of bound
+                                        if (ii >= 0 && ii < ASizeX && jj >= 0 && jj < ASizeY)
+                                        {
+                                                const T a = A.At(ii, jj, 0);
+                                                const T b = B.At(mm, nn, 0);
+                                                if(f(current_value, a, b))
+                                                {
+                                                        current_index = A.Index(ii,jj,0);
+                                                        current_value = a;
+                                                }
+                                        }
+                                }
+                        }
+                        const size_t index = ret.Index(i, j, 0);
+                        ret[index] = current_index;
+                }
+        }
+        // calculate for left boundary
+        for (int j = 0; j < ASizeY; ++j)  // columns
+        {
+                for (int i = 0; i < kCenterX; ++i)  // rows
+                {
+                        current_value = init1;
+                        current_index = 0;
+
+                        for (int n = 0; n < BSizeY; ++n)  // kernel columns
+                        {
+                                int nn = BSizeY - 1 - n;  // column index of flipped kernel
+
+                                for (int m = 0; m < BSizeX; ++m)  // kernel rows
+                                {
+                                        int mm = BSizeX - 1 - m;  // row index of flipped kernel
+
+                                        // index of input signal, used for checking boundary
+                                        int ii = i + (m - kCenterX);
+                                        int jj = j + (n - kCenterY);
+
+                                        // ignore input samples which are out of bound
+                                        if (ii >= 0 && ii < ASizeX && jj >= 0 && jj < ASizeY)
+                                        {
+                                                const T a = A.At(ii, jj, 0);
+                                                const T b = B.At(mm, nn, 0);
+                                                if(f(current_value, a, b))
+                                                {
+                                                        current_index = A.Index(ii,jj,0);
+                                                        current_value = a;
+                                                }
+                                        }
+                                }
+                        }
+                        const size_t index = ret.Index(i, j, 0);
+                        ret[index] = current_index;
+                }
+        }
+        // calculate for right boundary
+        for (int j = 0; j < ASizeY; ++j)  // columns
+        {
+                for (int i = ASizeX - kCenterX; i < ASizeX; ++i)  // rows
+                {
+                        current_value = init1;
+                        current_index = 0;
+
+                        for (int n = 0; n < BSizeY; ++n)  // kernel columns
+                        {
+                                int nn = BSizeY - 1 - n;          // column index of flipped kernel
+                                for (int m = 0; m < BSizeX; ++m)  // kernel rows
+                                {
+                                        int mm = BSizeX - 1 - m;  // row index of flipped kernel
+
+                                        // index of input signal, used for checking boundary
+                                        int ii = i + (m - kCenterX);
+                                        int jj = j + (n - kCenterY);
+
+                                        // ignore input samples which are out of bound
+                                        if (ii >= 0 && ii < ASizeX && jj >= 0 && jj < ASizeY)
+                                        {
+                                                const T a = A.At(ii, jj, 0);
+                                                const T b = B.At(mm, nn, 0);
+                                                if(f(current_value, a, b))
+                                                {
+                                                        current_index = A.Index(ii,jj,0);
+                                                        current_value = a;
+                                                }
+                                        }
+                                }
+                        }
+                        const size_t index = ret.Index(i, j, 0);
+                        ret[index] = current_index;
+                }
+        }
+
+	return ret;
 }
 
 #ifdef __CUDACC__

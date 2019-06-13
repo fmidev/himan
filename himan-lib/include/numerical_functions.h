@@ -52,6 +52,42 @@ template <typename T>
 himan::matrix<T> Min2D(const himan::matrix<T>& A, const himan::matrix<T>& B, bool useCuda = false);
 
 /**
+ * @brief A generalized filter from that filters like Min,Max,Mean etc. can be derived
+ * for  matrix A from the area specified by matrix B
+ *
+ * Matrix B acts also as a weight; a default boxed convolution would have all matrix B 
+ * elements set to 1, but if for example origin needs to be excluded, that value
+ * can be set to Missing.
+ *
+ * @param A Data
+ * @param B Kernel
+ * @param f Filter function void f(double& sum_of_values, double& sum_of_weights, double value, double weight)
+ * @param g Weight normalization function double g(double& sum_of_values, double& sum_of_weights)
+ * @param init1 Initial value of generalized value summation
+ * @param init2 Inital value of weight summation
+ */
+
+template <typename T, class F>
+himan::matrix<size_t> FindIndex2D(const himan::matrix<T>& A, const himan::matrix<T>& B, F&& f,
+                               T init1);
+
+/**
+ * @brief Compute the index of the maximum value in matrix A from the area specified by
+ * matrix B
+ *
+ * Matrix B acts as a mask; a default boxed maximum search would have all matrix B
+ * elements set to 1, but if for example origin needs to be excluded, that value
+ * can be set to Missing.
+ *
+ * @param A Data
+ * @param B Kernel
+ * @return Index of maximum data
+ */
+
+template <typename T>
+himan::matrix<size_t> IndexMax2D(const himan::matrix<T>& A, const himan::matrix<T>& B);
+
+/**
  * @brief Compute the probability of some condition in matrix A from the area specified by
  * matrix B
  *
@@ -64,6 +100,22 @@ himan::matrix<T> Min2D(const himan::matrix<T>& A, const himan::matrix<T>& B, boo
 
 template <typename T, class F>
 himan::matrix<T> Prob2D(const himan::matrix<T>& A, const himan::matrix<T>& B, F&& f);
+
+/**
+ * @brief A generalized filter from that filters like Min,Max,Mean etc. can be derived
+ * for  matrix A from the area specified by matrix B
+ *
+ * Matrix B acts also as a weight; a default boxed convolution would have all matrix B 
+ * elements set to 1, but if for example origin needs to be excluded, that value
+ * can be set to Missing.
+ *
+ * @param A Data
+ * @param B Kernel
+ * @param f Filter function void f(double& sum_of_values, double& sum_of_weights, double value, double weight)
+ * @param g Weight normalization function double g(double& sum_of_values, double& sum_of_weights)
+ * @param init1 Initial value of generalized value summation
+ * @param init2 Inital value of weight summation
+ */
 
 template <typename T, class F, class G>
 himan::matrix<T> Reduce2D(const himan::matrix<T>& A, const himan::matrix<T>& B, F&& f, G&& g, T init1, T init2);
