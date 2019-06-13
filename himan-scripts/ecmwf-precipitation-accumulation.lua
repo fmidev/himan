@@ -19,7 +19,7 @@
   -- accumulated precipitation between two timesteps is the difference of total precipitation values at given 
   -- convert from m to mm
   for i=1, #currRR do
-    acc[i] = (currRR[i] - prevRR[i])/1000
+    acc[i] = (currRR[i] - prevRR[i])*1000
   end
 
   result:SetValues(acc)
