@@ -39,8 +39,10 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 		    stoi(r->RadonDB().GetProducerMetaData(itsConfiguration->TargetProducer().Id(), "last hybrid level number"));
 	}
 
-	if (itsConfiguration->TargetProducer().Id() == 240 || itsConfiguration->TargetProducer().Id() == 243)
+	if ((itsConfiguration->TargetProducer().Id() == 240 || itsConfiguration->TargetProducer().Id() == 243) ||
+	    itsConfiguration->TargetProducer().Id() == 270)
 	{
+		// Workaround for MNWC which doesn't have geopotential for sub-hour data (as of 2019-06-12)
 		itsUseGeopotential = false;
 
 		itsThreadDistribution = ThreadDistribution::kThreadForForecastTypeAndTime;
@@ -64,12 +66,6 @@ void hybrid_height::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned sho
 	if (itsUseGeopotential)
 	{
 		ret = WithGeopotential(myTargetInfo);
-
-		// Workaround for MNWC which doesn't have geopotential for sub-hour data (as of 2019-06-12)
-		if (!ret && itsConfiguration->TargetProducer().Id() == 270)
-		{
-			ret = WithHypsometricEquation(myTargetInfo);
-		}
 	}
 	else
 	{
@@ -291,7 +287,7 @@ bool hybrid_height::WithHypsometricEquation(shared_ptr<himan::info<float>>& myTa
 		                     },
 		                     make_shared<info<float>>(*myTargetInfo), PInfo, prevPInfo, TInfo, prevTInfo));
 
-		if (pool.size() == 8)
+		if (pool.size() == 10)
 		{
 			for (auto& f : pool)
 			{

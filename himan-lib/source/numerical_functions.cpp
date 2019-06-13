@@ -5,6 +5,7 @@
 #include "numerical_functions.h"
 #include <Eigen/Dense>
 #include <algorithm>
+#include <limits>
 
 using namespace himan;
 using namespace numerical_functions;
@@ -70,6 +71,18 @@ matrix<T> numerical_functions::Min2D(const matrix<T>& A, const matrix<T>& B, boo
 
 template matrix<double> numerical_functions::Min2D(const matrix<double>&, const matrix<double>& B, bool);
 template matrix<float> numerical_functions::Min2D(const matrix<float>&, const matrix<float>& B, bool);
+
+template <typename T>
+matrix<size_t> numerical_functions::IndexMax2D(const matrix<T>& A, const matrix<T>& B)
+{
+	return FindIndex2D(A, B,
+			[](T& current_max, const T& a, const T& b) {
+				return (a > current_max) & IsValid(b);
+			}, std::numeric_limits<T>::lowest());
+}
+
+template matrix<size_t> numerical_functions::IndexMax2D(const matrix<float>& A, const matrix<float>& B);
+template matrix<size_t> numerical_functions::IndexMax2D(const matrix<double>& A, const matrix<double>& B);
 
 template <typename T>
 std::pair<std::vector<T>, std::vector<T>> numerical_functions::LegGauss(size_t N, bool computeWeights)

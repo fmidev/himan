@@ -75,7 +75,7 @@ inline CUDA_HOST CUDA_DEVICE bool IsValid(float value) {return !IsMissingFloat(v
 // where "typename" is float or double
 
 template <typename T>
-CUDA_HOST CUDA_DEVICE T MissingValue();
+CUDA_HOST CUDA_DEVICE T MissingValue() { return std::numeric_limits<T>::max(); }
 
 template <>
 CUDA_HOST CUDA_DEVICE
@@ -86,9 +86,9 @@ CUDA_HOST CUDA_DEVICE
 inline float MissingValue() { return MissingFloat(); }
 
 template <typename T>
-inline bool IsMissing(T value) = delete; 
+inline bool IsMissing(T value) { return value == MissingValue<T>(); }
 template <typename T>
-inline bool IsValid(T value) = delete;
+inline bool IsValid(T value) { return !IsMissing(value); }
 
 inline CUDA_HOST CUDA_DEVICE bool IsKHPMissingValue(const double& x) {return x == -999;}
 

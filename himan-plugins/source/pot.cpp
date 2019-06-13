@@ -28,11 +28,6 @@ void pot::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	POT.Unit(kPrcnt);
 
-	if (itsConfiguration->GetValue("strict") == "true")
-	{
-		itsStrictMode = true;
-	}
-
 	SetParams({POT});
 
 	Start();
@@ -44,14 +39,14 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	 * Required source parameters
 	 */
 
-	const param CapeParamEC("CAPE-JKG");
 	const param CapeParamHiman("CAPE1040-JKG");
 	const level MU(kMaximumThetaE, 0);
+	const level ML(kHeightLayer, 500, 0);
 	const param RainParam("RRR-KGM2");
 	const param ELHeight("EL-LAST-M");
 	const param LCLHeight("LCL-M");
 	const param LCLTemp("LCL-K");
-	const param LFCHeight("LFC-M");
+	const param LPLHeight("LPL-M");
 
 	forecast_type forecastType = myTargetInfo->ForecastType();
 	forecast_time forecastTime = myTargetInfo->Time();
@@ -62,27 +57,34 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	myThreadedLogger.Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 	                       static_cast<string>(forecastLevel));
 
-	info_t CAPEMaxInfo, CbTopMaxInfo, LfcMinInfo, RRInfo, LclInfo, LclTempInfo;
+	info_t CAPEMuInfo, CAPEMlInfo, CbTopMaxInfo, RRInfo, LclMuInfo, LclMlInfo, LclMuTempInfo, LclMlTempInfo, LplMuInfo,
+	    LplMlInfo;
 
 	// Fetch params
-	CAPEMaxInfo = Fetch(forecastTime, MU, CapeParamHiman, forecastType, false);
-	if (!CAPEMaxInfo)
-		CAPEMaxInfo = Fetch(forecastTime, forecastLevel, CapeParamEC, forecastType, false);
+	CAPEMuInfo = Fetch(forecastTime, MU, CapeParamHiman, forecastType, false);
+	CAPEMlInfo = Fetch(forecastTime, ML, CapeParamHiman, forecastType, false);
+
 	CbTopMaxInfo = Fetch(forecastTime, MU, ELHeight, forecastType, false);
-	LfcMinInfo = Fetch(forecastTime, MU, LFCHeight, forecastType, false);
-	LclInfo = Fetch(forecastTime, MU, LCLHeight, forecastType, false);
-	LclTempInfo = Fetch(forecastTime, MU, LCLTemp, forecastType, false);
+
+	LclMuInfo = Fetch(forecastTime, MU, LCLHeight, forecastType, false);
+	LclMuTempInfo = Fetch(forecastTime, MU, LCLTemp, forecastType, false);
+	LclMlInfo = Fetch(forecastTime, ML, LCLHeight, forecastType, false);
+	LclMlTempInfo = Fetch(forecastTime, ML, LCLTemp, forecastType, false);
+
+	LplMuInfo = Fetch(forecastTime, MU, LPLHeight, forecastType, false);
+
 	RRInfo = Fetch(forecastTime, forecastLevel, RainParam, forecastType, false);
 
-	if (!CAPEMaxInfo || !CbTopMaxInfo || !LfcMinInfo || !LclInfo || !LclTempInfo || !RRInfo)
+	if (!CAPEMuInfo || !CAPEMlInfo || !CbTopMaxInfo || !LclMuInfo || !LclMuTempInfo || !LclMlInfo || !LclMlTempInfo ||
+	    !LplMuInfo || !RRInfo)
 	{
 		myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
 		                         static_cast<string>(forecastLevel));
 		return;
 	}
 
-	const double smallRadius = 35;
-	const double largeRadius = 62;
+	const double smallRadius = 20;
+	const double largeRadius = 35;
 
 	int smallFilterSizeX = 3;
 	int smallFilterSizeY = 3;
@@ -114,30 +116,40 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	// filters
 	himan::matrix<double> small_filter_kernel(smallFilterSizeX, smallFilterSizeY, 1, MissingDouble(), 1.0);
-	himan::matrix<double> large_filter_kernel(largeFilterSizeX, largeFilterSizeY, 1, MissingDouble(),
-	                                          1.0 / (largeFilterSizeX * largeFilterSizeY));
+	himan::matrix<double> large_filter_kernel(largeFilterSizeX, largeFilterSizeY, 1, MissingDouble(), 1.0);
 
-	// Cape filtering
-	himan::matrix<double> filtered_CAPE =
-	    numerical_functions::Max2D<double>(CAPEMaxInfo->Data(), small_filter_kernel, itsConfiguration->UseCuda());
+	// Find nearby (20km radius) gridpoint X that gives maximum most unstable CAPE
+	// The algorithm then uses CAPE, LPL, EL, LCL and CIN values from the specific gridpoint X
+	himan::matrix<size_t> filtered_CAPE_indices =
+	    numerical_functions::IndexMax2D(CAPEMuInfo->Data(), small_filter_kernel);
 
-	// Cb_top filtering
-	himan::matrix<double> filtered_CbTop =
-	    numerical_functions::Max2D<double>(CbTopMaxInfo->Data(), small_filter_kernel, itsConfiguration->UseCuda());
+	// There are two paths in the algorithm depending on LPL:
+	// If convection is approx. surface based, LPL(mu) < 250, use mean-layer (ml) parameters
+	// If convection is elevated, LPL(mu) > 250, use most unstable (mu) parameters
+	std::vector<double> Cape, Lcl, LclT;
+	Cape.reserve(myTargetInfo->Data().Size());
+	Lcl.reserve(myTargetInfo->Data().Size());
+	LclT.reserve(myTargetInfo->Data().Size());
 
-	// LFC filtering
-	himan::matrix<double> filtered_LFC =
-	    numerical_functions::Min2D<double>(LfcMinInfo->Data(), small_filter_kernel, itsConfiguration->UseCuda());
+	for (size_t idx : filtered_CAPE_indices.Values())
+	{
+		if (LplMuInfo->Data().At(idx) < 250)
+		{
+			Cape.push_back(CAPEMlInfo->Data().At(idx));
+			Lcl.push_back(LclMlInfo->Data().At(idx));
+			LclT.push_back(LclMlTempInfo->Data().At(idx));
+		}
+		else
+		{
+			Cape.push_back(CAPEMuInfo->Data().At(idx));
+			Lcl.push_back(LclMuInfo->Data().At(idx));
+			LclT.push_back(LclMuTempInfo->Data().At(idx));
+		}
+	}
 
 	// Lift filtering
-	himan::matrix<double> filtered_PoLift =
-	    numerical_functions::Reduce2D<double>(RRInfo->Data(), large_filter_kernel,
-	                                          [=](double& val1, double& val2, const double& a, const double& b) {
-		                                          val2++;
-		                                          if (IsValid(a) && a >= 0.1)
-			                                          val1 += b;
-	                                          },
-	                                          [](const double& val1, const double& val2) { return val1; }, 0.0, 0.0);
+	himan::matrix<double> filtered_PoLift = numerical_functions::Prob2D<double>(
+	    RRInfo->Data(), large_filter_kernel, [](const double& x) { return x >= 0.1; });
 
 	// hitool to find Cb/LCL Top temps
 	auto h = GET_PLUGIN(hitool);
@@ -149,7 +161,7 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	try
 	{
-		CbTopTemp = h->VerticalValue<double>(param("T-K"), filtered_CbTop.Values());
+		CbTopTemp = h->VerticalValue<double>(param("T-K"), VEC(CbTopMaxInfo));
 	}
 	catch (const HPExceptionType& e)
 	{
@@ -164,15 +176,15 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	string deviceType = "CPU";
 
 	// starting point of the algorithm POT v2.5
-	for (auto&& tup : zip_range(VEC(myTargetInfo), filtered_CAPE.Values(), filtered_PoLift.Values(),
-	                            filtered_CbTop.Values(), CbTopTemp, filtered_LFC.Values(), VEC(LclTempInfo)))
+	for (auto&& tup :
+	     zip_range(VEC(myTargetInfo), Cape, filtered_PoLift.Values(), VEC(CbTopMaxInfo), CbTopTemp, Lcl, LclT))
 	{
 		double& POT = tup.get<0>();
 		const double& CAPE = tup.get<1>();
 		const double& PoLift = tup.get<2>();
 		const double& Cb_top = tup.get<3>();
 		const double& Cb_top_temp = tup.get<4>() - himan::constants::kKelvin;
-		const double& LFC = tup.get<5>();
+		const double& LCL = tup.get<5>();
 		const double& LCL_temp = tup.get<6>() - himan::constants::kKelvin;
 
 		double PoThermoDyn = 0;  // Probability of ThermoDynamics = todennäköisyys ukkosta suosivalle termodynamiikalle
@@ -184,12 +196,12 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 		// Relaatio pystynopeuden ja todennäköisyyden välillä:
 		// Todennäköisyys kasvaa 0->1, kun pystynopeus kasvaa 5->30 m/s
-		if (verticalVelocity >= 5 && verticalVelocity <= 30)
+		if (verticalVelocity >= 5 && verticalVelocity <= 25)
 		{
-			PoThermoDyn = 0.04 * verticalVelocity - 0.2;
+			PoThermoDyn = 0.05 * verticalVelocity - 0.25;
 		}
 
-		if (verticalVelocity > 30)
+		if (verticalVelocity > 25)
 		{
 			PoThermoDyn = 1;
 		}
@@ -209,9 +221,9 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		// Probability of Mixed Phase
 		// Konvektiopilvessä tulee olla tarpeeksi paksu sekafaasikerros, jotta sähköistyminen voi tapahtua.
 		// Näin ollen pilven pohjan korkeudella (LCL-tasolla) lämpötila ei saa olla kylmempi kuin ~ -12C
-		if (LCL_temp >= -12 && LCL_temp <= 0)
+		if (LCL_temp >= -10 && LCL_temp <= 0)
 		{
-			PoMixedPhase = 0.0833333 * LCL_temp + 1;
+			PoMixedPhase = 0.1 * LCL_temp + 1;
 		}
 
 		if (LCL_temp > 0)
@@ -222,14 +234,14 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		// Probability of Depth
 		// Konvektion tulee tapahtua riittävän paksussa kerroksessa LFC-->EL
 
-		double depth = Cb_top - LFC;
+		double depth = Cb_top - LCL;
 
-		if (depth >= 2000.0 && depth <= 4000.0)
+		if (depth >= 2500.0 && depth <= 5000.0)
 		{
-			PoDepth = 0.0005 * depth - 1;
+			PoDepth = 0.0004 * depth - 1;
 		}
 
-		if (depth > 4000.0)
+		if (depth > 5000.0)
 		{
 			PoDepth = 1;
 		}
