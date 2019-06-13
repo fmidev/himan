@@ -194,7 +194,8 @@ himan::matrix<T> Prob2D(const himan::matrix<T>& A, const himan::matrix<T>& B, F&
 			                val2 += b;
 		                }
 	                },
-	                [=](const T& val1, const T& val2) { return T(0) ? MissingValue<T>() : val1 / val2; }, T(0), T(0));
+	                [=](const T& val1, const T& val2) { return val2 == T(0) ? MissingValue<T>() : val1 / val2; }, T(0),
+	                T(0));
 }
 
 template <typename T, class F>
