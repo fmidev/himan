@@ -55,7 +55,7 @@ himan::matrix<T> Min2D(const himan::matrix<T>& A, const himan::matrix<T>& B, boo
  * @brief A generalized filter from that filters like Min,Max,Mean etc. can be derived
  * for  matrix A from the area specified by matrix B
  *
- * Matrix B acts also as a weight; a default boxed convolution would have all matrix B 
+ * Matrix B acts also as a weight; a default boxed convolution would have all matrix B
  * elements set to 1, but if for example origin needs to be excluded, that value
  * can be set to Missing.
  *
@@ -68,8 +68,7 @@ himan::matrix<T> Min2D(const himan::matrix<T>& A, const himan::matrix<T>& B, boo
  */
 
 template <typename T, class F>
-himan::matrix<size_t> FindIndex2D(const himan::matrix<T>& A, const himan::matrix<T>& B, F&& f,
-                               T init1);
+himan::matrix<size_t> FindIndex2D(const himan::matrix<T>& A, const himan::matrix<T>& B, F&& f, T init1);
 
 /**
  * @brief Compute the index of the maximum value in matrix A from the area specified by
@@ -105,7 +104,7 @@ himan::matrix<T> Prob2D(const himan::matrix<T>& A, const himan::matrix<T>& B, F&
  * @brief A generalized filter from that filters like Min,Max,Mean etc. can be derived
  * for  matrix A from the area specified by matrix B
  *
- * Matrix B acts also as a weight; a default boxed convolution would have all matrix B 
+ * Matrix B acts also as a weight; a default boxed convolution would have all matrix B
  * elements set to 1, but if for example origin needs to be excluded, that value
  * can be set to Missing.
  *
