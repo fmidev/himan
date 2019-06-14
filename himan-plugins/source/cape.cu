@@ -1089,8 +1089,7 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	InitializeArray<float>(d_T, himan::MissingFloat(), N, stream);
 	InitializeArray<float>(d_TD, himan::MissingFloat(), N, stream);
 
-	fill(T.begin(), T.end(), himan::MissingFloat());
-	std::vector<float> TD(T.size(), himan::MissingFloat());
+	std::vector<float> TD(T.size());
 
 	MixingRatioFinalizeKernel<<<gridSize, blockSize, 0, stream>>>(d_T, d_TD, d_Psurf, d_Tpot, d_MR, N);
 
