@@ -537,11 +537,8 @@ __global__ void MixingRatioKernel(const float* __restrict__ d_T, const float* __
 		ASSERT((P > 100 && P < 1500) || IsMissing(P));
 		ASSERT((RH >= 0 && RH < 102) || IsMissing(RH));
 
-		if (IsValid(T))
-		{
-			d_Tpot[idx] = metutil::Theta_<float>(T, 100 * P);
-			d_MR[idx] = metutil::smarttool::MixingRatio_<float>(T, RH, 100 * P);
-		}
+		d_Tpot[idx] = metutil::Theta_<float>(T, 100 * P);
+		d_MR[idx] = metutil::smarttool::MixingRatio_<float>(T, RH, 100 * P);
 	}
 }
 
@@ -702,6 +699,37 @@ __global__ void MaximaLocation(const float* __restrict__ d_v, const unsigned cha
 				}
 			}
 		} while (!passed);
+	}
+}
+
+__global__ void MeanKernel(const float* __restrict__ d_Tpot, const float* __restrict__ d_MR,
+                           const float* __restrict__ d_prevTpot, const float* __restrict__ d_prevMR,
+                           float* __restrict__ d_meanTpot, float* __restrict__ d_meanMR, float* __restrict__ d_range,
+                           size_t N)
+{
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < N)
+	{
+		if (IsValid(d_Tpot[idx]))
+		{
+			// trapezoidal integration
+			d_range[idx] += 1;
+			d_meanTpot[idx] += (d_prevTpot[idx] + d_Tpot[idx]) * 0.5;
+			d_meanMR[idx] += (d_prevMR[idx] + d_MR[idx]) * 0.5;
+		}
+	}
+}
+
+__global__ void MeanFinalizeKernel(float* __restrict__ d_meanTpot, float* __restrict__ d_meanMR,
+                                   const float* __restrict__ d_range, size_t N)
+{
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < N)
+	{
+		d_meanTpot[idx] = d_meanTpot[idx] / d_range[idx];
+		d_meanMR[idx] = d_meanMR[idx] / d_range[idx];
 	}
 }
 
@@ -990,6 +1018,11 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 
 	float* d_Tpot = 0;
 	float* d_MR = 0;
+	float* d_prevTpot = 0;
+	float* d_prevMR = 0;
+	float* d_meanTpot = 0;
+	float* d_meanMR = 0;
+	float* d_range = 0;
 	float* d_T = 0;
 	float* d_RH = 0;
 	float* d_P = 0;
@@ -997,19 +1030,19 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 
 	CUDA_CHECK(cudaMalloc((float**)&d_Tpot, N * sizeof(float)));
 	CUDA_CHECK(cudaMalloc((float**)&d_MR, N * sizeof(float)));
+	CUDA_CHECK(cudaMalloc((float**)&d_prevTpot, N * sizeof(float)));
+	CUDA_CHECK(cudaMalloc((float**)&d_prevMR, N * sizeof(float)));
+	CUDA_CHECK(cudaMalloc((float**)&d_meanTpot, N * sizeof(float)));
+	CUDA_CHECK(cudaMalloc((float**)&d_meanMR, N * sizeof(float)));
+	CUDA_CHECK(cudaMalloc((float**)&d_range, N * sizeof(float)));
 	CUDA_CHECK(cudaMalloc((float**)&d_T, N * sizeof(float)));
 	CUDA_CHECK(cudaMalloc((float**)&d_RH, N * sizeof(float)));
 	CUDA_CHECK(cudaMalloc((float**)&d_P, N * sizeof(float)));
 	CUDA_CHECK(cudaMalloc((float**)&d_TD, N * sizeof(float)));
 
-	InitializeArray<float>(d_Tpot, himan::MissingFloat(), N, stream);
-	InitializeArray<float>(d_MR, himan::MissingFloat(), N, stream);
-
-	std::vector<float> Tpot(N, himan::MissingFloat());
-	std::vector<float> MR(N, himan::MissingFloat());
-
-	CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(Tpot.data()), sizeof(float) * N, 0));
-	CUDA_CHECK(cudaHostRegister(reinterpret_cast<void*>(MR.data()), sizeof(float) * N, 0));
+	InitializeArray<float>(d_meanTpot, 0.f, N, stream);
+	InitializeArray<float>(d_meanMR, 0.f, N, stream);
+	InitializeArray<float>(d_range, 0.f, N, stream);
 
 	const auto& Psample = std::get<0>(sourceData);
 	const auto& Tsample = std::get<1>(sourceData);
@@ -1027,6 +1060,8 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 
 	while (true)
 	{
+		CUDA_CHECK(cudaStreamSynchronize(stream));
+
 		for (size_t i = 0; i < N; i++)
 		{
 			if (k >= Psample[i].size())
@@ -1040,8 +1075,6 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 			P[i] = Psample[i][k];
 		}
 
-		k++;
-
 		if (static_cast<unsigned int>(count_if(P.begin(), P.end(), [](const float& v) { return IsMissing(v); })) ==
 		    P.size())
 		{
@@ -1054,31 +1087,37 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 
 		MixingRatioKernel<<<gridSize, blockSize, 0, stream>>>(d_T, d_P, d_RH, d_Tpot, d_MR, N);
 
-		CUDA_CHECK(cudaMemcpyAsync(Tpot.data(), d_Tpot, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
-		CUDA_CHECK(cudaMemcpyAsync(MR.data(), d_MR, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
+		if (k == 0)
+		{
+			CUDA_CHECK(cudaMemcpyAsync(d_prevTpot, d_Tpot, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
+			CUDA_CHECK(cudaMemcpyAsync(d_prevMR, d_MR, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
 
-		CUDA_CHECK(cudaStreamSynchronize(stream));
+			k++;
+			continue;
+		}
 
-		tp.Process(Convert(Tpot), Convert(P));
-		mr.Process(Convert(MR), Convert(P));
+		MeanKernel<<<gridSize, blockSize, 0, stream>>>(d_Tpot, d_MR, d_prevTpot, d_prevMR, d_meanTpot, d_meanMR,
+		                                               d_range, N);
+
+		CUDA_CHECK(cudaMemcpyAsync(d_prevTpot, d_Tpot, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync(d_prevMR, d_MR, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
+
+		k++;
 	}
 
-	CUDA_CHECK(cudaHostUnregister(Tpot.data()));
 	CUDA_CHECK(cudaHostUnregister(T.data()));
 	CUDA_CHECK(cudaHostUnregister(P.data()));
 	CUDA_CHECK(cudaHostUnregister(RH.data()));
-	CUDA_CHECK(cudaHostUnregister(MR.data()));
+
+	MeanFinalizeKernel<<<gridSize, blockSize, 0, stream>>>(d_meanTpot, d_meanMR, d_range, N);
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
-	// Calculate averages
-
-	Tpot = Convert(tp.Result());
-	MR = Convert(mr.Result());
-
-	// Copy averages to GPU for final calculation
-	CUDA_CHECK(cudaMemcpyAsync(d_Tpot, Tpot.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
-	CUDA_CHECK(cudaMemcpyAsync(d_MR, MR.data(), sizeof(float) * N, cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaFree(d_Tpot));
+	CUDA_CHECK(cudaFree(d_MR));
+	CUDA_CHECK(cudaFree(d_prevTpot));
+	CUDA_CHECK(cudaFree(d_prevMR));
+	CUDA_CHECK(cudaFree(d_range));
 
 	float* d_Psurf = 0;
 	CUDA_CHECK(cudaMalloc((float**)&d_Psurf, N * sizeof(float)));
@@ -1086,20 +1125,16 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	auto Psurf = cuda::Fetch<float>(conf, myTargetInfo->Time(), itsBottomLevel, PParam, myTargetInfo->ForecastType());
 	cuda::PrepareInfo(Psurf, d_Psurf, stream);
 
-	InitializeArray<float>(d_T, himan::MissingFloat(), N, stream);
-	InitializeArray<float>(d_TD, himan::MissingFloat(), N, stream);
+	std::vector<float> TD(T.size());
 
-	fill(T.begin(), T.end(), himan::MissingFloat());
-	std::vector<float> TD(T.size(), himan::MissingFloat());
-
-	MixingRatioFinalizeKernel<<<gridSize, blockSize, 0, stream>>>(d_T, d_TD, d_Psurf, d_Tpot, d_MR, N);
+	MixingRatioFinalizeKernel<<<gridSize, blockSize, 0, stream>>>(d_T, d_TD, d_Psurf, d_meanTpot, d_meanMR, N);
 
 	CUDA_CHECK(cudaMemcpyAsync(T.data(), d_T, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
 	CUDA_CHECK(cudaMemcpyAsync(TD.data(), d_TD, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
-	CUDA_CHECK(cudaFree(d_Tpot));
-	CUDA_CHECK(cudaFree(d_MR));
+	CUDA_CHECK(cudaFree(d_meanTpot));
+	CUDA_CHECK(cudaFree(d_meanMR));
 	CUDA_CHECK(cudaFree(d_RH));
 	CUDA_CHECK(cudaFree(d_P));
 	CUDA_CHECK(cudaFree(d_T));
@@ -1107,7 +1142,6 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	CUDA_CHECK(cudaFree(d_Psurf));
 
 	CUDA_CHECK(cudaStreamDestroy(stream));
-
 	return std::make_tuple(T, TD, VEC(Psurf));
 }
 
