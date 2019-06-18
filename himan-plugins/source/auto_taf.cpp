@@ -135,6 +135,11 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	h->ForecastType(myTargetInfo->ForecastType());
 	h->HeightUnit(kHPa);
 
+	if (LCL500->Data().MissingCount() == LCL500->Data().Size())
+	{
+		myThreadedLogger.Error("LCL 500m mix is missing totally");
+		return;
+	}
 	auto bounds = minmax_element(VEC(LCL500).begin(), VEC(LCL500).end());
 
 	auto levelsMax = h->LevelForHeight(myTargetInfo->Producer(), *(bounds.second));
