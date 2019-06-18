@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 19.6.17
+Version: 19.6.18
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -115,7 +115,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
-* Thu Jun 13 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.6.17-1.fmi
+* Tue Jun 18 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.6.18-1.fmi
+- vvms to single precision
+* Mon Jun 17 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.6.17-1.fmi
 - cape/500m performance optimization
 * Thu Jun 13 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.6.13-2.fmi
 - Fix numerical_functions regression
