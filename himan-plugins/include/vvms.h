@@ -24,10 +24,8 @@ class vvms : public compiled_plugin, private compiled_plugin_base
 {
    public:
 	vvms();
+	virtual ~vvms() = default;
 
-	inline virtual ~vvms()
-	{
-	}
 	vvms(const vvms& other) = delete;
 	vvms& operator=(const vvms& other) = delete;
 
@@ -43,15 +41,15 @@ class vvms : public compiled_plugin, private compiled_plugin_base
 	}
 
    private:
-	virtual void Calculate(std::shared_ptr<info<double>> theTargetInfo, unsigned short theThreadIndex);
-	double itsScale;
+	virtual void Calculate(std::shared_ptr<info<float>> theTargetInfo, unsigned short theThreadIndex);
+	float itsScale;
 };
 
 // the class factory
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-	return std::shared_ptr<vvms>(new vvms());
+	return std::make_shared<vvms>();
 }
 }  // namespace plugin
 }  // namespace himan
