@@ -13,15 +13,15 @@
  * Calculate results. At this point it as assumed that U and V are in correct form.
  */
 
-__global__ void Calculate(cdarr_t d_u, cdarr_t d_v, darr_t d_speed, darr_t d_dir,
-                          himan::plugin::HPWindVectorTargetType targetType, size_t N)
+__global__ void Calculate(const float* __restrict__ d_u, const float* __restrict__ d_v, float* __restrict__ d_speed,
+                          float* __restrict__ d_dir, himan::plugin::HPWindVectorTargetType targetType, size_t N)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < N)
 	{
-		const double U = d_u[idx];
-		const double V = d_v[idx];
+		const float U = d_u[idx];
+		const float V = d_v[idx];
 
 		d_speed[idx] = __dsqrt_rn(U * U + V * V);
 
@@ -34,7 +34,7 @@ __global__ void Calculate(cdarr_t d_u, cdarr_t d_v, darr_t d_speed, darr_t d_dir
 				offset = 0;
 			}
 
-			double dir = himan::constants::kRad * atan2(U, V) + offset;
+			float dir = himan::constants::kRad * atan2(U, V) + offset;
 
 			// modulo operator is supposedly slow on cuda ?
 
@@ -65,7 +65,7 @@ __global__ void Calculate(cdarr_t d_u, cdarr_t d_v, darr_t d_speed, darr_t d_dir
 }
 
 void himan::plugin::windvector_cuda::RunCuda(std::shared_ptr<const plugin_configuration> conf,
-                                             std::shared_ptr<info<double>> myTargetInfo, const param& UParam,
+                                             std::shared_ptr<info<float>> myTargetInfo, const param& UParam,
                                              const param& VParam, HPWindVectorTargetType itsTargetType)
 {
 	cudaStream_t stream;
@@ -74,22 +74,22 @@ void himan::plugin::windvector_cuda::RunCuda(std::shared_ptr<const plugin_config
 
 	// Allocate device arrays
 
-	double* d_u = 0;
-	double* d_v = 0;
-	double* d_speed = 0;
-	double* d_dir = 0;
+	float* d_u = 0;
+	float* d_v = 0;
+	float* d_speed = 0;
+	float* d_dir = 0;
 
 	// Allocate memory on device
 	const size_t N = myTargetInfo->SizeLocations();
 
-	const size_t memsize = N * sizeof(double);
+	const size_t memsize = N * sizeof(float);
 
 	// Fetch U & V, unpack to device, do not copy to host
 
 	auto UInfo =
-	    cuda::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(), UParam, myTargetInfo->ForecastType());
+	    cuda::Fetch<float>(conf, myTargetInfo->Time(), myTargetInfo->Level(), UParam, myTargetInfo->ForecastType());
 	auto VInfo =
-	    cuda::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(), VParam, myTargetInfo->ForecastType());
+	    cuda::Fetch<float>(conf, myTargetInfo->Time(), myTargetInfo->Level(), VParam, myTargetInfo->ForecastType());
 
 	if (!UInfo || !VInfo)
 	{

@@ -21,7 +21,7 @@ using namespace himan::plugin;
 
 #include "cuda_helper.h"
 
-typedef tuple<double, double, double, double> coefficients;
+typedef tuple<float, float, float, float> coefficients;
 
 windvector::windvector() : itsCalculationTarget(kUnknownElement), itsVectorCalculation(false)
 {
@@ -113,7 +113,7 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 
 	SetParams(theParams);
 
-	Start();
+	Start<float>();
 }
 
 /*
@@ -122,14 +122,14 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void windvector::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
+void windvector::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short threadIndex)
 {
 	// Required source parameters
 
 	param UParam;
 	param VParam;
 
-	double directionOffset = 180;  // For wind direction add this
+	float directionOffset = 180;  // For wind direction add this
 
 	switch (itsCalculationTarget)
 	{
@@ -184,8 +184,8 @@ void windvector::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short
 	{
 		deviceType = "CPU";
 
-		info_t UInfo = Fetch(forecastTime, forecastLevel, UParam, forecastType, itsConfiguration->UseCudaForPacking());
-		info_t VInfo = Fetch(forecastTime, forecastLevel, VParam, forecastType, itsConfiguration->UseCudaForPacking());
+		auto UInfo = FetchOne(forecastTime, forecastLevel, UParam, forecastType, itsConfiguration->UseCudaForPacking());
+		auto VInfo = FetchOne(forecastTime, forecastLevel, VParam, forecastType, itsConfiguration->UseCudaForPacking());
 
 		if (!UInfo || !VInfo)
 		{
@@ -206,7 +206,7 @@ void windvector::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short
 #ifdef HAVE_CUDA
 		if (UInfo->PackedData()->HasData())
 		{
-			util::Unpack<double>({UInfo, VInfo}, false);
+			util::Unpack<float>({UInfo, VInfo}, false);
 		}
 #endif
 
@@ -221,14 +221,14 @@ void windvector::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short
 		myTargetInfo->Index<param>(0);
 
 		auto& FFVec = VEC(myTargetInfo);
-		vector<double> DDVec(FFVec.size(), MissingDouble());
+		vector<float> DDVec(FFVec.size(), MissingFloat());
 
 		for (auto&& tup : zip_range(FFVec, DDVec, VEC(UInfo), VEC(VInfo)))
 		{
-			double& speed = tup.get<0>();
-			double& dir = tup.get<1>();
-			double U = tup.get<2>();
-			double V = tup.get<3>();
+			float& speed = tup.get<0>();
+			float& dir = tup.get<1>();
+			float U = tup.get<2>();
+			float V = tup.get<3>();
 
 			if (IsMissingValue({U, V}))
 			{
@@ -242,13 +242,13 @@ void windvector::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short
 				continue;
 			}
 
-			dir = himan::constants::kRad * atan2(U, V) + directionOffset;
+			dir = static_cast<float>(himan::constants::kRad) * atan2(U, V) + directionOffset;
 
 			// reduce the angle
-			dir = fmod(dir, 360);
+			dir = fmodf(dir, 360);
 
 			// force it to be the positive remainder, so that 0 <= dir < 360
-			dir = round(fmod((dir + 360), 360));
+			dir = round(fmodf((dir + 360), 360));
 		}
 
 		if (myTargetInfo->Size<param>() > 1)
@@ -262,23 +262,24 @@ void windvector::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short
 	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
 
-shared_ptr<himan::info<double>> windvector::Fetch(const forecast_time& theTime, const level& theLevel,
-                                                  const param& theParam, const forecast_type& theType,
-                                                  bool returnPacked) const
+shared_ptr<himan::info<float>> windvector::FetchOne(const forecast_time& theTime, const level& theLevel,
+                                                    const param& theParam, const forecast_type& theType,
+                                                    bool returnPacked) const
 {
 	auto f = GET_PLUGIN(fetcher);
 	f->DoVectorComponentRotation(true);
 
-	info_t ret;
+	shared_ptr<info<float>> ret;
 
 	try
 	{
-		ret = f->Fetch(itsConfiguration, theTime, theLevel, theParam, theType, itsConfiguration->UseCudaForPacking());
+		ret = f->Fetch<float>(itsConfiguration, theTime, theLevel, theParam, theType,
+		                      itsConfiguration->UseCudaForPacking());
 
 #ifdef HAVE_CUDA
 		if (!returnPacked && ret->PackedData()->HasData())
 		{
-			util::Unpack<double>({ret}, false);
+			util::Unpack<float>({ret}, false);
 
 			auto c = GET_PLUGIN(cache);
 
