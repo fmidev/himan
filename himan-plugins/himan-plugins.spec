@@ -4,7 +4,7 @@
 Summary: himan-plugins library
 Name: %{LIBNAME}
 Version: 19.6.18
-Release: 1.el7.fmi
+Release: 2.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 19.5.6
+Requires: himan-lib >= 19.6.18
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 19.2.12
@@ -115,6 +115,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Jun 18 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.6.18-2.fmi
+- windvector to single precision
 * Tue Jun 18 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.6.18-1.fmi
 - vvms to single precision
 * Mon Jun 17 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.6.17-1.fmi
