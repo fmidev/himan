@@ -14,7 +14,7 @@ using namespace himan::plugin;
 namespace vvmsgpu
 {
 extern void Process(std::shared_ptr<const himan::plugin_configuration> conf,
-                    std::shared_ptr<himan::info<double>> myTargetInfo);
+                    std::shared_ptr<himan::info<float>> myTargetInfo);
 }
 #endif
 // Required source parameters
@@ -48,7 +48,7 @@ void vvms::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	SetParams({theRequestedParam});
 
-	Start();
+	Start<float>();
 }
 
 /*
@@ -57,7 +57,7 @@ void vvms::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void vvms::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
+void vvms::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short threadIndex)
 {
 	auto myThreadedLogger = logger("vvmsThread #" + to_string(threadIndex));
 
@@ -83,7 +83,7 @@ void vvms::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threa
 	{
 		deviceType = "CPU";
 
-		double PScale = 1;
+		float PScale = 1.f;
 
 		/*
 		 * If vvms is calculated for pressure levels, the P value
@@ -91,17 +91,17 @@ void vvms::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threa
 		 * separately.
 		 */
 
-		info_t PInfo;
+		shared_ptr<info<float>> PInfo;
 
 		bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
 
-		info_t VVInfo = Fetch(forecastTime, forecastLevel, VVParam, forecastType, false);
-		info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, false);
+		auto VVInfo = Fetch<float>(forecastTime, forecastLevel, VVParam, forecastType, false);
+		auto TInfo = Fetch<float>(forecastTime, forecastLevel, TParam, forecastType, false);
 
 		if (!isPressureLevel)
 		{
 			// Source info for P
-			PInfo = Fetch(forecastTime, forecastLevel, PParam, forecastType, false);
+			PInfo = Fetch<float>(forecastTime, forecastLevel, PParam, forecastType, false);
 		}
 
 		if (!VVInfo || !TInfo || (!isPressureLevel && !PInfo))
@@ -128,12 +128,12 @@ void vvms::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threa
 
 		// Assume pressure level calculation
 
-		double P = 100 * myTargetInfo->Level().Value();
+		float P = 100.f * static_cast<float>(myTargetInfo->Level().Value());
 
 		LOCKSTEP(myTargetInfo, TInfo, VVInfo)
 		{
-			double T = TInfo->Value();
-			double VV = VVInfo->Value();
+			float T = TInfo->Value();
+			float VV = VVInfo->Value();
 
 			if (!isPressureLevel)
 			{
@@ -141,7 +141,7 @@ void vvms::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threa
 				P = PInfo->Value();
 			}
 
-			double w = itsScale * (287 * -VV * T / (himan::constants::kG * P * PScale));
+			float w = itsScale * (287.f * -VV * T / static_cast<float>(himan::constants::kG * P * PScale));
 
 			myTargetInfo->Value(w);
 		}
