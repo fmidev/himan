@@ -386,18 +386,18 @@ void himan::interpolate::RotateVectorComponentsGPU(himan::info<T>& UInfo, himan:
 
 		case himan::kLambertConformalConic:
 		{
-			CUDA_CHECK(cudaMalloc((void**)&d_lon, memsize));
+			CUDA_CHECK(cudaMalloc((void**)&d_lon, N * sizeof(double)));
 
 			double* lon = nullptr;
 
-			CUDA_CHECK(cudaMallocHost((void**)&lon, memsize));
+			CUDA_CHECK(cudaMallocHost((void**)&lon, N * sizeof(double)));
 
 			for (UInfo.ResetLocation(); UInfo.NextLocation();)
 			{
 				lon[UInfo.LocationIndex()] = UInfo.LatLon().X();
 			}
 
-			CUDA_CHECK(cudaMemcpyAsync(d_lon, lon, memsize, cudaMemcpyHostToDevice));
+			CUDA_CHECK(cudaMemcpyAsync(d_lon, lon, N * sizeof(double), cudaMemcpyHostToDevice));
 
 			const double latin1 = GetStandardParallel(UInfo.Grid().get(), 1);
 			const double latin2 = GetStandardParallel(UInfo.Grid().get(), 2);
