@@ -125,9 +125,12 @@ void himan::plugin::windvector_cuda::RunCuda(std::shared_ptr<const plugin_config
 
 	// And finally insert to cache
 
-	auto c = GET_PLUGIN(cache);
-	c->Insert(UInfo);
-	c->Insert(VInfo);
+	if (conf->UseCacheForReads())
+	{
+		auto c = GET_PLUGIN(cache);
+		c->Insert(UInfo);
+		c->Insert(VInfo);
+	}
 
 	if (myTargetInfo->Level().Type() == kHybrid)
 	{

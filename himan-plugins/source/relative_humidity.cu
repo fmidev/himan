@@ -104,7 +104,7 @@ void ProcessHumidityGPU(std::shared_ptr<const plugin_configuration> conf, std::s
 	CUDA_CHECK(cudaMalloc((void**)&d_RH, memsize));
 	CUDA_CHECK(cudaMalloc((void**)&d_T, memsize));
 
-	cuda::PrepareInfo(TInfo, d_T, stream);
+	cuda::PrepareInfo(TInfo, d_T, stream, conf->UseCacheForReads());
 
 	// First try to calculate using Q and P
 
@@ -134,7 +134,7 @@ void ProcessHumidityGPU(std::shared_ptr<const plugin_configuration> conf, std::s
 
 		// Copy data to device
 
-		cuda::PrepareInfo(TDInfo, d_TD, stream);
+		cuda::PrepareInfo(TDInfo, d_TD, stream, conf->UseCacheForReads());
 
 		CalculateTTD<float><<<gridSize, blockSize, 0, stream>>>(d_T, d_TD, d_RH, N);
 
@@ -166,8 +166,8 @@ void ProcessHumidityGPU(std::shared_ptr<const plugin_configuration> conf, std::s
 		CUDA_CHECK(cudaMalloc((void**)&d_Q, memsize));
 		CUDA_CHECK(cudaMalloc((void**)&d_P, memsize));
 
-		cuda::PrepareInfo<float>(QInfo, d_Q, stream);
-		cuda::PrepareInfo<float>(PInfo, d_P, stream);
+		cuda::PrepareInfo<float>(QInfo, d_Q, stream, conf->UseCacheForReads());
+		cuda::PrepareInfo<float>(PInfo, d_P, stream, conf->UseCacheForReads());
 
 		float PScale = 1;
 
@@ -197,7 +197,7 @@ void ProcessHumidityGPU(std::shared_ptr<const plugin_configuration> conf, std::s
 		CUDA_CHECK(cudaMalloc((void**)&d_Q, memsize));
 
 		// Copy data to device
-		cuda::PrepareInfo(QInfo, d_Q, stream);
+		cuda::PrepareInfo(QInfo, d_Q, stream, conf->UseCacheForReads());
 
 		CalculateTQ<float><<<gridSize, blockSize, 0, stream>>>(d_T, d_Q, d_RH, myTargetInfo->Level().Value(), N);
 
