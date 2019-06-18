@@ -49,8 +49,8 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 	CUDA_CHECK(cudaMalloc((void**)&d_rh, memsize));
 	CUDA_CHECK(cudaMalloc((void**)&d_td, memsize));
 
-	cuda::PrepareInfo<double>(TInfo, d_t, stream);
-	cuda::PrepareInfo<double>(RHInfo, d_rh, stream);
+	cuda::PrepareInfo<double>(TInfo, d_t, stream, conf->UseCacheForReads());
+	cuda::PrepareInfo<double>(RHInfo, d_rh, stream, conf->UseCacheForReads());
 
 	double RHScale = 1;
 

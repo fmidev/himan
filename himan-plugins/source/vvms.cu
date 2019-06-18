@@ -64,8 +64,8 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 	CUDA_CHECK(cudaMalloc((void**)&d_t, memsize));
 	CUDA_CHECK(cudaMalloc((void**)&d_vv, memsize));
 
-	cuda::PrepareInfo<float>(TInfo, d_t, stream);
-	cuda::PrepareInfo<float>(VVInfo, d_vv, stream);
+	cuda::PrepareInfo<float>(TInfo, d_t, stream, conf->UseCacheForReads());
+	cuda::PrepareInfo<float>(VVInfo, d_vv, stream, conf->UseCacheForReads());
 
 	// dims
 
@@ -96,7 +96,7 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 
 		auto PInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("P-HPA"),
 		                                myTargetInfo->ForecastType());
-		cuda::PrepareInfo(PInfo, d_p, stream);
+		cuda::PrepareInfo(PInfo, d_p, stream, conf->UseCacheForReads());
 
 		VVMSKernel<float><<<gridSize, blockSize, 0, stream>>>(d_t, d_vv, d_p, d_vv_ms, vv_scale, N);
 	}
