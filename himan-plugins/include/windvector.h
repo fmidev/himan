@@ -20,9 +20,8 @@ class windvector : public compiled_plugin, private compiled_plugin_base
    public:
 	windvector();
 
-	inline virtual ~windvector()
-	{
-	}
+	virtual ~windvector() = default;
+
 	windvector(const windvector& other) = delete;
 	windvector& operator=(const windvector& other) = delete;
 
@@ -37,14 +36,12 @@ class windvector : public compiled_plugin, private compiled_plugin_base
 		return kCompiled;
 	}
 
-   protected:
-	virtual std::shared_ptr<info<double>> Fetch(const forecast_time& theTime, const level& theLevel,
-	                                            const param& theParam,
-	                                            const forecast_type& theType = forecast_type(kDeterministic),
-	                                            bool returnPacked = false) const override;
-
    private:
-	virtual void Calculate(std::shared_ptr<info<double>> theTargetInfo, unsigned short theThreadIndex);
+	std::shared_ptr<info<float>> FetchOne(const forecast_time& theTime, const level& theLevel, const param& theParam,
+	                                      const forecast_type& theType = forecast_type(kDeterministic),
+	                                      bool returnPacked = false) const;
+
+	virtual void Calculate(std::shared_ptr<info<float>> theTargetInfo, unsigned short theThreadIndex);
 
 	HPWindVectorTargetType itsCalculationTarget;
 	bool itsVectorCalculation;
@@ -54,7 +51,7 @@ class windvector : public compiled_plugin, private compiled_plugin_base
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-	return std::shared_ptr<windvector>(new windvector());
+	return std::make_shared<windvector>();
 }
 }  // namespace plugin
 }  // namespace himan
