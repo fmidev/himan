@@ -98,7 +98,7 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 		}
 
 		CUDA_CHECK(cudaMalloc((void**)&d_p, memsize));
-		cuda::PrepareInfo(PInfo, d_p, stream);
+		cuda::PrepareInfo(PInfo, d_p, stream, conf->UseCacheForReads());
 
 		if (PInfo->Param().Unit() == kHPa || PInfo->Param().Name() == "P-HPA")
 		{
@@ -115,12 +115,12 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 	}
 
 	CUDA_CHECK(cudaMalloc((void**)&d_t, memsize));
-	cuda::PrepareInfo(TInfo, d_t, stream);
+	cuda::PrepareInfo(TInfo, d_t, stream, conf->UseCacheForReads());
 
 	if (TDInfo)
 	{
 		CUDA_CHECK(cudaMalloc((void**)&d_td, memsize));
-		cuda::PrepareInfo(TDInfo, d_td, stream);
+		cuda::PrepareInfo(TDInfo, d_td, stream, conf->UseCacheForReads());
 	}
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
