@@ -376,7 +376,6 @@ void RotateVectorComponentsCPU(const grid* from, const grid* to, himan::matrix<T
 
 					double angle = from->LatLon(i).X() - orientation;
 					ASSERT(angle >= -180 && angle <= 180);
-					ASSERT(UInfo.LatLon().Y() >= 0);
 
 					const double anglex = cone * angle * constants::kDeg;
 					double sinx, cosx;
@@ -495,7 +494,6 @@ void RotateVectorComponentsCPU(const grid* from, const grid* to, himan::matrix<T
 
 				const double angle = to->LatLon(i).X() - orientation;
 				ASSERT(angle >= -180 && angle <= 180);
-				ASSERT(UInfo.LatLon().Y() >= 0);
 
 				const double anglex = cone * angle * constants::kDeg;
 				double sinx, cosx;
