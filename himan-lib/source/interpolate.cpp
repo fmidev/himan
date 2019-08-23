@@ -137,7 +137,7 @@ bool ReorderPoints(const grid* baseGrid, std::shared_ptr<info<T>> info)
 		{
 			station s2 = sourceStations[j];
 
-			if (s1 == s2)
+			if (s1.Id() == s2.Id())
 			{
 				newStations.push_back(s1);
 				newData.Set(i, sourceData.At(j));
