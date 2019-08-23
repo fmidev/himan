@@ -97,14 +97,15 @@ bool IsVectorComponent(const std::string& paramName);
 HPInterpolationMethod InterpolationMethod(const std::string& paramName, HPInterpolationMethod interpolationMethod);
 
 template <typename T>
-void RotateVectorComponents(info<T>& UInfo, info<T>& VInfo, bool useCuda);
+void RotateVectorComponents(const grid* from, const grid* to, himan::info<T>& U, himan::info<T>& V, bool useCuda);
 
 template <typename T>
-void RotateVectorComponentsCPU(info<T>& UInfo, info<T>& VInfo);
+void RotateVectorComponentsCPU(const grid* from, const grid* to, himan::matrix<T>& U, himan::matrix<T>& V);
 
 #ifdef HAVE_CUDA
 template <typename T>
-void RotateVectorComponentsGPU(info<T>& UInfo, info<T>& VInfo, cudaStream_t& stream, T* d_u, T* d_v);
+void RotateVectorComponentsGPU(const grid* from, const grid* to, himan::matrix<T>& U, himan::matrix<T>& V,
+                               cudaStream_t& stream, T* d_u, T* d_v);
 #endif
 
 bool IsSupportedGridForRotation(HPGridType type);

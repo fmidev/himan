@@ -750,11 +750,6 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vec
 		    count_if(skip.begin(), skip.end(), [&](const info_t& info) { return eq(info, component); }) == 0 &&
 		    to != from && interpolate::IsSupportedGridForRotation(from))
 		{
-			if (to == kRotatedLatitudeLongitude || to == kStereographic || to == kLambertConformalConic)
-			{
-				throw runtime_error("Rotating vector components to projected area is not supported (yet)");
-			}
-
 			auto otherName = GetOtherVectorComponentName(name);
 
 			info_t u, v, other;
@@ -791,7 +786,8 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vec
 				himan::Abort();
 			}
 
-			interpolate::RotateVectorComponents(*u, *v, opts.configuration->UseCudaForInterpolation());
+			interpolate::RotateVectorComponents(component->Grid().get(), baseGrid, *u, *v,
+			                                    opts.configuration->UseCudaForInterpolation());
 
 			auto c = GET_PLUGIN(cache);
 			c->Replace<double>(u);
@@ -947,11 +943,6 @@ void fetcher::RotateVectorComponents(vector<shared_ptr<info<T>>>& components, co
 		if (interpolate::IsVectorComponent(name) && itsDoVectorComponentRotation && to != from &&
 		    interpolate::IsSupportedGridForRotation(from))
 		{
-			if (to == kRotatedLatitudeLongitude || to == kStereographic || to == kLambertConformalConic)
-			{
-				throw runtime_error("Rotating vector components to projected area is not supported (yet)");
-			}
-
 			auto otherName = GetOtherVectorComponentName(name);
 
 			search_options opts(component->Time(), param(otherName), component->Level(), sourceProd,
@@ -986,7 +977,8 @@ void fetcher::RotateVectorComponents(vector<shared_ptr<info<T>>>& components, co
 				throw runtime_error("Unrecognized vector component parameter: " + name);
 			}
 
-			interpolate::RotateVectorComponents(*u, *v, config->UseCudaForInterpolation());
+			interpolate::RotateVectorComponents(component->Grid().get(), target, *u, *v,
+			                                    config->UseCudaForInterpolation());
 
 			// Most likely both U&V are requested, so interpolate the other one now
 			// and put it to cache.

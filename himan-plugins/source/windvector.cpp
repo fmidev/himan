@@ -210,7 +210,13 @@ void windvector::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short 
 		}
 #endif
 
-		interpolate::RotateVectorComponents(*UInfo, *VInfo,
+		// We need to make sure that vector components are rotated to earth-relative form -- fetcher
+		// does not do it if source projection == target projection
+		// By using a dummy latlon area we make sure that rotation is only done to earth relative form
+
+		latitude_longitude_grid x;
+
+		interpolate::RotateVectorComponents(UInfo->Grid().get(), &x, *UInfo, *VInfo,
 		                                    itsConfiguration->UseCuda() && itsConfiguration->UseCudaForInterpolation());
 
 		auto c = GET_PLUGIN(cache);

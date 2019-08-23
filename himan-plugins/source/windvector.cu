@@ -112,7 +112,9 @@ void himan::plugin::windvector_cuda::RunCuda(std::shared_ptr<const plugin_config
 
 	if (UInfo->Grid()->UVRelativeToGrid())
 	{
-		himan::interpolate::RotateVectorComponentsGPU(*UInfo, *VInfo, stream, d_u, d_v);
+		latitude_longitude_grid x;
+		himan::interpolate::RotateVectorComponentsGPU(UInfo->Grid().get(), &x, UInfo->Data(), VInfo->Data(), stream,
+		                                              d_u, d_v);
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 	}
 
