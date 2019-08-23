@@ -54,7 +54,8 @@ bool point_list::EqualsTo(const point_list& other) const
 		{
 			if (itsStations[i] != other.itsStations[i])
 			{
-				itsLogger.Trace("Station " + to_string(i) + " does not match");
+				itsLogger.Trace("Station " + to_string(i) + " does not match: " + static_cast<string>(itsStations[i]) +
+				                " vs " + static_cast<string>(other.itsStations[i]));
 				return false;
 			}
 		}
