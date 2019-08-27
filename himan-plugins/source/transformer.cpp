@@ -21,7 +21,8 @@ mutex aggregationMutex;
 #ifdef HAVE_CUDA
 namespace transformergpu
 {
-void Process(himan::info_t myTargetInfo, himan::info_t sourceInfo, double scale, double base);
+void Process(shared_ptr<const himan::plugin_configuration> conf, himan::info_t myTargetInfo, himan::info_t sourceInfo,
+             double scale, double base);
 }
 #endif
 
@@ -336,7 +337,7 @@ void transformer::Rotate(shared_ptr<info<double>> myTargetInfo)
 	secondInfo->Data().Set(VEC(b));
 	secondInfo->Grid()->UVRelativeToGrid(b->Grid()->UVRelativeToGrid());
 
-	interpolate::RotateVectorComponents(*myTargetInfo, *secondInfo, false);
+	interpolate::RotateVectorComponents(a->Grid().get(), myTargetInfo->Grid().get(), *myTargetInfo, *secondInfo, false);
 }
 
 void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
@@ -420,7 +421,7 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 	{
 		deviceType = "GPU";
 
-		transformergpu::Process(myTargetInfo, sourceInfo, itsScale, itsBase);
+		transformergpu::Process(itsConfiguration, myTargetInfo, sourceInfo, itsScale, itsBase);
 	}
 	else
 #endif

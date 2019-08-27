@@ -13,35 +13,28 @@ using namespace std;
 // lot
 // of unnecessary code to be added to already slow compilation.
 
-double GetStandardParallel(himan::grid* g, int parallelno)
+double GetOrientation(const himan::grid* g)
 {
-	lambert_conformal_grid* lg = dynamic_cast<lambert_conformal_grid*>(g);
-
-	if (lg)
-	{
-		if (parallelno == 1)
-		{
-			return lg->StandardParallel1();
-		}
-		else if (parallelno == 2)
-		{
-			return lg->StandardParallel2();
-		}
-	}
-
-	return himan::kHPMissingValue;
-}
-
-double GetOrientation(himan::grid* g)
-{
-	lambert_conformal_grid* lg = dynamic_cast<lambert_conformal_grid*>(g);
+	const auto lg = dynamic_cast<const lambert_conformal_grid*>(g);
 
 	if (lg)
 	{
 		return lg->Orientation();
 	}
 
-	return kHPMissingValue;
+	return MissingDouble();
+}
+
+double GetCone(const himan::grid* g)
+{
+	const auto lg = dynamic_cast<const lambert_conformal_grid*>(g);
+
+	if (lg)
+	{
+		return lg->Cone();
+	}
+
+	return MissingDouble();
 }
 
 #endif
@@ -518,7 +511,7 @@ void lambert_conformal_grid::SetCoordinates() const
 			return;
 		}
 
-		// If latin1==latin2, projection is effectively lccSP1
+		// If itsStandardParallel1==itsStandardParallel2, projection is effectively lccSP1
 
 		if (IsKHPMissingValue(itsStandardParallel2))
 		{
@@ -608,4 +601,16 @@ OGRSpatialReference lambert_conformal_grid::SpatialReference() const
 {
 	SetCoordinates();
 	return OGRSpatialReference(*itsSpatialReference);
+}
+
+double lambert_conformal_grid::Cone() const
+{
+	if (fabs(itsStandardParallel1 - itsStandardParallel2) < 0.0001)
+	{
+		return sin(fabs(itsStandardParallel1) * constants::kDeg);
+	}
+
+	return (log(cos(itsStandardParallel1 * constants::kDeg)) - log(cos(itsStandardParallel2 * constants::kDeg))) /
+	       (log(tan((90 - fabs(itsStandardParallel1)) * constants::kDeg * 0.5)) -
+	        log(tan(90 - fabs(itsStandardParallel2)) * constants::kDeg * 0.5));
 }

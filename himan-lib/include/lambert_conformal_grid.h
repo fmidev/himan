@@ -105,6 +105,8 @@ class lambert_conformal_grid : public regular_grid
 
 	size_t Hash() const override;
 
+	double Cone() const;
+
    private:
 	bool EqualsTo(const lambert_conformal_grid& other) const;
 	void SetCoordinates() const;

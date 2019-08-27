@@ -332,7 +332,7 @@ void CalculateBulkShear(std::shared_ptr<const plugin_configuration> conf, std::s
 		}
 
 		CUDA_CHECK(cudaStreamSynchronize(stream));
-		cuda::PrepareInfo(CAPEInfo, d_u, stream);
+		cuda::PrepareInfo(CAPEInfo, d_u, stream, conf->UseCacheForReads());
 
 		CAPEShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u, d_bs, d_capes, N);
 
@@ -455,9 +455,9 @@ void StormRelativeHelicity(std::shared_ptr<const plugin_configuration> conf, std
 			throw himan::kFileDataNotFound;
 		}
 
-		cuda::PrepareInfo(prevUInfo, d_pu, stream);
-		cuda::PrepareInfo(prevVInfo, d_pv, stream);
-		cuda::PrepareInfo(prevZInfo, d_pz, stream);
+		cuda::PrepareInfo(prevUInfo, d_pu, stream, conf->UseCacheForReads());
+		cuda::PrepareInfo(prevVInfo, d_pv, stream, conf->UseCacheForReads());
+		cuda::PrepareInfo(prevZInfo, d_pz, stream, conf->UseCacheForReads());
 
 		thrust::device_ptr<unsigned char> dt_found = thrust::device_pointer_cast(d_found);
 
@@ -479,9 +479,9 @@ void StormRelativeHelicity(std::shared_ptr<const plugin_configuration> conf, std
 				break;
 			}
 
-			cuda::PrepareInfo(UInfo, d_u, stream);
-			cuda::PrepareInfo(VInfo, d_v, stream);
-			cuda::PrepareInfo(ZInfo, d_z, stream);
+			cuda::PrepareInfo(UInfo, d_u, stream, conf->UseCacheForReads());
+			cuda::PrepareInfo(VInfo, d_v, stream, conf->UseCacheForReads());
+			cuda::PrepareInfo(ZInfo, d_z, stream, conf->UseCacheForReads());
 
 			StormRelativeHelicityKernel<<<gridSize, blockSize, 0, stream>>>(d_srh, d_u, d_v, d_pu, d_pv, d_uid, d_vid,
 			                                                                d_z, d_pz, d_found, stopHeight, N);
@@ -550,7 +550,7 @@ void EnergyHelicityIndex(std::shared_ptr<const plugin_configuration> conf, std::
 
 		CUDA_CHECK(cudaMalloc((void**)&d_cape, memsize));
 
-		cuda::PrepareInfo(CAPEInfo, d_cape, stream);
+		cuda::PrepareInfo(CAPEInfo, d_cape, stream, conf->UseCacheForReads());
 
 		EHIKernel<<<gridSize, blockSize, 0, stream>>>(d_cape, d_srh, d_ehi, myTargetInfo->SizeLocations());
 
@@ -620,7 +620,7 @@ void CalculateBulkRichardsonNumber(std::shared_ptr<const plugin_configuration> c
 		CUDA_CHECK(cudaMalloc((void**)&d_u05, memsize));
 		CUDA_CHECK(cudaMalloc((void**)&d_v05, memsize));
 
-		cuda::PrepareInfo(CAPEInfo, d_cape, stream);
+		cuda::PrepareInfo(CAPEInfo, d_cape, stream, conf->UseCacheForReads());
 
 		auto U6 = h->VerticalAverage<double>(UParam, 10, 6000);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_u6, (const void*)U6.data(), memsize, cudaMemcpyHostToDevice, stream));
@@ -700,9 +700,9 @@ void CalculateLiftedIndices(std::shared_ptr<const plugin_configuration> conf,
 	CUDA_CHECK(cudaMalloc((void**)&d_td500m, memsize));
 	CUDA_CHECK(cudaMalloc((void**)&d_p500m, memsize));
 
-	cuda::PrepareInfo(T850Info, d_t850, stream);
-	cuda::PrepareInfo(T500Info, d_t500, stream);
-	cuda::PrepareInfo(TD850Info, d_td850, stream);
+	cuda::PrepareInfo(T850Info, d_t850, stream, conf->UseCacheForReads());
+	cuda::PrepareInfo(T500Info, d_t500, stream, conf->UseCacheForReads());
+	cuda::PrepareInfo(TD850Info, d_td850, stream, conf->UseCacheForReads());
 
 	const size_t N = myTargetInfo->SizeLocations();
 

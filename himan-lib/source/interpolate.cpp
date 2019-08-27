@@ -137,7 +137,7 @@ bool ReorderPoints(const grid* baseGrid, std::shared_ptr<info<T>> info)
 		{
 			station s2 = sourceStations[j];
 
-			if (s1 == s2)
+			if (s1.Id() == s2.Id())
 			{
 				newStations.push_back(s1);
 				newData.Set(i, sourceData.At(j));
@@ -293,120 +293,250 @@ HPInterpolationMethod InterpolationMethod(const std::string& paramName, HPInterp
 }
 
 template <typename T>
-void RotateVectorComponentsCPU(info<T>& UInfo, info<T>& VInfo)
+void RotateVectorComponentsCPU(const grid* from, const grid* to, himan::matrix<T>& U, himan::matrix<T>& V)
 {
-	ASSERT(UInfo.Grid()->Type() == VInfo.Grid()->Type());
+	// First convert to earth relative
 
-	auto& UVec = UInfo.Data().Values();
-	auto& VVec = VInfo.Data().Values();
+	logger log("interpolate");
 
-	ASSERT(UInfo.Grid()->Type() != kLatitudeLongitude);
-	switch (UInfo.Grid()->Type())
+	if (from->UVRelativeToGrid())
 	{
+		log.Trace("Rotating from " + HPGridTypeToString.at(from->Type()) + " to earth relative");
+
+		switch (from->Type())  // source type
+		{
+			case kLatitudeLongitude:
+				break;
+			case kRotatedLatitudeLongitude:
+			{
+				const auto rll = dynamic_cast<const rotated_latitude_longitude_grid*>(from);
+				point southPole = rll->SouthPole();
+
+				if (southPole.Y() > 0)
+				{
+					southPole.Y(-southPole.Y());
+					southPole.X(0);
+				}
+
+				for (size_t i = 0; i < U.Size(); i++)
+				{
+					T u = U[i];
+					T v = V[i];
+
+					const point rotPoint = rll->RotatedLatLon(i);
+					const point regPoint = rll->LatLon(i);
+
+					// Algorithm by J.E. HAUGEN (HIRLAM JUNE -92), modified by K. EEROLA
+					// Algorithm originally defined in hilake/TURNDD.F
+
+					const double southPoleY = constants::kDeg * (southPole.Y() + 90);
+
+					double sinPoleY, cosPoleY;
+					sincos(southPoleY, &sinPoleY, &cosPoleY);
+
+					const double cosRegY = cos(constants::kDeg * regPoint.Y());  // zcyreg
+					const double zxmxc = constants::kDeg * (regPoint.X() - southPole.X());
+
+					double sinxmxc, cosxmxc;
+					sincos(zxmxc, &sinxmxc, &cosxmxc);
+
+					const double rotXRad = constants::kDeg * rotPoint.X();
+					const double rotYRad = constants::kDeg * rotPoint.Y();
+
+					double sinRotX, cosRotX;
+					sincos(rotXRad, &sinRotX, &cosRotX);
+
+					double sinRotY, cosRotY;
+					sincos(rotYRad, &sinRotY, &cosRotY);
+
+					const double PA = cosxmxc * cosRotX + cosPoleY * sinxmxc * sinRotX;
+					const double PB = cosPoleY * sinxmxc * cosRotX * sinRotY + sinPoleY * sinxmxc * cosRotY -
+					                  cosxmxc * sinRotX * sinRotY;
+					const double PC = (-sinPoleY) * sinRotX / cosRegY;
+					const double PD = (cosPoleY * cosRotY - sinPoleY * cosRotX * sinRotY) / cosRegY;
+
+					U[i] = static_cast<T>(PA * u + PB * v);
+					V[i] = static_cast<T>(PC * u + PD * v);
+				}
+			}
+			break;
+
+			case kLambertConformalConic:
+			{
+				auto lcc = dynamic_cast<const lambert_conformal_grid*>(from);
+				const double cone = lcc->Cone();
+				const double orientation = lcc->Orientation();
+
+				for (size_t i = 0; i < U.Size(); i++)
+				{
+					T u = U[i];
+					T v = V[i];
+
+					// http://www.mcs.anl.gov/~emconsta/wind_conversion.txt
+
+					double angle = from->LatLon(i).X() - orientation;
+					ASSERT(angle >= -180 && angle <= 180);
+
+					const double anglex = cone * angle * constants::kDeg;
+					double sinx, cosx;
+					sincos(anglex, &sinx, &cosx);
+
+					U[i] = static_cast<T>(cosx * u + sinx * v);
+					V[i] = static_cast<T>(-1 * sinx * u + cosx * v);
+				}
+			}
+			break;
+
+			case kStereographic:
+			{
+				// The same as lambert but with cone = 1
+
+				const double orientation = dynamic_cast<const stereographic_grid*>(from)->Orientation();
+
+				for (size_t i = 0; i < U.Size(); i++)
+				{
+					T u = U[i];
+					T v = V[i];
+
+					const double angle = (from->LatLon(i).X() - orientation) * constants::kDeg;
+					double sinx, cosx;
+
+					sincos(angle, &sinx, &cosx);
+
+					U[i] = static_cast<T>(cosx * u + sinx * v);
+					V[i] = static_cast<T>(-1 * sinx * u + cosx * v);
+				}
+			}
+			break;
+			default:
+				throw std::runtime_error("Unable to rotate from " + HPGridTypeToString.at(from->Type()) + " to " +
+				                         HPGridTypeToString.at(to->Type()));
+		}
+	}
+
+	if (to->UVRelativeToGrid() == false)
+	{
+		log.Trace("Result grid has UVRelativeToGrid=false, no need for further rotation");
+		return;
+	}
+
+	switch (to->Type())
+	{
+		case kLatitudeLongitude:
+			break;
+
 		case kRotatedLatitudeLongitude:
 		{
-			auto rll = std::dynamic_pointer_cast<rotated_latitude_longitude_grid>(UInfo.Grid());
+			const auto rll = dynamic_cast<const rotated_latitude_longitude_grid*>(to);
+			point southPole = rll->SouthPole();
 
-			const point southPole = rll->SouthPole();
-
-			for (size_t i = 0; i < UInfo.SizeLocations(); i++)
+			if (southPole.Y() > 0)
 			{
-				double U = UVec[i];
-				double V = VVec[i];
+				southPole.Y(-southPole.Y());
+				southPole.X(0);
+			}
+
+			for (size_t i = 0; i < U.Size(); i++)
+			{
+				T u = U[i];
+				T v = V[i];
 
 				const point rotPoint = rll->RotatedLatLon(i);
 				const point regPoint = rll->LatLon(i);
-				const auto coeffs = util::EarthRelativeUVCoefficients(regPoint, rotPoint, southPole);
 
-				UVec[i] = static_cast<T>(std::get<0>(coeffs) * U + std::get<1>(coeffs) * V);
-				VVec[i] = static_cast<T>(std::get<2>(coeffs) * U + std::get<3>(coeffs) * V);
+				// Algorithm by J.E. HAUGEN (HIRLAM JUNE -92), modified by K. EEROLA
+				// Algorithm originally defined in hilake/TURNDD.F
+
+				const double southPoleY = constants::kDeg * (southPole.Y() + 90);
+
+				double sinPoleY, cosPoleY;
+				sincos(southPoleY, &sinPoleY, &cosPoleY);
+
+				const double sinRegY = sin(constants::kDeg * regPoint.Y());  // zsyreg
+				const double cosRegY = cos(constants::kDeg * regPoint.Y());  // zcyreg
+
+				double zxmxc = constants::kDeg * (regPoint.X() - southPole.X());
+
+				double sinxmxc, cosxmxc;
+				sincos(zxmxc, &sinxmxc, &cosxmxc);
+
+				const double rotXRad = constants::kDeg * rotPoint.X();
+
+				double sinRotX, cosRotX;
+				sincos(rotXRad, &sinRotX, &cosRotX);
+
+				const double cosRotY = cos(constants::kDeg * rotPoint.Y());  // zcyrot
+
+				const double PA = cosPoleY * sinxmxc * sinRotX + cosxmxc * cosRotX;
+				const double PB =
+				    cosPoleY * cosxmxc * sinRegY * sinRotX - sinPoleY * cosRegY * sinRotX - sinxmxc * sinRegY * cosRotX;
+				const double PC = sinPoleY * sinxmxc / cosRotY;
+				const double PD = (sinPoleY * cosxmxc * sinRegY + cosPoleY * cosRegY) / cosRotY;
+
+				U[i] = static_cast<T>(PA * u + PB * v);
+				V[i] = static_cast<T>(PC * u + PD * v);
 			}
 		}
 		break;
 
 		case kLambertConformalConic:
 		{
-			auto lcc = std::dynamic_pointer_cast<lambert_conformal_grid>(UInfo.Grid());
-
-			if (!lcc->UVRelativeToGrid())
-			{
-				return;
-			}
-
-			const double latin1 = lcc->StandardParallel1();
-			const double latin2 = lcc->StandardParallel2();
-
-			double cone;
-			if (latin1 == latin2)
-			{
-				cone = sin(fabs(latin1) * constants::kDeg);
-			}
-			else
-			{
-				cone = (log(cos(latin1 * constants::kDeg)) - log(cos(latin2 * constants::kDeg))) /
-				       (log(tan((90 - fabs(latin1)) * constants::kDeg * 0.5)) -
-				        log(tan(90 - fabs(latin2)) * constants::kDeg * 0.5));
-			}
-
+			auto lcc = dynamic_cast<const lambert_conformal_grid*>(to);
+			const double cone = lcc->Cone();
 			const double orientation = lcc->Orientation();
 
-			for (UInfo.ResetLocation(); UInfo.NextLocation();)
+			for (size_t i = 0; i < U.Size(); i++)
 			{
-				size_t i = UInfo.LocationIndex();
-
-				T U = UVec[i];
-				T V = VVec[i];
+				T u = U[i];
+				T v = V[i];
 
 				// http://www.mcs.anl.gov/~emconsta/wind_conversion.txt
 
-				double londiff = UInfo.LatLon().X() - orientation;
-				ASSERT(londiff >= -180 && londiff <= 180);
-				ASSERT(UInfo.LatLon().Y() >= 0);
+				const double angle = to->LatLon(i).X() - orientation;
+				ASSERT(angle >= -180 && angle <= 180);
 
-				const double angle = cone * londiff * constants::kDeg;
+				const double anglex = cone * angle * constants::kDeg;
 				double sinx, cosx;
-				sincos(angle, &sinx, &cosx);
+				sincos(anglex, &sinx, &cosx);
 
-				UVec[i] = static_cast<T>(cosx * U + sinx * V);
-				VVec[i] = static_cast<T>(-1 * sinx * U + cosx * V);
+				U[i] = static_cast<T>(cosx * u - sinx * v);
+				V[i] = static_cast<T>(sinx * u + cosx * v);
 			}
 		}
 		break;
-
 		case kStereographic:
 		{
-			// The same as lambert but with cone = 1
+			const double orientation = dynamic_cast<const stereographic_grid*>(to)->Orientation();
 
-			auto sc = std::dynamic_pointer_cast<stereographic_grid>(UInfo.Grid());
-			const double orientation = sc->Orientation();
-
-			for (UInfo.ResetLocation(); UInfo.NextLocation();)
+			for (size_t i = 0; i < U.Size(); i++)
 			{
-				size_t i = UInfo.LocationIndex();
+				T u = U[i];
+				T v = V[i];
 
-				T U = UVec[i];
-				T V = VVec[i];
-
-				const double angle = (UInfo.LatLon().X() - orientation) * constants::kDeg;
+				const double angle = (to->LatLon(i).X() - orientation) * constants::kDeg;
 				double sinx, cosx;
 
 				sincos(angle, &sinx, &cosx);
 
-				UVec[i] = static_cast<T>(-1 * cosx * U + sinx * V);
-				VVec[i] = static_cast<T>(-1 * -sinx * U + cosx * V);
+				U[i] = static_cast<T>(cosx * u - sinx * v);
+				V[i] = static_cast<T>(sinx * u + cosx * v);
 			}
 		}
 		break;
+
 		default:
-			break;
+			throw std::runtime_error("Unable to rotate from " + HPGridTypeToString.at(from->Type()) + " to " +
+			                         HPGridTypeToString.at(to->Type()));
 	}
 }
 
-template void RotateVectorComponentsCPU<double>(info<double>&, info<double>&);
-template void RotateVectorComponentsCPU<float>(info<float>&, info<float>&);
+template void RotateVectorComponentsCPU<double>(const grid*, const grid*, himan::matrix<double>&,
+                                                himan::matrix<double>&);
+template void RotateVectorComponentsCPU<float>(const grid*, const grid*, himan::matrix<float>&, himan::matrix<float>&);
 
 template <typename T>
-void RotateVectorComponents(info<T>& UInfo, info<T>& VInfo, bool useCuda)
+void RotateVectorComponents(const grid* from, const grid* to, himan::info<T>& UInfo, himan::info<T>& VInfo,
+                            bool useCuda)
 {
 	ASSERT(UInfo.Grid()->UVRelativeToGrid() == VInfo.Grid()->UVRelativeToGrid());
 
@@ -418,23 +548,28 @@ void RotateVectorComponents(info<T>& UInfo, info<T>& VInfo, bool useCuda)
 #ifdef HAVE_CUDA
 	if (useCuda)
 	{
+		if (UInfo.PackedData()->HasData() || VInfo.PackedData()->HasData())
+		{
+			throw std::runtime_error("Packed data needs to be unpacked before rotation on GPU");
+		}
+
 		cudaStream_t stream;
 		CUDA_CHECK(cudaStreamCreate(&stream));
-		RotateVectorComponentsGPU<T>(UInfo, VInfo, stream, 0, 0);
+		RotateVectorComponentsGPU<T>(from, to, UInfo.Data(), VInfo.Data(), stream, 0, 0);
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 	}
 	else
 #endif
 	{
-		RotateVectorComponentsCPU<T>(UInfo, VInfo);
+		RotateVectorComponentsCPU<T>(from, to, UInfo.Data(), VInfo.Data());
 	}
 
 	UInfo.Grid()->UVRelativeToGrid(false);
 	VInfo.Grid()->UVRelativeToGrid(false);
 }
 
-template void RotateVectorComponents<double>(info<double>&, info<double>&, bool);
-template void RotateVectorComponents<float>(info<float>&, info<float>&, bool);
+template void RotateVectorComponents<double>(const grid*, const grid*, info<double>&, info<double>&, bool);
+template void RotateVectorComponents<float>(const grid*, const grid*, info<float>&, info<float>&, bool);
 
 template <typename T>
 std::pair<std::vector<size_t>, std::vector<T>> InterpolationWeights(reduced_gaussian_grid& source, point target)

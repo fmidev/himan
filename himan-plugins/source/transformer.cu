@@ -16,7 +16,8 @@ __global__ void TransformerKernel(const T* __restrict__ d_source, T* __restrict_
 
 namespace transformergpu
 {
-void Process(info_t myTargetInfo, info_t sourceInfo, double scale, double base)
+void Process(std::shared_ptr<const himan::plugin_configuration> conf, info_t myTargetInfo, info_t sourceInfo,
+             double scale, double base)
 {
 	cudaStream_t stream;
 
@@ -36,7 +37,7 @@ void Process(info_t myTargetInfo, info_t sourceInfo, double scale, double base)
 
 	// Copy data to device
 
-	cuda::PrepareInfo(sourceInfo, d_source, stream);
+	cuda::PrepareInfo(sourceInfo, d_source, stream, conf->UseCacheForReads());
 
 	// dims
 
