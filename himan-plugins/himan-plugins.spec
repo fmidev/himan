@@ -4,7 +4,7 @@
 Summary: himan-plugins library
 Name: %{LIBNAME}
 Version: 19.8.27
-Release: 1.el7.fmi
+Release: 2.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -115,6 +115,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Aug 27 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.8.27-2.fmi
+- Allow missing values for CSI when producing probabilities
 * Tue Aug 27 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.8.27-1.fmi
 - Adding support for vector rotation to projection north
 * Tue Jun 18 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.6.18-3.fmi
