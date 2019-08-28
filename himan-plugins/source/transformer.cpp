@@ -35,7 +35,8 @@ transformer::transformer()
       itsTargetForecastType(kUnknownType),
       itsSourceForecastType(kUnknownType),
       itsRotateVectorComponents(false),
-      itsDoTimeInterpolation(false)
+      itsDoTimeInterpolation(false),
+      itsChangeMissingTo(himan::MissingDouble())
 {
 	itsCudaEnabledCalculation = true;
 
@@ -270,6 +271,19 @@ void transformer::SetAdditionalParameters()
 	{
 		itsDoTimeInterpolation = util::ParseBoolean(itsConfiguration->GetValue("time_interpolation"));
 	}
+
+	if (itsConfiguration->Exists("change_missing_value_to"))
+	{
+		try
+		{
+			itsChangeMissingTo = stod(itsConfiguration->GetValue("change_missing_value_to"));
+		}
+		catch (const invalid_argument& e)
+		{
+			throw runtime_error("Unable to convert " + itsConfiguration->GetValue("change_missing_value_to") +
+			                    " to double");
+		}
+	}
 }
 
 void transformer::Process(shared_ptr<const plugin_configuration> conf)
@@ -433,6 +447,12 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 
 		transform(source.begin(), source.end(), result.begin(),
 		          [&](const double& value) { return fma(value, itsScale, itsBase); });
+	}
+
+	if (!IsMissing(itsChangeMissingTo))
+	{
+		auto& vec = VEC(myTargetInfo);
+		replace_if(vec.begin(), vec.end(), [=](double d) { return IsMissing(d); }, itsChangeMissingTo);
 	}
 
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
