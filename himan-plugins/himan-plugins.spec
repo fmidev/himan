@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 19.8.27
-Release: 2.el7.fmi
+Version: 19.8.28
+Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -115,6 +115,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Aug 28 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.8.28-1.fmi
+- Minor blend tweaking
 * Tue Aug 27 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.8.27-2.fmi
 - Allow missing values for CSI when producing probabilities
 * Tue Aug 27 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.8.27-1.fmi
