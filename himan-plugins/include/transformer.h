@@ -59,6 +59,7 @@ class transformer : public compiled_plugin, private compiled_plugin_base
 	forecast_type itsSourceForecastType;
 	bool itsRotateVectorComponents;
 	bool itsDoTimeInterpolation;
+	double itsChangeMissingTo;
 };
 
 // the class factory
