@@ -37,6 +37,10 @@ class transformer : public compiled_plugin, private compiled_plugin_base
 		return kCompiled;
 	}
 
+   protected:
+	virtual void WriteToFile(const std::shared_ptr<info<double>> targetInfo,
+	                         write_options opts = write_options()) override;
+
    private:
 	virtual void Calculate(std::shared_ptr<info<double>> theTargetInfo, unsigned short theThreadIndex) override;
 
@@ -60,6 +64,7 @@ class transformer : public compiled_plugin, private compiled_plugin_base
 	bool itsRotateVectorComponents;
 	bool itsDoTimeInterpolation;
 	double itsChangeMissingTo;
+	bool itsWriteEmptyGrid;
 };
 
 // the class factory

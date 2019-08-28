@@ -36,7 +36,8 @@ transformer::transformer()
       itsSourceForecastType(kUnknownType),
       itsRotateVectorComponents(false),
       itsDoTimeInterpolation(false),
-      itsChangeMissingTo(himan::MissingDouble())
+      itsChangeMissingTo(himan::MissingDouble()),
+      itsWriteEmptyGrid(true)
 {
 	itsCudaEnabledCalculation = true;
 
@@ -284,6 +285,11 @@ void transformer::SetAdditionalParameters()
 			                    " to double");
 		}
 	}
+
+	if (itsConfiguration->Exists("write_empty_grid"))
+	{
+		itsWriteEmptyGrid = util::ParseBoolean(itsConfiguration->GetValue("write_empty_grid"));
+	}
 }
 
 void transformer::Process(shared_ptr<const plugin_configuration> conf)
@@ -457,4 +463,11 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
 	                      "/" + to_string(myTargetInfo->Data().Size()));
+}
+
+void transformer::WriteToFile(const shared_ptr<info<double>> targetInfo, write_options writeOptions)
+{
+	writeOptions.write_empty_grid = itsWriteEmptyGrid;
+
+	return compiled_plugin_base::WriteToFile(targetInfo, writeOptions);
 }
