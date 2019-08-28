@@ -38,7 +38,7 @@ const int kMepsForecastLength = 66;
 const int kGfsForecastLength = 240;
 
 const producer kLapsProd(109, 86, 109, "LAPSSCAN");
-const string kLapsGeom = "LAPSSCANLARGE";
+string kLapsGeom = "LAPSSCANLARGE";
 
 // Each blend producer is composed of these original producers. We use forecast_types to distinguish them
 // from each other, and this way we don't have to create bunch of extra producers.
@@ -101,6 +101,11 @@ std::string IdToName(size_t id)
 // - analysis time (obs)
 bool blend::ParseConfigurationOptions(const shared_ptr<const plugin_configuration>& conf)
 {
+	if (conf->GetValue("laps_geometry").empty() == false)
+	{
+		kLapsGeom = conf->GetValue("laps_geometry");
+	}
+
 	const string mode = conf->GetValue("mode");
 
 	if (mode == "blend")
