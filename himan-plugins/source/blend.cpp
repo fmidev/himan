@@ -715,39 +715,46 @@ void blend::CalculateBlend(shared_ptr<info<double>> targetInfo, unsigned short t
 		double F = 0.0;
 		size_t numMissing = 0;
 
+		const size_t li = targetInfo->LocationIndex();
+
 		for (const auto& tup : zip_range(forecasts, preweights, biases))
 		{
 			info_t f = tup.get<0>();
 			info_t w = tup.get<1>();
 			info_t b = tup.get<2>();
 
-			if (!f || !f->NextLocation())
+			if (!f)
 			{
 				forecastWarnings++;
 				continue;
 			}
 
-			if (!w || !w->NextLocation())
+			if (!w)
 			{
 				weightWarnings++;
 				continue;
 			}
 
-			if (!b || !b->NextLocation())
+			if (!b)
 			{
 				biasWarnings++;
 				continue;
 			}
 
+			f->LocationIndex(li);
+			w->LocationIndex(li);
+			b->LocationIndex(li);
+
 			const double v = f->Value();
 			const double wv = w->Value();
 			const double bb = b->Value();
-			if (IsMissing(v) || IsMissing(wv) || IsMissing(bb))
+
+			if (IsMissing(v) || IsMissing(wv) || IsMissing(bb) || wv == 0)
 			{
 				numMissing++;
+
 				continue;
 			}
-
 			collectedValues.push_back(v);
 			collectedWeights.push_back(wv);
 			collectedBiases.push_back(bb);
@@ -771,7 +778,7 @@ void blend::CalculateBlend(shared_ptr<info<double>> targetInfo, unsigned short t
 			weights[i] = 1.0 / sum;
 		}
 
-		if (numMissing == forecasts.size())
+		if (numMissing == forecasts.size() || weights.size() == 0)
 		{
 			F = MissingDouble();
 		}
@@ -820,6 +827,13 @@ void blend::CalculateBlend(shared_ptr<info<double>> targetInfo, unsigned short t
 void blend::WriteToFile(const info_t targetInfo, write_options writeOptions)
 {
 	auto aWriter = GET_PLUGIN(writer);
+
+	if (itsCalculationMode == kCalculateMAE || itsCalculationMode == kCalculateMAE)
+	{
+		// Add more precision as MAE/Bias fields are not actually what they claim
+		// (for example T-K)
+		writeOptions.precision = 5;
+	}
 
 	aWriter->WriteOptions(writeOptions);
 	auto tempInfo = make_shared<info<double>>(*targetInfo);
