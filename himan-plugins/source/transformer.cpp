@@ -37,7 +37,8 @@ transformer::transformer()
       itsRotateVectorComponents(false),
       itsDoTimeInterpolation(false),
       itsChangeMissingTo(himan::MissingDouble()),
-      itsWriteEmptyGrid(true)
+      itsWriteEmptyGrid(true),
+      itsDecimalPrecision(kHPMissingInt)
 {
 	itsCudaEnabledCalculation = true;
 
@@ -290,6 +291,18 @@ void transformer::SetAdditionalParameters()
 	{
 		itsWriteEmptyGrid = util::ParseBoolean(itsConfiguration->GetValue("write_empty_grid"));
 	}
+
+	if (itsConfiguration->Exists("decimal_precision"))
+	{
+		try
+		{
+			itsDecimalPrecision = stoi(itsConfiguration->GetValue("decimal_precision"));
+		}
+		catch (const invalid_argument& e)
+		{
+			throw runtime_error("Unable to convert " + itsConfiguration->GetValue("decimal_precision") + " to int");
+		}
+	}
 }
 
 void transformer::Process(shared_ptr<const plugin_configuration> conf)
@@ -468,6 +481,7 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 void transformer::WriteToFile(const shared_ptr<info<double>> targetInfo, write_options writeOptions)
 {
 	writeOptions.write_empty_grid = itsWriteEmptyGrid;
+	writeOptions.precision = itsDecimalPrecision;
 
 	return compiled_plugin_base::WriteToFile(targetInfo, writeOptions);
 }

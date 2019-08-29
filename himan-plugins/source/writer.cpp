@@ -118,6 +118,18 @@ template <typename T>
 bool writer::ToFile(std::shared_ptr<info<T>> theInfo, std::shared_ptr<const plugin_configuration> conf,
                     const std::string& theOriginalOutputFile)
 {
+	if (!itsWriteOptions.write_empty_grid)
+	{
+		if (theInfo->Data().MissingCount() == theInfo->Data().Size())
+		{
+			itsLogger.Info("Not writing empty grid for param " + theInfo->Param().Name() + " time " +
+			               theInfo->Time().OriginDateTime().String() + " step " +
+			               static_cast<std::string>(theInfo->Time().Step()) + " level " +
+			               static_cast<std::string>(theInfo->Level()));
+			return false;
+		}
+	}
+
 	timer t;
 
 	if (conf->StatisticsEnabled())
