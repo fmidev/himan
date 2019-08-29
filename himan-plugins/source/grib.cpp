@@ -843,15 +843,6 @@ bool grib::ToFile(info<T>& anInfo, string& outputFile, bool appendToFile)
 		return false;
 	}
 
-	if (!itsWriteOptions.write_empty_grid)
-	{
-		if (anInfo.Data().MissingCount() == anInfo.Data().Size())
-		{
-			itsLogger.Debug("Not writing empty grid");
-			return true;
-		}
-	}
-
 	long edition = static_cast<long>(itsWriteOptions.configuration->OutputFileType());
 
 	// Check levelvalue and forecast type since those might force us to change to grib2!
@@ -955,7 +946,8 @@ bool grib::ToFile(info<T>& anInfo, string& outputFile, bool appendToFile)
 	 */
 
 	const auto paramName = anInfo.Param().Name();
-	const int precision = anInfo.Param().Precision();
+	const int precision =
+	    (itsWriteOptions.precision == kHPMissingInt) ? anInfo.Param().Precision() : itsWriteOptions.precision;
 
 	long bitsPerValue;
 

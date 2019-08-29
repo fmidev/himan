@@ -82,3 +82,7 @@ change_missing_value_to: define if missing value should be changed to some norma
 write_empty_grid: define if an empty grid (all values missing) should be written out or not. default: yes.
 
     "write_empty_grid" : false
+
+precision: define the precision used writing output files, decimal places. default: use what is in database
+
+    "precision" : 2

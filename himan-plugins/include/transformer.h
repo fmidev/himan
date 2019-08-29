@@ -65,6 +65,7 @@ class transformer : public compiled_plugin, private compiled_plugin_base
 	bool itsDoTimeInterpolation;
 	double itsChangeMissingTo;
 	bool itsWriteEmptyGrid;
+	int itsDecimalPrecision;
 };
 
 // the class factory

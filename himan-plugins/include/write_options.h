@@ -17,8 +17,9 @@ struct write_options
 	bool use_bitmap;             // use bitmap for grib if missing data exists
 	HPPackingType packing_type;  // for grib, ie simple_packing, jpeg_packing
 	bool write_empty_grid;       // write file even if all data is missing
+	int precision;               // precision (decimal points)
 
-	write_options() : use_bitmap(true), packing_type(kSimplePacking), write_empty_grid(true)
+	write_options() : use_bitmap(true), packing_type(kSimplePacking), write_empty_grid(true), precision(kHPMissingInt)
 	{
 	}
 };
