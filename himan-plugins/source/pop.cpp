@@ -18,9 +18,9 @@ using namespace himan::plugin;
 pop::pop()
     : itsECEPSGeom("ECEUR0200"),
       itsECGeom("ECGLO0100"),
-      itsPEPSGeom("PEPSSCAN"),
+      itsPEPSGeom("PEPSSCAND"),
       itsHirlamGeom("RCR068"),
-      itsMEPSGeom("MEPSSCAN2500"),
+      itsMEPSGeom("MEPSSCAN2500G2"),
       itsGFSGeom("GFS0250")
 {
 	itsLogger = logger("pop");
@@ -231,6 +231,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		cnf->SourceProducers({producer(121, 86, 121, "PEPSSCAN")});
 
 		// PROB-RR-1 = "RR>= 0.2mm 1h"
+		// Yes, the level really is height/2!
 		auto PEPSInfo = f->Fetch(cnf, forecastTime, level(kHeight, 2), param("PROB-RR-1"), forecastType, false);
 		PEPS = VEC(PEPSInfo);
 	}
