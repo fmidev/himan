@@ -116,9 +116,6 @@ void vvms::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short thread
 			PScale = 100;
 		}
 
-		ASSERT(TInfo->Grid()->AB() == VVInfo->Grid()->AB() &&
-		       (isPressureLevel || PInfo->Grid()->AB() == TInfo->Grid()->AB()));
-
 		SetAB(myTargetInfo, TInfo);
 
 		if (PInfo)

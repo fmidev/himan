@@ -148,9 +148,6 @@ void tpot::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threa
 		return;
 	}
 
-	ASSERT(isPressureLevel || ((PInfo->Grid()->AB() == TInfo->Grid()->AB()) &&
-	                           (!TDInfo || (PInfo->Grid()->AB() == TDInfo->Grid()->AB()))));
-
 	SetAB(myTargetInfo, TInfo);
 
 	if (TInfo->Param().Unit() == kC)

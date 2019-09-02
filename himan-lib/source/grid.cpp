@@ -9,11 +9,7 @@ using namespace himan;
 using namespace std;
 
 grid::grid()
-    : itsGridClass(kUnknownGridClass),
-      itsGridType(kUnknownGridType),
-      itsAB(),
-      itsUVRelativeToGrid(false),
-      itsEarthShape()
+    : itsGridClass(kUnknownGridClass), itsGridType(kUnknownGridType), itsUVRelativeToGrid(false), itsEarthShape()
 {
 }
 
@@ -42,9 +38,6 @@ bool grid::EqualsTo(const grid& other) const
 		return false;
 	}
 
-	// We DON'T test for AB !
-	// Why?
-
 	return true;
 }
 
@@ -70,12 +63,6 @@ ostream& grid::Write(std::ostream& file) const
 	file << "<" << ClassName() << ">" << std::endl;
 
 	file << "__itsUVRelativeToGrid__ " << itsUVRelativeToGrid << std::endl;
-	file << "__itsAB__";
-
-	for (size_t i = 0; i < itsAB.size(); i++)
-	{
-		file << " " << itsAB[i];
-	}
 
 	file << std::endl;
 
@@ -87,14 +74,6 @@ ostream& grid::Write(std::ostream& file) const
 size_t grid::Size() const
 {
 	throw runtime_error("grid::Size() called");
-}
-vector<double> grid::AB() const
-{
-	return itsAB;
-}
-void grid::AB(const vector<double>& theAB)
-{
-	itsAB = theAB;
 }
 point grid::LatLon(size_t theLocationIndex) const
 {

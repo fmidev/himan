@@ -194,8 +194,6 @@ void windvector::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short 
 			return;
 		}
 
-		ASSERT(UInfo->Grid()->AB() == VInfo->Grid()->AB());
-
 		for (myTargetInfo->Reset<param>(); myTargetInfo->Next<param>();)
 		{
 			SetAB(myTargetInfo, UInfo);

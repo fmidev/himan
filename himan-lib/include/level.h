@@ -88,7 +88,8 @@ class level
 	template <class Archive>
 	void serialize(Archive& ar)
 	{
-		ar(CEREAL_NVP(itsType), CEREAL_NVP(itsValue), CEREAL_NVP(itsValue2), CEREAL_NVP(itsIndex), CEREAL_NVP(itsName));
+		ar(CEREAL_NVP(itsType), CEREAL_NVP(itsValue), CEREAL_NVP(itsValue2), CEREAL_NVP(itsIndex), CEREAL_NVP(itsName),
+		   CEREAL_NVP(itsAB));
 	}
 #endif
 };
