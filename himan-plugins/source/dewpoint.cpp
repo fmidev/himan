@@ -77,8 +77,6 @@ void dewpoint::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short t
 		return;
 	}
 
-	ASSERT(TInfo->Grid()->AB() == RHInfo->Grid()->AB());
-
 	SetAB(myTargetInfo, TInfo);
 
 	if (RHInfo->Param().Name() == "RH-0TO1")

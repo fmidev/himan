@@ -90,7 +90,6 @@ bool InterpolateArea(const grid* baseGrid, std::shared_ptr<info<T>> source)
 	{
 		auto interpGrid = std::shared_ptr<grid>(baseGrid->Clone());
 
-		interpGrid->AB(source->Grid()->AB());
 		interpGrid->UVRelativeToGrid(source->Grid()->UVRelativeToGrid());
 
 		source->Base()->grid = interpGrid;

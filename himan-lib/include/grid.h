@@ -54,9 +54,6 @@ class grid
 	HPGridClass Class() const;
 	void Class(HPGridClass theGridClass);
 
-	std::vector<double> AB() const;
-	void AB(const std::vector<double>& theAB);
-
 	/*
 	 * Functions that are common and valid to all types of grids.
 	 *
@@ -94,8 +91,6 @@ class grid
 	HPGridClass itsGridClass;
 	HPGridType itsGridType;
 
-	std::vector<double> itsAB;
-
 	logger itsLogger;
 
 	/**
@@ -115,8 +110,8 @@ class grid
 	template <class Archive>
 	void serialize(Archive& ar)
 	{
-		ar(CEREAL_NVP(itsGridClass), CEREAL_NVP(itsGridType), CEREAL_NVP(itsAB), CEREAL_NVP(itsLogger),
-		   CEREAL_NVP(itsIdentifier), CEREAL_NVP(itsUVRelativeToGrid), CEREAL_NVP(itsEarthShape));
+		ar(CEREAL_NVP(itsGridClass), CEREAL_NVP(itsGridType), CEREAL_NVP(itsLogger), CEREAL_NVP(itsIdentifier),
+		   CEREAL_NVP(itsUVRelativeToGrid), CEREAL_NVP(itsEarthShape));
 	}
 #endif
 };

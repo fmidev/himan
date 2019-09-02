@@ -94,8 +94,6 @@ void icing::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short theTh
 		VvScale = 1000;
 	}
 
-	ASSERT(TInfo->Grid()->AB() == VvInfo->Grid()->AB() && TInfo->Grid()->AB() == ClInfo->Grid()->AB());
-
 	SetAB(myTargetInfo, TInfo);
 
 	auto h = GET_PLUGIN(hitool);
