@@ -109,7 +109,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	myThreadedLogger.Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 	                       static_cast<string>(forecastLevel));
 
-	vector<double> PEPS, Hirlam, MEPS, GFS, EC, ECprev, ECprob1, ECprob01, ECfract50, ECfract75;
+	vector<double> PEPS, Hirlam, MEPS, GFS, EC, ECprev, ECprob1, ECprob2, ECfract50, ECfract75;
 
 	/*
 	 * Required source parameters
@@ -176,16 +176,16 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		auto ECprob1Info = f->Fetch(cnf, prevTime, level(kGround, 0), param("PROB-RR-1"), forecastType, false);
 		ECprob1 = VEC(ECprob1Info);
 
-		// PROB-RR-01 = "RR>= 0.1mm 6h"
-		auto ECprob01Info = f->Fetch(cnf, prevTime, level(kGround, 0), param("PROB-RR-01"), forecastType, false);
-		ECprob01 = VEC(ECprob01Info);
+		// PROB-RR3-1 = "RR>= 0.3mm 3h"
+		auto ECProb2Info = f->Fetch(cnf, prevTime, level(kGround, 0), param("PROB-RR3-1"), forecastType, false);
+		ECprob2 = VEC(ECProb2Info);
 	}
 	catch (HPExceptionType& e)
 	{
 		if (e == kFileDataNotFound)
 		{
 			ECprob1.resize(myTargetInfo->Data().Size(), MissingDouble());
-			ECprob01.resize(myTargetInfo->Data().Size(), MissingDouble());
+			ECprob2.resize(myTargetInfo->Data().Size(), MissingDouble());
 		}
 		else
 		{
@@ -472,7 +472,7 @@ void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	auto& result = VEC(myTargetInfo);
 
-	for (auto&& tup : zip_range(result, confidence.Values(), area.Values(), ECprob1, ECprob01))
+	for (auto&& tup : zip_range(result, confidence.Values(), area.Values(), ECprob1, ECprob2))
 	{
 		double& out_result = tup.get<0>();
 		double out_confidence = tup.get<1>();
