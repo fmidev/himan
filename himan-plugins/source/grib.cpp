@@ -1001,7 +1001,7 @@ bool grib::ToFile(info<T>& anInfo, string& outputFile, bool appendToFile)
 	HPForecastType forecastType = anInfo.ForecastType().Type();
 
 	if (edition == 1 &&
-	    (anInfo.Grid()->AB().size() > 255 || (forecastType == kEpsControl || forecastType == kEpsPerturbation) ||
+	    (anInfo.Level().AB().size() > 255 || (forecastType == kEpsControl || forecastType == kEpsPerturbation) ||
 	     anInfo.Param().ProcessingType().Type() != kUnknownProcessingType))
 	{
 		itsLogger.Trace("File type forced to GRIB2 (level value: " + to_string(anInfo.Level().Value()) +
