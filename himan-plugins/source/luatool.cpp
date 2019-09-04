@@ -1029,11 +1029,12 @@ namespace luabind_workaround
 template <typename T>
 matrix<T> ProbLimitGt2D(const matrix<T>& A, const matrix<T>& B, T limit)
 {
+#ifdef HAVE_CUDA
 	if (myUseCuda)
 	{
 		return numerical_functions::ProbLimitGt2DGPU<T>(A, B, limit);
 	}
-
+#endif
 	return numerical_functions::Reduce2D<T>(A, B,
 	                                        [=](T& val1, T& val2, const T& a, const T& b) {
 		                                        if (IsValid(a * b) && a * b > limit)
@@ -1046,11 +1047,12 @@ matrix<T> ProbLimitGt2D(const matrix<T>& A, const matrix<T>& B, T limit)
 template <typename T>
 matrix<T> ProbLimitEq2D(const matrix<T>& A, const matrix<T>& B, T limit)
 {
+#ifdef HAVE_CUDA
 	if (myUseCuda)
 	{
 		return numerical_functions::ProbLimitEq2DGPU<T>(A, B, limit);
 	}
-
+#endif
 	return numerical_functions::Reduce2D<T>(A, B,
 	                                        [=](T& val1, T& val2, const T& a, const T& b) {
 		                                        if (IsValid(a * b) && a * b == limit)
