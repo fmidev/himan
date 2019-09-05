@@ -85,6 +85,20 @@ HPAggregationType
     kMinimum
     kDifference
 
+enum HPProcessingType
+    kUnknownProcessingType = 0
+    kProbabilityGreaterThan
+    kProbabilityLessThan
+    kProbabilityBetween
+    kProbabilityEquals
+    kProbabilityNotEquals
+    kProbabilityEqualsIn
+    kFractile
+    kEnsembleMean
+    kSpread
+    kStandardDeviation
+    kEFI
+
 HPForecastType
     kUnknownType = 0
     kDeterministic
@@ -302,6 +316,20 @@ This class is inheriting from configuration class.
 | string | ClassName | | Returns class name |
 | string | GetValue | string | Return a per-plugin configuration value, if given in the plugin configuration file |
 | bool | Exists | string | Checks if some per-plugin configuration value is set in the plugin configuration file |
+
+## processing_type
+
+processing_type is another parameter component, defining for example that it is a derived probability.
+
+| Return value  | Name | Arguments | Description |
+|---|---|---|---|
+| string | ClassName | | Returns class name |
+| HPProcessingType | GetType | | Returns processing type type (for example: probability greater than) |
+|   | SetType | HPProcessingType  | Set processing type type |
+| number | GetValue | | Returns first value related to processing type |
+|   | SetValue | number  | Set first value related to processing type |
+| number | GetValue2 | | Returns second value related to processing type |
+|   | SetValue2 | number  | Set second value related to processing type |
 
 ## producer
 

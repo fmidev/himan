@@ -28,6 +28,106 @@ std::string GetParamNameFromGribShortName(const std::string& paramFileName, cons
 
 const double gribMissing = 32700.;
 
+long DetermineProductDefinitionTemplateNumber(long agg, long proc, long ftype)
+{
+	// Determine which code table to use to represent our data
+	// We have four options:
+	//
+	//  aggregation | processing
+	//  ------------+-----------
+	//       0      |     0
+	//       0      |     1
+	//       1      |     0
+	//       1      |     1
+
+	using namespace himan;
+
+	long templateNumber = 0;  // default: No aggregation, no processing
+
+	if (agg == kUnknownAggregationType && proc == kUnknownProcessingType)
+	{
+		// Case 1: No aggregation, no processing, for example T-K
+
+		templateNumber = 0;  // Analysis or forecast at a horizontal level or in a horizontal layer at a point in time
+
+		if (ftype == kEpsPerturbation || ftype == kEpsControl)
+		{
+			templateNumber = 1;  // Individual ensemble forecast, control and perturbed, at a horizontal level or in
+			                     // a horizontal layer at a point in time
+		}
+	}
+	else if (agg == kUnknownAggregationType && proc != kUnknownProcessingType)
+	{
+		// Case 2: not aggregated, but processed, for example F50-T-K
+
+		switch (proc)
+		{
+			default:
+				templateNumber = 2;  // Derived forecasts based on all ensemble members at a horizontal level or in a
+				                     // horizontal layer at a point in time.
+				break;
+			case kProbabilityGreaterThan:
+			case kProbabilityLessThan:
+			case kProbabilityBetween:
+			case kProbabilityEquals:
+			case kProbabilityNotEquals:
+			case kProbabilityEqualsIn:
+				// probabilities
+				templateNumber =
+				    5;  // Probability forecasts at a horizontal level or in a horizontal layer at a point in time
+				break;
+
+			case kFractile:
+				templateNumber =
+				    6;  //  Percentile forecasts at a horizontal level or in a horizontal layer at a point in time
+				break;
+		}
+	}
+	else if (agg != kUnknownAggregationType && proc == kUnknownProcessingType)
+	{
+		// Case 3: aggregated, but not processed, for example RR-1-H
+
+		templateNumber = 8;  // Average, accumulation, extreme values or other statistically processed values
+		                     // at a horizontal level or in a horizontal layer in a continuous or
+		                     // non-continuous time interval
+
+		if (ftype == kEpsPerturbation || ftype == kEpsControl)
+		{
+			templateNumber = 11;  // Individual ensemble forecast, control and perturbed, at a horizontal level or
+			                      // in a horizontal layer, in a continuous or non-continuous time interval.
+		}
+	}
+	else if (agg != kUnknownAggregationType && proc != kUnknownProcessingType)
+	{
+		// Case 4: aggregated and processed, for example PROB-RR-1
+
+		switch (proc)
+		{
+			default:
+				templateNumber =
+				    4;  // Derived forecasts based on a cluster of ensemble members over a circular area at a
+				        // horizontal level or in a horizontal layer at a point in time.
+				break;
+			case kProbabilityGreaterThan:
+			case kProbabilityLessThan:
+			case kProbabilityBetween:
+			case kProbabilityEquals:
+			case kProbabilityNotEquals:
+			case kProbabilityEqualsIn:
+				// probabilities
+				templateNumber = 9;  //  Probability forecasts at a horizontal level or in a horizontal layer in a
+				                     //  continuous or non-continuous time interval
+				break;
+			case kFractile:
+				templateNumber = 10;  // Percentile forecasts at a horizontal level or in a horizontal layer in a
+				                      // continuous or non-continuous time interval
+				break;
+		}
+	}
+
+	return templateNumber;
+}
+
 template <typename T>
 long DetermineBitsPerValue(const vector<T>& values, double precision)
 {
@@ -715,40 +815,91 @@ void grib::WriteParameter(const param& par, const producer& prod, const forecast
 			itsGrib->Message().ParameterDiscipline(par.GribDiscipline());
 		}
 
-		if (par.Aggregation().Type() != kUnknownAggregationType)
+		const auto aggType = par.Aggregation().Type();
+		const auto procType = par.ProcessingType().Type();
+		const long templateNumber = DetermineProductDefinitionTemplateNumber(aggType, procType, ftype.Type());
+
+		itsGrib->Message().ProductDefinitionTemplateNumber(templateNumber);
+
+		switch (aggType)
 		{
-			long templateNumber = 8;  // Average, accumulation, extreme values or other statistically processed values
-			                          // at a horizontal level or in a horizontal layer in a continuous or
-			                          // non-continuous time interval
+			case kAverage:
+				itsGrib->Message().TypeOfStatisticalProcessing(0);
+				break;
+			case kAccumulation:
+				itsGrib->Message().TypeOfStatisticalProcessing(1);
+				break;
+			case kMaximum:
+				itsGrib->Message().TypeOfStatisticalProcessing(2);
+				break;
+			case kMinimum:
+				itsGrib->Message().TypeOfStatisticalProcessing(3);
+				break;
+			default:
+			case kUnknownAggregationType:
+				break;
+		}
 
-			if (ftype.Type() == kEpsPerturbation || ftype.Type() == kEpsControl)
-			{
-				templateNumber = 11;  // Individual ensemble forecast, control and perturbed, at a horizontal level or
-				                      // in a horizontal layer, in a continuous or non-continuous time interval.
-			}
+		long num = static_cast<long>(par.ProcessingType().NumberOfEnsembleMembers());
 
-			itsGrib->Message().ProductDefinitionTemplateNumber(templateNumber);
+		if (num == static_cast<long>(kHPMissingInt))
+		{
+			num = 0;
+		}
 
-			long type;
-
-			switch (par.Aggregation().Type())
-			{
-				default:
-				case kAverage:
-					type = 0;
-					break;
-				case kAccumulation:
-					type = 1;
-					break;
-				case kMaximum:
-					type = 2;
-					break;
-				case kMinimum:
-					type = 3;
-					break;
-			}
-
-			itsGrib->Message().TypeOfStatisticalProcessing(type);
+		switch (procType)
+		{
+			default:
+				break;
+			case kProbabilityGreaterThan:  // Probability of event above upper limit
+				itsGrib->Message().SetLongKey("probabilityType", 1);
+				itsGrib->Message().SetLongKey("scaledValueOfUpperLimit",
+				                              static_cast<long>(par.ProcessingType().Value()));
+				break;
+			case kProbabilityLessThan:  // Probability of event below lower limit
+				itsGrib->Message().SetLongKey("probabilityType", 0);
+				itsGrib->Message().SetLongKey("scaledValueOfLowerLimit",
+				                              static_cast<long>(par.ProcessingType().Value()));
+				break;
+			case kProbabilityBetween:
+				itsGrib->Message().SetLongKey("probabilityType", 192);
+				itsGrib->Message().SetLongKey("scaledValueOfLowerLimit",
+				                              static_cast<long>(par.ProcessingType().Value()));
+				itsGrib->Message().SetLongKey("scaledValueOfUpperLimit",
+				                              static_cast<long>(par.ProcessingType().Value2()));
+				break;
+			case kProbabilityEquals:
+				itsGrib->Message().SetLongKey("probabilityType", 193);
+				itsGrib->Message().SetLongKey("scaledValueOfLowerLimit",
+				                              static_cast<long>(par.ProcessingType().Value()));
+				break;
+			case kProbabilityNotEquals:
+				itsGrib->Message().SetLongKey("probabilityType", 193);
+				itsGrib->Message().SetLongKey("scaledValueOfLowerLimit",
+				                              static_cast<long>(par.ProcessingType().Value()));
+				break;
+			case kProbabilityEqualsIn:
+				itsGrib->Message().SetLongKey("probabilityType", 194);
+				break;
+			case kFractile:
+				itsGrib->Message().SetLongKey("percentileValue", static_cast<long>(par.ProcessingType().Value()));
+				break;
+			case kEnsembleMean:
+				itsGrib->Message().SetLongKey("derivedForecast", 0);
+				itsGrib->Message().SetLongKey("numberOfForecastsInEnsemble", num);
+				break;
+			case kSpread:
+				itsGrib->Message().SetLongKey("derivedForecast", 4);
+				itsGrib->Message().SetLongKey("numberOfForecastsInEnsemble", num);
+				break;
+			case kStandardDeviation:
+				itsGrib->Message().SetLongKey("derivedForecast", 2);
+				itsGrib->Message().SetLongKey("numberOfForecastsInEnsemble", num);
+				break;
+			case kEFI:
+				itsGrib->Message().SetLongKey("derivedForecast", 199);
+				itsGrib->Message().SetLongKey("numberOfForecastsInEnsemble", num);
+				break;
 		}
 	}
 }
@@ -845,15 +996,17 @@ bool grib::ToFile(info<T>& anInfo, string& outputFile, bool appendToFile)
 
 	long edition = static_cast<long>(itsWriteOptions.configuration->OutputFileType());
 
-	// Check levelvalue and forecast type since those might force us to change to grib2!
+	// Check levelvalue, forecast type and param processing type since those might force us to change to grib2!
 
 	HPForecastType forecastType = anInfo.ForecastType().Type();
 
 	if (edition == 1 &&
-	    (anInfo.Level().AB().size() > 255 || (forecastType == kEpsControl || forecastType == kEpsPerturbation)))
+	    (anInfo.Level().AB().size() > 255 || (forecastType == kEpsControl || forecastType == kEpsPerturbation) ||
+	     anInfo.Param().ProcessingType().Type() != kUnknownProcessingType))
 	{
 		itsLogger.Trace("File type forced to GRIB2 (level value: " + to_string(anInfo.Level().Value()) +
-		                ", forecast type: " + HPForecastTypeToString.at(forecastType) + ")");
+		                ", forecast type: " + HPForecastTypeToString.at(forecastType) + ", processing type: " +
+		                HPProcessingTypeToString.at(anInfo.Param().ProcessingType().Type()) + ")");
 		edition = 2;
 		if (itsWriteOptions.configuration->FileCompression() == kNoCompression &&
 		    itsWriteOptions.configuration->FileWriteOption() != kSingleFile)

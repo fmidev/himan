@@ -189,12 +189,22 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 	for (float frac : itsFractiles)
 	{
 		auto name = "F" + boost::lexical_cast<std::string>(frac) + "-" + paramName;
-		calculatedParams.push_back(param(name));
+		param p(name);
+		p.ProcessingType(processing_type(kFractile, frac, kHPMissingValue, kHPMissingInt));
+		calculatedParams.push_back(p);
 	}
 
 	auto name = util::Split(paramName, "-", false);
-	calculatedParams.push_back(param(name[0] + "-MEAN-" + name[1]));    // mean
-	calculatedParams.push_back(param(name[0] + "-STDDEV-" + name[1]));  // standard deviation
+
+	param mean(name[0] + "-MEAN-" + name[1]);
+	mean.ProcessingType(processing_type(kEnsembleMean, kHPMissingInt, kHPMissingInt, kHPMissingInt));
+
+	calculatedParams.push_back(mean);
+
+	param stdev(name[0] + "-STDDEV-" + name[1]);
+	stdev.ProcessingType(processing_type(kStandardDeviation, kHPMissingInt, kHPMissingInt, kHPMissingInt));
+
+	calculatedParams.push_back(stdev);
 
 	SetParams(calculatedParams);
 

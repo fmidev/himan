@@ -375,6 +375,37 @@ const boost::unordered_map<HPAggregationType, std::string> HPAggregationTypeToSt
 	(kMaximum, "maximum")(kMinimum, "minimum")
 	(kDifference, "difference");
 
+enum HPProcessingType
+{
+	kUnknownProcessingType = 0,
+	kProbabilityGreaterThan,
+	kProbabilityLessThan,
+	kProbabilityBetween,
+	kProbabilityEquals,
+	kProbabilityNotEquals,
+	kProbabilityEqualsIn,
+	kFractile,
+	kEnsembleMean, // to differ from aggregation 'average'
+	kSpread,
+	kStandardDeviation,
+	kEFI
+};
+
+const boost::unordered_map<HPProcessingType, std::string> HPProcessingTypeToString =
+    ba::map_list_of
+	(kUnknownProcessingType, "unknown")
+	(kProbabilityGreaterThan, "probability greater than")
+	(kProbabilityLessThan, "probability less than")
+	(kProbabilityBetween, "probability between")
+	(kProbabilityEquals, "probability equals")
+	(kProbabilityNotEquals, "probability is not equal to")
+	(kProbabilityEqualsIn, "probability equal to value in list")
+	(kFractile, "fractile")
+	(kEnsembleMean, "ensemble mean")
+	(kSpread, "spread")
+	(kStandardDeviation, "standard deviation")
+	(kEFI, "efi");
+
 enum HPModifierType
 {
 	kUnknownModifierType = 0,

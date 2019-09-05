@@ -6,16 +6,6 @@
 
 namespace PROB
 {
-enum class comparison_op
-{
-	GTEQ,
-	LTEQ,
-	EQ,
-	EQIN,
-	NEQ,
-	BTWN
-};
-
 /*
  * struct partial_param_configuration
  *
@@ -33,8 +23,6 @@ struct partial_param_configuration
 {
 	std::vector<std::string> thresholds;
 	std::map<int, std::string> stationThresholds;
-
-	comparison_op comparison;
 
 	// Output parameter, the result
 	himan::param output;
@@ -62,14 +50,12 @@ struct partial_param_configuration
  * - double
  * - std::vector<double>
  *
-*/
+ */
 
 template <typename T>
 struct param_configuration
 {
 	std::vector<T> thresholds;
-
-	comparison_op comparison;
 
 	// Output parameter, the result
 	himan::param output;

@@ -22,7 +22,6 @@ function produceProbabilities(sourceparam, targetparam, op, limit)
   local curtime = forecast_time(current_time:GetOriginDateTime(), current_time:GetValidDateTime())
 
   for j=0,3 do -- Look for the past 3 hours
-
     ens:Fetch(configuration, curtime, current_level)
 
     local actual_size = ens:Size()
@@ -61,6 +60,22 @@ function produceProbabilities(sourceparam, targetparam, op, limit)
     end
 
     prob[i] = tmp / (#datas)
+  end
+
+  proctype = nil
+
+  if op == ">" then
+    proctype = processing_type(HPProcessingType.kProbabilityGreaterThan, limit, kHPMissingValue)
+  elseif op == "==" then
+    proctype = processing_type(HPProcessingType.kProbabilityEq, limit, kHPMissingValue)
+  end
+
+  targetparam:SetProcessingType(proctype)
+
+  if sourceparam:GetName() == "FFG-MS" then
+    targetparam:SetAggregation(aggregation(HPAggregationType.kMaximum, HPTimeResolution.kHourResolution, 0, 0))
+  elseif sourceparam:GetName() == "RRR-KGM2" then
+    targetparam:SetAggregation(aggregation(HPAggregationType.kAccumulation, HPTimeResolution.kHourResolution, 0, 0))
   end
 
   result:SetParam(targetparam)

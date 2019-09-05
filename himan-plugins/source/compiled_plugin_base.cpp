@@ -568,7 +568,10 @@ void compiled_plugin_base::SetParams(std::vector<param>& params, const vector<le
 				}
 
 				param p(paraminfo);
+
+				// database does not provide aggregation or processing type information
 				p.Aggregation(par.Aggregation());
+				p.ProcessingType(par.ProcessingType());
 
 				par = p;
 			}
