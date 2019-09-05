@@ -435,7 +435,7 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 	     sourceInfo->Param().ProcessingType().Type() != kUnknownProcessingType))
 	{
 		// If source parameter is an aggregation or processed somehow, copy that
-		// informatio to target param
+		// information to target param
 		param p = myTargetInfo->Param();
 		p.Aggregation(sourceInfo->Param().Aggregation());
 		p.ProcessingType(sourceInfo->Param().ProcessingType());

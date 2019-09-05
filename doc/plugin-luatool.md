@@ -324,7 +324,7 @@ processing_type is another parameter component, defining for example that it is 
 | Return value  | Name | Arguments | Description |
 |---|---|---|---|
 | string | ClassName | | Returns class name |
-| HPProcessingType | GetType | | Returns procssingg type type (for example: probability greater than) |
+| HPProcessingType | GetType | | Returns processing type type (for example: probability greater than) |
 |   | SetType | HPProcessingType  | Set processing type type |
 | number | GetValue | | Returns first value related to processing type |
 |   | SetValue | number  | Set first value related to processing type |
