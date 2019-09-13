@@ -12,8 +12,8 @@ if not ensSize then
   return
 end
 
-local ens1 = lagged_ensemble(param("VV2-M"), ensSize, HPTimeResolution.kHourResolution, -6, 2)
-local ens2 = lagged_ensemble(param("CL-2-FT"), ensSize, HPTimeResolution.kHourResolution, -6, 2)
+local ens1 = lagged_ensemble(param("VV2-M"), ensSize, time_duration(HPTimeResolution.kHourResolution, -6), 2)
+local ens2 = lagged_ensemble(param("CL-2-FT"), ensSize, time_duration(HPTimeResolution.kHourResolution, -6), 2)
 
 ens1:Fetch(configuration, current_time, current_level)
 ens2:Fetch(configuration, current_time, current_level)

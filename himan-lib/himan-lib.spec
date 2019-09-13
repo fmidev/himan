@@ -3,8 +3,8 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 19.5.15
-Release: 2.el7.fmi
+Version: 19.9.2
+Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -62,6 +62,16 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Mon Sep  2 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.9.2-1.fmi
+- Remove AB from grid
+* Tue Aug 27 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.8.27-1.fmi
+- Adding support for vector rotation to projection north
+* Tue Jun 18 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.6.18-1.fmi
+- Bugix to rotation
+* Thu Jun 13 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.6.13-1.fmi
+- numerical_functions additions
+* Wed Jun 12 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.6.12-1.fmi
+- numerical_functions tweaking
 * Wed May 15 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.5.15-2.fmi
 - Reduce2DGPU additions
 * Wed May 15 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.5.15-1.fmi

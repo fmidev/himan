@@ -2,11 +2,11 @@
 
 logger:Info("Calculating total precipitation")
 
-local subhour = current_time:GetStep() % 60
+local subhour = current_time:GetStep():Minutes()
 
-if subhour == 0 then
+if subhour ~= 0 then
   -- RR needs to be calculated only for subhours
-  logger:Info("Skipping full hour RR calculation for " .. current_time:GetStep())
+  logger:Info("Skipping full hour RR calculation for " .. current_time:GetStep():Minutes())
   return
 end
 

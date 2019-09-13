@@ -14,11 +14,12 @@ using namespace Eigen;
 template <typename T>
 matrix<T> numerical_functions::Filter2D(const matrix<T>& A, const matrix<T>& B, bool useCuda)
 {
+#ifdef HAVE_CUDA
 	if (useCuda)
 	{
 		return Filter2DGPU(A, B);
 	}
-
+#endif
 	return Reduce2D<T>(A, B,
 	                   [](T& val1, T& val2, const T& a, const T& b) {
 		                   if (IsValid(a * b))
@@ -37,11 +38,12 @@ template matrix<float> numerical_functions::Filter2D(const matrix<float>&, const
 template <typename T>
 matrix<T> numerical_functions::Max2D(const matrix<T>& A, const matrix<T>& B, bool useCuda)
 {
+#ifdef HAVE_CUDA
 	if (useCuda)
 	{
 		return Max2DGPU(A, B);
 	}
-
+#endif
 	return Reduce2D<T>(A, B,
 	                   [](T& val1, T& val2, const T& a, const T& b) {
 		                   if (IsValid(a * b))
@@ -56,11 +58,12 @@ template matrix<float> numerical_functions::Max2D(const matrix<float>&, const ma
 template <typename T>
 matrix<T> numerical_functions::Min2D(const matrix<T>& A, const matrix<T>& B, bool useCuda)
 {
+#ifdef HAVE_CUDA
 	if (useCuda)
 	{
 		return Min2DGPU(A, B);
 	}
-
+#endif
 	return Reduce2D<T>(A, B,
 	                   [](T& val1, T& val2, const T& a, const T& b) {
 		                   if (IsValid(a * b))
@@ -94,12 +97,12 @@ std::pair<std::vector<T>, std::vector<T>> numerical_functions::LegGauss(size_t N
 	Diagonal<Matrix<T, Dynamic, Dynamic>, 0> Jdiag0(J);
 	Diagonal<Matrix<T, Dynamic, Dynamic>, 1> Jdiag1(J);
 
-	for (int n = 0; n < N; ++n)
+	for (size_t n = 0; n < N; ++n)
 	{
 		Jdiag0[n] = 0.0;
 	}
 
-	for (int n = 0; n < N - 1; ++n)
+	for (size_t n = 0; n < N - 1; ++n)
 	{
 		Jdiag1[n] = static_cast<T>((n + 1) * 1.0 / std::sqrt(2 * (n) + 1) * 1.0 / std::sqrt(2 * (n + 1) + 1));
 	}

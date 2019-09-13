@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 19.5.15
+Version: 19.9.2
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 19.5.6
+Requires: himan-lib >= 19.6.18
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 19.2.12
@@ -115,6 +115,36 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Sep  2 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.9.2-1.fmi
+- pop tweaking
+* Thu Aug 29 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.8.29-1.fmi
+- blend fixes
+* Wed Aug 28 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.8.28-3.fmi
+- More minor transformer tweaking
+* Wed Aug 28 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.8.28-2.fmi
+- Minor transformer tweaking
+* Wed Aug 28 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.8.28-1.fmi
+- Minor blend tweaking
+* Tue Aug 27 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.8.27-2.fmi
+- Allow missing values for CSI when producing probabilities
+* Tue Aug 27 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.8.27-1.fmi
+- Adding support for vector rotation to projection north
+* Tue Jun 18 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.6.18-3.fmi
+- Bugfix for auto_taf
+* Tue Jun 18 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.6.18-2.fmi
+- windvector to single precision
+* Tue Jun 18 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.6.18-1.fmi
+- vvms to single precision
+* Mon Jun 17 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.6.17-1.fmi
+- cape/500m performance optimization
+* Thu Jun 13 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.6.13-2.fmi
+- Fix numerical_functions regression
+* Thu Jun 13 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.6.13-1.fmi
+- pot v2.6
+* Wed Jun 12 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.6.12-2.fmi
+- hybrid_height: fallback method for MNWC sub-hour
+* Wed Jun 12 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.6.12-1.fmi
+- numerical_functions tweaking
 * Wed May 15 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.5.15-1.fmi
 - Reduce2DGPU added
 * Mon May  6 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.5.6-2.fmi
