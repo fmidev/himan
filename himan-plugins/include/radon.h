@@ -25,6 +25,7 @@
 
 #include "NFmiRadonDB.h"
 #include "auxiliary_plugin.h"
+#include "file_information.h"
 #include "info.h"
 #include "search_options.h"
 
@@ -62,7 +63,7 @@ class radon : public auxiliary_plugin
 	 * @brief Return filename of a field
 	 */
 
-	std::pair<std::vector<std::string>, std::string> Files(search_options& options);
+	std::vector<file_information> Files(search_options& options);
 
 	/**
 	 * @brief Return previ data in CSV format
@@ -120,7 +121,7 @@ inline NFmiRadonDB& radon::RadonDB()
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-	return std::shared_ptr<radon>(new radon());
+	return std::make_shared<radon>();
 }
 #endif /* HIMAN_AUXILIARY_INCLUDE */
 

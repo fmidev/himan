@@ -2247,21 +2247,22 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 
 template bool grib::CreateInfoFromGrib<double>(const search_options&, bool, bool, shared_ptr<info<double>>) const;
 
-vector<shared_ptr<himan::info<double>>> grib::FromFile(const string& theInputFile, const search_options& options,
-                                                       bool readPackedData, bool readIfNotMatching) const
+vector<shared_ptr<himan::info<double>>> grib::FromFile(const file_information& theInputFile,
+                                                       const search_options& options, bool readPackedData,
+                                                       bool readIfNotMatching) const
 {
 	return FromFile<double>(theInputFile, options, readPackedData, readIfNotMatching);
 }
 
 template <typename T>
-vector<shared_ptr<himan::info<T>>> grib::FromFile(const string& theInputFile, const search_options& options,
+vector<shared_ptr<himan::info<T>>> grib::FromFile(const file_information& theInputFile, const search_options& options,
                                                   bool readPackedData, bool readIfNotMatching) const
 {
 	vector<shared_ptr<himan::info<T>>> infos;
 
-	if (!itsGrib->Open(theInputFile))
+	if (!itsGrib->Open(theInputFile.file_location))
 	{
-		itsLogger.Error("Opening file '" + theInputFile + "' failed");
+		itsLogger.Error("Opening file '" + theInputFile.file_location + "' failed");
 		return infos;
 	}
 
@@ -2277,108 +2278,60 @@ vector<shared_ptr<himan::info<T>>> grib::FromFile(const string& theInputFile, co
 	timer aTimer;
 	aTimer.Start();
 
-	while (itsGrib->NextMessage())
+	const unsigned long offset = theInputFile.offset;
+	const unsigned long bytes = theInputFile.length;
+
+	if (offset > 0)
 	{
-		foundMessageNo++;
+		if (!itsGrib->ReadMessage(offset, bytes))
+		{
+			return infos;
+		}
 		auto newInfo = make_shared<info<T>>();
 
 		if (CreateInfoFromGrib(options, readPackedData, readIfNotMatching, newInfo) || readIfNotMatching)
 		{
 			infos.push_back(newInfo);
 			newInfo->First();
-
-			aTimer.Stop();
-
-			if (!readIfNotMatching)
-				break;  // We found what we were looking for
 		}
 	}
-
-	const long duration = aTimer.GetTime();
-	const long bytes = boost::filesystem::file_size(theInputFile);
-
-	const int speed =
-	    static_cast<int>(floor((static_cast<double>(bytes) / 1024. / 1024.) / (static_cast<double>(duration) / 1000.)));
-
-	itsLogger.Debug("Read file '" + theInputFile + "' (" + to_string(speed) + " MB/s)");
-
-	return infos;
-}
-
-template vector<shared_ptr<himan::info<double>>> grib::FromFile<double>(const string&, const search_options&, bool,
-                                                                        bool) const;
-template vector<shared_ptr<himan::info<float>>> grib::FromFile<float>(const string&, const search_options&, bool,
-                                                                      bool) const;
-
-vector<shared_ptr<himan::info<double>>> grib::FromIndexFile(const string& theInputFile, const search_options& options,
-                                                            bool readPackedData, bool readIfNotMatching) const
-{
-	return FromIndexFile<double>(theInputFile, options, readPackedData, readIfNotMatching);
-}
-
-template <typename T>
-vector<shared_ptr<himan::info<T>>> grib::FromIndexFile(const string& theInputFile, const search_options& options,
-                                                       bool readPackedData, bool readIfNotMatching) const
-{
-	vector<shared_ptr<himan::info<T>>> infos;
-
-	if (!itsGrib->Open(theInputFile))
+	else
 	{
-		itsLogger.Error("Opening file '" + theInputFile + "' failed");
-		return infos;
-	}
+		while (itsGrib->NextMessage())
+		{
+			foundMessageNo++;
+			auto newInfo = make_shared<info<T>>();
 
-	if (options.prod.Centre() == kHPMissingInt)
-	{
-		itsLogger.Error("Process and centre information for producer " + to_string(options.prod.Id()) +
-		                " are undefined");
-		return infos;
-	}
+			if (CreateInfoFromGrib(options, readPackedData, readIfNotMatching, newInfo) || readIfNotMatching)
+			{
+				infos.push_back(newInfo);
+				newInfo->First();
 
-	timer aTimer;
-	aTimer.Start();
-
-	// TODO need to check what happens when multiple idx files or idx + grib files are provided as input.
-
-	// Create map for index keys, ie. those keys that are common to both grib editions
-	map<string, long> indexKeys;
-	indexKeys["level"] = static_cast<long>(options.level.Value());
-	indexKeys["step"] = static_cast<long>(options.time.Step().Hours());
-	indexKeys["centre"] = static_cast<long>(options.prod.Centre());
-	indexKeys["generatingProcessIdentifier"] = static_cast<long>(options.prod.Process());
-	indexKeys["date"] = stol(options.time.OriginDateTime().String("%Y%m%d"));
-	indexKeys["time"] = stol(options.time.OriginDateTime().String("%H%M"));
-
-	auto newInfo = make_shared<info<T>>();
-
-	if ((itsGrib->Message(indexKeys, OptionsToKeys(options, 1)) ||
-	     itsGrib->Message(indexKeys, OptionsToKeys(options, 2))) &&
-	    CreateInfoFromGrib(options, readPackedData, readIfNotMatching, newInfo))
-	{
-		infos.push_back(newInfo);
-		newInfo->First();
+				if (!readIfNotMatching)
+				{
+					break;  // We found what we were looking for
+				}
+			}
+		}
 	}
 
 	aTimer.Stop();
 
-	long duration = aTimer.GetTime();
+	const long duration = aTimer.GetTime();
 
-	if (infos.size())
-	{
-		itsLogger.Debug("Read " + infos[0]->Param().Name() + " from " + static_cast<string>(infos[0]->Level()) +
-		                " at " + infos[0]->Time().OriginDateTime().String() + " step " +
-		                static_cast<string>(infos[0]->Time().Step()) + " using grib index file '" + theInputFile +
-		                "' in " + to_string(duration) + " ms");
-	}
+	const int speed =
+	    static_cast<int>(floor((static_cast<double>(bytes) / 1024. / 1024.) / (static_cast<double>(duration) / 1000.)));
+
+	itsLogger.Debug("Read from file '" + theInputFile.file_location + "' position " + to_string(offset) + ":" +
+	                to_string(offset + bytes) + " (" + to_string(speed) + " MB/s)");
 
 	return infos;
 }
 
-template vector<shared_ptr<himan::info<double>>> grib::FromIndexFile<double>(const string&, const search_options&, bool,
-                                                                             bool) const;
-template vector<shared_ptr<himan::info<float>>> grib::FromIndexFile<float>(const string&, const search_options&, bool,
-                                                                           bool) const;
-
+template vector<shared_ptr<himan::info<double>>> grib::FromFile<double>(const file_information&, const search_options&,
+                                                                        bool, bool) const;
+template vector<shared_ptr<himan::info<float>>> grib::FromFile<float>(const file_information&, const search_options&,
+                                                                      bool, bool) const;
 void grib::UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restrict__ unpacked, size_t len,
                         size_t unpackedLen) const
 {
@@ -2408,46 +2361,6 @@ void grib::UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restric
 			}
 		}
 	}
-}
-
-std::map<string, long> grib::OptionsToKeys(const search_options& options, long edition) const
-{
-	// indicator of Parameter is not necessarily provided in search_options param
-	// look this information up from database instead
-
-	map<string, string> param;
-
-	if (options.configuration->DatabaseType() == kRadon)
-	{
-		auto r = GET_PLUGIN(radon);
-		auto levelInfo =
-		    r->RadonDB().GetLevelFromDatabaseName(boost::to_upper_copy(HPLevelTypeToString.at(options.level.Type())));
-
-		ASSERT(levelInfo.size());
-		param = r->RadonDB().GetParameterFromDatabaseName(options.prod.Id(), options.param.Name(),
-		                                                  stoi(levelInfo["id"]), options.level.Value());
-	}
-
-	std::map<string, long> ret;
-
-	if (edition == 1)
-	{
-		ret["table2Version"] = stol(param["grib1_table_version"]);
-		ret["indicatorOfTypeOfLevel"] = static_cast<long>(options.level.Type());
-		ret["indicatorOfParameter"] = stol(param["grib1_number"]);
-		ret["timeRangeIndicator"] = stol(param["grib1_timerange_indicator"]);
-	}
-	else if (edition == 2)
-	{
-		ret["typeOfFirstFixedSurface"] =
-		    static_cast<long>(itsGrib->Message().LevelTypeToAnotherEdition(options.level.Type(), 2));
-		ret["discipline"] = stol(param["grib2_discipline"]);
-		ret["parameterCategory"] = stol(param["grib2_category"]);
-		ret["parameterNumber"] = stol(param["grib2_number"]);
-		ret["typeOfStatisticalProcessing"] = stol(param["grib2_type_of_statistical_processing"]);
-	}
-
-	return ret;
 }
 
 std::string GetParamNameFromGribShortName(const std::string& paramFileName, const std::string& shortName)

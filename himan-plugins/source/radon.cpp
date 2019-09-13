@@ -8,6 +8,7 @@
 #include "plugin_factory.h"
 #include "point_list.h"
 #include "util.h"
+#include <boost/filesystem.hpp>
 #include <sstream>
 #include <thread>
 
@@ -288,7 +289,7 @@ string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<v
 
 		// clang-format off
 
-		query << "SELECT t.file_location, g.name FROM " << schema << "." << partition << " t, geom g, param p, level l"
+		query << "SELECT t.file_location, g.name, t.byte_offset, t.byte_length FROM " << schema << "." << partition << " t, geom g, param p, level l"
 		      << " WHERE t.geometry_id = g.id"
 		      << " AND t.producer_id = " << options.prod.Id()
 		      << " AND t.param_id = p.id"
@@ -330,7 +331,7 @@ string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<v
 			string tablename = gridgeoms[i][1];
 			string geomid = gridgeoms[i][0];
 
-			query << "SELECT file_location, geometry_name "
+			query << "SELECT file_location, geometry_name, byte_offset, byte_length "
 			      << "FROM " << tablename << "_v "
 			      << "WHERE analysis_time = '" << analtime << "'"
 			      << " AND param_name = '" << parm_name << "'"
@@ -348,24 +349,25 @@ string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<v
 	return query.str();
 }
 
-pair<vector<string>, string> radon::Files(search_options& options)
+vector<himan::file_information> radon::Files(search_options& options)
 {
 	Init();
 
-	vector<string> files, values;
+	vector<string> values;
+	vector<file_information> ret;
 
 	const auto gridgeoms = GetGridGeoms(options, itsRadonDB);
 
 	if (gridgeoms.empty())
 	{
-		return make_pair(files, string());
+		return ret;
 	}
 
 	const auto query = CreateFileSQLQuery(options, gridgeoms);
 
 	if (query.empty())
 	{
-		return make_pair(files, string());
+		return ret;
 	}
 
 	try
@@ -391,14 +393,18 @@ pair<vector<string>, string> radon::Files(search_options& options)
 
 	if (values.empty())
 	{
-		return make_pair(files, string());
+		return ret;
 	}
 
 	itsLogger.Trace("Found data for parameter " + options.param.Name() + " from radon geometry " + values[1]);
 
-	files.push_back(values[0]);
+	file_information finfo;
+	finfo.file_location = values[0];
+	finfo.file_type = util::FileType(values[0]);
+	finfo.offset = static_cast<unsigned int>(stoi(values[2]));
+	finfo.length = static_cast<unsigned int>(stoi(values[3]));
 
-	return make_pair(files, values[1]);
+	return {finfo};
 }
 
 bool radon::Save(const info<double>& resultInfo, const string& theFileName, const string& targetGeomName)
@@ -659,16 +665,19 @@ bool radon::SaveGrid(const info<T>& resultInfo, const string& theFileName, const
 
 	double levelValue2 = IsKHPMissingValue(resultInfo.Level().Value2()) ? -1 : resultInfo.Level().Value2();
 	const string fullTableName = schema_name + "." + table_name;
+	const auto fileSize = boost::filesystem::file_size(theFileName);
 
 	query
 	    << "INSERT INTO " << fullTableName
 	    << " (producer_id, analysis_time, geometry_id, param_id, level_id, level_value, level_value2, forecast_period, "
-	       "forecast_type_id, forecast_type_value, file_location, file_server) VALUES ("
+	       "forecast_type_id, forecast_type_value, message_no, byte_offset, byte_length, file_location, file_server) "
+	       "VALUES ("
 	    << resultInfo.Producer().Id() << ", "
 	    << "'" << analysisTime << "', " << geom_id << ", " << resultInfo.Param().Id() << ", " << levelinfo["id"] << ", "
 	    << resultInfo.Level().Value() << ", " << levelValue2 << ", "
 	    << "'" << util::MakeSQLInterval(resultInfo.Time()) << "', "
 	    << static_cast<int>(resultInfo.ForecastType().Type()) << ", " << forecastTypeValue << ","
+	    << "0, 0, " << fileSize << ","
 	    << "'" << theFileName << "', "
 	    << "'" << host << "')";
 
@@ -697,7 +706,9 @@ bool radon::SaveGrid(const info<T>& resultInfo, const string& theFileName, const
 		query.str("");
 		query << "UPDATE " << fullTableName << " SET "
 		      << "file_location = '" << theFileName << "', "
-		      << "file_server = '" << host << "' WHERE "
+		      << "file_server = '" << host << ", "
+		      << "message_no = 0, byte_offset = 0, "
+		      << "byte_length = " << fileSize << "' WHERE "
 		      << "producer_id = " << resultInfo.Producer().Id() << " AND "
 		      << "analysis_time = '" << analysisTime << "' AND "
 		      << "geometry_id = " << geom_id << " AND "
