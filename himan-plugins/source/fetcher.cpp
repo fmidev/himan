@@ -659,7 +659,7 @@ pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAuxili
 			f.length = 0;
 			f.storage_type = HPFileStorageType::kFileSystem;
 
-			files.emplace_back(f);
+			files.push_back(f);
 		}
 
 		if (itsUseCache && opts.configuration->UseCacheForReads() && opts.configuration->ReadAllAuxiliaryFilesToCache())
