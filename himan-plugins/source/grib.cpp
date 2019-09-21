@@ -2278,11 +2278,11 @@ vector<shared_ptr<himan::info<T>>> grib::FromFile(const file_information& theInp
 	timer aTimer;
 	aTimer.Start();
 
-	const unsigned long offset = theInputFile.offset;
-	const unsigned long bytes = theInputFile.length;
-
-	if (offset > 0)
+	if (theInputFile.offset && theInputFile.length)
 	{
+		const unsigned long offset = theInputFile.offset.get();
+		const unsigned long bytes = theInputFile.length.get();
+
 		if (!itsGrib->ReadMessage(offset, bytes))
 		{
 			return infos;
@@ -2318,12 +2318,15 @@ vector<shared_ptr<himan::info<T>>> grib::FromFile(const file_information& theInp
 	aTimer.Stop();
 
 	const long duration = aTimer.GetTime();
-
+	const auto bytes =
+	    (theInputFile.length) ? theInputFile.length.get() : boost::filesystem::file_size(theInputFile.file_location);
+	const auto position =
+	    (theInputFile.offset) ? "position " + to_string(theInputFile.offset.get()) + ":" + to_string(bytes) : "";
 	const int speed =
 	    static_cast<int>(floor((static_cast<double>(bytes) / 1024. / 1024.) / (static_cast<double>(duration) / 1000.)));
 
-	itsLogger.Debug("Read from file '" + theInputFile.file_location + "' position " + to_string(offset) + ":" +
-	                to_string(offset + bytes) + " (" + to_string(speed) + " MB/s)");
+	itsLogger.Debug("Read from file '" + theInputFile.file_location + "' " + position + " (" + to_string(speed) +
+	                " MB/s)");
 
 	return infos;
 }

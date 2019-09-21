@@ -655,8 +655,8 @@ pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAuxili
 			file_information f;
 			f.file_location = file;
 			f.file_type = util::FileType(file);
-			f.offset = 0;
-			f.length = 0;
+			f.offset = boost::none;
+			f.length = boost::none;
 			f.storage_type = HPFileStorageType::kFileSystem;
 
 			files.push_back(f);
