@@ -19,6 +19,8 @@ class aggregation
 	aggregation();
 	aggregation(HPAggregationType theAggregationType);
 	aggregation(HPAggregationType theAggregationType, const time_duration& theTimeInteval);
+	aggregation(HPAggregationType theAggregationType, const time_duration& theTimeInteval,
+	            const time_duration& theTimeOffset);
 
 	~aggregation() = default;
 	aggregation(const aggregation&) = default;
@@ -37,11 +39,16 @@ class aggregation
 	time_duration TimeDuration() const;
 	void TimeDuration(const time_duration& theTimeDuration);
 
+	time_duration TimeOffset() const;
+	void TimeOffset(const time_duration& theTimeOffset);
+
 	std::ostream& Write(std::ostream& file) const;
 
    private:
 	HPAggregationType itsType;
-	time_duration itsTimeDuration;
+	time_duration itsTimeDuration;  // duration of the aggregation period, for exampl *6 hour* precipitation
+	time_duration itsTimeOffset;    // offset of the beginning of the aggregation period compared to current hour,
+	                                // usually -1 * itsTimeDuration
 
 #ifdef SERIALIZATION
 	friend class cereal::access;

@@ -1322,11 +1322,14 @@ void BindLib(lua_State* L)
 		      .def("Empty", &time_duration::Empty),
 	          class_<aggregation>("aggregation")
 	              .def(constructor<HPAggregationType, const time_duration&>())
+	              .def(constructor<HPAggregationType, const time_duration&, const time_duration&>())
 	              .def("ClassName", &aggregation::ClassName)
 	              .def("GetType", LUA_CMEMFN(HPAggregationType, aggregation, Type, void))
 	              .def("SetType", LUA_MEMFN(void, aggregation, Type, HPAggregationType))
 	              .def("GetTimeDuration", LUA_CMEMFN(time_duration, aggregation, TimeDuration, void))
-	              .def("SetTimeDuration", LUA_MEMFN(void, aggregation, TimeDuration, const time_duration&)),
+	              .def("SetTimeDuration", LUA_MEMFN(void, aggregation, TimeDuration, const time_duration&))
+	              .def("GetTimeOffset", LUA_CMEMFN(time_duration, aggregation, TimeOffset, void))
+	              .def("SetTimeOffset", LUA_MEMFN(void, aggregation, TimeOffset, const time_duration&)),
 	          class_<processing_type>("processing_type")
 	              .def(constructor<HPProcessingType, double, double>())
 	              .def("ClassName", &processing_type::ClassName)

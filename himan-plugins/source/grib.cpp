@@ -626,12 +626,8 @@ void grib::WriteTime(const forecast_time& ftime, const producer& prod, const par
 
 		if (ftime.Step().Minutes() % 60 != 0)
 		{
-			if (ftime.Step().Minutes() % 15 != 0)
-			{
-				throw runtime_error("Minutes value not divisible with 15");
-			}
-			itsGrib->Message().UnitOfTimeRange(13);  // 15 minutes
-			stepUnit = FIFTEEN_MINUTES;
+			itsLogger.Fatal("Sub-hour output ony in grib2");
+			himan::Abort();
 		}
 		else if (ftime.Step().Hours() > 255)  // Forecast with stepvalues that don't fit in one byte
 		{
@@ -659,18 +655,9 @@ void grib::WriteTime(const forecast_time& ftime, const producer& prod, const par
 			}
 		}
 
-		long p1, p2;
-
-		if (stepUnit == FIFTEEN_MINUTES)
-		{
-			p1 = ((ftime.Step() - par.Aggregation().TimeDuration()) / 15).Minutes();
-			p2 = (ftime.Step() / 15).Minutes();
-		}
-		else
-		{
-			p1 = ((ftime.Step() - par.Aggregation().TimeDuration()) / static_cast<int>(stepUnit.Hours())).Hours();
-			p2 = (ftime.Step() / static_cast<int>(stepUnit.Hours())).Hours();
-		}
+		// These are used if parameter is aggregated
+		long p1 = ((ftime.Step() + par.Aggregation().TimeOffset()) / static_cast<int>(stepUnit.Hours())).Hours();
+		long p2 = p1 + par.Aggregation().TimeDuration().Hours() / static_cast<int>(stepUnit.Hours());
 
 		switch (par.Aggregation().Type())
 		{
@@ -678,7 +665,7 @@ void grib::WriteTime(const forecast_time& ftime, const producer& prod, const par
 			case kUnknownAggregationType:
 				// Forecast product valid for reference time + P1 (P1 > 0)
 				itsGrib->Message().TimeRangeIndicator(0);
-				itsGrib->Message().P1(p2);  // yes 'p2' is correct here!
+				itsGrib->Message().P1((ftime.Step() / static_cast<int>(stepUnit.Hours())).Hours());
 				break;
 			case kAverage:
 				// Average (reference time + P1 to reference time + P2)
@@ -753,6 +740,7 @@ void grib::WriteTime(const forecast_time& ftime, const producer& prod, const par
 				// duration of the aggregation period
 				long unitForTimeRange = 1;  // hours
 				long lengthOfTimeRange = par.Aggregation().TimeDuration().Hours();
+				long timeOffset = par.Aggregation().TimeOffset().Hours();
 
 				if (par.Aggregation().TimeDuration().Minutes() % 60 != 0)
 				{
@@ -762,15 +750,15 @@ void grib::WriteTime(const forecast_time& ftime, const producer& prod, const par
 
 				if (unitOfTimeRange == unitForTimeRange)
 				{
-					stepValue -= lengthOfTimeRange;
+					stepValue += timeOffset;
 				}
 				else if (unitOfTimeRange == 1 && unitForTimeRange == 0)
 				{
-					stepValue -= lengthOfTimeRange / 60;
+					stepValue += timeOffset / 60;
 				}
 				else if (unitOfTimeRange == 0 && unitForTimeRange == 1)
 				{
-					stepValue -= lengthOfTimeRange * 60;
+					stepValue += timeOffset * 60;
 				}
 
 				itsGrib->Message().SetLongKey("indicatorOfUnitForTimeRange", unitForTimeRange);
@@ -1002,11 +990,12 @@ bool grib::ToFile(info<T>& anInfo, string& outputFile, bool appendToFile)
 
 	if (edition == 1 &&
 	    (anInfo.Level().AB().size() > 255 || (forecastType == kEpsControl || forecastType == kEpsPerturbation) ||
-	     anInfo.Param().ProcessingType().Type() != kUnknownProcessingType))
+	     anInfo.Param().ProcessingType().Type() != kUnknownProcessingType || anInfo.Time().Step().Minutes() % 60 != 0))
 	{
 		itsLogger.Trace("File type forced to GRIB2 (level value: " + to_string(anInfo.Level().Value()) +
-		                ", forecast type: " + HPForecastTypeToString.at(forecastType) + ", processing type: " +
-		                HPProcessingTypeToString.at(anInfo.Param().ProcessingType().Type()) + ")");
+		                ", forecast type: " + HPForecastTypeToString.at(forecastType) +
+		                ", processing type: " + HPProcessingTypeToString.at(anInfo.Param().ProcessingType().Type()) +
+		                " step: " + static_cast<string>(anInfo.Time().Step()) + ")");
 		edition = 2;
 		if (itsWriteOptions.configuration->FileCompression() == kNoCompression &&
 		    itsWriteOptions.configuration->FileWriteOption() != kSingleFile)

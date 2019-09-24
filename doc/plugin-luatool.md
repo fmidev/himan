@@ -125,6 +125,8 @@ aggregation is a parameter component, defining for example that it is an accumul
 |   | SetType | HPAggregationType  | Set aggregation type |
 | time_duration | GetTimeDuration | | Returns the time duration of the aggregation (for example: one hour) |
 |   | SetTimeDuration | time_duration | Set time duration |
+| time_duration | GetTimeOffset | | Returns the time offset (beginning of aggregation period), usally a negation of time duration |
+|   | SetTimeOffset | time_duration | Set time offset |
 
 ## configuration
 
