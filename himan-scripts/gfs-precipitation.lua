@@ -164,6 +164,6 @@ function Form()
 
 end
 
-Rate(param("RR-KGM2"), param("RRR-KGM2"))
-Rate(param("RRC-KGM2"), param("RRRC-KGM2"))
+-- Rate(param("RR-KGM2"), param("RRR-KGM2"))
+-- Rate(param("RRC-KGM2"), param("RRRC-KGM2"))
 Form()
