@@ -21,6 +21,7 @@
 #define FETCHER_H
 
 #include "auxiliary_plugin.h"
+#include "file_information.h"
 #include "info.h"
 #include "plugin_configuration.h"
 #include "search_options.h"
@@ -169,8 +170,9 @@ class fetcher : public auxiliary_plugin
 	 */
 
 	template <typename T>
-	std::vector<std::shared_ptr<info<T>>> FromFile(const std::vector<std::string>& files, search_options& options,
-	                                               bool readPackedData = false, bool forceCaching = false);
+	std::vector<std::shared_ptr<info<T>>> FromFile(const std::vector<himan::file_information>& files,
+	                                               search_options& options, bool readPackedData = false,
+	                                               bool forceCaching = false);
 
 	/**
 	 * @brief Map level definitions between models and our expected levels.
