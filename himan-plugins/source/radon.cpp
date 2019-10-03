@@ -289,7 +289,7 @@ string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<v
 
 		// clang-format off
 
-		query << "SELECT t.file_location, g.name, t.byte_offset, t.byte_length FROM " << schema << "." << partition << " t, geom g, param p, level l"
+		query << "SELECT t.file_location, g.name, NULL as byte_offset, NULL as byte_length FROM " << schema << "." << partition << " t, geom g, param p, level l"
 		      << " WHERE t.geometry_id = g.id"
 		      << " AND t.producer_id = " << options.prod.Id()
 		      << " AND t.param_id = p.id"
@@ -401,8 +401,16 @@ vector<himan::file_information> radon::Files(search_options& options)
 	file_information finfo;
 	finfo.file_location = values[0];
 	finfo.file_type = util::FileType(values[0]);
-	finfo.offset = static_cast<unsigned int>(stoi(values[2]));
-	finfo.length = static_cast<unsigned int>(stoi(values[3]));
+	try
+	{
+		finfo.offset = static_cast<unsigned int>(stoi(values[2]));
+		finfo.length = static_cast<unsigned int>(stoi(values[3]));
+	}
+	catch (const invalid_argument& e)
+	{
+		finfo.offset = boost::none;
+		finfo.length = boost::none;
+	}
 
 	return {finfo};
 }
@@ -677,7 +685,7 @@ bool radon::SaveGrid(const info<T>& resultInfo, const string& theFileName, const
 	    << resultInfo.Level().Value() << ", " << levelValue2 << ", "
 	    << "'" << util::MakeSQLInterval(resultInfo.Time()) << "', "
 	    << static_cast<int>(resultInfo.ForecastType().Type()) << ", " << forecastTypeValue << ","
-	    << "0, 0, " << fileSize << ","
+	    << "NULL, NULL, " << fileSize << ","
 	    << "'" << theFileName << "', "
 	    << "'" << host << "')";
 
@@ -707,7 +715,7 @@ bool radon::SaveGrid(const info<T>& resultInfo, const string& theFileName, const
 		query << "UPDATE " << fullTableName << " SET "
 		      << "file_location = '" << theFileName << "', "
 		      << "file_server = '" << host << ", "
-		      << "message_no = 0, byte_offset = 0, "
+		      << "message_no = NULL, byte_offset = NULL, "
 		      << "byte_length = " << fileSize << "' WHERE "
 		      << "producer_id = " << resultInfo.Producer().Id() << " AND "
 		      << "analysis_time = '" << analysisTime << "' AND "
