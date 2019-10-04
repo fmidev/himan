@@ -44,6 +44,16 @@ void radon::Init()
 		{
 		}
 
+		int radonPort = 5432;
+
+		try
+		{
+			radonPort = stoi(util::GetEnv("RADON_PORT"));
+		}
+		catch (...)
+		{
+		}
+
 		try
 		{
 			call_once(oflag, [&]() {
@@ -51,6 +61,7 @@ void radon::Init()
 				NFmiRadonDBPool::Instance()->Password(util::GetEnv("RADON_WETODB_PASSWORD"));
 				NFmiRadonDBPool::Instance()->Database(radonName);
 				NFmiRadonDBPool::Instance()->Hostname(radonHost);
+				NFmiRadonDBPool::Instance()->Port(radonPort);
 
 				if (NFmiRadonDBPool::Instance()->MaxWorkers() < MAX_WORKERS)
 				{
