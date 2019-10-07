@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 19.9.16
+Version: 19.10.7
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -16,7 +16,7 @@ Requires: libstdc++
 Requires: himan-lib >= 19.9.16
 Requires: lua >= 5.1.4
 Requires: unixODBC
-Requires: libfmigrib >= 19.2.12
+Requires: libfmigrib >= 19.9.20
 Requires: libfmidb >= 19.2.12
 Requires: smartmet-library-newbase >= 18.7.23
 Requires: libpqxx
@@ -38,7 +38,7 @@ BuildRequires: eigen >= 3.3.4
 Requires: jasper-libs
 Requires: eccodes
 %endif
-BuildRequires: libfmigrib-devel >= 19.2.12
+BuildRequires: libfmigrib-devel >= 19.9.20
 #BuildRequires: smartmet-library-newbase-devel >= 18.7.23
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
@@ -115,6 +115,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Oct  7 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.10.7-1.fmi
+- New fmigrib ABI
+- Preliminary support for big gribs (many messages) in database
+- Minor bugfixes
 * Mon Sep 16 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.9.16-1.fmi
 - Add support for class processing_type
 * Mon Sep  2 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.9.2-1.fmi
