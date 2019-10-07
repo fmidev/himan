@@ -38,11 +38,6 @@ libraries.append('boost_thread')
 
 env.Append(LIBS = libraries)
 
-cflags = []
-cflags.append('-fPIC')
-
-env.Append(CCFLAGS = cflags)
-
 # Linker flags
 
 env.Append(LINKFLAGS = ['-rdynamic'])
