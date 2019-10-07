@@ -133,11 +133,19 @@ tuple<vec2d, vec2d, vec2d> GetSampledSourceData(shared_ptr<const himan::plugin_c
 
 	while (curLevel.Value() >= stopLevel.Value())
 	{
-		auto PInfo = f->Fetch<float>(conf, myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType(), false);
-		auto TInfo = f->Fetch<float>(conf, myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType(), false);
-		auto RHInfo = f->Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("RH-PRCNT"),
-		                              myTargetInfo->ForecastType(), false);
+		shared_ptr<info<float>> PInfo, TInfo, RHInfo;
 
+		try
+		{
+			PInfo = f->Fetch<float>(conf, myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType(), false);
+			TInfo = f->Fetch<float>(conf, myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType(), false);
+			RHInfo = f->Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("RH-PRCNT"),
+			                         myTargetInfo->ForecastType(), false);
+		}
+		catch (const HPExceptionType& e)
+		{
+			break;
+		}
 		const auto P = VEC(PInfo);
 		const auto T = VEC(TInfo);
 		const auto RH = VEC(RHInfo);
@@ -780,7 +788,8 @@ void SmoothData(shared_ptr<himan::info<float>> myTargetInfo)
 	auto filter = [&](const himan::param& par) {
 
 		myTargetInfo->Find<himan::param>(par);
-		himan::matrix<float> filtered = himan::numerical_functions::Filter2D<double>(myTargetInfo->Data(), filter_kernel);
+		himan::matrix<float> filtered =
+		    himan::numerical_functions::Filter2D<double>(myTargetInfo->Data(), filter_kernel);
 
 		myTargetInfo->Base()->data = move(filtered);
 	};
