@@ -684,19 +684,18 @@ bool radon::SaveGrid(const info<T>& resultInfo, const string& theFileName, const
 
 	double levelValue2 = IsKHPMissingValue(resultInfo.Level().Value2()) ? -1 : resultInfo.Level().Value2();
 	const string fullTableName = schema_name + "." + table_name;
-	const auto fileSize = boost::filesystem::file_size(theFileName);
+//	const auto fileSize = boost::filesystem::file_size(theFileName);
 
 	query
 	    << "INSERT INTO " << fullTableName
 	    << " (producer_id, analysis_time, geometry_id, param_id, level_id, level_value, level_value2, forecast_period, "
-	       "forecast_type_id, forecast_type_value, message_no, byte_offset, byte_length, file_location, file_server) "
+	       "forecast_type_id, forecast_type_value, file_location, file_server) "
 	       "VALUES ("
 	    << resultInfo.Producer().Id() << ", "
 	    << "'" << analysisTime << "', " << geom_id << ", " << resultInfo.Param().Id() << ", " << levelinfo["id"] << ", "
 	    << resultInfo.Level().Value() << ", " << levelValue2 << ", "
 	    << "'" << util::MakeSQLInterval(resultInfo.Time()) << "', "
 	    << static_cast<int>(resultInfo.ForecastType().Type()) << ", " << forecastTypeValue << ","
-	    << "NULL, NULL, " << fileSize << ","
 	    << "'" << theFileName << "', "
 	    << "'" << host << "')";
 
@@ -725,9 +724,8 @@ bool radon::SaveGrid(const info<T>& resultInfo, const string& theFileName, const
 		query.str("");
 		query << "UPDATE " << fullTableName << " SET "
 		      << "file_location = '" << theFileName << "', "
-		      << "file_server = '" << host << ", "
-		      << "message_no = NULL, byte_offset = NULL, "
-		      << "byte_length = " << fileSize << "' WHERE "
+		      << "file_server = '" << host << "' "
+		      << "WHERE "
 		      << "producer_id = " << resultInfo.Producer().Id() << " AND "
 		      << "analysis_time = '" << analysisTime << "' AND "
 		      << "geometry_id = " << geom_id << " AND "
