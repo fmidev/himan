@@ -17,10 +17,15 @@ namespace himan
 {
 lagged_ensemble::lagged_ensemble(const param& parameter, size_t expectedEnsembleSize, const time_duration& theLag,
                                  size_t numberOfSteps)
-    : itsLag(theLag), itsNumberOfSteps(numberOfSteps)
+    : lagged_ensemble(parameter, expectedEnsembleSize, theLag * static_cast<int>(numberOfSteps - 1), theLag * -1)
+{
+}
+
+lagged_ensemble::lagged_ensemble(const param& parameter, size_t expectedEnsembleSize, const time_duration& theLag,
+                                 const time_duration& theStep)
+    : itsLag(theLag), itsStep(theStep)
 {
 	itsParam = parameter;
-	itsExpectedEnsembleSize = expectedEnsembleSize;
 	itsEnsembleType = kLaggedEnsemble;
 
 	itsDesiredForecasts.reserve(expectedEnsembleSize);
@@ -33,7 +38,18 @@ lagged_ensemble::lagged_ensemble(const param& parameter, size_t expectedEnsemble
 
 	itsLogger = logger("lagged_ensemble");
 
-	itsForecasts.reserve(itsExpectedEnsembleSize * itsNumberOfSteps);
+	if (itsLag.Hours() > 0)
+	{
+		itsLogger.Fatal("Lag has to be negative");
+		himan::Abort();
+	}
+	if (itsStep.Hours() < 0)
+	{
+		itsLogger.Fatal("Step has to be positive (" + std::to_string(itsStep.Hours()) + ")");
+		himan::Abort();
+	}
+
+	itsForecasts.reserve(2 * expectedEnsembleSize);  // educated guess
 }
 
 // We do a 'full fetch' every time, relying on himan's cache to store the previously stored
@@ -42,23 +58,19 @@ lagged_ensemble::lagged_ensemble(const param& parameter, size_t expectedEnsemble
 void lagged_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const forecast_time& time,
                             const level& forecastLevel)
 {
-	ASSERT(itsLag.Hours() < 0);
-	ASSERT(itsNumberOfSteps > 0);
-
 	auto f = GET_PLUGIN(fetcher);
 
 	itsForecasts.clear();
 
 	int missing = 0;
 	int loaded = 0;
-	unsigned int cnt = 0;
 
-	itsLogger.Info("Fetching for " + std::to_string(itsNumberOfSteps) + " timesteps with lag " +
-	               static_cast<std::string>(itsLag));
+	itsLogger.Info("Fetching with lag " + static_cast<std::string>(itsLag));
 
 	forecast_time ftime(time);
+	ftime.OriginDateTime() += itsLag;
 
-	do
+	while (ftime.OriginDateTime() <= time.OriginDateTime())
 	{
 		// Missing forecasts are checked for both the current origin time, and for lagged
 		for (const auto& desired : itsDesiredForecasts)
@@ -80,9 +92,8 @@ void lagged_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, 
 				missing++;
 			}
 		}
-		ftime.OriginDateTime() += itsLag;  // lag is negative
-		cnt++;
-	} while (cnt < itsNumberOfSteps);
+		ftime.OriginDateTime() += itsStep;
+	}
 
 	VerifyValidForecastCount(loaded, missing);
 }
@@ -107,16 +118,11 @@ void lagged_ensemble::VerifyValidForecastCount(int numLoadedForecasts, int numMi
 			throw kFileDataNotFound;
 		}
 	}
-	itsLogger.Info("succesfully loaded " + std::to_string(numLoadedForecasts) + "/" +
-	               std::to_string(itsDesiredForecasts.size() * itsNumberOfSteps) + " fields");
+	itsLogger.Info("Succesfully loaded " + std::to_string(numLoadedForecasts) + " fields");
 }
 
 time_duration lagged_ensemble::Lag() const
 {
 	return itsLag;
-}
-size_t lagged_ensemble::NumberOfSteps() const
-{
-	return itsNumberOfSteps;
 }
 }  // namespace himan

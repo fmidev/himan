@@ -20,15 +20,10 @@ namespace plugin
 static const std::string kClassName = "himan::plugin::probability";
 
 probability::probability()
+    : itsEnsembleSize(0), itsMaximumMissingForecasts(0), itsUseLaggedEnsemble(0), itsLag(), itsLagStep()
 {
 	itsCudaEnabledCalculation = false;
 	itsLogger = logger("probability");
-
-	itsEnsembleSize = 0;
-	itsMaximumMissingForecasts = 0;
-	itsUseLaggedEnsemble = false;
-	itsLag = 0;
-	itsLaggedSteps = 0;
 }
 
 probability::~probability()
@@ -284,30 +279,35 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 			lag = -lag;
 		}
 
-		itsLag = lag;
-		itsUseLaggedEnsemble = true;
-	}
-	else
-	{
-		itsUseLaggedEnsemble = false;
-	}
+		itsLag = time_duration(kHourResolution, lag);
 
-	// How many lagged steps to include in the calculation
-	if (itsUseLaggedEnsemble)
-	{
+		// How many lagged steps to include in the calculation
+
 		if (itsConfiguration->Exists("lagged_steps"))
 		{
-			const int steps = std::stoi(itsConfiguration->GetValue("lagged_steps"));
-			if (steps <= 0)
+			const std::string lagsteps = itsConfiguration->GetValue("lagged_steps");
+
+			if (lagsteps.find(":") == std::string::npos)
 			{
-				throw std::runtime_error(ClassName() + ": invalid lagged_steps value. Allowed range >= 0");
+				const int steps = std::stoi(lagsteps);
+				if (steps <= 0)
+				{
+					throw std::runtime_error(ClassName() + ": invalid lagged_steps value. Allowed range >= 0");
+				}
+				itsLagStep = itsLag * -1;
+				itsLag *= steps;
 			}
-			itsLaggedSteps = steps;
+			else
+			{
+				itsLagStep = time_duration(lagsteps);
+			}
 		}
 		else
 		{
 			throw std::runtime_error(ClassName() + ": specify lagged_steps when using time lagging ('lag')");
 		}
+
+		itsUseLaggedEnsemble = true;
 	}
 
 	//
@@ -350,8 +350,7 @@ void probability::Calculate(std::shared_ptr<info<float>> myTargetInfo, unsigned 
 		if (itsUseLaggedEnsemble)
 		{
 			threadedLogger.Info("Using lagged ensemble");
-			ens = std::unique_ptr<ensemble>(new lagged_ensemble(
-			    pc.parameter, itsEnsembleSize, time_duration(kHourResolution, itsLag), itsLaggedSteps + 1));
+			ens = std::unique_ptr<ensemble>(new lagged_ensemble(pc.parameter, itsEnsembleSize, itsLag, itsLagStep));
 		}
 		else
 		{

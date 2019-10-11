@@ -1395,7 +1395,6 @@ void BindLib(lua_State* L)
 		      .def("Lag", &lagged_ensemble::Lag)
 		      .def("Size", &lagged_ensemble::Size)
 		      .def("ExpectedSize", &lagged_ensemble::ExpectedSize)
-		      .def("NumberOfSteps", &lagged_ensemble::NumberOfSteps)
 		      .def("VerifyValidForecastCount", &lagged_ensemble::VerifyValidForecastCount)
 		      .def("SetMaximumMissingForecasts", LUA_MEMFN(void, lagged_ensemble, MaximumMissingForecasts, int))
 		      .def("GetMaximumMissingForecasts", LUA_CMEMFN(int, lagged_ensemble, MaximumMissingForecasts, void)),
