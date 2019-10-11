@@ -714,6 +714,8 @@ void grib::WriteTime(const forecast_time& ftime, const producer& prod, const par
 	}
 	else
 	{
+		const long templateNumber = itsGrib->Message().ProductDefinitionTemplateNumber();
+
 		// leadtime for this prognosis
 		long unitOfTimeRange = 1;  // hours
 		long stepValue = ftime.Step().Hours();
@@ -764,6 +766,21 @@ void grib::WriteTime(const forecast_time& ftime, const producer& prod, const par
 				itsGrib->Message().SetLongKey("indicatorOfUnitForTimeRange", unitForTimeRange);
 				itsGrib->Message().ForecastTime(stepValue);  // start step
 				itsGrib->Message().LengthOfTimeRange(lengthOfTimeRange);
+
+				// for productDefinitionTemplateNumber 9,10,11,12,13,14,34,43,47,61,73,73
+				// grib2 has extra keys for "end of overall time interval"
+				if (templateNumber >= 9 && templateNumber <= 14)
+				{
+					raw_time endOfInterval = raw_time(ftime.ValidDateTime());
+					endOfInterval += par.Aggregation().TimeOffset() + par.Aggregation().TimeDuration();
+
+					itsGrib->Message().SetLongKey("yearOfEndOfOverallTimeInterval", stol(endOfInterval.String("%Y")));
+					itsGrib->Message().SetLongKey("monthOfEndOfOverallTimeInterval", stol(endOfInterval.String("%m")));
+					itsGrib->Message().SetLongKey("dayOfEndOfOverallTimeInterval", stol(endOfInterval.String("%d")));
+					itsGrib->Message().SetLongKey("hourOfEndOfOverallTimeInterval", stol(endOfInterval.String("%H")));
+					itsGrib->Message().SetLongKey("minuteOfEndOfOverallTimeInterval", stol(endOfInterval.String("%M")));
+					itsGrib->Message().SetLongKey("secondOfEndOfOverallTimeInterval", 0);
+				}
 				break;
 		}
 	}
