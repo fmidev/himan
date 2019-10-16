@@ -300,7 +300,8 @@ string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<v
 
 		// clang-format off
 
-		query << "SELECT t.file_location, g.name, NULL as byte_offset, NULL as byte_length FROM " << schema << "." << partition << " t, geom g, param p, level l"
+		query << "SELECT t.file_location, g.name, byte_offset, byte_length FROM "
+		      << schema << "." << partition << " t, geom g, param p, level l"
 		      << " WHERE t.geometry_id = g.id"
 		      << " AND t.producer_id = " << options.prod.Id()
 		      << " AND t.param_id = p.id"
@@ -684,12 +685,12 @@ bool radon::SaveGrid(const info<T>& resultInfo, const string& theFileName, const
 
 	double levelValue2 = IsKHPMissingValue(resultInfo.Level().Value2()) ? -1 : resultInfo.Level().Value2();
 	const string fullTableName = schema_name + "." + table_name;
-//	const auto fileSize = boost::filesystem::file_size(theFileName);
+	const auto fileSize = boost::filesystem::file_size(theFileName);
 
 	query
 	    << "INSERT INTO " << fullTableName
 	    << " (producer_id, analysis_time, geometry_id, param_id, level_id, level_value, level_value2, forecast_period, "
-	       "forecast_type_id, forecast_type_value, file_location, file_server) "
+	       "forecast_type_id, forecast_type_value, file_location, file_server, message_no, byte_offset, byte_length) "
 	       "VALUES ("
 	    << resultInfo.Producer().Id() << ", "
 	    << "'" << analysisTime << "', " << geom_id << ", " << resultInfo.Param().Id() << ", " << levelinfo["id"] << ", "
@@ -697,7 +698,7 @@ bool radon::SaveGrid(const info<T>& resultInfo, const string& theFileName, const
 	    << "'" << util::MakeSQLInterval(resultInfo.Time()) << "', "
 	    << static_cast<int>(resultInfo.ForecastType().Type()) << ", " << forecastTypeValue << ","
 	    << "'" << theFileName << "', "
-	    << "'" << host << "')";
+	    << "'" << host << "', 0, 0, " << fileSize << ")";
 
 	try
 	{
@@ -724,8 +725,10 @@ bool radon::SaveGrid(const info<T>& resultInfo, const string& theFileName, const
 		query.str("");
 		query << "UPDATE " << fullTableName << " SET "
 		      << "file_location = '" << theFileName << "', "
-		      << "file_server = '" << host << "' "
-		      << "WHERE "
+		      << "file_server = '" << host << "', "
+		      << "message_no = 0, "
+		      << "byte_offset = 0, "
+		      << "byte_length = " << fileSize << " WHERE "
 		      << "producer_id = " << resultInfo.Producer().Id() << " AND "
 		      << "analysis_time = '" << analysisTime << "' AND "
 		      << "geometry_id = " << geom_id << " AND "
