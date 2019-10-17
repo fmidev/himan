@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 19.10.7
+Version: 19.10.17
 Release: 1.el7.fmi
 License: MIT
 Group: Development/Tools
@@ -115,6 +115,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Oct 17 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.10.17-1.fmi
+- grib2 write xOfEndOfOverallTimeInterval
+- radon columns byte_offset&byte_length in use
 * Mon Oct  7 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.10.7-1.fmi
 - New fmigrib ABI
 - Preliminary support for big gribs (many messages) in database
