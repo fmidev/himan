@@ -13,8 +13,6 @@
 #include "lift.h"
 #include "util.h"
 
-#include <NFmiGribPacking.h>
-
 #include "cuda_plugin_helper.h"
 #include "forecast_time.h"
 #include "level.h"
