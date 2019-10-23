@@ -1,5 +1,6 @@
 #include "cuda_plugin_helper.h"
 #include "plugin_factory.h"
+#include <NFmiGribPacking.h>
 #include <thrust/count.h>
 #include <thrust/device_vector.h>
 #include <thrust/system/cuda/execution_policy.h>
@@ -37,8 +38,10 @@ bool Unpack(std::shared_ptr<himan::info<T>> fullInfo, cudaStream_t& stream, T* d
 		ASSERT(fullInfo->PackedData()->packingType == kSimplePacking);
 		ASSERT(fullInfo->Data().Size() == N);
 
-		packing::Unpack(std::dynamic_pointer_cast<simple_packed>(fullInfo->PackedData()).get(), d_arr, &stream);
+		const auto pck = std::dynamic_pointer_cast<simple_packed>(fullInfo->PackedData());
 
+		return NFmiGribPacking::simple_packing::Unpack<T>(d_arr, pck->data, pck->bitmap, pck->unpackedLength,
+		                                               pck->packedLength, pck->coefficients, stream);
 		return true;
 	}
 	else

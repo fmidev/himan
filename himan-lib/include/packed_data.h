@@ -40,6 +40,7 @@ struct packed_data
 
 #include "cuda_helper.h"
 #include "himan_common.h"
+#include <NFmiGribPacking.h>
 #include <stdexcept>
 
 namespace himan
@@ -132,14 +133,6 @@ inline void packed_data::Clear()
 	unpackedLength = 0;
 }
 
-struct packing_coefficients
-{
-	int bitsPerValue = 0;
-	double binaryScaleFactor = 0;
-	double decimalScaleFactor = 0;
-	double referenceValue = 0;
-};
-
 struct simple_packed : public packed_data
 {
 	CUDA_HOST
@@ -154,7 +147,7 @@ struct simple_packed : public packed_data
 
 	simple_packed(const simple_packed& other) = default;
 
-	packing_coefficients coefficients;
+	NFmiGribPacking::packing_coefficients coefficients;
 };
 
 inline CUDA_HOST simple_packed::simple_packed(int theBitsPerValue, double theBinaryScaleFactor,
@@ -165,12 +158,6 @@ inline CUDA_HOST simple_packed::simple_packed(int theBitsPerValue, double theBin
 	coefficients.binaryScaleFactor = theBinaryScaleFactor;
 	coefficients.decimalScaleFactor = theDecimalScaleFactor;
 	coefficients.referenceValue = theReferenceValue;
-}
-
-namespace packing
-{
-template <typename T>
-CUDA_HOST void Unpack(const simple_packed* src, T* dst, cudaStream_t* stream);
 }
 
 #endif
