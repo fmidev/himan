@@ -6,7 +6,7 @@ SCONS_FLAGS=-j $(NPROC)
 
 # How to install
 
-INSTALL_DATA = install -m 664
+INSTALL_DATA = install -m 755
 
 INSTALL_TARGET = /usr/lib64/himan-plugins
 

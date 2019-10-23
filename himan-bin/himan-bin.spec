@@ -4,7 +4,7 @@
 Summary: himan executable
 Name: %{BINNAME}
 Version: 19.5.6
-Release: 1.el7.fmi
+Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
