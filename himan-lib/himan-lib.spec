@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 19.10.7
+Version: 19.10.25
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -23,7 +23,7 @@ Requires: libboost_filesystem
 %else
 BuildRequires: bzip2-devel
 BuildRequires: redhat-rpm-config
-BuildRequires: cuda-9-1
+BuildRequires: cuda-10-1
 BuildRequires: gcc-c++ >= 4.8.2
 Requires: gdal
 Requires: eccodes
@@ -62,6 +62,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Fri Oct 25 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.10.25-1.fmi
+- Support CMEPS-style lagged ensembles
 * Mon Oct  7 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.10.7-1.fmi
 - Add time offset for aggregations
 * Mon Sep 16 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.9.16-1.fmi

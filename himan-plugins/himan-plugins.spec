@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 19.10.17
+Version: 19.10.25
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -29,10 +29,10 @@ Requires: grib_api
 %else
 BuildRequires: gdal-devel
 BuildRequires: gcc-c++ >= 4.8.2
-BuildRequires: cuda-9-1
+BuildRequires: cuda-10-1
 BuildRequires: eccodes-devel
 BuildRequires: redhat-rpm-config
-BuildRequires: cuda-cusp-9-1 >= 0.5.1
+BuildRequires: cuda-cusp-10-1 >= 0.5.1
 BuildRequires: eigen >= 3.3.4
 
 Requires: jasper-libs
@@ -115,6 +115,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Fri Oct 25 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.10.25-1.fmi
+- Fix for snow_drift
+- Support CMEPS style lagged ensembles
 * Thu Oct 17 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.10.17-1.fmi
 - grib2 write xOfEndOfOverallTimeInterval
 - radon columns byte_offset&byte_length in use
@@ -168,7 +171,7 @@ rm -rf $RPM_BUILD_ROOT
 - Stability updates
 * Wed Apr 24 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.4.24-1.fmi
 - Added convective severity index
-* Mon Apr 11 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.4.11-1.fmi
+* Thu Apr 11 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.4.11-1.fmi
 - More cape tuning
 * Mon Apr  8 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.4.8-1.fmi
 - cape tuning
