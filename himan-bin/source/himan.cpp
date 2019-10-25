@@ -579,7 +579,6 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	conf->UseCuda(false);
 	conf->UseCudaForPacking(false);
 	conf->UseCudaForUnpacking(false);
-	conf->UseCudaForInterpolation(false);
 	conf->CudaDeviceCount(0);
 #else
 	if (opt.count("cuda-properties"))
@@ -598,17 +597,11 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		conf->UseCudaForUnpacking(false);
 	}
 
-	if (opt.count("no-cuda-interpolation"))
-	{
-		conf->UseCudaForInterpolation(false);
-	}
-
 	if (opt.count("no-cuda"))
 	{
 		conf->UseCuda(false);
 		conf->UseCudaForPacking(false);
 		conf->UseCudaForUnpacking(false);
-		conf->UseCudaForInterpolation(false);
 	}
 
 	if (opt.count("no-ss_state-update"))
@@ -636,7 +629,6 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		conf->UseCuda(false);
 		conf->UseCudaForPacking(false);
 		conf->UseCudaForUnpacking(false);
-		conf->UseCudaForInterpolation(false);
 	}
 
 	conf->CudaDeviceCount(devCount);
