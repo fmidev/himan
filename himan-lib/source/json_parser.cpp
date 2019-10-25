@@ -1115,9 +1115,6 @@ unique_ptr<grid> ParseAreaAndGrid(const shared_ptr<configuration>& conf, const b
 
 	if (ig)
 	{
-		// Disable cuda interpolation (too inefficienct for single points)
-		itsLogger.Trace("Disabling cuda interpolation for single point data");
-		conf->UseCudaForInterpolation(false);
 		return ig;
 	}
 

@@ -26,7 +26,6 @@ configuration::configuration()
       itsUseCuda(true),
       itsUseCudaForPacking(true),
       itsUseCudaForUnpacking(true),
-      itsUseCudaForInterpolation(true),
       itsUseCacheForReads(true),
       itsUseCacheForWrites(true),
       itsUseDynamicMemoryAllocation(false),
@@ -70,7 +69,6 @@ std::ostream& configuration::Write(std::ostream& file) const
 	file << "__itsCudaDeviceId__ " << itsCudaDeviceId << std::endl;
 	file << "__itsUseCudaForPacking__ " << itsUseCudaForPacking << std::endl;
 	file << "__itsUseCudaForUnpacking__ " << itsUseCudaForUnpacking << std::endl;
-	file << "__itsUseCudaFoInterpolation__ " << itsUseCudaForInterpolation << std::endl;
 
 	file << "__itsUseCacheForReads__ " << itsUseCacheForReads << std::endl;
 	file << "__itsUseCacheForWrites__ " << itsUseCacheForWrites << std::endl;
@@ -204,15 +202,6 @@ void configuration::UseCudaForPacking(bool theUseCudaForPacking)
 {
 	itsUseCudaForPacking = theUseCudaForPacking;
 }
-bool configuration::UseCudaForInterpolation() const
-{
-	return itsUseCudaForInterpolation;
-}
-void configuration::UseCudaForInterpolation(bool theUseCudaForInterpolation)
-{
-	itsUseCudaForInterpolation = theUseCudaForInterpolation;
-}
-
 bool configuration::UseCacheForReads() const
 {
 	return itsUseCacheForReads;

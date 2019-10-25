@@ -89,8 +89,7 @@ template <typename T>
 bool InterpolateArea(const grid* baseGrid, std::shared_ptr<info<T>> source);
 
 template <typename T>
-bool Interpolate(const grid* baseGrid, std::vector<std::shared_ptr<info<T>>>& infos,
-                 bool useCudaForInterpolation = true);
+bool Interpolate(const grid* baseGrid, std::vector<std::shared_ptr<info<T>>>& infos);
 
 bool IsVectorComponent(const std::string& paramName);
 

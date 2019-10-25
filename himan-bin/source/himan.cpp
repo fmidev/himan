@@ -511,7 +511,6 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		("no-cuda", "disable all cuda extensions")
 		("no-cuda-packing", "disable cuda packing of grib data")
 		("no-cuda-unpacking", "disable cuda unpacking of grib data")
-		("no-cuda-interpolation", "disable cuda grid interpolation")
 #endif
 		("no-database", "disable database access")
 		("param-file", po::value(&paramFile), "parameter definition file for no-database mode (syntax: shortName,paramName)")

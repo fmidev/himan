@@ -214,8 +214,7 @@ void windvector::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short 
 
 		latitude_longitude_grid x;
 
-		interpolate::RotateVectorComponents(UInfo->Grid().get(), &x, *UInfo, *VInfo,
-		                                    itsConfiguration->UseCuda() && itsConfiguration->UseCudaForInterpolation());
+		interpolate::RotateVectorComponents(UInfo->Grid().get(), &x, *UInfo, *VInfo, itsConfiguration->UseCuda());
 
 		auto c = GET_PLUGIN(cache);
 

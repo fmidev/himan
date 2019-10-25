@@ -279,8 +279,7 @@ shared_ptr<info<T>> fetcher::FetchFromProducerSingle(search_options& opts, bool 
 
 	if (itsDoInterpolation)
 	{
-		if (!interpolate::Interpolate(opts.configuration->BaseGrid(), theInfos,
-		                              opts.configuration->UseCudaForInterpolation()))
+		if (!interpolate::Interpolate(opts.configuration->BaseGrid(), theInfos))
 		{
 			// interpolation failed
 			throw kFileDataNotFound;
@@ -793,7 +792,7 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vec
 			}
 
 			interpolate::RotateVectorComponents(component->Grid().get(), baseGrid, *u, *v,
-			                                    opts.configuration->UseCudaForInterpolation());
+			                                    opts.configuration->UseCuda());
 
 			auto c = GET_PLUGIN(cache);
 			c->Replace<double>(u);
@@ -809,8 +808,7 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vec
 
 	if (itsDoInterpolation)
 	{
-		if (!interpolate::Interpolate(opts.configuration->BaseGrid(), infos,
-		                              opts.configuration->UseCudaForInterpolation()))
+		if (!interpolate::Interpolate(opts.configuration->BaseGrid(), infos))
 		{
 			itsLogger.Fatal("Interpolation failed");
 			himan::Abort();
@@ -983,14 +981,13 @@ void fetcher::RotateVectorComponents(vector<shared_ptr<info<T>>>& components, co
 				throw runtime_error("Unrecognized vector component parameter: " + name);
 			}
 
-			interpolate::RotateVectorComponents(component->Grid().get(), target, *u, *v,
-			                                    config->UseCudaForInterpolation());
+			interpolate::RotateVectorComponents(component->Grid().get(), target, *u, *v, config->UseCuda());
 
 			// Most likely both U&V are requested, so interpolate the other one now
 			// and put it to cache.
 
 			std::vector<shared_ptr<info<T>>> list({other});
-			if (itsDoInterpolation && interpolate::Interpolate(target, list, config->UseCudaForInterpolation()))
+			if (itsDoInterpolation && interpolate::Interpolate(target, list))
 			{
 				if (itsUseCache && config->UseCacheForReads() && !other->PackedData()->HasData())
 				{

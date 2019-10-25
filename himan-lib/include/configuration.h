@@ -144,9 +144,6 @@ class configuration
 	bool UseCudaForUnpacking() const;
 	void UseCudaForUnpacking(bool theUseCudaForUnpacking);
 
-	bool UseCudaForInterpolation() const;
-	void UseCudaForInterpolation(bool theUseCudaForInterpolation);
-
 	bool UseCacheForReads() const;
 	void UseCacheForReads(bool theUseCacheForReads);
 
@@ -241,7 +238,6 @@ class configuration
 	bool itsUseCuda;
 	bool itsUseCudaForPacking;
 	bool itsUseCudaForUnpacking;
-	bool itsUseCudaForInterpolation;
 	bool itsUseCacheForReads;
 	bool itsUseCacheForWrites;
 	bool itsUseDynamicMemoryAllocation;

@@ -164,7 +164,7 @@ template bool ReorderPoints<double>(const grid*, std::shared_ptr<info<double>>);
 template bool ReorderPoints<float>(const grid*, std::shared_ptr<info<float>>);
 
 template <typename T>
-bool Interpolate(const grid* baseGrid, std::vector<std::shared_ptr<info<T>>>& infos, bool useCudaForInterpolation)
+bool Interpolate(const grid* baseGrid, std::vector<std::shared_ptr<info<T>>>& infos)
 {
 	for (const auto& info : infos)
 	{
@@ -250,8 +250,8 @@ bool Interpolate(const grid* baseGrid, std::vector<std::shared_ptr<info<T>>>& in
 	return true;
 }
 
-template bool Interpolate<double>(const grid*, std::vector<std::shared_ptr<info<double>>>&, bool);
-template bool Interpolate<float>(const grid*, std::vector<std::shared_ptr<info<float>>>&, bool);
+template bool Interpolate<double>(const grid*, std::vector<std::shared_ptr<info<double>>>&);
+template bool Interpolate<float>(const grid*, std::vector<std::shared_ptr<info<float>>>&);
 
 bool IsVectorComponent(const std::string& paramName)
 {
