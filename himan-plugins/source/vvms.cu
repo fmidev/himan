@@ -96,6 +96,11 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 
 		auto PInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("P-HPA"),
 		                                myTargetInfo->ForecastType());
+
+		if (!PInfo)
+		{
+			return;
+		}
 		cuda::PrepareInfo(PInfo, d_p, stream, conf->UseCacheForReads());
 
 		VVMSKernel<float><<<gridSize, blockSize, 0, stream>>>(d_t, d_vv, d_p, d_vv_ms, vv_scale, N);

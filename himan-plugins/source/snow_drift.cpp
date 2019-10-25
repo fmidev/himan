@@ -207,13 +207,16 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 		{
 			prevTime.OriginDateTime(prevTime.ValidDateTime());
 
+			const std::vector<std::string> lapsGeom({"LAPS3000"});
+			const producer lapsProd(107, 86, 107, "LAPSFIN");
+
 			// Previous data can be max three hours old
 			for (int i = 0; i < 3; i++)
 			{
-				pSAInfo = Fetch(prevTime, level(kHeight, 0), SAParam, forecast_type(kAnalysis),
-				                itsConfiguration->SourceGeomNames(), producer(107, 86, 107, "LAPSFIN"), false);
-				pDAInfo = Fetch(prevTime, level(kHeight, 0), DAParam, forecast_type(kAnalysis),
-				                itsConfiguration->SourceGeomNames(), producer(107, 86, 107, "LAPSFIN"), false);
+				pSAInfo =
+				    Fetch(prevTime, level(kHeight, 0), SAParam, forecast_type(kAnalysis), lapsGeom, lapsProd, false);
+				pDAInfo =
+				    Fetch(prevTime, level(kHeight, 0), DAParam, forecast_type(kAnalysis), lapsGeom, lapsProd, false);
 
 				if (pSAInfo && pDAInfo)
 				{

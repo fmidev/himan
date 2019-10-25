@@ -13,8 +13,6 @@
 #include "lift.h"
 #include "util.h"
 
-#include <NFmiGribPacking.h>
-
 #include "cuda_plugin_helper.h"
 #include "forecast_time.h"
 #include "level.h"
@@ -38,8 +36,6 @@ bool cape_cuda::itsUseVirtualTemperature;
 typedef std::vector<std::vector<float>> vec2d;
 
 extern float Max(const std::vector<float>& vec);
-extern std::vector<float> Convert(const std::vector<double>& arr);
-extern std::vector<double> Convert(const std::vector<float>& arr);
 extern std::tuple<vec2d, vec2d, vec2d> GetSampledSourceData(std::shared_ptr<const plugin_configuration> conf,
                                                             std::shared_ptr<info<float>> myTargetInfo,
                                                             const std::vector<float>& P500m,
@@ -1012,9 +1008,10 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	tp.UpperHeight(P500m);
 	mr.UpperHeight(P500m);
 
-	auto PVec = Convert(dPVec);
+	auto PVec = util::Convert<double, float>(dPVec);
 
-	auto sourceData = GetSampledSourceData(conf, myTargetInfo, Convert(P500m), PVec, itsBottomLevel, stopLevel.second);
+	auto sourceData = GetSampledSourceData(conf, myTargetInfo, util::Convert<double, float>(P500m), PVec,
+	                                       itsBottomLevel, stopLevel.second);
 
 	float* d_Tpot = 0;
 	float* d_MR = 0;

@@ -210,6 +210,48 @@ std::string UniqueName(const plugin::search_options& options);
 template <typename T>
 std::string UniqueName(const info<T>& info);
 
+/**
+ * @brief Convert vector from float to double or vice versa, retaining correct
+ * missing value.
+ *
+ * Template specialization to avoid resource-wasting conversion from double --> double
+ * or float --> float
+ *
+ * T = from
+ * U = to
+ */
+
+template <typename T, typename U>
+std::vector<U> Convert(const std::vector<T>&);
+
+template <>
+inline std::vector<double> Convert(const std::vector<double>& v)
+{
+	return v;
+}
+
+template <>
+inline std::vector<float> Convert(const std::vector<float>& v)
+{
+	return v;
+}
+
+template <>
+inline std::vector<double> Convert(const std::vector<float>& v)
+{
+	std::vector<double> ret(v.size());
+	replace_copy_if(v.begin(), v.end(), ret.begin(), [](const float& val) { return IsMissing(val); }, MissingDouble());
+	return ret;
+}
+
+template <>
+inline std::vector<float> Convert(const std::vector<double>& v)
+{
+	std::vector<float> ret(v.size());
+	replace_copy_if(v.begin(), v.end(), ret.begin(), [](const double& val) { return IsMissing(val); }, MissingFloat());
+	return ret;
+}
+
 template <class... Conts>
 inline auto zip_range(Conts&... conts)
     -> decltype(boost::make_iterator_range(boost::make_zip_iterator(boost::make_tuple(conts.begin()...)),

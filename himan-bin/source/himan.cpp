@@ -505,8 +505,6 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		("list-plugins,l", "list all defined plugins")
 		("debug-level,d", po::value(&logLevel), "set log level: 0(fatal) 1(error) 2(warning) 3(info) 4(debug) 5(trace)")
 		("statistics,s", po::value(&statisticsLabel)->implicit_value("Himan"), "record statistics information")
-		("radon,R", "use only radon database (deprecated)")
-		("neons,N", "use only neons database (deprecated)")
 #ifdef HAVE_CUDA
 		("cuda-device-id", po::value(&cudaDeviceId), "use a specific cuda device (default: 0)")
 		("cuda-properties", "print cuda device properties of platform (if any)")
@@ -745,15 +743,7 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		exit(1);
 	}
 
-	if (opt.count("radon"))
-	{
-		cerr << "Option -R is deprecated" << endl;
-	}
-	else if (opt.count("neons"))
-	{
-		cerr << "Option -N is deprecated" << endl;
-	}
-	else if (opt.count("no-database"))
+	if (opt.count("no-database"))
 	{
 		conf->DatabaseType(kNoDatabase);
 		if (opt.count("param-file") == 0)

@@ -225,54 +225,6 @@ pair<level, level> hitool::LevelForHeight(const producer& prod, double height) c
 	return make_pair(level(kHybrid, static_cast<double>(newlowest)), level(kHybrid, static_cast<double>(newhighest)));
 }
 
-namespace
-{
-// modifier uses vector<double>, hitool can use either vector<double>
-// or vector<float>
-//
-// do conversion here; template specialization to avoid conversion
-// from double --> double
-
-// T = from
-// U = to
-
-template <typename T, typename U>
-vector<U> ConvertTo(const vector<T>&);
-
-template <>
-vector<double> ConvertTo(const vector<double>& v)
-{
-	return v;
-}
-
-// This should not be needed here but I'll add it for completeness
-template <>
-vector<float> ConvertTo(const vector<float>& v)
-{
-	return v;
-}
-
-template <>
-vector<double> ConvertTo(const vector<float>& v)
-{
-	vector<double> ret(v.size());
-
-	replace_copy_if(v.begin(), v.end(), ret.begin(), [](const float& val) { return IsMissing(val); }, MissingDouble());
-
-	return ret;
-}
-
-template <>
-vector<float> ConvertTo(const vector<double>& v)
-{
-	vector<float> ret(v.size());
-
-	replace_copy_if(v.begin(), v.end(), ret.begin(), [](const double& val) { return IsMissing(val); }, MissingFloat());
-
-	return ret;
-}
-}  // namespace
-
 template <typename T>
 vector<T> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelType wantedLevelType, const param& wantedParam,
                                        const vector<T>& lowerHeight, const vector<T>& upperHeight,
@@ -280,9 +232,9 @@ vector<T> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelType wan
 {
 	ASSERT(wantedLevelType == kHybrid);
 
-	mod->FindValue(ConvertTo<T, double>(findValue));
-	mod->LowerHeight(ConvertTo<T, double>(lowerHeight));
-	mod->UpperHeight(ConvertTo<T, double>(upperHeight));
+	mod->FindValue(util::Convert<T, double>(findValue));
+	mod->LowerHeight(util::Convert<T, double>(lowerHeight));
+	mod->UpperHeight(util::Convert<T, double>(upperHeight));
 
 	if (itsHeightUnit == kHPa)
 	{
@@ -446,7 +398,7 @@ vector<T> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelType wan
 		                  " grid points did not reach upper height limit. Did I run out of vertical levels?");
 	}
 
-	return ConvertTo<double, T>(ret);
+	return util::Convert<double, T>(ret);
 }
 
 template vector<double> hitool::VerticalExtremeValue<double>(shared_ptr<modifier>, HPLevelType, const param&,

@@ -38,8 +38,8 @@ class probability : public compiled_plugin, private compiled_plugin_base
 	int itsEnsembleSize;
 	int itsMaximumMissingForecasts;
 	bool itsUseLaggedEnsemble;
-	int itsLag;
-	int itsLaggedSteps;
+	time_duration itsLag;
+	time_duration itsLagStep;
 };
 
 extern "C" std::shared_ptr<himan_plugin> create()
