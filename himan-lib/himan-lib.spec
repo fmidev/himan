@@ -23,7 +23,7 @@ Requires: libboost_filesystem
 %else
 BuildRequires: bzip2-devel
 BuildRequires: redhat-rpm-config
-BuildRequires: cuda-10-1
+BuildRequires: cuda-9-1
 BuildRequires: gcc-c++ >= 4.8.2
 Requires: gdal
 Requires: eccodes
@@ -38,6 +38,8 @@ BuildRequires: boost-devel
 BuildRequires: scons
 
 Provides: libhiman.so
+
+AutoReqProv:	no
 
 %description
 Himan -- hilojen manipulaatio -- core library

@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 19.9.16
+Requires: himan-lib >= 19.10.25
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 19.9.20
@@ -29,10 +29,10 @@ Requires: grib_api
 %else
 BuildRequires: gdal-devel
 BuildRequires: gcc-c++ >= 4.8.2
-BuildRequires: cuda-10-1
+BuildRequires: cuda-9-1
 BuildRequires: eccodes-devel
 BuildRequires: redhat-rpm-config
-BuildRequires: cuda-cusp-10-1 >= 0.5.1
+BuildRequires: cuda-cusp-9-1 >= 0.5.1
 BuildRequires: eigen >= 3.3.4
 
 Requires: jasper-libs
@@ -44,6 +44,8 @@ BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: boost-devel
 BuildRequires: scons
+
+AutoReqProv:	no
 
 %description
 Himan -- hilojen manipulaatio -- plugin collection
