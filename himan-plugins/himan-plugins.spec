@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 19.10.7
-Release: 1.el7.fmi
+Version: 19.10.28
+Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 19.9.16
+Requires: himan-lib >= 19.10.25
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 19.9.20
@@ -44,6 +44,8 @@ BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: boost-devel
 BuildRequires: scons
+
+AutoReqProv:	no
 
 %description
 Himan -- hilojen manipulaatio -- plugin collection
@@ -115,6 +117,14 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Oct 28 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.10.28-1.fmi
+- correct data type for byte offset and length
+* Fri Oct 25 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.10.25-1.fmi
+- Fix for snow_drift
+- Support CMEPS style lagged ensembles
+* Thu Oct 17 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.10.17-1.fmi
+- grib2 write xOfEndOfOverallTimeInterval
+- radon columns byte_offset&byte_length in use
 * Mon Oct  7 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.10.7-1.fmi
 - New fmigrib ABI
 - Preliminary support for big gribs (many messages) in database
@@ -165,7 +175,7 @@ rm -rf $RPM_BUILD_ROOT
 - Stability updates
 * Wed Apr 24 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.4.24-1.fmi
 - Added convective severity index
-* Mon Apr 11 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.4.11-1.fmi
+* Thu Apr 11 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.4.11-1.fmi
 - More cape tuning
 * Mon Apr  8 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.4.8-1.fmi
 - cape tuning

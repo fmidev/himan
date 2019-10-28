@@ -415,8 +415,8 @@ vector<himan::file_information> radon::Files(search_options& options)
 	finfo.file_type = util::FileType(values[0]);
 	try
 	{
-		finfo.offset = static_cast<unsigned int>(stoi(values[2]));
-		finfo.length = static_cast<unsigned int>(stoi(values[3]));
+		finfo.offset = static_cast<unsigned long>(stol(values[2]));
+		finfo.length = static_cast<unsigned long>(stol(values[3]));
 	}
 	catch (const invalid_argument& e)
 	{

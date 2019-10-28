@@ -3,8 +3,8 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 19.10.7
-Release: 1.el7.fmi
+Version: 19.10.25
+Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -39,6 +39,8 @@ BuildRequires: scons
 
 Provides: libhiman.so
 
+AutoReqProv:	no
+
 %description
 Himan -- hilojen manipulaatio -- core library
 
@@ -62,6 +64,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Fri Oct 25 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.10.25-1.fmi
+- Support CMEPS-style lagged ensembles
 * Mon Oct  7 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.10.7-1.fmi
 - Add time offset for aggregations
 * Mon Sep 16 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.9.16-1.fmi
