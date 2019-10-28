@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 19.10.25
+Version: 19.10.28
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -117,6 +117,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Oct 28 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.10.28-1.fmi
+- correct data type for byte offset and length
 * Fri Oct 25 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.10.25-1.fmi
 - Fix for snow_drift
 - Support CMEPS style lagged ensembles
