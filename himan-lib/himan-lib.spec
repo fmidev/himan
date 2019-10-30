@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 19.10.25
+Version: 19.10.30
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -14,7 +14,7 @@ Requires: glibc
 Requires: libgcc
 Requires: libstdc++
 Requires: libfmidb >= 17.9.18
-Requires: libfmigrib >= 18.2.12
+Requires: libfmigrib >= 19.10.28
 
 %if %{defined suse_version}
 BuildRequires: bzip2
@@ -32,7 +32,7 @@ Requires: boost-filesystem
 
 %endif
 BuildRequires: libfmidb-devel >= 17.9.18
-BuildRequires: libfmigrib-devel >= 18.2.12
+BuildRequires: libfmigrib-devel >= 19.10.28
 BuildRequires: zlib-devel
 BuildRequires: boost-devel
 BuildRequires: scons
@@ -64,6 +64,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Wed Oct 30 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.10.30-1.fmi
+- Use unpacking functions from fmigrib
 * Fri Oct 25 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.10.25-1.fmi
 - Support CMEPS-style lagged ensembles
 * Mon Oct  7 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.10.7-1.fmi

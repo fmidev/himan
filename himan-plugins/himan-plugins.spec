@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 19.10.28
+Version: 19.10.30
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -16,7 +16,7 @@ Requires: libstdc++
 Requires: himan-lib >= 19.10.25
 Requires: lua >= 5.1.4
 Requires: unixODBC
-Requires: libfmigrib >= 19.9.20
+Requires: libfmigrib >= 19.10.28
 Requires: libfmidb >= 19.2.12
 Requires: smartmet-library-newbase >= 18.7.23
 Requires: libpqxx
@@ -38,8 +38,8 @@ BuildRequires: eigen >= 3.3.4
 Requires: jasper-libs
 Requires: eccodes
 %endif
-BuildRequires: libfmigrib-devel >= 19.9.20
-#BuildRequires: smartmet-library-newbase-devel >= 18.7.23
+BuildRequires: libfmigrib-devel >= 19.10.28
+BuildRequires: smartmet-library-newbase-devel >= 18.7.23
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: boost-devel
@@ -117,6 +117,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Oct 30 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.10.30-1.fmi
+- Use unpacking functions from fmigrib
 * Mon Oct 28 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.10.28-1.fmi
 - correct data type for byte offset and length
 * Fri Oct 25 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.10.25-1.fmi
