@@ -3,7 +3,7 @@
 #include "level.h"
 #include "logger.h"
 #include "plugin_factory.h"
-#include <boost/thread.hpp>
+#include <thread>
 #include <iostream>
 #include <map>
 
@@ -329,7 +329,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void split_sum::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
-	boost::thread_group threads;
+	vector<thread*> threads;
 	vector<info_t> infos;
 
 	int subThreadIndex = 0;
@@ -340,18 +340,26 @@ void split_sum::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short 
 
 		infos.push_back(newInfo);  // extend lifetime over this loop
 
-		threads.add_thread(new boost::thread(&split_sum::DoParam, this, newInfo, myTargetInfo->Param().Name(),
+		threads.push_back(new thread(&split_sum::DoParam, this, newInfo, myTargetInfo->Param().Name(),
 		                                     to_string(threadIndex) + "_" + to_string(subThreadIndex)));
 
 		if (subThreadIndex % SUB_THREAD_COUNT == 0)
 		{
-			threads.join_all();
+			for (auto& thread : threads)
+                        {
+                                if (thread->joinable())
+                                        thread->join();
+                        }
 
 			infos.clear();
 		}
 	}
 
-	threads.join_all();
+	for (auto& thread : threads)
+	{
+                if (thread->joinable())
+                	thread->join();
+	}
 }
 
 void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string subThreadIndex) const

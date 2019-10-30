@@ -10,7 +10,7 @@
 #include "logger.h"
 #include "numerical_functions.h"
 #include "plugin_factory.h"
-#include <boost/thread.hpp>
+#include <thread>
 
 #include "hitool.h"
 #include "radon.h"
@@ -195,8 +195,8 @@ void gust::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threa
 	deltaT dT;
 	vector<double> lowAndMiddleClouds(gridSize, himan::MissingDouble());
 
-	boost::thread t(&DeltaT, itsConfiguration, T_LowestLevelInfo, forecastTime, forecastType, gridSize, boost::ref(dT));
-	boost::thread t2(&LowAndMiddleClouds, boost::ref(lowAndMiddleClouds), LCloudInfo, MCloudInfo, HCloudInfo,
+	thread t(&DeltaT, itsConfiguration, T_LowestLevelInfo, forecastTime, forecastType, gridSize, boost::ref(dT));
+	thread t2(&LowAndMiddleClouds, boost::ref(lowAndMiddleClouds), LCloudInfo, MCloudInfo, HCloudInfo,
 	                 TCloudInfo);
 
 	// calc boundary layer height
