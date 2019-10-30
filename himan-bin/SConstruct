@@ -22,9 +22,6 @@ libraries = []
 
 libraries.append('himan')
 libraries.append('fmidb')
-libraries.append('rt')
-libraries.append('jasper')
-libraries.append('odbc')
 libraries.append('pqxx')
 libraries.append('boost_program_options')
 libraries.append('boost_system')
