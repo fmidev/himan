@@ -1,7 +1,6 @@
 #include "hybrid_height.h"
 #include "logger.h"
 #include "plugin_factory.h"
-#include <boost/thread.hpp>
 #include <future>
 
 #include "cache.h"
