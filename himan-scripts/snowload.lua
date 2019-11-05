@@ -80,13 +80,13 @@ Wetsnow = {}
 
 result:ResetTime()
 while result:NextTime() do
-	current_time:GetValidDateTime():Adjust(HPTimeResolution.kHourResolution, 1)
+	local curtime = result:GetTime()
 
 	-- fetch input data
-	local T = luatool:FetchWithType(current_time, level(HPLevelType.kHeight,2), param("T-K"), current_forecast_type) -- fetch temperature
-	local rr = luatool:FetchWithType(current_time, current_level, param("RRR-KGM2"), current_forecast_type) -- fetch precipitation
-	local phi = luatool:FetchWithType(current_time, current_level, param("RADGLO-WM2"), current_forecast_type) -- fetch solar radiation
-	local v = luatool:FetchWithType(current_time, level(HPLevelType.kHeight,10), param("FF-MS"), current_forecast_type) -- fetch wind speed
+	local T = luatool:FetchWithType(curtime, level(HPLevelType.kHeight,2), param("T-K"), current_forecast_type) -- fetch temperature
+	local rr = luatool:FetchWithType(curtime, current_level, param("RRR-KGM2"), current_forecast_type) -- fetch precipitation
+	local phi = luatool:FetchWithType(curtime, current_level, param("RADGLO-WM2"), current_forecast_type) -- fetch solar radiation
+	local v = luatool:FetchWithType(curtime, level(HPLevelType.kHeight,10), param("FF-MS"), current_forecast_type) -- fetch wind speed
 
 	for i=1, #T do
 		-- fill Wetsnow with values 0 at initial timestep

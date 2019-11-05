@@ -13,7 +13,7 @@
 #include "statistics.h"
 #include "stereographic_grid.h"
 #include <boost/filesystem.hpp>
-#include <boost/thread.hpp>
+#include <thread>
 
 #ifndef __clang_analyzer__
 
@@ -46,14 +46,14 @@ std::vector<T> TableToVector(const object& table);
 
 namespace
 {
-boost::thread_specific_ptr<lua_State> myL;
+thread_local lua_State* myL;
 bool myUseCuda;
 }
 
 luatool::luatool() : itsWriteOptions()
 {
 	itsLogger = logger("luatool");
-	myL.reset();
+	myL = 0;
 }
 
 luatool::~luatool()
@@ -108,11 +108,11 @@ void luatool::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned sho
 
 	InitLua();
 
-	ASSERT(myL.get());
+	ASSERT(myL);
 	myThreadedLogger.Info("Calculating time " + static_cast<std::string>(myTargetInfo->Time().ValidDateTime()) +
 	                      " level " + static_cast<std::string>(myTargetInfo->Level()));
 
-	globals(myL.get())["logger"] = myThreadedLogger;
+	globals(myL)["logger"] = myThreadedLogger;
 
 	for (const std::string& luaFile : itsConfiguration->GetValueList("luafile"))
 	{
@@ -127,8 +127,8 @@ void luatool::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned sho
 		ReadFile(luaFile);
 	}
 
-	lua_close(myL.get());
-	myL.release();
+	lua_close(myL);
+	myL = 0;
 }
 
 void luatool::InitLua()
@@ -147,7 +147,7 @@ void luatool::InitLua()
 	BindLib(L);
 	BindPlugins(L);
 
-	myL.reset(L);
+	myL = L;
 }
 
 void luatool::ResetVariables(info_t myTargetInfo)
@@ -155,7 +155,7 @@ void luatool::ResetVariables(info_t myTargetInfo)
 	// Set some variable that are needed in luatool calculations
 	// but are too hard or complicated to create in the lua side
 
-	const auto L = myL.get();
+	const auto L = myL;
 
 	globals(L)["luatool"] = boost::ref(*this);
 	globals(L)["result"] = myTargetInfo;
@@ -196,10 +196,10 @@ bool luatool::ReadFile(const std::string& luaFile)
 	try
 	{
 		timer t(true);
-		ASSERT(myL.get());
-		if (luaL_dofile(myL.get(), luaFile.c_str()))
+		ASSERT(myL);
+		if (luaL_dofile(myL, luaFile.c_str()))
 		{
-			itsLogger.Error(lua_tostring(myL.get(), -1));
+			itsLogger.Error(lua_tostring(myL, -1));
 			return false;
 		}
 		t.Stop();
@@ -1552,9 +1552,9 @@ luabind::object luatool::Fetch(const forecast_time& theTime, const level& theLev
 template <typename T>
 object VectorToTable(const std::vector<T>& vec)
 {
-	ASSERT(myL.get());
+	ASSERT(myL);
 
-	object ret = newtable(myL.get());
+	object ret = newtable(myL);
 
 	size_t i = 0;
 	for (const T& val : vec)
