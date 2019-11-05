@@ -2291,6 +2291,7 @@ vector<shared_ptr<himan::info<T>>> grib::FromFile(const file_information& theInp
 
 		if (!itsGrib->ReadMessage(offset, bytes))
 		{
+			itsLogger.Error("Reading GRIB message failed");
 			return infos;
 		}
 		auto newInfo = make_shared<info<T>>();
