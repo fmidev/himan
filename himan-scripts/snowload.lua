@@ -81,24 +81,26 @@ Wetsnow = {}
 result:ResetTime()
 while result:NextTime() do
 	local curtime = result:GetTime()
+	if (curtime:GetStep():Hours() ~= 0) then
+		-- fetch input data
+		local T = luatool:FetchWithType(curtime, level(HPLevelType.kHeight,2), param("T-K"), current_forecast_type) -- fetch temperature
+		local rr = luatool:FetchWithType(curtime, current_level, param("RRR-KGM2"), current_forecast_type) -- fetch precipitation
+		local phi = luatool:FetchWithType(curtime, current_level, param("RADGLO-WM2"), current_forecast_type) -- fetch solar radiation
+		local v = luatool:FetchWithType(curtime, level(HPLevelType.kHeight,10), param("FF-MS"), current_forecast_type) -- fetch wind speed
 
-	-- fetch input data
-	local T = luatool:FetchWithType(curtime, level(HPLevelType.kHeight,2), param("T-K"), current_forecast_type) -- fetch temperature
-	local rr = luatool:FetchWithType(curtime, current_level, param("RRR-KGM2"), current_forecast_type) -- fetch precipitation
-	local phi = luatool:FetchWithType(curtime, current_level, param("RADGLO-WM2"), current_forecast_type) -- fetch solar radiation
-	local v = luatool:FetchWithType(curtime, level(HPLevelType.kHeight,10), param("FF-MS"), current_forecast_type) -- fetch wind speed
-
-	for i=1, #T do
-		-- fill Wetsnow with values 0 at initial timestep
-		if table.getn(Wetsnow) < #T  then
-			Wetsnow[i] = 0
+		if T and rr and phi and v then
+			for i=1, #T do
+				-- fill Wetsnow with values 0 at initial timestep
+				if table.getn(Wetsnow) < #T  then
+						Wetsnow[i] = 0
+				end
+				T[i] = T[i] - kKelvin -- convert to celsius
+				Wetsnow[i] = Wetsnow[i]*f_wind_dec(v[i])*f_temperature(T[i])*f_sunrad(phi[i]) -- snow decrease
+				local delta = f_wind_acc(v[i])*f_load(Wetsnow[i])*wetsnow(rr[i],T[i])
+				Wetsnow[i] = Wetsnow[i] + delta -- snow accumulation
+			end
 		end
-		T[i] = T[i] - kKelvin -- convert to celsius
-		Wetsnow[i] = Wetsnow[i]*f_wind_dec(v[i])*f_temperature(T[i])*f_sunrad(phi[i]) -- snow decrease
-		local delta = f_wind_acc(v[i])*f_load(Wetsnow[i])*wetsnow(rr[i],T[i])
-		Wetsnow[i] = Wetsnow[i] + delta -- snow accumulation
 	end
-
 	result:SetParam(param("SNOWLOAD-KGM2"))
 	result:SetMissingValue(Missing)
 	result:SetValues(Wetsnow)
