@@ -88,15 +88,17 @@ while result:NextTime() do
 	local phi = luatool:FetchWithType(curtime, current_level, param("RADGLO-WM2"), current_forecast_type) -- fetch solar radiation
 	local v = luatool:FetchWithType(curtime, level(HPLevelType.kHeight,10), param("FF-MS"), current_forecast_type) -- fetch wind speed
 
-	for i=1, #T do
-		-- fill Wetsnow with values 0 at initial timestep
-		if table.getn(Wetsnow) < #T  then
-			Wetsnow[i] = 0
+	if T and rr and phi and v then
+		for i=1, #T do
+			-- fill Wetsnow with values 0 at initial timestep
+			if table.getn(Wetsnow) < #T  then
+					Wetsnow[i] = 0
+			end
+			T[i] = T[i] - kKelvin -- convert to celsius
+			Wetsnow[i] = Wetsnow[i]*f_wind_dec(v[i])*f_temperature(T[i])*f_sunrad(phi[i]) -- snow decrease
+			local delta = f_wind_acc(v[i])*f_load(Wetsnow[i])*wetsnow(rr[i],T[i])
+			Wetsnow[i] = Wetsnow[i] + delta -- snow accumulation
 		end
-		T[i] = T[i] - kKelvin -- convert to celsius
-		Wetsnow[i] = Wetsnow[i]*f_wind_dec(v[i])*f_temperature(T[i])*f_sunrad(phi[i]) -- snow decrease
-		local delta = f_wind_acc(v[i])*f_load(Wetsnow[i])*wetsnow(rr[i],T[i])
-		Wetsnow[i] = Wetsnow[i] + delta -- snow accumulation
 	end
 
 	result:SetParam(param("SNOWLOAD-KGM2"))
