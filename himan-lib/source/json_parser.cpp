@@ -564,17 +564,21 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 		// Check local producer option
 
+		vector<producer> delayedSourceProducers = conf->SourceProducers();
+
 		try
 		{
-			conf->SourceProducers(ParseSourceProducer(conf, element.second));
+			delayedSourceProducers = ParseSourceProducer(conf, element.second);
 		}
 		catch (...)
 		{
 		}
 
+		producer delayedTargetProducer = conf->TargetProducer();
+
 		try
 		{
-			conf->TargetProducer(ParseTargetProducer(conf, element.second));
+			delayedTargetProducer = ParseTargetProducer(conf, element.second);
 		}
 		catch (...)
 		{
@@ -598,6 +602,8 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 			pc->UseCacheForWrites(delayedUseCacheForWrites);
 			pc->itsOutputFileType = delayedFileType;
 			pc->FileWriteOption(delayedFileWrite);
+			pc->SourceProducers(delayedSourceProducers);
+			pc->TargetProducer(delayedTargetProducer);
 
 			if (plugin.second.empty())
 			{
