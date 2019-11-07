@@ -410,18 +410,18 @@ void himan::interpolate::RotateVectorComponentsGPU(const grid* from, const grid*
 			case himan::kStereographic:
 			{
 				const double orientation = dynamic_cast<const himan::stereographic_grid*>(from)->Orientation();
-				CUDA_CHECK(cudaMalloc((void**)&d_lon, memsize));
+				CUDA_CHECK(cudaMalloc((void**)&d_lon, N * sizeof(double)));
 
 				double* lon = nullptr;
 
-				CUDA_CHECK(cudaMallocHost((void**)&lon, memsize));
+				CUDA_CHECK(cudaMallocHost((void**)&lon, N * sizeof(double)));
 
 				for (size_t i = 0; i < U.Size(); i++)
 				{
 					lon[i] = from->LatLon(i).X();
 				}
 
-				CUDA_CHECK(cudaMemcpyAsync(d_lon, lon, memsize, cudaMemcpyHostToDevice));
+				CUDA_CHECK(cudaMemcpyAsync(d_lon, lon, N * sizeof(double), cudaMemcpyHostToDevice));
 
 				RotateLambert<T><<<gs, bs, 0, stream>>>(d_u, d_v, d_lon, 1, orientation, U.SizeX(), U.SizeY());
 
