@@ -413,6 +413,10 @@ vector<himan::file_information> radon::Files(search_options& options)
 	file_information finfo;
 	finfo.file_location = values[0];
 	finfo.file_type = util::FileType(values[0]);
+
+	// When file_format_id column is fully populated and added to views, use this:
+	// finfo.file_type = static_cast<HPFileType>(stoi(values[4]));  // 1 = GRIB1, 2=GRIB2
+
 	try
 	{
 		finfo.offset = static_cast<unsigned long>(stoul(values[2]));
@@ -687,18 +691,39 @@ bool radon::SaveGrid(const info<T>& resultInfo, const string& theFileName, const
 	const string fullTableName = schema_name + "." + table_name;
 	const auto fileSize = boost::filesystem::file_size(theFileName);
 
+	// Not the cleanest way of determining file type, but configuration is not available to this
+	// function.
+	const auto tokens = util::Split(theFileName, ".", false);
+	const auto extension = tokens[tokens.size() - 1];
+
+	int file_format_id = 1;  // GRIB1
+
+	if (extension == "grib2")
+	{
+		file_format_id = 2;
+	}
+	else if (extension != "grib")
+	{
+		itsLogger.Error("Unsupported file format for radon: " + extension);
+		return false;
+	}
+
+	const int file_protocol_id = 1;
+	const int message_no = 0;
+	const int byte_offset = 0;
+
 	query
 	    << "INSERT INTO " << fullTableName
 	    << " (producer_id, analysis_time, geometry_id, param_id, level_id, level_value, level_value2, forecast_period, "
-	       "forecast_type_id, forecast_type_value, file_location, file_server, message_no, byte_offset, byte_length) "
-	       "VALUES ("
-	    << resultInfo.Producer().Id() << ", "
+	    << "forecast_type_id, forecast_type_value, file_location, file_server, file_format_id, file_protocol_id, "
+	    << "message_no, byte_offset, byte_length) VALUES (" << resultInfo.Producer().Id() << ", "
 	    << "'" << analysisTime << "', " << geom_id << ", " << resultInfo.Param().Id() << ", " << levelinfo["id"] << ", "
 	    << resultInfo.Level().Value() << ", " << levelValue2 << ", "
 	    << "'" << util::MakeSQLInterval(resultInfo.Time()) << "', "
 	    << static_cast<int>(resultInfo.ForecastType().Type()) << ", " << forecastTypeValue << ","
 	    << "'" << theFileName << "', "
-	    << "'" << host << "', 0, 0, " << fileSize << ")";
+	    << "'" << host << "', " << file_format_id << ", " << file_protocol_id << ", " << message_no << ", "
+	    << byte_offset << ", " << fileSize << ")";
 
 	try
 	{
@@ -726,8 +751,10 @@ bool radon::SaveGrid(const info<T>& resultInfo, const string& theFileName, const
 		query << "UPDATE " << fullTableName << " SET "
 		      << "file_location = '" << theFileName << "', "
 		      << "file_server = '" << host << "', "
-		      << "message_no = 0, "
-		      << "byte_offset = 0, "
+		      << "file_format_id = " << file_format_id << ", "
+		      << "file_protocol_id = " << file_protocol_id << ", "
+		      << "message_no = " << message_no << ", "
+		      << "byte_offset = " << byte_offset << ", "
 		      << "byte_length = " << fileSize << " WHERE "
 		      << "producer_id = " << resultInfo.Producer().Id() << " AND "
 		      << "analysis_time = '" << analysisTime << "' AND "
