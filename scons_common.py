@@ -85,6 +85,11 @@ env['HAVE_CUDA'] = False
 if not NOCUDA and os.path.isfile(cuda_toolkit_path + '/lib64/libcudart.so'):
         env['HAVE_CUDA'] = True
 
+env['HAVE_S3'] = False
+
+if os.path.isfile('/usr/include/libs3.h'):
+	env['HAVE_S3'] = True
+
 # Required for scan-build
 env["ENV"].update(x for x in os.environ.items() if x[0].startswith("CCC_"))
 
@@ -181,6 +186,8 @@ env.Append(CPPDEFINES=['UNIX'])
 
 if env['HAVE_CUDA']:
         env.Append(CPPDEFINES=['HAVE_CUDA'])
+if env['HAVE_S3']:
+        env.Append(CPPDEFINES=['HAVE_S3'])
 
 env.Append(NVCCDEFINES=['HAVE_CUDA'])
 

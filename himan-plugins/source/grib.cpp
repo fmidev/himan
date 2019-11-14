@@ -1,5 +1,6 @@
 #include "grib.h"
 #include "NFmiGrib.h"
+#include "file_accessor.h"
 #include "grid.h"
 #include "lambert_conformal_grid.h"
 #include "latitude_longitude_grid.h"
@@ -1219,14 +1220,18 @@ bool grib::ToFile(info<T>& anInfo, string& outputFile, bool appendToFile)
 	itsGrib->Message().Write(outputFile, appendToFile);
 
 	aTimer.Stop();
-	const double duration = static_cast<double>(aTimer.GetTime());
+	const float duration = static_cast<float>(aTimer.GetTime());
+	const float bytes = static_cast<float>(boost::filesystem::file_size(outputFile));
+	const float speed = (bytes / 1024.f / 1024.f) / (duration / 1000.f);
 
-	const double bytes = static_cast<double>(boost::filesystem::file_size(outputFile));
+	stringstream ss;
 
-	const int speed = static_cast<int>(floor((bytes / 1024. / 1024.) / (duration / 1000.)));
+	ss.precision((speed < 1) ? 1 : 0);
 
 	string verb = (appendToFile ? "Appended to " : "Wrote ");
-	itsLogger.Info(verb + "file '" + outputFile + "' (" + to_string(speed) + " MB/s)");
+
+	ss << verb << "file '" << outputFile << "' (" << fixed << speed << " MB/s)";
+	itsLogger.Info(ss.str());
 
 	return true;
 }
@@ -2266,14 +2271,6 @@ vector<shared_ptr<himan::info<T>>> grib::FromFile(const file_information& theInp
 {
 	vector<shared_ptr<himan::info<T>>> infos;
 
-	if (!itsGrib->Open(theInputFile.file_location))
-	{
-		itsLogger.Error("Opening file '" + theInputFile.file_location + "' failed");
-		return infos;
-	}
-
-	int foundMessageNo = 0;
-
 	if (options.prod.Centre() == kHPMissingInt && options.configuration->DatabaseType() != kNoDatabase)
 	{
 		itsLogger.Error("Process and centre information for producer " + to_string(options.prod.Id()) +
@@ -2281,44 +2278,44 @@ vector<shared_ptr<himan::info<T>>> grib::FromFile(const file_information& theInp
 		return infos;
 	}
 
-	timer aTimer;
-	aTimer.Start();
+	timer aTimer(true);
 
-	if (theInputFile.offset && theInputFile.length)
+	if (readIfNotMatching || !theInputFile.offset)
 	{
-		const unsigned long offset = theInputFile.offset.get();
-		const unsigned long bytes = theInputFile.length.get();
-
-		if (!itsGrib->ReadMessage(offset, bytes))
+		// read all messages from local 'auxiliary' file
+		if (!itsGrib->Open(theInputFile.file_location))
 		{
-			itsLogger.Error("Reading GRIB message failed");
+			itsLogger.Error("Opening file '" + theInputFile.file_location + "' failed");
 			return infos;
 		}
-		auto newInfo = make_shared<info<T>>();
 
-		if (CreateInfoFromGrib(options, readPackedData, readIfNotMatching, newInfo) || readIfNotMatching)
-		{
-			infos.push_back(newInfo);
-			newInfo->First();
-		}
-	}
-	else
-	{
 		while (itsGrib->NextMessage())
 		{
-			foundMessageNo++;
 			auto newInfo = make_shared<info<T>>();
-
 			if (CreateInfoFromGrib(options, readPackedData, readIfNotMatching, newInfo) || readIfNotMatching)
 			{
 				infos.push_back(newInfo);
 				newInfo->First();
-
-				if (!readIfNotMatching)
-				{
-					break;  // We found what we were looking for
-				}
 			}
+		}
+	}
+	else
+	{
+		file_accessor fa;
+		const buffer buf = fa.Read(theInputFile);
+
+		if (!itsGrib->ReadMessage(buf.data, buf.length))
+		{
+			itsLogger.Error("Creating GRIB message from memory failed");
+			return infos;
+		}
+
+		auto newInfo = make_shared<info<T>>();
+
+		if (CreateInfoFromGrib(options, readPackedData, false, newInfo))
+		{
+			infos.push_back(newInfo);
+			newInfo->First();
 		}
 	}
 
@@ -2327,13 +2324,21 @@ vector<shared_ptr<himan::info<T>>> grib::FromFile(const file_information& theInp
 	const long duration = aTimer.GetTime();
 	const auto bytes =
 	    (theInputFile.length) ? theInputFile.length.get() : boost::filesystem::file_size(theInputFile.file_location);
-	const auto position =
-	    (theInputFile.offset) ? "position " + to_string(theInputFile.offset.get()) + ":" + to_string(bytes) : "";
-	const int speed =
-	    static_cast<int>(floor((static_cast<double>(bytes) / 1024. / 1024.) / (static_cast<double>(duration) / 1000.)));
+	const float speed = (static_cast<float>(bytes) / 1024.f / 1024.f) / (static_cast<float>(duration) / 1000.f);
 
-	itsLogger.Debug("Read from file '" + theInputFile.file_location + "' " + position + " (" + to_string(speed) +
-	                " MB/s)");
+	stringstream ss;
+	ss.precision((speed < 1.) ? 1 : 0);
+
+	ss << "Read from file '" << theInputFile.file_location << "' ";
+
+	if (theInputFile.offset)
+	{
+		ss << "position " << theInputFile.offset.get() << ":" << bytes;
+	}
+
+	ss << " (" << fixed << speed << " MB/s)";
+
+	itsLogger.Debug(ss.str());
 
 	return infos;
 }
