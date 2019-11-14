@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 19.11.7
+Version: 19.11.11
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -117,6 +117,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Nov 11 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.11.11-1.fmi
+- radon columns file_format_id&file_protocol_id in use
 * Thu Nov  7 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.11.7-1.fmi
 - boost::thread replaced with std::thread
 * Wed Oct 30 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.10.30-1.fmi
