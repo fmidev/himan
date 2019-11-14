@@ -3,8 +3,8 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 19.11.7
-Release: 2%{dist}.fmi
+Version: 19.11.14
+Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -29,6 +29,7 @@ Requires: gdal
 Requires: eccodes
 Requires: boost-iostreams
 Requires: boost-filesystem
+Requires: libs3
 
 %endif
 BuildRequires: libfmidb-devel >= 17.9.18
@@ -36,6 +37,7 @@ BuildRequires: libfmigrib-devel >= 19.10.28
 BuildRequires: zlib-devel
 BuildRequires: boost-devel
 BuildRequires: scons
+BuildRequires: libs3-devel
 
 Provides: libhiman.so
 
@@ -64,6 +66,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Thu Nov 14 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.11.14-1.fmi
+- Add s3 read support
 * Thu Nov  7 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.11.7-2.fmi
 - Fix out-of-bounds write in cuda vector component rotation
 * Thu Nov  7 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.11.7-1.fmi
