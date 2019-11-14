@@ -12,7 +12,7 @@ buffer ReadFromLocalFile(const file_information& finfo)
 	if (finfo.offset && finfo.length)
 	{
 		offset = finfo.offset.get();
-		length = finfo.offset.get();
+		length = finfo.length.get();
 		fseek(fp, offset, SEEK_SET);
 	}
 	else
