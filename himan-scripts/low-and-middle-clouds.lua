@@ -7,18 +7,18 @@ logger:Info("Calculating low and middle clouds")
 
 local MISS = missing
 
-local N = luatool:Fetch(current_time, current_level, param("N-PRCNT")) -- total cloudiness
-local NL = luatool:Fetch(current_time, current_level, param("NL-PRCNT")) -- low clouds
-local NM = luatool:Fetch(current_time, current_level, param("NM-PRCNT")) -- middle clouds
-local NH = luatool:Fetch(current_time, current_level, param("NH-PRCNT")) -- high clouds
+local N = luatool:FetchWithType(current_time, current_level, param("N-PRCNT"), current_forecast_type) -- total cloudiness
+local NL = luatool:FetchWithType(current_time, current_level, param("NL-PRCNT"), current_forecast_type) -- low clouds
+local NM = luatool:FetchWithType(current_time, current_level, param("NM-PRCNT"), current_forecast_type) -- middle clouds
+local NH = luatool:FetchWithType(current_time, current_level, param("NH-PRCNT"), current_forecast_type) -- high clouds
 
 local scale = 1
 
 if not N or not NL or not NM or not NH then
-  N = luatool:Fetch(current_time, current_level, param("N-0TO1")) -- total cloudiness
-  NL = luatool:Fetch(current_time, current_level, param("NL-0TO1")) -- low clouds
-  NM = luatool:Fetch(current_time, current_level, param("NM-0TO1")) -- middle clouds
-  NH = luatool:Fetch(current_time, current_level, param("NH-0TO1")) -- high clouds
+  N = luatool:FetchWithType(current_time, current_level, param("N-0TO1"), current_forecast_type) -- total cloudiness
+  NL = luatool:FetchWithType(current_time, current_level, param("NL-0TO1"), current_forecast_type) -- low clouds
+  NM = luatool:FetchWithType(current_time, current_level, param("NM-0TO1"), current_forecast_type) -- middle clouds
+  NH = luatool:FetchWithType(current_time, current_level, param("NH-0TO1"), current_forecast_type) -- high clouds
 
   if not N or not NL or not NM or not NH then
     return
