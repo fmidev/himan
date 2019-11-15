@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 19.11.7
+Version: 19.11.14
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -22,6 +22,7 @@ Requires: smartmet-library-newbase >= 18.7.23
 Requires: libpqxx
 Requires: boost-iostreams
 Requires: boost-thread
+Requires: libs3
 
 %if %{defined suse_version}
 Requires: libjasper
@@ -34,6 +35,7 @@ BuildRequires: eccodes-devel
 BuildRequires: redhat-rpm-config
 BuildRequires: cuda-cusp-9-1 >= 0.5.1
 BuildRequires: eigen >= 3.3.4
+BuildRequires: libs3-devel
 
 Requires: jasper-libs
 Requires: eccodes
@@ -117,6 +119,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Nov 14 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.11.14-1.fmi
+- Add s3 read support
+* Mon Nov 11 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.11.11-1.fmi
+- radon columns file_format_id&file_protocol_id in use
 * Thu Nov  7 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.11.7-1.fmi
 - boost::thread replaced with std::thread
 * Wed Oct 30 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.10.30-1.fmi
