@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 19.11.14
+Version: 19.11.19
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -66,6 +66,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Tue Nov 19 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.11.19-1.fmi
+- Compile for compute capability 7.0
 * Thu Nov 14 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.11.14-1.fmi
 - Add s3 read support
 * Thu Nov  7 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.11.7-2.fmi

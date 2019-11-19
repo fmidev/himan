@@ -196,6 +196,7 @@ env.Append(NVCCFLAGS = ['-Wno-deprecated-declarations'])
 env.Append(NVCCFLAGS = ['-gencode=arch=compute_35,code=sm_35'])
 env.Append(NVCCFLAGS = ['-gencode=arch=compute_52,code=sm_52'])
 env.Append(NVCCFLAGS = ['-gencode=arch=compute_60,code=sm_60'])
+env.Append(NVCCFLAGS = ['-gencode=arch=compute_70,code=sm_70'])
 
 #if IS_CLANG:
 #	env.Append(NVCCFLAGS = ['-ccbin=clang++'])
