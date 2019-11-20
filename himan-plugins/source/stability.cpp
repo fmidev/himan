@@ -744,14 +744,13 @@ void stability::WriteToFile(const info_t targetInfo, write_options writeOptions)
 				continue;
 			}
 
-			if (itsConfiguration->FileWriteOption() == kDatabase ||
-			    itsConfiguration->FileWriteOption() == kMultipleFiles)
+			if (itsConfiguration->WriteMode() == kSingleGridToAFile)
 			{
 				aWriter->ToFile(tempInfo, itsConfiguration);
 			}
 			else
 			{
-				aWriter->ToFile(tempInfo, itsConfiguration, itsConfiguration->ConfigurationFile());
+				aWriter->ToFile(tempInfo, itsConfiguration);
 			}
 		}
 	}

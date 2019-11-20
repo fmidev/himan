@@ -27,11 +27,6 @@ bool writer::CreateFile(info<T>& theInfo, std::shared_ptr<const plugin_configura
 
 	itsWriteOptions.configuration = conf;
 
-	if (theOutputFile.empty())
-	{
-		theOutputFile = util::MakeFileName(itsWriteOptions.configuration->FileWriteOption(), theInfo, *conf);
-	}
-
 	fs::path pathname(theOutputFile);
 
 	if (!pathname.parent_path().empty() && !fs::is_directory(pathname.parent_path()))
@@ -64,9 +59,9 @@ bool writer::CreateFile(info<T>& theInfo, std::shared_ptr<const plugin_configura
 			}
 
 			theGribWriter->WriteOptions(itsWriteOptions);
-			return theGribWriter->ToFile<T>(
-			    theInfo, theOutputFile,
-			    (itsWriteOptions.configuration->FileWriteOption() == kSingleFile) ? true : false);
+			const bool append = (itsWriteOptions.configuration->WriteMode() == kAllGridsToAFile ||
+			                     itsWriteOptions.configuration->WriteMode() == kFewGridsToAFile);
+			return theGribWriter->ToFile<T>(theInfo, theOutputFile, append);
 		}
 		case kQueryData:
 		{
@@ -108,15 +103,14 @@ bool writer::CreateFile(info<T>& theInfo, std::shared_ptr<const plugin_configura
 template bool writer::CreateFile<double>(info<double>&, std::shared_ptr<const plugin_configuration>, std::string&);
 template bool writer::CreateFile<float>(info<float>&, std::shared_ptr<const plugin_configuration>, std::string&);
 
-bool writer::ToFile(std::shared_ptr<info<double>> theInfo, std::shared_ptr<const plugin_configuration> conf,
-                    const std::string& theOriginalOutputFile)
+bool writer::ToFile(std::shared_ptr<info<double>> theInfo, std::shared_ptr<const plugin_configuration> conf)
+
 {
-	return ToFile<double>(theInfo, conf, theOriginalOutputFile);
+	return ToFile<double>(theInfo, conf);
 }
 
 template <typename T>
-bool writer::ToFile(std::shared_ptr<info<T>> theInfo, std::shared_ptr<const plugin_configuration> conf,
-                    const std::string& theOriginalOutputFile)
+bool writer::ToFile(std::shared_ptr<info<T>> theInfo, std::shared_ptr<const plugin_configuration> conf)
 {
 	if (!itsWriteOptions.write_empty_grid)
 	{
@@ -138,20 +132,20 @@ bool writer::ToFile(std::shared_ptr<info<T>> theInfo, std::shared_ptr<const plug
 	}
 
 	bool ret = true;
-	std::string theOutputFile = theOriginalOutputFile;  // This is modified
+	std::string theOutputFile = util::MakeFileName(conf->WriteToDatabase(), conf->WriteMode(), *theInfo, *conf);
 
-	if (conf->FileWriteOption() != kCacheOnly)
+	if (conf->WriteMode() != kNoFileWrite)
 	{
 		// When writing previ to database, no file is needed. In all other cases we have to create
 		// a file.
 
 		if (theInfo->Producer().Class() == kGridClass ||
-		    (theInfo->Producer().Class() == kPreviClass && conf->FileWriteOption() != kDatabase))
+		    (theInfo->Producer().Class() == kPreviClass && conf->WriteToDatabase() == false))
 		{
 			ret = CreateFile<T>(*theInfo, conf, theOutputFile);
 		}
 
-		if (ret && conf->FileWriteOption() == kDatabase)
+		if (ret && conf->WriteToDatabase() == true)
 		{
 			HPDatabaseType dbtype = conf->DatabaseType();
 
@@ -187,7 +181,7 @@ bool writer::ToFile(std::shared_ptr<info<T>> theInfo, std::shared_ptr<const plug
 
 		// Pin those items that are not written to file at all
 		// so they can't be removed from cache if cache size is limited
-		c->Insert<T>(theInfo, (conf->FileWriteOption() == kCacheOnly));
+		c->Insert<T>(theInfo, (conf->WriteMode() == kNoFileWrite));
 	}
 
 	if (conf->StatisticsEnabled())
@@ -200,10 +194,8 @@ bool writer::ToFile(std::shared_ptr<info<T>> theInfo, std::shared_ptr<const plug
 	return ret;
 }
 
-template bool writer::ToFile<double>(std::shared_ptr<info<double>>, std::shared_ptr<const plugin_configuration>,
-                                     const std::string&);
-template bool writer::ToFile<float>(std::shared_ptr<info<float>>, std::shared_ptr<const plugin_configuration>,
-                                    const std::string&);
+template bool writer::ToFile<double>(std::shared_ptr<info<double>>, std::shared_ptr<const plugin_configuration>);
+template bool writer::ToFile<float>(std::shared_ptr<info<float>>, std::shared_ptr<const plugin_configuration>);
 
 write_options writer::WriteOptions() const
 {

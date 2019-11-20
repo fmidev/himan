@@ -33,10 +33,8 @@ class writer : public auxiliary_plugin
 		return kAuxiliary;
 	}
 	template <typename T>
-	bool ToFile(std::shared_ptr<info<T>> theInfo, std::shared_ptr<const plugin_configuration> conf,
-	            const std::string& theFileName = "");
-	bool ToFile(std::shared_ptr<info<double>> theInfo, std::shared_ptr<const plugin_configuration> conf,
-	            const std::string& theFileName = "");
+	bool ToFile(std::shared_ptr<info<T>> theInfo, std::shared_ptr<const plugin_configuration> conf);
+	bool ToFile(std::shared_ptr<info<double>> theInfo, std::shared_ptr<const plugin_configuration> conf);
 
 	write_options WriteOptions() const;
 	void WriteOptions(const write_options& theWriteOptions);

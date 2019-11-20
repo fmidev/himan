@@ -364,14 +364,14 @@ Possible values are:
 
 Default value for key is `grib`.
 
-The write destination is defined with key `file_write`. Possible values are:
+The write mode is defined with key `write_mode`. Possible values are:
 
-* `single`, all data is written to a single file
-* `multiple`, each grid is written to a separate file
-* `database`, same as multiple but the file information is also stored to database
-* `cache only`, file is only written to cache
+* `single`, each grid is written to its own file
+* `few`, each plugin results are written to its own file
+* `all`, all grids are written to one file
+* `no`, file is only written to cache
 
-`"file_write" : "single | multiple | database | cache only",`
+`"file_write" : "single | few | all | no",`
 
 Default value for key is `single`. Key can be set in the global or processqueue scope.
 
@@ -385,13 +385,21 @@ Default value for key is `none`.
 
 ## Database access
 
-Himan can be forced to read data from command line given arguments only. This behavior can be set with key `read_data_from_database`. Default value for key is `true`.
+Himan can be forced to read data from command line given arguments only. This behavior can be set with key `read_from_database`. Default value for key is `true`.
 
-    "read_data_from_database" : true | false
+    "read_from_database" : true | false
 
 Example:
 
-    "read_data_from_database" : false,
+    "read_from_database" : false,
+
+Himan can write file metadata to radon database. This is controlled with `write_to_database`. Default value for key is `false`.
+
+    "write_to_database" : true | false
+
+Example:
+
+    "write_to_database" : false,
 
 <a name="Forecast_types"/>
 

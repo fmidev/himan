@@ -843,7 +843,7 @@ void blend::WriteToFile(const info_t targetInfo, write_options writeOptions)
 		return;
 	}
 
-	if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
+	if (itsConfiguration->WriteMode() == kSingleGridToAFile)
 	{
 		aWriter->ToFile(tempInfo, itsConfiguration);
 	}
@@ -851,7 +851,7 @@ void blend::WriteToFile(const info_t targetInfo, write_options writeOptions)
 	{
 		lock_guard<mutex> lock(singleFileWriteMutex);
 
-		aWriter->ToFile(tempInfo, itsConfiguration, itsConfiguration->ConfigurationFile());
+		aWriter->ToFile(tempInfo, itsConfiguration);
 	}
 
 	if (itsConfiguration->UseDynamicMemoryAllocation())

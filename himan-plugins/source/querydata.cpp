@@ -402,7 +402,7 @@ bool querydata::ToFile(info<T>& theInfo, string& theOutputFile)
 
 	bool activeOnly = true;
 
-	if (itsWriteOptions.configuration->FileWriteOption() == kSingleFile)
+	if (itsWriteOptions.configuration->WriteMode() == kAllGridsToAFile)
 	{
 		activeOnly = false;
 	}

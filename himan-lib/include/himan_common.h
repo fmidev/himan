@@ -263,22 +263,22 @@ const boost::unordered_map<std::string, HPLevelType> HPStringToLevelType =
 	("maxthetae", kMaximumThetaE);
 
 
-enum HPFileWriteOption
+enum HPWriteMode
 {
-	kUnknownFileWriteOption = 0,
-	kSingleFile,
-	kMultipleFiles,
-	kDatabase,
-	kCacheOnly
+	kUnknown = 0,
+	kAllGridsToAFile,
+	kFewGridsToAFile,
+	kSingleGridToAFile,
+	kNoFileWrite
 };
 
-const boost::unordered_map<HPFileWriteOption, std::string> HPFileWriteOptionToString =
+const boost::unordered_map<HPWriteMode, std::string> HPWriteModeToString =
     ba::map_list_of
-	(kUnknownFileWriteOption, "unknown")
-	(kSingleFile, "single file only")
-	(kMultipleFiles, "multiple files")
-	(kDatabase, "write to database")
-	(kCacheOnly, "cache only");
+	(kUnknown, "unknown")
+	(kAllGridsToAFile, "all fields to single file")
+	(kFewGridsToAFile, "few fields to a file")
+	(kSingleGridToAFile, "one field per file")
+	(kNoFileWrite, "do not write file at all");
 
 /**
  * @enum HPScanningMode
