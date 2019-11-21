@@ -64,33 +64,6 @@ void dewpoint::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short t
 	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 	                      static_cast<string>(forecastLevel));
 
-	double TBase = 0;
-	double RHScale = 1;
-
-	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, itsConfiguration->UseCudaForPacking());
-	info_t RHInfo = Fetch(forecastTime, forecastLevel, RHParam, forecastType, itsConfiguration->UseCudaForPacking());
-
-	if (!TInfo || !RHInfo)
-	{
-		myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
-		                         static_cast<string>(forecastLevel));
-		return;
-	}
-
-	SetAB(myTargetInfo, TInfo);
-
-	if (RHInfo->Param().Name() == "RH-0TO1")
-	{
-		RHScale = 100.0;
-	}
-
-	// Formula assumes T == Celsius
-
-	if (TInfo->Param().Unit() == kC)
-	{
-		TBase = himan::constants::kKelvin;
-	}
-
 	string deviceType;
 
 #ifdef HAVE_CUDA
@@ -104,6 +77,34 @@ void dewpoint::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short t
 	else
 #endif
 	{
+		double TBase = 0;
+		double RHScale = 1;
+
+		info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, itsConfiguration->UseCudaForPacking());
+		info_t RHInfo =
+		    Fetch(forecastTime, forecastLevel, RHParam, forecastType, itsConfiguration->UseCudaForPacking());
+
+		if (!TInfo || !RHInfo)
+		{
+			myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
+			                         static_cast<string>(forecastLevel));
+			return;
+		}
+
+		SetAB(myTargetInfo, TInfo);
+
+		if (RHInfo->Param().Name() == "RH-0TO1")
+		{
+			RHScale = 100.0;
+		}
+
+		// Formula assumes T == Celsius
+
+		if (TInfo->Param().Unit() == kC)
+		{
+			TBase = himan::constants::kKelvin;
+		}
+
 		deviceType = "CPU";
 		auto& target = VEC(myTargetInfo);
 		const auto& TVec = VEC(TInfo);
