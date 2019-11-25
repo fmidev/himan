@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 19.11.19
+Version: 19.11.25
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -23,7 +23,7 @@ Requires: libboost_filesystem
 %else
 BuildRequires: bzip2-devel
 BuildRequires: redhat-rpm-config
-BuildRequires: cuda-9-1
+BuildRequires: cuda-10-1
 BuildRequires: gcc-c++ >= 4.8.2
 Requires: gdal
 Requires: eccodes
@@ -66,6 +66,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Mon Nov 25 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.11.25-1.fmi
+- Cuda 10.1
 * Tue Nov 19 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.11.19-1.fmi
 - Compile for compute capability 7.0
 * Thu Nov 14 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.11.14-1.fmi

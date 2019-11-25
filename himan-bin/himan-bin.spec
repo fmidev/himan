@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 19.10.25
+Version: 19.11.25
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -26,7 +26,7 @@ Requires: libjasper
 %else
 BuildRequires: redhat-rpm-config
 BuildRequires: gcc-c++ >= 4.8.2
-BuildRequires: cuda-9-1
+BuildRequires: cuda-10-1
 Requires: jasper
 Requires: boost-program-options
 Requires: boost-system
@@ -64,6 +64,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Mon Nov 25 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.11.25-1.fmi
+- Cuda 10.1
 * Fri Oct 25 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.10.25-1.fmi
 - Remove options -R and -N
 * Mon May  6 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.5.6-1.fmi

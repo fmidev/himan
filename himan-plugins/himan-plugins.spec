@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 19.11.19
+Version: 19.11.25
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -30,10 +30,10 @@ Requires: grib_api
 %else
 BuildRequires: gdal-devel
 BuildRequires: gcc-c++ >= 4.8.2
-BuildRequires: cuda-9-1
+BuildRequires: cuda-10-1
 BuildRequires: eccodes-devel
 BuildRequires: redhat-rpm-config
-BuildRequires: cuda-cusp-9-1 >= 0.5.1
+BuildRequires: cuda-cusp-10-1 >= 0.5.1
 BuildRequires: eigen >= 3.3.4
 BuildRequires: libs3-devel
 
@@ -119,6 +119,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Nov 25 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.11.25-1.fmi
+- Cuda 10.1
 * Tue Nov 19 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.11.19-1.fmi
 - Compile for compute capability 7.0
 * Thu Nov 14 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.11.14-1.fmi
