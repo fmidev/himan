@@ -90,14 +90,12 @@ class configuration
 	void TargetProducer(const producer& theTargetProducer);
 
 	/**
-	 * @brief Enable or disable writing to one or many file
+	 * @brief Decide how many fields to write in a single file
 	 *
-	 * @param theWholeFileWrite true = all data is written to one file, false = each data descriptor
-	 * combination is written to separate file
 	 */
 
-	void FileWriteOption(HPFileWriteOption theFileWriteOption);
-	HPFileWriteOption FileWriteOption() const;
+	void WriteMode(HPWriteMode theWriteMode);
+	HPWriteMode WriteMode() const;
 
 	/**
 	 * @brief Enable or disable output file compression
@@ -110,12 +108,12 @@ class configuration
 
 	/**
 	 * @brief Enable or disable reading of source data from Neons
-	 * @param theReadDataFromDatabase true = read data from neons, false = use only data specified in command
+	 * @param theReadFromDatabase true = read data from neons, false = use only data specified in command
 	 * line (auxiliary files)
 	 */
 
-	void ReadDataFromDatabase(bool theReadDataFromDatabase);
-	bool ReadDataFromDatabase() const;
+	void ReadFromDatabase(bool theReadFromDatabase);
+	bool ReadFromDatabase() const;
 
 	/**
 	 * @brief Top level function for CUDA calculation
@@ -215,11 +213,17 @@ class configuration
 	bool UploadStatistics() const;
 	void UploadStatistics(bool theUploadStatistics);
 
+	bool WriteToDatabase() const;
+	void WriteToDatabase(bool theWriteToDatabase);
+
+	bool LegacyWriteMode() const;
+	void LegacyWriteMode(bool theLegacyWriteMode);
+
    protected:
 	std::vector<producer> itsSourceProducers;
 
 	HPFileType itsOutputFileType;
-	HPFileWriteOption itsFileWriteOption;
+	HPWriteMode itsWriteMode;
 	HPFileCompression itsFileCompression;
 	HPDatabaseType itsDatabaseType;
 
@@ -227,7 +231,7 @@ class configuration
 	std::vector<std::string> itsAuxiliaryFiles;
 	std::string itsOriginTime;
 
-	bool itsReadDataFromDatabase;
+	bool itsReadFromDatabase;
 	short itsThreadCount;
 	std::string itsTargetGeomName;
 	std::vector<std::string> itsSourceGeomNames;
@@ -253,6 +257,8 @@ class configuration
 	bool itsAsyncExecution;
 	bool itsUpdateSSStateTable;
 	bool itsUploadStatistics;
+	bool itsWriteToDatabase;
+	bool itsLegacyWriteMode;
 };
 
 inline std::ostream& operator<<(std::ostream& file, const configuration& ob)

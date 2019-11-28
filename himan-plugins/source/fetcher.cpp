@@ -571,7 +571,7 @@ vector<shared_ptr<info<T>>> fetcher::FetchFromDatabase(search_options& opts, boo
 
 	HPDatabaseType dbtype = opts.configuration->DatabaseType();
 
-	if (!opts.configuration->ReadDataFromDatabase() || dbtype == kNoDatabase)
+	if (!opts.configuration->ReadFromDatabase() || dbtype == kNoDatabase)
 	{
 		return ret;
 	}

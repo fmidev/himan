@@ -16,7 +16,12 @@ using namespace himan;
 using namespace std;
 
 plugin_configuration::plugin_configuration()
-    : itsName(""), itsOptions(), itsPreconfiguredParams(), itsStatistics(new statistics)
+    : itsName(""),
+      itsOptions(),
+      itsPreconfiguredParams(),
+      itsStatistics(new statistics),
+      itsOrdinalNumber(0),
+      itsRelativeOrdinalNumber(0)
 {
 }
 
@@ -25,7 +30,9 @@ plugin_configuration::plugin_configuration(const configuration& theConfiguration
       itsName(""),
       itsOptions(),
       itsPreconfiguredParams(),
-      itsStatistics(new statistics)
+      itsStatistics(new statistics),
+      itsOrdinalNumber(0),
+      itsRelativeOrdinalNumber(0)
 {
 }
 
@@ -35,12 +42,19 @@ plugin_configuration::plugin_configuration(const plugin_configuration& other)
       itsOptions(other.itsOptions),
       itsPreconfiguredParams(other.itsPreconfiguredParams),
       itsStatistics(new statistics(*other.itsStatistics)),
-      itsBaseGrid(other.itsBaseGrid->Clone())
+      itsBaseGrid(other.itsBaseGrid->Clone()),
+      itsOrdinalNumber(other.itsOrdinalNumber),
+      itsRelativeOrdinalNumber(other.itsRelativeOrdinalNumber)
 {
 }
 
 plugin_configuration::plugin_configuration(const string& theName, const map<string, vector<string>>& theOptions)
-    : itsName(theName), itsOptions(theOptions), itsPreconfiguredParams(), itsStatistics(new statistics)
+    : itsName(theName),
+      itsOptions(theOptions),
+      itsPreconfiguredParams(),
+      itsStatistics(new statistics),
+      itsOrdinalNumber(0),
+      itsRelativeOrdinalNumber(0)
 {
 }
 
@@ -149,8 +163,9 @@ void plugin_configuration::WriteStatistics()
 	     << setw(30) << left << "Source geom_name:" << util::Join(itsSourceGeomNames, ",") << endl
 	     << setw(30) << left << "Outfile type:" << HPFileTypeToString.at(itsOutputFileType) << endl
 	     << setw(30) << left << "Compression type:" << HPFileCompressionToString.at(itsFileCompression) << endl
-	     << setw(30) << left << "File write:" << HPFileWriteOptionToString.at(itsFileWriteOption) << endl
-	     << setw(30) << left << "Read from database:" << (itsReadDataFromDatabase ? "true" : "false") << endl;
+	     << setw(30) << left << "Write mode:" << HPWriteModeToString.at(itsWriteMode) << endl
+	     << setw(30) << left << "Read from database:" << (itsReadFromDatabase ? "true" : "false") << endl
+	     << setw(30) << left << "Write to database:" << (itsWriteToDatabase ? "true" : "false") << endl;
 
 	string sourceProducers = "";
 
@@ -180,13 +195,13 @@ void plugin_configuration::WriteStatistics()
 	     << setw(30) << left << "Cache hit count:" << itsStatistics->itsCacheHitCount << endl
 	     << setw(30) << left << "Cache miss count:" << itsStatistics->itsCacheMissCount << endl
 	     << setw(30) << left << "Elapsed wall time:" << setw(7) << right << itsStatistics->itsTotalTime << " ms" << endl
-	     << setw(30) << left << "Plugin init time (st):" << setw(7) << right << itsStatistics->itsInitTime << " ms ("
+	     << setw(30) << left << "Plugin init time:" << setw(7) << right << itsStatistics->itsInitTime << " ms ("
 	     << setw(2) << initP << "%)" << endl
-	     << setw(30) << left << "Fetching time (mt):" << setw(7) << right << itsStatistics->itsFetchingTime << " ms ("
+	     << setw(30) << left << "Fetching time:" << setw(7) << right << itsStatistics->itsFetchingTime << " ms ("
 	     << setw(2) << fetchP << "%)" << endl
-	     << setw(30) << left << "Process time (mt):" << setw(7) << right << itsStatistics->itsProcessingTime << " ms ("
+	     << setw(30) << left << "Process time:" << setw(7) << right << itsStatistics->itsProcessingTime << " ms ("
 	     << setw(2) << procP << "%)" << endl
-	     << setw(30) << left << "Writing time (mt):" << setw(7) << right << itsStatistics->itsWritingTime << " ms ("
+	     << setw(30) << left << "Writing time:" << setw(7) << right << itsStatistics->itsWritingTime << " ms ("
 	     << setw(2) << writeP << "%)" << endl
 	     << setw(30) << left << "Values:" << itsStatistics->itsValueCount << endl
 	     << setw(30) << left << "Missing values:" << itsStatistics->itsMissingValueCount << " ("
@@ -223,4 +238,24 @@ ostream& plugin_configuration::Write(ostream& file) const
 	configuration::Write(file);
 
 	return file;
+}
+
+unsigned int plugin_configuration::OrdinalNumber() const
+{
+	return itsOrdinalNumber;
+}
+
+void plugin_configuration::OrdinalNumber(unsigned int theOrdinalNumber)
+{
+	itsOrdinalNumber = theOrdinalNumber;
+}
+
+unsigned int plugin_configuration::RelativeOrdinalNumber() const
+{
+	return itsRelativeOrdinalNumber;
+}
+
+void plugin_configuration::RelativeOrdinalNumber(unsigned int theRelativeOrdinalNumber)
+{
+	itsRelativeOrdinalNumber = theRelativeOrdinalNumber;
 }

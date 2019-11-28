@@ -11,13 +11,13 @@ using namespace himan;
 configuration::configuration()
     : itsSourceProducers(),
       itsOutputFileType(kGRIB1),
-      itsFileWriteOption(kSingleFile),
+      itsWriteMode(kAllGridsToAFile),
       itsFileCompression(kNoCompression),
       itsDatabaseType(kRadon),
       itsConfigurationFile(),
       itsAuxiliaryFiles(),
       itsOriginTime(),
-      itsReadDataFromDatabase(true),
+      itsReadFromDatabase(true),
       itsThreadCount(-1),
       itsTargetGeomName(),
       itsSourceGeomNames(),
@@ -37,7 +37,9 @@ configuration::configuration()
       itsParamFile(),
       itsAsyncExecution(false),
       itsUpdateSSStateTable(true),
-      itsUploadStatistics(true)
+      itsUploadStatistics(true),
+      itsWriteToDatabase(false),
+      itsLegacyWriteMode(false)
 {
 }
 
@@ -48,10 +50,10 @@ std::ostream& configuration::Write(std::ostream& file) const
 	file << itsTargetProducer;
 
 	file << "__itsOutputFileType__ " << HPFileTypeToString.at(itsOutputFileType) << std::endl;
-	file << "__itsFileWriteOption__ " << HPFileWriteOptionToString.at(itsFileWriteOption) << std::endl;
+	file << "__itsWriteMode__ " << HPWriteModeToString.at(itsWriteMode) << std::endl;
 	file << "__itsFileCompression__ " << HPFileCompressionToString.at(itsFileCompression) << std::endl;
 	file << "__itsUseCuda__ " << itsUseCuda << std::endl;
-	file << "__itsReadDataFromDatabase__ " << itsReadDataFromDatabase << std::endl;
+	file << "__itsReadFromDatabase__ " << itsReadFromDatabase << std::endl;
 
 	file << "__itsThreadCount__ " << itsThreadCount << std::endl;
 
@@ -87,6 +89,8 @@ std::ostream& configuration::Write(std::ostream& file) const
 	file << "__itsAsyncExecution__ " << itsAsyncExecution << std::endl;
 	file << "__itsUpdateSSStateTable__" << itsUpdateSSStateTable << std::endl;
 	file << "__itsUploadStatistics__" << itsUploadStatistics << std::endl;
+	file << "__itsWriteToDatabase__" << itsWriteToDatabase << std::endl;
+	file << "__itsLegacyWriteMode__" << itsLegacyWriteMode << std::endl;
 
 	return file;
 }
@@ -108,13 +112,13 @@ void configuration::OutputFileType(HPFileType theOutputFileType)
 {
 	itsOutputFileType = theOutputFileType;
 }
-HPFileWriteOption configuration::FileWriteOption() const
+HPWriteMode configuration::WriteMode() const
 {
-	return itsFileWriteOption;
+	return itsWriteMode;
 }
-void configuration::FileWriteOption(HPFileWriteOption theFileWriteOption)
+void configuration::WriteMode(HPWriteMode theWriteMode)
 {
-	itsFileWriteOption = theFileWriteOption;
+	itsWriteMode = theWriteMode;
 }
 HPFileCompression configuration::FileCompression() const
 {
@@ -124,13 +128,13 @@ void configuration::FileCompression(HPFileCompression theFileCompression)
 {
 	itsFileCompression = theFileCompression;
 }
-bool configuration::ReadDataFromDatabase() const
+bool configuration::ReadFromDatabase() const
 {
-	return itsReadDataFromDatabase;
+	return itsReadFromDatabase;
 }
-void configuration::ReadDataFromDatabase(bool theReadDataFromDatabase)
+void configuration::ReadFromDatabase(bool theReadFromDatabase)
 {
-	itsReadDataFromDatabase = theReadDataFromDatabase;
+	itsReadFromDatabase = theReadFromDatabase;
 }
 
 bool configuration::UseCuda() const
@@ -331,4 +335,24 @@ bool configuration::UploadStatistics() const
 void configuration::UploadStatistics(bool theUploadStatistics)
 {
 	itsUploadStatistics = theUploadStatistics;
+}
+
+bool configuration::WriteToDatabase() const
+{
+	return itsWriteToDatabase;
+}
+
+void configuration::WriteToDatabase(bool theWriteToDatabase)
+{
+	itsWriteToDatabase = theWriteToDatabase;
+}
+
+bool configuration::LegacyWriteMode() const
+{
+	return itsLegacyWriteMode;
+}
+
+void configuration::LegacyWriteMode(bool theLegacyWriteMode)
+{
+	itsLegacyWriteMode = theLegacyWriteMode;
 }

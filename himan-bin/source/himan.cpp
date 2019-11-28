@@ -233,7 +233,7 @@ void ExecutePlugin(const shared_ptr<plugin_configuration>& pc, vector<plugin_tim
 		pluginTimes.push_back(t);
 	}
 
-	if (pc->DatabaseType() == kRadon && pc->FileWriteOption() == kDatabase && pc->UpdateSSStateTable())
+	if (pc->DatabaseType() == kRadon && pc->WriteToDatabase() && pc->UpdateSSStateTable())
 	{
 		UpdateSSState(pc);
 	}
@@ -375,7 +375,7 @@ int main(int argc, char** argv)
 		cout << "-------------------------------------------" << endl;
 		cout << setw(25) << left << "Total duration:" << setw(8) << right << totalTime << " ms" << endl;
 
-		if (conf->DatabaseType() == kRadon && conf->FileWriteOption() == kDatabase)
+		if (conf->DatabaseType() == kRadon && conf->WriteToDatabase())
 		{
 			UploadRunStatisticsToDatabase(conf, pluginTimes);
 		}

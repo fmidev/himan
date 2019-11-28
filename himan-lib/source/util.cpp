@@ -31,8 +31,14 @@ using namespace himan;
 using namespace std;
 
 template <typename T>
-string util::MakeFileName(HPFileWriteOption fileWriteOption, const info<T>& info, const configuration& conf)
+string util::MakeFileName(bool writeToDatabase, HPWriteMode writeMode, const info<T>& info,
+                          const plugin_configuration& conf)
 {
+	if (writeMode == kNoFileWrite)
+	{
+		return "";
+	}
+
 	ostringstream fileName;
 	ostringstream base;
 
@@ -45,7 +51,7 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, const info<T>& info
 
 	// For neons get base directory
 
-	if (fileWriteOption == kDatabase)
+	if (writeToDatabase)
 	{
 		char* path;
 
@@ -61,22 +67,63 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, const info<T>& info
 			cout << "Warning::util MASALA_PROCESSED_DATA_BASE not set" << endl;
 		}
 
-		base << "/" << info.Producer().Id() << "/" << ftime.OriginDateTime().String("%Y%m%d%H%M") << "/"
-		     << conf.TargetGeomName() << "/";
+		// directory structure when writing to database:
+		//
+		// all:
+		//   /path/to/files/<producer_id>/<analysis_time>
+		// few:
+		//   /path/to/files/<producer_id>/<analysis_time>/<geometry_name>/<first_step>_<last_step>
+		// single
+		//   /path/to/files/<producer_id>/<analysis_time>/<geometry_name>/<step>
 
-		if (ftime.Step().Minutes() % 60 != 0)
+		base << "/" << info.Producer().Id() << "/" << ftime.OriginDateTime().String("%Y%m%d%H%M");
+
+		if (writeMode == kSingleGridToAFile)
 		{
-			base << ftime.Step().Minutes();
+			base << "/" << conf.TargetGeomName() << "/";
+
+			if (ftime.Step().Minutes() % 60 != 0)
+			{
+				base << ftime.Step().Minutes();
+			}
+			else
+			{
+				base << ftime.Step().Hours();
+			}
 		}
-		else
+		else if (writeMode == kFewGridsToAFile)
 		{
-			base << ftime.Step().Hours();
+			base << "/" << conf.TargetGeomName() << "/";
+			auto tempInfo = info;
+
+			bool useHours = true;
+			for (tempInfo.template Reset<forecast_time>(); tempInfo.template Next<forecast_time>();)
+			{
+				if (tempInfo.Time().Step().Minutes() % 60)
+				{
+					useHours = false;
+					break;
+				}
+			}
+			tempInfo.template First<forecast_time>();
+			const auto first = tempInfo.Time().Step();
+			tempInfo.template Last<forecast_time>();
+			const auto last = tempInfo.Time().Step();
+
+			if (first == last)
+			{
+				base << (useHours ? first.Hours() : first.Minutes());
+			}
+			else
+			{
+				base << (useHours ? first.Hours() : first.Minutes()) << "_"
+				     << (useHours ? last.Hours() : last.Minutes());
+			}
 		}
 	}
-
 	// Create a unique file name when creating multiple files from one info
 
-	if (fileWriteOption == kDatabase || fileWriteOption == kMultipleFiles)
+	if (writeMode == kSingleGridToAFile)
 	{
 		fileName << base.str() << "/" << par.Name() << "_" << HPLevelTypeToString.at(lvl.Type()) << "_" << lvl.Value();
 
@@ -117,19 +164,31 @@ string util::MakeFileName(HPFileWriteOption fileWriteOption, const info<T>& info
 			fileName << "_" << static_cast<int>(ftype.Type()) << "_" << ftype.Value();
 		}
 	}
-	else
+	else if (writeMode == kFewGridsToAFile)
 	{
-		// TODO!
-
-		fileName << base.str() << "/"
-		         << "TODO.file";
+		fileName << "fc" << ftime.OriginDateTime().String("%Y%m%d%H%M") << "+" << setw(3) << setfill('0')
+		         << ftime.Step().Hours() << "h" << setw(2) << setfill('0') << (ftime.Step().Minutes() % 60) << "m_"
+		         << conf.Name() << "#" << conf.RelativeOrdinalNumber();
+	}
+	else if (writeMode == kAllGridsToAFile)
+	{
+		if (conf.LegacyWriteMode())
+		{
+			fileName << base.str() << "/" << conf.ConfigurationFile();
+		}
+		else
+		{
+			fileName << base.str() << "/"
+			         << "fc" << ftime.OriginDateTime().String("%Y%m%d%H%M") << "+" << setw(3) << setfill('0')
+			         << ftime.Step().Hours() << "h" << setw(2) << setfill('0') << (ftime.Step().Minutes() % 60) << "m";
+		}
 	}
 
 	return fileName.str();
 }
 
-template string util::MakeFileName<double>(HPFileWriteOption, const info<double>&, const configuration&);
-template string util::MakeFileName<float>(HPFileWriteOption, const info<float>&, const configuration&);
+template string util::MakeFileName<double>(bool, HPWriteMode, const info<double>&, const plugin_configuration&);
+template string util::MakeFileName<float>(bool, HPWriteMode, const info<float>&, const plugin_configuration&);
 
 himan::HPFileType util::FileType(const string& theFile)
 {

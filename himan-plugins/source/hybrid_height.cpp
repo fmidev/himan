@@ -368,7 +368,7 @@ bool hybrid_height::WithHypsometricEquation(shared_ptr<himan::info<float>>& myTa
 			}
 		}
 
-		if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
+		if (itsConfiguration->WriteMode() == kSingleGridToAFile)
 		{
 			writers.push_back(async(launch::async,
 			                        [this](shared_ptr<info<float>> tempInfo) { WriteSingleGridToFile(tempInfo); },
@@ -408,7 +408,7 @@ void hybrid_height::WriteSingleGridToFile(const shared_ptr<info<float>> targetIn
 		return;
 	}
 
-	if (itsConfiguration->FileWriteOption() == kDatabase || itsConfiguration->FileWriteOption() == kMultipleFiles)
+	if (itsConfiguration->WriteMode() == kSingleGridToAFile)
 	{
 		aWriter->ToFile<float>(targetInfo, itsConfiguration);
 	}
@@ -416,6 +416,6 @@ void hybrid_height::WriteSingleGridToFile(const shared_ptr<info<float>> targetIn
 	{
 		lock_guard<mutex> lock(singleFileWriteMutex);
 
-		aWriter->ToFile<float>(targetInfo, itsConfiguration, itsConfiguration->ConfigurationFile());
+		aWriter->ToFile<float>(targetInfo, itsConfiguration);
 	}
 }

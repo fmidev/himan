@@ -127,6 +127,11 @@ class plugin_configuration : public configuration
 		return itsBaseGrid.get();
 	}
 
+	unsigned int OrdinalNumber() const;
+	void OrdinalNumber(unsigned int theOrdinalNumber);
+	unsigned int RelativeOrdinalNumber() const;
+	void RelativeOrdinalNumber(unsigned int theRelativeOrdinalNumber);
+
    private:
 	friend class json_parser;
 
@@ -138,6 +143,8 @@ class plugin_configuration : public configuration
 	std::vector<forecast_type> itsForecastTypes;
 	std::vector<forecast_time> itsTimes;
 	std::unique_ptr<grid> itsBaseGrid;
+	unsigned int itsOrdinalNumber;
+	unsigned int itsRelativeOrdinalNumber;
 };
 
 inline std::ostream& operator<<(std::ostream& file, const plugin_configuration& ob)

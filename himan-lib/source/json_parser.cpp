@@ -36,6 +36,8 @@ producer ParseTargetProducer(const shared_ptr<configuration>& conf, const boost:
 vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt);
 unique_ptr<grid> ParseAreaAndGrid(const std::shared_ptr<configuration>& conf, const boost::property_tree::ptree& pt);
 vector<forecast_time> ParseTime(std::shared_ptr<configuration> conf, const boost::property_tree::ptree& pt);
+tuple<HPWriteMode, bool, bool> ParseWriteMode(const shared_ptr<configuration>& conf,
+                                              const boost::property_tree::ptree& pt);
 
 vector<level> LevelsFromString(const string& levelType, const string& levelValues);
 
@@ -113,38 +115,13 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 	/* Check file_write */
 
-	try
-	{
-		string theFileWriteOption = pt.get<string>("file_write");
+	auto parsed = ParseWriteMode(conf, pt);
 
-		if (theFileWriteOption == "database")
-		{
-			conf->FileWriteOption(kDatabase);
-		}
-		else if (theFileWriteOption == "single")
-		{
-			conf->FileWriteOption(kSingleFile);
-		}
-		else if (theFileWriteOption == "multiple")
-		{
-			conf->FileWriteOption(kMultipleFiles);
-		}
-		else if (theFileWriteOption == "cache only")
-		{
-			conf->FileWriteOption(kCacheOnly);
-		}
-		else
-		{
-			throw runtime_error("Invalid value for file_write: " + theFileWriteOption);
-		}
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
+	if (get<0>(parsed) != kUnknown)
 	{
-		// Something was not found; do nothing
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing key file_write: ") + e.what());
+		conf->WriteMode(get<0>(parsed));
+		conf->WriteToDatabase(get<1>(parsed));
+		conf->LegacyWriteMode(get<2>(parsed));
 	}
 
 	/* Check file_compression */
@@ -166,11 +143,10 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 			conf->FileCompression(kNoCompression);
 		}
 
-		if (conf->FileCompression() != kNoCompression && conf->FileWriteOption() == kSingleFile)
+		if (conf->FileCompression() != kNoCompression && conf->WriteMode() == kAllGridsToAFile)
 		{
-			itsLogger.Warning(
-			    "file_write_option value 'single' conflicts with file_compression, using 'multiple' instead");
-			conf->FileWriteOption(kMultipleFiles);
+			itsLogger.Warning("file_mode value 'all' conflicts with file_compression, using 'single' instead");
+			conf->WriteMode(kSingleGridToAFile);
 		}
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
@@ -182,15 +158,15 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		throw runtime_error(string("Error parsing key file_write: ") + e.what());
 	}
 
-	/* Check read_data_from_database */
+	/* Check read_data_from_database (legacy) */
 
 	try
 	{
-		string theReadDataFromDatabase = pt.get<string>("read_data_from_database");
+		string theReadFromDatabase = pt.get<string>("read_data_from_database");
 
-		if (!util::ParseBoolean(theReadDataFromDatabase) || conf->DatabaseType() == kNoDatabase)
+		if (!util::ParseBoolean(theReadFromDatabase) || conf->DatabaseType() == kNoDatabase)
 		{
-			conf->ReadDataFromDatabase(false);
+			conf->ReadFromDatabase(false);
 		}
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
@@ -200,6 +176,26 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	catch (exception& e)
 	{
 		throw runtime_error(string("Error parsing key read_data_from_database: ") + e.what());
+	}
+
+	/* Check read_from_database */
+
+	try
+	{
+		string theReadFromDatabase = pt.get<string>("read_from_database");
+
+		if (!util::ParseBoolean(theReadFromDatabase) || conf->DatabaseType() == kNoDatabase)
+		{
+			conf->ReadFromDatabase(false);
+		}
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing key read_from_database: ") + e.what());
 	}
 
 	// Check global use_cache_for_writes option
@@ -350,7 +346,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	}
 	catch (exception& e)
 	{
-		throw runtime_error(string("Error parsing key file_write: ") + e.what());
+		throw runtime_error(string("Error parsing key dynamic_memory_allocation: ") + e.what());
 	}
 
 	/*
@@ -515,40 +511,16 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 		// Check local file_write option
 
-		HPFileWriteOption delayedFileWrite = conf->FileWriteOption();
+		HPWriteMode delayedWriteMode = conf->WriteMode();
+		bool delayedWriteToDatabase = conf->WriteToDatabase();
+		bool delayedLegacyWriteMode = conf->LegacyWriteMode();
+		auto delayedParsed = ParseWriteMode(conf, element.second);
 
-		try
+		if (get<0>(delayedParsed) != kUnknown)
 		{
-			string theFileWriteOption = element.second.get<string>("file_write");
-
-			if (theFileWriteOption == "database")
-			{
-				delayedFileWrite = kDatabase;
-			}
-			else if (theFileWriteOption == "single")
-			{
-				delayedFileWrite = kSingleFile;
-			}
-			else if (theFileWriteOption == "multiple")
-			{
-				delayedFileWrite = kMultipleFiles;
-			}
-			else if (theFileWriteOption == "cache only")
-			{
-				delayedFileWrite = kCacheOnly;
-			}
-			else
-			{
-				throw runtime_error("Invalid value for file_write: " + theFileWriteOption);
-			}
-		}
-		catch (boost::property_tree::ptree_bad_path& e)
-		{
-			// Something was not found; do nothing
-		}
-		catch (exception& e)
-		{
-			throw runtime_error(string("Error parsing meta information: ") + e.what());
+			delayedWriteMode = get<0>(delayedParsed);
+			delayedWriteToDatabase = get<1>(delayedParsed);
+			delayedLegacyWriteMode = get<2>(delayedParsed);
 		}
 
 		// Check local forecast_type option
@@ -601,7 +573,9 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 			pc->UseCacheForReads(delayedUseCacheForReads);
 			pc->UseCacheForWrites(delayedUseCacheForWrites);
 			pc->itsOutputFileType = delayedFileType;
-			pc->FileWriteOption(delayedFileWrite);
+			pc->WriteMode(delayedWriteMode);
+			pc->WriteToDatabase(delayedWriteToDatabase);
+			pc->LegacyWriteMode(delayedLegacyWriteMode);
 			pc->SourceProducers(delayedSourceProducers);
 			pc->TargetProducer(delayedTargetProducer);
 
@@ -697,6 +671,11 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 			}
 
 			ASSERT(pc.unique());
+
+			pc->OrdinalNumber(static_cast<unsigned int>(pluginContainer.size()));
+			pc->RelativeOrdinalNumber(static_cast<unsigned int>(
+			    count_if(pluginContainer.begin(), pluginContainer.end(),
+			             [pc](const shared_ptr<plugin_configuration>& c) { return c->Name() == pc->Name(); })));
 
 			pluginContainer.push_back(pc);
 		}
@@ -1456,4 +1435,96 @@ vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt)
 	}
 
 	return forecastTypes;
+}
+
+tuple<HPWriteMode, bool, bool> ParseWriteMode(const shared_ptr<configuration>& conf,
+                                              const boost::property_tree::ptree& pt)
+{
+	HPWriteMode writeMode = kUnknown;
+	bool writeToDatabase = false;
+	bool legacyWriteMode = false;
+
+	// legacy way of defining things
+
+	try
+	{
+		string theFileWriteOption = pt.get<string>("file_write");
+
+		if (theFileWriteOption == "database")
+		{
+			writeMode = kSingleGridToAFile;
+			writeToDatabase = true;
+		}
+		else if (theFileWriteOption == "single")
+		{
+			writeMode = kAllGridsToAFile;
+			writeToDatabase = false;
+		}
+		else if (theFileWriteOption == "multiple")
+		{
+			writeMode = kSingleGridToAFile;
+			writeToDatabase = false;
+		}
+		else if (theFileWriteOption == "cache only")
+		{
+			writeMode = kNoFileWrite;
+			writeToDatabase = false;
+		}
+		else
+		{
+			throw runtime_error("Invalid value for file_write: " + theFileWriteOption);
+		}
+
+		legacyWriteMode = true;
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing meta information: ") + e.what());
+	}
+
+	// new way, will overwrite legacy if both are defined
+
+	try
+	{
+		string theWriteMode = pt.get<string>("write_mode");
+
+		if (theWriteMode == "all")
+		{
+			writeMode = kAllGridsToAFile;
+		}
+		else if (theWriteMode == "few")
+		{
+			writeMode = kFewGridsToAFile;
+		}
+		else if (theWriteMode == "single")
+		{
+			writeMode = kSingleGridToAFile;
+		}
+		else if (theWriteMode == "no")
+		{
+			writeMode = kNoFileWrite;
+		}
+		else
+		{
+			throw runtime_error("Invalid value for file_mode: " + theWriteMode);
+		}
+
+		writeToDatabase = util::ParseBoolean(pt.get<string>("write_to_database"));
+
+		legacyWriteMode = false;
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing meta information: ") + e.what());
+	}
+
+	return make_tuple(writeMode, writeToDatabase, legacyWriteMode);
 }

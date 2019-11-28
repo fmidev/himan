@@ -1016,7 +1016,7 @@ bool grib::ToFile(info<T>& anInfo, string& outputFile, bool appendToFile)
 		                " step: " + static_cast<string>(anInfo.Time().Step()) + ")");
 		edition = 2;
 		if (itsWriteOptions.configuration->FileCompression() == kNoCompression &&
-		    itsWriteOptions.configuration->FileWriteOption() != kSingleFile)
+		    itsWriteOptions.configuration->WriteMode() != kAllGridsToAFile)
 		{
 			outputFile += "2";
 		}
