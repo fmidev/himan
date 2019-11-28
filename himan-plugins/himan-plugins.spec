@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 19.11.25
+Version: 19.11.28
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 19.10.25
+Requires: himan-lib >= 19.11.28
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 19.10.28
@@ -119,6 +119,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Nov 28 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.11.28-1.fmi
+- Support more file writing options
 * Mon Nov 25 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.11.25-1.fmi
 - Cuda 10.1
 * Tue Nov 19 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.11.19-1.fmi
