@@ -318,7 +318,8 @@ enum HPExceptionType
 	kUnknownException = 0,
 	kFileMetaDataNotFound,
 	kFileDataNotFound,
-	kFunctionNotImplemented
+	kFunctionNotImplemented,
+	kInvalidWriteOptions
 };
 
 enum HPTimeResolution

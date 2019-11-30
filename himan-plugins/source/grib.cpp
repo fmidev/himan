@@ -980,13 +980,13 @@ void WriteDataValues(const vector<float>& values, NFmiGribMessage& msg)
 	delete[] arr;
 }
 
-bool grib::ToFile(info<double>& anInfo, string& outputFile, bool appendToFile)
+himan::file_information grib::ToFile(info<double>& anInfo)
 {
-	return ToFile<double>(anInfo, outputFile, appendToFile);
+	return ToFile<double>(anInfo);
 }
 
 template <typename T>
-bool grib::ToFile(info<T>& anInfo, string& outputFile, bool appendToFile)
+himan::file_information grib::ToFile(info<T>& anInfo)
 {
 	// Write only that data which is currently set at descriptors
 
@@ -997,7 +997,46 @@ bool grib::ToFile(info<T>& anInfo, string& outputFile, bool appendToFile)
 	{
 		itsLogger.Error("Unable to write irregular grid of type " + HPGridTypeToString.at(anInfo.Grid()->Type()) +
 		                " to grib");
-		return false;
+		throw kInvalidWriteOptions;
+	}
+
+	bool appendToFile = (itsWriteOptions.configuration->WriteMode() == kAllGridsToAFile ||
+	                     itsWriteOptions.configuration->WriteMode() == kFewGridsToAFile);
+
+	if (appendToFile && (itsWriteOptions.configuration->FileCompression() == kGZIP ||
+	                     itsWriteOptions.configuration->FileCompression() == kBZIP2))
+	{
+		itsLogger.Warning("Unable to write multiple grids to a packed file");
+		appendToFile = false;
+	}
+
+	file_information finfo;
+	finfo.file_location = util::MakeFileName(anInfo, *itsWriteOptions.configuration) + ".grib";
+	finfo.file_type = kGRIB1;
+	finfo.storage_type = kLocalFileSystem;
+
+	if (itsWriteOptions.configuration->OutputFileType() == kGRIB2)
+	{
+		finfo.file_location += "2";
+		finfo.file_type = kGRIB2;
+	}
+
+	if (itsWriteOptions.configuration->FileCompression() == kGZIP)
+	{
+		finfo.file_location += ".gz";
+	}
+	else if (itsWriteOptions.configuration->FileCompression() == kBZIP2)
+	{
+		finfo.file_location += ".bz2";
+	}
+
+	namespace fs = boost::filesystem;
+
+	fs::path pathname(finfo.file_location);
+
+	if (!pathname.parent_path().empty() && !fs::is_directory(pathname.parent_path()))
+	{
+		fs::create_directories(pathname.parent_path());
 	}
 
 	long edition = static_cast<long>(itsWriteOptions.configuration->OutputFileType());
@@ -1015,25 +1054,27 @@ bool grib::ToFile(info<T>& anInfo, string& outputFile, bool appendToFile)
 		                ", processing type: " + HPProcessingTypeToString.at(anInfo.Param().ProcessingType().Type()) +
 		                " step: " + static_cast<string>(anInfo.Time().Step()) + ")");
 		edition = 2;
+		finfo.file_type = kGRIB2;
+
 		if (itsWriteOptions.configuration->FileCompression() == kNoCompression &&
 		    itsWriteOptions.configuration->WriteMode() != kAllGridsToAFile)
 		{
-			outputFile += "2";
+			finfo.file_location += "2";
 		}
 
 		if (itsWriteOptions.configuration->FileCompression() == kGZIP)
 		{
-			outputFile.insert(outputFile.end() - 3, '2');
+			finfo.file_location.insert(finfo.file_location.end() - 3, '2');
 		}
 		else if (itsWriteOptions.configuration->FileCompression() == kBZIP2)
 		{
-			outputFile.insert(outputFile.end() - 4, '2');
+			finfo.file_location.insert(finfo.file_location.end() - 4, '2');
 		}
 		else if (itsWriteOptions.configuration->FileCompression() != kNoCompression)
 		{
 			itsLogger.Error("Unable to write to compressed grib. Unknown file compression: " +
 			                HPFileCompressionToString.at(itsWriteOptions.configuration->FileCompression()));
-			return false;
+			throw kInvalidWriteOptions;
 		}
 	}
 
@@ -1209,19 +1250,56 @@ bool grib::ToFile(info<T>& anInfo, string& outputFile, bool appendToFile)
 		itsGrib->Message().PV(AB, AB.size());
 	}
 
-	if ((itsWriteOptions.configuration->FileCompression() == kGZIP ||
-	     itsWriteOptions.configuration->FileCompression() == kBZIP2) &&
-	    appendToFile)
+	// message length can only be received from eccodes since it includes
+	// all grib headers etc
+	finfo.length = itsGrib->Message().GetLongKey("totalLength");
+
+	if (itsWriteOptions.configuration->WriteMode() != kSingleGridToAFile)
 	{
-		itsLogger.Warning("Unable to append to a compressed file");
-		appendToFile = false;
+		// appending to a file is a serial operation -- two threads cannot
+		// append to a single file simultaneously. therefore offset is just
+		// the size of the file so far.
+
+		try
+		{
+			finfo.offset = boost::filesystem::file_size(finfo.file_location);
+		}
+		catch (const boost::filesystem::filesystem_error& e)
+		{
+			finfo.offset = 0;
+		}
+
+		// handling message number is a bit tricker. fmigrib library cannot really
+		// be used for tracking message no of written messages, because neither it
+		// nor eccodes has any visibility to any ossibly existing messages in a file
+		// that is appended to. therefore here we are tracking the message count per
+		// file, but this is assuming that when himan starts, the file appended to
+		// does not exist!
+
+		static std::map<std::string, unsigned long> messages;
+
+		try
+		{
+			messages.at(finfo.file_location) = messages.at(finfo.file_location) + 1;
+		}
+		catch (const out_of_range& e)
+		{
+			messages[finfo.file_location] = 0;
+		}
+
+		finfo.message_no = messages.at(finfo.file_location);
+	}
+	else
+	{
+		finfo.offset = 0;
+		finfo.message_no = 0;
 	}
 
-	itsGrib->Message().Write(outputFile, appendToFile);
+	itsGrib->Message().Write(finfo.file_location, appendToFile);
 
 	aTimer.Stop();
 	const float duration = static_cast<float>(aTimer.GetTime());
-	const float bytes = static_cast<float>(boost::filesystem::file_size(outputFile));
+	const float bytes = static_cast<float>(finfo.length.get());  // TODO: does not work correctly if file is packed
 	const float speed = (bytes / 1024.f / 1024.f) / (duration / 1000.f);
 
 	stringstream ss;
@@ -1230,14 +1308,14 @@ bool grib::ToFile(info<T>& anInfo, string& outputFile, bool appendToFile)
 
 	string verb = (appendToFile ? "Appended to " : "Wrote ");
 
-	ss << verb << "file '" << outputFile << "' (" << fixed << speed << " MB/s)";
+	ss << verb << "file '" << finfo.file_location << "' (" << fixed << speed << " MB/s)";
 	itsLogger.Info(ss.str());
 
-	return true;
+	return finfo;
 }
 
-template bool grib::ToFile<double>(info<double>&, string&, bool);
-template bool grib::ToFile<float>(info<float>&, string&, bool);
+template himan::file_information grib::ToFile<double>(info<double>&);
+template himan::file_information grib::ToFile<float>(info<float>&);
 
 // ---------------------------------------------------------------------------
 

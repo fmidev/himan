@@ -31,10 +31,9 @@ using namespace himan;
 using namespace std;
 
 template <typename T>
-string util::MakeFileName(bool writeToDatabase, HPWriteMode writeMode, const info<T>& info,
-                          const plugin_configuration& conf)
+string util::MakeFileName(const info<T>& info, const plugin_configuration& conf)
 {
-	if (writeMode == kNoFileWrite)
+	if (conf.WriteMode() == kNoFileWrite)
 	{
 		return "";
 	}
@@ -49,9 +48,9 @@ string util::MakeFileName(bool writeToDatabase, HPWriteMode writeMode, const inf
 
 	base.str(".");
 
-	// For neons get base directory
+	// For database writes get base directory
 
-	if (writeToDatabase)
+	if (conf.WriteToDatabase())
 	{
 		char* path;
 
@@ -70,18 +69,17 @@ string util::MakeFileName(bool writeToDatabase, HPWriteMode writeMode, const inf
 		// directory structure when writing to database:
 		//
 		// all:
-		//   /path/to/files/<producer_id>/<analysis_time>
+		//   /path/to/files/<producer_id>/<analysis_time>/<geometry_name>
 		// few:
-		//   /path/to/files/<producer_id>/<analysis_time>/<geometry_name>/<first_step>_<last_step>
-		// single
+		//   /path/to/files/<producer_id>/<analysis_time>/<geometry_name>
+		// single:
 		//   /path/to/files/<producer_id>/<analysis_time>/<geometry_name>/<step>
 
-		base << "/" << info.Producer().Id() << "/" << ftime.OriginDateTime().String("%Y%m%d%H%M");
+		base << "/" << info.Producer().Id() << "/" << ftime.OriginDateTime().String("%Y%m%d%H%M") << "/"
+		     << conf.TargetGeomName() << "/";
 
-		if (writeMode == kSingleGridToAFile)
+		if (conf.WriteMode() == kSingleGridToAFile)
 		{
-			base << "/" << conf.TargetGeomName() << "/";
-
 			if (ftime.Step().Minutes() % 60 != 0)
 			{
 				base << ftime.Step().Minutes();
@@ -91,39 +89,10 @@ string util::MakeFileName(bool writeToDatabase, HPWriteMode writeMode, const inf
 				base << ftime.Step().Hours();
 			}
 		}
-		else if (writeMode == kFewGridsToAFile)
-		{
-			base << "/" << conf.TargetGeomName() << "/";
-			auto tempInfo = info;
-
-			bool useHours = true;
-			for (tempInfo.template Reset<forecast_time>(); tempInfo.template Next<forecast_time>();)
-			{
-				if (tempInfo.Time().Step().Minutes() % 60)
-				{
-					useHours = false;
-					break;
-				}
-			}
-			tempInfo.template First<forecast_time>();
-			const auto first = tempInfo.Time().Step();
-			tempInfo.template Last<forecast_time>();
-			const auto last = tempInfo.Time().Step();
-
-			if (first == last)
-			{
-				base << (useHours ? first.Hours() : first.Minutes());
-			}
-			else
-			{
-				base << (useHours ? first.Hours() : first.Minutes()) << "_"
-				     << (useHours ? last.Hours() : last.Minutes());
-			}
-		}
 	}
 	// Create a unique file name when creating multiple files from one info
 
-	if (writeMode == kSingleGridToAFile)
+	if (conf.WriteMode() == kSingleGridToAFile)
 	{
 		fileName << base.str() << "/" << par.Name() << "_" << HPLevelTypeToString.at(lvl.Type()) << "_" << lvl.Value();
 
@@ -164,13 +133,14 @@ string util::MakeFileName(bool writeToDatabase, HPWriteMode writeMode, const inf
 			fileName << "_" << static_cast<int>(ftype.Type()) << "_" << ftype.Value();
 		}
 	}
-	else if (writeMode == kFewGridsToAFile)
+	else if (conf.WriteMode() == kFewGridsToAFile)
 	{
-		fileName << "fc" << ftime.OriginDateTime().String("%Y%m%d%H%M") << "+" << setw(3) << setfill('0')
+		fileName << base.str() << "/"
+		         << "fc" << ftime.OriginDateTime().String("%Y%m%d%H%M") << "+" << setw(3) << setfill('0')
 		         << ftime.Step().Hours() << "h" << setw(2) << setfill('0') << (ftime.Step().Minutes() % 60) << "m_"
 		         << conf.Name() << "#" << conf.RelativeOrdinalNumber();
 	}
-	else if (writeMode == kAllGridsToAFile)
+	else if (conf.WriteMode() == kAllGridsToAFile)
 	{
 		if (conf.LegacyWriteMode())
 		{
@@ -187,8 +157,8 @@ string util::MakeFileName(bool writeToDatabase, HPWriteMode writeMode, const inf
 	return fileName.str();
 }
 
-template string util::MakeFileName<double>(bool, HPWriteMode, const info<double>&, const plugin_configuration&);
-template string util::MakeFileName<float>(bool, HPWriteMode, const info<float>&, const plugin_configuration&);
+template string util::MakeFileName<double>(const info<double>&, const plugin_configuration&);
+template string util::MakeFileName<float>(const info<float>&, const plugin_configuration&);
 
 himan::HPFileType util::FileType(const string& theFile)
 {
