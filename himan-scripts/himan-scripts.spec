@@ -14,6 +14,8 @@ Requires: glibc
 Requires: lua >= 5.1.4
 Requires: himan-plugins
 
+%define debug_package %{nil}
+
 %description
 Himan -- hilojen manipulaatio -- scripts collection
 
