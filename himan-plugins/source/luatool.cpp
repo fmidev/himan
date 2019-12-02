@@ -1064,6 +1064,60 @@ matrix<T> ProbLimitGt2D(const matrix<T>& A, const matrix<T>& B, T limit)
 }
 
 template <typename T>
+matrix<T> ProbLimitGe2D(const matrix<T>& A, const matrix<T>& B, T limit)
+{
+#ifdef HAVE_CUDA
+        if (myUseCuda)
+        {
+                return numerical_functions::ProbLimitGt2DGPU<T>(A, B, limit);
+        }
+#endif
+        return numerical_functions::Reduce2D<T>(A, B,
+                                                [=](T& val1, T& val2, const T& a, const T& b) {
+                                                        if (IsValid(a * b) && a * b >= limit)
+                                                                val1 += T(1);
+                                                },
+                                                [](const T& val1, const T& val2) { return (val1 >= T(1)) ? T(1) : T(0); },
+                                                T(0), T(0));
+}
+
+template <typename T>
+matrix<T> ProbLimitLt2D(const matrix<T>& A, const matrix<T>& B, T limit)
+{
+#ifdef HAVE_CUDA
+        if (myUseCuda)
+        {
+                return numerical_functions::ProbLimitGt2DGPU<T>(A, B, limit);
+        }
+#endif
+        return numerical_functions::Reduce2D<T>(A, B,
+                                                [=](T& val1, T& val2, const T& a, const T& b) {
+                                                        if (IsValid(a * b) && a * b < limit)
+                                                                val1 += T(1);
+                                                },
+                                                [](const T& val1, const T& val2) { return (val1 >= T(1)) ? T(1) : T(0); },
+                                                T(0), T(0));
+}
+
+template <typename T>
+matrix<T> ProbLimitLe2D(const matrix<T>& A, const matrix<T>& B, T limit)
+{
+#ifdef HAVE_CUDA
+        if (myUseCuda)
+        {
+                return numerical_functions::ProbLimitGt2DGPU<T>(A, B, limit);
+        }
+#endif
+        return numerical_functions::Reduce2D<T>(A, B,
+                                                [=](T& val1, T& val2, const T& a, const T& b) {
+                                                        if (IsValid(a * b) && a * b <= limit)
+                                                                val1 += T(1);
+                                                },
+                                                [](const T& val1, const T& val2) { return (val1 >= T(1)) ? T(1) : T(0); },
+                                                T(0), T(0));
+}
+
+template <typename T>
 matrix<T> ProbLimitEq2D(const matrix<T>& A, const matrix<T>& B, T limit)
 {
 #ifdef HAVE_CUDA
@@ -1455,6 +1509,12 @@ void BindLib(lua_State* L)
 	          def("Min2D", &numerical_functions::Min2D<float>),
                   def("ProbLimitGt2D", &luabind_workaround::ProbLimitGt2D<double>),
                   def("ProbLimitGt2D", &luabind_workaround::ProbLimitGt2D<float>),
+                  def("ProbLimitGe2D", &luabind_workaround::ProbLimitGe2D<double>),
+                  def("ProbLimitGe2D", &luabind_workaround::ProbLimitGe2D<float>),
+                  def("ProbLimitLt2D", &luabind_workaround::ProbLimitLt2D<double>),
+                  def("ProbLimitLt2D", &luabind_workaround::ProbLimitLt2D<float>),
+                  def("ProbLimitLe2D", &luabind_workaround::ProbLimitLe2D<double>),
+                  def("ProbLimitLe2D", &luabind_workaround::ProbLimitLe2D<float>),
                   def("ProbLimitEq2D", &luabind_workaround::ProbLimitEq2D<double>),
                   def("ProbLimitEq2D", &luabind_workaround::ProbLimitEq2D<float>),
 	          // metutil namespace
