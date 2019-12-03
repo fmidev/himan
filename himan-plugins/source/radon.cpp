@@ -24,39 +24,40 @@ void radon::Init()
 {
 	if (!itsInit)
 	{
-		string radonHost = "vorlon";
-
-		try
-		{
-			radonHost = util::GetEnv("RADON_HOSTNAME");
-		}
-		catch (...)
-		{
-		}
-
-		string radonName = "radon";
-
-		try
-		{
-			radonName = util::GetEnv("RADON_DATABASENAME");
-		}
-		catch (...)
-		{
-		}
-
-		int radonPort = 5432;
-
-		try
-		{
-			radonPort = stoi(util::GetEnv("RADON_PORT"));
-		}
-		catch (...)
-		{
-		}
-
 		try
 		{
 			call_once(oflag, [&]() {
+
+				string radonHost = "vorlon";
+
+				try
+				{
+					radonHost = util::GetEnv("RADON_HOSTNAME");
+				}
+				catch (...)
+				{
+				}
+
+				string radonName = "radon";
+
+				try
+				{
+					radonName = util::GetEnv("RADON_DATABASENAME");
+				}
+				catch (...)
+				{
+				}
+
+				int radonPort = 5432;
+
+				try
+				{
+					radonPort = stoi(util::GetEnv("RADON_PORT"));
+				}
+				catch (...)
+				{
+				}
+
 				NFmiRadonDBPool::Instance()->Username("wetodb");
 				NFmiRadonDBPool::Instance()->Password(util::GetEnv("RADON_WETODB_PASSWORD"));
 				NFmiRadonDBPool::Instance()->Database(radonName);
