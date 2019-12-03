@@ -66,8 +66,8 @@ class grib : public io_plugin
 	                                                    bool forceCaching) const;
 
 	template <typename T>
-	bool ToFile(info<T>& anInfo, std::string& outputFile, bool appendToFile = false);
-	bool ToFile(info<double>& anInfo, std::string& outputFile, bool appendToFile = false);
+	file_information ToFile(info<T>& anInfo);
+	file_information ToFile(info<double>& anInfo);
 
    private:
 	void WriteAreaAndGrid(const std::shared_ptr<himan::grid>& grid, const producer& prod);
