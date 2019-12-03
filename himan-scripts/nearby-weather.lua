@@ -25,13 +25,13 @@ if not Weather then
   return
 end
 
-local thunder = {}--thunder:GetValues()
-local prec_form = {}--prec_form:GetValues()
-local prec_type = {}--prec_type:GetValues()
-local prec_intensity = {}--prec_intensity:GetValues()
-local fog = {}--fog:GetValues()
-local cloud_cover = {}--cloud_cover:GetValues()
-local cloud_type = {}--cloud_type:GetValues()
+local thunder = {}
+local prec_form = {}
+local prec_type = {}
+local prec_intensity = {}
+local fog = {}
+local cloud_cover = {}
+local cloud_type = {}
 
 for i=1, #Weather do
   --chop weather number into pieces
@@ -50,9 +50,9 @@ for i=1, #Weather do
 end
 
 -- todo set a mask matrix to match 50/100km radius
-local rain_radius = matrix(5, 5, 1, Missing)
+local rain_radius = matrix(11, 11, 1, Missing)
 rain_radius:Fill(1)
-local wind_radius = matrix(10, 10, 1, Missing)
+local wind_radius = matrix(21, 21, 1, Missing)
 wind_radius:Fill(1)
 
 -------------
@@ -127,15 +127,13 @@ local strong_snow = ProbLimitGt2D(tmp, rain_radius, 3):GetValues()
 
 -- Laskee vallitsevan sateen tyypin alueelle
 tmp:SetValues(prec_type)
+rain_radius:Fill(1/121) --set weights adding up to 1 for mean filtering
+
 local prevalent_type = Filter2D(tmp, rain_radius, false):GetValues()
 
 -- round to whole number
 for i=1, #prevalent_type do
-  if(prevalent_type[i] % 1 < 0.5) then
-    prevalent_type[i] = math.floor(prevalent_type[i])
-  else
-    prevalent_type[i] = math.ceil(prevalent_type[i])
-  end
+    prevalent_type[i] = math.floor(prevalent_type[i] + 0.5 )
 end
 
 ------------------------
@@ -146,31 +144,32 @@ local prevalent_form = {}
 local prevalent_cover = {}
  
 tmp:SetValues(precipitation_form)
+rain_radius:Fill(1) --reset weights to original state
 
 local drizzle = ProbLimitEq2D(tmp, rain_radius, 0):GetValues()
 local water = ProbLimitEq2D(tmp, rain_radius, 1):GetValues() 
 local sleet = ProbLimitEq2D(tmp, rain_radius, 2):GetValues()
 local snow = ProbLimitEq2D(tmp, rain_radius, 3):GetValues()
-local icedrizzle = ProbLimitEq2D(tmp, rain_radius, 4):GetValues()
-local icerain = ProbLimitEq2D(tmp, rain_radius, 5):GetValues()
+local freezingdrizzle = ProbLimitEq2D(tmp, rain_radius, 4):GetValues()
+local freezingrain = ProbLimitEq2D(tmp, rain_radius, 5):GetValues()
 local hail = ProbLimitEq2D(tmp, rain_radius, 6):GetValues()
 local snowgrain = ProbLimitEq2D(tmp, rain_radius, 7):GetValues()
 local icegrain = ProbLimitEq2D(tmp, rain_radius, 8):GetValues()
 
 -- this can be done by simply picking the one from above with highest probability 
 for i=1, #drizzle do
-  hail[i] = hail[i] + icedrizzle[i] + icerain[i]
-  icerain[i] = icerain[i] + icedrizzle[i]
+  hail[i] = hail[i] + snowgrain[i] + freezingrain[i]
+  freezingrain[i] = freezingrain[i] + freezingdrizzle[i]
 
   if(prec_intensity[i] > 0) then
-    prevalent_form[i],prevalent_cover[i] = max(drizzle[i],water[i],sleet[i],snow[i],icedrizzle[i],icerain[i],hail[i],snowgrain[i],icegrain[i])
+    prevalent_form[i],prevalent_cover[i] = max(drizzle[i],water[i],sleet[i],snow[i],freezingdrizzle[i],freezingrain[i],hail[i],snowgrain[i],icegrain[i])
   else
     prevalent_form[i] = Missing
     prevalent_cover[i] = Missing
   end
-  
+
   -- does this make sense? icerain is an area-probability, prevalent_form is a numeral.
-  if (icerain[i] > drizzle[i] or icerain[i] > water[i] or icerain[i] > sleet[i] or icerain[i] > snow[i]) then
+  if (freezingrain[i] > drizzle[i] or freezingrain[i] > water[i] or freezingrain[i] > sleet[i] or freezingrain[i] > snow[i]) then
     prevalent_form[i] = 5
   elseif (hail[i] > drizzle[i] or hail[i] > water[i] or hail[i] > sleet[i] or hail[i] > snow[i]) then
     prevalent_form[i] = 6
@@ -184,7 +183,7 @@ end
 local fog_index = {}
 
 tmp:SetValues(fog)
-local fog_share = ProbLimitGt2D(tmp, rain_radius, 1):GetValues()
+local fog_share = ProbLimitGe2D(tmp, rain_radius, 1):GetValues()
 
 for i=1, #fog_share do
   fog_index[i] = 0
@@ -207,17 +206,19 @@ end
 
 -- use mean
 tmp:SetValues(cloud_cover)
+rain_radius:Fill(1/121) --set weight for mean filter
 local MedianCloudiness = Filter2D(tmp, rain_radius, false):GetValues()
+rain_radius:Fill(1) --reset original value
 local MinCloudiness = Min2D(tmp, rain_radius, false):GetValues()
 local MaxCloudiness = Max2D(tmp, rain_radius, false):GetValues()
 
 -- Pilvinen (pilvisyys >= 7)
-local Cloudy =  ProbLimitGt2D(tmp, rain_radius, 7):GetValues() 
+local Cloudy =  ProbLimitGe2D(tmp, rain_radius, 7):GetValues() 
 -- Melkein pilvinen (pilvisyys = 6)
-local AlmostCloudy = ProbLimitGt2D(tmp, rain_radius, 6):GetValues()
+local AlmostCloudy = ProbLimitEq2D(tmp, rain_radius, 6):GetValues()
 
 -- Puolipilvinen ( 3<= pilvisyys <= 5 )
-local HalfCloudy = ProbLimitGt2D(tmp, rain_radius, 3):GetValues() 
+local HalfCloudy = ProbLimitGe2D(tmp, rain_radius, 3):GetValues() 
 local HalfCloudy2 = ProbLimitGt2D(tmp, rain_radius, 5):GetValues()
 
 for i=1, #HalfCloudy do
@@ -225,7 +226,7 @@ for i=1, #HalfCloudy do
 end
 
 -- Aurinkoinen (pilvisyys < 2)
-local Sunny = ProbLimitGt2D(tmp, rain_radius, 2):GetValues()
+local Sunny = ProbLimitLt2D(tmp, rain_radius, 2):GetValues()
 
 -----------------
 -- STRONG GUST --
@@ -269,6 +270,11 @@ for i=1, #NEIGHBOUR do
   elseif (rainy_weather[i] == 1)  then
     NEIGHBOUR[i] = 80000 + rain_frequency[i]*1000
 
+    if (prevalent_type[i] == 1 or prevalent_form[i] == 0 or prevalent_form[i] == 5) then
+         NEIGHBOUR[i] = NEIGHBOUR[i] + prevalent_form[i]*100+10
+    else
+         NEIGHBOUR[i] = NEIGHBOUR[i] + prevalent_form[i]*100+20
+    end
 -- Yhditelmäsateita OSA 1. Laitetaan kaikki aluksi jatkuvan sateen teksteille
 
     if ( (prevalent_form[i] == 1 and snow[i] >= 0.20 and snow[i] >= sleet[i]) or (prevalent_form[i] == 3 and water[i] >= 0.20 and water[i] >= sleet[i]) ) then
@@ -316,36 +322,36 @@ for i=1, #NEIGHBOUR do
         NEIGHBOUR[i] = 70000 + (MedianCloudiness[i]+1)*1000
       else                                       
         NEIGHBOUR[i] = 70000 + MedianCloudiness[i]*1000
-        if (Cloudy[i] + AlmostCloudy[i] >= 0.65) then -- "Pilvistä tai melkein pilvistä"
-          NEIGHBOUR[i] = 78000
-        end
-        if (Cloudy[i] >= 0.90) then -- "Pilvistä"
-          NEIGHBOUR[i] = 79000
-        end
-        if ((HalfCloudy[i] > 0.50 and HalfCloudy[i] <0.80) and Sunny[i] < 0.05) then -- "Puolipilvistä tai pilvistä"
-          NEIGHBOUR[i] = 77000
-        end 
-        if ((Sunny[i] > 0.30 and Sunny[i] < 0.60) and Cloudy[i] < 0.20) then -- "Selkeää tai puolipilvistä"
-          NEIGHBOUR[i] = 73000
-        end
-        if ((Sunny[i] >= 0.60 and Sunny[i] <= 0.80) and Cloudy[i] < 0.20) then -- "Melkein selkeää" tai "Enimmäkseen selkeää" tai "Pilvisyys on vähäistä"
-          NEIGHBOUR[i] = 72000
-        end 
-        if (Sunny[i] > 0.80) then
-          NEIGHBOUR[i] = 71000 -- "Selkeää"
-        end
-        if ((MaxCloudiness[i] - MinCloudiness[i] >= 0.05) and cloud_cover[i] >= 6 and (Cloudy[i] < 0.75)) then -- "Vaihtelevaa pilvisyyttä"
-          NEIGHBOUR[i] = 70500
-        end
-        if (cloud_cover[i] <= 2 and (NEIGHBOUR[i] >= 75000 and NEIGHBOUR[i] <= 79000) ) then -- "Vaihtelevaa pilvisyyttä" , kun pisteessä pilvisyys vähäistä, mutta lähellä puolipilvisestä pilviseen
-          NEIGHBOUR[i] = 70500
-        end
-        if (NEIGHBOUR[i] == 70000 ) then
-          NEIGHBOUR[i] = 71000
-        end
-        if (NEIGHBOUR[i] == 74000 ) then
-          NEIGHBOUR[i] = 75000
-        end
+      end
+      if (Cloudy[i] + AlmostCloudy[i] >= 0.65) then -- "Pilvistä tai melkein pilvistä"
+        NEIGHBOUR[i] = 78000
+      end
+      if (Cloudy[i] >= 0.90) then -- "Pilvistä"
+        NEIGHBOUR[i] = 79000
+      end
+      if ((HalfCloudy[i] > 0.50 and HalfCloudy[i] <0.80) and Sunny[i] < 0.05) then -- "Puolipilvistä tai pilvistä"
+        NEIGHBOUR[i] = 77000
+      end 
+      if ((Sunny[i] > 0.30 and Sunny[i] < 0.60) and Cloudy[i] < 0.20) then -- "Selkeää tai puolipilvistä"
+        NEIGHBOUR[i] = 73000
+      end
+      if ((Sunny[i] >= 0.60 and Sunny[i] <= 0.80) and Cloudy[i] < 0.20) then -- "Melkein selkeää" tai "Enimmäkseen selkeää" tai "Pilvisyys on vähäistä"
+        NEIGHBOUR[i] = 72000
+      end 
+      if (Sunny[i] > 0.80) then
+        NEIGHBOUR[i] = 71000 -- "Selkeää"
+      end
+      if ((MaxCloudiness[i] - MinCloudiness[i] >= 0.05) and cloud_cover[i] >= 6 and (Cloudy[i] < 0.75)) then -- "Vaihtelevaa pilvisyyttä"
+        NEIGHBOUR[i] = 70500
+      end
+      if (cloud_cover[i] <= 2 and (NEIGHBOUR[i] >= 75000 and NEIGHBOUR[i] <= 79000) ) then -- "Vaihtelevaa pilvisyyttä" , kun pisteessä pilvisyys vähäistä, mutta lähellä puolipilvisestä pilviseen
+        NEIGHBOUR[i] = 70500
+      end
+      if (NEIGHBOUR[i] == 70000 ) then
+        NEIGHBOUR[i] = 71000
+      end
+      if (NEIGHBOUR[i] == 74000 ) then
+        NEIGHBOUR[i] = 75000
       end
     end
   end
