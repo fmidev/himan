@@ -7,6 +7,7 @@
 #define CSV_H
 
 #include "auxiliary_plugin.h"
+#include "file_information.h"
 #include "info.h"
 #include "search_options.h"
 
@@ -61,9 +62,9 @@ class csv : public io_plugin
 	 */
 
 	template <typename T>
-	bool ToFile(info<T>& theInfo, std::string& outputFile);
+	file_information ToFile(info<T>& theInfo);
 
-	bool ToFile(info<double>& theInfo, std::string& outputFile);
+	file_information ToFile(info<double>& theInfo);
 };
 
 #ifndef HIMAN_AUXILIARY_INCLUDE

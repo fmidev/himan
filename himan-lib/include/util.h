@@ -38,8 +38,7 @@ HPFileType FileType(const std::string& theFile);
  */
 
 template <typename T>
-std::string MakeFileName(bool writeToDatabase, HPWriteMode writeMode, const info<T>& info,
-                         const plugin_configuration& conf);
+std::string MakeFileName(const info<T>& info, const plugin_configuration& conf);
 
 /**
  * @brief Splits a string and fills the gaps if requested

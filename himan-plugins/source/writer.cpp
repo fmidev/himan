@@ -4,7 +4,6 @@
 #include "statistics.h"
 #include "timer.h"
 #include "util.h"
-#include <boost/filesystem.hpp>
 #include <fstream>
 
 #include "cache.h"
@@ -21,18 +20,9 @@ writer::writer() : itsWriteOptions()
 }
 
 template <typename T>
-bool writer::CreateFile(info<T>& theInfo, std::shared_ptr<const plugin_configuration> conf, std::string& theOutputFile)
+himan::file_information writer::CreateFile(info<T>& theInfo, std::shared_ptr<const plugin_configuration> conf)
 {
-	namespace fs = boost::filesystem;
-
 	itsWriteOptions.configuration = conf;
-
-	fs::path pathname(theOutputFile);
-
-	if (!pathname.parent_path().empty() && !fs::is_directory(pathname.parent_path()))
-	{
-		fs::create_directories(pathname.parent_path());
-	}
 
 	switch (itsWriteOptions.configuration->OutputFileType())
 	{
@@ -42,41 +32,21 @@ bool writer::CreateFile(info<T>& theInfo, std::shared_ptr<const plugin_configura
 		{
 			auto theGribWriter = GET_PLUGIN(grib);
 
-			theOutputFile += ".grib";
-
-			if (itsWriteOptions.configuration->OutputFileType() == kGRIB2)
-			{
-				theOutputFile += "2";
-			}
-
-			if (itsWriteOptions.configuration->FileCompression() == kGZIP)
-			{
-				theOutputFile += ".gz";
-			}
-			else if (itsWriteOptions.configuration->FileCompression() == kBZIP2)
-			{
-				theOutputFile += ".bz2";
-			}
-
 			theGribWriter->WriteOptions(itsWriteOptions);
-			const bool append = (itsWriteOptions.configuration->WriteMode() == kAllGridsToAFile ||
-			                     itsWriteOptions.configuration->WriteMode() == kFewGridsToAFile);
-			return theGribWriter->ToFile<T>(theInfo, theOutputFile, append);
+			return theGribWriter->ToFile<T>(theInfo);
 		}
 		case kQueryData:
 		{
 			if (theInfo.Grid()->Type() == kReducedGaussian)
 			{
 				itsLogger.Error("Reduced gaussian grid cannot be written to querydata");
-				return false;
+				throw kInvalidWriteOptions;
 			}
 
 			auto theWriter = GET_PLUGIN(querydata);
 			theWriter->WriteOptions(itsWriteOptions);
 
-			theOutputFile += ".fqd";
-
-			return theWriter->ToFile<T>(theInfo, theOutputFile);
+			return theWriter->ToFile<T>(theInfo);
 		}
 		case kNetCDF:
 			break;
@@ -86,9 +56,7 @@ bool writer::CreateFile(info<T>& theInfo, std::shared_ptr<const plugin_configura
 			auto theWriter = GET_PLUGIN(csv);
 			theWriter->WriteOptions(itsWriteOptions);
 
-			theOutputFile += ".csv";
-
-			return theWriter->ToFile<T>(theInfo, theOutputFile);
+			return theWriter->ToFile<T>(theInfo);
 		}
 		// Must have this or compiler complains
 		default:
@@ -97,11 +65,11 @@ bool writer::CreateFile(info<T>& theInfo, std::shared_ptr<const plugin_configura
 			break;
 	}
 
-	return false;
+	throw kInvalidWriteOptions;
 }
 
-template bool writer::CreateFile<double>(info<double>&, std::shared_ptr<const plugin_configuration>, std::string&);
-template bool writer::CreateFile<float>(info<float>&, std::shared_ptr<const plugin_configuration>, std::string&);
+template himan::file_information writer::CreateFile<double>(info<double>&, std::shared_ptr<const plugin_configuration>);
+template himan::file_information writer::CreateFile<float>(info<float>&, std::shared_ptr<const plugin_configuration>);
 
 bool writer::ToFile(std::shared_ptr<info<double>> theInfo, std::shared_ptr<const plugin_configuration> conf)
 
@@ -132,20 +100,21 @@ bool writer::ToFile(std::shared_ptr<info<T>> theInfo, std::shared_ptr<const plug
 	}
 
 	bool ret = true;
-	std::string theOutputFile = util::MakeFileName(conf->WriteToDatabase(), conf->WriteMode(), *theInfo, *conf);
 
 	if (conf->WriteMode() != kNoFileWrite)
 	{
 		// When writing previ to database, no file is needed. In all other cases we have to create
 		// a file.
 
+		file_information finfo;
+
 		if (theInfo->Producer().Class() == kGridClass ||
 		    (theInfo->Producer().Class() == kPreviClass && conf->WriteToDatabase() == false))
 		{
-			ret = CreateFile<T>(*theInfo, conf, theOutputFile);
+			finfo = CreateFile<T>(*theInfo, conf);
 		}
 
-		if (ret && conf->WriteToDatabase() == true)
+		if (conf->WriteToDatabase() == true)
 		{
 			HPDatabaseType dbtype = conf->DatabaseType();
 
@@ -156,11 +125,10 @@ bool writer::ToFile(std::shared_ptr<info<T>> theInfo, std::shared_ptr<const plug
 				// Try to save file information to radon
 				try
 				{
-					ret = r->Save<T>(*theInfo, theOutputFile, conf->TargetGeomName());
-
-					if (!ret)
+					if (!r->Save<T>(*theInfo, finfo, conf->TargetGeomName()))
 					{
 						itsLogger.Error("Writing to radon failed");
+						ret = false;
 					}
 				}
 				catch (const std::exception& e)

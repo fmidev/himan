@@ -76,9 +76,9 @@ class radon : public auxiliary_plugin
 	 */
 
 	template <typename T>
-	bool Save(const info<T>& resultInfo, const std::string& theFileName, const std::string& targetGeomName);
+	bool Save(const info<T>& resultInfo, const file_information& finfo, const std::string& targetGeomName);
 
-	bool Save(const info<double>& resultInfo, const std::string& theFileName, const std::string& targetGeomName);
+	bool Save(const info<double>& resultInfo, const file_information& finfo, const std::string& targetGeomName);
 
 	/**
 	 * @brief Function to expose the NFmiRadonDB interface
@@ -100,7 +100,7 @@ class radon : public auxiliary_plugin
 
 	void Init();
 	template <typename T>
-	bool SaveGrid(const info<T>& resultInfo, const std::string& theFileName, const std::string& targetGeomName);
+	bool SaveGrid(const info<T>& resultInfo, const file_information& theFileName, const std::string& targetGeomName);
 
 	template <typename T>
 	bool SavePrevi(const info<T>& resultInfo);
