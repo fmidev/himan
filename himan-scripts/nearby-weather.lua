@@ -49,10 +49,10 @@ for i=1, #Weather do
   end
 end
 
--- todo set a mask matrix to match 50/100km radius
-local rain_radius = matrix(11, 11, 1, Missing)
+-- todo set a mask matrix to match 50/100km radius in smartmet edited data
+local rain_radius = matrix(13, 13, 1, Missing)
 rain_radius:Fill(1)
-local wind_radius = matrix(21, 21, 1, Missing)
+local wind_radius = matrix(27, 27, 1, Missing)
 wind_radius:Fill(1)
 
 -------------
@@ -62,7 +62,7 @@ local tmp = w:GetData()
 tmp:SetValues(thunder)
 
 local thunder_awareness = {}
-local thunder_percentage = ProbLimitGt2D(tmp, rain_radius, 1):GetValues()
+local thunder_percentage = ProbLimitGe2D(tmp, rain_radius, 1):GetValues()
 
 
 for i=1, #thunder_percentage do
@@ -119,7 +119,7 @@ for i=1, #weak do
 end
 
 local strong_water = ProbLimitGt2D(tmp, rain_radius, 5):GetValues()
-local strong_snow = ProbLimitGt2D(tmp, rain_radius, 3):GetValues()
+local strong_snow = ProbLimitGe2D(tmp, rain_radius, 3):GetValues()
 
 ------------------------
 -- PRECIPITATION TYPE --
@@ -127,7 +127,7 @@ local strong_snow = ProbLimitGt2D(tmp, rain_radius, 3):GetValues()
 
 -- Laskee vallitsevan sateen tyypin alueelle
 tmp:SetValues(prec_type)
-rain_radius:Fill(1/121) --set weights adding up to 1 for mean filtering
+rain_radius:Fill(1/169) --set weights adding up to 1 for mean filtering
 
 local prevalent_type = Filter2D(tmp, rain_radius, false):GetValues()
 
@@ -206,7 +206,7 @@ end
 
 -- use mean
 tmp:SetValues(cloud_cover)
-rain_radius:Fill(1/121) --set weight for mean filter
+rain_radius:Fill(1/169) --set weight for mean filter
 local MedianCloudiness = Filter2D(tmp, rain_radius, false):GetValues()
 rain_radius:Fill(1) --reset original value
 local MinCloudiness = Min2D(tmp, rain_radius, false):GetValues()
@@ -237,7 +237,7 @@ local gust_number = {}
 -- Tuulenpuuskat >= 15 m/s
 
 tmp:SetValues(gust)
-local windgust1 = ProbLimitGt2D(tmp, wind_radius, 15):GetValues()
+local windgust1 = ProbLimitGe2D(tmp, wind_radius, 15):GetValues()
 
 for i=1, #windgust1 do
   if(windgust1[i] > 0.20) then
@@ -246,7 +246,7 @@ for i=1, #windgust1 do
 end
 
 -- Tuulenpuuskat >= 20 m/s
-local windgust2 = ProbLimitGt2D(tmp, wind_radius, 20):GetValues()
+local windgust2 = ProbLimitGe2D(tmp, wind_radius, 20):GetValues()
 
 for i=1, #windgust2 do
   if(windgust2[i] > 0.20) then
