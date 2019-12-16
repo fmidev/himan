@@ -2411,7 +2411,7 @@ vector<shared_ptr<himan::info<T>>> grib::FromFile(const file_information& theInp
 
 	if (theInputFile.offset)
 	{
-		ss << "position " << theInputFile.offset.get() << ":" << bytes;
+		ss << "position " << theInputFile.offset.get() << ":" << bytes << " msg# " << theInputFile.message_no.get();
 	}
 
 	ss << " (" << fixed << speed << " MB/s)";

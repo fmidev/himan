@@ -301,7 +301,7 @@ string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<v
 
 		// clang-format off
 
-		query << "SELECT t.file_location, g.name, byte_offset, byte_length, file_format_id, file_protocol_id "
+		query << "SELECT t.file_location, g.name, byte_offset, byte_length, file_format_id, file_protocol_id, message_no "
 		      << "FROM " << schema << "." << partition << " t, geom g, param p, level l"
 		      << " WHERE t.geometry_id = g.id"
 		      << " AND t.producer_id = " << options.prod.Id()
@@ -344,7 +344,8 @@ string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<v
 			string tablename = gridgeoms[i][1];
 			string geomid = gridgeoms[i][0];
 
-			query << "SELECT file_location, geometry_name, byte_offset, byte_length, file_format_id, file_protocol_id "
+			query << "SELECT file_location, geometry_name, byte_offset, byte_length, file_format_id, file_protocol_id, "
+			         "message_no "
 			      << "FROM " << tablename << "_v "
 			      << "WHERE analysis_time = '" << analtime << "'"
 			      << " AND param_name = '" << parm_name << "'"
@@ -413,22 +414,20 @@ vector<himan::file_information> radon::Files(search_options& options)
 
 	file_information finfo;
 	finfo.file_location = values[0];
-	finfo.file_type = util::FileType(values[0]);
-	finfo.storage_type = kLocalFileSystem;
-
-	// When file_format_id column is fully populated and added to views, use this:
-	// finfo.file_type = static_cast<HPFileType>(stoi(values[4]));  // 1 = GRIB1, 2=GRIB2
-	// finfo.storage_type = static_cast<HPFileStorageType>(stoi(values[5]));
+	finfo.file_type = static_cast<HPFileType>(stoi(values[4]));  // 1 = GRIB1, 2=GRIB2
+	finfo.storage_type = static_cast<HPFileStorageType>(stoi(values[5]));
 
 	try
 	{
 		finfo.offset = static_cast<unsigned long>(stoul(values[2]));
 		finfo.length = static_cast<unsigned long>(stoul(values[3]));
+		finfo.message_no = static_cast<unsigned long>(stoul(values[6]));
 	}
 	catch (const invalid_argument& e)
 	{
 		finfo.offset = boost::none;
 		finfo.length = boost::none;
+		finfo.message_no = boost::none;
 	}
 
 	return {finfo};
