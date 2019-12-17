@@ -15,24 +15,36 @@ csv::csv()
 	itsLogger = logger("csv");
 }
 
-bool csv::ToFile(info<double>& theInfo, string& theOutputFile)
+himan::file_information csv::ToFile(info<double>& theInfo)
 {
-	return ToFile<double>(theInfo, theOutputFile);
+	return ToFile<double>(theInfo);
 }
 
 template <typename T>
-bool csv::ToFile(info<T>& theInfo, string& theOutputFile)
+himan::file_information csv::ToFile(info<T>& theInfo)
 {
 	if (theInfo.Grid()->Class() != kIrregularGrid)
 	{
 		itsLogger.Error("Only irregular grids can be written to CSV");
-		return false;
+		throw kInvalidWriteOptions;
 	}
 
 	timer aTimer;
 	aTimer.Start();
 
-	ofstream out(theOutputFile);
+	file_information finfo;
+	finfo.file_location = util::MakeFileName(theInfo, *itsWriteOptions.configuration) + ".csv";
+	finfo.file_type = kCSV;
+	finfo.storage_type = kLocalFileSystem;
+
+	boost::filesystem::path pathname(finfo.file_location);
+
+	if (!pathname.parent_path().empty() && !boost::filesystem::is_directory(pathname.parent_path()))
+	{
+		boost::filesystem::create_directories(pathname.parent_path());
+	}
+
+	ofstream out(finfo.file_location);
 
 	ASSERT(out.is_open());
 
@@ -72,16 +84,16 @@ bool csv::ToFile(info<T>& theInfo, string& theOutputFile)
 	aTimer.Stop();
 
 	double duration = static_cast<double>(aTimer.GetTime());
-	double bytes = static_cast<double>(boost::filesystem::file_size(theOutputFile));
+	double bytes = static_cast<double>(boost::filesystem::file_size(finfo.file_location));
 
 	double speed = floor((bytes / 1024. / 1024.) / (duration / 1000.));
-	itsLogger.Info("Wrote file '" + theOutputFile + "' (" + to_string(speed) + " MB/s)");
+	itsLogger.Info("Wrote file '" + finfo.file_location + "' (" + to_string(speed) + " MB/s)");
 
-	return true;
+	return finfo;
 }
 
-template bool csv::ToFile<double>(info<double>&, string&);
-template bool csv::ToFile<float>(info<float>&, string&);
+template himan::file_information csv::ToFile<double>(info<double>&);
+template himan::file_information csv::ToFile<float>(info<float>&);
 
 shared_ptr<himan::info<double>> csv::FromFile(const string& inputFile, const search_options& options,
                                               bool readIfNotMatching) const

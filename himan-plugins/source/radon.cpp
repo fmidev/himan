@@ -24,39 +24,40 @@ void radon::Init()
 {
 	if (!itsInit)
 	{
-		string radonHost = "vorlon";
-
-		try
-		{
-			radonHost = util::GetEnv("RADON_HOSTNAME");
-		}
-		catch (...)
-		{
-		}
-
-		string radonName = "radon";
-
-		try
-		{
-			radonName = util::GetEnv("RADON_DATABASENAME");
-		}
-		catch (...)
-		{
-		}
-
-		int radonPort = 5432;
-
-		try
-		{
-			radonPort = stoi(util::GetEnv("RADON_PORT"));
-		}
-		catch (...)
-		{
-		}
-
 		try
 		{
 			call_once(oflag, [&]() {
+
+				string radonHost = "vorlon";
+
+				try
+				{
+					radonHost = util::GetEnv("RADON_HOSTNAME");
+				}
+				catch (...)
+				{
+				}
+
+				string radonName = "radon";
+
+				try
+				{
+					radonName = util::GetEnv("RADON_DATABASENAME");
+				}
+				catch (...)
+				{
+				}
+
+				int radonPort = 5432;
+
+				try
+				{
+					radonPort = stoi(util::GetEnv("RADON_PORT"));
+				}
+				catch (...)
+				{
+				}
+
 				NFmiRadonDBPool::Instance()->Username("wetodb");
 				NFmiRadonDBPool::Instance()->Password(util::GetEnv("RADON_WETODB_PASSWORD"));
 				NFmiRadonDBPool::Instance()->Database(radonName);
@@ -300,7 +301,7 @@ string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<v
 
 		// clang-format off
 
-		query << "SELECT t.file_location, g.name, byte_offset, byte_length, file_format_id, file_protocol_id "
+		query << "SELECT t.file_location, g.name, byte_offset, byte_length, file_format_id, file_protocol_id, message_no "
 		      << "FROM " << schema << "." << partition << " t, geom g, param p, level l"
 		      << " WHERE t.geometry_id = g.id"
 		      << " AND t.producer_id = " << options.prod.Id()
@@ -343,7 +344,8 @@ string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<v
 			string tablename = gridgeoms[i][1];
 			string geomid = gridgeoms[i][0];
 
-			query << "SELECT file_location, geometry_name, byte_offset, byte_length, file_format_id, file_protocol_id "
+			query << "SELECT file_location, geometry_name, byte_offset, byte_length, file_format_id, file_protocol_id, "
+			         "message_no "
 			      << "FROM " << tablename << "_v "
 			      << "WHERE analysis_time = '" << analtime << "'"
 			      << " AND param_name = '" << parm_name << "'"
@@ -412,40 +414,38 @@ vector<himan::file_information> radon::Files(search_options& options)
 
 	file_information finfo;
 	finfo.file_location = values[0];
-	finfo.file_type = util::FileType(values[0]);
-	finfo.storage_type = kLocalFileSystem;
-
-	// When file_format_id column is fully populated and added to views, use this:
-	// finfo.file_type = static_cast<HPFileType>(stoi(values[4]));  // 1 = GRIB1, 2=GRIB2
-	// finfo.storage_type = static_cast<HPFileStorageType>(stoi(values[5]));
+	finfo.file_type = static_cast<HPFileType>(stoi(values[4]));  // 1 = GRIB1, 2=GRIB2
+	finfo.storage_type = static_cast<HPFileStorageType>(stoi(values[5]));
 
 	try
 	{
 		finfo.offset = static_cast<unsigned long>(stoul(values[2]));
 		finfo.length = static_cast<unsigned long>(stoul(values[3]));
+		finfo.message_no = static_cast<unsigned long>(stoul(values[6]));
 	}
 	catch (const invalid_argument& e)
 	{
 		finfo.offset = boost::none;
 		finfo.length = boost::none;
+		finfo.message_no = boost::none;
 	}
 
 	return {finfo};
 }
 
-bool radon::Save(const info<double>& resultInfo, const string& theFileName, const string& targetGeomName)
+bool radon::Save(const info<double>& resultInfo, const file_information& finfo, const string& targetGeomName)
 {
-	return Save<double>(resultInfo, theFileName, targetGeomName);
+	return Save<double>(resultInfo, finfo, targetGeomName);
 }
 
 template <typename T>
-bool radon::Save(const info<T>& resultInfo, const string& theFileName, const string& targetGeomName)
+bool radon::Save(const info<T>& resultInfo, const file_information& finfo, const string& targetGeomName)
 {
 	Init();
 
 	if (resultInfo.Producer().Class() == kGridClass)
 	{
-		return SaveGrid(resultInfo, theFileName, targetGeomName);
+		return SaveGrid(resultInfo, finfo, targetGeomName);
 	}
 	else if (resultInfo.Producer().Class() == kPreviClass)
 	{
@@ -455,8 +455,8 @@ bool radon::Save(const info<T>& resultInfo, const string& theFileName, const str
 	return false;
 }
 
-template bool radon::Save<double>(const info<double>&, const string&, const string&);
-template bool radon::Save<float>(const info<float>&, const string&, const string&);
+template bool radon::Save<double>(const info<double>&, const file_information&, const string&);
+template bool radon::Save<float>(const info<float>&, const file_information&, const string&);
 
 template <typename T>
 bool radon::SavePrevi(const info<T>& resultInfo)
@@ -563,7 +563,7 @@ template bool radon::SavePrevi<double>(const info<double>&);
 template bool radon::SavePrevi<float>(const info<float>&);
 
 template <typename T>
-bool radon::SaveGrid(const info<T>& resultInfo, const string& theFileName, const string& targetGeomName)
+bool radon::SaveGrid(const info<T>& resultInfo, const file_information& finfo, const string& targetGeomName)
 {
 	stringstream query;
 
@@ -691,28 +691,18 @@ bool radon::SaveGrid(const info<T>& resultInfo, const string& theFileName, const
 
 	double levelValue2 = IsKHPMissingValue(resultInfo.Level().Value2()) ? -1 : resultInfo.Level().Value2();
 	const string fullTableName = schema_name + "." + table_name;
-	const auto fileSize = boost::filesystem::file_size(theFileName);
 
-	// Not the cleanest way of determining file type, but configuration is not available to this
-	// function.
-	const auto tokens = util::Split(theFileName, ".", false);
-	const auto extension = tokens[tokens.size() - 1];
-
-	int file_format_id = 1;  // GRIB1
-
-	if (extension == "grib2")
-	{
-		file_format_id = 2;
-	}
-	else if (extension != "grib")
-	{
-		itsLogger.Error("Unsupported file format for radon: " + extension);
-		return false;
-	}
-
+	const int file_format_id = finfo.file_type;
 	const int file_protocol_id = 1;
-	const int message_no = 0;
-	const int byte_offset = 0;
+
+	auto FormatToSQL = [](const boost::optional<unsigned long>& opt) -> string {
+		if (opt)
+		{
+			return to_string(opt.get());
+		}
+
+		return "NULL";
+	};
 
 	query
 	    << "INSERT INTO " << fullTableName
@@ -723,9 +713,9 @@ bool radon::SaveGrid(const info<T>& resultInfo, const string& theFileName, const
 	    << resultInfo.Level().Value() << ", " << levelValue2 << ", "
 	    << "'" << util::MakeSQLInterval(resultInfo.Time()) << "', "
 	    << static_cast<int>(resultInfo.ForecastType().Type()) << ", " << forecastTypeValue << ","
-	    << "'" << theFileName << "', "
-	    << "'" << host << "', " << file_format_id << ", " << file_protocol_id << ", " << message_no << ", "
-	    << byte_offset << ", " << fileSize << ")";
+	    << "'" << finfo.file_location << "', "
+	    << "'" << host << "', " << file_format_id << ", " << file_protocol_id << ", " << FormatToSQL(finfo.message_no)
+	    << ", " << FormatToSQL(finfo.offset) << ", " << FormatToSQL(finfo.length) << ")";
 
 	try
 	{
@@ -751,13 +741,13 @@ bool radon::SaveGrid(const info<T>& resultInfo, const string& theFileName, const
 
 		query.str("");
 		query << "UPDATE " << fullTableName << " SET "
-		      << "file_location = '" << theFileName << "', "
+		      << "file_location = '" << finfo.file_location << "', "
 		      << "file_server = '" << host << "', "
 		      << "file_format_id = " << file_format_id << ", "
 		      << "file_protocol_id = " << file_protocol_id << ", "
-		      << "message_no = " << message_no << ", "
-		      << "byte_offset = " << byte_offset << ", "
-		      << "byte_length = " << fileSize << " WHERE "
+		      << "message_no = " << FormatToSQL(finfo.message_no) << ", "
+		      << "byte_offset = " << FormatToSQL(finfo.offset) << ", "
+		      << "byte_length = " << FormatToSQL(finfo.length) << "WHERE "
 		      << "producer_id = " << resultInfo.Producer().Id() << " AND "
 		      << "analysis_time = '" << analysisTime << "' AND "
 		      << "geometry_id = " << geom_id << " AND "
@@ -774,10 +764,18 @@ bool radon::SaveGrid(const info<T>& resultInfo, const string& theFileName, const
 		itsRadonDB->Commit();
 	}
 
-	itsLogger.Trace("Saved information on file '" + theFileName + "' to radon");
+	query.str("");
+	query << "Saved information on file '" << finfo.file_location << "'";
+
+	if (finfo.message_no)
+	{
+		query << " message no " << finfo.message_no.get();
+	}
+
+	itsLogger.Trace(query.str());
 
 	return true;
 }
 
-template bool radon::SaveGrid<double>(const info<double>&, const string&, const string&);
-template bool radon::SaveGrid<float>(const info<float>&, const string&, const string&);
+template bool radon::SaveGrid<double>(const info<double>&, const file_information&, const string&);
+template bool radon::SaveGrid<float>(const info<float>&, const file_information&, const string&);

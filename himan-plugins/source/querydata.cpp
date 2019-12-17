@@ -10,6 +10,8 @@
 #include "ogr_spatialref.h"
 #include "point_list.h"
 #include "stereographic_grid.h"
+#include "util.h"
+#include <boost/filesystem.hpp>
 #include <fstream>
 
 #include "plugin_factory.h"
@@ -390,15 +392,27 @@ querydata::querydata()
 	itsLogger = logger("querydata");
 }
 
-bool querydata::ToFile(info<double>& theInfo, string& theOutputFile)
+himan::file_information querydata::ToFile(info<double>& theInfo)
 {
-	return ToFile<double>(theInfo, theOutputFile);
+	return ToFile<double>(theInfo);
 }
 
 template <typename T>
-bool querydata::ToFile(info<T>& theInfo, string& theOutputFile)
+himan::file_information querydata::ToFile(info<T>& theInfo)
 {
-	ofstream out(theOutputFile.c_str());
+	file_information finfo;
+	finfo.file_location = util::MakeFileName(theInfo, *itsWriteOptions.configuration) + ".fqd";
+	finfo.file_type = kQueryData;
+	finfo.storage_type = kLocalFileSystem;
+
+	boost::filesystem::path pathname(finfo.file_location);
+
+	if (!pathname.parent_path().empty() && !boost::filesystem::is_directory(pathname.parent_path()))
+	{
+		boost::filesystem::create_directories(pathname.parent_path());
+	}
+
+	ofstream out(finfo.file_location.c_str());
 
 	bool activeOnly = true;
 
@@ -411,18 +425,18 @@ bool querydata::ToFile(info<T>& theInfo, string& theOutputFile)
 
 	if (!qdata)
 	{
-		return false;
+		throw kInvalidWriteOptions;
 	}
 
 	out << *qdata;
 
-	itsLogger.Info("Wrote file '" + theOutputFile + "'");
+	itsLogger.Info("Wrote file '" + finfo.file_location + "'");
 
-	return true;
+	return finfo;
 }
 
-template bool querydata::ToFile<double>(info<double>&, string&);
-template bool querydata::ToFile<float>(info<float>&, string&);
+template himan::file_information querydata::ToFile<double>(info<double>&);
+template himan::file_information querydata::ToFile<float>(info<float>&);
 
 template <typename T>
 shared_ptr<NFmiQueryData> querydata::CreateQueryData(const info<T>& originalInfo, bool activeOnly,
