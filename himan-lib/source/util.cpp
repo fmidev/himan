@@ -144,7 +144,8 @@ string util::MakeFileName(const info<T>& info, const plugin_configuration& conf)
 	{
 		if (conf.LegacyWriteMode())
 		{
-			fileName << base.str() << "/" << conf.ConfigurationFile();
+			fileName << conf.ConfigurationFile();  // legacy mode for 'all grids to a file' does not support database
+			                                       // --> no need for 'base'
 		}
 		else
 		{
