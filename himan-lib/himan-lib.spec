@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 19.11.28
+Version: 19.12.17
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -66,7 +66,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
-* Thu Nov 28 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.11.28-1.fmi
+* Tue Dec 17 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.12.17-1.fmi
 - Support more file writing options
 * Mon Nov 25 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.11.25-1.fmi
 - Cuda 10.1
