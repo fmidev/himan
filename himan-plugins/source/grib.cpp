@@ -1479,9 +1479,10 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 	// handle grib 1 & grib 2 longitude values in a smart way. (a single geometry
 	// can have coordinates in both ways!)
 
-	long centre = itsGrib->Message().Centre();
+	const long centre = itsGrib->Message().Centre();
+	const long ident = itsGrib->Message().Process();
 
-	if (itsGrib->Message().Edition() == 2 && (centre == 98 || centre == 86) && X0 != 0)
+	if (itsGrib->Message().Edition() == 2 && (centre == 98 || centre == 86) && ident != 244 && X0 != 0)
 	{
 		X0 -= 360;
 		if (X0 < -180)
