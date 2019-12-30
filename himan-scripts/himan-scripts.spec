@@ -3,7 +3,7 @@
 %define LIBNAME himan-scripts
 Summary: himan-scripts collection
 Name: %{LIBNAME}
-Version: 19.11.29
+Version: 19.12.30
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -38,5 +38,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/himan-scripts/*.lua
 
 %changelog
+* Mon Dec 30 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.12.30-1.fmi
+- Fix to snowload
 * Fri Nov 29 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.11.29-1.fmi
 - Initial build
