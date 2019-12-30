@@ -78,13 +78,26 @@ logger:Info("Calculating Snow load")
 
 Wetsnow = {}
 
+local step = configuration:GetForecastStep():Hours() -- no support for sub-hours
+
+local rrparam = nil
+
+if step == 1 then
+  rrparam = param("RRR-KGM2")
+elseif step == 3 then
+  rrparam = param("RR-3-MM")
+elseif step == 3 then
+  rrparam = param("RR-6-MM")
+end
+
 result:ResetTime()
+
 while result:NextTime() do
 	local curtime = result:GetTime()
 	if (curtime:GetStep():Hours() ~= 0) then
 		-- fetch input data
 		local T = luatool:FetchWithType(curtime, level(HPLevelType.kHeight,2), param("T-K"), current_forecast_type) -- fetch temperature
-		local rr = luatool:FetchWithType(curtime, current_level, param("RRR-KGM2"), current_forecast_type) -- fetch precipitation
+		local rr = luatool:FetchWithType(curtime, current_level, rrparam, current_forecast_type) -- fetch precipitation
 		local phi = luatool:FetchWithType(curtime, current_level, param("RADGLO-WM2"), current_forecast_type) -- fetch solar radiation
 		local v = luatool:FetchWithType(curtime, level(HPLevelType.kHeight,10), param("FF-MS"), current_forecast_type) -- fetch wind speed
 
