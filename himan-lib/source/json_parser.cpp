@@ -1432,6 +1432,10 @@ vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt)
 				{
 					forecastTypes.push_back(forecast_type(kAnalysis));
 				}
+				else if (type == "sp" || type == "statistical")
+				{
+					forecastTypes.push_back(forecast_type(kStatisticalProcessing));
+				}
 				else
 				{
 					throw runtime_error("Invalid forecast_type: " + type);

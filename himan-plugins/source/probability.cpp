@@ -334,6 +334,13 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 
 	SetParams(calculatedParams);
 
+	if (itsForecastTypeIterator.Size() > 1)
+	{
+		itsLogger.Warning("More than one forecast type defined - fractile can only produce 'statistical processing'");
+	}
+
+	itsForecastTypeIterator = forecast_type_iter({forecast_type(kStatisticalProcessing)});
+
 	FetchRemainingLimitsForStations(conf->BaseGrid(), itsParamConfigurations, itsLogger);
 
 	Start<float>();
