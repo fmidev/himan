@@ -14,6 +14,8 @@ static std::once_flag oflag;
 const char* host = 0;
 const char* access_key = 0;
 const char* secret_key = 0;
+const char* security_token = 0;
+
 thread_local S3Status statusG = S3StatusOK;
 
 void CheckS3Error(S3Status errarg, const char* file, const int line);
@@ -59,6 +61,7 @@ void Initialize()
 
 		access_key = getenv("S3_ACCESS_KEY_ID");
 		secret_key = getenv("S3_SECRET_ACCESS_KEY");
+		security_token = getenv("S3_SESSION_TOKEN");
 		host = getenv("S3_HOSTNAME");
 
 		if (!host)
@@ -115,7 +118,7 @@ buffer s3::ReadFile(const file_information& fileInformation)
 		S3UriStylePath,
 		access_key,
 		secret_key,
-		0
+		security_token
 	};
 
 	// clang-format on
@@ -145,6 +148,10 @@ buffer s3::ReadFile(const file_information& fileInformation)
 			throw himan::kFileDataNotFound;
 		case S3StatusFailedToConnect:
 			logr.Error(std::string(S3_get_status_name(statusG)) + ": is proxy required but not set?");
+			throw himan::kFileDataNotFound;
+		case S3StatusErrorInvalidAccessKeyId:
+			logr.Error(std::string(S3_get_status_name(statusG)) +
+			           ": are Temporary Security Credentials used without security token (env: S3_SESSION_TOKEN)?");
 			throw himan::kFileDataNotFound;
 		default:
 			logr.Error(S3_get_status_name(statusG));
