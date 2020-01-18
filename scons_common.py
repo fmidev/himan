@@ -96,6 +96,12 @@ env["ENV"].update(x for x in os.environ.items() if x[0].startswith("CCC_"))
 # Includes
 
 includes = []
+
+try:
+	includes.extend(os.environ['INCLUDEPATHS'].split(';'))
+except:
+	pass
+
 includes.append(env['WORKSPACE'] + '/himan-lib/include')
 includes.append(env['WORKSPACE'] + '/himan-plugins/include')
 
@@ -107,6 +113,11 @@ env.Append(CPPPATH = includes)
 # Library paths
 
 librarypaths = []
+
+try:
+	librarypaths.extend(os.environ['LIBRARYPATHS'].split(';'))
+except:
+	pass
 
 librarypaths.append('/usr/lib64')
 env.Append(LIBPATH = librarypaths)
