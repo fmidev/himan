@@ -8,6 +8,7 @@
 #include "plugin_factory.h"
 #include "producer.h"
 #include "reduced_gaussian_grid.h"
+#include "s3.h"
 #include "stereographic_grid.h"
 #include "timer.h"
 #include "util.h"
@@ -980,35 +981,77 @@ void WriteDataValues(const vector<float>& values, NFmiGribMessage& msg)
 	delete[] arr;
 }
 
+template <typename T>
+void grib::WriteData(info<T>& anInfo)
+{
+	// set to missing value to a large value to prevent it from mixing up with valid
+	// values in the data
+
+	itsGrib->Message().MissingValue(gribMissing);
+
+	if (itsWriteOptions.use_bitmap && anInfo.Data().MissingCount() > 0)
+	{
+		itsGrib->Message().Bitmap(true);
+	}
+
+	/*
+	 * Possible precipitation form value encoding must be done before determining
+	 * bits per value, as the range of values is changed.
+	 */
+
+	const auto paramName = anInfo.Param().Name();
+	const int precision =
+	    (itsWriteOptions.precision == kHPMissingInt) ? anInfo.Param().Precision() : itsWriteOptions.precision;
+
+	long bitsPerValue;
+
+	if (itsGrib->Message().Edition() == 2 && (paramName == "PRECFORM-N" || paramName == "PRECFORM2-N"))
+	{
+		// We take a copy of the data, because the values at cache should not change
+		auto values = anInfo.Data().Values();
+
+		EncodePrecipitationFormToGrib2(values);
+		bitsPerValue = DetermineBitsPerValue(values, precision);
+
+		// Change missing value 'nan' to a real fp value
+		replace_if(values.begin(), values.end(), [](const T& v) { return IsMissing(v); }, gribMissing);
+
+		itsGrib->Message().BitsPerValue(bitsPerValue);
+		WriteDataValues<T>(values, itsGrib->Message());
+	}
+	else
+	{
+		// In this branch no copy is made
+		const auto& values = anInfo.Data().Values();
+		bitsPerValue = DetermineBitsPerValue(values, precision);
+
+		// Change missing value 'nan' to a real fp value
+		anInfo.Data().MissingValue(gribMissing);
+
+		itsGrib->Message().BitsPerValue(bitsPerValue);
+
+		WriteDataValues<T>(values, itsGrib->Message());
+	}
+
+	itsLogger.Trace("Using " + (precision == kHPMissingInt ? "maximum precision" : to_string(precision) + " decimals") +
+	                " (" + to_string(bitsPerValue) + " bits) to store " + paramName);
+
+	// Return missing value to nan if info is recycled (luatool)
+	anInfo.Data().MissingValue(MissingValue<T>());
+}
+
+template void grib::WriteData<float>(info<float>&);
+template void grib::WriteData<double>(info<double>&);
+
 himan::file_information grib::ToFile(info<double>& anInfo)
 {
 	return ToFile<double>(anInfo);
 }
 
 template <typename T>
-himan::file_information grib::ToFile(info<T>& anInfo)
+himan::file_information grib::CreateGribMessage(info<T>& anInfo)
 {
 	// Write only that data which is currently set at descriptors
-
-	timer aTimer;
-	aTimer.Start();
-
-	if (anInfo.Grid()->Class() == kIrregularGrid && anInfo.Grid()->Type() != kReducedGaussian)
-	{
-		itsLogger.Error("Unable to write irregular grid of type " + HPGridTypeToString.at(anInfo.Grid()->Type()) +
-		                " to grib");
-		throw kInvalidWriteOptions;
-	}
-
-	bool appendToFile = (itsWriteOptions.configuration->WriteMode() == kAllGridsToAFile ||
-	                     itsWriteOptions.configuration->WriteMode() == kFewGridsToAFile);
-
-	if (appendToFile && (itsWriteOptions.configuration->FileCompression() == kGZIP ||
-	                     itsWriteOptions.configuration->FileCompression() == kBZIP2))
-	{
-		itsLogger.Warning("Unable to write multiple grids to a packed file");
-		appendToFile = false;
-	}
 
 	file_information finfo;
 	finfo.file_location = util::MakeFileName(anInfo, *itsWriteOptions.configuration) + ".grib";
@@ -1028,15 +1071,6 @@ himan::file_information grib::ToFile(info<T>& anInfo)
 	else if (itsWriteOptions.configuration->FileCompression() == kBZIP2)
 	{
 		finfo.file_location += ".bz2";
-	}
-
-	namespace fs = boost::filesystem;
-
-	fs::path pathname(finfo.file_location);
-
-	if (!pathname.parent_path().empty() && !fs::is_directory(pathname.parent_path()))
-	{
-		fs::create_directories(pathname.parent_path());
 	}
 
 	long edition = static_cast<long>(itsWriteOptions.configuration->OutputFileType());
@@ -1131,60 +1165,9 @@ himan::file_information grib::ToFile(info<T>& anInfo)
 
 	WriteLevel(anInfo.Level());
 
-	// set to missing value to a large value to prevent it from mixing up with valid
-	// values in the data
+	// Set data to grib with correct precision and missing value
 
-	itsGrib->Message().MissingValue(gribMissing);
-
-	if (itsWriteOptions.use_bitmap && anInfo.Data().MissingCount() > 0)
-	{
-		itsGrib->Message().Bitmap(true);
-	}
-
-	/*
-	 * Possible precipitation form value encoding must be done before determining
-	 * bits per value, as the range of values is changed.
-	 */
-
-	const auto paramName = anInfo.Param().Name();
-	const int precision =
-	    (itsWriteOptions.precision == kHPMissingInt) ? anInfo.Param().Precision() : itsWriteOptions.precision;
-
-	long bitsPerValue;
-
-	if (edition == 2 && (paramName == "PRECFORM-N" || paramName == "PRECFORM2-N"))
-	{
-		// We take a copy of the data, because the values at cache should not change
-		auto values = anInfo.Data().Values();
-
-		EncodePrecipitationFormToGrib2(values);
-		bitsPerValue = DetermineBitsPerValue(values, precision);
-
-		// Change missing value 'nan' to a real fp value
-		replace_if(values.begin(), values.end(), [](const T& v) { return IsMissing(v); }, gribMissing);
-
-		itsGrib->Message().BitsPerValue(bitsPerValue);
-		WriteDataValues<T>(values, itsGrib->Message());
-	}
-	else
-	{
-		// In this branch no copy is made
-		const auto& values = anInfo.Data().Values();
-		bitsPerValue = DetermineBitsPerValue(values, precision);
-
-		// Change missing value 'nan' to a real fp value
-		anInfo.Data().MissingValue(gribMissing);
-
-		itsGrib->Message().BitsPerValue(bitsPerValue);
-
-		WriteDataValues<T>(values, itsGrib->Message());
-	}
-
-	itsLogger.Trace("Using " + (precision == kHPMissingInt ? "maximum precision" : to_string(precision) + " decimals") +
-	                " (" + to_string(bitsPerValue) + " bits) to store " + paramName);
-
-	// Return missing value to nan if info is recycled (luatool)
-	anInfo.Data().MissingValue(MissingValue<T>());
+	WriteData<T>(anInfo);
 
 	if (edition == 2 && itsWriteOptions.packing_type == kJpegPacking)
 	{
@@ -1295,9 +1278,66 @@ himan::file_information grib::ToFile(info<T>& anInfo)
 		finfo.message_no = 0;
 	}
 
-	itsGrib->Message().Write(finfo.file_location, appendToFile);
+	return finfo;
+}
+
+template himan::file_information grib::CreateGribMessage<double>(info<double>&);
+template himan::file_information grib::CreateGribMessage<float>(info<float>&);
+
+template <typename T>
+himan::file_information grib::ToFile(info<T>& anInfo)
+{
+	timer aTimer;
+	aTimer.Start();
+
+	if (anInfo.Grid()->Class() == kIrregularGrid && anInfo.Grid()->Type() != kReducedGaussian)
+	{
+		itsLogger.Error("Unable to write irregular grid of type " + HPGridTypeToString.at(anInfo.Grid()->Type()) +
+		                " to grib");
+		throw kInvalidWriteOptions;
+	}
+
+	bool appendToFile = (itsWriteOptions.configuration->WriteMode() == kAllGridsToAFile ||
+	                     itsWriteOptions.configuration->WriteMode() == kFewGridsToAFile);
+
+	if (appendToFile && (itsWriteOptions.configuration->FileCompression() == kGZIP ||
+	                     itsWriteOptions.configuration->FileCompression() == kBZIP2))
+	{
+		itsLogger.Warning("Unable to write multiple grids to a packed file");
+		appendToFile = false;
+	}
+
+	auto finfo = CreateGribMessage<T>(anInfo);
+
+	if (finfo.file_location.find("s3://") != string::npos)
+	{
+		if (itsWriteOptions.configuration->WriteMode() != kSingleGridToAFile)
+		{
+			itsLogger.Fatal("Write to S3 only supported with write_mode = single");
+			himan::Abort();
+		}
+
+		himan::buffer buff;
+		buff.length = finfo.length.get();
+		buff.data = static_cast<unsigned char*> (malloc(buff.length));
+		itsGrib->Message().GetMessage(buff.data, buff.length);
+		s3::WriteObject(finfo.file_location, buff);
+	}
+	else
+	{
+		namespace fs = boost::filesystem;
+		fs::path pathname(finfo.file_location);
+
+		if (!pathname.parent_path().empty() && !fs::is_directory(pathname.parent_path()))
+		{
+			fs::create_directories(pathname.parent_path());
+		}
+
+		itsGrib->Message().Write(finfo.file_location, appendToFile);
+	}
 
 	aTimer.Stop();
+
 	const float duration = static_cast<float>(aTimer.GetTime());
 	const float bytes = static_cast<float>(finfo.length.get());  // TODO: does not work correctly if file is packed
 	const float speed = (bytes / 1024.f / 1024.f) / (duration / 1000.f);

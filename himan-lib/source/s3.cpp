@@ -22,6 +22,45 @@ void CheckS3Error(S3Status errarg, const char* file, const int line);
 
 #define S3_CHECK(errarg) CheckS3Error(errarg, __FILE__, __LINE__)
 
+std::vector<std::string> GetBucketAndFileName(const std::string& fullFileName)
+{
+	std::vector<std::string> ret;
+
+	auto fileName = fullFileName;
+
+	// strip protocol from string if it's there
+	const auto pos = fullFileName.find("s3://");
+
+	if (pos != std::string::npos)
+	{
+		fileName = fileName.erase(pos, 5);
+	}
+
+	// erase forward slash if exists (s3 buckets can't start with /)
+	if (fileName[0] == '/')
+	{
+		fileName = fileName.erase(0, 1);
+	}
+
+	auto tokens = util::Split(fileName, "/", false);
+
+	ret.push_back(tokens[0]);
+	tokens.erase(std::begin(tokens), std::begin(tokens) + 1);
+
+	std::string key;
+	for (const auto& piece : tokens)
+	{
+		if (!key.empty())
+		{
+			key += "/";
+		}
+		key += piece;
+	}
+
+	ret.push_back(key);
+	return ret;
+}
+
 inline void CheckS3Error(S3Status errarg, const char* file, const int line)
 {
 	if (errarg)
@@ -93,18 +132,9 @@ buffer s3::ReadFile(const file_information& fileInformation)
 
 	S3GetObjectHandler getObjectHandler = {responseHandler, &getObjectDataCallback};
 
-	auto tokens = util::Split(fileInformation.file_location, "/", false);
-
-	const std::string bucket = tokens[0];
-	tokens.erase(std::begin(tokens), std::begin(tokens) + 1);
-
-	std::string key;
-	for (const auto& piece : tokens)
-	{
-		if (!key.empty())
-			key += "/";
-		key += piece;
-	}
+	const auto bucketAndFileName = GetBucketAndFileName(fileInformation.file_location);
+	const auto bucket = bucketAndFileName[0];
+	const auto key = bucketAndFileName[1];
 
 	buffer ret;
 
@@ -129,7 +159,9 @@ buffer s3::ReadFile(const file_information& fileInformation)
 	do
 	{
 		if (count > 0)
-			sleep(count);
+		{
+			sleep(2 * count);
+		}
 		const unsigned long offset = fileInformation.offset.get();
 		const unsigned long length = fileInformation.length.get();
 
@@ -165,8 +197,106 @@ buffer s3::ReadFile(const file_information& fileInformation)
 
 	return ret;
 }
+
+struct write_data
+{
+	himan::buffer buffer;
+	size_t write_ptr;
+};
+
+static int putObjectDataCallback(int bufferSize, char* buffer, void* callbackData)
+{
+	write_data* data = static_cast<write_data*>(callbackData);
+	int bytesWritten = 0;
+
+	if (data->buffer.length)
+	{
+		bytesWritten =
+		    static_cast<int>((static_cast<int>(data->buffer.length) > bufferSize) ? bufferSize : data->buffer.length);
+		memcpy(buffer, data->buffer.data + data->write_ptr, bytesWritten);
+		data->write_ptr += bytesWritten;
+		data->buffer.length -= bytesWritten;
+	}
+
+	return bytesWritten;
+}
+
+void s3::WriteObject(const std::string& objectName, const himan::buffer& buff)
+{
+	Initialize();
+
+	const auto bucketAndFileName = GetBucketAndFileName(objectName);
+	const auto bucket = bucketAndFileName[0];
+	const auto key = bucketAndFileName[1];
+
+	// clang-format off
+
+	S3BucketContext bucketContext =
+	{
+		host,
+		bucket.c_str(),
+		S3ProtocolHTTP,
+		S3UriStylePath,
+		access_key,
+		secret_key,
+		security_token
+	};
+
+	// clang-format on
+
+	S3PutObjectHandler putObjectHandler = {responseHandler, &putObjectDataCallback};
+
+	write_data data;
+	data.buffer.data = buff.data;
+	data.buffer.length = buff.length;
+	data.write_ptr = 0;
+
+	logger logr("s3");
+
+	int count = 0;
+	do
+	{
+		if (count > 0)
+		{
+			sleep(2 * count);
+		}
+
+		S3_put_object(&bucketContext, key.c_str(), buff.length, NULL, NULL, &putObjectHandler, &data);
+		logr.Trace("Writing to host=" + std::string(host) + " bucket=" + bucket + " key=" + key + " (" +
+		           S3_get_status_name(statusG) + ")");
+
+		count++;
+	} while (S3_status_is_retryable(statusG) && count < 3);
+
+	// remove pointer to original buff so that double free doesn't occur
+	data.buffer.data = 0;
+
+	switch (statusG)
+	{
+		case S3StatusOK:
+			break;
+		case S3StatusInternalError:
+			logr.Error(std::string(S3_get_status_name(statusG)) + ": is there a proxy blocking the connection?");
+			throw himan::kFileDataNotFound;
+		case S3StatusFailedToConnect:
+			logr.Error(std::string(S3_get_status_name(statusG)) + ": is proxy required but not set?");
+			throw himan::kFileDataNotFound;
+		case S3StatusErrorInvalidAccessKeyId:
+			logr.Error(std::string(S3_get_status_name(statusG)) +
+			           ": are Temporary Security Credentials used without security token (env: S3_SESSION_TOKEN)?");
+			throw himan::kFileDataNotFound;
+		default:
+			logr.Error(S3_get_status_name(statusG));
+			throw himan::kFileDataNotFound;
+	}
+}
+
 #else
 buffer s3::ReadFile(const file_information& fileInformation)
+{
+	throw std::runtime_error("S3 support not compiled");
+}
+void s3::WriteObject()
 {
 	throw std::runtime_error("S3 support not compiled");
 }

@@ -76,6 +76,12 @@ class grib : public io_plugin
 	void WriteLevel(const level& lev);
 
 	template <typename T>
+	void WriteData(info<T>& anInfo);
+
+	template <typename T>
+	himan::file_information CreateGribMessage(info<T>& anInfo);
+
+	template <typename T>
 	bool CreateInfoFromGrib(const search_options& options, bool readPackedData, bool forceCaching,
 	                        std::shared_ptr<info<T>> newInfo) const;
 
