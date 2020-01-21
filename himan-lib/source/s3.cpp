@@ -11,7 +11,6 @@ using namespace himan;
 
 static std::once_flag oflag;
 
-const char* host = 0;
 const char* access_key = 0;
 const char* secret_key = 0;
 const char* security_token = 0;
@@ -101,12 +100,6 @@ void Initialize()
 		access_key = getenv("S3_ACCESS_KEY_ID");
 		secret_key = getenv("S3_SECRET_ACCESS_KEY");
 		security_token = getenv("S3_SESSION_TOKEN");
-		host = getenv("S3_HOSTNAME");
-
-		if (!host)
-		{
-			host = "s3.us-east-1.amazonaws.com";
-		}
 
 		logger logr("s3");
 
@@ -122,7 +115,7 @@ void Initialize()
 			himan::Abort();
 		}
 
-		S3_CHECK(S3_initialize("s3", S3_INIT_ALL, host));
+		S3_CHECK(S3_initialize("s3", S3_INIT_ALL, NULL));
 	});
 }
 
@@ -142,7 +135,7 @@ buffer s3::ReadFile(const file_information& fileInformation)
 
 	S3BucketContext bucketContext = 
 	{
-		host,
+		fileInformation.file_server.c_str(),
 		bucket.c_str(),
 		S3ProtocolHTTP,
 		S3UriStylePath,
@@ -166,7 +159,7 @@ buffer s3::ReadFile(const file_information& fileInformation)
 		const unsigned long length = fileInformation.length.get();
 
 		S3_get_object(&bucketContext, key.c_str(), NULL, offset, length, NULL, &getObjectHandler, &ret);
-		logr.Trace("Reading from host=" + std::string(host) + " bucket=" + bucket + " key=" + key + " " +
+		logr.Debug("Reading from host=" + fileInformation.file_server + " bucket=" + bucket + " key=" + key + " " +
 		           std::to_string(offset) + ":" + std::to_string(length) + " (" + S3_get_status_name(statusG) + ")");
 		count++;
 	} while (S3_status_is_retryable(statusG) && count < 3);
@@ -229,6 +222,13 @@ void s3::WriteObject(const std::string& objectName, const himan::buffer& buff)
 	const auto bucket = bucketAndFileName[0];
 	const auto key = bucketAndFileName[1];
 
+	const char* host = getenv("S3_HOSTNAME");
+
+	if (!host)
+	{
+		throw std::runtime_error("Environment variable S3_HOSTNAME not defined");
+	}
+
 	// clang-format off
 
 	S3BucketContext bucketContext =
@@ -262,7 +262,7 @@ void s3::WriteObject(const std::string& objectName, const himan::buffer& buff)
 		}
 
 		S3_put_object(&bucketContext, key.c_str(), buff.length, NULL, NULL, &putObjectHandler, &data);
-		logr.Trace("Writing to host=" + std::string(host) + " bucket=" + bucket + " key=" + key + " (" +
+		logr.Debug("Writing to host=" + std::string(host) + " bucket=" + bucket + " key=" + key + " (" +
 		           S3_get_status_name(statusG) + ")");
 
 		count++;

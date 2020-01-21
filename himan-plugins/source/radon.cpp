@@ -68,7 +68,8 @@ void radon::Init()
 				{
 					NFmiRadonDBPool::Instance()->MaxWorkers(MAX_WORKERS);
 				}
-				itsLogger.Info("Connected to radon (db=" + radonName + ", host=" + radonHost + ")");
+				itsLogger.Info("Connected to radon (db=" + radonName + ", host=" + radonHost + ":" +
+				               std::to_string(radonPort) + ")");
 			});
 
 			itsRadonDB = std::unique_ptr<NFmiRadonDB>(NFmiRadonDBPool::Instance()->GetConnection());
@@ -301,7 +302,7 @@ string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<v
 
 		// clang-format off
 
-		query << "SELECT t.file_location, g.name, byte_offset, byte_length, file_format_id, file_protocol_id, message_no "
+		query << "SELECT t.file_location, g.name, byte_offset, byte_length, file_format_id, file_protocol_id, message_no, t.file_server "
 		      << "FROM " << schema << "." << partition << " t, geom g, param p, level l"
 		      << " WHERE t.geometry_id = g.id"
 		      << " AND t.producer_id = " << options.prod.Id()
@@ -414,6 +415,7 @@ vector<himan::file_information> radon::Files(search_options& options)
 
 	file_information finfo;
 	finfo.file_location = values[0];
+	finfo.file_server = values[7];
 	finfo.file_type = static_cast<HPFileType>(stoi(values[4]));  // 1 = GRIB1, 2=GRIB2
 	finfo.storage_type = static_cast<HPFileStorageType>(stoi(values[5]));
 
@@ -657,8 +659,32 @@ bool radon::SaveGrid(const info<T>& resultInfo, const file_information& finfo, c
 
 	query.str("");
 
-	char host[255];
-	gethostname(host, 255);
+	string host;
+
+	switch (finfo.storage_type)
+	{
+		case kLocalFileSystem:
+		{
+			char host_[128];
+			gethostname(host_, 128);
+			host = string(host_);
+		}
+		break;
+		case kS3ObjectStorageSystem:
+		{
+			const char* host_ = getenv("S3_HOSTNAME");
+			host = string(host_);
+		}
+		break;
+		default:
+			break;
+	}
+
+	if (host.empty())
+	{
+		itsLogger.Error("Hostname could not be determined");
+		himan::Abort();
+	}
 
 	auto levelinfo = itsRadonDB->GetLevelFromDatabaseName(HPLevelTypeToString.at(resultInfo.Level().Type()));
 
@@ -692,9 +718,6 @@ bool radon::SaveGrid(const info<T>& resultInfo, const file_information& finfo, c
 	double levelValue2 = IsKHPMissingValue(resultInfo.Level().Value2()) ? -1 : resultInfo.Level().Value2();
 	const string fullTableName = schema_name + "." + table_name;
 
-	const int file_format_id = finfo.file_type;
-	const int file_protocol_id = 1;
-
 	auto FormatToSQL = [](const boost::optional<unsigned long>& opt) -> string {
 		if (opt)
 		{
@@ -714,8 +737,9 @@ bool radon::SaveGrid(const info<T>& resultInfo, const file_information& finfo, c
 	    << "'" << util::MakeSQLInterval(resultInfo.Time()) << "', "
 	    << static_cast<int>(resultInfo.ForecastType().Type()) << ", " << forecastTypeValue << ","
 	    << "'" << finfo.file_location << "', "
-	    << "'" << host << "', " << file_format_id << ", " << file_protocol_id << ", " << FormatToSQL(finfo.message_no)
-	    << ", " << FormatToSQL(finfo.offset) << ", " << FormatToSQL(finfo.length) << ")";
+	    << "'" << host << "', " << finfo.file_type << ", " << finfo.storage_type << ", "
+	    << FormatToSQL(finfo.message_no) << ", " << FormatToSQL(finfo.offset) << ", " << FormatToSQL(finfo.length)
+	    << ")";
 
 	try
 	{
@@ -743,11 +767,11 @@ bool radon::SaveGrid(const info<T>& resultInfo, const file_information& finfo, c
 		query << "UPDATE " << fullTableName << " SET "
 		      << "file_location = '" << finfo.file_location << "', "
 		      << "file_server = '" << host << "', "
-		      << "file_format_id = " << file_format_id << ", "
-		      << "file_protocol_id = " << file_protocol_id << ", "
+		      << "file_format_id = " << finfo.file_type << ", "
+		      << "file_protocol_id = " << finfo.storage_type << ", "
 		      << "message_no = " << FormatToSQL(finfo.message_no) << ", "
 		      << "byte_offset = " << FormatToSQL(finfo.offset) << ", "
-		      << "byte_length = " << FormatToSQL(finfo.length) << "WHERE "
+		      << "byte_length = " << FormatToSQL(finfo.length) << " WHERE "
 		      << "producer_id = " << resultInfo.Producer().Id() << " AND "
 		      << "analysis_time = '" << analysisTime << "' AND "
 		      << "geometry_id = " << geom_id << " AND "

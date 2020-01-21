@@ -21,7 +21,11 @@ local w = luatool:FetchInfo(current_time, current_level, param("WEATHERNUMBER-N"
 
 local Weather = w:GetValues()
 
-if not Weather then
+--Get gust
+local g = luatool:FetchInfo(current_time, level(HPLevelType.kGround,0), param("FFG-MS"))
+local gust = g:GetValues()
+
+if not Weather or not gust then
   return
 end
 
@@ -143,7 +147,7 @@ end
 local prevalent_form = {}
 local prevalent_cover = {}
  
-tmp:SetValues(precipitation_form)
+tmp:SetValues(prec_form)
 rain_radius:Fill(1) --reset weights to original state
 
 local drizzle = ProbLimitEq2D(tmp, rain_radius, 0):GetValues()

@@ -1056,7 +1056,7 @@ himan::file_information grib::CreateGribMessage(info<T>& anInfo)
 	file_information finfo;
 	finfo.file_location = util::MakeFileName(anInfo, *itsWriteOptions.configuration) + ".grib";
 	finfo.file_type = kGRIB1;
-	finfo.storage_type = kLocalFileSystem;
+	finfo.storage_type = itsWriteOptions.configuration->WriteStorageType();
 
 	if (itsWriteOptions.configuration->OutputFileType() == kGRIB2)
 	{
@@ -1319,7 +1319,7 @@ himan::file_information grib::ToFile(info<T>& anInfo)
 
 		himan::buffer buff;
 		buff.length = finfo.length.get();
-		buff.data = static_cast<unsigned char*> (malloc(buff.length));
+		buff.data = static_cast<unsigned char*>(malloc(buff.length));
 		itsGrib->Message().GetMessage(buff.data, buff.length);
 		s3::WriteObject(finfo.file_location, buff);
 	}

@@ -50,6 +50,8 @@ string util::MakeFileName(const info<T>& info, const plugin_configuration& conf)
 
 	// For database writes get base directory
 
+	logger logr("util::MakeFileName");
+
 	if (conf.WriteToDatabase())
 	{
 		char* path;
@@ -58,6 +60,13 @@ string util::MakeFileName(const info<T>& info, const plugin_configuration& conf)
 
 		if (path != NULL)
 		{
+			if (strstr(path, "s3://") != NULL && conf.WriteStorageType() != kS3ObjectStorageSystem)
+			{
+				logr.Fatal("MASALA_PROCESSED_DATA_BASE is using s3 but configured storage type is " +
+				           HPFileStorageTypeToString.at(conf.WriteStorageType()));
+				himan::Abort();
+			}
+
 			base.str("");
 			base << path;
 		}
