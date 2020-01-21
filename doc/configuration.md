@@ -27,6 +27,7 @@ The json file can be divided into two parts: the global part, configuration appl
   * [Forecast types](#Forecast_types)
   * [Memory usage](#Memory_usage)
   * [Asynchronous execution](#Asynchronous_execution)
+* [Environment variables](#Environment_variables)
 * [Full examples](#Full_examples)
 
 <a name="Target_area"/>
@@ -498,6 +499,56 @@ Example:
 
     "write_storage_type" : "local | s3",
 
+<a name="Environment_variables"/>
+
+# Environment variables
+
+Himan behavior is controlled with a group of environment variables.
+
+* HIMAN_LIBRARY_PATH
+
+Controls where Himan is trying to find plugins. Default location is /usr/lib64/himan
+
+* MASALA_PROCESSED_DATA_BASE
+
+Controls where the resulting files are written if they are written to database. This variable gives the "base" directory
+and Himan will add subdirectories
+
+* RADON_HOSTNAME
+
+Specify hostname of radon database
+
+* RADON_DATABASENAME
+
+Specify name of radon database
+
+* RADON_PORT
+
+Specify port of radon database
+
+* RADON_WETODB_PASSWORD
+
+Specify the password for database user wetodb which Himan is using
+
+* S3_ACCESS_KEY_ID
+
+When accessing S3 storage, specify access key id
+
+* S3_SECRET_ACCESS_KEY
+
+When accessing S3 storage, specify access key
+
+* S3_SESSION_TOKEN
+
+When accessing S3 storage, specify (optional) session token
+
+* S3_HOSTNAME
+
+When writing to S3 storage, specify hostname (for example s3.eu-west-1.amazonaws.com)
+
+* FMIDB_DEBUG
+
+Not really a Himan environment variable, but very useful still. Setting any value will print all sql queries to stdout.
 
 <a name="Full_examples"/>
 
