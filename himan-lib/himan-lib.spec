@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 20.1.16
+Version: 20.1.21
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -66,6 +66,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Tue Jan 21 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.1.21-1.fmi
+- Support (limited) writing to S3
 * Wed Jan 16 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.1.16-1.fmi
 - Add support for security tokens when reading from s3
 * Tue Dec 17 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.12.17-1.fmi

@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 19.12.17
+Version: 20.1.21
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -16,7 +16,7 @@ Requires: libstdc++
 Requires: himan-lib >= 19.12.17
 Requires: lua >= 5.1.4
 Requires: unixODBC
-Requires: libfmigrib >= 19.10.28
+Requires: libfmigrib >= 20.1.20
 Requires: libfmidb >= 19.2.12
 Requires: smartmet-library-newbase >= 18.7.23
 Requires: libpqxx
@@ -40,7 +40,7 @@ BuildRequires: libs3-devel
 Requires: jasper-libs
 Requires: eccodes
 %endif
-BuildRequires: libfmigrib-devel >= 19.10.28
+BuildRequires: libfmigrib-devel >= 20.1.20
 BuildRequires: smartmet-library-newbase-devel >= 18.7.23
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
@@ -119,6 +119,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Tue Jan 21 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.1.21-1.fmi
+- Support (limited) writing to S3
 * Tue Dec 17 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.12.17-1.fmi
 - Support more file writing options
 * Mon Nov 25 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.11.25-1.fmi
