@@ -219,6 +219,9 @@ class configuration
 	bool LegacyWriteMode() const;
 	void LegacyWriteMode(bool theLegacyWriteMode);
 
+	HPFileStorageType WriteStorageType() const;
+	void WriteStorageType(HPFileStorageType theStorageType);
+
    protected:
 	std::vector<producer> itsSourceProducers;
 
@@ -259,6 +262,8 @@ class configuration
 	bool itsUploadStatistics;
 	bool itsWriteToDatabase;
 	bool itsLegacyWriteMode;
+
+	HPFileStorageType itsWriteStorageType;
 };
 
 inline std::ostream& operator<<(std::ostream& file, const configuration& ob)

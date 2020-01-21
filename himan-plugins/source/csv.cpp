@@ -35,7 +35,7 @@ himan::file_information csv::ToFile(info<T>& theInfo)
 	file_information finfo;
 	finfo.file_location = util::MakeFileName(theInfo, *itsWriteOptions.configuration) + ".csv";
 	finfo.file_type = kCSV;
-	finfo.storage_type = kLocalFileSystem;
+	finfo.storage_type = itsWriteOptions.configuration->WriteStorageType();
 
 	boost::filesystem::path pathname(finfo.file_location);
 

@@ -483,6 +483,22 @@ This can be avoided by using the configuration file key 'async'. By default the 
 
 **Note! Asynchronous execution should only be enabled for those plugins that have no other plugins as dependants!**
 
+<a name="Storage type"/>
+
+## Storage type
+
+Himan can write output files into two different storage types: local POSIX file system (default), and S3 object storage.
+
+If one wants to write to S3, that needs to be configured with configuration file key 'write_storage_type'.
+
+NB! This only affects writing; Himan can _read_ from both local file system and S3 storage simultaneously without any
+explicit configuration.
+
+Example:
+
+    "write_storage_type" : "local | s3",
+
+
 <a name="Full_examples"/>
 
 # Full examples

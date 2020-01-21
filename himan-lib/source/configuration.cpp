@@ -39,7 +39,8 @@ configuration::configuration()
       itsUpdateSSStateTable(true),
       itsUploadStatistics(true),
       itsWriteToDatabase(false),
-      itsLegacyWriteMode(false)
+      itsLegacyWriteMode(false),
+      itsWriteStorageType(kLocalFileSystem)
 {
 }
 
@@ -91,6 +92,7 @@ std::ostream& configuration::Write(std::ostream& file) const
 	file << "__itsUploadStatistics__" << itsUploadStatistics << std::endl;
 	file << "__itsWriteToDatabase__" << itsWriteToDatabase << std::endl;
 	file << "__itsLegacyWriteMode__" << itsLegacyWriteMode << std::endl;
+	file << "__itsWriteStorageType__" << HPFileStorageTypeToString.at(itsWriteStorageType) << std::endl;
 
 	return file;
 }
@@ -355,4 +357,14 @@ bool configuration::LegacyWriteMode() const
 void configuration::LegacyWriteMode(bool theLegacyWriteMode)
 {
 	itsLegacyWriteMode = theLegacyWriteMode;
+}
+
+HPFileStorageType configuration::WriteStorageType() const
+{
+	return itsWriteStorageType;
+}
+
+void configuration::WriteStorageType(HPFileStorageType theStorageType)
+{
+	itsWriteStorageType = theStorageType;
 }

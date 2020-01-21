@@ -580,6 +580,13 @@ const boost::unordered_map<HPFileStorageType, std::string> HPFileStorageTypeToSt
 	(kS3ObjectStorageSystem, "s3 object storage system")
 	;
 
+const boost::unordered_map<std::string, HPFileStorageType> HPStringToFileStorageType =
+    ba::map_list_of
+	("unknown", kUnknownStorageType)
+	("local", kLocalFileSystem)
+	("s3", kS3ObjectStorageSystem)
+	;
+
 // clang-format on
 
 namespace constants

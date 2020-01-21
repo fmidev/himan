@@ -165,7 +165,8 @@ void plugin_configuration::WriteStatistics()
 	     << setw(30) << left << "Compression type:" << HPFileCompressionToString.at(itsFileCompression) << endl
 	     << setw(30) << left << "Write mode:" << HPWriteModeToString.at(itsWriteMode) << endl
 	     << setw(30) << left << "Read from database:" << (itsReadFromDatabase ? "true" : "false") << endl
-	     << setw(30) << left << "Write to database:" << (itsWriteToDatabase ? "true" : "false") << endl;
+	     << setw(30) << left << "Write to database:" << (itsWriteToDatabase ? "true" : "false") << endl
+	     << setw(30) << left << "Write storage type: " << HPFileStorageTypeToString.at(itsWriteStorageType) << endl;
 
 	string sourceProducers = "";
 

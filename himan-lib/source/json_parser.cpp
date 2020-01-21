@@ -349,6 +349,23 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		throw runtime_error(string("Error parsing key dynamic_memory_allocation: ") + e.what());
 	}
 
+	/* Check storage_type */
+
+	try
+	{
+		string theStorageType = pt.get<string>("write_storage_type");
+
+		conf->WriteStorageType(HPStringToFileStorageType.at(theStorageType));
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing key storage_type: ") + e.what());
+	}
+
 	/*
 	 * Check processqueue.
 	 *
