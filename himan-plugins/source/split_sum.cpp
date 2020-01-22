@@ -42,6 +42,7 @@ split_sum::split_sum()
 	sourceParameters["SN-3-MM"] = {param("SNACC-KGM2")};
 	sourceParameters["SN-6-MM"] = {param("SNACC-KGM2")};
 	sourceParameters["SN-24-MM"] = {param("SNACC-KGM2")};
+	sourceParameters["SN-120-MM"] = {param("SNACC-KGM2")};
 
 	sourceParameters["SNR-KGM2"] = {param("SNACC-KGM2")};
 	sourceParameters["SNRC-KGM2"] = {param("SNC-KGM2")};
@@ -154,6 +155,16 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 
 		params.push_back(parm);
 	}
+
+        if (itsConfiguration->Exists("sn120h") && itsConfiguration->GetValue("sn120h") == "true")
+        {
+                param parm("SN-120-MM");
+                parm.Unit(kMm);
+
+                parm.Aggregation(aggregation(kAccumulation, time_duration("120:00")));
+
+                params.push_back(parm);
+        }
 
 	if (itsConfiguration->Exists("rrc3h") && itsConfiguration->GetValue("rrc3h") == "true")
 	{
