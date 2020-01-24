@@ -132,6 +132,11 @@ pair<level, level> hitool::LevelForHeight(const producer& prod, double height) c
 			producerId = 10;
 			break;
 
+		case 11:
+		case 265:
+			producerId = 265;
+			break;
+
 		default:
 			itsLogger.Error("Unsupported producer for hitool::LevelForHeight(): " + to_string(prod.Id()));
 			break;
