@@ -22,7 +22,8 @@ using namespace std;
 using namespace himan;
 using namespace himan::plugin;
 
-mutex dimensionMutex, singleFileWriteMutex;
+mutex dimensionMutex;
+static mutex singleFileWriteMutex;
 
 template <typename T>
 bool compiled_plugin_base::Next(info<T>& myTargetInfo)
