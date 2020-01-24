@@ -11,7 +11,7 @@
 using namespace std;
 using namespace himan::plugin;
 
-extern mutex singleFileWriteMutex;
+static mutex singleFileWriteMutex;
 
 const string itsName("hybrid_height");
 const himan::param PParam("P-HPA");
