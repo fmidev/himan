@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.1.21
+Version: 20.1.24
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -119,6 +119,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Fri Jan 24 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.1.24-1.fmi
+- Fix for grib message indexing
+* Wed Jan 22 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.1.22-1.fmi
+- Add 120h snow accumulation to split sum
 * Tue Jan 21 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.1.21-1.fmi
 - Support (limited) writing to S3
 * Tue Dec 17 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.12.17-1.fmi
