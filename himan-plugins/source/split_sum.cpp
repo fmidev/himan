@@ -13,8 +13,6 @@
 using namespace std;
 using namespace himan::plugin;
 
-mutex mySingleFileWriteMutex;
-
 const int SUB_THREAD_COUNT = 5;
 
 map<string, himan::params> sourceParameters;
