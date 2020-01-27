@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.1.24
+Version: 20.1.27
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -119,6 +119,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Jan 27 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.1.27-1.fmi
+- Another fix for grib message indexing
 * Fri Jan 24 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.1.24-1.fmi
 - Fix for grib message indexing
 * Wed Jan 22 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.1.22-1.fmi
