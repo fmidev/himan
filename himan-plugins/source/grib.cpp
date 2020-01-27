@@ -1256,8 +1256,7 @@ himan::file_information grib::CreateGribMessage(info<T>& anInfo)
 		// be used for tracking message no of written messages, because neither it
 		// nor eccodes has any visibility to any ossibly existing messages in a file
 		// that is appended to. therefore here we are tracking the message count per
-		// file, but this is assuming that when himan starts, the file appended to
-		// does not exist!
+		// file
 
 		static std::map<std::string, unsigned long> messages;
 
@@ -1267,7 +1266,20 @@ himan::file_information grib::CreateGribMessage(info<T>& anInfo)
 		}
 		catch (const out_of_range& e)
 		{
-			messages[finfo.file_location] = 0;
+			if (finfo.offset.get() == 0)
+			{
+				// offset is zero --> file does not exist yet --> start counting from msg 0
+				messages[finfo.file_location] = 0;
+			}
+			else
+			{
+				// file existed before Himan started --> count the messages from
+				// the existing files and start numbering from there
+
+				NFmiGrib rdr;
+				rdr.Open(finfo.file_location);
+				messages[finfo.file_location] = rdr.MessageCount();
+			}
 		}
 
 		finfo.message_no = messages.at(finfo.file_location);
