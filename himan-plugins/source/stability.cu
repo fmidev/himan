@@ -857,6 +857,11 @@ void CalculateConvectiveSeverityIndex(std::shared_ptr<const plugin_configuration
 		auto mlCAPEInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), HalfKMLevel, param("CAPE-JKG"),
 		                                      myTargetInfo->ForecastType());
 
+		if (!muCAPEInfo || !muLPLInfo || !mlCAPEInfo)
+		{
+			return;
+		}
+
 		myTargetInfo->Find<param>(EBSParam);
 		myTargetInfo->Find<level>(MaxWindLevel);
 
