@@ -23,7 +23,6 @@ using namespace himan;
 using namespace himan::plugin;
 
 mutex dimensionMutex;
-static mutex singleFileWriteMutex;
 
 template <typename T>
 bool compiled_plugin_base::Next(info<T>& myTargetInfo)
@@ -165,16 +164,7 @@ void compiled_plugin_base::WriteToFile(const shared_ptr<info<T>> targetInfo, wri
 				continue;
 			}
 
-			if (itsConfiguration->WriteMode() == kSingleGridToAFile)
-			{
-				aWriter->ToFile(tempInfo, itsConfiguration);
-			}
-			else
-			{
-				lock_guard<mutex> lock(singleFileWriteMutex);
-
-				aWriter->ToFile(tempInfo, itsConfiguration);  //, itsConfiguration->ConfigurationFile());
-			}
+			aWriter->ToFile(tempInfo, itsConfiguration);
 		}
 	};
 

@@ -29,6 +29,7 @@ using namespace himan::plugin;
 std::string GetParamNameFromGribShortName(const std::string& paramFileName, const std::string& shortName);
 
 const double gribMissing = 32700.;
+static mutex serializedWriteMutex;
 
 long DetermineProductDefinitionTemplateNumber(long agg, long proc, long ftype)
 {
@@ -1366,9 +1367,17 @@ himan::file_information grib::ToFile(info<T>& anInfo)
 
 	auto finfo = CreateGribMessage<T>(anInfo);
 
-	DetermineMessageNumber(finfo);
-	WriteMessageToFile(finfo);
-
+	if (itsWriteOptions.configuration->WriteMode() != kSingleGridToAFile)
+	{
+		lock_guard<mutex> lock(serializedWriteMutex);
+		DetermineMessageNumber(finfo);
+		WriteMessageToFile(finfo);
+	}
+	else
+	{
+		DetermineMessageNumber(finfo);
+		WriteMessageToFile(finfo);
+	}
 	return finfo;
 }
 
