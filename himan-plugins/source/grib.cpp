@@ -1233,82 +1233,74 @@ himan::file_information grib::CreateGribMessage(info<T>& anInfo)
 		itsGrib->Message().PV(AB, AB.size());
 	}
 
-	// message length can only be received from eccodes since it includes
-	// all grib headers etc
-	finfo.length = itsGrib->Message().GetLongKey("totalLength");
-
-	if (itsWriteOptions.configuration->WriteMode() != kSingleGridToAFile)
-	{
-		// appending to a file is a serial operation -- two threads cannot
-		// append to a single file simultaneously. therefore offset is just
-		// the size of the file so far.
-
-		try
-		{
-			finfo.offset = boost::filesystem::file_size(finfo.file_location);
-		}
-		catch (const boost::filesystem::filesystem_error& e)
-		{
-			finfo.offset = 0;
-		}
-
-		// handling message number is a bit tricker. fmigrib library cannot really
-		// be used for tracking message no of written messages, because neither it
-		// nor eccodes has any visibility to any ossibly existing messages in a file
-		// that is appended to. therefore here we are tracking the message count per
-		// file
-
-		static std::map<std::string, unsigned long> messages;
-
-		try
-		{
-			messages.at(finfo.file_location) = messages.at(finfo.file_location) + 1;
-		}
-		catch (const out_of_range& e)
-		{
-			if (finfo.offset.get() == 0)
-			{
-				// offset is zero --> file does not exist yet --> start counting from msg 0
-				messages[finfo.file_location] = 0;
-			}
-			else
-			{
-				// file existed before Himan started --> count the messages from
-				// the existing files and start numbering from there
-
-				NFmiGrib rdr;
-				rdr.Open(finfo.file_location);
-				messages[finfo.file_location] = rdr.MessageCount();
-			}
-		}
-
-		finfo.message_no = messages.at(finfo.file_location);
-	}
-	else
-	{
-		finfo.offset = 0;
-		finfo.message_no = 0;
-	}
-
 	return finfo;
 }
 
 template himan::file_information grib::CreateGribMessage<double>(info<double>&);
 template himan::file_information grib::CreateGribMessage<float>(info<float>&);
 
-template <typename T>
-himan::file_information grib::ToFile(info<T>& anInfo)
+void grib::DetermineMessageNumber(file_information& finfo)
 {
-	timer aTimer;
-	aTimer.Start();
+	// message length can only be received from eccodes since it includes
+	// all grib headers etc
+	finfo.length = itsGrib->Message().GetLongKey("totalLength");
 
-	if (anInfo.Grid()->Class() == kIrregularGrid && anInfo.Grid()->Type() != kReducedGaussian)
+	if (itsWriteOptions.configuration->WriteMode() == kSingleGridToAFile)
 	{
-		itsLogger.Error("Unable to write irregular grid of type " + HPGridTypeToString.at(anInfo.Grid()->Type()) +
-		                " to grib");
-		throw kInvalidWriteOptions;
+		finfo.offset = 0;
+		finfo.message_no = 0;
+		return;
 	}
 
+	// appending to a file is a serial operation -- two threads cannot
+	// append to a single file simultaneously. therefore offset is just
+	// the size of the file so far.
+
+	try
+	{
+		finfo.offset = boost::filesystem::file_size(finfo.file_location);
+	}
+	catch (const boost::filesystem::filesystem_error& e)
+	{
+		finfo.offset = 0;
+	}
+
+	// handling message number is a bit tricker. fmigrib library cannot really
+	// be used for tracking message no of written messages, because neither it
+	// nor eccodes has any visibility to any ossibly existing messages in a file
+	// that is appended to. therefore here we are tracking the message count per
+	// file
+
+	static std::map<std::string, unsigned long> messages;
+
+	try
+	{
+		messages.at(finfo.file_location) = messages.at(finfo.file_location) + 1;
+	}
+	catch (const out_of_range& e)
+	{
+		if (finfo.offset.get() == 0)
+		{
+			// offset is zero --> file does not exist yet --> start counting from msg 0
+			messages[finfo.file_location] = 0;
+		}
+		else
+		{
+			// file existed before Himan started --> count the messages from
+			// the existing files and start numbering from there
+
+			NFmiGrib rdr;
+			rdr.Open(finfo.file_location);
+			messages[finfo.file_location] = rdr.MessageCount();
+		}
+	}
+
+	finfo.message_no = messages.at(finfo.file_location);
+}
+
+void grib::WriteMessageToFile(const file_information& finfo)
+{
+	timer aTimer(true);
 	bool appendToFile = (itsWriteOptions.configuration->WriteMode() == kAllGridsToAFile ||
 	                     itsWriteOptions.configuration->WriteMode() == kFewGridsToAFile);
 
@@ -1318,8 +1310,6 @@ himan::file_information grib::ToFile(info<T>& anInfo)
 		itsLogger.Warning("Unable to write multiple grids to a packed file");
 		appendToFile = false;
 	}
-
-	auto finfo = CreateGribMessage<T>(anInfo);
 
 	if (finfo.file_location.find("s3://") != string::npos)
 	{
@@ -1362,6 +1352,22 @@ himan::file_information grib::ToFile(info<T>& anInfo)
 
 	ss << verb << "file '" << finfo.file_location << "' (" << fixed << speed << " MB/s)";
 	itsLogger.Info(ss.str());
+}
+
+template <typename T>
+himan::file_information grib::ToFile(info<T>& anInfo)
+{
+	if (anInfo.Grid()->Class() == kIrregularGrid && anInfo.Grid()->Type() != kReducedGaussian)
+	{
+		itsLogger.Error("Unable to write irregular grid of type " + HPGridTypeToString.at(anInfo.Grid()->Type()) +
+		                " to grib");
+		throw kInvalidWriteOptions;
+	}
+
+	auto finfo = CreateGribMessage<T>(anInfo);
+
+	DetermineMessageNumber(finfo);
+	WriteMessageToFile(finfo);
 
 	return finfo;
 }

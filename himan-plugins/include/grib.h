@@ -94,6 +94,9 @@ class grib : public io_plugin
 	template <typename T>
 	void ReadData(std::shared_ptr<info<T>> newInfo, bool readPackedData) const;
 
+	void DetermineMessageNumber(file_information& finfo);
+	void WriteMessageToFile(const file_information& finfo);
+
 	/**
 	 * @brief UnpackBitmap
 	 *
