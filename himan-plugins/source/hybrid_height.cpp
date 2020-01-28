@@ -11,8 +11,6 @@
 using namespace std;
 using namespace himan::plugin;
 
-static mutex singleFileWriteMutex;
-
 const string itsName("hybrid_height");
 const himan::param PParam("P-HPA");
 const himan::param TParam("T-K");
@@ -408,14 +406,5 @@ void hybrid_height::WriteSingleGridToFile(const shared_ptr<info<float>> targetIn
 		return;
 	}
 
-	if (itsConfiguration->WriteMode() == kSingleGridToAFile)
-	{
-		aWriter->ToFile<float>(targetInfo, itsConfiguration);
-	}
-	else
-	{
-		lock_guard<mutex> lock(singleFileWriteMutex);
-
-		aWriter->ToFile<float>(targetInfo, itsConfiguration);
-	}
+	aWriter->ToFile<float>(targetInfo, itsConfiguration);
 }

@@ -744,14 +744,7 @@ void stability::WriteToFile(const info_t targetInfo, write_options writeOptions)
 				continue;
 			}
 
-			if (itsConfiguration->WriteMode() == kSingleGridToAFile)
-			{
-				aWriter->ToFile(tempInfo, itsConfiguration);
-			}
-			else
-			{
-				aWriter->ToFile(tempInfo, itsConfiguration);
-			}
+			aWriter->ToFile(tempInfo, itsConfiguration);
 		}
 	}
 	if (itsConfiguration->UseDynamicMemoryAllocation())

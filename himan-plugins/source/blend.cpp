@@ -18,8 +18,6 @@ namespace plugin
 {
 using namespace std;
 
-static mutex singleFileWriteMutex;
-
 const string kClassName = "himan::plugin::blend";
 
 // 'decaying factor' for bias and mae
@@ -843,16 +841,7 @@ void blend::WriteToFile(const info_t targetInfo, write_options writeOptions)
 		return;
 	}
 
-	if (itsConfiguration->WriteMode() == kSingleGridToAFile)
-	{
-		aWriter->ToFile(tempInfo, itsConfiguration);
-	}
-	else
-	{
-		lock_guard<mutex> lock(singleFileWriteMutex);
-
-		aWriter->ToFile(tempInfo, itsConfiguration);
-	}
+	aWriter->ToFile(tempInfo, itsConfiguration);
 
 	if (itsConfiguration->UseDynamicMemoryAllocation())
 	{
