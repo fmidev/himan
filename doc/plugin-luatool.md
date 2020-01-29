@@ -105,6 +105,7 @@ HPForecastType
     kAnalysis
     kEpsControl
     kEpsPerturbation
+    kStatisticalProcessing
 
 HPGridType
     kUnknownGridType = 0
@@ -177,16 +178,22 @@ info-class combines all different pieces of metadata into one. This class instan
 | | ResetTime | | Reset time iterator to point value before first value |
 | bool | FirstTime | | Set time iterator to first value |
 | bool | NextTime | | Set time iterator to next value |
+| | ResetForecastType | | Reset forecast type iterator to point value before first value |
+| bool | FirstForecastType | | Set forecast type iterator to first value |
+| bool | NextForecastType | | Set forecast type iterator to next value |
 | number | SizeParams | | Returns number of parameters |
 | number | SizeLevels | | Returns number of level |
 | number | SizeTimes | | Returns number of times |
+| number | SizeForecastTypes | | Returns number of forecast types |
 | number | SizeLocations | | Returns number of locations (points) in the current grid |
 | param | GetParam | | Returns current parameter |
 | level | GetLevel | | Returns current level |
 | forecast_time | GetTime | | Returns current time |
+| forecast_type | GetForecastType | | Returns current forecast type |
 | | SetParam | param | Sets (replaces) current parameter |
 | | SetLevel | level | Sets (replaces) current level |
 | | SetTime | forecast_time | Sets (replaces) current time |
+| | SetForecastType | forecast_type | Sets (replaces) current forecast type |
 | point | GetLatLon | number | Returns latlon coordinates of given grid point |
 | table | GetValues | | Returns grid data contents |
 | | SetValues | table | Sets grid data contents from a lua table |

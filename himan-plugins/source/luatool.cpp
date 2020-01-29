@@ -340,7 +340,8 @@ void BindEnum(lua_State* L)
 				 value("kDeterministic", kDeterministic),
 				 value("kAnalysis", kAnalysis),
 				 value("kEpsControl", kEpsControl),
-				 value("kEpsPerturbation", kEpsPerturbation)]];
+				 value("kEpsPerturbation", kEpsPerturbation),
+				 value("kStatisticalProcessing", kStatisticalProcessing)]];
 }
 
 // clang-format on
@@ -380,6 +381,12 @@ size_t GetLevelIndex(std::shared_ptr<info<T>> anInfo)
 	return anInfo->template Index<level>() + 1;
 }
 template <typename T>
+size_t GetForecastTypeIndex(std::shared_ptr<info<T>> anInfo)
+{
+	return anInfo->template Index<forecast_type>() + 1;
+}
+
+template <typename T>
 void SetLocationIndex(std::shared_ptr<info<T>> anInfo, size_t theIndex)
 {
 	anInfo->template LocationIndex(--theIndex);
@@ -398,6 +405,11 @@ template <typename T>
 void SetLevelIndex(std::shared_ptr<info<T>> anInfo, size_t theIndex)
 {
 	anInfo->template Index<level>(--theIndex);
+}
+template <typename T>
+void SetForecastTypeIndex(std::shared_ptr<info<T>> anInfo, size_t theIndex)
+{
+	anInfo->template Index<forecast_type>(--theIndex);
 }
 template <typename T>
 void SetValues(std::shared_ptr<info<T>>& anInfo, const object& table)
@@ -1067,54 +1079,54 @@ template <typename T>
 matrix<T> ProbLimitGe2D(const matrix<T>& A, const matrix<T>& B, T limit)
 {
 #ifdef HAVE_CUDA
-        if (myUseCuda)
-        {
-                return numerical_functions::ProbLimitGt2DGPU<T>(A, B, limit);
-        }
+	if (myUseCuda)
+	{
+		return numerical_functions::ProbLimitGt2DGPU<T>(A, B, limit);
+	}
 #endif
-        return numerical_functions::Reduce2D<T>(A, B,
-                                                [=](T& val1, T& val2, const T& a, const T& b) {
-                                                        if (IsValid(a * b) && a * b >= limit)
-                                                                val1 += T(1);
-                                                },
-                                                [](const T& val1, const T& val2) { return (val1 >= T(1)) ? T(1) : T(0); },
-                                                T(0), T(0));
+	return numerical_functions::Reduce2D<T>(A, B,
+	                                        [=](T& val1, T& val2, const T& a, const T& b) {
+		                                        if (IsValid(a * b) && a * b >= limit)
+			                                        val1 += T(1);
+	                                        },
+	                                        [](const T& val1, const T& val2) { return (val1 >= T(1)) ? T(1) : T(0); },
+	                                        T(0), T(0));
 }
 
 template <typename T>
 matrix<T> ProbLimitLt2D(const matrix<T>& A, const matrix<T>& B, T limit)
 {
 #ifdef HAVE_CUDA
-        if (myUseCuda)
-        {
-                return numerical_functions::ProbLimitGt2DGPU<T>(A, B, limit);
-        }
+	if (myUseCuda)
+	{
+		return numerical_functions::ProbLimitGt2DGPU<T>(A, B, limit);
+	}
 #endif
-        return numerical_functions::Reduce2D<T>(A, B,
-                                                [=](T& val1, T& val2, const T& a, const T& b) {
-                                                        if (IsValid(a * b) && a * b < limit)
-                                                                val1 += T(1);
-                                                },
-                                                [](const T& val1, const T& val2) { return (val1 >= T(1)) ? T(1) : T(0); },
-                                                T(0), T(0));
+	return numerical_functions::Reduce2D<T>(A, B,
+	                                        [=](T& val1, T& val2, const T& a, const T& b) {
+		                                        if (IsValid(a * b) && a * b < limit)
+			                                        val1 += T(1);
+	                                        },
+	                                        [](const T& val1, const T& val2) { return (val1 >= T(1)) ? T(1) : T(0); },
+	                                        T(0), T(0));
 }
 
 template <typename T>
 matrix<T> ProbLimitLe2D(const matrix<T>& A, const matrix<T>& B, T limit)
 {
 #ifdef HAVE_CUDA
-        if (myUseCuda)
-        {
-                return numerical_functions::ProbLimitGt2DGPU<T>(A, B, limit);
-        }
+	if (myUseCuda)
+	{
+		return numerical_functions::ProbLimitGt2DGPU<T>(A, B, limit);
+	}
 #endif
-        return numerical_functions::Reduce2D<T>(A, B,
-                                                [=](T& val1, T& val2, const T& a, const T& b) {
-                                                        if (IsValid(a * b) && a * b <= limit)
-                                                                val1 += T(1);
-                                                },
-                                                [](const T& val1, const T& val2) { return (val1 >= T(1)) ? T(1) : T(0); },
-                                                T(0), T(0));
+	return numerical_functions::Reduce2D<T>(A, B,
+	                                        [=](T& val1, T& val2, const T& a, const T& b) {
+		                                        if (IsValid(a * b) && a * b <= limit)
+			                                        val1 += T(1);
+	                                        },
+	                                        [](const T& val1, const T& val2) { return (val1 >= T(1)) ? T(1) : T(0); },
+	                                        T(0), T(0));
 }
 
 template <typename T>
@@ -1155,16 +1167,22 @@ void BindLib(lua_State* L)
 	              .def("ResetTime", &info<double>::Reset<forecast_time>)
 	              .def("FirstTime", &info<double>::First<forecast_time>)
 	              .def("NextTime", &info<double>::Next<forecast_time>)
+	              .def("ResetForecastType", &info<double>::Reset<forecast_type>)
+	              .def("FirstForecastType", &info<double>::First<forecast_type>)
+	              .def("NextForecastType", &info<double>::Next<forecast_type>)
 	              .def("SizeLocations", LUA_CMEMFN(size_t, info<double>, SizeLocations, void))
 	              .def("SizeTimes", LUA_CMEMFN(size_t, info<double>, Size<forecast_time>, void))
 	              .def("SizeParams", LUA_CMEMFN(size_t, info<double>, Size<param>, void))
 	              .def("SizeLevels", LUA_CMEMFN(size_t, info<double>, Size<level>, void))
+	              .def("SizeForecastTypes", LUA_CMEMFN(size_t, info<double>, Size<forecast_type>, void))
 	              .def("GetLevel", LUA_CMEMFN(const level&, info<double>, Level, void))
 	              .def("GetTime", LUA_CMEMFN(const forecast_time&, info<double>, Time, void))
 	              .def("GetParam", LUA_CMEMFN(const param&, info<double>, Param, void))
+	              .def("GetForecastType", LUA_CMEMFN(const forecast_type&, info<double>, ForecastType, void))
 	              .def("GetGrid", LUA_CMEMFN(std::shared_ptr<grid>, info<double>, Grid, void))
 	              .def("SetTime", LUA_MEMFN(void, info<double>, Set<forecast_time>, const forecast_time&))
 	              .def("SetLevel", LUA_MEMFN(void, info<double>, Set<level>, const level&))
+	              .def("SetForecastType", LUA_MEMFN(void, info<double>, Set<forecast_type>, const forecast_type&))
 	              //.def("SetParam", LUA_MEMFN(void, info, SetParam, const param&))
 	              // These are local functions to luatool
 	              .def("SetParam", &info_wrapper::SetParam<double>)
@@ -1173,9 +1191,11 @@ void BindLib(lua_State* L)
 	              .def("GetTimeIndex", &info_wrapper::GetTimeIndex<double>)
 	              .def("GetParamIndex", &info_wrapper::GetParamIndex<double>)
 	              .def("GetLevelIndex", &info_wrapper::GetLevelIndex<double>)
+	              .def("GetForecastTypeIndex", &info_wrapper::GetForecastTypeIndex<double>)
 	              .def("SetTimeIndex", &info_wrapper::SetTimeIndex<double>)
 	              .def("SetParamIndex", &info_wrapper::SetParamIndex<double>)
 	              .def("SetLevelIndex", &info_wrapper::SetLevelIndex<double>)
+	              .def("SetForecastTypeIndex", &info_wrapper::SetForecastTypeIndex<double>)
 	              .def("SetValues", &info_wrapper::SetValues<double>)
 	              .def("SetValuesFromMatrix", &info_wrapper::SetValuesFromMatrix<double>)
 	              .def("GetValues", &info_wrapper::GetValues<double>)
@@ -1195,25 +1215,33 @@ void BindLib(lua_State* L)
 	              .def("ResetTime", &info<float>::Reset<forecast_time>)
 	              .def("FirstTime", &info<float>::First<forecast_time>)
 	              .def("NextTime", &info<float>::Next<forecast_time>)
+	              .def("ResetForecastType", &info<float>::Reset<forecast_type>)
+	              .def("FirstForecastType", &info<float>::First<forecast_type>)
+	              .def("NextForecastType", &info<float>::Next<forecast_type>)
 	              .def("SizeLocations", LUA_CMEMFN(size_t, info<float>, SizeLocations, void))
 	              .def("SizeTimes", LUA_CMEMFN(size_t, info<float>, Size<forecast_time>, void))
 	              .def("SizeParams", LUA_CMEMFN(size_t, info<float>, Size<param>, void))
 	              .def("SizeLevels", LUA_CMEMFN(size_t, info<float>, Size<level>, void))
+	              .def("SizeForecastTypes", LUA_CMEMFN(size_t, info<float>, Size<forecast_type>, void))
 	              .def("GetLevel", LUA_CMEMFN(const level&, info<float>, Level, void))
 	              .def("GetTime", LUA_CMEMFN(const forecast_time&, info<float>, Time, void))
 	              .def("GetParam", LUA_CMEMFN(const param&, info<float>, Param, void))
+	              .def("GetForecastType", LUA_CMEMFN(const forecast_type&, info<float>, ForecastType, void))
 	              .def("GetGrid", LUA_CMEMFN(std::shared_ptr<grid>, info<float>, Grid, void))
 	              .def("SetTime", LUA_MEMFN(void, info<float>, Set<forecast_time>, const forecast_time&))
 	              .def("SetLevel", LUA_MEMFN(void, info<float>, Set<level>, const level&))
 	              .def("SetParam", &info_wrapper::SetParam<float>)
+	              .def("SetForecastType", LUA_MEMFN(void, info<float>, Set<forecast_type>, const forecast_type&))
 	              .def("SetIndexValue", &info_wrapper::SetValue<float>)
 	              .def("GetIndexValue", &info_wrapper::GetValue<float>)
 	              .def("GetTimeIndex", &info_wrapper::GetTimeIndex<float>)
 	              .def("GetParamIndex", &info_wrapper::GetParamIndex<float>)
 	              .def("GetLevelIndex", &info_wrapper::GetLevelIndex<float>)
+	              .def("GetForecastTypeIndex", &info_wrapper::GetForecastTypeIndex<float>)
 	              .def("SetTimeIndex", &info_wrapper::SetTimeIndex<float>)
 	              .def("SetParamIndex", &info_wrapper::SetParamIndex<float>)
 	              .def("SetLevelIndex", &info_wrapper::SetLevelIndex<float>)
+	              .def("SetForecastTypeIndex", &info_wrapper::SetForecastTypeIndex<float>)
 	              .def("SetValues", &info_wrapper::SetValues<float>)
 	              .def("SetValuesFromMatrix", &info_wrapper::SetValuesFromMatrix<float>)
 	              .def("GetValues", &info_wrapper::GetValues<float>)
