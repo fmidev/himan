@@ -1359,6 +1359,7 @@ void BindLib(lua_State* L)
 	                   LUA_MEMFN(void, forecast_time, ValidDateTime, const std::string&, const std::string&))
 	              .def("GetStep", LUA_CMEMFN(time_duration, forecast_time, Step, void)),
 	          class_<forecast_type>("forecast_type")
+	              .def(constructor<HPForecastType>())
 	              .def(constructor<HPForecastType, double>())
 	              .def("ClassName", &forecast_type::ClassName)
 	              .def("GetType", LUA_CMEMFN(HPForecastType, forecast_type, Type, void))
