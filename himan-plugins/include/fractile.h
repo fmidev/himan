@@ -38,6 +38,8 @@ class fractile : public compiled_plugin, private compiled_plugin_base
 
    private:
 	virtual void Calculate(std::shared_ptr<info<float>> myTargetInfo, uint16_t threadIndex);
+	void SetParams();
+	void SetForecastType();
 
 	std::vector<float> itsFractiles;
 };

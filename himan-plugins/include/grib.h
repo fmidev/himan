@@ -74,6 +74,7 @@ class grib : public io_plugin
 	void WriteTime(const forecast_time& ftime, const producer& prod, const param& par);
 	void WriteParameter(const param& par, const producer& prod, const forecast_type& ftype);
 	void WriteLevel(const level& lev);
+	void WriteForecastType(const forecast_type& forecastType, const producer& prod);
 
 	template <typename T>
 	void WriteData(info<T>& anInfo);

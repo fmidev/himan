@@ -150,10 +150,8 @@ std::unique_ptr<ensemble> CreateEnsemble(const std::shared_ptr<const plugin_conf
 	return std::move(ens);
 }
 
-void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
+void fractile::SetParams()
 {
-	Init(conf);
-
 	auto fractiles = itsConfiguration->GetValue("fractiles");
 
 	if (!fractiles.empty())
@@ -178,7 +176,7 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 	}
 
 	params calculatedParams;
-	std::string paramName = conf->GetValue("param");
+	std::string paramName = itsConfiguration->GetValue("param");
 
 	if (paramName.empty())
 	{
@@ -206,8 +204,25 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 
 	calculatedParams.push_back(stdev);
 
-	SetParams(calculatedParams);
+	compiled_plugin_base::SetParams(calculatedParams);
+}
 
+void fractile::SetForecastType()
+{
+	if (itsForecastTypeIterator.Size() > 1)
+	{
+		itsLogger.Warning("More than one forecast type defined - fractile can only produce 'statistical processing'");
+	}
+
+	itsForecastTypeIterator = forecast_type_iter({forecast_type(kStatisticalProcessing)});
+}
+
+void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
+{
+	Init(conf);
+
+	SetParams();
+	SetForecastType();
 	Start<float>();
 }
 
