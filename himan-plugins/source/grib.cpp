@@ -1011,11 +1011,12 @@ void grib::WriteForecastType(const forecast_type& forecastType, const producer& 
 
 		case kStatisticalProcessing:
 			// "Post-processed forecast", one could consider everything produced by
-			// Himan to be of this category but we only use this to mean statistical
+			// Himan to be of this category but we only use this to represent statistical
 			// post processing
 			itsGrib->Message().TypeOfGeneratingProcess(13);
-			// "Event probability", no closer match in the standard tables
-			itsGrib->Message().SetLongKey("typeOfProcessedData", 9);
+			// Use locally reserved number because standard tables do not have a suitable
+			// option
+			itsGrib->Message().SetLongKey("typeOfProcessedData", 192);
 			break;
 
 		default:
