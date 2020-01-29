@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.1.28
+Version: 20.1.29
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -13,11 +13,11 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 19.12.17
+Requires: himan-lib >= 20.1.29
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 20.1.20
-Requires: libfmidb >= 19.2.12
+Requires: libfmidb >= 20.1.21
 Requires: smartmet-library-newbase >= 18.7.23
 Requires: libpqxx
 Requires: boost-iostreams
@@ -41,6 +41,7 @@ Requires: jasper-libs
 Requires: eccodes
 %endif
 BuildRequires: libfmigrib-devel >= 20.1.20
+BuildRequires: libfmidb-devel >= 20.1.21
 BuildRequires: smartmet-library-newbase-devel >= 18.7.23
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
@@ -119,6 +120,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Jan 29 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.1.29-1.fmi
+- Support forecast type "statistical processing"
 * Tue Jan 28 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.1.28-1.fmi
 - Reduce mutex scope when appending to grib files
 * Mon Jan 27 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.1.27-1.fmi

@@ -3,7 +3,7 @@
 %define LIBNAME himan-scripts
 Summary: himan-scripts collection
 Name: %{LIBNAME}
-Version: 20.1.21
+Version: 20.1.29
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -12,7 +12,8 @@ Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: lua >= 5.1.4
-Requires: himan-plugins
+Requires: himan-plugins >= 20.1.29
+Requires: himan-lib >= 20.1.29
 
 %define debug_package %{nil}
 
@@ -38,6 +39,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/himan-scripts/*.lua
 
 %changelog
+* Wed Jan 29 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.1.29-1.fmi
+- Specify forecast type when needed
 * Tue Jan 21 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.1.21-1.fmi
 - Add nearby-weather.lua
 * Mon Dec 30 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.12.30-1.fmi
