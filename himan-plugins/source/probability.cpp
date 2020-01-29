@@ -336,7 +336,8 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 
 	if (itsForecastTypeIterator.Size() > 1)
 	{
-		itsLogger.Warning("More than one forecast type defined - fractile can only produce 'statistical processing'");
+		itsLogger.Warning(
+		    "More than one forecast type defined - probability can only produce 'statistical processing'");
 	}
 
 	itsForecastTypeIterator = forecast_type_iter({forecast_type(kStatisticalProcessing)});
