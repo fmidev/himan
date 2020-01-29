@@ -51,6 +51,7 @@ while ens1:NextLocation() and ens2:NextLocation() do
 end
 
 local probParam = param("PROB-LVP-1")
+result:SetForecastType(forecast_type(HPForecastType.kStatisticalProcessing))
 result:SetParam(probParam)
 result:SetValues(probLVP)
 luatool:WriteToFile(result)

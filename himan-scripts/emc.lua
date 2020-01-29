@@ -49,6 +49,7 @@ end
 
 result:SetValues(values)
 result:SetParam(param("ENSMEMB-N"))
+result:SetForecastType(forecast_type(HPForecastType.kStatisticalProcessing))
 
 logger:Info("Writing source data to file")
 luatool:WriteToFile(result)
