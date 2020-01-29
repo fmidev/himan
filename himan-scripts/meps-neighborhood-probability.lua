@@ -79,6 +79,7 @@ function produceProbabilities(sourceparam, targetparam, op, limit)
     targetparam:SetAggregation(aggregation(HPAggregationType.kAccumulation, configuration:GetForecastStep()))
   end
 
+  result:SetForecastType(forecast_type(HPForecastType.kStatisticalProcessing))
   result:SetParam(targetparam)
   result:SetValues(prob)
 

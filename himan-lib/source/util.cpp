@@ -137,9 +137,14 @@ string util::MakeFileName(const info<T>& info, const plugin_configuration& conf)
 			}
 		}
 
-		if (static_cast<int>(ftype.Type()) > 2)
+		if (static_cast<int>(ftype.Type()) > 2)  // backwards compatibility
 		{
-			fileName << "_" << static_cast<int>(ftype.Type()) << "_" << ftype.Value();
+			fileName << "_" << static_cast<int>(ftype.Type());
+
+			if (ftype.Type() == kEpsControl || ftype.Type() == kEpsPerturbation)
+			{
+				fileName << "_" << ftype.Value();
+			}
 		}
 	}
 	else if (conf.WriteMode() == kFewGridsToAFile)

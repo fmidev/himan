@@ -961,6 +961,71 @@ void grib::WriteLevel(const level& lev)
 	}
 }
 
+void grib::WriteForecastType(const forecast_type& forecastType, const producer& prod)
+{
+	// For grib1 this is simple: we only support analysis and deterministic forecasts
+	// (when writing). Those do not need any extra metadata.
+
+	if (itsGrib->Message().Edition() == 1)
+	{
+		return;
+	}
+
+	// For grib2 there are several keys:
+	// - type of data (https://apps.ecmwf.int/codes/grib/format/grib2/ctables/1/4)
+	// - type of generating process (https://apps.ecmwf.int/codes/grib/format/grib2/ctables/4/3)
+	// - product definition template number (https://apps.ecmwf.int/codes/grib/format/grib2/ctables/4/0)
+	//
+	// The key 'productDefinitionTemplateNumber' is set at WriteParameter()
+
+	switch (forecastType.Type())
+	{
+		case kAnalysis:
+			itsGrib->Message().TypeOfGeneratingProcess(0);
+			itsGrib->Message().SetLongKey("typeOfProcessedData", 0);
+			break;
+		case kDeterministic:
+			itsGrib->Message().TypeOfGeneratingProcess(2);
+			itsGrib->Message().SetLongKey("typeOfProcessedData", 2);
+			break;
+		case kEpsControl:
+		case kEpsPerturbation:
+		{
+			const long gribTOPD = (forecastType.Type() == kEpsControl ? 3 : 4);
+			itsGrib->Message().SetLongKey("typeOfProcessedData", gribTOPD);
+			itsGrib->Message().TypeOfGeneratingProcess(4);
+			itsGrib->Message().PerturbationNumber(static_cast<long>(forecastType.Value()));
+			auto r = GET_PLUGIN(radon);
+
+			try
+			{
+				const long ensembleSize = stol(r->RadonDB().GetProducerMetaData(prod.Id(), "ensemble size"));
+				itsGrib->Message().SetLongKey("numberOfForecastsInEnsemble", ensembleSize);
+			}
+			catch (const invalid_argument& e)
+			{
+				itsLogger.Warning("Unable to get valid ensemble size information from radon for producer " +
+				                  to_string(prod.Id()));
+			}
+		}
+		break;
+
+		case kStatisticalProcessing:
+			// "Post-processed forecast", one could consider everything produced by
+			// Himan to be of this category but we only use this to represent statistical
+			// post processing
+			itsGrib->Message().TypeOfGeneratingProcess(13);
+			// Use locally reserved number because standard tables do not have a suitable
+			// option
+			itsGrib->Message().SetLongKey("typeOfProcessedData", 192);
+			break;
+
+		default:
+			itsLogger.Warning("Unrecognized forecast type: " + static_cast<string>(forecastType));
+			break;
+	}
+}
+
 template <typename T>
 void WriteDataValues(const vector<T>&, NFmiGribMessage&);
 
@@ -980,6 +1045,59 @@ void WriteDataValues(const vector<float>& values, NFmiGribMessage& msg)
 	msg.Values(arr, static_cast<long>(values.size()));
 
 	delete[] arr;
+}
+
+himan::file_information grib::ToFile(info<double>& anInfo)
+{
+	return ToFile<double>(anInfo);
+}
+
+int DetermineCorrectGribEdition(int edition, const himan::forecast_type& ftype, const himan::forecast_time& ftime,
+                                const himan::level& lvl, const himan::param& par)
+{
+	if (edition == 2)
+	{
+		// never switch from 2 to 1
+		return 2;
+	}
+
+	// Check levelvalue, forecast type and param processing type since those might force us to change to grib2!
+
+	using namespace himan;
+
+	const bool lvlCondition = lvl.AB().size() > 255;
+	const bool ftypeCondition = (ftype.Type() != kAnalysis && ftype.Type() != kDeterministic);
+	const bool parCondition = par.ProcessingType().Type() != kUnknownProcessingType;
+	const bool timeCondition = ftime.Step().Minutes() % 60 != 0;
+
+	if (lvlCondition || ftypeCondition || parCondition || timeCondition)
+	{
+		himan::logger lgr("grib");
+		lgr.Trace("File type forced to GRIB2 (level value: " + to_string(lvl.Value()) +
+		          ", forecast type: " + HPForecastTypeToString.at(ftype.Type()) +
+		          ", processing type: " + HPProcessingTypeToString.at(par.ProcessingType().Type()) +
+		          " step: " + static_cast<string>(ftime.Step()) + ")");
+		return 2;
+	}
+
+	return edition;
+}
+
+himan::forecast_type DetermineCorrectForecastType(const himan::forecast_type& ftype, const himan::param& par)
+{
+	// A kind of a workaround to make sure metadata in grib2 is correct when writing
+	// statistically processed fields.
+
+	using namespace himan;
+
+	if (par.ProcessingType().Type() != kUnknownProcessingType && ftype.Type() != kStatisticalProcessing)
+	{
+		logger lgr("grib");
+		lgr.Debug("Changing forecast type from " + static_cast<string>(ftype) + " to statistical processing");
+		return forecast_type(kStatisticalProcessing);
+	}
+
+	return ftype;
 }
 
 template <typename T>
@@ -1044,11 +1162,6 @@ void grib::WriteData(info<T>& anInfo)
 template void grib::WriteData<float>(info<float>&);
 template void grib::WriteData<double>(info<double>&);
 
-himan::file_information grib::ToFile(info<double>& anInfo)
-{
-	return ToFile<double>(anInfo);
-}
-
 template <typename T>
 himan::file_information grib::CreateGribMessage(info<T>& anInfo)
 {
@@ -1059,9 +1172,19 @@ himan::file_information grib::CreateGribMessage(info<T>& anInfo)
 	finfo.file_type = kGRIB1;
 	finfo.storage_type = itsWriteOptions.configuration->WriteStorageType();
 
-	if (itsWriteOptions.configuration->OutputFileType() == kGRIB2)
+	long edition = DetermineCorrectGribEdition(static_cast<int>(itsWriteOptions.configuration->OutputFileType()),
+	                                           anInfo.ForecastType(), anInfo.Time(), anInfo.Level(), anInfo.Param());
+
+	if (edition == 2)
 	{
-		finfo.file_location += "2";
+		// backwards compatibility: previously grib version number was
+		// not appended to filename when 'file_write' : 'single'
+		if ((itsWriteOptions.configuration->LegacyWriteMode() == false ||
+		     itsWriteOptions.configuration->WriteMode() != kAllGridsToAFile) ||
+		    itsWriteOptions.configuration->OutputFileType() == kGRIB2)
+		{
+			finfo.file_location += "2";
+		}
 		finfo.file_type = kGRIB2;
 	}
 
@@ -1072,45 +1195,6 @@ himan::file_information grib::CreateGribMessage(info<T>& anInfo)
 	else if (itsWriteOptions.configuration->FileCompression() == kBZIP2)
 	{
 		finfo.file_location += ".bz2";
-	}
-
-	long edition = static_cast<long>(itsWriteOptions.configuration->OutputFileType());
-
-	// Check levelvalue, forecast type and param processing type since those might force us to change to grib2!
-
-	HPForecastType forecastType = anInfo.ForecastType().Type();
-
-	if (edition == 1 &&
-	    (anInfo.Level().AB().size() > 255 || (forecastType == kEpsControl || forecastType == kEpsPerturbation) ||
-	     anInfo.Param().ProcessingType().Type() != kUnknownProcessingType || anInfo.Time().Step().Minutes() % 60 != 0))
-	{
-		itsLogger.Trace("File type forced to GRIB2 (level value: " + to_string(anInfo.Level().Value()) +
-		                ", forecast type: " + HPForecastTypeToString.at(forecastType) +
-		                ", processing type: " + HPProcessingTypeToString.at(anInfo.Param().ProcessingType().Type()) +
-		                " step: " + static_cast<string>(anInfo.Time().Step()) + ")");
-		edition = 2;
-		finfo.file_type = kGRIB2;
-
-		if (itsWriteOptions.configuration->FileCompression() == kNoCompression &&
-		    itsWriteOptions.configuration->WriteMode() != kAllGridsToAFile)
-		{
-			finfo.file_location += "2";
-		}
-
-		if (itsWriteOptions.configuration->FileCompression() == kGZIP)
-		{
-			finfo.file_location.insert(finfo.file_location.end() - 3, '2');
-		}
-		else if (itsWriteOptions.configuration->FileCompression() == kBZIP2)
-		{
-			finfo.file_location.insert(finfo.file_location.end() - 4, '2');
-		}
-		else if (itsWriteOptions.configuration->FileCompression() != kNoCompression)
-		{
-			itsLogger.Error("Unable to write to compressed grib. Unknown file compression: " +
-			                HPFileCompressionToString.at(itsWriteOptions.configuration->FileCompression()));
-			throw kInvalidWriteOptions;
-		}
 	}
 
 	itsGrib->Message().Edition(edition);
@@ -1126,33 +1210,13 @@ himan::file_information grib::CreateGribMessage(info<T>& anInfo)
 		itsGrib->Message().Process(anInfo.Producer().Process());
 	}
 
-	// Forecast type
-
-	// Note: forecast type is also checked in WriteParameter(), because
-	// it might affect productDefinitionTemplateNumber (grib2)
-
-	itsGrib->Message().ForecastType(anInfo.ForecastType().Type());
-
-	if (static_cast<int>(anInfo.ForecastType().Type()) > 2)
-	{
-		itsGrib->Message().ForecastTypeValue(static_cast<long>(anInfo.ForecastType().Value()));
-		auto r = GET_PLUGIN(radon);
-
-		try
-		{
-			const long ensembleSize = stol(r->RadonDB().GetProducerMetaData(anInfo.Producer().Id(), "ensemble size"));
-			itsGrib->Message().SetLongKey("numberOfForecastsInEnsemble", ensembleSize);
-		}
-		catch (const invalid_argument& e)
-		{
-			itsLogger.Warning("Unable to get valid ensemble size information from radon for producer " +
-			                  to_string(anInfo.Producer().Id()));
-		}
-	}
-
 	// Parameter
 
 	WriteParameter(anInfo.Param(), anInfo.Producer(), anInfo.ForecastType());
+
+	// Forecast type
+
+	WriteForecastType(DetermineCorrectForecastType(anInfo.ForecastType(), anInfo.Param()), anInfo.Producer());
 
 	// Area and Grid
 
@@ -1182,12 +1246,10 @@ himan::file_information grib::CreateGribMessage(info<T>& anInfo)
 	 *	1	0		Direction increments not given
 	 *	1	1		Direction increments given
 	 *	2	0		Earth assumed spherical with radius = 6367.47 km
-	 *	2	1		Earth assumed oblate spheroid with size as determined by IAU in 1965: 6378.160 km, 6356.775 km, f =
-	 *1/297.0
-	 *	3-4	0		reserved (set to 0)
-	 *	5	0		u- and v-components of vector quantities resolved relative to easterly and northerly directions
-	 * 	5	1		u and v components of vector quantities resolved relative to the defined grid in the direction of
-	 *increasing x and y (or i and j) coordinates respectively
+	 *	2	1		Earth assumed oblate spheroid with size as determined by IAU in 1965: 6378.160 km, 6356.775 km,
+	 *f = 1/297.0 3-4	0		reserved (set to 0) 5	0		u- and v-components of vector quantities resolved
+	 *relative to easterly and northerly directions 5	1		u and v components of vector quantities resolved
+	 *relative to the defined grid in the direction of increasing x and y (or i and j) coordinates respectively
 	 *	6-8	0		reserved (set to 0)
 	 *
 	 *	GRIB2
@@ -1445,8 +1507,8 @@ himan::earth_shape<double> ReadEarthShape(const NFmiGribMessage& msg)
 				break;
 			}
 			case 4:
-				// Earth assumed oblate spheroid as defined in IAG-GRS80 model (major axis = 6,378,137.0 m, minor axis =
-				// 6,356,752.314 m, f = 1/298.257222101)
+				// Earth assumed oblate spheroid as defined in IAG-GRS80 model (major axis = 6,378,137.0 m, minor
+				// axis = 6,356,752.314 m, f = 1/298.257222101)
 				a = 6378137;
 				b = 6356752.314;
 				break;
@@ -1477,8 +1539,8 @@ himan::earth_shape<double> ReadEarthShape(const NFmiGribMessage& msg)
 				a = b = 6371200;
 				break;
 			case 9:
-				//  Earth represented by the Ordnance Survey Great Britain 1936 Datum, using the Airy 1830 Spheroid, the
-				//  Greenwich meridian as 0 longitude, and the Newlyn datum as mean sea level, 0 height
+				//  Earth represented by the Ordnance Survey Great Britain 1936 Datum, using the Airy 1830 Spheroid,
+				//  the Greenwich meridian as 0 longitude, and the Newlyn datum as mean sea level, 0 height
 				a = 6377563.396;
 				b = 6356256.909;
 				break;
@@ -2078,44 +2140,67 @@ himan::producer grib::ReadProducer(const search_options& options) const
 	{
 		// Do a double check and fetch the fmi producer id from database.
 
-		long typeId = 1;  // deterministic forecast, default
-		long msgType = itsGrib->Message().ForecastType();
-
-		if (msgType == 2)
-		{
-			typeId = 2;  // ANALYSIS
-		}
-		else if (msgType == 3 || msgType == 4)
-		{
-			typeId = 3;  // ENSEMBLE
-		}
-
 		auto r = GET_PLUGIN(radon);
 
-		auto prodInfo = r->RadonDB().GetProducerFromGrib(centre, process, typeId);
+		if (centre == 98)
+		{
+			// legacy: for ECMWF must still separate between different produces
+			// based on forecast type
+			// future goal: forecast type is not a producer property
+			long typeId = 1;  // deterministic forecast, default
+			long msgType = itsGrib->Message().ForecastType();
 
-		if (!prodInfo.empty())
-		{
-			prod.Id(stoi(prodInfo["id"]));
-		}
-		else
-		{
-			if (centre == 98 && (process <= 149 && process >= 142))
+			if (msgType == 2)
 			{
-				if (typeId == 1 || typeId == 2)
-				{
-					prod.Id(131);
-				}
-				else if (typeId == 3)
-				{
-					prod.Id(134);
-				}
+				typeId = 2;  // ANALYSIS
+			}
+			else if (msgType == 3 || msgType == 4)
+			{
+				typeId = 3;  // ENSEMBLE
+			}
 
+			auto prodInfo = r->RadonDB().GetProducerFromGrib(centre, process, typeId);
+
+			if (!prodInfo.empty())
+			{
+				prod.Id(stoi(prodInfo["id"]));
 				return prod;
 			}
 
-			itsLogger.Warning("Producer information not found from database for centre " + to_string(centre) +
-			                  ", process " + to_string(process) + " type " + to_string(typeId));
+			if (process <= 149 && process >= 142)
+			{
+				if (itsGrib->Message().ForecastType() <= 2)
+				{
+					prod.Id(131);
+				}
+				else if (itsGrib->Message().ForecastType() >= 3)
+				{
+					prod.Id(134);
+				}
+			}
+			else
+			{
+				itsLogger.Warning("Producer information not found from database for centre " + to_string(centre) +
+				                  ", process " + to_string(process));
+			}
+		}
+		else
+		{
+			auto prodInfo = r->RadonDB().GetProducerFromGrib(centre, process);
+			if (prodInfo.empty())
+			{
+				itsLogger.Warning("Producer information not found from database for centre " + to_string(centre) +
+				                  ", process " + to_string(process));
+			}
+			else if (prodInfo.size() >= 1)
+			{
+				prod.Id(stoi(prodInfo[0]["id"]));
+				if (prodInfo.size() > 1)
+				{
+					itsLogger.Warning("More than producer definition found from radon for centre " + to_string(centre) +
+					                  ", process " + to_string(process) + ", selecting first one=" + prodInfo[0]["Id"]);
+				}
+			}
 		}
 	}
 
