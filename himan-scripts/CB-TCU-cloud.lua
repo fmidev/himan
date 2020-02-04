@@ -10,7 +10,7 @@ local MU = level(HPLevelType.kMaximumThetaE,0)
 local HL = level(HPLevelType.kHeightLayer,500,0)
 local HG = level(HPLevelType.kHeight,0)
 
-EL500 = luatool:FetchWithType(current_time, HL, param("EL-HPA"), current_forecast_type)
+EL500 = luatool:FetchWithType(current_time, HL, param("EL-LAST-HPA"), current_forecast_type)
 LCL500 = luatool:FetchWithType(current_time, HL, param("LCL-HPA"), current_forecast_type)
 LFC500 = luatool:FetchWithType(current_time, HL, param("LFC-HPA"), current_forecast_type)
 CAPE500 = luatool:FetchWithType(current_time, HL, param("CAPE-JKG"), current_forecast_type)
@@ -18,7 +18,7 @@ CIN500 = luatool:FetchWithType(current_time, HL, param("CIN-JKG"), current_forec
 
 LCLmu = luatool:FetchWithType(current_time, MU, param("LCL-HPA"), current_forecast_type)
 LFCmu = luatool:FetchWithType(current_time, MU, param("LFC-HPA"), current_forecast_type)
-ELmu = luatool:FetchWithType(current_time, MU, param("EL-HPA"), current_forecast_type)
+ELmu = luatool:FetchWithType(current_time, MU, param("EL-LAST-HPA"), current_forecast_type)
 CINmu = luatool:FetchWithType(current_time, MU, param("CIN-JKG"), current_forecast_type)
 CAPEmu = luatool:FetchWithType(current_time, MU, param("CAPE-JKG"), current_forecast_type)
 
@@ -42,9 +42,10 @@ end
 
 RR = luatool:FetchWithType(current_time, HG, param("RRR-KGM2"), current_forecast_type)
 
-CBlimit = 9  --required vertical thickness [degrees C] to consider a CB (tweak this..!)
-TCUlimit = 6  --required vertical thickness [degrees C] to consider a TCU (tweak this..!)
-CBtopLim = 263.15 --required top T [K] to consider a CB (tweakable!)
+CBlimit = 12  --required vertical thickness [degrees C] to consider a CB (tweak this..!)
+TCUlimit = 9  --required vertical thickness [degrees C] to consider a TCU (tweak this..!)
+CBtopLim = 263.15  --required top T [K] to consider a CB (tweakable!)
+CINlimTCU = -1  --CIN limit for TCu
 
 --Max height [FL] to check for top
 TopLim = 650
@@ -61,7 +62,7 @@ for i=1, #EL500 do
   res[i] = Missing
 
   --TCU
-  if ((Tbase[i]-Ttop[i]>TCUlimit) and (NL[i]>0) and (CIN500[i]>-1)) then
+  if ((Tbase[i]-Ttop[i]>TCUlimit) and (NL[i]>0) and (CIN500[i]>CINlimTCU)) then
     res[i] = FlightLevel_(EL500[i]*100)
     --Limit top value
     if (res[i] <= TopLim) then
@@ -88,7 +89,7 @@ for i=1, #EL500 do
   --If no TOP from above, check also with MU values, for elev. conv. only from blw 3,5km
   if ( IsMissing(res[i]) and (LFCmu[i]<LCL500[i]) and (LFCmu[i]>650)) then
     -- TCU
-    if ((TbaseMU[i]-TtopMU[i]>TCUlimit) and ((NL[i]>0) or (NM[i]>0)) and (CINmu[i]>-1)) then
+    if ((TbaseMU[i]-TtopMU[i]>TCUlimit) and ((NL[i]>0) or (NM[i]>0)) and (CINmu[i]>CINlimTCU)) then
       res[i] =  FlightLevel_(ELmu[i]*100)
       --Limit top value
       if (res[i] <= TopLim) then
