@@ -145,6 +145,12 @@ vector<std::string> radon::CSV(search_options& options)
 	}
 
 	const string period = util::MakeSQLInterval(options.time);
+	string forecastTypeValue = "-1";  // default, deterministic/analysis
+
+	if (options.ftype.Type() >= 3 && options.ftype.Type() <= 4)
+	{
+		forecastTypeValue = boost::lexical_cast<string>(options.ftype.Value());
+	}
 
 	query.str("");
 
@@ -165,7 +171,7 @@ vector<std::string> radon::CSV(search_options& options)
 	      << "AND (t.level_value2 = " << options.level.Value2() << " OR t.level_value2 = -1) "
 	      << "AND t.forecast_period = '" << period << "' "
 	      << "AND t.forecast_type_id = " << options.ftype.Type() << " "
-	      << "AND t.forecast_type_value = " << options.ftype.Value() << " "
+	      << "AND t.forecast_type_value = " << forecastTypeValue << " "
 	      << "AND t.station_id IN (";
 
 	const point_list* list = dynamic_cast<const point_list*>(options.configuration->BaseGrid());
@@ -261,7 +267,7 @@ string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<v
 
 	string forecastTypeValue = "-1";  // default, deterministic/analysis
 
-	if (options.ftype.Type() > 2)
+	if (options.ftype.Type() >= 3 && options.ftype.Type() <= 4)
 	{
 		forecastTypeValue = boost::lexical_cast<string>(options.ftype.Value());
 	}
@@ -505,7 +511,7 @@ bool radon::SavePrevi(const info<T>& resultInfo)
 
 	int forecastTypeValue = -1;  // default, deterministic/analysis
 
-	if (resultInfo.ForecastType().Type() > 2)
+	if (resultInfo.ForecastType().Type() >= 3 && resultInfo.ForecastType().Type() <= 4)
 	{
 		forecastTypeValue = static_cast<int>(resultInfo.ForecastType().Value());
 	}
@@ -710,7 +716,7 @@ bool radon::SaveGrid(const info<T>& resultInfo, const file_information& finfo, c
 	// itsRadonDB->Verbose(false);
 	int forecastTypeValue = -1;  // default, deterministic/analysis
 
-	if (resultInfo.ForecastType().Type() > 2)
+	if (resultInfo.ForecastType().Type() >= 3 && resultInfo.ForecastType().Type() <= 4)
 	{
 		forecastTypeValue = static_cast<int>(resultInfo.ForecastType().Value());
 	}
