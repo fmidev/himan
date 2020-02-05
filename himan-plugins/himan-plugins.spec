@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.1.29
+Version: 20.2.5
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -120,6 +120,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Feb  5 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.2.5-1.fmi
+- Minor fix to radon plugin
 * Wed Jan 29 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.1.29-1.fmi
 - Support forecast type "statistical processing"
 * Tue Jan 28 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.1.28-1.fmi
