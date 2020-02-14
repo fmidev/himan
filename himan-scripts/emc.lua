@@ -19,9 +19,9 @@ logger:Info(msg)
 
 for key, value in pairs(params) do
   ens = nil
-  -- For MEPS and GLAMEPS we use lagged ensemble (with different lag)
-  if currentProducerName == "GLAMEPSCAL" or currentProducerName == "MEPS" then
-    ens = lagged_ensemble(param(key), ensemble_size, time_duration(HPTimeResolution.kHourResolution, -6), 2)
+  -- For MEPS we use lagged ensemble
+  if currentProducerName == "MEPS" then
+    ens = lagged_ensemble(param(key), ensemble_size, time_duration(HPTimeResolution.kHourResolution, -1), 6)
   else
     ens = ensemble(param(key), ensemble_size)
   end
