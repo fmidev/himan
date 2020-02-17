@@ -2184,6 +2184,11 @@ himan::producer grib::ReadProducer(const search_options& options) const
 				                  ", process " + to_string(process));
 			}
 		}
+		else if (centre == 251 && process == 40)
+		{
+			// support old (40) and new (0) number for MEPS
+			prod.Id(4);
+		}
 		else
 		{
 			auto prodInfo = r->RadonDB().GetProducerFromGrib(centre, process);
