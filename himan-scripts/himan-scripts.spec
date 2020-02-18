@@ -4,7 +4,7 @@
 Summary: himan-scripts collection
 Name: %{LIBNAME}
 Version: 20.2.18
-Release: 1%{dist}.fmi
+Release: 2%{dist}.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -39,6 +39,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/himan-scripts/*.lua
 
 %changelog
+* Tue Feb 18 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.2.18-2.fmi
+- Fix to LVP.lua
 * Tue Feb 18 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.2.18-1.fmi
 - Updates to emc.lua and cloutype.lua
 * Tue Feb  4 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.2.4-1.fmi
