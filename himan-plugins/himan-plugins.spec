@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.2.5
+Version: 20.2.19
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -120,6 +120,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Feb 19 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.2.19-1.fmi
+- Attempting to speed up writing to one big grib file
 * Wed Feb  5 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.2.5-1.fmi
 - Minor fix to radon plugin
 * Wed Jan 29 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.1.29-1.fmi
