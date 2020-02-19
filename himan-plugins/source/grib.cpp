@@ -1332,7 +1332,6 @@ void grib::DetermineMessageNumber(file_information& finfo)
 
 	try
 	{
-		offsets.at(finfo.file_location) = offsets.at(finfo.file_location) + finfo.length.get();
 		messages.at(finfo.file_location) = messages.at(finfo.file_location) + 1;
 	}
 	catch (const out_of_range& e)
@@ -1356,6 +1355,8 @@ void grib::DetermineMessageNumber(file_information& finfo)
 
 	finfo.offset = offsets.at(finfo.file_location);
 	finfo.message_no = messages.at(finfo.file_location);
+
+	offsets.at(finfo.file_location) = offsets.at(finfo.file_location) + finfo.length.get();
 }
 
 void grib::WriteMessageToFile(const file_information& finfo)
