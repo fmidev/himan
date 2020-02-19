@@ -29,7 +29,8 @@ using namespace himan::plugin;
 std::string GetParamNameFromGribShortName(const std::string& paramFileName, const std::string& shortName);
 
 const double gribMissing = 32700.;
-static mutex serializedWriteMutex;
+static mutex singleGribMessageCounterMutex;
+static map<string, std::mutex> singleGribMessageCounterMap;
 
 long DetermineProductDefinitionTemplateNumber(long agg, long proc, long ftype)
 {
@@ -1316,48 +1317,44 @@ void grib::DetermineMessageNumber(file_information& finfo)
 	}
 
 	// appending to a file is a serial operation -- two threads cannot
-	// append to a single file simultaneously. therefore offset is just
+	// do it to a single file simultaneously. therefore offset is just
 	// the size of the file so far.
-
-	try
-	{
-		finfo.offset = boost::filesystem::file_size(finfo.file_location);
-	}
-	catch (const boost::filesystem::filesystem_error& e)
-	{
-		finfo.offset = 0;
-	}
+	// because we don't want to actually fetch the file size every time
+	// (too slow), store the size in a variable
 
 	// handling message number is a bit tricker. fmigrib library cannot really
-	// be used for tracking message no of written messages, because neither it
-	// nor eccodes has any visibility to any ossibly existing messages in a file
-	// that is appended to. therefore here we are tracking the message count per
-	// file
+	// be used for tracking message number of written messages, because neither it
+	// nor eccodes has any visibility to any possibly existing messages in a file
+	// that is being appended to. therefore here we are tracking the message count
+	// per file
 
-	static std::map<std::string, unsigned long> messages;
+	static std::map<std::string, unsigned long> offsets, messages;
 
 	try
 	{
+		offsets.at(finfo.file_location) = offsets.at(finfo.file_location) + finfo.length.get();
 		messages.at(finfo.file_location) = messages.at(finfo.file_location) + 1;
 	}
 	catch (const out_of_range& e)
 	{
-		if (finfo.offset.get() == 0)
+		if (boost::filesystem::exists(finfo.file_location) == false)
 		{
-			// offset is zero --> file does not exist yet --> start counting from msg 0
+			// file does not exist yet --> start counting from msg 0
+			offsets[finfo.file_location] = 0;
 			messages[finfo.file_location] = 0;
 		}
 		else
 		{
 			// file existed before Himan started --> count the messages from
 			// the existing files and start numbering from there
-
 			NFmiGrib rdr;
 			rdr.Open(finfo.file_location);
 			messages[finfo.file_location] = rdr.MessageCount();
+			offsets[finfo.file_location] = boost::filesystem::file_size(finfo.file_location);
 		}
 	}
 
+	finfo.offset = offsets.at(finfo.file_location);
 	finfo.message_no = messages.at(finfo.file_location);
 }
 
@@ -1431,7 +1428,19 @@ himan::file_information grib::ToFile(info<T>& anInfo)
 
 	if (itsWriteOptions.configuration->WriteMode() != kSingleGridToAFile)
 	{
-		lock_guard<mutex> lock(serializedWriteMutex);
+		pair<map<string, std::mutex>::iterator, bool> muret;
+
+		// Acquire mutex to (possibly) modify map containing "file name":"mutex" pairs
+		unique_lock<mutex> sflock(singleGribMessageCounterMutex);
+		// create or refer to a mutex for this specific file name
+		muret = singleGribMessageCounterMap.emplace(piecewise_construct, forward_as_tuple(finfo.file_location),
+		                                            forward_as_tuple());
+		// allow other threads to modify the map so as not to block threads writing
+		// to other files
+		sflock.unlock();
+		// lock the mutex for this file name
+		lock_guard<mutex> uniqueLock(muret.first->second);
+
 		DetermineMessageNumber(finfo);
 		WriteMessageToFile(finfo);
 	}
