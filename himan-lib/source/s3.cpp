@@ -1,13 +1,13 @@
-#ifdef HAVE_S3
 #include "s3.h"
+using namespace himan;
+
+#ifdef HAVE_S3
 #include "debug.h"
 #include "util.h"
 #include <iostream>
 #include <libs3.h>
 #include <mutex>
 #include <string.h>  // memcpy
-
-using namespace himan;
 
 static std::once_flag oflag;
 
@@ -214,7 +214,7 @@ static int putObjectDataCallback(int bufferSize, char* buffer, void* callbackDat
 	return bytesWritten;
 }
 
-void s3::WriteObject(const std::string& objectName, const himan::buffer& buff)
+void s3::WriteObject(const std::string& objectName, const buffer& buff)
 {
 	Initialize();
 
@@ -296,7 +296,7 @@ buffer s3::ReadFile(const file_information& fileInformation)
 {
 	throw std::runtime_error("S3 support not compiled");
 }
-void s3::WriteObject()
+void s3::WriteObject(const std::string& objectName, const buffer& buff)
 {
 	throw std::runtime_error("S3 support not compiled");
 }
