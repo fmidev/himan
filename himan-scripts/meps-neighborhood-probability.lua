@@ -36,6 +36,9 @@ function produceProbabilities(sourceparam, targetparam, op, limit)
         elseif op == "==" then
           reduced = ProbLimitEq2D(data:GetData(), mask, limit):GetValues()
         end
+        for k,v in pairs(reduced) do
+          reduced[k] = math.ceil(v)
+        end
         datas[#datas+1] = reduced
       end
     end

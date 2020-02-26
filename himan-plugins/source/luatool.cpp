@@ -1066,13 +1066,7 @@ matrix<T> ProbLimitGt2D(const matrix<T>& A, const matrix<T>& B, T limit)
 		return numerical_functions::ProbLimitGt2DGPU<T>(A, B, limit);
 	}
 #endif
-	return numerical_functions::Reduce2D<T>(A, B,
-	                                        [=](T& val1, T& val2, const T& a, const T& b) {
-		                                        if (IsValid(a * b) && a * b > limit)
-			                                        val1 += T(1);
-	                                        },
-	                                        [](const T& val1, const T& val2) { return (val1 >= T(1)) ? T(1) : T(0); },
-	                                        T(0), T(0));
+	return numerical_functions::Prob2D<T>(A, B, [=](const T& val1) { return val1 > limit; });
 }
 
 template <typename T>
@@ -1081,16 +1075,10 @@ matrix<T> ProbLimitGe2D(const matrix<T>& A, const matrix<T>& B, T limit)
 #ifdef HAVE_CUDA
 	if (myUseCuda)
 	{
-		return numerical_functions::ProbLimitGt2DGPU<T>(A, B, limit);
+		return numerical_functions::ProbLimitGe2DGPU<T>(A, B, limit);
 	}
 #endif
-	return numerical_functions::Reduce2D<T>(A, B,
-	                                        [=](T& val1, T& val2, const T& a, const T& b) {
-		                                        if (IsValid(a * b) && a * b >= limit)
-			                                        val1 += T(1);
-	                                        },
-	                                        [](const T& val1, const T& val2) { return (val1 >= T(1)) ? T(1) : T(0); },
-	                                        T(0), T(0));
+	return numerical_functions::Prob2D<T>(A, B, [=](const T& val) { return val >= limit; });
 }
 
 template <typename T>
@@ -1099,16 +1087,10 @@ matrix<T> ProbLimitLt2D(const matrix<T>& A, const matrix<T>& B, T limit)
 #ifdef HAVE_CUDA
 	if (myUseCuda)
 	{
-		return numerical_functions::ProbLimitGt2DGPU<T>(A, B, limit);
+		return numerical_functions::ProbLimitLt2DGPU<T>(A, B, limit);
 	}
 #endif
-	return numerical_functions::Reduce2D<T>(A, B,
-	                                        [=](T& val1, T& val2, const T& a, const T& b) {
-		                                        if (IsValid(a * b) && a * b < limit)
-			                                        val1 += T(1);
-	                                        },
-	                                        [](const T& val1, const T& val2) { return (val1 >= T(1)) ? T(1) : T(0); },
-	                                        T(0), T(0));
+	return numerical_functions::Prob2D<T>(A, B, [=](const T& val) { return val < limit; });
 }
 
 template <typename T>
@@ -1117,16 +1099,10 @@ matrix<T> ProbLimitLe2D(const matrix<T>& A, const matrix<T>& B, T limit)
 #ifdef HAVE_CUDA
 	if (myUseCuda)
 	{
-		return numerical_functions::ProbLimitGt2DGPU<T>(A, B, limit);
+		return numerical_functions::ProbLimitLe2DGPU<T>(A, B, limit);
 	}
 #endif
-	return numerical_functions::Reduce2D<T>(A, B,
-	                                        [=](T& val1, T& val2, const T& a, const T& b) {
-		                                        if (IsValid(a * b) && a * b <= limit)
-			                                        val1 += T(1);
-	                                        },
-	                                        [](const T& val1, const T& val2) { return (val1 >= T(1)) ? T(1) : T(0); },
-	                                        T(0), T(0));
+	return numerical_functions::Prob2D<T>(A, B, [=](const T& val) { return val <= limit; });
 }
 
 template <typename T>
@@ -1138,13 +1114,7 @@ matrix<T> ProbLimitEq2D(const matrix<T>& A, const matrix<T>& B, T limit)
 		return numerical_functions::ProbLimitEq2DGPU<T>(A, B, limit);
 	}
 #endif
-	return numerical_functions::Reduce2D<T>(A, B,
-	                                        [=](T& val1, T& val2, const T& a, const T& b) {
-		                                        if (IsValid(a * b) && a * b == limit)
-			                                        val1 += T(1);
-	                                        },
-	                                        [](const T& val1, const T& val2) { return (val1 >= T(1)) ? T(1) : T(0); },
-	                                        T(0), T(0));
+	return numerical_functions::Prob2D<T>(A, B, [=](const T& val) { return val == limit; });
 }
 }
 

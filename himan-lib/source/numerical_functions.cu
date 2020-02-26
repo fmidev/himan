@@ -7,6 +7,9 @@ using namespace numerical_functions;
 
 #ifdef HAVE_CUDA
 
+// GPU functions have definitions in this file because they have to compiled with nvcc
+// and the direct header implementation cannot be visible to gcc
+
 template <typename T>
 matrix<T> numerical_functions::Filter2DGPU(const matrix<T>& A, const matrix<T>& B)
 {
@@ -57,28 +60,43 @@ template matrix<float> numerical_functions::Min2DGPU(const matrix<float>&, const
 template <typename T>
 matrix<T> numerical_functions::ProbLimitGt2DGPU(const matrix<T>& A, const matrix<T>& B, T limit)
 {
-	return Reduce2DGPU<T>(A, B,
-	                      [=] __device__(T & val1, T & val2, const T& a, const T& b) {
-		                      if (IsValid(a * b) && a * b > limit)
-			                      val1 += T(1);
-	                      },
-	                      [] __device__(const T& val1, const T& val2) { return (val1 >= 1) ? T(1) : T(0); }, T(0),
-	                      T(0));
+	return Prob2DGPU<T>(A, B, [=] __device__(const T& val) { return val > limit; });
 }
 
 template matrix<double> numerical_functions::ProbLimitGt2DGPU(const matrix<double>&, const matrix<double>&, double);
 template matrix<float> numerical_functions::ProbLimitGt2DGPU(const matrix<float>&, const matrix<float>&, float);
 
 template <typename T>
+matrix<T> numerical_functions::ProbLimitGe2DGPU(const matrix<T>& A, const matrix<T>& B, T limit)
+{
+	return Prob2DGPU<T>(A, B, [=] __device__(const T& val) { return val >= limit; });
+}
+
+template matrix<double> numerical_functions::ProbLimitGe2DGPU(const matrix<double>&, const matrix<double>&, double);
+template matrix<float> numerical_functions::ProbLimitGe2DGPU(const matrix<float>&, const matrix<float>&, float);
+
+template <typename T>
+matrix<T> numerical_functions::ProbLimitLt2DGPU(const matrix<T>& A, const matrix<T>& B, T limit)
+{
+	return Prob2DGPU<T>(A, B, [=] __device__(const T& val) { return val < limit; });
+}
+
+template matrix<double> numerical_functions::ProbLimitLt2DGPU(const matrix<double>&, const matrix<double>&, double);
+template matrix<float> numerical_functions::ProbLimitLt2DGPU(const matrix<float>&, const matrix<float>&, float);
+
+template <typename T>
+matrix<T> numerical_functions::ProbLimitLe2DGPU(const matrix<T>& A, const matrix<T>& B, T limit)
+{
+	return Prob2DGPU<T>(A, B, [=] __device__(const T& val) { return val <= limit; });
+}
+
+template matrix<double> numerical_functions::ProbLimitLe2DGPU(const matrix<double>&, const matrix<double>&, double);
+template matrix<float> numerical_functions::ProbLimitLe2DGPU(const matrix<float>&, const matrix<float>&, float);
+
+template <typename T>
 matrix<T> numerical_functions::ProbLimitEq2DGPU(const matrix<T>& A, const matrix<T>& B, T limit)
 {
-	return Reduce2DGPU<T>(A, B,
-	                      [=] __device__(T & val1, T & val2, const T& a, const T& b) {
-		                      if (IsValid(a * b) && a * b == limit)
-			                      val1 += T(1);
-	                      },
-	                      [] __device__(const T& val1, const T& val2) { return (val1 >= 1) ? T(1) : T(0); }, T(0),
-	                      T(0));
+	return Prob2DGPU<T>(A, B, [=] __device__(const T& val) { return val == limit; });
 }
 
 template matrix<double> numerical_functions::ProbLimitEq2DGPU(const matrix<double>&, const matrix<double>&, double);
