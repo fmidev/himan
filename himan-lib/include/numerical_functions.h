@@ -144,6 +144,9 @@ himan::matrix<T> Max2DGPU(const matrix<T>& A, const matrix<T>& B);
 template <typename T>
 himan::matrix<T> Min2DGPU(const matrix<T>& A, const matrix<T>& B);
 
+template <typename T, class F>
+himan::matrix<T> Prob2DGPU(const himan::matrix<T>& A, const himan::matrix<T>& B, F&& f);
+
 template <typename T>
 himan::matrix<T> ProbLimitGt2DGPU(const matrix<T>& A, const matrix<T>& B, T limit);
 

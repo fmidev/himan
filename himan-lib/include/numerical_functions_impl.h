@@ -500,6 +500,22 @@ himan::matrix<T> Reduce2DGPU(const himan::matrix<T>& A, const himan::matrix<T>& 
 	return C;
 }
 
+template <typename T, class F>
+himan::matrix<T> Prob2DGPU(const himan::matrix<T>& A, const himan::matrix<T>& B, F&& f)
+{
+	return Reduce2DGPU(
+	    A, B,
+	    [=] __device__(T & val1, T & val2, const T& a, const T& b) {
+		    if (IsValid(a * b))
+		    {
+			    val1 += f(a) ? b : T(0);
+			    val2 += b;
+		    }
+	    },
+	    [=] __device__(const T& val1, const T& val2) { return val2 == T(0) ? MissingValue<T>() : val1 / val2; }, T(0),
+	    T(0));
+}
+
 #endif
 
 }  // namespace numerical_functions
