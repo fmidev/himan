@@ -1081,7 +1081,7 @@ matrix<T> ProbLimitGe2D(const matrix<T>& A, const matrix<T>& B, T limit)
 #ifdef HAVE_CUDA
 	if (myUseCuda)
 	{
-		return numerical_functions::ProbLimitGt2DGPU<T>(A, B, limit);
+		return numerical_functions::ProbLimitGe2DGPU<T>(A, B, limit);
 	}
 #endif
 	return numerical_functions::Reduce2D<T>(A, B,
@@ -1099,7 +1099,7 @@ matrix<T> ProbLimitLt2D(const matrix<T>& A, const matrix<T>& B, T limit)
 #ifdef HAVE_CUDA
 	if (myUseCuda)
 	{
-		return numerical_functions::ProbLimitGt2DGPU<T>(A, B, limit);
+		return numerical_functions::ProbLimitLt2DGPU<T>(A, B, limit);
 	}
 #endif
 	return numerical_functions::Reduce2D<T>(A, B,
@@ -1117,7 +1117,7 @@ matrix<T> ProbLimitLe2D(const matrix<T>& A, const matrix<T>& B, T limit)
 #ifdef HAVE_CUDA
 	if (myUseCuda)
 	{
-		return numerical_functions::ProbLimitGt2DGPU<T>(A, B, limit);
+		return numerical_functions::ProbLimitLe2DGPU<T>(A, B, limit);
 	}
 #endif
 	return numerical_functions::Reduce2D<T>(A, B,

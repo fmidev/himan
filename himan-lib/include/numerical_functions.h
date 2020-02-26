@@ -148,6 +148,15 @@ template <typename T>
 himan::matrix<T> ProbLimitGt2DGPU(const matrix<T>& A, const matrix<T>& B, T limit);
 
 template <typename T>
+himan::matrix<T> ProbLimitGe2DGPU(const matrix<T>& A, const matrix<T>& B, T limit);
+
+template <typename T>
+himan::matrix<T> ProbLimitLt2DGPU(const matrix<T>& A, const matrix<T>& B, T limit);
+
+template <typename T>
+himan::matrix<T> ProbLimitLe2DGPU(const matrix<T>& A, const matrix<T>& B, T limit);
+
+template <typename T>
 himan::matrix<T> ProbLimitEq2DGPU(const matrix<T>& A, const matrix<T>& B, T limit);
 
 template <typename T, class F, class G>
