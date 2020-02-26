@@ -3,8 +3,8 @@
 %define LIBNAME himan-scripts
 Summary: himan-scripts collection
 Name: %{LIBNAME}
-Version: 20.2.18
-Release: 2%{dist}.fmi
+Version: 20.2.26
+Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -12,8 +12,8 @@ Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: lua >= 5.1.4
-Requires: himan-plugins >= 20.1.29
-Requires: himan-lib >= 20.1.29
+Requires: himan-plugins >= 20.2.26
+Requires: himan-lib >= 20.2.26
 
 %define debug_package %{nil}
 
@@ -39,6 +39,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/himan-scripts/*.lua
 
 %changelog
+* Wed Feb 26 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.2.26-1.fmi
+- Fixes to probability filters
 * Tue Feb 18 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.2.18-2.fmi
 - Fix to LVP.lua
 * Tue Feb 18 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.2.18-1.fmi
