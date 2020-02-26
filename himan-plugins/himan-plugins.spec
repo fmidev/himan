@@ -4,7 +4,7 @@
 Summary: himan-plugins library
 Name: %{LIBNAME}
 Version: 20.2.19
-Release: 1%{dist}.fmi
+Release: 2%{dist}.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -120,6 +120,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Feb 19 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.2.19-2.fmi
+- New release
 * Wed Feb 19 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.2.19-1.fmi
 - Attempting to speed up writing to one big grib file
 * Wed Feb  5 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.2.5-1.fmi
