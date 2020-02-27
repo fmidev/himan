@@ -36,8 +36,11 @@ function produceProbabilities(sourceparam, targetparam, op, limit)
         elseif op == "==" then
           reduced = ProbLimitEq2D(data:GetData(), mask, limit):GetValues()
         end
+        mvals = 0
         for k,v in pairs(reduced) do
-          reduced[k] = math.ceil(v)
+          if v == v then
+            reduced[k] = math.ceil(v)
+          end
         end
         datas[#datas+1] = reduced
       end
@@ -58,12 +61,17 @@ function produceProbabilities(sourceparam, targetparam, op, limit)
     prob[i] = MISS
 
     local tmp = 0
+    local cnt = 0
 
     for j=1,#datas do
-      tmp = tmp + datas[j][i]
+      local v = datas[j][i]
+      if v == v then
+        tmp = tmp + datas[j][i]
+        cnt = cnt + 1
+      end
     end
 
-    prob[i] = tmp / (#datas)
+    prob[i] = tmp / cnt
   end
 
   proctype = nil
