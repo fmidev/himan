@@ -3,7 +3,7 @@
 %define LIBNAME himan-scripts
 Summary: himan-scripts collection
 Name: %{LIBNAME}
-Version: 20.2.26
+Version: 20.2.27
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -39,6 +39,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/himan-scripts/*.lua
 
 %changelog
+* Wed Feb 26 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.2.27-1.fmi
+- Skip missing values in neighborhood probabilites
 * Wed Feb 26 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.2.26-1.fmi
 - Fixes to probability filters
 * Tue Feb 18 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.2.18-2.fmi
