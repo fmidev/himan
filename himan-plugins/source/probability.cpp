@@ -366,8 +366,7 @@ void probability::Calculate(std::shared_ptr<info<float>> myTargetInfo, unsigned 
 			threadedLogger.Info("Using lagged ensemble");
 			if (itsNamedEnsemble.empty() == false)
 			{
-				ens = std::unique_ptr<ensemble>(
-				    new lagged_ensemble(lagged_ensemble::CreateNamedEnsemble(itsNamedEnsemble, pc.parameter)));
+				ens = std::unique_ptr<ensemble>(new lagged_ensemble(pc.parameter, itsNamedEnsemble));
 			}
 			else
 			{

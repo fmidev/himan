@@ -12,8 +12,8 @@ if not ensSize then
   return
 end
 
-local ens1 = lagged_ensemble.CreateNamedEnsemble("MEPS_LAGGED_ENSEMBLE", param("VV2-M"))
-local ens2 = lagged_ensemble.CreateNamedEnsemble("MEPS_LAGGED_ENSEMBLE", param("CL-2-FT"))
+local ens1 = lagged_ensemble(param("VV2-M"), "MEPS_LAGGED_ENSEMBLE")
+local ens2 = lagged_ensemble(param("CL-2-FT"), "MEPS_LAGGED_ENSEMBLE")
 
 ens1:SetMaximumMissingForecasts(ensSize)
 ens2:SetMaximumMissingForecasts(ensSize)

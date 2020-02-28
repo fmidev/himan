@@ -1437,6 +1437,7 @@ void BindLib(lua_State* L)
 		      .def("GetForecast", &ensemble::Forecast),
 		  class_<himan::lagged_ensemble, ensemble, std::shared_ptr<himan::lagged_ensemble>>("lagged_ensemble")
 		      .def(constructor<param, size_t, const time_duration&, size_t>())
+		      .def(constructor<param, const std::string&>())
 		      .def("ClassName", &lagged_ensemble::ClassName)
 		      .def("Fetch", &lagged_ensemble::Fetch)
 		      .def("Value", &lagged_ensemble::Value)
@@ -1449,8 +1450,7 @@ void BindLib(lua_State* L)
 		      .def("ExpectedSize", &lagged_ensemble::ExpectedSize)
 		      .def("VerifyValidForecastCount", &lagged_ensemble::VerifyValidForecastCount)
 		      .def("SetMaximumMissingForecasts", LUA_MEMFN(void, lagged_ensemble, MaximumMissingForecasts, int))
-		      .def("GetMaximumMissingForecasts", LUA_CMEMFN(int, lagged_ensemble, MaximumMissingForecasts, void))
-		      .scope[def("CreateNamedEnsemble", &lagged_ensemble::CreateNamedEnsemble)],
+		      .def("GetMaximumMissingForecasts", LUA_CMEMFN(int, lagged_ensemble, MaximumMissingForecasts, void)),
 		  class_<modifier>("modifier")
 		      .def("Result", &modifier_wrapper::Result)
 		      .def("CalculationFinished", &modifier::CalculationFinished)

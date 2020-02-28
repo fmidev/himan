@@ -98,8 +98,7 @@ std::unique_ptr<ensemble> CreateEnsemble(const std::shared_ptr<const plugin_conf
 
 			if (name.empty() == false)
 			{
-				ens = std::unique_ptr<lagged_ensemble>(
-				    new lagged_ensemble(lagged_ensemble::CreateNamedEnsemble(name, param(paramName))));
+				ens = std::unique_ptr<lagged_ensemble>(new lagged_ensemble(param(paramName), name));
 			}
 
 			else
