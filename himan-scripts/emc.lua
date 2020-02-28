@@ -21,7 +21,7 @@ for key, value in pairs(params) do
   ens = nil
   -- For MEPS we use lagged ensemble
   if currentProducerName == "MEPS" then
-    ens = lagged_ensemble(param(key), ensemble_size, time_duration(HPTimeResolution.kHourResolution, -1), 6)
+    ens = lagged_ensemble.CreateNamedEnsemble("MEPS_LAGGED_ENSEMBLE", sourceparam)
   else
     ens = ensemble(param(key), ensemble_size)
   end

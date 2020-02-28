@@ -94,47 +94,57 @@ std::unique_ptr<ensemble> CreateEnsemble(const std::shared_ptr<const plugin_conf
 		break;
 		case kLaggedEnsemble:
 		{
-			auto lagstr = conf->GetValue("lag");
+			auto name = conf->GetValue("named_ensemble");
 
-			if (lagstr.empty())
+			if (name.empty() == false)
 			{
-				log.Fatal("specify lag value for lagged_ensemble");
-				himan::Abort();
+				ens = std::unique_ptr<lagged_ensemble>(
+				    new lagged_ensemble(lagged_ensemble::CreateNamedEnsemble(name, param(paramName))));
 			}
 
-			int lag = std::stoi(conf->GetValue("lag"));
-
-			if (lag == 0)
+			else
 			{
-				log.Fatal("lag value needs to be negative integer");
-				himan::Abort();
+				auto lagstr = conf->GetValue("lag");
+				if (lagstr.empty())
+				{
+					log.Fatal("specify lag value for lagged_ensemble");
+					himan::Abort();
+				}
+
+				int lag = std::stoi(conf->GetValue("lag"));
+
+				if (lag == 0)
+				{
+					log.Fatal("lag value needs to be negative integer");
+					himan::Abort();
+				}
+				else if (lag > 0)
+				{
+					log.Warning("negating lag value " + std::to_string(-lag));
+					lag = -lag;
+				}
+
+				auto stepsstr = conf->GetValue("lagged_steps");
+
+				if (stepsstr.empty())
+				{
+					log.Fatal("specify lagged_steps value for lagged_ensemble");
+					himan::Abort();
+				}
+
+				int steps = std::stoi(conf->GetValue("lagged_steps"));
+
+				if (steps <= 0)
+				{
+					log.Fatal("invalid lagged_steps value. Allowed range >= 0");
+					himan::Abort();
+				}
+
+				steps++;
+
+				ens = std::unique_ptr<lagged_ensemble>(
+				    new lagged_ensemble(param(paramName), ensSize, time_duration(kHourResolution, lag), steps));
 			}
-			else if (lag > 0)
-			{
-				log.Warning("negating lag value " + std::to_string(-lag));
-				lag = -lag;
-			}
-
-			auto stepsstr = conf->GetValue("lagged_steps");
-
-			if (stepsstr.empty())
-			{
-				log.Fatal("specify lagged_steps value for lagged_ensemble");
-				himan::Abort();
-			}
-
-			int steps = std::stoi(conf->GetValue("lagged_steps"));
-
-			if (steps <= 0)
-			{
-				log.Fatal("invalid lagged_steps value. Allowed range >= 0");
-				himan::Abort();
-			}
-
-			steps++;
-
-			ens = std::unique_ptr<lagged_ensemble>(
-			    new lagged_ensemble(param(paramName), ensSize, time_duration(kHourResolution, lag), steps));
 		}
 		break;
 		default:
