@@ -40,6 +40,7 @@ class probability : public compiled_plugin, private compiled_plugin_base
 	bool itsUseLaggedEnsemble;
 	time_duration itsLag;
 	time_duration itsLagStep;
+	std::string itsNamedEnsemble;
 };
 
 extern "C" std::shared_ptr<himan_plugin> create()

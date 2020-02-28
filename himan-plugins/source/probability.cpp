@@ -310,6 +310,12 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 		itsUseLaggedEnsemble = true;
 	}
 
+	if (itsConfiguration->Exists("named_ensemble"))
+	{
+		itsUseLaggedEnsemble = true;
+		itsNamedEnsemble = itsConfiguration->GetValue("named_ensemble");
+	}
+
 	//
 	// 2. Setup input and output parameters from the json configuration.
 	//    `calculatedParams' will hold the output parameter, it's inputs,
@@ -358,7 +364,14 @@ void probability::Calculate(std::shared_ptr<info<float>> myTargetInfo, unsigned 
 		if (itsUseLaggedEnsemble)
 		{
 			threadedLogger.Info("Using lagged ensemble");
-			ens = std::unique_ptr<ensemble>(new lagged_ensemble(pc.parameter, itsEnsembleSize, itsLag, itsLagStep));
+			if (itsNamedEnsemble.empty() == false)
+			{
+				ens = std::unique_ptr<ensemble>(new lagged_ensemble(pc.parameter, itsNamedEnsemble));
+			}
+			else
+			{
+				ens = std::unique_ptr<ensemble>(new lagged_ensemble(pc.parameter, itsEnsembleSize, itsLag, itsLagStep));
+			}
 		}
 		else
 		{
