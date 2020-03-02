@@ -43,7 +43,7 @@ void CalculateSnowDriftIndex(info_t& myTargetInfo, const std::vector<double>& T,
 		const auto t = tup.get<3>();    // temperature
 		const auto ff = tup.get<4>();   // wind speed
 		const auto ffg = tup.get<5>();  // wind gust speed
-		const auto sf = tup.get<6>();   // snow fall rate (mm/h)
+		const auto sf = tup.get<6>();   // snow fall rate (mm/h), water equivalent
 		const auto psa = tup.get<7>();  // previous accumulated snow cover age
 		const auto pda = tup.get<8>();  // previous accumulated snowdrift value
 		const auto m = tup.get<9>();    // mask value for this grid point (true: process grid point)
@@ -153,6 +153,14 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 		if (!TInfo || !FFInfo || !SFInfo)
 		{
 			continue;
+		}
+
+		if (prod.Id() == 107)
+		{
+			// LAPS precipitation is snow in meters, not snow water content
+			// --> scale with 100 to translate it to water content
+			auto& sf = VEC(SFInfo);
+			transform(sf.begin(), sf.end(), sf.begin(), [](double d) { return IsMissing(d) ? d : d * 100.; });
 		}
 
 		// Use ice coverage information to mask out points on the sea where there is no ice
