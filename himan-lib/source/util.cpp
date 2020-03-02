@@ -17,7 +17,9 @@
 #include "stereographic_grid.h"
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem/path.hpp>
+#include <boost/format.hpp>
 #include <boost/math/constants/constants.hpp>
+#include <boost/regex.hpp>
 #include <iomanip>
 #include <sstream>
 #include <wordexp.h>
@@ -30,23 +32,271 @@
 using namespace himan;
 using namespace std;
 
-template <typename T>
-string util::MakeFileName(const info<T>& info, const plugin_configuration& conf)
+namespace
 {
-	if (conf.WriteMode() == kNoFileWrite)
+template <typename T>
+string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration& conf, const string filenameTemplate)
+{
+	const auto ftype = info.template Value<forecast_type>();
+	const auto ftime = info.template Value<forecast_time>();
+	const auto lvl = info.template Value<level>();
+	const auto par = info.template Value<param>();
+	const auto prod = info.Producer();
+
+	// Allowed template keys:
+	// {analysis_time:FORMAT_SPECIFIER}        - analysis time, default format %Y%m%d%H%M%S
+	// {forecast_time:FORMAT_SPECIFIER}        - forecast time, default format %Y%m%d%H%M%S
+	// {step:FORMAT_SPECIFIER}                 - leadtime, default format %H:%M
+	// {geom_name}                             - geometry name
+	// {grid_name}                             - grid (projection) name
+	// {grid_ni}                               - grid size in x direction
+	// {grid_nj}                               - grid size in y direction
+	// {param_name}                            - parameter name
+	// {aggregation_name}                      - aggregation name
+	// {aggregation_duration:FORMAT_SPECIFIER} - aggregation duration
+	// {processing_type_name}                  - processing type name
+	// {processing_type_value:FORMAT_SPECIFIER}- processing type value
+	// {processing_type_value:FORMAT_SPECIFIER}- second possible processing type value
+	// {level_name }                           - level name
+	// {level_value:FORMAT_SPECIFIER}          - level value
+	// {level_value2:FORMAT_SPECIFIER}         - second possible level value
+	// {forecast_type_name}                    - forecast type name, like 'sp' or 'det' (short forms used)
+	// {forecast_type_id:FORMAT_SPECIFIER}     - forecast type id, 1 .. 5
+	// {forecast_type_value:FORMAT_SPECIFIER}  - possible forecast type value
+	// {producer_id}                           - radon producer id
+	// {filetype}                              - file type extension, like grib, grib2, fqd, ...
+
+	enum class Component
 	{
-		return "";
+		kMasalaBase,
+		kAnalysisTime,
+		kForecastTime,
+		kStep,
+		kGeometryName,
+		kGridName,
+		kGridNi,
+		kGridNj,
+		kParamName,
+		kAggregationName,
+		kAggregationDuration,
+		kProcessingTypeName,
+		kProcessingTypeValue,
+		kProcessingTypeValue2,
+		kLevelName,
+		kLevelValue,
+		kLevelValue2,
+		kForecastTypeId,
+		kForecastTypeName,
+		kForecastTypeValue,
+		kProducerId,
+		kFileType
+	};
+
+	auto ForecastTypeToShortString = [](HPForecastType type) -> string {
+		switch (type)
+		{
+			case kDeterministic:
+				return "det";
+			case kAnalysis:
+				return "an";
+			case kEpsControl:
+				return "cf";
+			case kEpsPerturbation:
+				return "pf";
+			case kStatisticalProcessing:
+				return "sp";
+			default:
+				return "unknown";
+		}
+	};
+
+	auto FileTypeToShortString = [](HPFileType type) -> string {
+		switch (type)
+		{
+			case kGRIB:
+			case kGRIB1:
+				return "grib";
+			case kGRIB2:
+				return "grib2";
+			case kQueryData:
+				return "fqd";
+			case kCSV:
+				return "csv";
+			default:
+				return "unknown";
+		}
+	};
+
+	auto DefaultFormat = [](Component k) -> string {
+		switch (k)
+		{
+			case Component::kAnalysisTime:
+			case Component::kForecastTime:
+				return "%Y%m%d%H%M";
+			case Component::kStep:
+			case Component::kAggregationDuration:
+				return "%Hh%Mm";
+			case Component::kProcessingTypeValue:
+			case Component::kProcessingTypeValue2:
+			case Component::kLevelValue:
+			case Component::kLevelValue2:
+			case Component::kForecastTypeId:
+			case Component::kForecastTypeValue:
+			case Component::kProducerId:
+			case Component::kGridNi:
+			case Component::kGridNj:
+				return "%d";
+			default:
+				return "";
+		}
+	};
+	auto ReplaceTemplateValue = [&](const boost::regex& re, string& filename, Component k) {
+		boost::smatch what;
+
+		if (boost::regex_search(filename, what, re) == false)
+		{
+			return;
+		}
+
+		string fmt = DefaultFormat(k);
+
+		if (what.size() == 3 && string(what[2]).empty() == false)
+		{
+			fmt = string(what[2]);
+			fmt.erase(fmt.begin());  // remove starting ':'
+		}
+
+		string replacement;
+
+		switch (k)
+		{
+			case Component::kMasalaBase:
+				replacement = util::GetEnv("MASALA_PROCESSED_DATA_BASE");
+				break;
+			case Component::kAnalysisTime:
+				replacement = ftime.OriginDateTime().String(fmt);
+				break;
+			case Component::kForecastTime:
+				replacement = ftime.ValidDateTime().String(fmt);
+				break;
+			case Component::kStep:
+				replacement = ftime.Step().String(fmt);
+				break;
+			case Component::kGeometryName:
+				replacement = conf.TargetGeomName();
+				break;
+			case Component::kGridName:
+				replacement = HPGridTypeToString.at(info.Grid()->Type());
+				break;
+			case Component::kGridNi:
+			{
+				if (info.Grid()->Class() == kRegularGrid)
+				{
+					replacement = (boost::format(fmt) % (dynamic_pointer_cast<regular_grid>(info.Grid())->Ni())).str();
+				}
+				break;
+			}
+			case Component::kGridNj:
+			{
+				if (info.Grid()->Class() == kRegularGrid)
+				{
+					replacement = (boost::format(fmt) % (dynamic_pointer_cast<regular_grid>(info.Grid())->Nj())).str();
+				}
+				break;
+			}
+			case Component::kParamName:
+				replacement = par.Name();
+				break;
+			case Component::kAggregationName:
+				replacement = HPAggregationTypeToString.at(par.Aggregation().Type());
+				break;
+			case Component::kAggregationDuration:
+				replacement = par.Aggregation().TimeDuration().String(fmt);
+				break;
+			case Component::kProcessingTypeName:
+				replacement = HPProcessingTypeToString.at(par.ProcessingType().Type());
+				break;
+			case Component::kProcessingTypeValue:
+				replacement = (boost::format(fmt) % par.ProcessingType().Value()).str();
+				break;
+			case Component::kProcessingTypeValue2:
+				replacement = (boost::format(fmt) % par.ProcessingType().Value2()).str();
+				break;
+			case Component::kLevelName:
+				replacement = HPLevelTypeToString.at(lvl.Type());
+				break;
+			case Component::kLevelValue:
+				replacement = (boost::format(fmt) % lvl.Value()).str();
+				break;
+			case Component::kLevelValue2:
+				replacement = (boost::format(fmt) % lvl.Value2()).str();
+				break;
+			case Component::kForecastTypeId:
+				replacement = (boost::format(fmt) % ftype.Type()).str();
+				break;
+			case Component::kForecastTypeName:
+				replacement = ForecastTypeToShortString(ftype.Type());
+				break;
+			case Component::kForecastTypeValue:
+				replacement = (boost::format(fmt) % ftype.Value()).str();
+				break;
+			case Component::kProducerId:
+				replacement = (boost::format(fmt) % prod.Id()).str();
+				break;
+			case Component::kFileType:
+				replacement = FileTypeToShortString(conf.OutputFileType());
+				break;
+			default:
+				break;
+		}
+
+		filename = boost::regex_replace(filename, re, replacement);
+	};
+
+	string filename = filenameTemplate;
+
+	const static vector<pair<Component, string>> regexs{
+	    make_pair(Component::kMasalaBase, R"(\{(masala_base)\})"),
+	    make_pair(Component::kAnalysisTime, R"(\{(analysis_time)(:[%a-zA-Z]*)*\})"),
+	    make_pair(Component::kForecastTime, R"(\{(forecast_time)(:[%a-zA-Z]*)*\})"),
+	    make_pair(Component::kStep, R"(\{(step)(:[\.%0-9a-zA-Z]*)*\})"),
+	    make_pair(Component::kGeometryName, R"(\{(geom_name)\})"),
+	    make_pair(Component::kGridName, R"(\{(grid_name)\})"),
+	    make_pair(Component::kGridNi, R"(\{(grid_ni)(:[\.%0-9a-zA-Z]*)*\})"),
+	    make_pair(Component::kGridNj, R"(\{(grid_nj)(:[\.%0-9a-zA-Z]*)*\})"),
+	    make_pair(Component::kParamName, R"(\{(param_name)\})"),
+	    make_pair(Component::kAggregationName, R"(\{(aggregation_name)\})"),
+	    make_pair(Component::kAggregationDuration, R"(\{(aggregation_duration)\})"),
+	    make_pair(Component::kProcessingTypeName, R"(\{(processing_type_name)\})"),
+	    make_pair(Component::kProcessingTypeValue, R"(\{(processing_type_value)(:[\.%0-9a-zA-Z]*)*\})"),
+	    make_pair(Component::kProcessingTypeValue2, R"(\{(processing_type_value2)(:[\.%0-9a-zA-Z]*)*\})"),
+	    make_pair(Component::kLevelName, R"(\{(level_name)\})"),
+	    make_pair(Component::kLevelValue, R"(\{(level_value)(:[\.%0-9a-zA-Z]*)*\})"),
+	    make_pair(Component::kLevelValue2, R"(\{(level_value2)(:[\.%0-9a-zA-Z]*)*\})"),
+	    make_pair(Component::kForecastTypeId, R"(\{(forecast_type_id)(:[\.%0-9a-zA-Z]*)*\})"),
+	    make_pair(Component::kForecastTypeName, R"(\{(forecast_type_name)\})"),
+	    make_pair(Component::kForecastTypeValue, R"(\{(forecast_type_value)(:[\.%0-9a-zA-Z]*)*\})"),
+	    make_pair(Component::kProducerId, R"(\{(producer_id)(:[\.%0-9a-zA-Z]*)*\})"),
+	    make_pair(Component::kFileType, R"(\{(file_type)\})")};
+
+	for (const auto& p : regexs)
+	{
+		ReplaceTemplateValue(boost::regex(p.second), filename, p.first);
 	}
 
-	ostringstream fileName;
-	ostringstream base;
+	return filename;
+}
+
+template <typename T>
+string DetermineDefaultFileName(const info<T>& info, const plugin_configuration& conf)
+{
+	// ostringstream fileName;
+	stringstream ss;
 
 	const auto ftype = info.template Value<forecast_type>();
 	const auto ftime = info.template Value<forecast_time>();
 	const auto lvl = info.template Value<level>();
 	const auto par = info.template Value<param>();
-
-	base.str(".");
 
 	// For database writes get base directory
 
@@ -54,27 +304,6 @@ string util::MakeFileName(const info<T>& info, const plugin_configuration& conf)
 
 	if (conf.WriteToDatabase())
 	{
-		char* path;
-
-		path = std::getenv("MASALA_PROCESSED_DATA_BASE");
-
-		if (path != NULL)
-		{
-			if (strstr(path, "s3://") != NULL && conf.WriteStorageType() != kS3ObjectStorageSystem)
-			{
-				logr.Fatal("MASALA_PROCESSED_DATA_BASE is using s3 but configured storage type is " +
-				           HPFileStorageTypeToString.at(conf.WriteStorageType()));
-				himan::Abort();
-			}
-
-			base.str("");
-			base << path;
-		}
-		else
-		{
-			cout << "Warning::util MASALA_PROCESSED_DATA_BASE not set" << endl;
-		}
-
 		// directory structure when writing to database:
 		//
 		// all:
@@ -84,92 +313,101 @@ string util::MakeFileName(const info<T>& info, const plugin_configuration& conf)
 		// single:
 		//   /path/to/files/<producer_id>/<analysis_time>/<geometry_name>/<step>
 
-		base << "/" << info.Producer().Id() << "/" << ftime.OriginDateTime().String("%Y%m%d%H%M") << "/"
-		     << conf.TargetGeomName() << "/";
+		ss << "{masala_base}/{producer_id}/{analysis_time:%Y%m%d%H%M}/{geom_name}/";
 
 		if (conf.WriteMode() == kSingleGridToAFile)
 		{
 			if (ftime.Step().Minutes() % 60 != 0)
 			{
-				base << ftime.Step().Minutes();
+				ss << "{step:%m}/";
 			}
 			else
 			{
-				base << ftime.Step().Hours();
+				ss << "{step:%h}/";
 			}
 		}
 	}
-	// Create a unique file name when creating multiple files from one info
 
 	if (conf.WriteMode() == kSingleGridToAFile)
 	{
-		fileName << base.str() << "/" << par.Name() << "_" << HPLevelTypeToString.at(lvl.Type()) << "_" << lvl.Value();
+		ss << "{param_name}_{level_name}_{level_value}";
 
 		if (!IsKHPMissingValue(lvl.Value2()))
 		{
-			fileName << "-" << lvl.Value2();
+			ss << "-{level_value2}";
 		}
 
-		fileName << "_" << HPGridTypeToString.at(info.Grid()->Type());
+		ss << "_{grid_name}";
 
 		if (info.Grid()->Class() == kRegularGrid)
 		{
-			fileName << "_" << dynamic_pointer_cast<regular_grid>(info.Grid())->Ni() << "_"
-			         << dynamic_pointer_cast<regular_grid>(info.Grid())->Nj();
+			ss << "_{grid_ni}_{grid_nj}";
 		}
 
 		const auto step = ftime.Step();
 
-		// backwards compatibility to FMI harmonie -- remove this later
-		// when ready to change all regression test results (filenames)
+		ss << "_0_";
 
-		if (info.Producer().Id() == 210)
+		if ((step.Minutes() - step.Hours() * 60) != 0)
 		{
-			fileName << "_0_" << setw(3) << setfill('0') << step.Minutes();
+			ss << "{step:%03hh%02Mmin}";
 		}
 		else
 		{
-			fileName << "_0_" << setw(3) << setfill('0') << step.Hours();
-
-			if ((step.Minutes() - step.Hours() * 60) != 0)
-			{
-				fileName << 'h' << setw(2) << setfill('0') << (step.Minutes() - step.Hours() * 60) << "min";
-			}
+			ss << "{step:%03h}";
 		}
 
 		if (static_cast<int>(ftype.Type()) > 2)  // backwards compatibility
 		{
-			fileName << "_" << static_cast<int>(ftype.Type());
-
+			ss << "_"
+			   << "{forecast_type_id}";
 			if (ftype.Type() == kEpsControl || ftype.Type() == kEpsPerturbation)
 			{
-				fileName << "_" << ftype.Value();
+				ss << "_"
+				   << "{forecast_type_value}";
 			}
 		}
 	}
 	else if (conf.WriteMode() == kFewGridsToAFile)
 	{
-		fileName << base.str() << "/"
-		         << "fc" << ftime.OriginDateTime().String("%Y%m%d%H%M") << "+" << setw(3) << setfill('0')
-		         << ftime.Step().Hours() << "h" << setw(2) << setfill('0') << (ftime.Step().Minutes() % 60) << "m_"
-		         << conf.Name() << "#" << conf.RelativeOrdinalNumber();
+		ss << "/fc{analysis_time:%Y%m%d%H%M}+{step:%03hh%02Mm}_" << conf.Name() << "#" << conf.RelativeOrdinalNumber();
 	}
 	else if (conf.WriteMode() == kAllGridsToAFile)
 	{
 		if (conf.LegacyWriteMode())
 		{
-			fileName << conf.ConfigurationFile();  // legacy mode for 'all grids to a file' does not support database
-			                                       // --> no need for 'base'
+			// legacy mode for 'all grids to a file' does not support database
+			// --> no need for 'base'
+
+			ss.str("");
+			ss << conf.ConfigurationFile();
 		}
 		else
 		{
-			fileName << base.str() << "/"
-			         << "fc" << ftime.OriginDateTime().String("%Y%m%d%H%M") << "+" << setw(3) << setfill('0')
-			         << ftime.Step().Hours() << "h" << setw(2) << setfill('0') << (ftime.Step().Minutes() % 60) << "m";
+			ss << "/fc{analysis_time:%Y%m%d%H%M}+{step:%03hh%02Mm}";
 		}
 	}
 
-	return fileName.str();
+	return ss.str();
+}
+}  // namespace
+
+template <typename T>
+string util::MakeFileName(const info<T>& info, const plugin_configuration& conf)
+{
+	if (conf.WriteMode() == kNoFileWrite)
+	{
+		return "";
+	}
+
+	string filenameTemplate = conf.FilenameTemplate();
+
+	if (filenameTemplate.empty())
+	{
+		filenameTemplate = DetermineDefaultFileName(info, conf);
+	}
+
+	return MakeFileNameFromTemplate(info, conf, filenameTemplate);
 }
 
 template string util::MakeFileName<double>(const info<double>&, const plugin_configuration&);

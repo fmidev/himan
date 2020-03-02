@@ -36,8 +36,8 @@ producer ParseTargetProducer(const shared_ptr<configuration>& conf, const boost:
 vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt);
 unique_ptr<grid> ParseAreaAndGrid(const std::shared_ptr<configuration>& conf, const boost::property_tree::ptree& pt);
 vector<forecast_time> ParseTime(std::shared_ptr<configuration> conf, const boost::property_tree::ptree& pt);
-tuple<HPWriteMode, bool, bool> ParseWriteMode(const shared_ptr<configuration>& conf,
-                                              const boost::property_tree::ptree& pt);
+tuple<HPWriteMode, bool, bool, string> ParseWriteMode(const shared_ptr<configuration>& conf,
+                                                      const boost::property_tree::ptree& pt);
 
 vector<level> LevelsFromString(const string& levelType, const string& levelValues);
 
@@ -122,6 +122,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		conf->WriteMode(get<0>(parsed));
 		conf->WriteToDatabase(get<1>(parsed));
 		conf->LegacyWriteMode(get<2>(parsed));
+		conf->FilenameTemplate(get<3>(parsed));
 	}
 
 	/* Check file_compression */
@@ -531,6 +532,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		HPWriteMode delayedWriteMode = conf->WriteMode();
 		bool delayedWriteToDatabase = conf->WriteToDatabase();
 		bool delayedLegacyWriteMode = conf->LegacyWriteMode();
+		string delayedFilenameTemplate = conf->FilenameTemplate();
 		auto delayedParsed = ParseWriteMode(conf, element.second);
 
 		if (get<0>(delayedParsed) != kUnknown)
@@ -538,6 +540,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 			delayedWriteMode = get<0>(delayedParsed);
 			delayedWriteToDatabase = get<1>(delayedParsed);
 			delayedLegacyWriteMode = get<2>(delayedParsed);
+			delayedFilenameTemplate = get<3>(delayedParsed);
 		}
 
 		// Check local forecast_type option
@@ -593,6 +596,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 			pc->WriteMode(delayedWriteMode);
 			pc->WriteToDatabase(delayedWriteToDatabase);
 			pc->LegacyWriteMode(delayedLegacyWriteMode);
+			pc->FilenameTemplate(delayedFilenameTemplate);
 			pc->SourceProducers(delayedSourceProducers);
 			pc->TargetProducer(delayedTargetProducer);
 
@@ -1458,8 +1462,8 @@ vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt)
 	return forecastTypes;
 }
 
-tuple<HPWriteMode, bool, bool> ParseWriteMode(const shared_ptr<configuration>& conf,
-                                              const boost::property_tree::ptree& pt)
+tuple<HPWriteMode, bool, bool, string> ParseWriteMode(const shared_ptr<configuration>& conf,
+                                                      const boost::property_tree::ptree& pt)
 {
 	HPWriteMode writeMode = kUnknown;
 	bool writeToDatabase = false;
@@ -1547,5 +1551,21 @@ tuple<HPWriteMode, bool, bool> ParseWriteMode(const shared_ptr<configuration>& c
 		throw runtime_error(string("Error parsing meta information: ") + e.what());
 	}
 
-	return make_tuple(writeMode, writeToDatabase, legacyWriteMode);
+	// filename template
+
+	string filenameTemplate("");
+	try
+	{
+		filenameTemplate = pt.get<string>("filename_template");
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing meta information: ") + e.what());
+	}
+
+	return make_tuple(writeMode, writeToDatabase, legacyWriteMode, filenameTemplate);
 }

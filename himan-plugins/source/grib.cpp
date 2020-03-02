@@ -1379,6 +1379,11 @@ void grib::WriteMessageToFile(const file_information& finfo)
 			itsLogger.Fatal("Write to S3 only supported with write_mode = single");
 			himan::Abort();
 		}
+		if (finfo.file_location.find("s3://") == string::npos)
+		{
+			itsLogger.Fatal("File name needs to start with s3:// when writing to s3");
+			himan::Abort();
+		}
 
 		himan::buffer buff;
 		buff.length = finfo.length.get();
