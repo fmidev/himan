@@ -314,18 +314,20 @@ double DriftIndex(double sv)
 double MobilityIndex(double da, double sa)
 {
 	double mi = 1.0;
-
-	if (da < 2.0 && sa < 24.0)
+	if (sa < 24.0)
 	{
-		mi = 1.0;
-	}
-	else if (da >= 2.0 && da <= 6.0)
-	{
-		mi = 0.6;
-	}
-	else if (da > 6.0)
-	{
-		mi = 0.3;
+		if (da < 2.0)
+		{
+			mi = 1.0;
+		}
+		else if (da >= 2.0 && da <= 6.0)
+		{
+			mi = 0.6;
+		}
+		else if (da > 6.0)
+		{
+			mi = 0.3;
+		}
 	}
 
 	if (sa >= 24.0 && mi == 1.0)

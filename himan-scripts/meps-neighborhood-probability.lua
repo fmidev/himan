@@ -11,13 +11,11 @@ function produceProbabilities(sourceparam, targetparam, op, limit)
   local datas = {}
   local producer = configuration:GetSourceProducer(0)
   local ensemble_size = tonumber(radon:GetProducerMetaData(producer, "ensemble size"))
-  local steps = 2
-  local lag = 6
 
   logger:Info("Producing area probabilities for " .. sourceparam:GetName())
 
-  local ens = lagged_ensemble(sourceparam, ensemble_size, time_duration(HPTimeResolution.kHourResolution, -lag), steps)
-  ens:SetMaximumMissingForecasts(ensemble_size * steps)
+  local ens = lagged_ensemble(sourceparam, "MEPS_LAGGED_ENSEMBLE")
+  ens:SetMaximumMissingForecasts(ensemble_size)
 
   local curtime = forecast_time(current_time:GetOriginDateTime(), current_time:GetValidDateTime())
 
