@@ -3,7 +3,7 @@
 %define LIBNAME himan-scripts
 Summary: himan-scripts collection
 Name: %{LIBNAME}
-Version: 20.2.27
+Version: 20.3.2
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -12,8 +12,8 @@ Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: lua >= 5.1.4
-Requires: himan-plugins >= 20.2.26
-Requires: himan-lib >= 20.2.26
+Requires: himan-plugins >= 20.3.2
+Requires: himan-lib >= 20.3.2
 
 %define debug_package %{nil}
 
@@ -39,6 +39,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/himan-scripts/*.lua
 
 %changelog
+* Mon Mar  2 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.3.2-1.fmi
+- Improved lagged ensemble configuration
 * Wed Feb 26 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.2.27-1.fmi
 - Skip missing values in neighborhood probabilites
 * Wed Feb 26 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.2.26-1.fmi

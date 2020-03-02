@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.2.26
+Version: 20.3.2
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 20.2.26
+Requires: himan-lib >= 20.3.2
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 20.1.20
@@ -120,6 +120,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Mar  2 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.3.2-1.fmi
+- Improved lagged ensemble configuration
+- snow_drift minor tweaking
 * Wed Feb 26 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.2.26-1.fmi
 - Fixes to probability filters
 * Wed Feb 19 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.2.19-2.fmi
