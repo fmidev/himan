@@ -372,15 +372,57 @@ The write mode is defined with key `write_mode`. Possible values are:
 * `all`, all grids are written to one file
 * `no`, file is only written to cache
 
-`"file_write" : "single | few | all | no",`
+    "file_write" : "single | few | all | no"
 
 Default value for key is `single`. Key can be set in the global or processqueue scope.
 
 Himan can pack the written files with either gzip or bzip2 methods. The key that controls this is called `file_compression`. 
 
-    "file_compression" : "none | gzip | bzip2",
+    "file_compression" : "none | gzip | bzip2"
 
 Default value for key is `none`.
+
+Filename can be controlled with key `filename_template`. If no value is given, Himan will use default template.
+
+Allowed template values are:
+* {analysis_time:DATE_FORMAT_SPECIFIER}            - analysis time
+* {forecast_time:DATE_FORMAT_SPECIFIER}            - forecast time
+* {step:DURATION_FORMAT_SPECIFIER}                 - leadtime of forecast
+* {geom_name}                                      - geometry name
+* {grid_name}                                      - grid (projection) short name
+* {grid_ni:NUMBER_FORMAT_SPECIFIER}                - grid size in x direction, only for regular grids
+* {grid_nj:NUMBER_FORMAT_SPECIFIER}                - grid size in y direction, only for regular grids
+* {param_name}                                     - parameter name
+* {aggregation_name}                               - aggregation name
+* {aggregation_duration:DURATION_FORMAT_SPECIFIER} - aggregation duration
+* {processing_type_name}                           - processing type name
+* {processing_type_value:NUMBER_FORMAT_SPECIFIER}  - processing type value
+* {processing_type_value:NUMBER_FORMAT_SPECIFIER}  - second possible processing type value
+* {level_name}                                     - level name
+* {level_value:NUMBER_FORMAT_SPECIFIER}            - level value
+* {level_value2:NUMBER_FORMAT_SPECIFIER}           - second possible level value
+* {forecast_type_name}                             - forecast type short name, like 'sp' or 'det'
+* {forecast_type_id:NUMBER_FORMAT_SPECIFIER}       - forecast type id, 1 .. 5
+* {forecast_type_value:NUMBER_FORMAT_SPECIFIER}    - possible forecast type value
+* {producer_id:NUMBER_FORMAT_SPECIFIER}            - radon producer id
+* {file_type}                                      - file type extension, like grib, grib2, fqd, ...
+
+Format specifiers:
+* DATE_FORMAT_SPECIFIER: usual c-style strftime formatting (%Y%m%d...)
+* DURATION_FORMAT_SPECIFIER: custom time duration formatting
+  * %H - Total hours % 24
+  * %M - Total minutes % 60
+  * %S - Total seconds % 60
+  * %d - Total days
+  * %h - Total hours
+  * %m - Total minutes
+  * %s - Total seconds
+  * Each value can have further printf-style identifiers, like  %03h --> total hours with up to 3 leading zeros
+* NUMBER_FORMAT_SPECIFIER: usual c-style printf formatting
+
+Example:
+
+    "filename_template" : "fc{analysis_time:%Y%m%d%H%M}_{step:%03h}_{level_name}.{file_type}"
 
 <a name="Database_access"/>
 

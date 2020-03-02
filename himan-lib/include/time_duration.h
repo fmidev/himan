@@ -19,6 +19,24 @@ class time_duration
 	{
 		return "himan::time_duration";
 	}
+
+	/**
+	 * @brief Format time duration to string
+	 *
+	 * Allowed format values:
+	 *  %H --> Total hours % 24
+	 *  %M --> Total minutes % 60
+	 *  %S --> Total seconds % 60
+	 *  %d --> Total days
+	 *  %h --> Total hours
+	 *  %m --> Total minutes
+	 *  %s --> Total seconds
+	 *
+	 * Each value can have further printf-style identifiers, like
+	 * %03h --> total hours with up to 3 leading zeros
+	 */
+
+	std::string String(const std::string& fmt) const;
 	bool operator==(const time_duration&) const;
 	bool operator!=(const time_duration&) const;
 	bool operator>(const time_duration&) const;

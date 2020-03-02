@@ -222,6 +222,9 @@ class configuration
 	HPFileStorageType WriteStorageType() const;
 	void WriteStorageType(HPFileStorageType theStorageType);
 
+	void FilenameTemplate(const std::string& theFilenameTemplate);
+	std::string FilenameTemplate() const;
+
    protected:
 	std::vector<producer> itsSourceProducers;
 
@@ -264,6 +267,7 @@ class configuration
 	bool itsLegacyWriteMode;
 
 	HPFileStorageType itsWriteStorageType;
+	std::string itsFilenameTemplate;
 };
 
 inline std::ostream& operator<<(std::ostream& file, const configuration& ob)

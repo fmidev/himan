@@ -1,5 +1,7 @@
 #include "time_duration.h"
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/format.hpp>
+#include <boost/regex.hpp>
 
 using namespace himan;
 
@@ -125,4 +127,69 @@ std::ostream& time_duration::Write(std::ostream& file) const
 	file << static_cast<std::string>(*this);
 
 	return file;
+}
+
+std::string time_duration::String(const std::string& fmt) const
+{
+	// %H --> Total hours % 24
+	// example: 33:00:00 --> %H = 9
+	// %M --> Total minutes % 60
+	// example: 01:15:00 --> %M = 15
+	// %S --> Total seconds % 60
+	// example: 00:10:30 --> %S = 30
+	// %d --> Total days
+	// example: 1 day 12:00:00 --> %d = 1
+	// %h --> Total hours
+	// example: 33:00:00 --> %H = 33
+	// %m --> Total minutes
+	// example: 01:15:00 --> %M = 75
+	// %s --> Total seconds
+	// example: 00:10:30 --> %S = 630
+
+	auto ret = fmt;
+
+	const static std::vector<std::pair<char, boost::regex>> regexs{
+	    std::make_pair('H', boost::regex{R"(%([0-9]*)H)"}), std::make_pair('M', boost::regex{R"(%([0-9]*)M)"}),
+	    std::make_pair('S', boost::regex{R"(%([0-9]*)S)"}), std::make_pair('d', boost::regex{R"(%([0-9]*)d)"}),
+	    std::make_pair('h', boost::regex{R"(%([0-9]*)h)"}), std::make_pair('m', boost::regex{R"(%([0-9]*)m)"}),
+	    std::make_pair('s', boost::regex{R"(%([0-9]*)s)"})};
+
+	for (const auto& r : regexs)
+	{
+		const auto& re = r.second;
+		int value;
+		switch (r.first)
+		{
+			case 'H':
+				value = static_cast<int>(Hours() % 24);
+				break;
+			case 'M':
+				value = static_cast<int>(Minutes() % 60);
+				break;
+			case 'S':
+				value = static_cast<int>(Seconds() % 60);
+				break;
+			case 'd':
+				value = static_cast<int>(floor(static_cast<double>(Hours()) / 24.));
+				break;
+			case 'h':
+				value = static_cast<int>(Hours());
+				break;
+			case 'm':
+				value = static_cast<int>(Minutes());
+				break;
+			case 's':
+				value = static_cast<int>(Seconds());
+				break;
+			default:
+				break;
+		}
+		boost::smatch what;
+		if (boost::regex_search(fmt, what, re))
+		{
+			ret = boost::regex_replace(ret, re, (boost::format("%" + std::string(what[1]) + "d") % value).str());
+		}
+	}
+
+	return ret;
 }

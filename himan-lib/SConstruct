@@ -28,6 +28,7 @@ libraries.append('dl')
 libraries.append('pqxx')
 libraries.append('boost_iostreams')
 libraries.append('boost_filesystem')
+libraries.append('boost_regex')
 libraries.append('eccodes')
 libraries.append('gdal')
 
