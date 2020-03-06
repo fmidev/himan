@@ -1,5 +1,5 @@
 --[[
-snow.lua
+snow-depth.lua
 
 aaltom/2015-02-12
 ]]
