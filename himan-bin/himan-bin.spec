@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 20.1.21
+Version: 20.3.2
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -64,6 +64,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Mon Mar  2 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.3.2-1.fmi
+- Add filename template support
 * Tue Jan 21 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.1.21-1.fmi
 - Support (limited) writing to S3
 * Tue Dec 17 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.12.17-1.fmi
