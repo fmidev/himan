@@ -3,7 +3,7 @@
 %define LIBNAME himan-scripts
 Summary: himan-scripts collection
 Name: %{LIBNAME}
-Version: 20.3.2
+Version: 20.3.6
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -39,6 +39,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/himan-scripts/*.lua
 
 %changelog
+* Fri Mar  6 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.3.6-1.fmi
+- Fix for snow.lua (and rename to snow-depth.lua)
 * Mon Mar  2 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.3.2-1.fmi
 - Improved lagged ensemble configuration
 * Wed Feb 26 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.2.27-1.fmi
