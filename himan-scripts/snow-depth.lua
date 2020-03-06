@@ -1,5 +1,5 @@
 --[[
-snow.lua
+snow-depth.lua
 
 aaltom/2015-02-12
 ]]
@@ -13,19 +13,10 @@ par2 = param("SD-KGM2") -- Snow depth in water equivalent
 par3 = param("SD-M") -- Snow depth in m
 
 local lvl = level(HPLevelType.kHeight, 0)
-
-local snd_level = nil
-
 local prod = configuration:GetSourceProducer(0)
 local prod_name = prod.GetName(prod)
 
-if prod_name == "MEPS" or prod_name == "MEPSMTA" then
-  snd_level = level(HPLevelType.kHeight, 800)
-else
-  snd_level = level(HPLevelType.kHeight, 0)
-end
-
-local sd = luatool:FetchWithType(current_time, snd_level, par1, current_forecast_type)
+local sd = luatool:FetchWithType(current_time, lvl, par1, current_forecast_type)
 local sw = luatool:FetchWithType(current_time, lvl, par2, current_forecast_type)
 
 if not sd or not sw then
