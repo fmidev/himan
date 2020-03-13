@@ -157,6 +157,11 @@ void lagged_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, 
 
 		forecast_time ftime(time);
 		ftime.OriginDateTime() += lag;
+		if (ftime.Step().Hours() < 0)
+		{
+			itsLogger.Trace("Negative leadtime, skipping");
+			continue;
+		}
 		itsLogger.Trace("Fetching " + static_cast<std::string>(ftype) + " with lag " + static_cast<std::string>(lag));
 
 		try
