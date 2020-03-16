@@ -33,9 +33,11 @@ while true do
 
     for i=1,#mean do
       -- positive values should not affect the value of frost sum
-      local m = math.min(mean[i] - 273.15, 0)
-
-      frostSum[i] = frostSum[i] + m
+      -- Note: following can be replaced with math.min() but that is ~100% slower (!)
+      local m = mean[i] - 273.15
+      if m < 0 then
+        frostSum[i] = frostSum[i] + m
+      end
     end
   end
 
