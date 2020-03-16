@@ -44,11 +44,11 @@ end
 -- Get 'matrix'
 local pdata = p:GetData()
 
-local pMin1 = Min2D(pdata, mask1):GetValues()
-local pMin2 = Min2D(pdata, mask2):GetValues()
+local pMin1 = Min2D(pdata, mask1, configuration:GetUseCuda()):GetValues()
+local pMin2 = Min2D(pdata, mask2, configuration:GetUseCuda()):GetValues()
 
-local pMax1 = Max2D(pdata, mask1):GetValues()
-local pMax2 = Max2D(pdata, mask2):GetValues()
+local pMax1 = Max2D(pdata, mask1, configuration:GetUseCuda()):GetValues()
+local pMax2 = Max2D(pdata, mask2, configuration:GetUseCuda()):GetValues()
 
 pressureCode = {}
 

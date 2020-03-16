@@ -34,9 +34,11 @@ while true do
     end
 
     for i=1,#mean do
-      local m = math.max(mean[i] - 273.15 - 5, 0)
-
-      gdd[i] = gdd[i] + m
+      -- Note: following can be replaced with math.max() but that is ~100% slower (!)
+      local m = mean[i] - 273.15 - 5
+      if m > 0 then
+        gdd[i] = gdd[i] + m
+      end
     end
   end
 
