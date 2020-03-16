@@ -3,8 +3,8 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 20.3.2
-Release: 2%{dist}.fmi
+Version: 20.3.16
+Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -66,6 +66,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Mon Mar 16 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.3.16-1
+- Minor bugfix to lagged_ensemble
 * Mon Mar  2 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.3.2-2.fmi
 - Add filename template support
 * Mon Mar  2 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.3.2-1.fmi
