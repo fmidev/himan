@@ -225,6 +225,9 @@ class configuration
 	void FilenameTemplate(const std::string& theFilenameTemplate);
 	std::string FilenameTemplate() const;
 
+	HPPackingType PackingType() const;
+	void PackingType(HPPackingType thePackingType);
+
    protected:
 	std::vector<producer> itsSourceProducers;
 
@@ -268,6 +271,7 @@ class configuration
 
 	HPFileStorageType itsWriteStorageType;
 	std::string itsFilenameTemplate;
+	HPPackingType itsPackingType;
 };
 
 inline std::ostream& operator<<(std::ostream& file, const configuration& ob)

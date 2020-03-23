@@ -14,12 +14,11 @@ namespace plugin
 struct write_options
 {
 	std::shared_ptr<const plugin_configuration> configuration;
-	bool use_bitmap;             // use bitmap for grib if missing data exists
-	HPPackingType packing_type;  // for grib, ie simple_packing, jpeg_packing
-	bool write_empty_grid;       // write file even if all data is missing
-	int precision;               // precision (decimal points)
+	bool use_bitmap;        // use bitmap for grib if missing data exists
+	bool write_empty_grid;  // write file even if all data is missing
+	int precision;          // precision (decimal points)
 
-	write_options() : use_bitmap(true), packing_type(kSimplePacking), write_empty_grid(true), precision(kHPMissingInt)
+	write_options() : use_bitmap(true), write_empty_grid(true), precision(kHPMissingInt)
 	{
 	}
 };

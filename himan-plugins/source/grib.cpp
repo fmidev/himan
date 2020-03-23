@@ -1235,11 +1235,20 @@ himan::file_information grib::CreateGribMessage(info<T>& anInfo)
 
 	WriteData<T>(anInfo);
 
-	if (edition == 2 && itsWriteOptions.packing_type == kJpegPacking)
+	if (edition == 2)
 	{
-		itsGrib->Message().PackingType("grid_jpeg");
+		switch (itsWriteOptions.configuration->PackingType())
+		{
+			case kJpegPacking:
+				itsGrib->Message().PackingType("grid_jpeg");
+				break;
+			case kCcsdsPacking:
+				itsGrib->Message().PackingType("grid_ccsds");
+				break;
+			default:
+				break;
+		}
 	}
-
 	/*
 	 *  GRIB 1
 	 *

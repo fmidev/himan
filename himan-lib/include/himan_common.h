@@ -355,8 +355,25 @@ enum HPPackingType
 	kUnknownPackingType = 0,
 	kUnpacked,
 	kSimplePacking,
-	kJpegPacking
+	kJpegPacking,
+	kCcsdsPacking
 };
+
+const boost::unordered_map<HPPackingType, std::string> HPPackingTypeToString =
+    ba::map_list_of
+	(kUnknownPackingType, "unknown")
+	(kUnpacked, "unpacked")
+	(kSimplePacking, "simple_packing")
+	(kJpegPacking, "jpeg_packing")
+	(kCcsdsPacking, "ccsds_packing");
+
+const boost::unordered_map<std::string, HPPackingType> HPStringToPackingType =
+    ba::map_list_of
+	("unknown", kUnknownPackingType)
+	("unpacked", kUnpacked)
+	("simple_packing", kSimplePacking)
+	("jpeg_packing", kJpegPacking)
+	("ccsds_packing", kCcsdsPacking);
 
 enum HPAggregationType
 {

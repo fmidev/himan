@@ -367,6 +367,23 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		throw runtime_error(string("Error parsing key storage_type: ") + e.what());
 	}
 
+	/* Check packing_type */
+
+	try
+	{
+		const string thePackingType = pt.get<string>("packing_type");
+
+		conf->PackingType(HPStringToPackingType.at(thePackingType));
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing key storage_type: ") + e.what());
+	}
+
 	/*
 	 * Check processqueue.
 	 *
@@ -534,6 +551,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		bool delayedLegacyWriteMode = conf->LegacyWriteMode();
 		string delayedFilenameTemplate = conf->FilenameTemplate();
 		auto delayedParsed = ParseWriteMode(conf, element.second);
+		auto delayedPackingType = conf->PackingType();
 
 		if (get<0>(delayedParsed) != kUnknown)
 		{
@@ -576,6 +594,23 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		{
 		}
 
+		/* Check local packing_type option */
+
+		try
+		{
+			const string thePackingType = pt.get<string>("packing_type");
+
+			delayedPackingType = HPStringToPackingType.at(thePackingType);
+		}
+		catch (boost::property_tree::ptree_bad_path& e)
+		{
+			// Something was not found; do nothing
+		}
+		catch (exception& e)
+		{
+			throw runtime_error(string("Error parsing key storage_type: ") + e.what());
+		}
+
 		if (plugins.empty())
 		{
 			throw runtime_error(ClassName() + ": plugin definitions not found");
@@ -599,6 +634,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 			pc->FilenameTemplate(delayedFilenameTemplate);
 			pc->SourceProducers(delayedSourceProducers);
 			pc->TargetProducer(delayedTargetProducer);
+			pc->PackingType(delayedPackingType);
 
 			if (plugin.second.empty())
 			{
