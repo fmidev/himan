@@ -371,7 +371,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 	try
 	{
-		const string thePackingType = pt.get<string>("packing_type");
+		const string thePackingType = pt.get<string>("file_packing_type");
 
 		conf->PackingType(HPStringToPackingType.at(thePackingType));
 	}
@@ -598,7 +598,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 		try
 		{
-			const string thePackingType = pt.get<string>("packing_type");
+			const string thePackingType = pt.get<string>("file_packing_type");
 
 			delayedPackingType = HPStringToPackingType.at(thePackingType);
 		}
