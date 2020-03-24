@@ -3,7 +3,6 @@
 #include "plugin_factory.h"
 #include "statistics.h"
 #include "timer.h"
-#include "util.h"
 #include <fstream>
 
 #include "cache.h"
