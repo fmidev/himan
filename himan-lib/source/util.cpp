@@ -64,7 +64,7 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 	// {forecast_type_id:FORMAT_SPECIFIER}     - forecast type id, 1 .. 5
 	// {forecast_type_value:FORMAT_SPECIFIER}  - possible forecast type value
 	// {producer_id}                           - radon producer id
-	// {filetype}                              - file type extension, like grib, grib2, fqd, ...
+	// {file_type}                             - file type extension, like grib, grib2, fqd, ...
 
 	enum class Component
 	{
@@ -257,8 +257,8 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 
 	const static vector<pair<Component, string>> regexs{
 	    make_pair(Component::kMasalaBase, R"(\{(masala_base)\})"),
-	    make_pair(Component::kAnalysisTime, R"(\{(analysis_time)(:[%a-zA-Z]*)*\})"),
-	    make_pair(Component::kForecastTime, R"(\{(forecast_time)(:[%a-zA-Z]*)*\})"),
+	    make_pair(Component::kAnalysisTime, R"(\{(analysis_time)(:[%a-zA-Z_]*)*\})"),
+	    make_pair(Component::kForecastTime, R"(\{(forecast_time)(:[%a-zA-Z_]*)*\})"),
 	    make_pair(Component::kStep, R"(\{(step)(:[\.%0-9a-zA-Z]*)*\})"),
 	    make_pair(Component::kGeometryName, R"(\{(geom_name)\})"),
 	    make_pair(Component::kGridName, R"(\{(grid_name)\})"),
@@ -266,7 +266,7 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 	    make_pair(Component::kGridNj, R"(\{(grid_nj)(:[\.%0-9a-zA-Z]*)*\})"),
 	    make_pair(Component::kParamName, R"(\{(param_name)\})"),
 	    make_pair(Component::kAggregationName, R"(\{(aggregation_name)\})"),
-	    make_pair(Component::kAggregationDuration, R"(\{(aggregation_duration)\})"),
+	    make_pair(Component::kAggregationDuration, R"(\{(aggregation_duration)(:[\.%0-9a-zA-Z]*)*\})"),
 	    make_pair(Component::kProcessingTypeName, R"(\{(processing_type_name)\})"),
 	    make_pair(Component::kProcessingTypeValue, R"(\{(processing_type_value)(:[\.%0-9a-zA-Z]*)*\})"),
 	    make_pair(Component::kProcessingTypeValue2, R"(\{(processing_type_value2)(:[\.%0-9a-zA-Z]*)*\})"),
