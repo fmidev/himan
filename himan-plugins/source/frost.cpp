@@ -2,7 +2,6 @@
 #include "forecast_time.h"
 #include "level.h"
 #include "logger.h"
-#include "util.h"
 #include "plugin_factory.h"
 #include "fetcher.h"
 #include <math.h>
@@ -13,13 +12,25 @@ using namespace std;
 using namespace himan;
 using namespace himan::plugin;
 
-const string itsName("frost");
+// rampDown function returns a value between 1 and 0,
+// depending where valueInBetween is in the interval between start and end.
 
-const param FParam("FROST-PROB");
+double rampDown(const double& start, const double& end, const double& valueInBetween)
+{
+	if (valueInBetween <= start)
+		return 1.0;
+
+	if (valueInBetween >= end)
+		return 0.0;
+
+	return fabs((valueInBetween - end) / (end - start));
+}
+
+const param FParam("PROB-FROST");
 
 frost::frost()
 {
-	itsLogger = logger("itsName");
+	itsLogger = logger("frost");
 }
 
 void frost::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -122,7 +133,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
                 {
                         myThreadedLogger.Error("No data found.");
                 }
-                return;
+                //return;
 	}
 
 	/*info_t ICNInfo;
@@ -176,20 +187,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 		double dewIndex = kHPMissingValue;
 
-		if (TD < -5.0)
-		{
-			dewIndex = 1.0;
-		}
-
-		else if (TD > 5.0)
-		{
-			dewIndex = 0.0;
-		}
-
-		else
-		{
-			dewIndex = fabs((TD - 5.0) / 10.0);  // TD -5...5
-		}
+		dewIndex = rampDown(-5, 5, TD); // TD -5...5
 
 		// nIndex
 
@@ -201,39 +199,13 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 		double tIndexHigh = kHPMissingValue;
 
-		if (T < 2.5)
-		{
-			tIndexHigh = 1;
-		}
-
-		else if (T > 15.0)
-		{
-			tIndexHigh = 0;
-		}
-
-		else
-		{
-			tIndexHigh = (fabs((T - 15.0) / 12.5)) * (fabs((T - 15.0) / 12.5));
-		}
+		tIndexHigh = rampDown(2.5, 15, T) * rampDown(2.5, 15, T);
 
 		// wgWind
 
 		double wgWind = kHPMissingValue;
 
-		if (WG < 1.0)
-		{
-			wgWind = 1.0;
-		}
-
-		else if (WG > 6.0)
-		{
-			wgWind = 0;
-		}
-
-		else
-		{
-			wgWind = fabs((WG - 6.0) / 5.0);
-		}
+		wgWind = rampDown(1, 6, WG);
 
 		double lowWindCoef = 1.0;
 		double nCoef = 1.0;
@@ -244,7 +216,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 		if (T >= 0 && T < 2.5)
 		{
-			lowWindCoef = fabs((T - 2.5) / 2.5) * weight + 1.0;
+			lowWindCoef = rampDown(0, 2.5, T) * weight + 1.0;
 			nCoef = 1.0 / lowWindCoef;
 		}
 
@@ -254,18 +226,18 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 		if (T < -3.0)
 		{
-			frost_prob = 100.0;
+			frost_prob = 1.0;
 		}
 
 		else if (T < 0)
 		{
-			frost_prob = 90.0;
+			frost_prob = 0.9;
 		}
 
 		else
 		{
 			frost_prob = ((lowWindCoef * dewIndex) + stabCoef + (nCoef * nIndex)) /
-				(lowWindCoef + stabCoef + (1.0 / lowWindCoef)) * 100 * tIndexHigh;
+				(lowWindCoef + stabCoef + (1.0 / lowWindCoef)) * tIndexHigh;
 		}
 
 		// Raising the frost probability due to ground temperature TG.
@@ -274,22 +246,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 		if (T < 5)
 		{
-
-			if (TG < -6.0)
-			{
-				tgModel = 100.0;
-			}
-
-			else if (TG > 5.0)
-			{
-				tgModel = 0;
-			}
-		
-			else
-			{
-				tgModel = sqrt(fabs((TG - 5.0) / 11.0)) * 100;
-			}
-
+			tgModel = sqrt(rampDown(-6, 5, TG));
 		}
 
 		if (frost_prob < tgModel)
@@ -299,12 +256,12 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 		// Raising the frost probability due to probability of T<0 and T. Both EC and MEPS cases.
 
-		if (T0EC > 60.0 && T < 5.0 && frost_prob < T0EC)
+		if (T0EC > 0.6 && T < 5.0 && frost_prob < T0EC)
 		{
 			frost_prob = T0EC;
 		}
 
-		if (frost_prob < T0MEPS && T0MEPS > 40.0)
+		if (frost_prob < T0MEPS && T0MEPS > 0.4)
 		{
 			frost_prob = (frost_prob * 2.0 + T0MEPS) / 3.0;
 		}
@@ -318,7 +275,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 		{
 			if (RAD > 175)
 			{
-				frost_prob = 0;
+				frost_prob = 0.0;
 			}
 
 		}
@@ -332,20 +289,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
                 	double elevationAngle = theLocation.ElevationAngle(theTime);
                 	double angleCoef = kHPMissingValue;
 
-			if (elevationAngle < -1.0)
-                	{
-                        	angleCoef = 1;
-                	}
-
-                	else if (elevationAngle > 20.0)
-                	{
-                        	angleCoef = 0;
-                	}
-
-                	else
-                	{
-                        	angleCoef = fabs((elevationAngle - 20.0) / 21.0);
-                	}
+			angleCoef = rampDown(-1, 20, elevationAngle);
 
 			frost_prob = angleCoef * frost_prob;
 		}
@@ -359,16 +303,9 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 		// Lowering frost probability when forecasted T is high enough.
 
-		if (T > 6)
+		if (T > 6.0)
 		{
-			if (T > 15.0)
-			{
-				frost_prob = 0;
-			}
-			else
-			{
-				frost_prob = frost_prob * fabs((T - 15.0) / 9.0);
-			}
+			frost_prob = frost_prob * rampDown(6, 15, T);
 		}
 
 		myTargetInfo->Value(frost_prob);
