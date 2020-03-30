@@ -57,8 +57,8 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 	const param T0Param("PROB-TC-0");
 	const param NParam("N-0TO1");
 	const param RADParam("RADGLO-WM2");
+	const param ICNParam("IC-0TO1");
 	//const param LCParam("LC-0TO1");
-	//const param ICNParam("ICNCT-PRCNT");
 
 	auto myThreadedLogger = logger("frostThread #" + to_string(threadIndex));
 
@@ -82,6 +82,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 	info_t TGInfo = Fetch(forecastTime, level(kGroundDepth, 0, 7), TGParam, forecastType, false);
 	info_t WGInfo = Fetch(forecastTime, level(kGround, 0), WGParam, forecastType, false);
 	info_t NInfo = Fetch(forecastTime, level(kGround, 0), NParam, forecastType, false);
+	info_t ICNInfo = Fetch(forecastTime, level(kGround, 0), ICNParam, forecastType, false);
         //info_t LCInfo = Fetch(forecastTime, level(kGround, 0), LCParam, forecastType, false);
 
         info_t RADInfo;
@@ -133,27 +134,10 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
                 {
                         myThreadedLogger.Error("No data found.");
                 }
-                //return;
-	}
-
-	/*info_t ICNInfo;
-
-	try
-	{
-		cnf->SourceProducers({producer(150, 86, 150, "HBM_EC")});
-		cnf->SourceGeomNames({"HBM"});
-		ICNInfo = f->Fetch(cnf, forecastTime, level(kHeight, 0), ICNParam, forecastType, false);
-	}
-	        catch (HPExceptionType& e)
-        {
-                if  (e == kFileDataNotFound)
-                {
-                        myThreadedLogger.Error("No data found.");
-                }
                 return;
-	}*/
+	}
 
-	if (!TInfo || !TDInfo || !TGInfo || !WGInfo || !NInfo || !RADInfo || !T0ECInfo || !T0MEPSInfo) // LCINfo, ICNInfo removed.
+	if (!TInfo || !TDInfo || !TGInfo || !WGInfo || !NInfo || !RADInfo || !T0ECInfo || !T0MEPSInfo || !ICNInfo) // LCINfo removed.
 	{
 		myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
 			static_cast<string>(forecastLevel));
@@ -162,7 +146,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 	string deviceType = "CPU";
 
-	LOCKSTEP(myTargetInfo, TInfo, TDInfo, TGInfo, WGInfo, NInfo, RADInfo, T0ECInfo, T0MEPSInfo) // LCInfo, ICNInfo, removed.
+	LOCKSTEP(myTargetInfo, TInfo, TDInfo, TGInfo, WGInfo, NInfo, RADInfo, T0ECInfo, T0MEPSInfo, ICNInfo) // LCInfo removed.
 
 	{
 		double T = TInfo->Value() - himan::constants::kKelvin;
@@ -173,10 +157,10 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 		double RAD = RADInfo->Value();
 		double T0EC = T0ECInfo->Value();
 		double T0MEPS = T0MEPSInfo->Value();
-		//double LC = TInfo->Value();
-		//double ICN = TInfo->Value();
+		double ICN = ICNInfo->Value();
+		//double LC = LCInfo->Value();
 
-		if (IsMissingValue({T, TD, TG, WG, N, RAD, T0EC, T0MEPS})) // LC, ICN
+		if (IsMissingValue({T, TD, TG, WG, N, RAD, T0EC, T0MEPS, ICN})) // LC
 		{
 			continue;
 		}
@@ -222,7 +206,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 		// Calculating frost probability.
 
-		double frost_prob = kHPMissingValue;
+		double frost_prob = MissingDouble();
 
 		if (T < -3.0)
 		{
