@@ -33,7 +33,7 @@ himan::file_information csv::ToFile(info<T>& theInfo)
 	aTimer.Start();
 
 	file_information finfo;
-	finfo.file_location = util::MakeFileName(theInfo, *itsWriteOptions.configuration) + ".csv";
+	finfo.file_location = util::MakeFileName(theInfo, *itsWriteOptions.configuration);
 	finfo.file_type = kCSV;
 	finfo.storage_type = itsWriteOptions.configuration->WriteStorageType();
 

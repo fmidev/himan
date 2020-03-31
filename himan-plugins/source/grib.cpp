@@ -1169,24 +1169,23 @@ himan::file_information grib::CreateGribMessage(info<T>& anInfo)
 	// Write only that data which is currently set at descriptors
 
 	file_information finfo;
-	finfo.file_location = util::MakeFileName(anInfo, *itsWriteOptions.configuration) + ".grib";
-	finfo.file_type = kGRIB1;
+	finfo.file_location = util::MakeFileName(anInfo, *itsWriteOptions.configuration);
 	finfo.storage_type = itsWriteOptions.configuration->WriteStorageType();
 
 	long edition = DetermineCorrectGribEdition(static_cast<int>(itsWriteOptions.configuration->OutputFileType()),
 	                                           anInfo.ForecastType(), anInfo.Time(), anInfo.Level(), anInfo.Param());
 
-	if (edition == 2)
+	finfo.file_type = static_cast<HPFileType>(edition);
+
+	if (edition == 2 && itsWriteOptions.configuration->OutputFileType() == kGRIB1)
 	{
 		// backwards compatibility: previously grib version number was
 		// not appended to filename when 'file_write' : 'single'
 		if ((itsWriteOptions.configuration->LegacyWriteMode() == false ||
-		     itsWriteOptions.configuration->WriteMode() != kAllGridsToAFile) ||
-		    itsWriteOptions.configuration->OutputFileType() == kGRIB2)
+		     itsWriteOptions.configuration->WriteMode() != kAllGridsToAFile))
 		{
 			finfo.file_location += "2";
 		}
-		finfo.file_type = kGRIB2;
 	}
 
 	if (itsWriteOptions.configuration->FileCompression() == kGZIP)

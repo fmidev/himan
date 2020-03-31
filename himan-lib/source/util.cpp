@@ -359,18 +359,20 @@ string DetermineDefaultFileName(const info<T>& info, const plugin_configuration&
 
 		if (static_cast<int>(ftype.Type()) > 2)  // backwards compatibility
 		{
-			ss << "_"
-			   << "{forecast_type_id}";
+			ss << "_{forecast_type_id}";
+
 			if (ftype.Type() == kEpsControl || ftype.Type() == kEpsPerturbation)
 			{
-				ss << "_"
-				   << "{forecast_type_value}";
+				ss << "_{forecast_type_value}";
 			}
 		}
+
+		ss << ".{file_type}";
 	}
 	else if (conf.WriteMode() == kFewGridsToAFile)
 	{
-		ss << "/fc{analysis_time:%Y%m%d%H%M}+{step:%03hh%02Mm}_" << conf.Name() << "#" << conf.RelativeOrdinalNumber();
+		ss << "/fc{analysis_time:%Y%m%d%H%M}+{step:%03hh%02Mm}_" << conf.Name() << "#" << conf.RelativeOrdinalNumber()
+		   << ".{file_type}";
 	}
 	else if (conf.WriteMode() == kAllGridsToAFile)
 	{
@@ -380,11 +382,11 @@ string DetermineDefaultFileName(const info<T>& info, const plugin_configuration&
 			// --> no need for 'base'
 
 			ss.str("");
-			ss << conf.ConfigurationFile();
+			ss << conf.ConfigurationFile() << ".{file_type}";
 		}
 		else
 		{
-			ss << "/fc{analysis_time:%Y%m%d%H%M}+{step:%03hh%02Mm}";
+			ss << "/fc{analysis_time:%Y%m%d%H%M}+{step:%03hh%02Mm}.{file_type}";
 		}
 	}
 
