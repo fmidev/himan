@@ -424,6 +424,12 @@ Example:
 
     "filename_template" : "fc{analysis_time:%Y%m%d%H%M}_{step:%03h}_{level_name}.{file_type}"
 
+Himan can pack data with a few different methods. Packing is controlled with key `packing_type`.
+
+    "file_packing_type" : "simple_packing" | "jpeg_packing" | "ccsds_packing"
+
+Note! Only GRIB2 files support all three packing types. Default value is `simple_packing`.
+
 <a name="Database_access"/>
 
 ## Database access
