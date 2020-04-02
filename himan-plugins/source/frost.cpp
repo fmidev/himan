@@ -4,7 +4,7 @@
 #include "logger.h"
 #include "plugin_factory.h"
 #include "fetcher.h"
-#include <math.h>
+#include "radon.h"
 #include <NFmiLocation.h>
 #include <NFmiMetTime.h>
 
@@ -23,10 +23,10 @@ double rampDown(const double& start, const double& end, const double& valueInBet
 	if (valueInBetween >= end)
 		return 0.0;
 
-	return fabs((valueInBetween - end) / (end - start));
+	return (end - valueInBetween) / (end - start);
 }
 
-const param FParam("PROB-FROST");
+const param FParam("PROB-FROST-1");
 
 frost::frost()
 {
@@ -55,7 +55,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 	const param TGParam("TG-K");
 	const param WGParam("FFG-MS");
 	const param T0Param("PROB-TC-0");
-	const param NParam("N-0TO1");
+	const param NParam("N-PRCNT");
 	const param RADParam("RADGLO-WM2");
 	const param ICNParam("IC-0TO1");
 	//const param LCParam("LC-0TO1");
@@ -69,23 +69,48 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + ", level " +
 			static_cast<string>(forecastLevel));
 
-	auto cnf = make_shared<plugin_configuration>(*itsConfiguration);
-	auto f = GET_PLUGIN(fetcher);
+	// Get the latest data from producer 181.
 
-	cnf->SourceProducers({producer(131, 98, 150, "ECG")});
+	info_t TInfo = Fetch(forecastTime, level(kHeight, 2), TParam, forecastType, false);
+	info_t TDInfo = Fetch(forecastTime, level(kHeight, 2), TDParam, forecastType, false);
+	info_t NInfo = Fetch(forecastTime, level(kHeight, 0), NParam, forecastType, false);
 
-        const std::vector<std::string>& names = { "ECEUR0100", "ECGLO0100", "ECEUR0200" };
-	cnf->SourceGeomNames(names);
+	// Change forecastTime for producer 131 due to varying forecastTime with producer 181.
 
-	info_t TInfo = Fetch(forecastTime, level(kGround, 0), TParam, forecastType, false);
-	info_t TDInfo = Fetch(forecastTime, level(kGround, 0), TDParam, forecastType, false);
-	info_t TGInfo = Fetch(forecastTime, level(kGroundDepth, 0, 7), TGParam, forecastType, false);
-	info_t WGInfo = Fetch(forecastTime, level(kGround, 0), WGParam, forecastType, false);
-	info_t NInfo = Fetch(forecastTime, level(kGround, 0), NParam, forecastType, false);
+        auto r = GET_PLUGIN(radon);
+        auto latestFromDatabase = r->RadonDB().GetLatestTime(131, "", 0);
+        forecastTime.OriginDateTime(latestFromDatabase);
+
+        info_t TGInfo = Fetch(forecastTime, level(kGroundDepth, 0, 7), TGParam, forecastType, false);
+        info_t WGInfo = Fetch(forecastTime, level(kGround, 0), WGParam, forecastType, false);
+
+	// Change forecastTime to 00 or 12 if necessary.  
+
+	int latestHour = std::stoi(forecastTime.OriginDateTime().String("%H"));
+
+	if (latestHour > 0 && latestHour < 12)
+	{
+		 forecastTime.OriginDateTime().Adjust(kHourResolution, -latestHour);
+	}
+	if (latestHour > 12 && latestHour <= 23)
+	{
+		forecastTime.OriginDateTime().Adjust(kHourResolution, -latestHour);
+		forecastTime.OriginDateTime().Adjust(kHourResolution, 12);
+	}
+
 	info_t ICNInfo = Fetch(forecastTime, level(kGround, 0), ICNParam, forecastType, false);
+
         //info_t LCInfo = Fetch(forecastTime, level(kGround, 0), LCParam, forecastType, false);
 
-        info_t RADInfo;
+	// Get the latest RADGLO-WM2.
+
+	info_t RADInfo;
+
+        latestFromDatabase = r->RadonDB().GetLatestTime(240, "ECGLO0100", 0);
+	forecastTime.OriginDateTime(latestFromDatabase);
+
+	auto cnf = make_shared<plugin_configuration>(*itsConfiguration);
+        auto f = GET_PLUGIN(fetcher);
 
         try
         {
@@ -101,7 +126,12 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
                 return;
         }
 
+	// Get the latest ECMWF PROB-TC-0.
+
 	info_t T0ECInfo;
+
+	latestFromDatabase = r->RadonDB().GetLatestTime(242, "ECEUR0200", 0);
+        forecastTime.OriginDateTime(latestFromDatabase);
 
 	forecast_type stat_type = forecast_type(kStatisticalProcessing);
 
@@ -120,7 +150,25 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 		return;
 	}
 
+	// Get the latest MEPS PROB-TC-0 from hour 00, 03, 06, 09, 12, 15, 18 or 21. 
+
 	info_t T0MEPSInfo;
+
+	latestFromDatabase = r->RadonDB().GetLatestTime(260, "MEPS2500D", 1);
+	forecastTime.OriginDateTime(latestFromDatabase);
+	latestHour = std::stoi(forecastTime.OriginDateTime().String("%H"));
+
+        if (latestHour == 1 || latestHour == 4 || latestHour == 7 || latestHour == 10 ||latestHour == 13 
+		|| latestHour == 16 ||latestHour == 19 || latestHour == 22)
+        {
+                 forecastTime.OriginDateTime().Adjust(kHourResolution, -1);
+        }
+
+        if (latestHour == 2 || latestHour == 5 || latestHour == 8 || latestHour == 11 ||latestHour == 14 
+		|| latestHour == 17 ||latestHour == 20 || latestHour == 23)
+        {
+                forecastTime.OriginDateTime().Adjust(kHourResolution, -2);
+        }
 
 	try
 	{
@@ -171,25 +219,25 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 		double dewIndex = kHPMissingValue;
 
-		dewIndex = rampDown(-5, 5, TD); // TD -5...5
+		dewIndex = rampDown(-5.0, 5.0, TD); // TD -5...5
 
 		// nIndex
 
 		double nIndex = kHPMissingValue;
 
-		nIndex = 1.0 - N;
+		nIndex = (100.0 - N) / 100.0;
 
 		// tIndexHigh
 
 		double tIndexHigh = kHPMissingValue;
 
-		tIndexHigh = rampDown(2.5, 15, T) * rampDown(2.5, 15, T);
+		tIndexHigh = rampDown(2.5, 15.0, T) * rampDown(2.5, 15.0, T);
 
 		// wgWind
 
 		double wgWind = kHPMissingValue;
 
-		wgWind = rampDown(1, 6, WG);
+		wgWind = rampDown(1.0, 6.0, WG);
 
 		double lowWindCoef = 1.0;
 		double nCoef = 1.0;
@@ -228,9 +276,9 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 		double tgModel = kHPMissingValue;
 
-		if (T < 5)
+		if (T < 5.0)
 		{
-			tgModel = sqrt(rampDown(-6, 5, TG));
+			tgModel = sqrt(rampDown(-6.0, 5.0, TG));
 		}
 
 		if (frost_prob < tgModel)
@@ -273,7 +321,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
                 	double elevationAngle = theLocation.ElevationAngle(theTime);
                 	double angleCoef = kHPMissingValue;
 
-			angleCoef = rampDown(-1, 20, elevationAngle);
+			angleCoef = rampDown(-1.0, 20.0, elevationAngle);
 
 			frost_prob = angleCoef * frost_prob;
 		}
@@ -289,7 +337,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 		if (T > 6.0)
 		{
-			frost_prob = frost_prob * rampDown(6, 15, T);
+			frost_prob = frost_prob * rampDown(6.0, 15.0, T);
 		}
 
 		myTargetInfo->Value(frost_prob);
