@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.3.2
-Release: 2%{dist}.fmi
+Version: 20.4.2
+Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 20.3.2
+Requires: himan-lib >= 20.4.2
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 20.1.20
@@ -120,6 +120,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Thu Apr  2 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.2-1.fmi
+- Add support for ccsds packing
+- Minor bugfixes
 * Mon Mar  2 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.3.2-2.fmi
 - Add filename template support
 - snow_drift minor tweaking
