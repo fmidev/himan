@@ -1,10 +1,10 @@
 /**
- * @file   lambert_conformal_grid.h
+ * @file   lambert_equal_area_grid.h
  *
  */
 
-#ifndef LAMBERT_CONFORMAL_GRID_H
-#define LAMBERT_CONFORMAL_GRID_H
+#ifndef LAMBERT_EQUAL_AREA_H
+#define LAMBERT_EQUAL_AREA_H
 
 #include "grid.h"
 #include "logger.h"
@@ -17,19 +17,22 @@ class OGRSpatialReference;
 
 namespace himan
 {
-class lambert_conformal_grid : public regular_grid
+class lambert_equal_area_grid : public regular_grid
 {
    public:
-	lambert_conformal_grid();
-	lambert_conformal_grid(HPScanningMode theScanningMode, point theFirstPoint);
+	lambert_equal_area_grid(HPScanningMode theScanningMode, const point& theFirstPoint, size_t ni, size_t nj, double di,
+	                        double dj, double theOrientation, double theStandardParallel,
+	                        const earth_shape<double>& earthShape, bool firstPointIsProjected = false);
+	lambert_equal_area_grid(HPScanningMode theScanningMode, const point& theFirstPoint, size_t ni, size_t nj, double di,
+	                        double dj, std::unique_ptr<OGRSpatialReference> spRef, bool firstPointIsProjected = false);
 
-	virtual ~lambert_conformal_grid();
-	lambert_conformal_grid(const lambert_conformal_grid& other);
-	lambert_conformal_grid& operator=(const lambert_conformal_grid& other) = delete;
+	virtual ~lambert_equal_area_grid();
+	lambert_equal_area_grid(const lambert_equal_area_grid& other);
+	lambert_equal_area_grid& operator=(const lambert_equal_area_grid& other) = delete;
 
 	virtual std::string ClassName() const
 	{
-		return "himan::lambert_conformal_grid";
+		return "himan::lambert_equal_area_grid";
 	}
 	virtual std::ostream& Write(std::ostream& file) const;
 
@@ -75,44 +78,25 @@ class lambert_conformal_grid : public regular_grid
 	point BottomRight() const;
 	point TopLeft() const;
 
-	void BottomLeft(const point& theBottomLeft);
-	void TopLeft(const point& theTopLeft);
+	point FirstPoint() const override;
+	point LastPoint() const override;
 
-	point FirstPoint() const;
-	point LastPoint() const;
-
-	bool operator==(const grid& other) const;
-	bool operator!=(const grid& other) const;
+	std::unique_ptr<grid> Clone() const override;
+	size_t Hash() const override;
 
 	point XY(const point& latlon) const override;
 	point LatLon(size_t locationIndex) const override;
 
-	std::unique_ptr<grid> Clone() const override;
+	bool operator==(const grid& other) const;
+	bool operator!=(const grid& other) const;
 
-	void Orientation(double theOrientation);
 	double Orientation() const;
-
-	void StandardParallel1(double theStandardParallel1);
-	double StandardParallel1() const;
-
-	void StandardParallel2(double theStandardParallel2);
-	double StandardParallel2() const;
-
+	double StandardParallel() const;
 	OGRSpatialReference SpatialReference() const;
 
-	point SouthPole() const;
-	void SouthPole(const point& theSouthPole);
-
-	size_t Hash() const override;
-
-	double Cone() const;
-
    private:
-	bool EqualsTo(const lambert_conformal_grid& other) const;
-	void SetCoordinates() const;
-
-	point itsBottomLeft;
-	point itsTopLeft;
+	bool EqualsTo(const lambert_equal_area_grid& other) const;
+	void CreateCoordinateTransformations(const point& firstPoint, bool isProjected);
 
 	double itsDi;
 	double itsDj;
@@ -120,13 +104,6 @@ class lambert_conformal_grid : public regular_grid
 	size_t itsNi;
 	size_t itsNj;
 
-	double itsOrientation;
-	double itsStandardParallel1;
-	mutable double itsStandardParallel2;
-
-	point itsSouthPole;
-
-	mutable std::once_flag itsAreaFlag;
 	mutable std::unique_ptr<OGRCoordinateTransformation> itsXYToLatLonTransformer;
 	mutable std::unique_ptr<OGRCoordinateTransformation> itsLatLonToXYTransformer;
 #ifdef SERIALIZATION
@@ -142,14 +119,14 @@ class lambert_conformal_grid : public regular_grid
 #endif
 };
 
-inline std::ostream& operator<<(std::ostream& file, const lambert_conformal_grid& ob)
+inline std::ostream& operator<<(std::ostream& file, const lambert_equal_area_grid& ob)
 {
 	return ob.Write(file);
 }
 }  // namespace himan
 
 #ifdef SERIALIZATION
-CEREAL_REGISTER_TYPE(himan::lambert_conformal_grid);
+CEREAL_REGISTER_TYPE(himan::lambert_equal_area_grid);
 #endif
 
-#endif /* LAMBERT_CONFORMAL_GRID_H */
+#endif /* LAMBERT_EQUAL_AREA_H */

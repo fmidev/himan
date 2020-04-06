@@ -263,7 +263,7 @@ point lambert_conformal_grid::XY(const point& latlon) const
 	// Grid point coordinates run from 0 ... ni and 0 ... nj.
 
 	const double x = (projX / itsDi);
-	const double y = (projY / itsDj);
+	const double y = (projY / itsDj) * (itsScanningMode == kTopLeft ? -1 : 1);
 
 	if (x < 0 || x > Ni() - 1 || y < 0 || y > Nj() - 1)
 	{
@@ -287,12 +287,7 @@ point lambert_conformal_grid::LatLon(size_t locationIndex) const
 	const size_t iIndex = static_cast<size_t>(locationIndex % itsNi);
 
 	double x = static_cast<double>(iIndex) * Di();
-	double y = static_cast<double>(jIndex) * Dj();
-
-	if (itsScanningMode == kTopLeft)
-	{
-		y *= -1;
-	}
+	double y = static_cast<double>(jIndex) * Dj() * (itsScanningMode == kTopLeft ? -1 : 1);
 
 	ASSERT(itsXYToLatLonTransformer);
 	if (!itsXYToLatLonTransformer->Transform(1, &x, &y))

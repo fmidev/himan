@@ -423,7 +423,7 @@ unique_ptr<grid> latitude_longitude_grid::Clone() const
 
 ostream& latitude_longitude_grid::Write(std::ostream& file) const
 {
-	grid::Write(file);
+	regular_grid::Write(file);
 
 	file << itsBottomLeft << itsTopLeft << itsTopRight << itsBottomRight << "__itsNi__ " << itsNi << endl
 	     << "__itsNj__ " << itsNj << endl
