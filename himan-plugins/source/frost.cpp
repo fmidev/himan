@@ -75,7 +75,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 	info_t TDInfo = Fetch(forecastTime, level(kHeight, 2), TDParam, forecastType, false);
 	info_t NInfo = Fetch(forecastTime, level(kHeight, 0), NParam, forecastType, false);
 
-	// Change forecastTime for producer 131 due to varying forecastTime with producer 181.
+	// Change forecast origin time for producer 131 due to varying origin time with producer 181.
 
         auto r = GET_PLUGIN(radon);
         auto latestFromDatabase = r->RadonDB().GetLatestTime(131, "", 0);
@@ -124,7 +124,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 	info_t ICNInfo;
 
-	// Change forecastTime to 00 or 12 if necessary.  
+	// Change forecast origin time to 00 or 12 if necessary.  
 
 	int latestHour = std::stoi(forecastTime.OriginDateTime().String("%H"));
 
@@ -259,10 +259,11 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 	info_t T0MEPSInfo;
 
 	int MEPS_offset = 1;
-	success = false;
 
 	latestFromDatabase = r->RadonDB().GetLatestTime(260, "MEPS2500D", MEPS_offset);
 	forecastTime.OriginDateTime(latestFromDatabase);
+
+	success = false;
 
         while (success == false)
         {
