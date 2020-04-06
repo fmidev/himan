@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.4.2
+Version: 20.4.6
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
