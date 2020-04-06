@@ -17,7 +17,7 @@ Requires: himan-lib >= 20.4.2
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 20.1.20
-Requires: libfmidb >= 20.1.21
+Requires: libfmidb >= 20.4.6
 Requires: smartmet-library-newbase >= 18.7.23
 Requires: libpqxx
 Requires: boost-iostreams
@@ -41,7 +41,7 @@ Requires: jasper-libs
 Requires: eccodes
 %endif
 BuildRequires: libfmigrib-devel >= 20.1.20
-BuildRequires: libfmidb-devel >= 20.1.21
+BuildRequires: libfmidb-devel >= 20.4.6
 BuildRequires: smartmet-library-newbase-devel >= 18.7.23
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
@@ -120,6 +120,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Apr  6 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.6-1.fmi
+- fmidb ABI change
 * Thu Apr  2 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.2-1.fmi
 - Add support for ccsds packing
 - Minor bugfixes
