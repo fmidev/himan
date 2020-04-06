@@ -422,19 +422,43 @@ vector<himan::file_information> radon::Files(search_options& options)
 	file_information finfo;
 	finfo.file_location = values[0];
 	finfo.file_server = values[7];
-	finfo.file_type = static_cast<HPFileType>(stoi(values[4]));  // 1 = GRIB1, 2=GRIB2
+	switch (stoi(values[4]))
+	{
+		case 1:
+		case 2:
+			finfo.file_type = static_cast<HPFileType>(stoi(values[4]));
+			break;
+		case 3:
+		case 4:
+			finfo.file_type = kNetCDF;
+			break;
+		case 5:
+			finfo.file_type = kGeoTIFF;
+			break;
+		default:
+			itsLogger.Error("Unknown file type: " + values[4]);
+			return ret;
+	}
+
 	finfo.storage_type = static_cast<HPFileStorageType>(stoi(values[5]));
 
 	try
 	{
 		finfo.offset = static_cast<unsigned long>(stoul(values[2]));
 		finfo.length = static_cast<unsigned long>(stoul(values[3]));
-		finfo.message_no = static_cast<unsigned long>(stoul(values[6]));
 	}
 	catch (const invalid_argument& e)
 	{
 		finfo.offset = boost::none;
 		finfo.length = boost::none;
+	}
+
+	try
+	{
+		finfo.message_no = static_cast<unsigned long>(stoul(values[6]));
+	}
+	catch (const invalid_argument& e)
+	{
 		finfo.message_no = boost::none;
 	}
 

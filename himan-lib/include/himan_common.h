@@ -124,7 +124,8 @@ enum HPFileType
 	kGRIBIndex,
 	kQueryData,
 	kNetCDF,
-	kCSV
+	kCSV,
+	kGeoTIFF
 };
 
 const boost::unordered_map<HPFileType, std::string> HPFileTypeToString =
@@ -136,7 +137,8 @@ const boost::unordered_map<HPFileType, std::string> HPFileTypeToString =
 	(kGRIBIndex, "grib index file")
 	(kQueryData, "QueryData")
 	(kNetCDF, "NetCDF")
-	(kCSV, "CSV");
+	(kCSV, "CSV")
+	(kGeoTIFF, "GeoTIFF");
 
 // Defined external compression types
 
