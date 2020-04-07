@@ -10,17 +10,14 @@
 using namespace himan;
 using namespace std;
 
-point_list::point_list() : irregular_grid(), itsStations()
+point_list::point_list() : irregular_grid(kPointList), itsStations()
 {
 	itsLogger = logger("point_list");
-	Type(kPointList);
 }
 
-point_list::point_list(const vector<station>& theStations) : irregular_grid(), itsStations(theStations)
+point_list::point_list(const vector<station>& theStations) : irregular_grid(kPointList), itsStations(theStations)
 {
 	itsLogger = logger("point_list");
-
-	Type(kPointList);
 }
 
 point_list::point_list(const point_list& other) : irregular_grid(other), itsStations(other.itsStations)

@@ -19,9 +19,8 @@ class reduced_gaussian_grid : public irregular_grid
 {
    public:
 	reduced_gaussian_grid();
-	virtual ~reduced_gaussian_grid()
-	{
-	}
+	virtual ~reduced_gaussian_grid() = default;
+
 	reduced_gaussian_grid(const reduced_gaussian_grid& other);
 	reduced_gaussian_grid& operator=(const reduced_gaussian_grid& other) = delete;
 

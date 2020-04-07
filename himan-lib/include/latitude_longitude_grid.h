@@ -20,8 +20,10 @@ namespace himan
 class latitude_longitude_grid : public regular_grid
 {
    public:
-	latitude_longitude_grid();
-	latitude_longitude_grid(HPScanningMode theScanningMode, point theBottomLeft, point theTopRight);
+	latitude_longitude_grid(HPScanningMode theScanningMode, const point& theFirstPoint, const point& theLastPoint,
+	                        size_t ni, size_t nj, const earth_shape<double>& earthShape);
+	latitude_longitude_grid(HPScanningMode theScanningMode, const point& theFirstPoint, size_t ni, size_t nj, double di,
+	                        double dj, const earth_shape<double>& earthShape);
 
 	virtual ~latitude_longitude_grid() = default;
 	/**
@@ -42,59 +44,7 @@ class latitude_longitude_grid : public regular_grid
 	}
 	virtual std::ostream& Write(std::ostream& file) const;
 
-	/**
-	 * @return Number of points along X axis
-	 */
-
-	size_t Ni() const override;
-
-	/**
-	 * @return Number of points along Y axis
-	 */
-
-	size_t Nj() const override;
-
-	/**
-	 *
-	 * @return  Grid size
-	 */
-
-	size_t Size() const override;
-
-	/**
-	 * @return Distance between two points in X axis in degrees
-	 */
-
-	double Di() const override;
-
-	/**
-	 * @return Distance between two points in Y axis in degrees
-	 */
-
-	double Dj() const override;
-
-	void Ni(size_t theNi);
-	void Nj(size_t theNj);
-
-	void Di(double theDi);
-	void Dj(double theDj);
-
-	point BottomLeft() const override;
-	point TopRight() const override;
-	point BottomRight() const;
-	point TopLeft() const;
-
-	void BottomLeft(const point& theBottomLeft);
-	void TopRight(const point& theTopRight);
-	void BottomRight(const point& theBottomRight);
-	void TopLeft(const point& theTopLeft);
-
-	void FirstPoint(const point& theFirstPoint);
-	void LastPoint(const point& theLastPoint);
-
-	point FirstPoint() const;
-	point LastPoint() const;
-
+	virtual point FirstPoint() const override;
 	bool IsGlobal() const;
 
 	bool operator==(const grid& other) const;
@@ -107,20 +57,14 @@ class latitude_longitude_grid : public regular_grid
 
 	std::unique_ptr<grid> Clone() const override;
 
+	virtual std::string Proj4String() const override;
+	virtual earth_shape<double> EarthShape() const override;
+
    protected:
-	void UpdateCoordinates() const;
 	bool EqualsTo(const latitude_longitude_grid& other) const;
 
-	mutable point itsBottomLeft;
-	mutable point itsTopRight;
-	mutable point itsBottomRight;
-	mutable point itsTopLeft;
-
-	mutable double itsDi;
-	mutable double itsDj;
-
-	size_t itsNi;
-	size_t itsNj;
+	point itsFirstPoint;
+	earth_shape<double> itsEarthShape;
 
    private:
 #ifdef SERIALIZATION
@@ -129,9 +73,9 @@ class latitude_longitude_grid : public regular_grid
 	template <class Archive>
 	void serialize(Archive& ar)
 	{
-		ar(cereal::base_class<regular_grid>(this), CEREAL_NVP(itsBottomLeft), CEREAL_NVP(itsBottomRight),
-		   CEREAL_NVP(itsTopLeft), CEREAL_NVP(itsTopRight), CEREAL_NVP(itsDi), CEREAL_NVP(itsDj), CEREAL_NVP(itsNi),
-		   CEREAL_NVP(itsNj), CEREAL_NVP(itsIsGlobal));
+		ar(cereal::base_class<regular_grid>(this), CEREAL_NVP(itsFirstPoint), CEREAL_NVP(itsEarthShape)
+
+		);
 	}
 #endif
 };
@@ -143,11 +87,15 @@ inline std::ostream& operator<<(std::ostream& file, const latitude_longitude_gri
 class rotated_latitude_longitude_grid : public latitude_longitude_grid
 {
    public:
-	rotated_latitude_longitude_grid();
-	rotated_latitude_longitude_grid(HPScanningMode theScanningMode, point theBottomLeft, point theTopRight,
-	                                point theSouthPole, bool initiallyRotated = true);
+	rotated_latitude_longitude_grid(HPScanningMode theScanningMode, const point& theFirstPoint, size_t ni, size_t nj,
+	                                double di, double dj, const earth_shape<double>& earthShape,
+	                                const point& theSouthPole, bool initiallyRotated = true);
+	rotated_latitude_longitude_grid(HPScanningMode theScanningMode, const point& theFirstPoint,
+	                                const point& theLastPoint, size_t ni, size_t nj,
+	                                const earth_shape<double>& earthShape, const point& theSouthPole,
+	                                bool initiallyRotated = true);
 
-	virtual ~rotated_latitude_longitude_grid();
+	virtual ~rotated_latitude_longitude_grid() = default;
 	rotated_latitude_longitude_grid(const rotated_latitude_longitude_grid& other);
 	rotated_latitude_longitude_grid& operator=(const rotated_latitude_longitude_grid& other) = delete;
 
@@ -162,14 +110,23 @@ class rotated_latitude_longitude_grid : public latitude_longitude_grid
 	}
 	std::unique_ptr<grid> Clone() const override;
 
+	// return south pole location in normal latlon
 	point SouthPole() const;
-	void SouthPole(const point& theSouthPole);
 
+	// return first point in normal latlon
+	point FirstPoint() const override;
+	// return grid xy coordinates for normal latlon
 	point XY(const point& latlon) const override;
+	// return latlon for grid running index
 	point LatLon(size_t locationIndex) const override;
+	// return rotated point for grid running index
 	point RotatedLatLon(size_t locationIndex) const;
+	// return rotated point for normal latlon
+	point Rotate(const point& latlon) const;
 
 	size_t Hash() const override;
+
+	virtual std::string Proj4String() const override;
 
    private:
 	bool EqualsTo(const rotated_latitude_longitude_grid& other) const;

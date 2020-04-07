@@ -196,12 +196,11 @@ NFmiHPlaceDescriptor CreateGrid(himan::info<T>& info)
 		case himan::kRotatedLatitudeLongitude:
 		{
 			auto g = std::dynamic_pointer_cast<himan::rotated_latitude_longitude_grid>(info.Grid());
-
 			theArea = new NFmiRotatedLatLonArea(
 			    NFmiPoint(g->BottomLeft().X(), g->BottomLeft().Y()), NFmiPoint(g->TopRight().X(), g->TopRight().Y()),
 			    NFmiPoint(g->SouthPole().X(), g->SouthPole().Y()), NFmiPoint(0., 0.),  // default values
 			    NFmiPoint(1., 1.),                                                     // default values
-			    true);
+			    false);
 
 			break;
 		}
@@ -639,38 +638,32 @@ shared_ptr<himan::info<T>> querydata::CreateInfo(shared_ptr<NFmiQueryData> theDa
 	switch (qinfo.Area()->ClassId())
 	{
 		case kNFmiLatLonArea:
-		{
-			newGrid = new latitude_longitude_grid;
-			latitude_longitude_grid* const ll = dynamic_cast<latitude_longitude_grid*>(newGrid);
-			ll->BottomLeft(point(qinfo.Area()->BottomLeftLatLon().X(), qinfo.Area()->BottomLeftLatLon().Y()));
-			ll->TopRight(point(qinfo.Area()->TopRightLatLon().X(), qinfo.Area()->TopRightLatLon().Y()));
-			ll->Ni(ni);
-			ll->Nj(nj);
-		}
-		break;
+			newGrid = new latitude_longitude_grid(
+			    kBottomLeft, point(qinfo.Area()->BottomLeftLatLon().X(), qinfo.Area()->BottomLeftLatLon().Y()),
+			    point(qinfo.Area()->TopRightLatLon().X(), qinfo.Area()->TopRightLatLon().Y()), ni, nj,
+			    earth_shape<double>(6371220.));
+			break;
 
 		case kNFmiRotatedLatLonArea:
 		{
-			newGrid = new rotated_latitude_longitude_grid;
-			rotated_latitude_longitude_grid* const rll = dynamic_cast<rotated_latitude_longitude_grid*>(newGrid);
-			NFmiPoint southPole = reinterpret_cast<const NFmiRotatedLatLonArea*>(qinfo.Area())->SouthernPole();
-			rll->SouthPole(point(southPole.X(), southPole.Y()));
-			rll->UVRelativeToGrid(false);
-			rll->BottomLeft(point(qinfo.Area()->BottomLeftLatLon().X(), qinfo.Area()->BottomLeftLatLon().Y()));
-			rll->TopRight(point(qinfo.Area()->TopRightLatLon().X(), qinfo.Area()->TopRightLatLon().Y()));
-			rll->Ni(ni);
-			rll->Nj(nj);
+			const NFmiPoint southPole = reinterpret_cast<const NFmiRotatedLatLonArea*>(qinfo.Area())->SouthernPole();
+
+			newGrid = new rotated_latitude_longitude_grid(
+			    kBottomLeft, point(qinfo.Area()->BottomLeftLatLon().X(), qinfo.Area()->BottomLeftLatLon().Y()),
+			    point(qinfo.Area()->TopRightLatLon().X(), qinfo.Area()->TopRightLatLon().Y()), ni, nj,
+			    earth_shape<double>(6371220.), point(southPole.X(), southPole.Y()));
 		}
 		break;
 
 		case kNFmiStereographicArea:
 		{
-			newGrid = new stereographic_grid;
-			stereographic_grid* const s = dynamic_cast<stereographic_grid*>(newGrid);
-			s->Orientation(reinterpret_cast<const NFmiStereographicArea*>(qinfo.Area())->Orientation());
-			s->BottomLeft(point(qinfo.Area()->BottomLeftLatLon().X(), qinfo.Area()->BottomLeftLatLon().Y()));
-			s->Ni(ni);
-			s->Nj(nj);
+			const double di = qinfo.Area()->WorldXYWidth() / qinfo.Grid()->XNumber();
+			const double dj = qinfo.Area()->WorldXYHeight() / qinfo.Grid()->YNumber();
+
+			newGrid = new stereographic_grid(
+			    kBottomLeft, point(qinfo.Area()->BottomLeftLatLon().X(), qinfo.Area()->BottomLeftLatLon().Y()), ni, nj,
+			    di, dj, reinterpret_cast<const NFmiStereographicArea*>(qinfo.Area())->Orientation(),
+			    earth_shape<double>(6371220.));
 		}
 		break;
 
@@ -678,9 +671,6 @@ shared_ptr<himan::info<T>> querydata::CreateInfo(shared_ptr<NFmiQueryData> theDa
 			itsLogger.Fatal("Invalid projection");
 			himan::Abort();
 	}
-
-	dynamic_cast<regular_grid*>(newGrid)->ScanningMode(kBottomLeft);
-	newGrid->EarthShape(earth_shape<double>(6371220));
 
 	auto b = make_shared<base<T>>();
 	b->grid = shared_ptr<grid>(newGrid->Clone());

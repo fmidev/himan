@@ -2,6 +2,7 @@
 #include "interpolate.h"
 #include "plugin_factory.h"
 #include "windvector.cuh"
+#include <ogr_spatialref.h>
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -23,7 +24,7 @@ __global__ void Calculate(const float* __restrict__ d_u, const float* __restrict
 		const float U = d_u[idx];
 		const float V = d_v[idx];
 
-		d_speed[idx] = __dsqrt_rn(U * U + V * V);
+		d_speed[idx] = __fsqrt_rn(U * U + V * V);
 
 		if (targetType != himan::plugin::kGust)
 		{
@@ -112,8 +113,9 @@ void himan::plugin::windvector_cuda::RunCuda(std::shared_ptr<const plugin_config
 
 	if (UInfo->Grid()->UVRelativeToGrid())
 	{
-		latitude_longitude_grid x;
-		himan::interpolate::RotateVectorComponentsGPU(UInfo->Grid().get(), &x, UInfo->Data(), VInfo->Data(), stream,
+		latitude_longitude_grid dummy(kBottomLeft, point(), point(), 0, 0, earth_shape<double>());
+
+		himan::interpolate::RotateVectorComponentsGPU(UInfo->Grid().get(), &dummy, UInfo->Data(), VInfo->Data(), stream,
 		                                              d_u, d_v);
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 	}
