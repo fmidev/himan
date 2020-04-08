@@ -14,6 +14,8 @@ frost plugin calculates frost probability.
 * radiation (RADGLO-WM2)
 * sea ice (IC-0TO1)
 * land cover (LC-0TO1)
+* elevation angle of the sun
+* date
 
 # Output parameters
 
