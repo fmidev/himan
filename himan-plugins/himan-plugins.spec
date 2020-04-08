@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.4.6
+Version: 20.4.8
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -82,6 +82,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libfetcher.so
 %{_libdir}/himan-plugins/libfog.so
 %{_libdir}/himan-plugins/libfractile.so
+%{_libdir}/himan-plugins/libfrost.so
 %{_libdir}/himan-plugins/libgrib.so
 %{_libdir}/himan-plugins/libgust.so
 %{_libdir}/himan-plugins/libhitool.so
@@ -120,6 +121,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Apr  8 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.8-1.fmi
+- New plugin frost
 * Mon Apr  6 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.6-1.fmi
 - fmidb ABI change
 * Thu Apr  2 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.2-1.fmi
