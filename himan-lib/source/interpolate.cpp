@@ -798,6 +798,7 @@ area_interpolation<T>::area_interpolation(grid& source, grid& target, HPInterpol
 			case kRotatedLatitudeLongitude:
 			case kStereographic:
 			case kLambertConformalConic:
+			case kLambertEqualArea:
 				if (method == kBiLinear)
 				{
 					w = InterpolationWeights<T>(dynamic_cast<regular_grid&>(source), target.LatLon(i));
@@ -886,13 +887,16 @@ bool interpolator<T>::Insert(const base<T>& source, const base<T>& target, HPInt
 
 		// area_interpolation is already present in cache
 		if (cache.count(insertValue.first) > 0)
+		{
 			return true;
+		}
 
 		insertValue.second = himan::interpolate::area_interpolation<T>(*source.grid, *target.grid, method);
 	}
 	catch (const std::exception& e)
 	{
-		return false;
+		std::cerr << "Creating interpolation coefficients failed with " << e.what() << "\n";
+		himan::Abort();
 	}
 
 	return cache.insert(std::move(insertValue)).second;

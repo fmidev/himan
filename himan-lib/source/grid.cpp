@@ -4,6 +4,8 @@
  */
 
 #include "grid.h"
+#include <cpl_conv.h>
+#include <ogr_spatialref.h>
 
 using namespace himan;
 using namespace std;
@@ -64,8 +66,6 @@ ostream& grid::Write(std::ostream& file) const
 
 	file << "__itsUVRelativeToGrid__ " << itsUVRelativeToGrid << std::endl;
 
-	file << std::endl;
-
 	file << itsEarthShape;
 
 	return file;
@@ -111,6 +111,13 @@ regular_grid::regular_grid() : grid(), itsScanningMode(kUnknownScanningMode)
 {
 	Class(kRegularGrid);
 }
+regular_grid::regular_grid(HPGridType gridType, HPScanningMode scMode, bool uvRelativeToGrid) : grid()
+{
+	itsGridClass = kRegularGrid;
+	itsGridType = gridType;
+	itsScanningMode = scMode;
+	itsUVRelativeToGrid = uvRelativeToGrid;
+}
 
 regular_grid::~regular_grid()
 {
@@ -141,6 +148,38 @@ HPScanningMode regular_grid::ScanningMode() const
 void regular_grid::ScanningMode(HPScanningMode theScanningMode)
 {
 	itsScanningMode = theScanningMode;
+}
+
+point regular_grid::BottomLeft() const
+{
+	return point();
+}
+
+point regular_grid::TopRight() const
+{
+	return point();
+}
+
+std::string regular_grid::Proj4String() const
+{
+	char* projstr;
+	if (itsSpatialReference->exportToProj4(&projstr) != OGRERR_NONE)
+	{
+		throw std::runtime_error("Failed to get proj4 str");
+	}
+
+	std::string proj(projstr);
+	CPLFree(projstr);
+	return proj;
+}
+
+ostream& regular_grid::Write(std::ostream& file) const
+{
+	grid::Write(file);
+	file << "<" << this->ClassName() << ">" << std::endl
+	     << "__itsScanningMode__ " << HPScanningModeToString.at(itsScanningMode) << std::endl;
+
+	return file;
 }
 
 //--------------- irregular grid

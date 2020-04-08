@@ -382,7 +382,7 @@ unique_ptr<grid> stereographic_grid::Clone() const
 
 ostream& stereographic_grid::Write(std::ostream& file) const
 {
-	grid::Write(file);
+	regular_grid::Write(file);
 
 	file << itsBottomLeft;
 	file << itsTopLeft;

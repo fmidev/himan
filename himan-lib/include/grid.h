@@ -19,13 +19,14 @@
 #include "point.h"
 #include "serialization.h"
 
+class OGRSpatialReference;
+
 namespace himan
 {
 class grid
 {
    public:
 	grid();
-	grid(const std::string& WKT);
 
 	virtual ~grid() = default;
 
@@ -82,9 +83,6 @@ class grid
 	earth_shape<double> EarthShape() const;
 	void EarthShape(const earth_shape<double>& theEarthShape);
 
-	std::string WKT() const;
-	std::string Proj4() const;
-
    protected:
 	bool EqualsTo(const grid& other) const;
 
@@ -120,9 +118,12 @@ class regular_grid : public grid
 {
    public:
 	regular_grid();
+	regular_grid(HPGridType gridType, HPScanningMode scMode, bool uvRelativeToGrid);
 	~regular_grid();
 	regular_grid(const regular_grid&);
 	regular_grid& operator=(const regular_grid& other) = delete;
+
+	virtual std::ostream& Write(std::ostream& file) const override;
 
 	/* Return grid point value (incl. fractions) of a given latlon point */
 	virtual point XY(const point& latlon) const = 0;
@@ -133,8 +134,8 @@ class regular_grid : public grid
 	 * to implement correct functionality.
 	 */
 
-	virtual point BottomLeft() const = 0;
-	virtual point TopRight() const = 0;
+	virtual point BottomLeft() const;
+	virtual point TopRight() const;
 
 	virtual HPScanningMode ScanningMode() const;
 	virtual void ScanningMode(HPScanningMode theScanningMode);
@@ -145,10 +146,14 @@ class regular_grid : public grid
 	virtual double Di() const = 0;
 	virtual double Dj() const = 0;
 
+	virtual std::string Proj4String() const;
+
    protected:
 	bool EqualsTo(const regular_grid& other) const;
 
 	HPScanningMode itsScanningMode;
+	mutable std::unique_ptr<OGRSpatialReference> itsSpatialReference;
+
 #ifdef SERIALIZATION
 	friend class cereal::access;
 
@@ -183,6 +188,11 @@ class irregular_grid : public grid
 };
 
 inline std::ostream& operator<<(std::ostream& file, const grid& ob)
+{
+	return ob.Write(file);
+}
+
+inline std::ostream& operator<<(std::ostream& file, const regular_grid& ob)
 {
 	return ob.Write(file);
 }
