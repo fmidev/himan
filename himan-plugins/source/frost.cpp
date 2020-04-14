@@ -206,38 +206,36 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 	int ec_offset = 0;
 
-	latestFromDatabase = r->RadonDB().GetLatestTime(242, "ECEUR0200", ec_offset);
-        forecastTime.OriginDateTime(latestFromDatabase);
-
-	// ECMWF PROB-TC-0 is calculated only for every 3 hours.
-
-	int forecastHour = std::stoi(forecastTime.ValidDateTime().String("%H"));
-
-        if (forecastHour % 3 == 1 || forecastHour % 3 == 2)
-        {
-                myThreadedLogger.Error("ECMWF PROB-TC-0 not available for forecast hour: " + forecastTime.ValidDateTime().String("%H"));
-                return;
-        }
-
         bool success = false;
 
 	while (success == false)
 	{
-
-		latestHour = std::stoi(forecastTime.OriginDateTime().String("%H"));
-
 		try
 		{
-			success = true;
+			latestFromDatabase = r->RadonDB().GetLatestTime(242, "ECEUR0200", ec_offset);
+        		forecastTime.OriginDateTime(latestFromDatabase);
+
+			// ECMWF PROB-TC-0 is calculated only for every 3 hours.
+
+			int forecastHour = std::stoi(forecastTime.ValidDateTime().String("%H"));
+
+			if (forecastHour % 3 == 1 || forecastHour % 3 == 2)
+			{
+				myThreadedLogger.Error("ECMWF PROB-TC-0 not available for forecast hour: " + forecastTime.ValidDateTime().String("%H"));
+				return;
+			}
+
 			cnf->SourceProducers({producer(242, 86, 242, "ECM_PROB")});
 			cnf->SourceGeomNames({"ECEUR0200"});
 			T0ECInfo = f->Fetch(cnf, forecastTime, level(kGround, 0), T0Param, stat_type, false);
+			success = true;
 		}
 		catch (HPExceptionType& e)
 		{
 			if  (e == kFileDataNotFound)
 			{
-				myThreadedLogger.Error("No data found.");
+				const string analtime = forecastTime.OriginDateTime().String("%Y-%m-%d %H:%M:%S");
+				myThreadedLogger.Error("ECMWF PROB-TC-0 from analysis time " + analtime + " not found.");
 			}
 			ec_offset++;
 
@@ -245,12 +243,10 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 			{
 				return;
 			}
-			latestFromDatabase = r->RadonDB().GetLatestTime(242, "ECEUR0200", ec_offset);
-			const string analtime = forecastTime.OriginDateTime().String("%Y-%m-%d %H:%M:%S");
-			myThreadedLogger.Error("ECMWF PROB-TC-0 from analysis time " + analtime + " not found, using " + 
-				static_cast<string>(latestFromDatabase));
-			forecastTime.OriginDateTime(latestFromDatabase);
-			success = false;
+		}
+		catch (...)
+		{
+			return;
 		}
 	}
 
@@ -260,39 +256,40 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 	int MEPS_offset = 1;
 
-	latestFromDatabase = r->RadonDB().GetLatestTime(260, "MEPS2500D", MEPS_offset);
-	forecastTime.OriginDateTime(latestFromDatabase);
-
 	success = false;
 
         while (success == false)
         {
-		latestHour = std::stoi(forecastTime.OriginDateTime().String("%H"));
-
-        	if (latestHour == 1 || latestHour == 4 || latestHour == 7 || latestHour == 10 ||latestHour == 13 
-			|| latestHour == 16 ||latestHour == 19 || latestHour == 22)
-        	{
-                 	forecastTime.OriginDateTime().Adjust(kHourResolution, -1);
-        	}
-
-        	if (latestHour == 2 || latestHour == 5 || latestHour == 8 || latestHour == 11 ||latestHour == 14 
-			|| latestHour == 17 ||latestHour == 20 || latestHour == 23)
-        	{
-                	forecastTime.OriginDateTime().Adjust(kHourResolution, -2);
-        	}
-
 		try
 		{
-			success = true;
-			cnf->SourceProducers({producer(260, 86, 204, "MEPSMTA")});
-			cnf->SourceGeomNames({"MEPS2500D"});
-			T0MEPSInfo = f->Fetch(cnf, forecastTime, level(kHeight, 2), T0Param, stat_type, false);
+		        latestFromDatabase = r->RadonDB().GetLatestTime(260, "MEPS2500D", MEPS_offset);
+        		forecastTime.OriginDateTime(latestFromDatabase);
+
+			latestHour = std::stoi(forecastTime.OriginDateTime().String("%H"));
+
+        		if (latestHour == 1 || latestHour == 4 || latestHour == 7 || latestHour == 10 ||latestHour == 13 
+				|| latestHour == 16 ||latestHour == 19 || latestHour == 22)
+        		{
+                 		forecastTime.OriginDateTime().Adjust(kHourResolution, -1);
+        		}
+
+        		if (latestHour == 2 || latestHour == 5 || latestHour == 8 || latestHour == 11 ||latestHour == 14 
+				|| latestHour == 17 ||latestHour == 20 || latestHour == 23)
+        		{
+                		forecastTime.OriginDateTime().Adjust(kHourResolution, -2);
+        		}
+
+				cnf->SourceProducers({producer(260, 86, 204, "MEPSMTA")});
+				cnf->SourceGeomNames({"MEPS2500D"});
+				T0MEPSInfo = f->Fetch(cnf, forecastTime, level(kHeight, 2), T0Param, stat_type, false);
+				success = true;
 		}
 		catch (HPExceptionType& e)
 		{
                 	if  (e == kFileDataNotFound)
                 	{
-                        	myThreadedLogger.Error("No data found.");
+				const string analtime = forecastTime.OriginDateTime().String("%Y-%m-%d %H:%M:%S");
+                        	myThreadedLogger.Error("MEPS PROB-TC-0 from analysis time " + analtime + " not found.");
 
 			}
 			MEPS_offset++;
@@ -301,12 +298,10 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 			{
 				return;
 			}
-			latestFromDatabase = r->RadonDB().GetLatestTime(260, "MEPS2500D", MEPS_offset);
-			const string analtime = forecastTime.OriginDateTime().String("%Y-%m-%d %H:%M:%S");
-			myThreadedLogger.Error("MEPS PROB-TC-0 from analysis time " + analtime + 
-				" not found, using " + static_cast<string>(latestFromDatabase));
-			forecastTime.OriginDateTime(latestFromDatabase);
-			success = false;
+		}
+		catch (...)
+		{
+			return;
 		}
 	}
 
