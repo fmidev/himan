@@ -26,8 +26,6 @@ double rampDown(const double& start, const double& end, const double& valueInBet
 	return (end - valueInBetween) / (end - start);
 }
 
-const param FParam("PROB-FROST-1");
-
 frost::frost()
 {
 	itsLogger = logger("frost");
@@ -37,7 +35,7 @@ void frost::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 
-	SetParams({FParam});
+	SetParams({param("PROB-FROST-1"), param("PROB-FROST-2")});
 
 	Start();
 }
@@ -373,18 +371,25 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 			nCoef = 1.0 / lowWindCoef;
 		}
 
-		// Calculating frost probability.
+		// Calculating frost and severe frost probability.
 
-		double frost_prob = MissingDouble();
+		double frost_prob = MissingDouble(), severe_frost_prob = MissingDouble();
 
-		if (T < -3.0)
+		if (T < -5.0)
+		{
+			severe_frost_prob = 1.0;
+		}
+
+		else if (T < -3.0)
 		{
 			frost_prob = 1.0;
+			severe_frost_prob = 0.75;
 		}
 
 		else if (T < 0)
 		{
 			frost_prob = 0.9;
+			severe_frost_prob = 0.7;
 		}
 
 		else
@@ -419,6 +424,8 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 			frost_prob = (frost_prob * 2.0 + T0MEPS) / 3.0;
 		}
 
+		severe_frost_prob = pow(frost_prob * 100, 3) * 1e-4;
+
 		// No frost when radiation is high enough. Valid in  1.4.-15.9.
 
 		int month = stoi(forecastTime.ValidDateTime().String("%m"));
@@ -429,6 +436,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 			if (RAD > 175)
 			{
 				frost_prob = 0.0;
+				severe_frost_prob = 0.0;
 			}
 		}
 
@@ -451,6 +459,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 		if (ICN == 0 && LC == 0)
 		{
 			frost_prob = 0;
+			severe_frost_prob = 0;
 		}
 
 		// Lowering frost probability when forecasted T is high enough.
@@ -460,7 +469,12 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 			frost_prob = frost_prob * rampDown(6.0, 15.0, T);
 		}
 
+		severe_frost_prob = min(frost_prob, severe_frost_prob);
+
+		myTargetInfo->Index<param>(0);
 		myTargetInfo->Value(frost_prob);
+		myTargetInfo->Index<param>(1);
+		myTargetInfo->Value(severe_frost_prob);
 	}
 
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
