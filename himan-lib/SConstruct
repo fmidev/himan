@@ -7,10 +7,7 @@ Import('env build_dir')
 
 # Includes
 
-includes = []
-includes.append('/usr/include/gdal')
-
-env.Append(CPPPATH = includes)
+env.Append(CPPPATH = ['/usr/include'])
 
 # Library paths
 
