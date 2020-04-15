@@ -522,7 +522,7 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 
 		result = (currentSum - previousSum) * invstep * scaleFactor;
 
-		if (result < 0 && myParamName != "RTOPLW-WM2")
+		if (result < 0 && myParamName != "RTOPLW-WM2" && myParamName != "RNETLW-WM2")
 		{
 			result = 0;
 		}
