@@ -803,6 +803,7 @@ area_interpolation<T>::area_interpolation(grid& source, grid& target, HPInterpol
 			case kStereographic:
 			case kLambertConformalConic:
 			case kLambertEqualArea:
+			case kTransverseMercator:
 				if (method == kBiLinear)
 				{
 					w = InterpolationWeights<T>(dynamic_cast<regular_grid&>(source), target.LatLon(i));

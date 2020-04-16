@@ -486,7 +486,8 @@ enum HPGridType
 	kReducedGaussian,
 	kPointList,
 	kLambertConformalConic,
-	kLambertEqualArea
+	kLambertEqualArea,
+	kTransverseMercator
 };
 
 const boost::unordered_map<HPGridType, std::string> HPGridTypeToString =
@@ -499,7 +500,8 @@ const boost::unordered_map<HPGridType, std::string> HPGridTypeToString =
 	(kReducedGaussian, "rgg")
 	(kPointList, "pointlist")
 	(kLambertConformalConic, "lcc")
-	(kLambertEqualArea, "laea");
+	(kLambertEqualArea, "laea")
+	(kTransverseMercator, "tm");
 
 enum HPDatabaseType
 {
