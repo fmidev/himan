@@ -328,10 +328,57 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 		double ICN = ICNInfo->Value();
 		double LC = LCInfo->Value();
 
-		if (IsMissingValue({T, TD, TG, WG, N, RAD, T0EC, T0MEPS, ICN, LC}))
+		if (IsMissingValue({T}))
 		{
-			continue;
+			myThreadedLogger.Error("Missingeja..........T");
+			return;
 		}
+		if (IsMissingValue({TD}))
+                {
+                        myThreadedLogger.Error("Missingeja..........TD");
+                        return;
+                }
+		if (IsMissingValue({TG}))
+                {
+                        myThreadedLogger.Error("Missingeja..........TG");
+                        return;
+                }
+		if (IsMissingValue({WG}))
+                {
+                        myThreadedLogger.Error("Missingeja..........WG");
+                        return;
+                }
+		if (IsMissingValue({N}))
+                {
+                        myThreadedLogger.Error("Missingeja..........N");
+                        return;
+                }
+		if (IsMissingValue({RAD}))
+                {
+                        myThreadedLogger.Error("Missingeja..........RAD");
+                        return;
+                }
+		if (IsMissingValue({T0EC}))
+                {
+                        myThreadedLogger.Error("Missingeja..........T0EC");
+                        return;
+                }
+		if (IsMissingValue({ICN}))
+                {
+                        myThreadedLogger.Error("Missingeja..........ICN");
+                        return;
+                }
+		if (IsMissingValue({LC}))
+                {
+                        myThreadedLogger.Error("Missingeja..........LC");
+                        return;
+                }
+		if (IsMissingValue({T0MEPS}))
+                {
+                        myThreadedLogger.Error("Missingeja..........T0MEPS");
+                        return;
+                }
+
 
 		// Calculating indexes and coefficients.
 
