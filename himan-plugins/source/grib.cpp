@@ -17,6 +17,7 @@
 #include <ogr_spatialref.h>
 
 using namespace std;
+using namespace himan;
 using namespace himan::plugin;
 
 #include "radon.h"
@@ -28,6 +29,7 @@ using namespace himan::plugin;
 #define BitTest(n, i) !!((n)&BitMask1(i))
 
 std::string GetParamNameFromGribShortName(const std::string& paramFileName, const std::string& shortName);
+void UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restrict__ unpacked, size_t len, size_t unpackedLen);
 
 static mutex singleGribMessageCounterMutex;
 static map<string, std::mutex> singleGribMessageCounterMap;
@@ -330,18 +332,11 @@ himan::time_duration DurationFromTimeRange(long unitOfTimeRange)
 grib::grib()
 {
 	itsLogger = logger("grib");
-
-	itsGrib = make_shared<NFmiGrib>();
 }
 
-shared_ptr<NFmiGrib> grib::Reader()
+void WriteAreaAndGrid(NFmiGribMessage& message, const shared_ptr<himan::grid>& grid, const producer& prod)
 {
-	return itsGrib;
-}
-
-void grib::WriteAreaAndGrid(const shared_ptr<himan::grid>& grid, const producer& prod)
-{
-	const long edition = itsGrib->Message().Edition();
+	const long edition = message.Edition();
 	HPScanningMode scmode = kUnknownScanningMode;
 
 	auto firstGridPoint = grid->FirstPoint();
@@ -354,6 +349,7 @@ void grib::WriteAreaAndGrid(const shared_ptr<himan::grid>& grid, const producer&
 		}
 	}
 
+	logger logr("grib");
 	// UVRelativeToGrid is set in ToFile()
 
 	switch (grid->Type())
@@ -368,21 +364,21 @@ void grib::WriteAreaAndGrid(const shared_ptr<himan::grid>& grid, const producer&
 
 			if (edition == 2)
 			{
-				gridType = itsGrib->Message().GridTypeToAnotherEdition(gridType, 2);
+				gridType = message.GridTypeToAnotherEdition(gridType, 2);
 			}
 
-			itsGrib->Message().GridType(gridType);
+			message.GridType(gridType);
 
-			itsGrib->Message().X0(firstGridPoint.X());
-			itsGrib->Message().X1(lastGridPoint.X());
-			itsGrib->Message().Y0(firstGridPoint.Y());
-			itsGrib->Message().Y1(lastGridPoint.Y());
+			message.X0(firstGridPoint.X());
+			message.X1(lastGridPoint.X());
+			message.Y0(firstGridPoint.Y());
+			message.Y1(lastGridPoint.Y());
 
-			itsGrib->Message().iDirectionIncrement(rg->Di());
-			itsGrib->Message().jDirectionIncrement(rg->Dj());
+			message.iDirectionIncrement(rg->Di());
+			message.jDirectionIncrement(rg->Dj());
 
-			itsGrib->Message().SizeX(static_cast<long>(rg->Ni()));
-			itsGrib->Message().SizeY(static_cast<long>(rg->Nj()));
+			message.SizeX(static_cast<long>(rg->Ni()));
+			message.SizeY(static_cast<long>(rg->Nj()));
 
 			scmode = rg->ScanningMode();
 
@@ -401,26 +397,26 @@ void grib::WriteAreaAndGrid(const shared_ptr<himan::grid>& grid, const producer&
 
 			if (edition == 2)
 			{
-				gridType = itsGrib->Message().GridTypeToAnotherEdition(gridType, 2);
+				gridType = message.GridTypeToAnotherEdition(gridType, 2);
 			}
 
-			itsGrib->Message().GridType(gridType);
+			message.GridType(gridType);
 
-			itsGrib->Message().X0(firstGridPoint.X());
-			itsGrib->Message().Y0(firstGridPoint.Y());
-			itsGrib->Message().X1(lastGridPoint.X());
-			itsGrib->Message().Y1(lastGridPoint.Y());
+			message.X0(firstGridPoint.X());
+			message.Y0(firstGridPoint.Y());
+			message.X1(lastGridPoint.X());
+			message.Y1(lastGridPoint.Y());
 
-			itsGrib->Message().SouthPoleX(rg->SouthPole().X());
-			itsGrib->Message().SouthPoleY(rg->SouthPole().Y());
+			message.SouthPoleX(rg->SouthPole().X());
+			message.SouthPoleY(rg->SouthPole().Y());
 
-			itsGrib->Message().iDirectionIncrement(rg->Di());
-			itsGrib->Message().jDirectionIncrement(rg->Dj());
+			message.iDirectionIncrement(rg->Di());
+			message.jDirectionIncrement(rg->Dj());
 
-			itsGrib->Message().GridType(gridType);
+			message.GridType(gridType);
 
-			itsGrib->Message().SizeX(static_cast<long>(rg->Ni()));
-			itsGrib->Message().SizeY(static_cast<long>(rg->Nj()));
+			message.SizeX(static_cast<long>(rg->Ni()));
+			message.SizeY(static_cast<long>(rg->Nj()));
 
 			scmode = rg->ScanningMode();
 
@@ -435,27 +431,27 @@ void grib::WriteAreaAndGrid(const shared_ptr<himan::grid>& grid, const producer&
 
 			if (edition == 2)
 			{
-				gridType = itsGrib->Message().GridTypeToAnotherEdition(gridType, 2);
+				gridType = message.GridTypeToAnotherEdition(gridType, 2);
 			}
 
-			itsGrib->Message().GridType(gridType);
+			message.GridType(gridType);
 
-			itsGrib->Message().X0(firstGridPoint.X());
-			itsGrib->Message().Y0(firstGridPoint.Y());
+			message.X0(firstGridPoint.X());
+			message.Y0(firstGridPoint.Y());
 
-			itsGrib->Message().GridOrientation(rg->Orientation());
+			message.GridOrientation(rg->Orientation());
 
-			itsGrib->Message().XLengthInMeters(rg->Di());
-			itsGrib->Message().YLengthInMeters(rg->Dj());
+			message.XLengthInMeters(rg->Di());
+			message.YLengthInMeters(rg->Dj());
 
-			itsGrib->Message().SizeX(static_cast<long>(rg->Ni()));
-			itsGrib->Message().SizeY(static_cast<long>(rg->Nj()));
+			message.SizeX(static_cast<long>(rg->Ni()));
+			message.SizeY(static_cast<long>(rg->Nj()));
 
 			scmode = rg->ScanningMode();
 
 			if (edition == 2)
 			{
-				itsGrib->Message().SetLongKey("LaDInDegrees", 60);
+				message.SetLongKey("LaDInDegrees", 60);
 			}
 
 			break;
@@ -469,27 +465,27 @@ void grib::WriteAreaAndGrid(const shared_ptr<himan::grid>& grid, const producer&
 
 			if (edition == 2)
 			{
-				gridType = itsGrib->Message().GridTypeToAnotherEdition(gridType, 2);
+				gridType = message.GridTypeToAnotherEdition(gridType, 2);
 			}
 
-			itsGrib->Message().GridType(gridType);
+			message.GridType(gridType);
 
 			const double lonMin = firstGridPoint.X();
 			const double lonMax = gg->LatLon(gg->NumberOfPointsAlongParallels()[gg->N()], gg->N()).X();
 			const double latMin = gg->Latitudes().back();
 			const double latMax = gg->Latitudes().front();
 
-			itsGrib->Message().X0(lonMin);
-			itsGrib->Message().Y0(latMax);
-			itsGrib->Message().X1(lonMax);
-			itsGrib->Message().Y1(latMin);
+			message.X0(lonMin);
+			message.Y0(latMax);
+			message.X1(lonMax);
+			message.Y1(latMin);
 
-			itsGrib->Message().SetLongKey("iDirectionIncrement", 65535);
-			itsGrib->Message().SetLongKey("numberOfPointsAlongAParallel", 65535);
+			message.SetLongKey("iDirectionIncrement", 65535);
+			message.SetLongKey("numberOfPointsAlongAParallel", 65535);
 
-			itsGrib->Message().SetLongKey("N", static_cast<long>(gg->N()));
+			message.SetLongKey("N", static_cast<long>(gg->N()));
 
-			itsGrib->Message().PL(gg->NumberOfPointsAlongParallels());
+			message.PL(gg->NumberOfPointsAlongParallels());
 
 			scmode = kTopLeft;
 
@@ -504,41 +500,41 @@ void grib::WriteAreaAndGrid(const shared_ptr<himan::grid>& grid, const producer&
 
 			if (edition == 2)
 			{
-				gridType = itsGrib->Message().GridTypeToAnotherEdition(gridType, 2);
+				gridType = message.GridTypeToAnotherEdition(gridType, 2);
 			}
 
-			itsGrib->Message().GridType(gridType);
+			message.GridType(gridType);
 
-			itsGrib->Message().X0(firstGridPoint.X());
-			itsGrib->Message().Y0(firstGridPoint.Y());
+			message.X0(firstGridPoint.X());
+			message.Y0(firstGridPoint.Y());
 
-			itsGrib->Message().GridOrientation(lccg->Orientation());
+			message.GridOrientation(lccg->Orientation());
 
-			itsGrib->Message().XLengthInMeters(lccg->Di());
-			itsGrib->Message().YLengthInMeters(lccg->Dj());
+			message.XLengthInMeters(lccg->Di());
+			message.YLengthInMeters(lccg->Dj());
 
-			itsGrib->Message().SizeX(static_cast<long>(lccg->Ni()));
-			itsGrib->Message().SizeY(static_cast<long>(lccg->Nj()));
+			message.SizeX(static_cast<long>(lccg->Ni()));
+			message.SizeY(static_cast<long>(lccg->Nj()));
 
-			itsGrib->Message().SetLongKey("Latin1InDegrees", static_cast<long>(lccg->StandardParallel1()));
+			message.SetLongKey("Latin1InDegrees", static_cast<long>(lccg->StandardParallel1()));
 
 			if (!IsKHPMissingValue(lccg->StandardParallel2()))
 			{
-				itsGrib->Message().SetLongKey("Latin2InDegrees", static_cast<long>(lccg->StandardParallel2()));
+				message.SetLongKey("Latin2InDegrees", static_cast<long>(lccg->StandardParallel2()));
 			}
 
 			scmode = lccg->ScanningMode();
 
 			if (edition == 2)
 			{
-				itsGrib->Message().SetLongKey("LaDInDegrees", 60);
+				message.SetLongKey("LaDInDegrees", 60);
 			}
 
 			break;
 		}
 
 		default:
-			itsLogger.Fatal("Invalid projection while writing grib: " + to_string(grid->Type()));
+			logr.Fatal("Invalid projection while writing grib: " + to_string(grid->Type()));
 			himan::Abort();
 	}
 
@@ -557,25 +553,25 @@ void grib::WriteAreaAndGrid(const shared_ptr<himan::grid>& grid, const producer&
 		// sphere
 		if (edition == 1)
 		{
-			itsGrib->Message().SetLongKey("earthIsOblate", 0);
+			message.SetLongKey("earthIsOblate", 0);
 
-			long flag = itsGrib->Message().ResolutionAndComponentFlags();
+			long flag = message.ResolutionAndComponentFlags();
 
 			flag &= ~(1UL << 6);
 
-			itsGrib->Message().ResolutionAndComponentFlags(flag);
+			message.ResolutionAndComponentFlags(flag);
 		}
 		else
 		{
 			if (a == 6367470)
 			{
-				itsGrib->Message().SetLongKey("shapeOfTheEarth", 0);
+				message.SetLongKey("shapeOfTheEarth", 0);
 			}
 			else
 			{
-				itsGrib->Message().SetLongKey("shapeOfTheEarth", 1);
-				itsGrib->Message().SetLongKey("scaleFactorOfRadiusOfSphericalEarth", 1);
-				itsGrib->Message().SetLongKey("scaledValueOfRadiusOfSphericalEarth", a);
+				message.SetLongKey("shapeOfTheEarth", 1);
+				message.SetLongKey("scaleFactorOfRadiusOfSphericalEarth", 1);
+				message.SetLongKey("scaledValueOfRadiusOfSphericalEarth", a);
 			}
 		}
 	}
@@ -585,8 +581,8 @@ void grib::WriteAreaAndGrid(const shared_ptr<himan::grid>& grid, const producer&
 		himan::Abort();
 	}
 #endif
-	itsGrib->Message().Centre(prod.Centre() == kHPMissingInt ? 86 : prod.Centre());
-	itsGrib->Message().Process(prod.Process() == kHPMissingInt ? 255 : prod.Process());
+	message.Centre(prod.Centre() == kHPMissingInt ? 86 : prod.Centre());
+	message.Process(prod.Process() == kHPMissingInt ? 255 : prod.Process());
 
 	bool iNegative, jPositive;
 
@@ -613,26 +609,27 @@ void grib::WriteAreaAndGrid(const shared_ptr<himan::grid>& grid, const producer&
 			break;
 
 		default:
-			throw runtime_error(ClassName() + ": Unknown scanning mode when writing grib");
-			break;
+			logr.Fatal("Unknown scanning mode when writing grib");
+			himan::Abort();
 	}
 
-	itsGrib->Message().IScansNegatively(iNegative);
-	itsGrib->Message().JScansPositively(jPositive);
+	message.IScansNegatively(iNegative);
+	message.JScansPositively(jPositive);
 }
 
-void grib::WriteTime(const forecast_time& ftime, const producer& prod, const param& par)
+void WriteTime(NFmiGribMessage& message, const forecast_time& ftime, const producer& prod, const param& par)
 {
-	itsGrib->Message().DataDate(stol(ftime.OriginDateTime().String("%Y%m%d")));
-	itsGrib->Message().DataTime(stol(ftime.OriginDateTime().String("%H%M")));
+	message.DataDate(stol(ftime.OriginDateTime().String("%Y%m%d")));
+	message.DataTime(stol(ftime.OriginDateTime().String("%H%M")));
 
-	if (itsGrib->Message().Edition() == 1)
+	logger logr("grib");
+	if (message.Edition() == 1)
 	{
 		time_duration stepUnit = ONE_HOUR;
 
 		if (ftime.Step().Minutes() % 60 != 0)
 		{
-			itsLogger.Fatal("Sub-hour output ony in grib2");
+			logr.Fatal("Sub-hour output ony in grib2");
 			himan::Abort();
 		}
 		else if (ftime.Step().Hours() > 255)  // Forecast with stepvalues that don't fit in one byte
@@ -641,22 +638,22 @@ void grib::WriteTime(const forecast_time& ftime, const producer& prod, const par
 
 			if (hours % 3 == 0 && hours / 3 < 255)
 			{
-				itsGrib->Message().UnitOfTimeRange(10);  // 3 hours
+				message.UnitOfTimeRange(10);  // 3 hours
 				stepUnit = THREE_HOURS;
 			}
 			else if (hours % 6 == 0 && hours / 6 < 255)
 			{
-				itsGrib->Message().UnitOfTimeRange(11);  // 6 hours
+				message.UnitOfTimeRange(11);  // 6 hours
 				stepUnit = SIX_HOURS;
 			}
 			else if (hours % 12 == 0 && hours / 12 < 255)
 			{
-				itsGrib->Message().UnitOfTimeRange(12);  // 12 hours
+				message.UnitOfTimeRange(12);  // 12 hours
 				stepUnit = TWELVE_HOURS;
 			}
 			else
 			{
-				itsLogger.Fatal("Step too large, unable to continue");
+				logr.Fatal("Step too large, unable to continue");
 				himan::Abort();
 			}
 		}
@@ -670,57 +667,57 @@ void grib::WriteTime(const forecast_time& ftime, const producer& prod, const par
 			default:
 			case kUnknownAggregationType:
 				// Forecast product valid for reference time + P1 (P1 > 0)
-				itsGrib->Message().TimeRangeIndicator(0);
-				itsGrib->Message().P1((ftime.Step() / static_cast<int>(stepUnit.Hours())).Hours());
+				message.TimeRangeIndicator(0);
+				message.P1((ftime.Step() / static_cast<int>(stepUnit.Hours())).Hours());
 				break;
 			case kAverage:
 				// Average (reference time + P1 to reference time + P2)
-				itsGrib->Message().TimeRangeIndicator(3);
+				message.TimeRangeIndicator(3);
 
 				if (p1 < 0)
 				{
-					itsLogger.Warning("Forcing starting step from negative value to zero");
+					logr.Warning("Forcing starting step from negative value to zero");
 					p1 = 0;
 				}
 
-				itsGrib->Message().P1(p1);
-				itsGrib->Message().P2(p2);
+				message.P1(p1);
+				message.P2(p2);
 				break;
 			case kAccumulation:
 				// Accumulation (reference time + P1 to reference time + P2) product considered valid at reference time
 				// + P2
-				itsGrib->Message().TimeRangeIndicator(4);
+				message.TimeRangeIndicator(4);
 
 				if (p1 < 0)
 				{
-					itsLogger.Warning("Forcing starting step from negative value to zero");
+					logr.Warning("Forcing starting step from negative value to zero");
 					p1 = 0;
 				}
 
-				itsGrib->Message().P1(p1);
-				itsGrib->Message().P2(p2);
+				message.P1(p1);
+				message.P2(p2);
 				break;
 			case kDifference:
 				// Difference (reference time + P2 minus reference time + P1) product considered valid at reference time
 				// + P2
-				itsGrib->Message().TimeRangeIndicator(5);
+				message.TimeRangeIndicator(5);
 
 				if (p1 < 0)
 				{
-					itsLogger.Warning("Forcing starting step from negative value to zero");
+					logr.Warning("Forcing starting step from negative value to zero");
 					p1 = 0;
 				}
 
-				itsGrib->Message().P1(p1);
-				itsGrib->Message().P2(p2);
+				message.P1(p1);
+				message.P2(p2);
 				break;
 		}
 
-		ASSERT(itsGrib->Message().TimeRangeIndicator() != 10);
+		ASSERT(message.TimeRangeIndicator() != 10);
 	}
 	else
 	{
-		const long templateNumber = itsGrib->Message().ProductDefinitionTemplateNumber();
+		const long templateNumber = message.ProductDefinitionTemplateNumber();
 
 		// leadtime for this prognosis
 		long unitOfTimeRange = 1;  // hours
@@ -732,13 +729,13 @@ void grib::WriteTime(const forecast_time& ftime, const producer& prod, const par
 			stepValue = ftime.Step().Minutes();
 		}
 
-		itsGrib->Message().UnitOfTimeRange(unitOfTimeRange);
+		message.UnitOfTimeRange(unitOfTimeRange);
 		// Statistical processing is set in WriteParameter()
 		switch (par.Aggregation().Type())
 		{
 			default:
 			case kUnknownAggregationType:
-				itsGrib->Message().ForecastTime(stepValue);
+				message.ForecastTime(stepValue);
 				break;
 			case kAverage:
 			case kAccumulation:
@@ -769,9 +766,9 @@ void grib::WriteTime(const forecast_time& ftime, const producer& prod, const par
 					stepValue += timeOffset * 60;
 				}
 
-				itsGrib->Message().SetLongKey("indicatorOfUnitForTimeRange", unitForTimeRange);
-				itsGrib->Message().ForecastTime(stepValue);  // start step
-				itsGrib->Message().LengthOfTimeRange(lengthOfTimeRange);
+				message.SetLongKey("indicatorOfUnitForTimeRange", unitForTimeRange);
+				message.ForecastTime(stepValue);  // start step
+				message.LengthOfTimeRange(lengthOfTimeRange);
 
 				// for productDefinitionTemplateNumber 9,10,11,12,13,14,34,43,47,61,73,73
 				// grib2 has extra keys for "end of overall time interval"
@@ -780,71 +777,72 @@ void grib::WriteTime(const forecast_time& ftime, const producer& prod, const par
 					raw_time endOfInterval = raw_time(ftime.ValidDateTime());
 					endOfInterval += par.Aggregation().TimeOffset() + par.Aggregation().TimeDuration();
 
-					itsGrib->Message().SetLongKey("yearOfEndOfOverallTimeInterval", stol(endOfInterval.String("%Y")));
-					itsGrib->Message().SetLongKey("monthOfEndOfOverallTimeInterval", stol(endOfInterval.String("%m")));
-					itsGrib->Message().SetLongKey("dayOfEndOfOverallTimeInterval", stol(endOfInterval.String("%d")));
-					itsGrib->Message().SetLongKey("hourOfEndOfOverallTimeInterval", stol(endOfInterval.String("%H")));
-					itsGrib->Message().SetLongKey("minuteOfEndOfOverallTimeInterval", stol(endOfInterval.String("%M")));
-					itsGrib->Message().SetLongKey("secondOfEndOfOverallTimeInterval", 0);
+					message.SetLongKey("yearOfEndOfOverallTimeInterval", stol(endOfInterval.String("%Y")));
+					message.SetLongKey("monthOfEndOfOverallTimeInterval", stol(endOfInterval.String("%m")));
+					message.SetLongKey("dayOfEndOfOverallTimeInterval", stol(endOfInterval.String("%d")));
+					message.SetLongKey("hourOfEndOfOverallTimeInterval", stol(endOfInterval.String("%H")));
+					message.SetLongKey("minuteOfEndOfOverallTimeInterval", stol(endOfInterval.String("%M")));
+					message.SetLongKey("secondOfEndOfOverallTimeInterval", 0);
 				}
 				break;
 		}
 	}
 }
 
-void grib::WriteParameter(const param& par, const producer& prod, const forecast_type& ftype)
+void WriteParameter(NFmiGribMessage& message, const param& par, const producer& prod, const forecast_type& ftype)
 {
-	if (itsGrib->Message().Edition() == 1)
+	logger logr("grib");
+	if (message.Edition() == 1)
 	{
 		if (par.GribTableVersion() != kHPMissingInt && par.GribIndicatorOfParameter() != kHPMissingInt)
 		{
 			// In radon table version is a parameter property, not a
 			// producer property
 
-			itsGrib->Message().Table2Version(par.GribTableVersion());
-			itsGrib->Message().ParameterNumber(par.GribIndicatorOfParameter());
+			message.Table2Version(par.GribTableVersion());
+			message.ParameterNumber(par.GribIndicatorOfParameter());
 		}
 		else if (prod.Id() != kHPMissingInt)  // no-database example has 999999 as producer
 		{
-			itsLogger.Warning("Parameter " + par.Name() + " does not have mapping for producer " +
-			                  to_string(prod.Id()) + " in radon, setting table2version to 203");
-			itsGrib->Message().ParameterNumber(0);
-			itsGrib->Message().Table2Version(203);
+			logr.Warning("Parameter " + par.Name() + " does not have mapping for producer " + to_string(prod.Id()) +
+			             " in radon, setting table2version to 203");
+			message.ParameterNumber(0);
+			message.Table2Version(203);
 		}
 	}
-	else if (itsGrib->Message().Edition() == 2)
+	else if (message.Edition() == 2)
 	{
 		if (par.GribParameter() == kHPMissingInt)
 		{
-			itsLogger.Warning("Parameter information not found from radon for producer " + to_string(prod.Id()) +
-			                  ", name " + par.Name());
+			logr.Warning("Parameter information not found from radon for producer " + to_string(prod.Id()) + ", name " +
+			             par.Name());
 		}
 		else
 		{
-			itsGrib->Message().ParameterNumber(par.GribParameter());
-			itsGrib->Message().ParameterCategory(par.GribCategory());
-			itsGrib->Message().ParameterDiscipline(par.GribDiscipline());
+			message.ParameterNumber(par.GribParameter());
+			message.ParameterCategory(par.GribCategory());
+			message.ParameterDiscipline(par.GribDiscipline());
 		}
 
 		const auto aggType = par.Aggregation().Type();
 		const auto procType = par.ProcessingType().Type();
 		const long templateNumber = DetermineProductDefinitionTemplateNumber(aggType, procType, ftype.Type());
 
-		itsGrib->Message().ProductDefinitionTemplateNumber(templateNumber);
+		message.ProductDefinitionTemplateNumber(templateNumber);
 
 		switch (aggType)
 		{
 			case kAverage:
-				itsGrib->Message().TypeOfStatisticalProcessing(0);
+				message.TypeOfStatisticalProcessing(0);
 				break;
 			case kAccumulation:
-				itsGrib->Message().TypeOfStatisticalProcessing(1);
+				message.TypeOfStatisticalProcessing(1);
 				break;
 			case kMaximum:
-				itsGrib->Message().TypeOfStatisticalProcessing(2);
+				message.TypeOfStatisticalProcessing(2);
 				break;
 			case kMinimum:
-				itsGrib->Message().TypeOfStatisticalProcessing(3);
+				message.TypeOfStatisticalProcessing(3);
 				break;
 			default:
 			case kUnknownAggregationType:
@@ -863,78 +861,72 @@ void grib::WriteParameter(const param& par, const producer& prod, const forecast
 			default:
 				break;
 			case kProbabilityGreaterThan:  // Probability of event above upper limit
-				itsGrib->Message().SetLongKey("probabilityType", 1);
-				itsGrib->Message().SetLongKey("scaledValueOfUpperLimit",
-				                              static_cast<long>(par.ProcessingType().Value()));
+				message.SetLongKey("probabilityType", 1);
+				message.SetLongKey("scaledValueOfUpperLimit", static_cast<long>(par.ProcessingType().Value()));
 				break;
 			case kProbabilityLessThan:  // Probability of event below lower limit
-				itsGrib->Message().SetLongKey("probabilityType", 0);
-				itsGrib->Message().SetLongKey("scaledValueOfLowerLimit",
-				                              static_cast<long>(par.ProcessingType().Value()));
+				message.SetLongKey("probabilityType", 0);
+				message.SetLongKey("scaledValueOfLowerLimit", static_cast<long>(par.ProcessingType().Value()));
 				break;
 			case kProbabilityBetween:
-				itsGrib->Message().SetLongKey("probabilityType", 192);
-				itsGrib->Message().SetLongKey("scaledValueOfLowerLimit",
-				                              static_cast<long>(par.ProcessingType().Value()));
-				itsGrib->Message().SetLongKey("scaledValueOfUpperLimit",
-				                              static_cast<long>(par.ProcessingType().Value2()));
+				message.SetLongKey("probabilityType", 192);
+				message.SetLongKey("scaledValueOfLowerLimit", static_cast<long>(par.ProcessingType().Value()));
+				message.SetLongKey("scaledValueOfUpperLimit", static_cast<long>(par.ProcessingType().Value2()));
 				break;
 			case kProbabilityEquals:
-				itsGrib->Message().SetLongKey("probabilityType", 193);
-				itsGrib->Message().SetLongKey("scaledValueOfLowerLimit",
-				                              static_cast<long>(par.ProcessingType().Value()));
+				message.SetLongKey("probabilityType", 193);
+				message.SetLongKey("scaledValueOfLowerLimit", static_cast<long>(par.ProcessingType().Value()));
 				break;
 			case kProbabilityNotEquals:
-				itsGrib->Message().SetLongKey("probabilityType", 193);
-				itsGrib->Message().SetLongKey("scaledValueOfLowerLimit",
-				                              static_cast<long>(par.ProcessingType().Value()));
+				message.SetLongKey("probabilityType", 193);
+				message.SetLongKey("scaledValueOfLowerLimit", static_cast<long>(par.ProcessingType().Value()));
 				break;
 			case kProbabilityEqualsIn:
-				itsGrib->Message().SetLongKey("probabilityType", 194);
+				message.SetLongKey("probabilityType", 194);
 				break;
 			case kFractile:
-				itsGrib->Message().SetLongKey("percentileValue", static_cast<long>(par.ProcessingType().Value()));
+				message.SetLongKey("percentileValue", static_cast<long>(par.ProcessingType().Value()));
 				break;
 			case kEnsembleMean:
-				itsGrib->Message().SetLongKey("derivedForecast", 0);
-				itsGrib->Message().SetLongKey("numberOfForecastsInEnsemble", num);
+				message.SetLongKey("derivedForecast", 0);
+				message.SetLongKey("numberOfForecastsInEnsemble", num);
 				break;
 			case kSpread:
-				itsGrib->Message().SetLongKey("derivedForecast", 4);
-				itsGrib->Message().SetLongKey("numberOfForecastsInEnsemble", num);
+				message.SetLongKey("derivedForecast", 4);
+				message.SetLongKey("numberOfForecastsInEnsemble", num);
 				break;
 			case kStandardDeviation:
-				itsGrib->Message().SetLongKey("derivedForecast", 2);
-				itsGrib->Message().SetLongKey("numberOfForecastsInEnsemble", num);
+				message.SetLongKey("derivedForecast", 2);
+				message.SetLongKey("numberOfForecastsInEnsemble", num);
 				break;
 			case kEFI:
-				itsGrib->Message().SetLongKey("derivedForecast", 199);
-				itsGrib->Message().SetLongKey("numberOfForecastsInEnsemble", num);
+				message.SetLongKey("derivedForecast", 199);
+				message.SetLongKey("numberOfForecastsInEnsemble", num);
 				break;
 		}
 	}
 }
 
-void grib::WriteLevel(const level& lev)
+void WriteLevel(NFmiGribMessage& message, const level& lev)
 {
-	const long edition = itsGrib->Message().Edition();
+	const long edition = message.Edition();
 
 	// Himan levels equal to grib 1
 
 	if (edition == 1)
 	{
-		itsGrib->Message().LevelType(lev.Type());
+		message.LevelType(lev.Type());
 	}
 	else if (edition == 2)
 	{
 		if (lev.Type() == kHeightLayer)
 		{
-			itsGrib->Message().LevelType(103);
-			itsGrib->Message().SetLongKey("typeOfSecondFixedSurface", 103);
+			message.LevelType(103);
+			message.SetLongKey("typeOfSecondFixedSurface", 103);
 		}
 		else
 		{
-			itsGrib->Message().LevelType(itsGrib->Message().LevelTypeToAnotherEdition(lev.Type(), 2));
+			message.LevelType(message.LevelTypeToAnotherEdition(lev.Type(), 2));
 		}
 	}
 
@@ -942,8 +934,8 @@ void grib::WriteLevel(const level& lev)
 	{
 		case kHeightLayer:
 		{
-			itsGrib->Message().LevelValue(static_cast<long>(0.01 * lev.Value()), 100);    // top
-			itsGrib->Message().LevelValue2(static_cast<long>(0.01 * lev.Value2()), 100);  // bottom
+			message.LevelValue(static_cast<long>(0.01 * lev.Value()), 100);    // top
+			message.LevelValue2(static_cast<long>(0.01 * lev.Value2()), 100);  // bottom
 			break;
 		}
 		case kPressure:
@@ -955,21 +947,21 @@ void grib::WriteLevel(const level& lev)
 				scale = 100;
 			}
 
-			itsGrib->Message().LevelValue(static_cast<long>(lev.Value() * scale));
+			message.LevelValue(static_cast<long>(lev.Value() * scale));
 			break;
 		}
 		default:
-			itsGrib->Message().LevelValue(static_cast<long>(lev.Value()));
+			message.LevelValue(static_cast<long>(lev.Value()));
 			break;
 	}
 }
 
-void grib::WriteForecastType(const forecast_type& forecastType, const producer& prod)
+void WriteForecastType(NFmiGribMessage& message, const forecast_type& forecastType, const producer& prod)
 {
 	// For grib1 this is simple: we only support analysis and deterministic forecasts
 	// (when writing). Those do not need any extra metadata.
 
-	if (itsGrib->Message().Edition() == 1)
+	if (message.Edition() == 1)
 	{
 		return;
 	}
@@ -981,34 +973,36 @@ void grib::WriteForecastType(const forecast_type& forecastType, const producer& 
 	//
 	// The key 'productDefinitionTemplateNumber' is set at WriteParameter()
 
+	logger logr("grib");
+
 	switch (forecastType.Type())
 	{
 		case kAnalysis:
-			itsGrib->Message().TypeOfGeneratingProcess(0);
-			itsGrib->Message().SetLongKey("typeOfProcessedData", 0);
+			message.TypeOfGeneratingProcess(0);
+			message.SetLongKey("typeOfProcessedData", 0);
 			break;
 		case kDeterministic:
-			itsGrib->Message().TypeOfGeneratingProcess(2);
-			itsGrib->Message().SetLongKey("typeOfProcessedData", 2);
+			message.TypeOfGeneratingProcess(2);
+			message.SetLongKey("typeOfProcessedData", 2);
 			break;
 		case kEpsControl:
 		case kEpsPerturbation:
 		{
 			const long gribTOPD = (forecastType.Type() == kEpsControl ? 3 : 4);
-			itsGrib->Message().SetLongKey("typeOfProcessedData", gribTOPD);
-			itsGrib->Message().TypeOfGeneratingProcess(4);
-			itsGrib->Message().PerturbationNumber(static_cast<long>(forecastType.Value()));
+			message.SetLongKey("typeOfProcessedData", gribTOPD);
+			message.TypeOfGeneratingProcess(4);
+			message.PerturbationNumber(static_cast<long>(forecastType.Value()));
 			auto r = GET_PLUGIN(radon);
 
 			try
 			{
 				const long ensembleSize = stol(r->RadonDB().GetProducerMetaData(prod.Id(), "ensemble size"));
-				itsGrib->Message().SetLongKey("numberOfForecastsInEnsemble", ensembleSize);
+				message.SetLongKey("numberOfForecastsInEnsemble", ensembleSize);
 			}
 			catch (const invalid_argument& e)
 			{
-				itsLogger.Warning("Unable to get valid ensemble size information from radon for producer " +
-				                  to_string(prod.Id()));
+				logr.Warning("Unable to get valid ensemble size information from radon for producer " +
+				             to_string(prod.Id()));
 			}
 		}
 		break;
@@ -1017,14 +1011,14 @@ void grib::WriteForecastType(const forecast_type& forecastType, const producer& 
 			// "Post-processed forecast", one could consider everything produced by
 			// Himan to be of this category but we only use this to represent statistical
 			// post processing
-			itsGrib->Message().TypeOfGeneratingProcess(13);
+			message.TypeOfGeneratingProcess(13);
 			// Use locally reserved number because standard tables do not have a suitable
 			// option
-			itsGrib->Message().SetLongKey("typeOfProcessedData", 192);
+			message.SetLongKey("typeOfProcessedData", 192);
 			break;
 
 		default:
-			itsLogger.Warning("Unrecognized forecast type: " + static_cast<string>(forecastType));
+			logr.Warning("Unrecognized forecast type: " + static_cast<string>(forecastType));
 			break;
 	}
 }
@@ -1104,17 +1098,17 @@ himan::forecast_type DetermineCorrectForecastType(const himan::forecast_type& ft
 }
 
 template <typename T>
-void grib::WriteData(info<T>& anInfo)
+void WriteData(NFmiGribMessage& message, info<T>& anInfo, bool useBitmap, int precision)
 {
 	// set to missing value to a large value to prevent it from mixing up with valid
 	// values in the data. eccodes does not support nan as missing value.
 
 	const double gribMissing = 1e38;
-	itsGrib->Message().MissingValue(static_cast<T>(gribMissing));
+	message.MissingValue(static_cast<T>(gribMissing));
 
-	if (itsWriteOptions.use_bitmap && anInfo.Data().MissingCount() > 0)
+	if (useBitmap && anInfo.Data().MissingCount() > 0)
 	{
-		itsGrib->Message().Bitmap(true);
+		message.Bitmap(true);
 	}
 
 	/*
@@ -1123,51 +1117,48 @@ void grib::WriteData(info<T>& anInfo)
 	 */
 
 	const auto paramName = anInfo.Param().Name();
-	const int precision =
-	    (itsWriteOptions.precision == kHPMissingInt) ? anInfo.Param().Precision() : itsWriteOptions.precision;
+	const int myprecision = (precision == kHPMissingInt) ? anInfo.Param().Precision() : precision;
 
 	long bitsPerValue;
 
-	if (itsGrib->Message().Edition() == 2 && (paramName == "PRECFORM-N" || paramName == "PRECFORM2-N"))
+	if (message.Edition() == 2 && (paramName == "PRECFORM-N" || paramName == "PRECFORM2-N"))
 	{
 		// We take a copy of the data, because the values at cache should not change
 		auto values = anInfo.Data().Values();
 
 		EncodePrecipitationFormToGrib2(values);
-		bitsPerValue = DetermineBitsPerValue(values, precision);
+		bitsPerValue = DetermineBitsPerValue(values, myprecision);
 
 		// Change missing value 'nan' to a real fp value
 		replace_if(values.begin(), values.end(), [](const T& v) { return IsMissing(v); }, static_cast<T>(gribMissing));
 
-		itsGrib->Message().BitsPerValue(bitsPerValue);
-		WriteDataValues<T>(values, itsGrib->Message(), gribMissing);
+		message.BitsPerValue(bitsPerValue);
+		WriteDataValues<T>(values, message, gribMissing);
 	}
 	else
 	{
 		// In this branch no copy is made
 		const auto& values = anInfo.Data().Values();
-		bitsPerValue = DetermineBitsPerValue(values, precision);
+		bitsPerValue = DetermineBitsPerValue(values, myprecision);
 
 		// Change missing value 'nan' to a real fp value
 		anInfo.Data().MissingValue(static_cast<T>(gribMissing));
 
-		itsGrib->Message().BitsPerValue(bitsPerValue);
+		message.BitsPerValue(bitsPerValue);
 
-		WriteDataValues<T>(values, itsGrib->Message(), gribMissing);
+		WriteDataValues<T>(values, message, gribMissing);
 	}
 
-	itsLogger.Trace("Using " + (precision == kHPMissingInt ? "maximum precision" : to_string(precision) + " decimals") +
-	                " (" + to_string(bitsPerValue) + " bits) to store " + paramName);
+	logger logr("grib");
+	logr.Trace("Using " + (myprecision == kHPMissingInt ? "maximum precision" : to_string(myprecision) + " decimals") +
+	           " (" + to_string(bitsPerValue) + " bits) to store " + paramName);
 
 	// Return missing value to nan if info is recycled (luatool)
 	anInfo.Data().MissingValue(MissingValue<T>());
 }
 
-template void grib::WriteData<float>(info<float>&);
-template void grib::WriteData<double>(info<double>&);
-
 template <typename T>
-himan::file_information grib::CreateGribMessage(info<T>& anInfo)
+pair<himan::file_information, NFmiGribMessage> grib::CreateGribMessage(info<T>& anInfo)
 {
 	// Write only that data which is currently set at descriptors
 
@@ -1200,52 +1191,53 @@ himan::file_information grib::CreateGribMessage(info<T>& anInfo)
 		finfo.file_location += ".bz2";
 	}
 
-	itsGrib->Message().Edition(edition);
+	NFmiGribMessage message;
+	message.Edition(edition);
 
 	if (anInfo.Producer().Centre() == kHPMissingInt)
 	{
-		itsGrib->Message().Centre(86);
-		itsGrib->Message().Process(255);
+		message.Centre(86);
+		message.Process(255);
 	}
 	else
 	{
-		itsGrib->Message().Centre(anInfo.Producer().Centre());
-		itsGrib->Message().Process(anInfo.Producer().Process());
+		message.Centre(anInfo.Producer().Centre());
+		message.Process(anInfo.Producer().Process());
 	}
 
 	// Parameter
 
-	WriteParameter(anInfo.Param(), anInfo.Producer(), anInfo.ForecastType());
+	WriteParameter(message, anInfo.Param(), anInfo.Producer(), anInfo.ForecastType());
 
 	// Forecast type
 
-	WriteForecastType(DetermineCorrectForecastType(anInfo.ForecastType(), anInfo.Param()), anInfo.Producer());
+	WriteForecastType(message, DetermineCorrectForecastType(anInfo.ForecastType(), anInfo.Param()), anInfo.Producer());
 
 	// Area and Grid
 
-	WriteAreaAndGrid(anInfo.Grid(), anInfo.Producer());
+	WriteAreaAndGrid(message, anInfo.Grid(), anInfo.Producer());
 
 	// Time information
 
-	WriteTime(anInfo.Time(), anInfo.Producer(), anInfo.Param());
+	WriteTime(message, anInfo.Time(), anInfo.Producer(), anInfo.Param());
 
 	// Level
 
-	WriteLevel(anInfo.Level());
+	WriteLevel(message, anInfo.Level());
 
 	// Set data to grib with correct precision and missing value
 
-	WriteData<T>(anInfo);
+	WriteData<T>(message, anInfo, itsWriteOptions.use_bitmap, itsWriteOptions.precision);
 
 	if (edition == 2)
 	{
 		switch (itsWriteOptions.configuration->PackingType())
 		{
 			case kJpegPacking:
-				itsGrib->Message().PackingType("grid_jpeg");
+				message.PackingType("grid_jpeg");
 				break;
 			case kCcsdsPacking:
-				itsGrib->Message().PackingType("grid_ccsds");
+				message.PackingType("grid_ccsds");
 				break;
 			default:
 				break;
@@ -1281,22 +1273,22 @@ himan::file_information grib::CreateGribMessage(info<T>& anInfo)
 
 	if (anInfo.Grid()->Type() == kReducedGaussian)
 	{
-		itsGrib->Message().ResolutionAndComponentFlags(0);
+		message.ResolutionAndComponentFlags(0);
 	}
 	else
 	{
 		if (edition == 1)
 		{
-			itsGrib->Message().ResolutionAndComponentFlags(128);  // 10000000
+			message.ResolutionAndComponentFlags(128);  // 10000000
 		}
 		else
 		{
-			itsGrib->Message().ResolutionAndComponentFlags(48);  // 00110000
+			message.ResolutionAndComponentFlags(48);  // 00110000
 		}
 
 		if (anInfo.Grid()->UVRelativeToGrid())
 		{
-			itsGrib->Message().UVRelativeToGrid(true);
+			message.UVRelativeToGrid(true);
 		}
 	}
 
@@ -1304,23 +1296,23 @@ himan::file_information grib::CreateGribMessage(info<T>& anInfo)
 
 	if (!AB.empty())
 	{
-		itsGrib->Message().NV(static_cast<long>(AB.size()));
-		itsGrib->Message().PV(AB, AB.size());
+		message.NV(static_cast<long>(AB.size()));
+		message.PV(AB, AB.size());
 	}
 
-	return finfo;
+	return make_pair(finfo, message);
 }
 
-template himan::file_information grib::CreateGribMessage<double>(info<double>&);
-template himan::file_information grib::CreateGribMessage<float>(info<float>&);
+template pair<himan::file_information, NFmiGribMessage> grib::CreateGribMessage<double>(info<double>&);
+template pair<himan::file_information, NFmiGribMessage> grib::CreateGribMessage<float>(info<float>&);
 
-void grib::DetermineMessageNumber(file_information& finfo)
+void DetermineMessageNumber(NFmiGribMessage& message, file_information& finfo, HPWriteMode writeMode)
 {
 	// message length can only be received from eccodes since it includes
 	// all grib headers etc
-	finfo.length = itsGrib->Message().GetLongKey("totalLength");
+	finfo.length = message.GetLongKey("totalLength");
 
-	if (itsWriteOptions.configuration->WriteMode() == kSingleGridToAFile)
+	if (writeMode == kSingleGridToAFile)
 	{
 		finfo.offset = 0;
 		finfo.message_no = 0;
@@ -1370,36 +1362,38 @@ void grib::DetermineMessageNumber(file_information& finfo)
 	offsets.at(finfo.file_location) = offsets.at(finfo.file_location) + finfo.length.get();
 }
 
-void grib::WriteMessageToFile(const file_information& finfo)
+void WriteMessageToFile(NFmiGribMessage& message, const file_information& finfo, const write_options& wopts)
 {
 	timer aTimer(true);
-	bool appendToFile = (itsWriteOptions.configuration->WriteMode() == kAllGridsToAFile ||
-	                     itsWriteOptions.configuration->WriteMode() == kFewGridsToAFile);
+	logger logr("grib");
 
-	if (appendToFile && (itsWriteOptions.configuration->FileCompression() == kGZIP ||
-	                     itsWriteOptions.configuration->FileCompression() == kBZIP2))
+	bool appendToFile =
+	    (wopts.configuration->WriteMode() == kAllGridsToAFile || wopts.configuration->WriteMode() == kFewGridsToAFile);
+
+	if (appendToFile &&
+	    (wopts.configuration->FileCompression() == kGZIP || wopts.configuration->FileCompression() == kBZIP2))
 	{
-		itsLogger.Warning("Unable to write multiple grids to a packed file");
+		logr.Warning("Unable to write multiple grids to a packed file");
 		appendToFile = false;
 	}
 
 	if (finfo.file_location.find("s3://") != string::npos)
 	{
-		if (itsWriteOptions.configuration->WriteMode() != kSingleGridToAFile)
+		if (wopts.configuration->WriteMode() != kSingleGridToAFile)
 		{
-			itsLogger.Fatal("Write to S3 only supported with write_mode = single");
+			logr.Fatal("Write to S3 only supported with write_mode = single");
 			himan::Abort();
 		}
 		if (finfo.file_location.find("s3://") == string::npos)
 		{
-			itsLogger.Fatal("File name needs to start with s3:// when writing to s3");
+			logr.Fatal("File name needs to start with s3:// when writing to s3");
 			himan::Abort();
 		}
 
 		himan::buffer buff;
 		buff.length = finfo.length.get();
 		buff.data = static_cast<unsigned char*>(malloc(buff.length));
-		itsGrib->Message().GetMessage(buff.data, buff.length);
+		message.GetMessage(buff.data, buff.length);
 		s3::WriteObject(finfo.file_location, buff);
 	}
 	else
@@ -1412,7 +1406,7 @@ void grib::WriteMessageToFile(const file_information& finfo)
 			fs::create_directories(pathname.parent_path());
 		}
 
-		itsGrib->Message().Write(finfo.file_location, appendToFile);
+		message.Write(finfo.file_location, appendToFile);
 	}
 
 	aTimer.Stop();
@@ -1428,7 +1422,7 @@ void grib::WriteMessageToFile(const file_information& finfo)
 	string verb = (appendToFile ? "Appended to " : "Wrote ");
 
 	ss << verb << "file '" << finfo.file_location << "' (" << fixed << speed << " MB/s)";
-	itsLogger.Info(ss.str());
+	logr.Info(ss.str());
 }
 
 template <typename T>
@@ -1441,7 +1435,9 @@ himan::file_information grib::ToFile(info<T>& anInfo)
 		throw kInvalidWriteOptions;
 	}
 
-	auto finfo = CreateGribMessage<T>(anInfo);
+	auto ret = CreateGribMessage<T>(anInfo);
+	auto finfo = ret.first;
+	auto msg = ret.second;
 
 	if (itsWriteOptions.configuration->WriteMode() != kSingleGridToAFile)
 	{
@@ -1458,14 +1454,15 @@ himan::file_information grib::ToFile(info<T>& anInfo)
 		// lock the mutex for this file name
 		lock_guard<mutex> uniqueLock(muret.first->second);
 
-		DetermineMessageNumber(finfo);
-		WriteMessageToFile(finfo);
+		DetermineMessageNumber(msg, finfo, itsWriteOptions.configuration->WriteMode());
+		WriteMessageToFile(msg, finfo, itsWriteOptions);
 	}
 	else
 	{
-		DetermineMessageNumber(finfo);
-		WriteMessageToFile(finfo);
+		DetermineMessageNumber(msg, finfo, itsWriteOptions.configuration->WriteMode());
+		WriteMessageToFile(msg, finfo, itsWriteOptions);
 	}
+
 	return finfo;
 }
 
@@ -1596,10 +1593,10 @@ himan::earth_shape<double> ReadEarthShape(const NFmiGribMessage& msg)
 	return himan::earth_shape<double>(a, b);
 }
 
-unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
+unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message)
 {
-	bool iNegative = itsGrib->Message().IScansNegatively();
-	bool jPositive = itsGrib->Message().JScansPositively();
+	bool iNegative = message.IScansNegatively();
+	bool jPositive = message.JScansPositively();
 
 	HPScanningMode m = kUnknownScanningMode;
 
@@ -1624,8 +1621,8 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 		throw runtime_error("WHAT?");
 	}
 
-	double X0 = itsGrib->Message().X0();
-	double Y0 = itsGrib->Message().Y0();
+	double X0 = message.X0();
+	double Y0 = message.Y0();
 
 	// GRIB2 has longitude 0 .. 360, but in neons we have it -180 .. 180
 	// NB! ONLY FOR EC and FMI! GFS and GEM geometries are in grib2 format
@@ -1634,10 +1631,10 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 	// handle grib 1 & grib 2 longitude values in a smart way. (a single geometry
 	// can have coordinates in both ways!)
 
-	const long centre = itsGrib->Message().Centre();
-	const long ident = itsGrib->Message().Process();
+	const long centre = message.Centre();
+	const long ident = message.Process();
 
-	if (itsGrib->Message().Edition() == 2 && (centre == 98 || centre == 86) && ident != 244 && X0 != 0)
+	if (message.Edition() == 2 && (centre == 98 || centre == 86) && ident != 244 && X0 != 0)
 	{
 		X0 -= 360;
 		if (X0 < -180)
@@ -1666,7 +1663,7 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 
 	unique_ptr<grid> newGrid;
 
-	switch (itsGrib->Message().NormalizedGridType())
+	switch (message.NormalizedGridType())
 	{
 		case 0:
 		{
@@ -1674,11 +1671,11 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 			newGrid = unique_ptr<latitude_longitude_grid>(new latitude_longitude_grid(
 			    m,
 			    firstPoint,
-			    static_cast<size_t>(itsGrib->Message().SizeX()),
-			    static_cast<size_t>(itsGrib->Message().SizeY()),
-			    itsGrib->Message().iDirectionIncrement(),
-			    itsGrib->Message().jDirectionIncrement(),
-			    ReadEarthShape(itsGrib->Message())
+			    static_cast<size_t>(message.SizeX()),
+			    static_cast<size_t>(message.SizeY()),
+			    message.iDirectionIncrement(),
+			    message.jDirectionIncrement(),
+			    ReadEarthShape(message)
 			));
 			// clang-format on
 			break;
@@ -1688,15 +1685,15 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 			// clang-format off
 			newGrid = unique_ptr<lambert_conformal_grid>(new lambert_conformal_grid(
 			    m,
-			    point(itsGrib->Message().X0(), itsGrib->Message().Y0()),
-			    itsGrib->Message().SizeX(),
-			    itsGrib->Message().SizeY(),
-			    itsGrib->Message().XLengthInMeters(),
-			    itsGrib->Message().YLengthInMeters(),
-			    itsGrib->Message().GridOrientation(),
-			    static_cast<double>(itsGrib->Message().GetLongKey("Latin1InDegrees")),
-			    static_cast<double>(itsGrib->Message().GetLongKey("Latin2InDegrees")),
-			    ReadEarthShape(itsGrib->Message()),
+			    point(message.X0(), message.Y0()),
+			    message.SizeX(),
+			    message.SizeY(),
+			    message.XLengthInMeters(),
+			    message.YLengthInMeters(),
+			    message.GridOrientation(),
+			    static_cast<double>(message.GetLongKey("Latin1InDegrees")),
+			    static_cast<double>(message.GetLongKey("Latin2InDegrees")),
+			    ReadEarthShape(message),
 			    false
 			));
 			// clang-format off
@@ -1710,9 +1707,9 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 				newGrid = unique_ptr<reduced_gaussian_grid>(new reduced_gaussian_grid);
 				reduced_gaussian_grid* const gg = dynamic_cast<reduced_gaussian_grid*>(newGrid.get());
 
-				gg->N(static_cast<int>(itsGrib->Message().GetLongKey("N")));
-				gg->NumberOfPointsAlongParallels(itsGrib->Message().PL());
-				gg->EarthShape(ReadEarthShape(itsGrib->Message()));
+				gg->N(static_cast<int>(message.GetLongKey("N")));
+				gg->NumberOfPointsAlongParallels(message.PL());
+				gg->EarthShape(ReadEarthShape(message));
 
 				break;
 			}
@@ -1723,13 +1720,13 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 			// clang-format off
 			newGrid = unique_ptr<stereographic_grid>(new stereographic_grid(
 			    m,
-			    point(itsGrib->Message().X0(), itsGrib->Message().Y0()),
-			    itsGrib->Message().SizeX(),
-			    itsGrib->Message().SizeY(),
-			    itsGrib->Message().XLengthInMeters(),
-			    itsGrib->Message().YLengthInMeters(),
-			    itsGrib->Message().GridOrientation(),
-			    ReadEarthShape(itsGrib->Message()),
+			    point(message.X0(), message.Y0()),
+			    message.SizeX(),
+			    message.SizeY(),
+			    message.XLengthInMeters(),
+			    message.YLengthInMeters(),
+			    message.GridOrientation(),
+			    ReadEarthShape(message),
 			    false
 			));
 			// clang-format off
@@ -1742,72 +1739,78 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 			newGrid = unique_ptr<rotated_latitude_longitude_grid>(new rotated_latitude_longitude_grid(
 			    m,
 			    firstPoint,
-			    static_cast<size_t>(itsGrib->Message().SizeX()),
-			    static_cast<size_t>(itsGrib->Message().SizeY()),
-			    itsGrib->Message().iDirectionIncrement(),
-			    itsGrib->Message().jDirectionIncrement(),
-			    ReadEarthShape(itsGrib->Message()),
-			    point(itsGrib->Message().SouthPoleX(), itsGrib->Message().SouthPoleY())
+			    static_cast<size_t>(message.SizeX()),
+			    static_cast<size_t>(message.SizeY()),
+			    message.iDirectionIncrement(),
+			    message.jDirectionIncrement(),
+			    ReadEarthShape(message),
+			    point(message.SouthPoleX(), message.SouthPoleY())
 			));
 			// clang-format on
 			break;
 		}
 		default:
-			itsLogger.Fatal("Unsupported grid type: " + to_string(itsGrib->Message().NormalizedGridType()));
+			logger logr("grib");
+			logr.Fatal("Unsupported grid type: " + to_string(message.NormalizedGridType()));
 			himan::Abort();
 	}
 
-	newGrid->UVRelativeToGrid(itsGrib->Message().UVRelativeToGrid());
+	newGrid->UVRelativeToGrid(message.UVRelativeToGrid());
+
 	return newGrid;
 }
 
-himan::param grib::ReadParam(const search_options& options, const producer& prod) const
+himan::param ReadParam(const search_options& options, const producer& prod, const NFmiGribMessage& message)
 {
 	param p;
 
-	long number = itsGrib->Message().ParameterNumber();
+	long number = message.ParameterNumber();
 
 	shared_ptr<radon> r;
 
 	auto dbtype = options.configuration->DatabaseType();
+	logger logr("grib");
 
-	if (itsGrib->Message().Edition() == 1)
+	if (message.Edition() == 1)
 	{
-		long no_vers = itsGrib->Message().Table2Version();
+		long no_vers = message.Table2Version();
 
-		long timeRangeIndicator = itsGrib->Message().TimeRangeIndicator();
+		long timeRangeIndicator = message.TimeRangeIndicator();
 
 		string parmName = "";
+		int parmId = 0;
 
 		if (dbtype == kRadon)
 		{
 			r = GET_PLUGIN(radon);
 
 			auto parminfo = r->RadonDB().GetParameterFromGrib1(prod.Id(), no_vers, number, timeRangeIndicator,
-			                                                   itsGrib->Message().NormalizedLevelType(),
-			                                                   static_cast<double>(itsGrib->Message().LevelValue()));
+			                                                   message.NormalizedLevelType(),
+			                                                   static_cast<double>(message.LevelValue()));
 
 			if (!parminfo.empty())
 			{
 				parmName = parminfo["name"];
+				parmId = std::stoi(parminfo["id"]);
 			}
 		}
 
 		if (parmName.empty() && dbtype == kNoDatabase)
 		{
-			parmName = GetParamNameFromGribShortName(options.configuration->ParamFile(),
-			                                         itsGrib->Message().GetStringKey("shortName"));
+			parmName =
+			    GetParamNameFromGribShortName(options.configuration->ParamFile(), message.GetStringKey("shortName"));
 		}
 
 		if (parmName.empty())
 		{
-			itsLogger.Warning("Parameter name not found from " + HPDatabaseTypeToString.at(dbtype) +
-			                  " for no_vers: " + to_string(no_vers) + ", number: " + to_string(number) +
-			                  ", timeRangeIndicator: " + to_string(timeRangeIndicator));
+			logr.Warning("Parameter name not found from " + HPDatabaseTypeToString.at(dbtype) +
+			             " for no_vers: " + to_string(no_vers) + ", number: " + to_string(number) +
+			             ", timeRangeIndicator: " + to_string(timeRangeIndicator));
 		}
 		else
 		{
 			p.Name(parmName);
+			p.Id(parmId);
 		}
 
 		p.GribParameter(number);
@@ -1825,13 +1828,13 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 
 			case 3:  // average
 				a.Type(kAverage);
-				a.TimeDuration(DurationFromTimeRange(itsGrib->Message().UnitOfTimeRange()) *
-				               static_cast<int>(itsGrib->Message().P2() - itsGrib->Message().P1()));
+				a.TimeDuration(DurationFromTimeRange(message.UnitOfTimeRange()) *
+				               static_cast<int>(message.P2() - message.P1()));
 				break;
 			case 4:  // accumulation
 				a.Type(kAccumulation);
-				a.TimeDuration(DurationFromTimeRange(itsGrib->Message().UnitOfTimeRange()) *
-				               static_cast<int>(itsGrib->Message().P2() - itsGrib->Message().P1()));
+				a.TimeDuration(DurationFromTimeRange(message.UnitOfTimeRange()) *
+				               static_cast<int>(message.P2() - message.P1()));
 				break;
 		}
 
@@ -1842,44 +1845,45 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 	}
 	else
 	{
-		long category = itsGrib->Message().ParameterCategory();
-		long discipline = itsGrib->Message().ParameterDiscipline();
+		long category = message.ParameterCategory();
+		long discipline = message.ParameterDiscipline();
 
 		string parmName = "";
+		int parmId = 0;
 
-		const long tosp = (itsGrib->Message().TypeOfStatisticalProcessing() == -999)
-		                      ? -1
-		                      : itsGrib->Message().TypeOfStatisticalProcessing();
+		const long tosp = (message.TypeOfStatisticalProcessing() == -999) ? -1 : message.TypeOfStatisticalProcessing();
 
 		if (dbtype == kRadon)
 		{
 			r = GET_PLUGIN(radon);
 
-			auto parminfo = r->RadonDB().GetParameterFromGrib2(
-			    prod.Id(), discipline, category, number, itsGrib->Message().LevelType(),
-			    static_cast<double>(itsGrib->Message().LevelValue()), tosp);
+			auto parminfo =
+			    r->RadonDB().GetParameterFromGrib2(prod.Id(), discipline, category, number, message.LevelType(),
+			                                       static_cast<double>(message.LevelValue()), tosp);
 
 			if (parminfo.size())
 			{
 				parmName = parminfo["name"];
+				parmId = std::stoi(parminfo["id"]);
 			}
 		}
 
 		if (parmName.empty() && dbtype == kNoDatabase)
 		{
-			parmName = GetParamNameFromGribShortName(options.configuration->ParamFile(),
-			                                         itsGrib->Message().GetStringKey("shortName"));
+			parmName =
+			    GetParamNameFromGribShortName(options.configuration->ParamFile(), message.GetStringKey("shortName"));
 		}
 
 		if (parmName.empty())
 		{
-			itsLogger.Warning("Parameter name not found from database for discipline: " + to_string(discipline) +
-			                  ", category: " + to_string(category) + ", number: " + to_string(number) +
-			                  ", statistical processing: " + to_string(tosp));
+			logr.Warning("Parameter name not found from database for discipline: " + to_string(discipline) +
+			             ", category: " + to_string(category) + ", number: " + to_string(number) +
+			             ", statistical processing: " + to_string(tosp));
 		}
 		else
 		{
 			p.Name(parmName);
+			p.Id(parmId);
 		}
 
 		p.GribParameter(number);
@@ -1888,10 +1892,9 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 
 		aggregation a;
 
-		const long unitForTimeRange = itsGrib->Message().GetLongKey("indicatorOfUnitForTimeRange");
-		const auto td =
-		    DurationFromTimeRange(unitForTimeRange) * static_cast<int>(itsGrib->Message().LengthOfTimeRange());
-		switch (itsGrib->Message().TypeOfStatisticalProcessing())
+		const long unitForTimeRange = message.GetLongKey("indicatorOfUnitForTimeRange");
+		const auto td = DurationFromTimeRange(unitForTimeRange) * static_cast<int>(message.LengthOfTimeRange());
+		switch (message.TypeOfStatisticalProcessing())
 		{
 			case 0:  // Average
 				a.Type(kAverage);
@@ -1920,7 +1923,7 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 		}
 	}
 
-	string unit = itsGrib->Message().ParameterUnit();
+	string unit = message.ParameterUnit();
 
 	if (unit == "K")
 	{
@@ -1972,33 +1975,33 @@ himan::param grib::ReadParam(const search_options& options, const producer& prod
 	}
 	else
 	{
-		itsLogger.Trace("Unable to determine himan parameter unit for grib unit " + itsGrib->Message().ParameterUnit());
+		logr.Trace("Unable to determine himan parameter unit for grib unit " + message.ParameterUnit());
 	}
 
 	return p;
 }
 
-himan::forecast_time grib::ReadTime() const
+himan::forecast_time ReadTime(const NFmiGribMessage& message)
 {
-	string dataDate = to_string(itsGrib->Message().DataDate());
+	string dataDate = to_string(message.DataDate());
 
 	/*
 	 * dataTime is HH24MM in long datatype.
 	 * So, for example analysistime 00 is 0, and 06 is 600.
 	 */
 
-	long dt = itsGrib->Message().DataTime();
+	long dt = message.DataTime();
 	char fmt[5];
 	snprintf(fmt, 5, "%04ld", dt);
 
-	long step = itsGrib->Message().NormalizedStep(true, true);
+	long step = message.NormalizedStep(true, true);
 
 	string originDateTimeStr = dataDate + string(fmt);
 	raw_time originDateTime(originDateTimeStr, "%Y%m%d%H%M");
 
 	forecast_time t(originDateTime, originDateTime);
 
-	long unitOfTimeRange = itsGrib->Message().NormalizedUnitOfTimeRange();
+	long unitOfTimeRange = message.NormalizedUnitOfTimeRange();
 
 	HPTimeResolution timeResolution = kUnknownTimeResolution;
 
@@ -2019,7 +2022,8 @@ himan::forecast_time grib::ReadTime() const
 			break;
 
 		default:
-			itsLogger.Warning("Unsupported unit of time range: " + to_string(unitOfTimeRange));
+			logger logr("grib");
+			logr.Warning("Unsupported unit of time range: " + to_string(unitOfTimeRange));
 			break;
 	}
 
@@ -2028,15 +2032,16 @@ himan::forecast_time grib::ReadTime() const
 	return t;
 }
 
-himan::level grib::ReadLevel(const search_options& opts, const producer& prod) const
+himan::level ReadLevel(const search_options& opts, const producer& prod, const NFmiGribMessage& message)
 {
 	himan::HPLevelType levelType = kUnknownLevel;
+	logger logr("grib");
 
 	if (opts.configuration->DatabaseType() == kNoDatabase)
 	{
 		// Minimal set of levels for those who might try to run himan
 		// without a database connection
-		const long gribLevel = itsGrib->Message().NormalizedLevelType();
+		const long gribLevel = message.NormalizedLevelType();
 
 		switch (gribLevel)
 		{
@@ -2053,22 +2058,22 @@ himan::level grib::ReadLevel(const search_options& opts, const producer& prod) c
 				levelType = himan::kHybrid;
 				break;
 			default:
-				itsLogger.Fatal("Unsupported level type for no database mode: " + to_string(gribLevel));
+				logr.Fatal("Unsupported level type for no database mode: " + to_string(gribLevel));
 				himan::Abort();
 		}
 	}
 	else
 	{
-		const long gribLevel = itsGrib->Message().LevelType();
+		const long gribLevel = message.LevelType();
 
 		auto r = GET_PLUGIN(radon);
 
-		auto levelInfo = r->RadonDB().GetLevelFromGrib(prod.Id(), gribLevel, itsGrib->Message().Edition());
+		auto levelInfo = r->RadonDB().GetLevelFromGrib(prod.Id(), gribLevel, message.Edition());
 
 		if (levelInfo.empty())
 		{
-			itsLogger.Fatal("Unsupported level type for producer " + to_string(prod.Id()) + ": " +
-			                to_string(gribLevel) + ", grib edition " + to_string(itsGrib->Message().Edition()));
+			logr.Fatal("Unsupported level type for producer " + to_string(prod.Id()) + ": " + to_string(gribLevel) +
+			           ", grib edition " + to_string(message.Edition()));
 			himan::Abort();
 		}
 
@@ -2079,10 +2084,10 @@ himan::level grib::ReadLevel(const search_options& opts, const producer& prod) c
 
 		// 1. Check if we have a height_layer, which in grib2 is first and second leveltype 103
 
-		if (levelName == "height" && itsGrib->Message().Edition() == 2)
+		if (levelName == "height" && message.Edition() == 2)
 		{
-			const long levelType2 = itsGrib->Message().GetLongKey("typeOfSecondFixedSurface");
-			const long levelValue2 = itsGrib->Message().LevelValue2();
+			const long levelType2 = message.GetLongKey("typeOfSecondFixedSurface");
+			const long levelValue2 = message.LevelValue2();
 
 			if (levelType2 == 103 && levelValue2 != -999 && levelValue2 != 214748364700)
 			{
@@ -2098,39 +2103,40 @@ himan::level grib::ReadLevel(const search_options& opts, const producer& prod) c
 	switch (levelType)
 	{
 		case himan::kHeightLayer:
-			l = level(levelType, 100 * static_cast<double>(itsGrib->Message().LevelValue()),
-			          100 * static_cast<double>(itsGrib->Message().LevelValue2()));
+			l = level(levelType, 100 * static_cast<double>(message.LevelValue()),
+			          100 * static_cast<double>(message.LevelValue2()));
 			break;
 
 		case himan::kGroundDepth:
 		case himan::kPressureDelta:
 		{
-			long gribLevelValue2 = itsGrib->Message().LevelValue2();
+			long gribLevelValue2 = message.LevelValue2();
 			// Missing in grib is all bits set
 			if (gribLevelValue2 == 2147483647)
 			{
 				gribLevelValue2 = -1;
 			}
 
-			l = level(levelType, static_cast<float>(itsGrib->Message().LevelValue()),
-			          static_cast<float>(gribLevelValue2));
+			l = level(levelType, static_cast<float>(message.LevelValue()), static_cast<float>(gribLevelValue2));
 		}
 		break;
 
 		default:
-			l = level(levelType, static_cast<float>(itsGrib->Message().LevelValue()));
+			l = level(levelType, static_cast<float>(message.LevelValue()));
 			break;
 	}
 
 	return l;
 }
 
-himan::producer grib::ReadProducer(const search_options& options) const
+himan::producer ReadProducer(const search_options& options, const NFmiGribMessage& message)
 {
-	long centre = itsGrib->Message().Centre();
-	long process = itsGrib->Message().Process();
+	long centre = message.Centre();
+	long process = message.Process();
 
 	producer prod(centre, process);
+
+	logger logr("grib");
 
 	if (options.configuration->DatabaseType() == kRadon)
 	{
@@ -2144,7 +2150,7 @@ himan::producer grib::ReadProducer(const search_options& options) const
 			// based on forecast type
 			// future goal: forecast type is not a producer property
 			long typeId = 1;  // deterministic forecast, default
-			long msgType = itsGrib->Message().ForecastType();
+			long msgType = message.ForecastType();
 
 			if (msgType == 2)
 			{
@@ -2165,19 +2171,19 @@ himan::producer grib::ReadProducer(const search_options& options) const
 
 			if (process <= 149 && process >= 142)
 			{
-				if (itsGrib->Message().ForecastType() <= 2)
+				if (message.ForecastType() <= 2)
 				{
 					prod.Id(131);
 				}
-				else if (itsGrib->Message().ForecastType() >= 3)
+				else if (message.ForecastType() >= 3)
 				{
 					prod.Id(134);
 				}
 			}
 			else
 			{
-				itsLogger.Warning("Producer information not found from database for centre " + to_string(centre) +
-				                  ", process " + to_string(process));
+				logr.Warning("Producer information not found from database for centre " + to_string(centre) +
+				             ", process " + to_string(process));
 			}
 		}
 		else if (centre == 251 && process == 40)
@@ -2190,16 +2196,16 @@ himan::producer grib::ReadProducer(const search_options& options) const
 			auto prodInfo = r->RadonDB().GetProducerFromGrib(centre, process);
 			if (prodInfo.empty())
 			{
-				itsLogger.Warning("Producer information not found from database for centre " + to_string(centre) +
-				                  ", process " + to_string(process));
+				logr.Warning("Producer information not found from database for centre " + to_string(centre) +
+				             ", process " + to_string(process));
 			}
 			else if (prodInfo.size() >= 1)
 			{
 				prod.Id(stoi(prodInfo[0]["id"]));
 				if (prodInfo.size() > 1)
 				{
-					itsLogger.Warning("More than producer definition found from radon for centre " + to_string(centre) +
-					                  ", process " + to_string(process) + ", selecting first one=" + prodInfo[0]["Id"]);
+					logr.Warning("More than producer definition found from radon for centre " + to_string(centre) +
+					             ", process " + to_string(process) + ", selecting first one=" + prodInfo[0]["Id"]);
 				}
 			}
 		}
@@ -2209,17 +2215,17 @@ himan::producer grib::ReadProducer(const search_options& options) const
 }
 
 template <typename T>
-void ReadDataValues(vector<T>&, NFmiGribMessage& msg);
+void ReadDataValues(vector<T>&, const NFmiGribMessage& msg);
 
 template <>
-void ReadDataValues(vector<double>& values, NFmiGribMessage& msg)
+void ReadDataValues(vector<double>& values, const NFmiGribMessage& msg)
 {
 	size_t len = msg.ValuesLength();
 	msg.GetValues(values.data(), &len, himan::MissingDouble());
 }
 
 template <>
-void ReadDataValues(vector<float>& values, NFmiGribMessage& msg)
+void ReadDataValues(vector<float>& values, const NFmiGribMessage& msg)
 {
 	double* arr = new double[values.size()];
 	size_t len = msg.ValuesLength();
@@ -2232,7 +2238,7 @@ void ReadDataValues(vector<float>& values, NFmiGribMessage& msg)
 }
 
 template <typename T>
-void grib::ReadData(shared_ptr<info<T>> newInfo, bool readPackedData) const
+void ReadData(shared_ptr<info<T>> newInfo, bool readPackedData, const NFmiGribMessage& message)
 {
 	auto& dm = newInfo->Data();
 
@@ -2243,59 +2249,61 @@ void grib::ReadData(shared_ptr<info<T>> newInfo, bool readPackedData) const
 	const auto paramName = newInfo->Param().Name();
 	long producerId = newInfo->Producer().Id();
 
-	if (itsGrib->Message().Edition() == 2 && (paramName == "PRECFORM-N" || paramName == "PRECFORM2-N") &&
+	if (message.Edition() == 2 && (paramName == "PRECFORM-N" || paramName == "PRECFORM2-N") &&
 	    (producerId == 230 || producerId == 240 || producerId == 243 || producerId == 250 || producerId == 260 ||
 	     producerId == 265 || producerId == 270))
 	{
 		decodePrecipitationForm = true;
 	}
 
-	if (readPackedData && decodePrecipitationForm == false && itsGrib->Message().PackingType() == "grid_simple")
+	logger logr("grib");
+
+	if (readPackedData && decodePrecipitationForm == false && message.PackingType() == "grid_simple")
 	{
 		// Get coefficient information
 
-		double bsf = static_cast<double>(itsGrib->Message().BinaryScaleFactor());
-		double dsf = static_cast<double>(itsGrib->Message().DecimalScaleFactor());
-		double rv = itsGrib->Message().ReferenceValue();
-		int bpv = static_cast<int>(itsGrib->Message().BitsPerValue());
+		double bsf = static_cast<double>(message.BinaryScaleFactor());
+		double dsf = static_cast<double>(message.DecimalScaleFactor());
+		double rv = message.ReferenceValue();
+		int bpv = static_cast<int>(message.BitsPerValue());
 
 		auto packed = make_shared<simple_packed>(bpv, util::ToPower(bsf, 2), util::ToPower(-dsf, 10), rv);
 
 		// Get packed values from grib
 
-		size_t len = itsGrib->Message().PackedValuesLength();
+		size_t len = message.PackedValuesLength();
 		int* unpackedBitmap = 0;
 
-		packed->unpackedLength = itsGrib->Message().SizeX() * itsGrib->Message().SizeY();
+		packed->unpackedLength = message.SizeX() * message.SizeY();
 
 		if (len > 0)
 		{
 			ASSERT(packed->data == 0);
 			CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**>(&packed->data), len * sizeof(unsigned char)));
 
-			itsGrib->Message().PackedValues(packed->data);
+			message.PackedValues(packed->data);
 			packed->packedLength = len;
 
-			itsLogger.Trace("Retrieved " + to_string(len) + " bytes of packed data from grib");
+			logr.Trace("Retrieved " + to_string(len) + " bytes of packed data from grib");
 		}
 		else
 		{
-			itsLogger.Trace("Grid is constant or empty");
+			logr.Trace("Grid is constant or empty");
 		}
 
-		if (itsGrib->Message().Bitmap())
+		if (message.Bitmap())
 		{
-			size_t bitmap_len = itsGrib->Message().BytesLength("bitmap");
+			size_t bitmap_len = message.BytesLength("bitmap");
 			size_t bitmap_size = static_cast<size_t>(ceil(static_cast<double>(bitmap_len) / 8));
 
-			itsLogger.Trace("Grib has bitmap, length " + to_string(bitmap_len) + " size " + to_string(bitmap_size) +
-			                " bytes");
+			logr.Trace("Grib has bitmap, length " + to_string(bitmap_len) + " size " + to_string(bitmap_size) +
+			           " bytes");
 
 			CUDA_CHECK(cudaMallocHost(reinterpret_cast<void**>(&unpackedBitmap), bitmap_len * sizeof(int)));
 
 			unsigned char* bitmap = new unsigned char[bitmap_size];
 
-			itsGrib->Message().Bytes("bitmap", bitmap);
+			message.Bytes("bitmap", bitmap);
 
 			UnpackBitmap(bitmap, unpackedBitmap, bitmap_size, bitmap_len);
 
@@ -2310,21 +2318,21 @@ void grib::ReadData(shared_ptr<info<T>> newInfo, bool readPackedData) const
 	else
 #endif
 	{
-		ReadDataValues<T>(dm.Values(), itsGrib->Message());
+		ReadDataValues<T>(dm.Values(), message);
 
 		if (decodePrecipitationForm)
 		{
-			itsLogger.Trace("Decoding precipitation form grib2 values");
+			logr.Trace("Decoding precipitation form grib2 values");
 			DecodePrecipitationFormFromGrib2(dm.Values());
 		}
 
-		itsLogger.Trace("Retrieved " + std::to_string(dm.Size() * sizeof(T)) + " bytes of unpacked data from grib");
+		logr.Trace("Retrieved " + std::to_string(dm.Size() * sizeof(T)) + " bytes of unpacked data from grib");
 	}
 }
 
 template <typename T>
 bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData, bool readIfNotMatching,
-                              shared_ptr<info<T>> newInfo) const
+                              shared_ptr<info<T>> newInfo, const NFmiGribMessage& message, bool readData) const
 {
 	shared_ptr<radon> r;
 
@@ -2335,7 +2343,7 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 
 	bool dataIsValid = true;
 
-	auto prod = ReadProducer(options);
+	auto prod = ReadProducer(options, message);
 
 	if (options.prod.Process() != prod.Process() || options.prod.Centre() != prod.Centre())
 	{
@@ -2348,7 +2356,7 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 		}
 	}
 
-	auto p = ReadParam(options, prod);
+	auto p = ReadParam(options, prod, message);
 
 	if (p != options.param)
 	{
@@ -2365,7 +2373,7 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 		}
 	}
 
-	auto t = ReadTime();
+	auto t = ReadTime(message);
 
 	if (t != options.time)
 	{
@@ -2395,7 +2403,7 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 		}
 	}
 
-	auto l = ReadLevel(options, prod);
+	auto l = ReadLevel(options, prod, message);
 
 	if (l != options.level)
 	{
@@ -2412,8 +2420,8 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 		}
 	}
 
-	forecast_type ty(static_cast<HPForecastType>(itsGrib->Message().ForecastType()),
-	                 static_cast<double>(itsGrib->Message().ForecastTypeValue()));
+	forecast_type ty(static_cast<HPForecastType>(message.ForecastType()),
+	                 static_cast<double>(message.ForecastTypeValue()));
 
 	if (options.ftype.Type() != ty.Type() || options.ftype.Value() != ty.Value())
 	{
@@ -2438,11 +2446,11 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 
 	if (l.Type() == himan::kHybrid)
 	{
-		long nv = itsGrib->Message().NV();
+		long nv = message.NV();
 
 		if (nv > 0)
 		{
-			ab = itsGrib->Message().PV();
+			ab = message.PV();
 		}
 	}
 
@@ -2453,14 +2461,14 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 	newInfo->template Set<level>({l});
 	newInfo->template Set<forecast_type>({ty});
 
-	unique_ptr<grid> newGrid = ReadAreaAndGrid();
+	unique_ptr<grid> newGrid = ReadAreaAndGrid(message);
 
 	ASSERT(newGrid);
 
 	auto b = make_shared<base<T>>();
 	b->grid = shared_ptr<grid>(newGrid->Clone());
 
-	newInfo->Create(b, true);
+	newInfo->Create(b, readData);
 
 	// Set descriptors
 
@@ -2469,12 +2477,17 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 	newInfo->template Find<level>(l);
 	newInfo->template Find<forecast_type>(ty);
 
+	if (readData == false)
+	{
+		return true;
+	}
+
 	/*
 	 * Read data from grib. If interpolation is required, it's better to do the unpacking
 	 * at host to avoid unnecessary copying between CPU and GPU.
 	 */
 
-	ReadData(newInfo, readPackedData && (*options.configuration->BaseGrid() == *newInfo->Grid()));
+	ReadData(newInfo, readPackedData && (*options.configuration->BaseGrid() == *newInfo->Grid()), message);
 
 	if (!dataIsValid)
 	{
@@ -2485,7 +2498,8 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 	return true;
 }
 
-template bool grib::CreateInfoFromGrib<double>(const search_options&, bool, bool, shared_ptr<info<double>>) const;
+template bool grib::CreateInfoFromGrib<double>(const search_options&, bool, bool, shared_ptr<info<double>>,
+                                               const NFmiGribMessage&, bool) const;
 
 vector<shared_ptr<himan::info<double>>> grib::FromFile(const file_information& theInputFile,
                                                        const search_options& options, bool readPackedData,
@@ -2508,20 +2522,22 @@ vector<shared_ptr<himan::info<T>>> grib::FromFile(const file_information& theInp
 	}
 
 	timer aTimer(true);
+	NFmiGrib reader;
 
 	if (readIfNotMatching || !theInputFile.offset)
 	{
 		// read all messages from local 'auxiliary' file
-		if (!itsGrib->Open(theInputFile.file_location))
+		if (!reader.Open(theInputFile.file_location))
 		{
 			itsLogger.Error("Opening file '" + theInputFile.file_location + "' failed");
 			return infos;
 		}
 
-		while (itsGrib->NextMessage())
+		while (reader.NextMessage())
 		{
 			auto newInfo = make_shared<info<T>>();
-			if (CreateInfoFromGrib(options, readPackedData, readIfNotMatching, newInfo) || readIfNotMatching)
+			if (CreateInfoFromGrib(options, readPackedData, readIfNotMatching, newInfo, reader.Message()) ||
+			    readIfNotMatching)
 			{
 				infos.push_back(newInfo);
 				newInfo->First();
@@ -2533,7 +2549,7 @@ vector<shared_ptr<himan::info<T>>> grib::FromFile(const file_information& theInp
 		file_accessor fa;
 		const buffer buf = fa.Read(theInputFile);
 
-		if (!itsGrib->ReadMessage(buf.data, buf.length))
+		if (!reader.ReadMessage(buf.data, buf.length))
 		{
 			itsLogger.Error("Creating GRIB message from memory failed");
 			return infos;
@@ -2541,7 +2557,7 @@ vector<shared_ptr<himan::info<T>>> grib::FromFile(const file_information& theInp
 
 		auto newInfo = make_shared<info<T>>();
 
-		if (CreateInfoFromGrib(options, readPackedData, false, newInfo))
+		if (CreateInfoFromGrib(options, readPackedData, false, newInfo, reader.Message()))
 		{
 			infos.push_back(newInfo);
 			newInfo->First();
@@ -2576,8 +2592,23 @@ template vector<shared_ptr<himan::info<double>>> grib::FromFile<double>(const fi
                                                                         bool, bool) const;
 template vector<shared_ptr<himan::info<float>>> grib::FromFile<float>(const file_information&, const search_options&,
                                                                       bool, bool) const;
-void grib::UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restrict__ unpacked, size_t len,
-                        size_t unpackedLen) const
+/**
+ * @brief UnpackBitmap
+ *
+ * Transform regular bitmap (unsigned char) to a int-based bitmap where each array key represents
+ * an actual data value. If bitmap is zero for that key, zero is also put to the int array. If bitmap
+ * is set for that key, the value is one.
+ *
+ * TODO: Change int-array to unpacked unsigned char array (reducing size 75%) or even not unpack bitmap beforehand
+ * but do it
+ * while computing stuff with the data array.
+ *
+ * @param bitmap Original bitmap read from grib
+ * @param unpacked Unpacked bitmap where number of keys is the same as in the data array
+ * @param len Length of original bitmap
+ */
+
+void UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restrict__ unpacked, size_t len, size_t unpackedLen)
 {
 	size_t i, idx = 0;
 	int v = 1;

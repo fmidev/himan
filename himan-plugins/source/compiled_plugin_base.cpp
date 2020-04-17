@@ -546,32 +546,7 @@ void compiled_plugin_base::SetParams(std::vector<param>& params, const vector<le
 					continue;
 				}
 
-				auto levelInfo =
-				    r->RadonDB().GetLevelFromDatabaseName(boost::to_upper_copy(HPLevelTypeToString.at(lvl.Type())));
-
-				if (levelInfo.empty())
-				{
-					itsBaseLogger.Warning("Level type '" + HPLevelTypeToString.at(lvl.Type()) +
-					                      "' not found from radon");
-					continue;
-				}
-
-				auto paraminfo = r->RadonDB().GetParameterFromDatabaseName(itsConfiguration->TargetProducer().Id(),
-				                                                           par.Name(), lvl.Type(), lvl.Value());
-
-				if (paraminfo.empty())
-				{
-					itsBaseLogger.Warning("Parameter '" + par.Name() + "' definition not found from Radon");
-					continue;
-				}
-
-				param p(paraminfo);
-
-				// database does not provide aggregation or processing type information
-				p.Aggregation(par.Aggregation());
-				p.ProcessingType(par.ProcessingType());
-
-				par = p;
+				par = util::GetParameterInfoFromDatabaseName(itsConfiguration->TargetProducer(), par, lvl);
 			}
 		}
 	}

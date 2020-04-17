@@ -306,14 +306,16 @@ void ReadData(GDALRasterBand* poBand, matrix<T>& mat, const std::map<std::string
 }
 
 std::vector<std::shared_ptr<info<double>>> geotiff::FromFile(const file_information& theInputFile,
-                                                             const search_options& options) const
+                                                             const search_options& options, bool validate,
+                                                             bool readData) const
 {
-	return FromFile<double>(theInputFile, options);
+	return FromFile<double>(theInputFile, options, validate, readData);
 }
 
 template <typename T>
 std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& theInputFile,
-                                                        const search_options& options) const
+                                                        const search_options& options, bool validate,
+                                                        bool readData) const
 {
 	std::vector<std::shared_ptr<himan::info<T>>> infos;
 
@@ -361,21 +363,21 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 		auto bftype = ReadForecastType(bmeta, ftype);
 		auto bftime = ReadTime(bmeta, ftime);
 
-		if (options.time != bftime)
+		if (validate && options.time != bftime)
 		{
 			itsLogger.Warning("Time does not match: " + options.time.OriginDateTime().String() + " step " +
 			                  options.time.Step().String("%02H:%02M:%02S") + " vs " + bftime.OriginDateTime().String() +
 			                  " step " + bftime.Step().String("%02H:%02M:%02S"));
 		}
-		if (options.level != blvl)
+		if (validate && options.level != blvl)
 		{
 			itsLogger.Warning("Level does not match");
 		}
-		if (options.ftype != bftype)
+		if (validate && options.ftype != bftype)
 		{
 			itsLogger.Warning("Forecast type does not match");
 		}
-		if (options.param != bpar)
+		if (validate && options.param != bpar)
 		{
 			itsLogger.Warning("param does not match: " + options.param.Name() + " vs " + bpar.Name());
 		}
@@ -387,8 +389,10 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 		anInfo->Create(b, true);
 		anInfo->Producer(options.prod);
 
-		ReadData<T>(poBand, anInfo->Data(), meta);
-
+		if (readData)
+		{
+			ReadData<T>(poBand, anInfo->Data(), meta);
+		}
 		return anInfo;
 	};
 
@@ -396,7 +400,7 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 	{
 		for (int bandNo = 1; bandNo <= poDataset->GetRasterCount(); bandNo++)
 		{
-			itsLogger.Info("Read from file '" + theInputFile.file_location + "- band# " + std::to_string(bandNo));
+			itsLogger.Info("Read from file '" + theInputFile.file_location + "' band# " + std::to_string(bandNo));
 			GDALRasterBand* poBand = poDataset->GetRasterBand(bandNo);
 			infos.push_back(MakeInfoFromGeoTIFFBand(poBand));
 		}
@@ -413,6 +417,6 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 }
 
 template std::vector<std::shared_ptr<info<double>>> geotiff::FromFile<double>(const file_information&,
-                                                                              const search_options&) const;
+                                                                              const search_options&, bool, bool) const;
 template std::vector<std::shared_ptr<info<float>>> geotiff::FromFile<float>(const file_information&,
-                                                                            const search_options&) const;
+                                                                            const search_options&, bool, bool) const;

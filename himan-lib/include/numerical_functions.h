@@ -4,6 +4,7 @@
 #include "cuda_helper.h"
 #include "himan_common.h"
 #include "plugin_configuration.h"
+#include "matrix.h"
 
 namespace himan
 {

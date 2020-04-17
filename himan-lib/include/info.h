@@ -25,6 +25,7 @@
 #include "stereographic_grid.h"
 #include <limits>  // for std::numeric_limits<size_t>::max();
 #include <vector>
+#include "matrix.h"
 
 #define VEC(I) I->Data().Values()
 
