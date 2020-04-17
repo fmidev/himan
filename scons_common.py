@@ -119,7 +119,6 @@ try:
 except:
 	pass
 
-librarypaths.append('/usr/lib64')
 env.Append(LIBPATH = librarypaths)
 
 # Libraries
@@ -180,6 +179,8 @@ else:
 env.Append(CCFLAGS = '-fPIC')
 env.Append(CCFLAGS = cflags_normal)
 env.Append(CCFLAGS = cflags_extra)
+
+env.AppendUnique(CCFLAGS=('-isystem', '/usr/include/gdal'))
 
 if IS_CLANG:
 	env.AppendUnique(CCFLAGS=('-isystem', '/usr/include/smartmet/newbase'))
