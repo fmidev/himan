@@ -328,9 +328,9 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 		double LC = LCInfo->Value();
 
 		if (IsMissingValue({T, TD, TG, WG, N, RAD, T0EC, T0MEPS, ICN, LC}))
-		{
-			continue;
-		}
+                {
+                        continue;
+                }
 
 		// Calculating indexes and coefficients.
 
@@ -377,6 +377,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 		if (T < -5.0)
 		{
+			frost_prob = 1.0;
 			severe_frost_prob = 1.0;
 		}
 
