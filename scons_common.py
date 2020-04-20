@@ -119,6 +119,7 @@ try:
 except:
 	pass
 
+librarypaths.append('/usr/lib64/boost169')
 env.Append(LIBPATH = librarypaths)
 
 # Libraries
@@ -180,6 +181,7 @@ env.Append(CCFLAGS = '-fPIC')
 env.Append(CCFLAGS = cflags_normal)
 env.Append(CCFLAGS = cflags_extra)
 
+env.AppendUnique(CCFLAGS=('-isystem', '/usr/include/boost169'))
 env.AppendUnique(CCFLAGS=('-isystem', '/usr/include/gdal'))
 
 if IS_CLANG:

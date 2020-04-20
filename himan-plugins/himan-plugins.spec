@@ -20,8 +20,8 @@ Requires: libfmigrib >= 20.1.20
 Requires: libfmidb >= 20.4.6
 Requires: smartmet-library-newbase >= 18.7.23
 Requires: libpqxx
-Requires: boost-iostreams
-Requires: boost-thread
+Requires: boost169-iostreams
+Requires: boost169-thread
 Requires: libs3
 
 %if %{defined suse_version}
@@ -45,7 +45,7 @@ BuildRequires: libfmidb-devel >= 20.4.6
 BuildRequires: smartmet-library-newbase-devel >= 18.7.23
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
-BuildRequires: boost-devel
+BuildRequires: boost169-devel
 BuildRequires: scons
 
 AutoReqProv:	no

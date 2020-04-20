@@ -27,15 +27,15 @@ BuildRequires: cuda-10-1
 BuildRequires: gcc-c++ >= 4.8.2
 Requires: gdal
 Requires: eccodes
-Requires: boost-iostreams
-Requires: boost-filesystem
+Requires: boost169-iostreams
+Requires: boost169-filesystem
 Requires: libs3
 
 %endif
 BuildRequires: libfmidb-devel >= 17.9.18
 BuildRequires: libfmigrib-devel >= 19.10.28
 BuildRequires: zlib-devel
-BuildRequires: boost-devel
+BuildRequires: boost169-devel
 BuildRequires: scons
 BuildRequires: libs3-devel
 

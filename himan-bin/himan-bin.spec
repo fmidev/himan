@@ -19,7 +19,7 @@ Requires: gdal >= 1.11.0
 Requires: zlib
 Requires: libfmidb
 Requires: xerces-c
-BuildRequires: boost-devel >= 1.66
+BuildRequires: boost169-devel
 
 %if %{defined suse_version}
 Requires: libjasper
@@ -28,11 +28,11 @@ BuildRequires: redhat-rpm-config
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-10-1
 Requires: jasper
-Requires: boost-program-options
-Requires: boost-system
-Requires: boost-regex
-Requires: boost-iostreams
-Requires: boost-thread
+Requires: boost169-program-options
+Requires: boost169-system
+Requires: boost169-regex
+Requires: boost169-iostreams
+Requires: boost169-thread
 Requires: bzip2-libs
 
 %endif
