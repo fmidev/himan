@@ -217,12 +217,14 @@ env.Append(NVCCFLAGS = ['-gencode=arch=compute_70,code=sm_70'])
 #	env.Append(NVCCFLAGS = ['-std=c++14'])
 
 #else:
-env.Append(NVCCFLAGS = ['-std=c++11'])
+env.AppendUnique(NVCCFLAGS = ['-std=c++11'])
+env.AppendUnique(NVCCFLAGS = ('-isystem', '/usr/include/boost169'))
 
 for flag in cflags_normal:
 	if flag == '-Wcast-qual':
 		continue
 	env.Append(NVCCFLAGS = ['-Xcompiler', flag])
+
 
 env.Append(NVCCPATH = [env['WORKSPACE'] + '/himan-lib/include']) # cuda-helper
 env.Append(NVCCPATH = [env['WORKSPACE'] + '/himan-plugins/include'])
