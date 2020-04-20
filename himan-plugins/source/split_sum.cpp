@@ -52,6 +52,7 @@ split_sum::split_sum()
 	// Solid (snow + graupel + hail)
 	sourceParameters["RRRS-KGM2"] = {param("RRS-KGM2")};
 	sourceParameters["RRS-3-MM"] = {param("RRS-KGM2")};
+	sourceParameters["RRS-24-MM"] = {param("RRS-KGM2")};
 
 	// Radiation
 	sourceParameters["RADGLO-WM2"] = {param("RADGLOA-JM2"), param("RADGLO-WM2")};
@@ -236,6 +237,16 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 
 		params.push_back(parm);
 	}
+
+        if (itsConfiguration->Exists("rrs24h") && itsConfiguration->GetValue("rrs24h") == "true")
+        {
+                param parm("RRS-24-MM");
+                parm.Unit(kKgm2);
+
+                parm.Aggregation(aggregation(kAccumulation, time_duration("24:00")));
+
+                params.push_back(parm);
+        }
 
 	// Snow
 
