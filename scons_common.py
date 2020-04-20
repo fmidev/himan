@@ -119,6 +119,7 @@ try:
 except:
 	pass
 
+librarypaths.append('/usr/lib64/boost169')
 env.Append(LIBPATH = librarypaths)
 
 # Libraries
@@ -180,6 +181,7 @@ env.Append(CCFLAGS = '-fPIC')
 env.Append(CCFLAGS = cflags_normal)
 env.Append(CCFLAGS = cflags_extra)
 
+env.AppendUnique(CCFLAGS=('-isystem', '/usr/include/boost169'))
 env.AppendUnique(CCFLAGS=('-isystem', '/usr/include/gdal'))
 
 if IS_CLANG:
@@ -208,18 +210,21 @@ env.Append(NVCCFLAGS = ['-Wno-deprecated-declarations'])
 env.Append(NVCCFLAGS = ['-gencode=arch=compute_35,code=sm_35'])
 env.Append(NVCCFLAGS = ['-gencode=arch=compute_52,code=sm_52'])
 env.Append(NVCCFLAGS = ['-gencode=arch=compute_60,code=sm_60'])
+env.Append(NVCCFLAGS = ['-gencode=arch=compute_70,code=sm_70'])
 
 #if IS_CLANG:
 #	env.Append(NVCCFLAGS = ['-ccbin=clang++'])
 #	env.Append(NVCCFLAGS = ['-std=c++14'])
 
 #else:
-env.Append(NVCCFLAGS = ['-std=c++11'])
+env.AppendUnique(NVCCFLAGS = ['-std=c++11'])
+env.AppendUnique(NVCCFLAGS = ('-isystem', '/usr/include/boost169'))
 
 for flag in cflags_normal:
 	if flag == '-Wcast-qual':
 		continue
 	env.Append(NVCCFLAGS = ['-Xcompiler', flag])
+
 
 env.Append(NVCCPATH = [env['WORKSPACE'] + '/himan-lib/include']) # cuda-helper
 env.Append(NVCCPATH = [env['WORKSPACE'] + '/himan-plugins/include'])

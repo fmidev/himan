@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 19.11.14
+Version: 20.4.20
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -13,15 +13,15 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 19.10.25
+Requires: himan-lib >= 20.4.2
 Requires: lua >= 5.1.4
 Requires: unixODBC
-Requires: libfmigrib >= 19.10.28
-Requires: libfmidb >= 19.2.12
+Requires: libfmigrib >= 20.1.20
+Requires: libfmidb >= 20.4.6
 Requires: smartmet-library-newbase >= 18.7.23
 Requires: libpqxx
-Requires: boost-iostreams
-Requires: boost-thread
+Requires: boost169-iostreams
+Requires: boost169-thread
 Requires: libs3
 
 %if %{defined suse_version}
@@ -30,21 +30,22 @@ Requires: grib_api
 %else
 BuildRequires: gdal-devel
 BuildRequires: gcc-c++ >= 4.8.2
-BuildRequires: cuda-9-1
+BuildRequires: cuda-10-1
 BuildRequires: eccodes-devel
 BuildRequires: redhat-rpm-config
-BuildRequires: cuda-cusp-9-1 >= 0.5.1
+BuildRequires: cuda-cusp-10-1 >= 0.5.1
 BuildRequires: eigen >= 3.3.4
 BuildRequires: libs3-devel
 
 Requires: jasper-libs
 Requires: eccodes
 %endif
-BuildRequires: libfmigrib-devel >= 19.10.28
+BuildRequires: libfmigrib-devel >= 20.1.20
+BuildRequires: libfmidb-devel >= 20.4.6
 BuildRequires: smartmet-library-newbase-devel >= 18.7.23
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
-BuildRequires: boost-devel
+BuildRequires: boost169-devel
 BuildRequires: scons
 
 AutoReqProv:	no
@@ -81,6 +82,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libfetcher.so
 %{_libdir}/himan-plugins/libfog.so
 %{_libdir}/himan-plugins/libfractile.so
+%{_libdir}/himan-plugins/libfrost.so
 %{_libdir}/himan-plugins/libgrib.so
 %{_libdir}/himan-plugins/libgust.so
 %{_libdir}/himan-plugins/libhitool.so
@@ -119,6 +121,51 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Apr 20 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.20-1.fmi
+- Update to frost
+* Wed Apr 15 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.15-1.fmi
+- Add severe frost (frost)
+- Allow negative values for surface new LW radiation (split_sum)
+* Tue Apr 14 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.14-1.fmi
+- Update to frost
+* Wed Apr  8 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.8-1.fmi
+- New plugin frost
+* Mon Apr  6 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.6-1.fmi
+- fmidb ABI change
+* Thu Apr  2 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.2-1.fmi
+- Add support for ccsds packing
+- Minor bugfixes
+* Mon Mar  2 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.3.2-2.fmi
+- Add filename template support
+- snow_drift minor tweaking
+* Mon Mar  2 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.3.2-1.fmi
+- Improved lagged ensemble configuration
+* Wed Feb 26 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.2.26-1.fmi
+- Fixes to probability filters
+* Wed Feb 19 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.2.19-2.fmi
+- New release
+* Wed Feb 19 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.2.19-1.fmi
+- Attempting to speed up writing to one big grib file
+* Wed Feb  5 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.2.5-1.fmi
+- Minor fix to radon plugin
+* Wed Jan 29 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.1.29-1.fmi
+- Support forecast type "statistical processing"
+* Tue Jan 28 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.1.28-1.fmi
+- Reduce mutex scope when appending to grib files
+* Mon Jan 27 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.1.27-1.fmi
+- Another fix for grib message indexing
+* Fri Jan 24 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.1.24-1.fmi
+- Fix for grib message indexing
+* Wed Jan 22 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.1.22-1.fmi
+- Add 120h snow accumulation to split sum
+* Tue Jan 21 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.1.21-1.fmi
+- Support (limited) writing to S3
+* Tue Dec 17 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.12.17-1.fmi
+- Support more file writing options
+* Mon Nov 25 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.11.25-1.fmi
+- Cuda 10.1
+* Tue Nov 19 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.11.19-1.fmi
+- Compile for compute capability 7.0
 * Thu Nov 14 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.11.14-1.fmi
 - Add s3 read support
 * Mon Nov 11 2019 Mikko Partio <mikko.partio@fmi.fi> - 19.11.11-1.fmi
