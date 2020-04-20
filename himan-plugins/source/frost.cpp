@@ -4,7 +4,6 @@
 #include "level.h"
 #include "logger.h"
 #include "plugin_factory.h"
-#include "radon.h"
 #include <NFmiLocation.h>
 #include <NFmiMetTime.h>
 
@@ -61,6 +60,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 	auto myThreadedLogger = logger("frostThread #" + to_string(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();
+	forecast_time original_forecastTime(forecastTime);
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
@@ -75,31 +75,38 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 	// Change forecast origin time for producer 131 due to varying origin time with producer 181.
 
-	auto r = GET_PLUGIN(radon);
-	auto latestFromDatabase = r->RadonDB().GetLatestTime(131, "", 0);
-	forecastTime.OriginDateTime(latestFromDatabase);
-
 	auto cnf = make_shared<plugin_configuration>(*itsConfiguration);
 	auto f = GET_PLUGIN(fetcher);
 
 	// Get the latest TG-K.
 
 	info_t TGInfo;
+	int i = 0;
+	bool success = false;
 
-	try
+	while (success == false)
 	{
-		cnf->SourceProducers({producer(131, 98, 150, "ECG")});
-		TGInfo = f->Fetch(cnf, forecastTime, level(kGroundDepth, 0, 7), TGParam, forecastType, false);
-	}
-	catch (HPExceptionType& e)
-	{
-		if (e == kFileDataNotFound)
+
+		try
 		{
-			myThreadedLogger.Error("No data found.");
+			cnf->SourceProducers({producer(131, 98, 150, "ECG")});
+			TGInfo = f->Fetch(cnf, forecastTime, level(kGroundDepth, 0, 7), TGParam, forecastType, false);
+			success = true;
 		}
-		return;
+		catch (HPExceptionType& e)
+		{
+			if (e == kFileDataNotFound)
+			{
+				myThreadedLogger.Error("No data found.");
+				forecastTime.OriginDateTime().Adjust(kHourResolution, -1);
+				i++;
+			}
+			if (i > 100) 
+			{
+				return;
+			}
+		}
 	}
-
 	// Get the latest FFG-MS.
 
 	info_t WGInfo;
@@ -150,14 +157,11 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 		return;
 	}
 
-	// Get the latest LC-0TO1, avalable only for hour 00.
+	// Get the latest LC-0TO1, available only for hour 00.
 
 	info_t LCInfo;
 
-	forecast_time LC_time(forecastTime.OriginDateTime(), forecastTime.ValidDateTime());
-	latestFromDatabase = r->RadonDB().GetLatestTime(131, "ECEUR0100", 0);
-	LC_time.OriginDateTime(latestFromDatabase);
-	LC_time.ValidDateTime(forecastTime.OriginDateTime());
+	forecast_time LC_time(forecastTime.OriginDateTime(), forecastTime.OriginDateTime());
 
 	try
 	{
@@ -178,22 +182,33 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 	info_t RADInfo;
 
-	latestFromDatabase = r->RadonDB().GetLatestTime(240, "ECGLO0100", 0);
-	forecastTime.OriginDateTime(latestFromDatabase);
+	forecastTime = original_forecastTime;
 
-	try
-	{
-		cnf->SourceProducers({producer(240, 86, 240, "ECGMTA")});
-		cnf->SourceGeomNames({"ECGLO0100"});
-		RADInfo = f->Fetch(cnf, forecastTime, level(kHeight, 0), RADParam, forecastType, false);
-	}
-	catch (HPExceptionType& e)
-	{
-		if (e == kFileDataNotFound)
+	success = false;
+	i = 0;
+
+	while (success == false)
+	{ 
+		try
 		{
-			myThreadedLogger.Error("No data found.");
+			cnf->SourceProducers({producer(240, 86, 240, "ECGMTA")});
+			cnf->SourceGeomNames({"ECGLO0100"});
+			RADInfo = f->Fetch(cnf, forecastTime, level(kHeight, 0), RADParam, forecastType, false);
+			success = true;
 		}
-		return;
+		catch (HPExceptionType& e)
+		{
+			if (e == kFileDataNotFound)
+			{
+				myThreadedLogger.Error("No data found.");	
+				forecastTime.OriginDateTime().Adjust(kHourResolution, -1);
+				i++;
+			}
+			if (i > 100) 
+			{
+				return;
+			}
+		}
 	}
 
 	// Get the latest ECMWF PROB-TC-0. If not found, get earlier.
@@ -201,18 +216,15 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 	info_t T0ECInfo;
 
 	forecast_type stat_type = forecast_type(kStatisticalProcessing);
+	forecastTime = original_forecastTime;
 
-	int ec_offset = 0;
-
-	bool success = false;
+	i = 0;
+	success = false;
 
 	while (success == false)
 	{
 		try
 		{
-			latestFromDatabase = r->RadonDB().GetLatestTime(242, "ECEUR0200", ec_offset);
-			forecastTime.OriginDateTime(latestFromDatabase);
-
 			// ECMWF PROB-TC-0 is calculated only for every 3 hours.
 
 			int forecastHour = std::stoi(forecastTime.ValidDateTime().String("%H"));
@@ -235,10 +247,10 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 			{
 				const string analtime = forecastTime.OriginDateTime().String("%Y-%m-%d %H:%M:%S");
 				myThreadedLogger.Error("ECMWF PROB-TC-0 from analysis time " + analtime + " not found.");
+				forecastTime.OriginDateTime().Adjust(kHourResolution, -1);
+				i++;
 			}
-			ec_offset++;
-
-			if (ec_offset > 1)
+			if (i > 100)
 			{
 				return;
 			}
@@ -253,17 +265,14 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 	info_t T0MEPSInfo;
 
-	int MEPS_offset = 1;
-
+	forecastTime = original_forecastTime;
+	i = 0;
 	success = false;
 
 	while (success == false)
 	{
 		try
 		{
-			latestFromDatabase = r->RadonDB().GetLatestTime(260, "MEPS2500D", MEPS_offset);
-			forecastTime.OriginDateTime(latestFromDatabase);
-
 			latestHour = std::stoi(forecastTime.OriginDateTime().String("%H"));
 
 			if (latestHour == 1 || latestHour == 4 || latestHour == 7 || latestHour == 10 || latestHour == 13 ||
@@ -289,10 +298,18 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 			{
 				const string analtime = forecastTime.OriginDateTime().String("%Y-%m-%d %H:%M:%S");
 				myThreadedLogger.Error("MEPS PROB-TC-0 from analysis time " + analtime + " not found.");
-			}
-			MEPS_offset++;
-
-			if (MEPS_offset > 2)
+				if (i == 0)
+				{
+					forecastTime.OriginDateTime().Adjust(kHourResolution, 24);
+					i++;
+				}
+				else
+				{
+					forecastTime.OriginDateTime().Adjust(kHourResolution, -1);
+					i++;
+				}
+			} 
+			if (i > 30)
 			{
 				return;
 			}
