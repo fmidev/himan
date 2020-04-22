@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 20.4.8
+Version: 20.4.22
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -66,6 +66,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libhiman.so
 
 %changelog
+* Wed Apr 22 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.22-1.fmi
+- boost 1.69
 * Wed Apr  8 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.8-1.fmi
 - Preliminary support for LAEA
 * Thu Apr  2 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.2-1.fmi

@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 20.4.2
+Version: 20.4.22
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -64,6 +64,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Wed Apr 22 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.22-1.fmi
+- boost 1.69
 * Thu Apr  2 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.2-1.fmi
 - Changes in himan-lib headers
 * Mon Mar  2 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.3.2-1.fmi

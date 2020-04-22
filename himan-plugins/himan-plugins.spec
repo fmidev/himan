@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.4.20
+Version: 20.4.22
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -121,6 +121,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Wed Apr 22 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.22-1.fmi
+- boost 1.69
 * Mon Apr 20 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.20-1.fmi
 - Update to frost
 * Wed Apr 15 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.15-1.fmi
