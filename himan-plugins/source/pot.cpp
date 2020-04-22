@@ -114,6 +114,12 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 			break;
 	}
 
+	// make sure filters have at least size 1;
+	smallFilterSizeX = smallFilterSizeX < 1 ? 1 : smallFilterSizeX;
+	smallFilterSizeY = smallFilterSizeY < 1 ? 1 : smallFilterSizeY;
+	largeFilterSizeX = largeFilterSizeX < 1 ? 1 : largeFilterSizeX;
+	largeFilterSizeY = largeFilterSizeY < 1 ? 1 : largeFilterSizeY;
+
 	// filters
 	himan::matrix<double> small_filter_kernel(smallFilterSizeX, smallFilterSizeY, 1, MissingDouble(), 1.0);
 	himan::matrix<double> large_filter_kernel(largeFilterSizeX, largeFilterSizeY, 1, MissingDouble(), 1.0);
