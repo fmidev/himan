@@ -5,13 +5,14 @@
 
 #include "grid.h"
 #include <cpl_conv.h>
+#include <ogr_geometry.h>
 #include <ogr_spatialref.h>
 
 using namespace himan;
 using namespace std;
 
-grid::grid()
-    : itsGridClass(kUnknownGridClass), itsGridType(kUnknownGridType), itsUVRelativeToGrid(false), itsEarthShape()
+grid::grid(HPGridClass gridClass, HPGridType gridType, bool uvRelativeToGrid)
+    : itsGridClass(gridClass), itsGridType(gridType), itsUVRelativeToGrid(uvRelativeToGrid)
 {
 }
 
@@ -21,15 +22,6 @@ bool grid::EqualsTo(const grid& other) const
 	{
 		itsLogger.Trace("Grid type does not match: " + HPGridTypeToString.at(itsGridType) + " vs " +
 		                HPGridTypeToString.at(other.Type()));
-		return false;
-	}
-
-	// Comparison of earth shape turned off for now
-	if ((false) && other.itsEarthShape != itsEarthShape)
-	{
-		itsLogger.Trace("Earth shape does not match: A: " + to_string(other.itsEarthShape.A()) + " vs " +
-		                to_string(itsEarthShape.A()) + " and B: " + to_string(other.itsEarthShape.B()) + " vs " +
-		                to_string(itsEarthShape.B()));
 		return false;
 	}
 
@@ -47,17 +39,10 @@ HPGridType grid::Type() const
 {
 	return itsGridType;
 }
-void grid::Type(HPGridType theGridType)
-{
-	itsGridType = theGridType;
-}
+
 HPGridClass grid::Class() const
 {
 	return itsGridClass;
-}
-void grid::Class(HPGridClass theGridClass)
-{
-	itsGridClass = theGridClass;
 }
 
 ostream& grid::Write(std::ostream& file) const
@@ -66,7 +51,7 @@ ostream& grid::Write(std::ostream& file) const
 
 	file << "__itsUVRelativeToGrid__ " << itsUVRelativeToGrid << std::endl;
 
-	file << itsEarthShape;
+	file << EarthShape();
 
 	return file;
 }
@@ -96,33 +81,26 @@ void grid::UVRelativeToGrid(bool theUVRelativeToGrid)
 	itsUVRelativeToGrid = theUVRelativeToGrid;
 }
 
-earth_shape<double> grid::EarthShape() const
-{
-	return itsEarthShape;
-}
-
-void grid::EarthShape(const earth_shape<double>& theEarthShape)
-{
-	itsEarthShape = theEarthShape;
-}
-
 //--------------- regular grid
-regular_grid::regular_grid() : grid(), itsScanningMode(kUnknownScanningMode)
+
+regular_grid::regular_grid(HPGridType gridType, HPScanningMode scMode, double di, double dj, size_t ni, size_t nj,
+                           bool uvRelativeToGrid)
+    : grid(kRegularGrid, gridType, uvRelativeToGrid),
+      itsScanningMode(scMode),
+      itsDi(di),
+      itsDj(dj),
+      itsNi(ni),
+      itsNj(nj)
 {
-	Class(kRegularGrid);
-}
-regular_grid::regular_grid(HPGridType gridType, HPScanningMode scMode, bool uvRelativeToGrid) : grid()
-{
-	itsGridClass = kRegularGrid;
-	itsGridType = gridType;
-	itsScanningMode = scMode;
-	itsUVRelativeToGrid = uvRelativeToGrid;
 }
 
-regular_grid::~regular_grid()
-{
-}
-regular_grid::regular_grid(const regular_grid& other) : grid(other), itsScanningMode(other.itsScanningMode)
+regular_grid::regular_grid(const regular_grid& other)
+    : grid(other),
+      itsScanningMode(other.itsScanningMode),
+      itsDi(other.itsDi),
+      itsDj(other.itsDj),
+      itsNi(other.itsNi),
+      itsNj(other.itsNj)
 {
 }
 
@@ -133,8 +111,75 @@ bool regular_grid::EqualsTo(const regular_grid& other) const
 		return false;
 	}
 
-	if (other.itsScanningMode != itsScanningMode)
+	// Turned off for now
+	if (false && other.itsScanningMode != itsScanningMode)
 	{
+		return false;
+	}
+
+	const auto es = EarthShape();
+	const auto oes = other.EarthShape();
+
+	// Turned off for now
+	if (false && es != oes)
+	{
+		itsLogger.Trace("Earth shape does not match: " + to_string(es.A()) + "/" + to_string(es.B()) + " vs " +
+		                to_string(oes.A()) + "/" + to_string(oes.B()));
+
+		return false;
+	}
+
+	const double kEpsilon = 0.0001;
+
+	if (fabs(other.itsDi - itsDi) > kEpsilon)
+	{
+		itsLogger.Trace("Di does not match: " + to_string(itsDi) + " vs " + to_string(other.itsDi));
+		return false;
+	}
+
+	if ((other.itsDj != itsDj) > kEpsilon)
+	{
+		itsLogger.Trace("Dj does not match: " + to_string(itsDj) + " vs " + to_string(other.itsDj));
+		return false;
+	}
+
+	if (other.itsNi != itsNi)
+	{
+		itsLogger.Trace("Ni does not match: " + to_string(itsNi) + " vs " + to_string(other.itsNi));
+		return false;
+	}
+
+	if (other.itsNj != itsNj)
+	{
+		itsLogger.Trace("Nj does not match: " + to_string(itsNj) + " vs " + to_string(other.itsNj));
+		return false;
+	}
+
+	if (other.BottomLeft() != BottomLeft())
+	{
+		itsLogger.Trace("BottomLeft does not match: " + static_cast<std::string>(other.BottomLeft()) + " vs " +
+		                static_cast<std::string>(BottomLeft()));
+		return false;
+	}
+
+	if (other.TopLeft() != TopLeft())
+	{
+		itsLogger.Trace("TopLeft does not match: " + static_cast<std::string>(other.TopLeft()) + " vs " +
+		                static_cast<std::string>(TopLeft()));
+		return false;
+	}
+
+	if (other.BottomRight() != BottomRight())
+	{
+		itsLogger.Trace("BottomRight does not match: " + static_cast<std::string>(other.BottomRight()) + " vs " +
+		                static_cast<std::string>(BottomRight()));
+		return false;
+	}
+
+	if (other.TopRight() != TopRight())
+	{
+		itsLogger.Trace("TopRight does not match: " + static_cast<std::string>(other.TopRight()) + " vs " +
+		                static_cast<std::string>(TopRight()));
 		return false;
 	}
 
@@ -145,23 +190,14 @@ HPScanningMode regular_grid::ScanningMode() const
 {
 	return itsScanningMode;
 }
-void regular_grid::ScanningMode(HPScanningMode theScanningMode)
-{
-	itsScanningMode = theScanningMode;
-}
-
-point regular_grid::BottomLeft() const
-{
-	return point();
-}
-
-point regular_grid::TopRight() const
-{
-	return point();
-}
 
 std::string regular_grid::Proj4String() const
 {
+	if (itsSpatialReference == nullptr)
+	{
+		throw std::runtime_error("Spatial reference instance not initialized");
+	}
+
 	char* projstr;
 	if (itsSpatialReference->exportToProj4(&projstr) != OGRERR_NONE)
 	{
@@ -173,23 +209,226 @@ std::string regular_grid::Proj4String() const
 	return proj;
 }
 
+point regular_grid::XY(const point& latlon) const
+{
+	double projX = latlon.X(), projY = latlon.Y();
+	ASSERT(itsLatLonToXYTransformer);
+
+	// 1. Transform latlon to projected coordinates.
+	// Projected coordinates are in meters, with false easting and
+	// false northing applied so that point 0,0 is top left or bottom left,
+	// depending on the scanning mode.
+
+	if (!itsLatLonToXYTransformer->Transform(1, &projX, &projY))
+	{
+		itsLogger.Error("Error determining xy value for latlon point " + std::to_string(latlon.X()) + "," +
+		                std::to_string(latlon.Y()));
+		return point();
+	}
+
+	// 2. Transform projected coordinates (meters) to grid xy (no unit).
+	// Projected coordinates run from 0 ... area width and 0 ... area height.
+	// Grid point coordinates run from 0 ... ni and 0 ... nj.
+
+	const double x = (projX / itsDi);
+	const double y = (projY / itsDj) * (itsScanningMode == kTopLeft ? -1 : 1);
+
+	if (x < 0 || x > itsNi - 1 || y < 0 || y > itsNj - 1)
+	{
+		return point(MissingDouble(), MissingDouble());
+	}
+
+	return point(x, y);
+}
+
+point regular_grid::LatLon(size_t locationIndex) const
+{
+	ASSERT(IsValid(itsDi));
+	ASSERT(IsValid(itsDj));
+	ASSERT(locationIndex < itsNi * itsNj);
+
+	const size_t jIndex = static_cast<size_t>(locationIndex / itsNi);
+	const size_t iIndex = static_cast<size_t>(locationIndex % itsNi);
+
+	double x = static_cast<double>(iIndex) * itsDi;
+	double y = static_cast<double>(jIndex) * itsDj * (itsScanningMode == kTopLeft ? -1 : 1);
+
+	ASSERT(itsXYToLatLonTransformer);
+	if (!itsXYToLatLonTransformer->Transform(1, &x, &y))
+	{
+		itsLogger.Error("Error determining latitude longitude value for xy point " + std::to_string(x) + "," +
+		                std::to_string(y));
+		return point();
+	}
+
+	return point(x, y);
+}
+
+size_t regular_grid::Size() const
+{
+	return itsNi * itsNj;
+}
+
+point regular_grid::FirstPoint() const
+{
+	return LatLon(0);
+}
+
+point regular_grid::LastPoint() const
+{
+	return LatLon(Size() - 1);
+}
+
+point regular_grid::BottomLeft() const
+{
+	switch (itsScanningMode)
+	{
+		case kBottomLeft:
+			return LatLon(0);
+		case kTopLeft:
+			return LatLon(itsNj * itsNi - itsNi);
+		default:
+			throw runtime_error("Unhandled scanning mode: " + HPScanningModeToString.at(itsScanningMode));
+	}
+}
+point regular_grid::TopRight() const
+{
+	switch (itsScanningMode)
+	{
+		case kBottomLeft:
+			return LatLon(itsNj * itsNi - 1);
+		case kTopLeft:
+			return LatLon(itsNi - 1);
+		default:
+			throw runtime_error("Unhandled scanning mode: " + HPScanningModeToString.at(itsScanningMode));
+	}
+}
+point regular_grid::TopLeft() const
+{
+	switch (itsScanningMode)
+	{
+		case kBottomLeft:
+			return LatLon(itsNj * itsNi - itsNi);
+		case kTopLeft:
+			return LatLon(0);
+		default:
+			throw runtime_error("Unhandled scanning mode: " + HPScanningModeToString.at(itsScanningMode));
+	}
+}
+point regular_grid::BottomRight() const
+{
+	switch (itsScanningMode)
+	{
+		case kBottomLeft:
+			return LatLon(itsNi - 1);
+		case kTopLeft:
+			return LatLon(itsNi * itsNj - 1);
+		default:
+			throw runtime_error("Unhandled scanning mode: " + HPScanningModeToString.at(itsScanningMode));
+	}
+}
+
+size_t regular_grid::Ni() const
+{
+	return itsNi;
+}
+size_t regular_grid::Nj() const
+{
+	return itsNj;
+}
+double regular_grid::Di() const
+{
+	return itsDi;
+}
+double regular_grid::Dj() const
+{
+	return itsDj;
+}
+earth_shape<double> regular_grid::EarthShape() const
+{
+	OGRErr err;
+	const double A = OSRGetSemiMajor(itsSpatialReference.get(), &err);
+
+	if (err != OGRERR_NONE)
+	{
+		throw runtime_error("Unable to get Semi Major");
+	}
+
+	const double B = OSRGetSemiMinor(itsSpatialReference.get(), &err);
+
+	if (err != OGRERR_NONE)
+	{
+		throw runtime_error("Unable to get Semi Minor");
+	}
+
+	return earth_shape<double>(A, B);
+}
+
 ostream& regular_grid::Write(std::ostream& file) const
 {
 	grid::Write(file);
-	file << "<" << this->ClassName() << ">" << std::endl
-	     << "__itsScanningMode__ " << HPScanningModeToString.at(itsScanningMode) << std::endl;
+
+	file << "<" << ClassName() << ">" << std::endl
+	     << "__itsScanningMode__ " << HPScanningModeToString.at(itsScanningMode) << std::endl
+	     << "__itsDi__ " << itsDi << std::endl
+	     << "__itsDj__ " << itsDj << std::endl
+	     << "__itsNi__ " << itsNi << std::endl
+	     << "__itsNj__ " << itsNj << std::endl;
 
 	return file;
 }
 
-//--------------- irregular grid
-
-irregular_grid::irregular_grid() : grid()
+std::unique_ptr<OGRPolygon> regular_grid::Geometry() const
 {
-	Class(kIrregularGrid);
+	OGRLinearRing ring;
+
+	auto Index = [&](size_t x, size_t y) -> size_t { return y * itsNi + x; };
+
+	// A         B
+	//  +-------+
+	//  |       |
+	//  |       |
+	//  +-------+
+	// C         D
+
+	// assuming topleft (works the same of bottomleft)
+	// AB
+
+	for (size_t i = 0; i < itsNi; i++)
+	{
+		const point p = LatLon(Index(i, 0));
+		ring.addPoint(p.X(), p.Y());
+	}
+
+	// BD
+	for (size_t j = 0; j < itsNj; j++)
+	{
+		const point p = LatLon(Index(itsNi - 1, j));
+		ring.addPoint(p.X(), p.Y());
+	}
+
+	// CD
+	for (int i = static_cast<int>(itsNi) - 1; i >= 0; --i)
+	{
+		const point p = LatLon(Index(i, itsNj - 1));
+		ring.addPoint(p.X(), p.Y());
+	}
+
+	// AC
+	for (int j = static_cast<int>(itsNj) - 1; j >= 0; --j)
+	{
+		const point p = LatLon(Index(0, j));
+		ring.addPoint(p.X(), p.Y());
+	}
+
+	auto geometry = std::unique_ptr<OGRPolygon>(new OGRPolygon());
+	geometry->addRing(&ring);
+	return std::move(geometry);
 }
 
-irregular_grid::~irregular_grid()
+//--------------- irregular grid
+
+irregular_grid::irregular_grid(HPGridType type) : grid(kIrregularGrid, type, false)
 {
 }
 
@@ -205,4 +444,14 @@ bool irregular_grid::EqualsTo(const irregular_grid& other) const
 	}
 
 	return true;
+}
+
+earth_shape<double> irregular_grid::EarthShape() const
+{
+	return itsEarthShape;
+}
+
+void irregular_grid::EarthShape(const earth_shape<double>& theShape)
+{
+	itsEarthShape = theShape;
 }

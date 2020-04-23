@@ -201,8 +201,10 @@ bool Interpolate(const grid* baseGrid, std::vector<std::shared_ptr<info<T>>>& in
 				}
 #endif
 				util::Flip<T>(info->Data());
-				std::dynamic_pointer_cast<regular_grid>(info->Grid())
-				    ->ScanningMode(dynamic_cast<const regular_grid*>(baseGrid)->ScanningMode());
+				auto base = info->Base();
+				const bool uv = base->grid->UVRelativeToGrid();
+				base->grid = std::shared_ptr<himan::grid>(baseGrid->Clone());
+				base->grid->UVRelativeToGrid(uv);
 			}
 		}
 
@@ -298,7 +300,7 @@ void RotateVectorComponentsCPU(const grid* from, const grid* to, himan::matrix<T
 
 	logger log("interpolate");
 
-	if (from->UVRelativeToGrid())
+	if (from->UVRelativeToGrid() && from->Type() != kLatitudeLongitude)
 	{
 		log.Trace("Rotating from " + HPGridTypeToString.at(from->Type()) + " to earth relative");
 
@@ -539,8 +541,10 @@ void RotateVectorComponents(const grid* from, const grid* to, himan::info<T>& UI
 {
 	ASSERT(UInfo.Grid()->UVRelativeToGrid() == VInfo.Grid()->UVRelativeToGrid());
 
+	logger log("interpolate");
 	if (!UInfo.Grid()->UVRelativeToGrid())
 	{
+		log.Trace("Source data is not relative to grid -- skipping rotation");
 		return;
 	}
 

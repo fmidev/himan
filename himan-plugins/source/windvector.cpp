@@ -12,6 +12,7 @@
 #include "util.h"
 #include <iostream>
 #include <math.h>
+#include <ogr_spatialref.h>
 
 #include "cache.h"
 #include "fetcher.h"
@@ -207,14 +208,10 @@ void windvector::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short 
 			util::Unpack<float>({UInfo, VInfo}, false);
 		}
 #endif
-
-		// We need to make sure that vector components are rotated to earth-relative form -- fetcher
-		// does not do it if source projection == target projection
-		// By using a dummy latlon area we make sure that rotation is only done to earth relative form
-
-		latitude_longitude_grid x;
-
-		interpolate::RotateVectorComponents(UInfo->Grid().get(), &x, *UInfo, *VInfo, itsConfiguration->UseCuda());
+		// TODO: a better way should exist to provide vector component rotation
+		// than creating a dummy area
+		latitude_longitude_grid dummy(kBottomLeft, point(), point(), 0, 0, earth_shape<double>());
+		interpolate::RotateVectorComponents(UInfo->Grid().get(), &dummy, *UInfo, *VInfo, itsConfiguration->UseCuda());
 
 		auto c = GET_PLUGIN(cache);
 

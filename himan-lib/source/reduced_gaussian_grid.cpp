@@ -14,10 +14,13 @@ using namespace himan;
 using namespace std;
 
 reduced_gaussian_grid::reduced_gaussian_grid()
-    : irregular_grid(), itsNumberOfPointsAlongParallels(), itsAccumulatedPointsAlongParallels(), itsLatitudes(), itsN(0)
+    : irregular_grid(kReducedGaussian),
+      itsNumberOfPointsAlongParallels(),
+      itsAccumulatedPointsAlongParallels(),
+      itsLatitudes(),
+      itsN(0)
 {
 	itsLogger = logger("reduced_gaussian_grid");
-	Type(kReducedGaussian);
 }
 
 reduced_gaussian_grid::reduced_gaussian_grid(const reduced_gaussian_grid& other)

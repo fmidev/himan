@@ -14,6 +14,7 @@
 #include "util.h"
 #include <algorithm>
 #include <boost/filesystem.hpp>
+#include <ogr_spatialref.h>
 
 using namespace std;
 using namespace himan::plugin;
@@ -393,7 +394,9 @@ void grib::WriteAreaAndGrid(const shared_ptr<himan::grid>& grid, const producer&
 		{
 			auto rg = dynamic_pointer_cast<rotated_latitude_longitude_grid>(grid);
 
-			himan::point lastGridPoint = rg->LastPoint();
+			// In grib we put rotated coordinates as first and last point
+			firstGridPoint = rg->Rotate(grid->FirstPoint());
+			himan::point lastGridPoint = rg->Rotate(rg->LastPoint());
 
 			long gridType = 10;  // Grib 1
 
@@ -1667,47 +1670,36 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 	{
 		case 0:
 		{
-			newGrid = unique_ptr<latitude_longitude_grid>(new latitude_longitude_grid);
-			latitude_longitude_grid* const rg = dynamic_cast<latitude_longitude_grid*>(newGrid.get());
-
-			size_t ni = static_cast<size_t>(itsGrib->Message().SizeX());
-			size_t nj = static_cast<size_t>(itsGrib->Message().SizeY());
-
-			rg->Ni(ni);
-			rg->Nj(nj);
-
-			rg->Di(itsGrib->Message().iDirectionIncrement());
-			rg->Dj(itsGrib->Message().jDirectionIncrement());
-
-			rg->ScanningMode(m);
-
-			rg->FirstPoint(firstPoint);
-
-			double X1 = itsGrib->Message().X1();
-			double Y1 = itsGrib->Message().Y1();
-
-			rg->LastPoint(point(X1, Y1));
-
+			// clang-format off
+			newGrid = unique_ptr<latitude_longitude_grid>(new latitude_longitude_grid(
+			    m,
+			    firstPoint,
+			    static_cast<size_t>(itsGrib->Message().SizeX()),
+			    static_cast<size_t>(itsGrib->Message().SizeY()),
+			    itsGrib->Message().iDirectionIncrement(),
+			    itsGrib->Message().jDirectionIncrement(),
+			    ReadEarthShape(itsGrib->Message())
+			));
+			// clang-format on
 			break;
 		}
 		case 3:
 		{
-			newGrid = unique_ptr<lambert_conformal_grid>(
-			    new lambert_conformal_grid(m, point(itsGrib->Message().X0(), itsGrib->Message().Y0())));
-			lambert_conformal_grid* const lccg = dynamic_cast<lambert_conformal_grid*>(newGrid.get());
-
-			lccg->Ni(static_cast<size_t>(itsGrib->Message().SizeX()));
-			lccg->Nj(static_cast<size_t>(itsGrib->Message().SizeY()));
-
-			lccg->ScanningMode(m);
-			lccg->Orientation(itsGrib->Message().GridOrientation());
-			lccg->Di(itsGrib->Message().XLengthInMeters());
-			lccg->Dj(itsGrib->Message().YLengthInMeters());
-
-			lccg->StandardParallel1(static_cast<double>(itsGrib->Message().GetLongKey("Latin1InDegrees")));
-			lccg->StandardParallel2(static_cast<double>(itsGrib->Message().GetLongKey("Latin2InDegrees")));
-			lccg->UVRelativeToGrid(itsGrib->Message().UVRelativeToGrid());
-
+			// clang-format off
+			newGrid = unique_ptr<lambert_conformal_grid>(new lambert_conformal_grid(
+			    m,
+			    point(itsGrib->Message().X0(), itsGrib->Message().Y0()),
+			    itsGrib->Message().SizeX(),
+			    itsGrib->Message().SizeY(),
+			    itsGrib->Message().XLengthInMeters(),
+			    itsGrib->Message().YLengthInMeters(),
+			    itsGrib->Message().GridOrientation(),
+			    static_cast<double>(itsGrib->Message().GetLongKey("Latin1InDegrees")),
+			    static_cast<double>(itsGrib->Message().GetLongKey("Latin2InDegrees")),
+			    ReadEarthShape(itsGrib->Message()),
+			    false
+			));
+			// clang-format off
 			break;
 		}
 
@@ -1720,6 +1712,7 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 
 				gg->N(static_cast<int>(itsGrib->Message().GetLongKey("N")));
 				gg->NumberOfPointsAlongParallels(itsGrib->Message().PL());
+				gg->EarthShape(ReadEarthShape(itsGrib->Message()));
 
 				break;
 			}
@@ -1727,64 +1720,44 @@ unique_ptr<himan::grid> grib::ReadAreaAndGrid() const
 
 		case 5:
 		{
-			newGrid = unique_ptr<stereographic_grid>(new stereographic_grid);
-			stereographic_grid* const rg = dynamic_cast<stereographic_grid*>(newGrid.get());
-
-			size_t ni = static_cast<size_t>(itsGrib->Message().SizeX());
-			size_t nj = static_cast<size_t>(itsGrib->Message().SizeY());
-
-			rg->Ni(ni);
-			rg->Nj(nj);
-
-			rg->Orientation(itsGrib->Message().GridOrientation());
-			rg->Di(itsGrib->Message().XLengthInMeters());
-			rg->Dj(itsGrib->Message().YLengthInMeters());
-
-			rg->ScanningMode(m);
-			rg->UVRelativeToGrid(itsGrib->Message().UVRelativeToGrid());
-
-			rg->FirstPoint(firstPoint);
-
+			// clang-format off
+			newGrid = unique_ptr<stereographic_grid>(new stereographic_grid(
+			    m,
+			    point(itsGrib->Message().X0(), itsGrib->Message().Y0()),
+			    itsGrib->Message().SizeX(),
+			    itsGrib->Message().SizeY(),
+			    itsGrib->Message().XLengthInMeters(),
+			    itsGrib->Message().YLengthInMeters(),
+			    itsGrib->Message().GridOrientation(),
+			    ReadEarthShape(itsGrib->Message()),
+			    false
+			));
+			// clang-format off
 			break;
 		}
 
 		case 10:
 		{
-			newGrid = unique_ptr<rotated_latitude_longitude_grid>(new rotated_latitude_longitude_grid);
-			rotated_latitude_longitude_grid* const rg = dynamic_cast<rotated_latitude_longitude_grid*>(newGrid.get());
-
-			size_t ni = static_cast<size_t>(itsGrib->Message().SizeX());
-			size_t nj = static_cast<size_t>(itsGrib->Message().SizeY());
-
-			rg->Ni(ni);
-			rg->Nj(nj);
-
-			rg->Di(itsGrib->Message().iDirectionIncrement());
-			rg->Dj(itsGrib->Message().jDirectionIncrement());
-
-			rg->SouthPole(himan::point(itsGrib->Message().SouthPoleX(), itsGrib->Message().SouthPoleY()));
-			rg->UVRelativeToGrid(itsGrib->Message().UVRelativeToGrid());
-
-			rg->ScanningMode(m);
-
-			rg->FirstPoint(firstPoint);
-
-			double X1 = itsGrib->Message().X1();
-			double Y1 = itsGrib->Message().Y1();
-
-			rg->LastPoint(point(X1, Y1));
-
+			// clang-format off
+			newGrid = unique_ptr<rotated_latitude_longitude_grid>(new rotated_latitude_longitude_grid(
+			    m,
+			    firstPoint,
+			    static_cast<size_t>(itsGrib->Message().SizeX()),
+			    static_cast<size_t>(itsGrib->Message().SizeY()),
+			    itsGrib->Message().iDirectionIncrement(),
+			    itsGrib->Message().jDirectionIncrement(),
+			    ReadEarthShape(itsGrib->Message()),
+			    point(itsGrib->Message().SouthPoleX(), itsGrib->Message().SouthPoleY())
+			));
+			// clang-format on
 			break;
 		}
 		default:
-			throw runtime_error(ClassName() +
-			                    ": Unsupported grid type: " + to_string(itsGrib->Message().NormalizedGridType()));
-			break;
+			itsLogger.Fatal("Unsupported grid type: " + to_string(itsGrib->Message().NormalizedGridType()));
+			himan::Abort();
 	}
 
-	const auto shape = ReadEarthShape(itsGrib->Message());
-	newGrid->EarthShape(shape);
-
+	newGrid->UVRelativeToGrid(itsGrib->Message().UVRelativeToGrid());
 	return newGrid;
 }
 

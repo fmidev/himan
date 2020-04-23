@@ -15,6 +15,7 @@
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <map>
+#include <ogr_spatialref.h>
 #include <stdexcept>
 #include <utility>
 
@@ -1162,24 +1163,27 @@ unique_ptr<grid> ParseAreaAndGrid(const shared_ptr<configuration>& conf, const b
 
 	// 4. Target geometry is still not set, check for bbox
 
-	unique_ptr<grid> rg;
-
 	try
 	{
+		const auto scmode = HPScanningModeFromString.at(pt.get<string>("scanning_mode"));
+
+		if (scmode != kBottomLeft)
+		{
+			throw runtime_error("Only bottom_left scanning mode is supported with bbox");
+		}
+
 		vector<string> coordinates = himan::util::Split(pt.get<string>("bbox"), ",", false);
 
-		rg = unique_ptr<latitude_longitude_grid>(new latitude_longitude_grid);
-
-		dynamic_cast<latitude_longitude_grid*>(rg.get())->BottomLeft(point(stod(coordinates[0]), stod(coordinates[1])));
-		dynamic_cast<latitude_longitude_grid*>(rg.get())->TopRight(point(stod(coordinates[2]), stod(coordinates[3])));
-
-		dynamic_cast<latitude_longitude_grid*>(rg.get())->Ni(pt.get<size_t>("ni"));
-		dynamic_cast<latitude_longitude_grid*>(rg.get())->Nj(pt.get<size_t>("nj"));
-
-		dynamic_cast<latitude_longitude_grid*>(rg.get())->ScanningMode(
-		    HPScanningModeFromString.at(pt.get<string>("scanning_mode")));
-
-		return rg;
+		// clang-format off
+		return unique_ptr<latitude_longitude_grid>(new latitude_longitude_grid(
+		    scmode,
+		    point(stod(coordinates[0]), stod(coordinates[1])),
+		    point(stod(coordinates[2]), stod(coordinates[3])),
+		    pt.get<size_t>("ni"),
+		    pt.get<size_t>("nj"),
+		    earth_shape<double>(6371220.)
+		));
+		// clang-format on
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
@@ -1204,42 +1208,44 @@ unique_ptr<grid> ParseAreaAndGrid(const shared_ptr<configuration>& conf, const b
 
 		if (projection == "latlon")
 		{
-			rg = unique_ptr<latitude_longitude_grid>(new latitude_longitude_grid);
-			dynamic_cast<latitude_longitude_grid*>(rg.get())->ScanningMode(mode);
-
-			dynamic_cast<latitude_longitude_grid*>(rg.get())->BottomLeft(
-			    point(pt.get<double>("bottom_left_longitude"), pt.get<double>("bottom_left_latitude")));
-			dynamic_cast<latitude_longitude_grid*>(rg.get())->TopRight(
-			    point(pt.get<double>("top_right_longitude"), pt.get<double>("top_right_latitude")));
-			dynamic_cast<latitude_longitude_grid*>(rg.get())->Ni(pt.get<size_t>("ni"));
-			dynamic_cast<latitude_longitude_grid*>(rg.get())->Nj(pt.get<size_t>("nj"));
+			// clang-format off
+			return unique_ptr<latitude_longitude_grid>(new latitude_longitude_grid(
+			    mode,
+			    point(pt.get<double>("bottom_left_longitude"), pt.get<double>("bottom_left_latitude")),
+			    point(pt.get<double>("top_right_longitude"), pt.get<double>("top_right_latitude")),
+			    pt.get<size_t>("ni"),
+			    pt.get<size_t>("nj"),
+			    earth_shape<double>(6371220.)));
+			// clang-format on
 		}
 		else if (projection == "rotated_latlon")
 		{
-			rg = unique_ptr<rotated_latitude_longitude_grid>(new rotated_latitude_longitude_grid);
-			dynamic_cast<rotated_latitude_longitude_grid*>(rg.get())->ScanningMode(mode);
-
-			dynamic_cast<rotated_latitude_longitude_grid*>(rg.get())->BottomLeft(
-			    point(pt.get<double>("bottom_left_longitude"), pt.get<double>("bottom_left_latitude")));
-			dynamic_cast<rotated_latitude_longitude_grid*>(rg.get())->TopRight(
-			    point(pt.get<double>("top_right_longitude"), pt.get<double>("top_right_latitude")));
-			dynamic_cast<rotated_latitude_longitude_grid*>(rg.get())->SouthPole(
-			    point(pt.get<double>("south_pole_longitude"), pt.get<double>("south_pole_latitude")));
-			dynamic_cast<rotated_latitude_longitude_grid*>(rg.get())->Ni(pt.get<size_t>("ni"));
-			dynamic_cast<rotated_latitude_longitude_grid*>(rg.get())->Nj(pt.get<size_t>("nj"));
+			// clang-format off
+			return unique_ptr<rotated_latitude_longitude_grid>(new rotated_latitude_longitude_grid(
+			    mode,
+			    point(pt.get<double>("bottom_left_longitude"), pt.get<double>("bottom_left_latitude")),
+			    point(pt.get<double>("top_right_longitude"), pt.get<double>("top_right_latitude")),
+			    pt.get<size_t>("ni"),
+			    pt.get<size_t>("nj"),
+			    earth_shape<double>(6371220.),
+			    point(pt.get<double>("south_pole_longitude"), pt.get<double>("south_pole_latitude"))));
+			// clang-format on
 		}
 		else if (projection == "stereographic")
 		{
-			rg = unique_ptr<stereographic_grid>(new stereographic_grid);
-			dynamic_cast<stereographic_grid*>(rg.get())->ScanningMode(mode);
-
-			dynamic_cast<stereographic_grid*>(rg.get())->FirstPoint(
-			    point(pt.get<double>("first_point_longitude"), pt.get<double>("first_point_latitude")));
-			dynamic_cast<stereographic_grid*>(rg.get())->Di(pt.get<double>("di"));
-			dynamic_cast<stereographic_grid*>(rg.get())->Dj(pt.get<double>("dj"));
-			dynamic_cast<stereographic_grid*>(rg.get())->Orientation(pt.get<double>("orientation"));
-			dynamic_cast<stereographic_grid*>(rg.get())->Ni(pt.get<size_t>("ni"));
-			dynamic_cast<stereographic_grid*>(rg.get())->Nj(pt.get<size_t>("nj"));
+			// clang-format off
+			return unique_ptr<stereographic_grid>(new stereographic_grid(
+			    mode,
+			    point(pt.get<double>("first_point_longitude"), pt.get<double>("first_point_latitude")),
+			    pt.get<size_t>("ni"),
+			    pt.get<size_t>("nj"),
+			    pt.get<double>("di"),
+			    pt.get<double>("dj"),
+			    pt.get<double>("orientation"),
+			    earth_shape<double>(6371220.),
+			    false
+			));
+			// clang-format on
 		}
 		else
 		{
@@ -1254,10 +1260,6 @@ unique_ptr<grid> ParseAreaAndGrid(const shared_ptr<configuration>& conf, const b
 	{
 		throw runtime_error(string("Error parsing area: ") + e.what());
 	}
-
-	rg->EarthShape(earth_shape<double>(6371220.));
-
-	return rg;
 }
 
 std::vector<producer> ParseSourceProducer(const shared_ptr<configuration>& conf, const boost::property_tree::ptree& pt)
