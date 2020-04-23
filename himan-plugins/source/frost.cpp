@@ -442,7 +442,10 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 			frost_prob = (frost_prob * 2.0 + T0MEPS) / 3.0;
 		}
 
-		severe_frost_prob = pow(frost_prob * 100, 3) * 1e-4;
+		if (severe_frost_prob < 0.75)
+		{
+			severe_frost_prob = pow(frost_prob * 100, 3) * 1e-4;
+		}
 
 		// No frost when radiation is high enough. Valid in  1.4.-15.9.
 
