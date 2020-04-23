@@ -347,14 +347,14 @@ double regular_grid::Dj() const
 earth_shape<double> regular_grid::EarthShape() const
 {
 	OGRErr err;
-	const double A = OSRGetSemiMajor(itsSpatialReference.get(), &err);
+	const double A = itsSpatialReference->GetSemiMajor(&err);
 
 	if (err != OGRERR_NONE)
 	{
 		throw runtime_error("Unable to get Semi Major");
 	}
 
-	const double B = OSRGetSemiMinor(itsSpatialReference.get(), &err);
+	const double B = itsSpatialReference->GetSemiMinor(&err);
 
 	if (err != OGRERR_NONE)
 	{
