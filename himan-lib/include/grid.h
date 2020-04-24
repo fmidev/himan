@@ -25,6 +25,50 @@ class OGRPolygon;
 
 namespace himan
 {
+enum HPGridClass
+{
+	kUnknownGridClass = 0,
+	kRegularGrid,
+	kIrregularGrid
+};
+
+const boost::unordered_map<HPGridClass, std::string> HPGridClassToString =
+    ba::map_list_of(kUnknownGridClass, "unknown")(kRegularGrid, "regular")(kIrregularGrid, "irregular");
+
+enum HPGridType
+{
+	kUnknownGridType = 0,
+	kLatitudeLongitude = 1,
+	kStereographic,
+	kAzimuthalEquidistant,
+	kRotatedLatitudeLongitude,
+	kReducedGaussian,
+	kPointList,
+	kLambertConformalConic,
+	kLambertEqualArea,
+	kTransverseMercator
+};
+
+const boost::unordered_map<HPGridType, std::string> HPGridTypeToString =
+    ba::map_list_of(kUnknownGridType, "unknown grid type")(kLatitudeLongitude, "ll")(kStereographic, "polster")(
+        kAzimuthalEquidistant, "azimuthal")(kRotatedLatitudeLongitude, "rll")(kReducedGaussian, "rgg")(
+        kPointList, "pointlist")(kLambertConformalConic, "lcc")(kLambertEqualArea, "laea")(kTransverseMercator, "tm");
+
+enum HPScanningMode
+{
+	kUnknownScanningMode = 0,
+	kTopLeft = 17,      // +x-y
+	kTopRight = 18,     // -x-y
+	kBottomLeft = 33,   // +x+y
+	kBottomRight = 34,  // -x+y
+};
+
+const boost::unordered_map<std::string, HPScanningMode> HPScanningModeFromString = ba::map_list_of(
+    "unknown", kUnknownScanningMode)("+x-y", kTopLeft)("-x+y", kTopRight)("+x+y", kBottomLeft)("-x-y", kBottomRight);
+
+const boost::unordered_map<HPScanningMode, std::string> HPScanningModeToString = ba::map_list_of(
+    kUnknownScanningMode, "unknown")(kTopLeft, "+x-y")(kTopRight, "-x+y")(kBottomLeft, "+x+y")(kBottomRight, "-x-y");
+
 class grid
 {
    public:

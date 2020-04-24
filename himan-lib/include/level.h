@@ -12,6 +12,42 @@
 
 namespace himan
 {
+enum HPLevelType
+{
+	kUnknownLevel = 0,
+	kGround = 1,
+	kMaximumWind = 6,
+	kTopOfAtmosphere = 8,
+	kIsothermal = 20,
+	kLake = 21,
+	kPressure = 100,
+	kPressureDelta = 101,  // pressure deviation from ground to level
+	kMeanSea = 102,
+	kAltitude = 103,
+	kHeight = 105,
+	kHeightLayer = 106,  // layer between two metric heights from ground level
+	kHybrid = 109,
+	kGroundDepth = 112,  // layer between two metric heights below ground level
+	kDepth = 160,
+	kEntireAtmosphere = 200,
+	kEntireOcean = 201,
+	// reserved numbers starting here
+	kMaximumThetaE = 246  // maximum theta e level, like grib2
+};
+
+const boost::unordered_map<HPLevelType, std::string> HPLevelTypeToString =
+    ba::map_list_of(kUnknownLevel, "unknown")(kGround, "ground")(kPressure, "pressure")(
+        kPressureDelta, "pressure_delta")(kMeanSea, "meansea")(kAltitude, "altitude")(kHeight, "height")(
+        kHeightLayer, "height_layer")(kHybrid, "hybrid")(kGroundDepth, "ground_depth")(kDepth, "depth")(
+        kTopOfAtmosphere, "top")(kIsothermal, "isothermal")(kEntireAtmosphere, "entatm")(kEntireOcean, "entocean")(
+        kLake, "lake")(kMaximumThetaE, "maxthetae")(kMaximumWind, "maxwind");
+
+const boost::unordered_map<std::string, HPLevelType> HPStringToLevelType = ba::map_list_of("unknown", kUnknownLevel)(
+    "ground", kGround)("pressure", kPressure)("pressure_delta", kPressureDelta)("meansea", kMeanSea)(
+    "altitude", kAltitude)("height", kHeight)("height_layer", kHeightLayer)("hybrid", kHybrid)(
+    "ground_depth", kGroundDepth)("depth", kDepth)("top", kTopOfAtmosphere)("isothermal", kIsothermal)(
+    "entatm", kEntireAtmosphere)("entocean", kEntireOcean)("lake", kLake)("maxthetae", kMaximumThetaE);
+
 class level
 {
    public:

@@ -13,6 +13,20 @@
 
 namespace himan
 {
+enum HPAggregationType
+{
+	kUnknownAggregationType = 0,
+	kAverage,
+	kAccumulation,
+	kMaximum,
+	kMinimum,
+	kDifference
+};
+
+const boost::unordered_map<HPAggregationType, std::string> HPAggregationTypeToString =
+    ba::map_list_of(kUnknownAggregationType, "unknown")(kAverage, "average")(kAccumulation, "accumulation")(
+        kMaximum, "maximum")(kMinimum, "minimum")(kDifference, "difference");
+
 class aggregation
 {
    public:
