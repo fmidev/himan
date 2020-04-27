@@ -15,8 +15,6 @@
 #include "search_options.h"
 #include <boost/iterator/zip_iterator.hpp>
 #include <memory>
-#include <mutex>
-#include <tuple>
 
 namespace himan
 {
