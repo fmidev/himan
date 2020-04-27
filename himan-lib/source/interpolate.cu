@@ -369,15 +369,19 @@ void himan::interpolate::RotateVectorComponentsGPU(const grid* from, const grid*
 		CUDA_CHECK(cudaMemcpyAsync(d_v, V.ValuesAsPOD(), memsize, cudaMemcpyHostToDevice));
 	}
 
-	if (from->UVRelativeToGrid())
+	logger log("interpolate_gpu");
+
+	if (from->UVRelativeToGrid() && from->Type() != kLatitudeLongitude)
 	{
+		log.Trace("Rotating from " + HPGridTypeToString.at(from->Type()) + " to earth relative");
+
 		switch (from->Type())
 		{
 			case himan::kRotatedLatitudeLongitude:
 			{
 				const auto rg = dynamic_cast<const rotated_latitude_longitude_grid*>(from);
 				RotateRotatedLatitudeLongitude<T>
-				    <<<gs, bs, 0, stream>>>(d_u, d_v, U.SizeX(), U.SizeY(), ::point(rg->FirstPoint()),
+				    <<<gs, bs, 0, stream>>>(d_u, d_v, U.SizeX(), U.SizeY(), ::point(rg->Rotate(rg->FirstPoint())),
 				                            ::point(rg->SouthPole()), rg->Di(), rg->Dj(), rg->ScanningMode());
 			}
 			break;
@@ -439,6 +443,11 @@ void himan::interpolate::RotateVectorComponentsGPU(const grid* from, const grid*
 	CUDA_CHECK(cudaMemcpy(V.ValuesAsPOD(), d_v, memsize, cudaMemcpyDeviceToHost));
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
+
+	if (to->Type() != kLatitudeLongitude)
+	{
+		log.Error("Unable to rotate to projected areas with gpu");
+	}
 
 	if (release)
 	{

@@ -746,13 +746,13 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vec
 
 	for (const auto& component : infos)
 	{
-		const HPGridType from = component->Grid()->Type();
 		const HPGridType to = baseGrid->Type();
+		const HPGridType from = component->Grid()->Type();
 		const auto name = component->Param().Name();
 
 		if (interpolate::IsVectorComponent(name) &&
 		    count_if(skip.begin(), skip.end(), [&](const info_t& info) { return eq(info, component); }) == 0 &&
-		    to != from && interpolate::IsSupportedGridForRotation(from))
+		    interpolate::IsSupportedGridForRotation(from) && component->Grid()->UVRelativeToGrid() && to != from)
 		{
 			auto otherName = GetOtherVectorComponentName(name);
 
@@ -790,6 +790,9 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vec
 				himan::Abort();
 			}
 
+#ifdef HAVE_CUDA
+			util::Unpack<double>({u, v}, false);
+#endif
 			interpolate::RotateVectorComponents(component->Grid().get(), baseGrid, *u, *v,
 			                                    opts.configuration->UseCuda());
 

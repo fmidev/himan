@@ -8,6 +8,7 @@
 #include "cuda_helper.h"
 #include "forecast_time.h"
 #include "lambert_conformal_grid.h"
+#include "lambert_equal_area_grid.h"
 #include "latitude_longitude_grid.h"
 #include "level.h"
 #include "param.h"
@@ -21,6 +22,7 @@
 #include <boost/math/constants/constants.hpp>
 #include <boost/regex.hpp>
 #include <iomanip>
+#include <ogr_spatialref.h>
 #include <sstream>
 #include <wordexp.h>
 
@@ -1136,8 +1138,6 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 	using himan::kBottomLeft;
 	using himan::kTopLeft;
 
-	unique_ptr<grid> g;
-
 	auto r = GET_PLUGIN(radon);
 
 	auto geominfo = r->RadonDB().GetGeometryDefinition(geom_name);
@@ -1149,104 +1149,62 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 
 	const auto scmode = HPScanningModeFromString.at(geominfo["scanning_mode"]);
 
+	// Until shape of earth is added to radon, hard code default value for all geoms
+	// in radon to sphere with radius 6371220, which is the one used in newbase
+	// (in most cases that's not *not* the one used by the weather model).
+	// Exception to this lambert conformal conic where we use radius 6367470.
+
 	if (geominfo["grid_type_id"] == "1")
 	{
-		g = unique_ptr<latitude_longitude_grid>(new latitude_longitude_grid);
-		latitude_longitude_grid* const llg = dynamic_cast<latitude_longitude_grid*>(g.get());
-
-		const double di = stod(geominfo["pas_longitude"]);
-		const double dj = stod(geominfo["pas_latitude"]);
-
-		llg->Ni(static_cast<size_t>(stol(geominfo["col_cnt"])));
-		llg->Nj(static_cast<size_t>(stol(geominfo["row_cnt"])));
-		llg->Di(di);
-		llg->Dj(dj);
-		llg->ScanningMode(scmode);
-
-		const double X0 = stod(geominfo["long_orig"]);
-		const double Y0 = stod(geominfo["lat_orig"]);
-
-		const double X1 = fmod(X0 + static_cast<double>(llg->Ni() - 1) * di, 360);
-		double Y1 = kHPMissingValue;
-
-		switch (llg->ScanningMode())
-		{
-			case kTopLeft:
-				Y1 = Y0 - static_cast<double>(llg->Nj() - 1) * dj;
-				break;
-			case kBottomLeft:
-				Y1 = Y0 + static_cast<double>(llg->Nj() - 1) * dj;
-				break;
-			default:
-				break;
-		}
-
-		llg->FirstPoint(point(X0, Y0));
-		llg->LastPoint(point(X1, Y1));
+		// clang-format off
+		return unique_ptr<latitude_longitude_grid>(new latitude_longitude_grid(
+		    scmode,
+		    point(stod(geominfo["long_orig"]), stod(geominfo["lat_orig"])),
+		    stol(geominfo["col_cnt"]),
+		    stol(geominfo["row_cnt"]),
+		    stod(geominfo["pas_longitude"]),
+		    stod(geominfo["pas_latitude"]),
+		    earth_shape<double>(6371220.)
+		));
+		// clang-format on
 	}
 	else if (geominfo["grid_type_id"] == "4")
 	{
-		g = unique_ptr<rotated_latitude_longitude_grid>(new rotated_latitude_longitude_grid);
-		rotated_latitude_longitude_grid* const rllg = dynamic_cast<rotated_latitude_longitude_grid*>(g.get());
-
-		const double di = stod(geominfo["pas_longitude"]);
-		const double dj = stod(geominfo["pas_latitude"]);
-
-		rllg->Ni(static_cast<size_t>(stol(geominfo["col_cnt"])));
-		rllg->Nj(static_cast<size_t>(stol(geominfo["row_cnt"])));
-		rllg->Di(di);
-		rllg->Dj(dj);
-		rllg->ScanningMode(scmode);
-
-		rllg->SouthPole(point(stod(geominfo["geom_parm_2"]), stod(geominfo["geom_parm_1"])));
-
-		const double X0 = stod(geominfo["long_orig"]);
-		const double Y0 = stod(geominfo["lat_orig"]);
-
-		const double X1 = fmod(X0 + static_cast<double>(rllg->Ni() - 1) * di, 360);
-
-		double Y1 = kHPMissingValue;
-
-		switch (rllg->ScanningMode())
-		{
-			case kTopLeft:
-				Y1 = Y0 - static_cast<double>(rllg->Nj() - 1) * dj;
-				break;
-			case kBottomLeft:
-				Y1 = Y0 + static_cast<double>(rllg->Nj() - 1) * dj;
-				break;
-			default:
-				break;
-		}
-
-		rllg->FirstPoint(point(X0, Y0));
-		rllg->LastPoint(point(X1, Y1));
+		// clang-format off
+		return unique_ptr<rotated_latitude_longitude_grid>(new rotated_latitude_longitude_grid(
+		    scmode,
+		    point(stod(geominfo["long_orig"]), stod(geominfo["lat_orig"])),
+		    stol(geominfo["col_cnt"]),
+		    stol(geominfo["row_cnt"]),
+		    stod(geominfo["pas_longitude"]),
+		    stod(geominfo["pas_latitude"]),
+		    earth_shape<double>(6371220.),
+		    point(stod(geominfo["geom_parm_2"]), stod(geominfo["geom_parm_1"])), true)
+		);
+		// clang-format on
 	}
 	else if (geominfo["grid_type_id"] == "2")
 	{
-		g = unique_ptr<stereographic_grid>(new stereographic_grid);
-		stereographic_grid* const sg = dynamic_cast<stereographic_grid*>(g.get());
-
-		const double di = stod(geominfo["pas_longitude"]);
-		const double dj = stod(geominfo["pas_latitude"]);
-
-		sg->Orientation(stod(geominfo["geom_parm_1"]));
-		sg->Di(di);
-		sg->Dj(dj);
-
-		sg->Ni(static_cast<size_t>(stol(geominfo["col_cnt"])));
-		sg->Nj(static_cast<size_t>(stol(geominfo["row_cnt"])));
-		sg->ScanningMode(scmode);
-
-		const double X0 = stod(geominfo["long_orig"]);
-		const double Y0 = stod(geominfo["lat_orig"]);
-
-		sg->FirstPoint(point(X0, Y0));
+		// clang-format off
+		return unique_ptr<stereographic_grid>(new stereographic_grid(
+		    scmode,
+		    point(stod(geominfo["long_orig"]), stod(geominfo["lat_orig"])),
+		    stol(geominfo["col_cnt"]),
+		    stol(geominfo["row_cnt"]),
+		    stod(geominfo["pas_longitude"]),
+		    stod(geominfo["pas_latitude"]),
+		    stod(geominfo["geom_parm_1"]),
+		    earth_shape<double>(6371220.),
+		    false
+		));
+		// clang-format on
 	}
 
 	else if (geominfo["grid_type_id"] == "6")
 	{
-		g = unique_ptr<reduced_gaussian_grid>(new reduced_gaussian_grid);
+		auto g = unique_ptr<reduced_gaussian_grid>(new reduced_gaussian_grid);
+		g->EarthShape(earth_shape<double>(6371220.));
+
 		reduced_gaussian_grid* const gg = dynamic_cast<reduced_gaussian_grid*>(g.get());
 
 		gg->N(stoi(geominfo["n"]));
@@ -1260,75 +1218,50 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		}
 
 		gg->NumberOfPointsAlongParallels(longitudes);
+		return std::move(g);
 	}
 
 	else if (geominfo["grid_type_id"] == "5")
 	{
-		g = unique_ptr<lambert_conformal_grid>(new lambert_conformal_grid);
-		lambert_conformal_grid* const lcg = dynamic_cast<lambert_conformal_grid*>(g.get());
+		// clang-format off
+		return unique_ptr<lambert_conformal_grid>(new lambert_conformal_grid(
+		    scmode,
+		    point(stod(geominfo["first_point_lon"]), stod(geominfo["first_point_lat"])),
+		    stoi(geominfo["ni"]),
+		    stoi(geominfo["nj"]),
+		    stod(geominfo["di"]),
+		    stod(geominfo["dj"]),
+		    stod(geominfo["orientation"]),
+		    stod(geominfo["latin1"]),
+		    (geominfo["latin2"].empty() ? stod(geominfo["latin1"]) : stod(geominfo["latin2"])),
+		    earth_shape<double>(6367470.),
+		    false
+		));
+		// clang-format on
+	}
 
-		lcg->Ni(stoi(geominfo["ni"]));
-		lcg->Nj(stoi(geominfo["nj"]));
-
-		lcg->Di(stod(geominfo["di"]));
-		lcg->Dj(stod(geominfo["dj"]));
-
-		lcg->Orientation(stod(geominfo["orientation"]));
-
-		lcg->StandardParallel1(stod(geominfo["latin1"]));
-
-		if (geominfo["latin2"].empty())
-		{
-			lcg->StandardParallel2(lcg->StandardParallel1());
-		}
-		else
-		{
-			lcg->StandardParallel2(stod(geominfo["latin2"]));
-		}
-
-		if (!geominfo["south_pole_lon"].empty())
-		{
-			const point sp(stod(geominfo["south_pole_lon"]), stod(geominfo["south_pole_lat"]));
-
-			lcg->SouthPole(sp);
-		}
-
-		const point first(stod(geominfo["first_point_lon"]), stod(geominfo["first_point_lat"]));
-
-		lcg->ScanningMode(scmode);
-
-		if (geominfo["scanning_mode"] == "+x-y")
-		{
-			lcg->TopLeft(first);
-		}
-		else if (geominfo["scanning_mode"] == "+x+y")
-		{
-			lcg->BottomLeft(first);
-		}
+	else if (geominfo["grid_type_id"] == "7")
+	{
+		// clang-format off
+		return unique_ptr<lambert_equal_area_grid>(new lambert_equal_area_grid(
+		    scmode,
+		    point(stod(geominfo["first_point_lon"]), stod(geominfo["first_point_lat"])),
+		    stoi(geominfo["ni"]),
+		    stoi(geominfo["nj"]),
+		    stod(geominfo["di"]),
+		    stod(geominfo["dj"]),
+		    stod(geominfo["orientation"]),
+		    stod(geominfo["latin"]),
+		    earth_shape<double>(6371220.),
+		    false
+		));
+		// clang-format on
 	}
 
 	else
 	{
 		throw invalid_argument("Invalid grid type id for geometry " + geom_name);
 	}
-	// Until shape of earth is added to radon, hard code default value for all geoms
-	// in radon to sphere with radius 6371220, which is the one used in newbase
-	// (in most cases that's not *not* the one used by the weather model).
-	// Exception to this lambert conformal conic where we use radius 6367470.
-
-	if (g)
-	{
-		if (g->Type() == kLambertConformalConic)
-		{
-			g->EarthShape(earth_shape<double>(6367470.));
-		}
-		else
-		{
-			g->EarthShape(earth_shape<double>(6371220.));
-		}
-	}
-
-	return g;
 }
 
 template <typename T>

@@ -390,24 +390,16 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 		// Calculating frost and severe frost probability.
 
-		double frost_prob = MissingDouble(), severe_frost_prob = MissingDouble();
+		double frost_prob = MissingDouble();
 
-		if (T < -5.0)
+		if (T < -3.0)
 		{
 			frost_prob = 1.0;
-			severe_frost_prob = 1.0;
-		}
-
-		else if (T < -3.0)
-		{
-			frost_prob = 1.0;
-			severe_frost_prob = 0.75;
 		}
 
 		else if (T < 0)
 		{
 			frost_prob = 0.9;
-			severe_frost_prob = 0.7;
 		}
 
 		else
@@ -442,10 +434,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 			frost_prob = (frost_prob * 2.0 + T0MEPS) / 3.0;
 		}
 
-		if (severe_frost_prob < 0.75)
-		{
-			severe_frost_prob = pow(frost_prob * 100, 3) * 1e-4;
-		}
+		double severe_frost_prob = pow(frost_prob * 100, 3) * 1e-4 * 0.01;
 
 		// No frost when radiation is high enough. Valid in  1.4.-15.9.
 

@@ -21,6 +21,24 @@
 
 namespace himan
 {
+enum HPForecastType
+{
+	kUnknownType = 0,
+	kDeterministic,
+	kAnalysis,
+	kEpsPerturbation = 3,
+	kEpsControl = 4,
+	kStatisticalProcessing = 5
+};
+
+const boost::unordered_map<HPForecastType, std::string> HPForecastTypeToString = ba::map_list_of(
+    kUnknownType, "unknown")(kDeterministic, "deterministic")(kAnalysis, "analysis")(kEpsControl, "eps control")(
+    kEpsPerturbation, "eps perturbation")(kStatisticalProcessing, "statistical post processing");
+
+const boost::unordered_map<std::string, HPForecastType> HPStringToForecastType =
+    ba::map_list_of("unknown", kUnknownType)("deterministic", kDeterministic)("analysis", kAnalysis)(
+        "eps control", kEpsControl)("eps perturbation", kEpsPerturbation);
+
 class forecast_type
 {
    public:

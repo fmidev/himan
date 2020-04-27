@@ -10,6 +10,34 @@
 
 namespace himan
 {
+enum HPModifierType
+{
+	kUnknownModifierType = 0,
+	kAverageModifier,
+	kAccumulationModifier,
+	kMaximumModifier,
+	kMinimumModifier,
+	kDifferenceModifier,
+	kMaximumMinimumModifier,
+	kCountModifier,
+	kFindHeightModifier,
+	kFindValueModifier,
+	kIntegralModifier,
+	kPlusMinusAreaModifier,
+	kFindHeightGreaterThanModifier,
+	kFindHeightLessThanModifier,
+};
+
+const boost::unordered_map<HPModifierType, std::string> HPModifierTypeToString =
+    ba::map_list_of(kUnknownModifierType, "unknown modifier")(kAverageModifier, "average modifier")(
+        kAccumulationModifier, "accumulation modifier")(kMaximumModifier, "maximum modifier")(
+        kMinimumModifier, "minimum modifier")(kDifferenceModifier, "difference modifier")(
+        kMaximumMinimumModifier, "maximum minimum modifier")(kCountModifier, "count modifier")(
+        kFindHeightModifier, "find height modifier")(kFindValueModifier, "find value modifier")(
+        kIntegralModifier, "integral modifier")(kPlusMinusAreaModifier, "plus minus area modifier")(
+        kFindHeightGreaterThanModifier, "find height greater than modifier")(kFindHeightLessThanModifier,
+                                                                             "find height less than modifier");
+
 /**
  * @class modifier
  *

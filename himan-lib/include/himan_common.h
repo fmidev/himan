@@ -155,26 +155,6 @@ const boost::unordered_map<HPFileCompression, std::string> HPFileCompressionToSt
 	(kGZIP, "gzip compressed")
 	(kBZIP2, "bzip2 compressed");
 
-// Define supported parameter units
-
-enum HPParameterUnit
-{
-	kUnknownUnit = 0,
-	kPa,
-	kK,
-	kC,
-	kPas,  // Pa/s
-	kHPa,
-	kPrcnt,
-	kMs,    // m/s
-	kM,     // meters
-	kMm,    // millimeters
-	kGph,   // geopotential height, m^2 / s^2
-	kKgkg,  // kg/kg
-	kJm2,   // J per square meter
-	kKgm2,  // kg/m^2
-	kS2     // 1/s^2
-};
 
 enum HPInterpolationMethod
 {
@@ -198,71 +178,6 @@ const boost::unordered_map<std::string, HPInterpolationMethod> HPStringToInterpo
 	("nearest point", kNearestPoint)
 	("nearest point value", kNearestPointValue);
 
-enum HPLevelType
-{
-	kUnknownLevel = 0,
-	kGround = 1,
-	kMaximumWind = 6,
-	kTopOfAtmosphere = 8,
-	kIsothermal = 20,
-	kLake = 21,
-	kPressure = 100,
-	kPressureDelta = 101,  // pressure deviation from ground to level
-	kMeanSea = 102,
-	kAltitude = 103,
-	kHeight = 105,
-	kHeightLayer = 106,  // layer between two metric heights from ground level
-	kHybrid = 109,
-	kGroundDepth = 112,     // layer between two metric heights below ground level
-	kDepth = 160,
-	kEntireAtmosphere = 200,
-	kEntireOcean = 201,
-	// reserved numbers starting here
-	kMaximumThetaE = 246  // maximum theta e level, like grib2
-};
-
-const boost::unordered_map<HPLevelType, std::string> HPLevelTypeToString =
-	ba::map_list_of
-	(kUnknownLevel, "unknown")
-	(kGround, "ground")
-	(kPressure, "pressure")
-	(kPressureDelta, "pressure_delta")
-	(kMeanSea, "meansea")
-	(kAltitude, "altitude")
-	(kHeight, "height")
-	(kHeightLayer, "height_layer")
-	(kHybrid, "hybrid")
-	(kGroundDepth, "ground_depth")
-	(kDepth, "depth")
-	(kTopOfAtmosphere, "top")
-	(kIsothermal, "isothermal")
-	(kEntireAtmosphere, "entatm")
-	(kEntireOcean, "entocean")
-	(kLake, "lake")
-	(kMaximumThetaE, "maxthetae")
-	(kMaximumWind, "maxwind");
-
-const boost::unordered_map<std::string, HPLevelType> HPStringToLevelType =
-	ba::map_list_of
-	("unknown", kUnknownLevel)
-	("ground", kGround)
-	("pressure", kPressure)
-	("pressure_delta", kPressureDelta)
-	("meansea", kMeanSea)
-	("altitude", kAltitude)
-	("height", kHeight)
-	("height_layer", kHeightLayer)
-	("hybrid", kHybrid)
-	("ground_depth", kGroundDepth)
-	("depth", kDepth)
-	("top", kTopOfAtmosphere)
-	("isothermal", kIsothermal)
-	("entatm", kEntireAtmosphere)
-	("entocean", kEntireOcean)
-	("lake", kLake)
-	("maxthetae", kMaximumThetaE);
-
-
 enum HPWriteMode
 {
 	kUnknown = 0,
@@ -280,38 +195,6 @@ const boost::unordered_map<HPWriteMode, std::string> HPWriteModeToString =
 	(kSingleGridToAFile, "one field per file")
 	(kNoFileWrite, "do not write file at all");
 
-/**
- * @enum HPScanningMode
- *
- * @brief Describe different data scanning modes (ie in which direction the data is read)
- *
- * Values match to newbase.
- */
-
-enum HPScanningMode
-{
-	kUnknownScanningMode = 0,
-	kTopLeft = 17,      // +x-y
-	kTopRight = 18,     // -x-y
-	kBottomLeft = 33,   // +x+y
-	kBottomRight = 34,  // -x+y
-};
-
-const boost::unordered_map<std::string, HPScanningMode> HPScanningModeFromString =
-	ba::map_list_of
-	("unknown", kUnknownScanningMode)
-	("+x-y", kTopLeft)
-	("-x+y", kTopRight)
-	("+x+y", kBottomLeft)
-	("-x-y", kBottomRight);
-
-const boost::unordered_map<HPScanningMode, std::string> HPScanningModeToString =
-	ba::map_list_of
-	(kUnknownScanningMode, "unknown")
-	(kTopLeft, "+x-y")
-	(kTopRight, "-x+y")
-	(kBottomLeft, "+x+y")
-	(kBottomRight, "-x-y");
 
 enum HPExceptionType
 {
@@ -375,131 +258,6 @@ const boost::unordered_map<std::string, HPPackingType> HPStringToPackingType =
 	("jpeg_packing", kJpegPacking)
 	("ccsds_packing", kCcsdsPacking);
 
-enum HPAggregationType
-{
-	kUnknownAggregationType = 0,
-	kAverage,
-	kAccumulation,
-	kMaximum,
-	kMinimum,
-	kDifference
-};
-
-const boost::unordered_map<HPAggregationType, std::string> HPAggregationTypeToString =
-    ba::map_list_of
-	(kUnknownAggregationType, "unknown")
-	(kAverage, "average")
-	(kAccumulation, "accumulation")
-	(kMaximum, "maximum")(kMinimum, "minimum")
-	(kDifference, "difference");
-
-enum HPProcessingType
-{
-	kUnknownProcessingType = 0,
-	kProbabilityGreaterThan,
-	kProbabilityLessThan,
-	kProbabilityBetween,
-	kProbabilityEquals,
-	kProbabilityNotEquals,
-	kProbabilityEqualsIn,
-	kFractile,
-	kEnsembleMean, // to differ from aggregation 'average'
-	kSpread,
-	kStandardDeviation,
-	kEFI
-};
-
-const boost::unordered_map<HPProcessingType, std::string> HPProcessingTypeToString =
-    ba::map_list_of
-	(kUnknownProcessingType, "unknown")
-	(kProbabilityGreaterThan, "probability greater than")
-	(kProbabilityLessThan, "probability less than")
-	(kProbabilityBetween, "probability between")
-	(kProbabilityEquals, "probability equals")
-	(kProbabilityNotEquals, "probability is not equal to")
-	(kProbabilityEqualsIn, "probability equal to value in list")
-	(kFractile, "fractile")
-	(kEnsembleMean, "ensemble mean")
-	(kSpread, "spread")
-	(kStandardDeviation, "standard deviation")
-	(kEFI, "efi");
-
-enum HPModifierType
-{
-	kUnknownModifierType = 0,
-	kAverageModifier,
-	kAccumulationModifier,
-	kMaximumModifier,
-	kMinimumModifier,
-	kDifferenceModifier,
-	kMaximumMinimumModifier,
-	kCountModifier,
-	kFindHeightModifier,
-	kFindValueModifier,
-	kIntegralModifier,
-	kPlusMinusAreaModifier,
-	kFindHeightGreaterThanModifier,
-	kFindHeightLessThanModifier,
-};
-
-const boost::unordered_map<HPModifierType, std::string> HPModifierTypeToString =
-    ba::map_list_of
-	(kUnknownModifierType, "unknown modifier")
-	(kAverageModifier, "average modifier")
-	(kAccumulationModifier, "accumulation modifier")
-	(kMaximumModifier, "maximum modifier")
-	(kMinimumModifier, "minimum modifier")
-	(kDifferenceModifier, "difference modifier")
-	(kMaximumMinimumModifier, "maximum minimum modifier")
-	(kCountModifier, "count modifier")
-	(kFindHeightModifier, "find height modifier")
-	(kFindValueModifier, "find value modifier")
-	(kIntegralModifier, "integral modifier")
-	(kPlusMinusAreaModifier, "plus minus area modifier")
-	(kFindHeightGreaterThanModifier, "find height greater than modifier")
-	(kFindHeightLessThanModifier, "find height less than modifier")
-;
-
-enum HPGridClass
-{
-	kUnknownGridClass = 0,
-	kRegularGrid,
-	kIrregularGrid
-};
-
-const boost::unordered_map<HPGridClass, std::string> HPGridClassToString =
-    ba::map_list_of
-	(kUnknownGridClass, "unknown")
-	(kRegularGrid, "regular")
-	(kIrregularGrid, "irregular");
-
-// Define supported grid types
-// Values equal to those in radon
-
-enum HPGridType
-{
-	kUnknownGridType = 0,
-	kLatitudeLongitude = 1,
-	kStereographic,
-	kAzimuthalEquidistant,
-	kRotatedLatitudeLongitude,
-	kReducedGaussian,
-	kPointList,
-	kLambertConformalConic,
-	kLambertEqualArea
-};
-
-const boost::unordered_map<HPGridType, std::string> HPGridTypeToString =
-    ba::map_list_of
-	(kUnknownGridType, "unknown grid type")
-	(kLatitudeLongitude, "ll")
-	(kStereographic, "polster")
-	(kAzimuthalEquidistant, "azimuthal")
-	(kRotatedLatitudeLongitude, "rll")
-	(kReducedGaussian, "rgg")
-	(kPointList, "pointlist")
-	(kLambertConformalConic, "lcc")
-	(kLambertEqualArea, "laea");
 
 enum HPDatabaseType
 {
@@ -514,78 +272,6 @@ const boost::unordered_map<HPDatabaseType, std::string> HPDatabaseTypeToString =
 	(kRadon, "radon")
 	(kNoDatabase, "no database");
 
-enum HPForecastType
-{
-	kUnknownType = 0,
-	kDeterministic,
-	kAnalysis,
-	kEpsPerturbation = 3,
-	kEpsControl = 4,
-	kStatisticalProcessing = 5
-};
-
-const boost::unordered_map<HPForecastType, std::string> HPForecastTypeToString =
-    ba::map_list_of
-	(kUnknownType, "unknown")
-	(kDeterministic, "deterministic")
-	(kAnalysis, "analysis")
-	(kEpsControl, "eps control")
-	(kEpsPerturbation, "eps perturbation")
-	(kStatisticalProcessing, "statistical post processing");
-
-const boost::unordered_map<std::string, HPForecastType> HPStringToForecastType =
-    ba::map_list_of
-	("unknown", kUnknownType)
-	("deterministic", kDeterministic)
-	("analysis", kAnalysis)
-	("eps control", kEpsControl)
-	("eps perturbation", kEpsPerturbation);
-
-enum HPEnsembleType
-{
-	kUnknownEnsembleType = 0,
-	kPerturbedEnsemble,
-	kTimeEnsemble,
-	kLevelEnsemble,
-	kLaggedEnsemble
-};
-
-const boost::unordered_map<HPEnsembleType, std::string> HPEnsembleTypeToString =
-    ba::map_list_of
-	(kUnknownEnsembleType, "unknown")
-	(kPerturbedEnsemble, "perturbed ensemble")
-	(kTimeEnsemble, "time ensemble")
-	(kLevelEnsemble, "level ensemble")
-	(kLaggedEnsemble, "lagged ensemble");
-
-const boost::unordered_map<std::string, HPEnsembleType> HPStringToEnsembleType =
-    ba::map_list_of
-	("unknown", kUnknownEnsembleType)
-	("perturbed ensemble", kPerturbedEnsemble)
-	("time ensemble", kTimeEnsemble)
-	("level ensemble", kLevelEnsemble)
-	("lagged ensemble", kLaggedEnsemble);
-
-enum HPProducerClass
-{
-	kUnknownProducerClass = 0,
-	kGridClass = 1,
-	kPreviClass = 3
-};
-
-const boost::unordered_map<HPProducerClass, std::string> HPProducerClassToString =
-    ba::map_list_of
-	(kUnknownProducerClass, "unknown")
-	(kGridClass, "grid")
-	(kPreviClass, "previ")
-	;
-
-const boost::unordered_map<std::string, HPProducerClass> HPStringToProducerClass =
-    ba::map_list_of
-	("unknown", kUnknownProducerClass)
-	("grid", kGridClass)
-	("previ", kPreviClass)
-	;
 
 enum HPFileStorageType
 {

@@ -17,11 +17,30 @@
 
 #include "aggregation.h"
 #include "himan_common.h"
-#include "serialization.h"
 #include "processing_type.h"
+#include "serialization.h"
 
 namespace himan
 {
+enum HPParameterUnit
+{
+	kUnknownUnit = 0,
+	kPa,
+	kK,
+	kC,
+	kPas,  // Pa/s
+	kHPa,
+	kPrcnt,
+	kMs,    // m/s
+	kM,     // meters
+	kMm,    // millimeters
+	kGph,   // geopotential height, m^2 / s^2
+	kKgkg,  // kg/kg
+	kJm2,   // J per square meter
+	kKgm2,  // kg/m^2
+	kS2     // 1/s^2
+};
+
 class param
 {
    public:

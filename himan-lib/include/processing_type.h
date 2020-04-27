@@ -12,6 +12,29 @@
 
 namespace himan
 {
+enum HPProcessingType
+{
+	kUnknownProcessingType = 0,
+	kProbabilityGreaterThan,
+	kProbabilityLessThan,
+	kProbabilityBetween,
+	kProbabilityEquals,
+	kProbabilityNotEquals,
+	kProbabilityEqualsIn,
+	kFractile,
+	kEnsembleMean,  // to differ from aggregation 'average'
+	kSpread,
+	kStandardDeviation,
+	kEFI
+};
+
+const boost::unordered_map<HPProcessingType, std::string> HPProcessingTypeToString =
+    ba::map_list_of(kUnknownProcessingType, "unknown")(kProbabilityGreaterThan, "probability greater than")(
+        kProbabilityLessThan, "probability less than")(kProbabilityBetween, "probability between")(
+        kProbabilityEquals, "probability equals")(kProbabilityNotEquals, "probability is not equal to")(
+        kProbabilityEqualsIn, "probability equal to value in list")(kFractile, "fractile")(
+        kEnsembleMean, "ensemble mean")(kSpread, "spread")(kStandardDeviation, "standard deviation")(kEFI, "efi");
+
 class processing_type
 {
    public:

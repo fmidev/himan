@@ -219,6 +219,7 @@ env.Append(NVCCFLAGS = ['-gencode=arch=compute_70,code=sm_70'])
 #else:
 env.AppendUnique(NVCCFLAGS = ['-std=c++11'])
 env.AppendUnique(NVCCFLAGS = ('-isystem', '/usr/include/boost169'))
+env.AppendUnique(NVCCFLAGS = ('-isystem', '/usr/include/gdal'))
 
 for flag in cflags_normal:
 	if flag == '-Wcast-qual':
