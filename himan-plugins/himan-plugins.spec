@@ -53,6 +53,13 @@ AutoReqProv:	no
 %description
 Himan -- hilojen manipulaatio -- plugin collection
 
+%package devel
+Summary: himan plugins header files
+Group: Development/Tools
+
+%description devel
+Header files for %{name}
+
 %prep
 rm -rf $RPM_BUILD_ROOT
 
@@ -119,6 +126,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libweather_code_2.so
 %{_libdir}/himan-plugins/libwindvector.so
 %{_libdir}/himan-plugins/libwriter.so
+
+%files devel
+%defattr(-,root,root,0644)
+%{_prefix}/include/himan/plugins/*
 
 %changelog
 * Mon Apr 27 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.27-1.fmi

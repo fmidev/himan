@@ -46,6 +46,13 @@ AutoReqProv:	no
 %description
 Himan -- hilojen manipulaatio -- core library
 
+%package devel
+Summary: himan header files
+Group: Development/Tools
+
+%description devel
+Header files for %{name}
+
 %prep
 rm -rf $RPM_BUILD_ROOT
 
@@ -64,6 +71,10 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root,0644)
 %{_libdir}/libhiman.so
+
+%files devel
+%defattr(-,root,root,0644)
+%{_prefix}/include/himan/*
 
 %changelog
 * Mon Apr 27 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.27-1.fmi

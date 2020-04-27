@@ -4,14 +4,7 @@ NPROC=$(shell nproc)
 
 SCONS_FLAGS=-j $(NPROC)
 
-# How to install
-
-INSTALL_DATA = install -m 755
-
-#rpmsourcedir = /home/partio/rpmbuild/SOURCES
 rpmsourcedir=/tmp/$(shell whoami)/rpmbuild
-
-INSTALL_TARGET = /usr/lib64
 
 .SILENT:createlink
 
@@ -44,7 +37,8 @@ rpm:    clean createlink
         fi;
 
 install:
-	mkdir -p $(DESTDIR)/$(INSTALL_TARGET)
-	if [ -f "build/release/lib$(LIB).so" ]; then \
-		$(INSTALL_DATA) build/release/lib$(LIB).so $(DESTDIR)/$(INSTALL_TARGET); \
-	fi;
+	mkdir -p $(DESTDIR)/usr/lib64 $(DESTDIR)/usr/include/himan
+	@if [ -f "build/release/lib$(LIB).so" ]; then \
+		install -m 755 build/release/lib$(LIB).so $(DESTDIR)/usr/lib64; \
+	fi
+	@for h in $(shell ls include/*); do install -m 644 $$h $(DESTDIR)/usr/include/himan; done

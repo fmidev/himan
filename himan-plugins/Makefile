@@ -6,10 +6,6 @@ SCONS_FLAGS=-j $(NPROC)
 
 # How to install
 
-INSTALL_DATA = install -m 755
-
-INSTALL_TARGET = /usr/lib64/himan-plugins
-
 rpmsourcedir = /tmp/$(shell whoami)/rpmbuild
 
 .SILENT:createlink
@@ -45,9 +41,10 @@ rpm:    clean createlink
         fi;
 
 install:
-	mkdir -p  $(DESTDIR)/$(INSTALL_TARGET)
-	for plugin in build/release/*.so; do \
-		echo installing $$plugin ; \
-                $(INSTALL_DATA) $$plugin $(DESTDIR)/$(INSTALL_TARGET); \
+	mkdir -p  $(DESTDIR)/usr/lib64/himan-plugins $(DESTDIR)/usr/include/himan/plugins
+	@for plugin in build/release/*.so; do \
+                install -m 755 $$plugin $(DESTDIR)/usr/lib64/himan-plugins; \
 	done;
+	@for h in $(shell ls include/*); do install -m 644 $$h $(DESTDIR)/usr/include/himan/plugins; done
+
 
