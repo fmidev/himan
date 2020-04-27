@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.4.23
+Version: 20.4.27
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -13,12 +13,12 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 20.4.2
+Requires: himan-lib >= 20.4.27
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 20.1.20
 Requires: libfmidb >= 20.4.6
-Requires: smartmet-library-newbase >= 18.7.23
+Requires: smartmet-library-newbase >= 20.4.18
 Requires: libpqxx
 Requires: boost169-iostreams
 Requires: boost169-thread
@@ -42,7 +42,7 @@ Requires: eccodes
 %endif
 BuildRequires: libfmigrib-devel >= 20.1.20
 BuildRequires: libfmidb-devel >= 20.4.6
-BuildRequires: smartmet-library-newbase-devel >= 18.7.23
+BuildRequires: smartmet-library-newbase-devel >= 20.4.18
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: boost169-devel
@@ -121,6 +121,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libwriter.so
 
 %changelog
+* Mon Apr 27 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.27-1.fmi
+- Refactored grid-class structure
+- Update to frost
 * Thu Apr 23 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.23-1.fmi
 - Update to frost
 - Update to pot
