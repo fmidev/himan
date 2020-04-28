@@ -1167,18 +1167,31 @@ unique_ptr<grid> ParseAreaAndGrid(const shared_ptr<configuration>& conf, const b
 	{
 		const auto scmode = HPScanningModeFromString.at(pt.get<string>("scanning_mode"));
 
-		if (scmode != kBottomLeft)
+		if (scmode != kBottomLeft && scmode != kTopLeft)
 		{
-			throw runtime_error("Only bottom_left scanning mode is supported with bbox");
+			throw runtime_error("Only bottom_left or top_left scanning mode is supported with bbox");
 		}
 
 		vector<string> coordinates = himan::util::Split(pt.get<string>("bbox"), ",", false);
 
+		point fp, lp;
+		if (scmode == kTopLeft)
+		{
+			// 'bbox' is always bl,tr -- have to juggle a bit here
+			fp = point(stod(coordinates[0]), stod(coordinates[3]));
+			lp = point(stod(coordinates[2]), stod(coordinates[1]));
+		}
+		else
+		{
+			fp = point(stod(coordinates[0]), stod(coordinates[1]));
+			lp = point(stod(coordinates[2]), stod(coordinates[3]));
+		}
+
 		// clang-format off
 		return unique_ptr<latitude_longitude_grid>(new latitude_longitude_grid(
 		    scmode,
-		    point(stod(coordinates[0]), stod(coordinates[1])),
-		    point(stod(coordinates[2]), stod(coordinates[3])),
+		    fp,
+		    lp,
 		    pt.get<size_t>("ni"),
 		    pt.get<size_t>("nj"),
 		    earth_shape<double>(6371220.)

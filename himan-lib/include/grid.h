@@ -42,11 +42,11 @@ enum HPGridType
 	kStereographic,
 	kAzimuthalEquidistant,
 	kRotatedLatitudeLongitude,
-	kReducedGaussian,
-	kPointList,
 	kLambertConformalConic,
+	kReducedGaussian,
 	kLambertEqualArea,
-	kTransverseMercator
+	kTransverseMercator,
+	kPointList = 100,
 };
 
 const boost::unordered_map<HPGridType, std::string> HPGridTypeToString =
