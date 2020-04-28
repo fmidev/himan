@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 20.4.27
+Version: 20.4.28
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -77,6 +77,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/*
 
 %changelog
+* Tue Apr 28 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.28-1.fmi
+- Bugfix for bbox parsing
 * Mon Apr 27 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.27-1.fmi
 - Refactored grid-class structure
 * Wed Apr 22 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.22-1.fmi
