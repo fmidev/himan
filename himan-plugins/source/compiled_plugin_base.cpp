@@ -165,6 +165,14 @@ void compiled_plugin_base::WriteToFile(const shared_ptr<info<T>> targetInfo, wri
 			}
 
 			aWriter->ToFile(tempInfo, itsConfiguration);
+
+			// check missing values
+			if (itsConfiguration->AllowedMissingValues() < tempInfo->Data().MissingCount())
+			{
+				itsBaseLogger.Fatal("Data contains more missing values (" + to_string(tempInfo->Data().MissingCount()) +
+				                    ") than allowed (" + to_string(itsConfiguration->AllowedMissingValues()) + ")");
+				exit(1);
+			}
 		}
 	};
 

@@ -373,7 +373,7 @@ string DetermineDefaultFileName(const info<T>& info, const plugin_configuration&
 	}
 	else if (conf.WriteMode() == kFewGridsToAFile)
 	{
-		ss << "/fc{analysis_time:%Y%m%d%H%M}+{step:%03hh%02Mm}_" << conf.Name() << "#" << conf.RelativeOrdinalNumber()
+		ss << "fc{analysis_time:%Y%m%d%H%M}+{step:%03hh%02Mm}_" << conf.Name() << "#" << conf.RelativeOrdinalNumber()
 		   << ".{file_type}";
 	}
 	else if (conf.WriteMode() == kAllGridsToAFile)
@@ -388,7 +388,7 @@ string DetermineDefaultFileName(const info<T>& info, const plugin_configuration&
 		}
 		else
 		{
-			ss << "/fc{analysis_time:%Y%m%d%H%M}+{step:%03hh%02Mm}.{file_type}";
+			ss << "fc{analysis_time:%Y%m%d%H%M}+{step:%03hh%02Mm}.{file_type}";
 		}
 	}
 

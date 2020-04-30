@@ -42,7 +42,8 @@ configuration::configuration()
       itsLegacyWriteMode(false),
       itsWriteStorageType(kLocalFileSystem),
       itsFilenameTemplate(),
-      itsPackingType(kSimplePacking)
+      itsPackingType(kSimplePacking),
+      itsAllowedMissingValues(std::numeric_limits<size_t>::max())
 {
 }
 
@@ -97,6 +98,7 @@ std::ostream& configuration::Write(std::ostream& file) const
 	file << "__itsWriteStorageType__" << HPFileStorageTypeToString.at(itsWriteStorageType) << std::endl;
 	file << "__itsFilenameTemplate__" << itsFilenameTemplate << std::endl;
 	file << "__itsPackingType__" << HPPackingTypeToString.at(itsPackingType) << std::endl;
+	file << "__itsAllowedMissingValues__" << itsAllowedMissingValues << std::endl;
 
 	return file;
 }
@@ -391,4 +393,14 @@ HPPackingType configuration::PackingType() const
 void configuration::PackingType(HPPackingType thePackingType)
 {
 	itsPackingType = thePackingType;
+}
+
+size_t configuration::AllowedMissingValues() const
+{
+	return itsAllowedMissingValues;
+}
+
+void configuration::AllowedMissingValues(size_t theAllowedMissingValues)
+{
+	itsAllowedMissingValues = theAllowedMissingValues;
 }

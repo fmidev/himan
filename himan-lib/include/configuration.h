@@ -228,6 +228,10 @@ class configuration
 	HPPackingType PackingType() const;
 	void PackingType(HPPackingType thePackingType);
 
+	// How much of the data is allowed to be missing in absolute numbers
+	size_t AllowedMissingValues() const;
+	void AllowedMissingValues(size_t theAllowedMissingValues);
+
    protected:
 	std::vector<producer> itsSourceProducers;
 
@@ -272,6 +276,7 @@ class configuration
 	HPFileStorageType itsWriteStorageType;
 	std::string itsFilenameTemplate;
 	HPPackingType itsPackingType;
+	size_t itsAllowedMissingValues;
 };
 
 inline std::ostream& operator<<(std::ostream& file, const configuration& ob)

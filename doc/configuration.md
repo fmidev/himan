@@ -27,6 +27,8 @@ The json file can be divided into two parts: the global part, configuration appl
   * [Forecast types](#Forecast_types)
   * [Memory usage](#Memory_usage)
   * [Asynchronous execution](#Asynchronous_execution)
+  * [Storage type](#Storage_type)
+  * [Allowed missing values](#Allowed_missing_values)
 * [Environment variables](#Environment_variables)
 * [Full examples](#Full_examples)
 
@@ -532,7 +534,7 @@ This can be avoided by using the configuration file key 'async'. By default the 
 
 **Note! Asynchronous execution should only be enabled for those plugins that have no other plugins as dependants!**
 
-<a name="Storage type"/>
+<a name="Storage_type"/>
 
 ## Storage type
 
@@ -546,6 +548,23 @@ explicit configuration.
 Example:
 
     "write_storage_type" : "local | s3",
+
+<a name="Allowed_missing_values"/>
+
+## Allowed missing values
+
+By default Himan does not care if some plugin produces missing values. This behavior can be controlled with configuration file key 'allowed_missing_values'.
+
+The key can contain the maximum number of missing values in a single grid in either absolute numbers or as a percentage of the grid size.
+If the value is reached, Himan will stop running immediately.
+
+The default behavior is to never abort. Key can be set in either main level or processqueue scope.
+
+Example:
+
+    "allowed_missing_values" : 20000
+    "allowed_missing_values" : "10%"
+
 
 <a name="Environment_variables"/>
 
