@@ -265,11 +265,7 @@ std::map<std::string, std::string> ParseMetadata(char** mdata, const producer& p
 			if (boost::regex_search(metadata, what, re) == false || what.size() == 0)
 			{
 				log.Warning("Regex did not match for attribute " + attribute);
-
-				std::cerr << "Regex:\n=====\n"
-				          << keyMask << "\n"
-				          << "Metadata:\n========\n"
-				          << metadata << "\n";
+				log.Warning("Regex: '" + keyMask + "' Metadata: '" + metadata + "'");
 			}
 
 			if (what.size() != 2)
@@ -309,6 +305,12 @@ void ReadData(GDALRasterBand* poBand, matrix<T>& mat, const std::map<std::string
 	mat.MissingValue(MissingValue<T>());
 }
 
+std::vector<std::shared_ptr<info<double>>> geotiff::FromFile(const file_information& theInputFile,
+                                                             const search_options& options) const
+{
+	return FromFile<double>(theInputFile, options);
+}
+
 template <typename T>
 std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& theInputFile,
                                                         const search_options& options) const
@@ -316,16 +318,19 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 	std::vector<std::shared_ptr<himan::info<T>>> infos;
 
 	GDALRegister_GTiff();
-	// GDALRegister_COG();
-	GDALDataset* poDataset = reinterpret_cast<GDALDataset*>(GDALOpen(theInputFile.file_location.c_str(), GA_ReadOnly));
+	// GDALRegister_COG(); // not working, maybe due to using an oldish gdal version
 
-	if (poDataset == NULL)
+	std::unique_ptr<GDALDataset, std::function<void(GDALDataset*)>> poDataset(
+	    reinterpret_cast<GDALDataset*>(GDALOpen(theInputFile.file_location.c_str(), GA_ReadOnly)),
+	    [](GDALDataset* dset) { GDALClose(dset); });
+
+	if (poDataset == nullptr)
 	{
 		itsLogger.Error("Failed to open dataset from " + theInputFile.file_location);
 		return infos;
 	}
 
-	auto meta = ParseMetadata(poDataset->GetMetadata(), options.prod);  // Get dataset metadata
+	auto meta = ParseMetadata(poDataset->GetMetadata(), options.prod);  // Get full dataset metadata
 
 	if (meta.size() == 0)
 	{
@@ -333,7 +338,7 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 		return infos;
 	}
 
-	auto area = ReadAreaAndGrid(poDataset);
+	auto area = ReadAreaAndGrid(poDataset.get());
 
 	if (area == nullptr)
 	{
@@ -400,8 +405,6 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 		GDALRasterBand* poBand = poDataset->GetRasterBand(static_cast<int>(theInputFile.message_no.get()));
 		infos.push_back(MakeInfoFromGeoTIFFBand(poBand));
 	}
-
-	GDALClose(poDataset);
 
 	return infos;
 }
