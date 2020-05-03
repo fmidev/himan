@@ -16,7 +16,6 @@ configuration::configuration()
       itsDatabaseType(kRadon),
       itsConfigurationFile(),
       itsAuxiliaryFiles(),
-      itsOriginTime(),
       itsReadFromDatabase(true),
       itsThreadCount(-1),
       itsTargetGeomName(),
@@ -43,7 +42,51 @@ configuration::configuration()
       itsWriteStorageType(kLocalFileSystem),
       itsFilenameTemplate(),
       itsPackingType(kSimplePacking),
-      itsAllowedMissingValues(std::numeric_limits<size_t>::max())
+      itsAllowedMissingValues(std::numeric_limits<size_t>::max()),
+      itsForecastTypes({forecast_type(kDeterministic)}),
+      itsBaseGrid(nullptr)
+{
+}
+
+configuration::configuration(const configuration& o)
+    : itsSourceProducers(o.itsSourceProducers),
+      itsOutputFileType(o.itsOutputFileType),
+      itsWriteMode(o.itsWriteMode),
+      itsFileCompression(o.itsFileCompression),
+      itsDatabaseType(o.itsDatabaseType),
+      itsConfigurationFile(o.itsConfigurationFile),
+      itsAuxiliaryFiles(o.itsAuxiliaryFiles),
+      itsReadFromDatabase(o.itsReadFromDatabase),
+      itsThreadCount(o.itsThreadCount),
+      itsTargetGeomName(o.itsTargetGeomName),
+      itsSourceGeomNames(o.itsSourceGeomNames),
+      itsStatisticsLabel(o.itsStatisticsLabel),
+      itsTargetProducer(o.itsTargetProducer),
+      itsUseCuda(o.itsUseCuda),
+      itsUseCudaForPacking(o.itsUseCudaForPacking),
+      itsUseCudaForUnpacking(o.itsUseCudaForUnpacking),
+      itsUseCacheForReads(o.itsUseCacheForReads),
+      itsUseCacheForWrites(o.itsUseCacheForWrites),
+      itsUseDynamicMemoryAllocation(o.itsUseDynamicMemoryAllocation),
+      itsReadAllAuxiliaryFilesToCache(o.itsReadAllAuxiliaryFilesToCache),
+      itsCudaDeviceCount(o.itsCudaDeviceCount),
+      itsCudaDeviceId(o.itsCudaDeviceId),
+      itsForecastStep(o.itsForecastStep),
+      itsCacheLimit(o.itsCacheLimit),
+      itsParamFile(o.itsParamFile),
+      itsAsyncExecution(o.itsAsyncExecution),
+      itsUpdateSSStateTable(o.itsUpdateSSStateTable),
+      itsUploadStatistics(o.itsUploadStatistics),
+      itsWriteToDatabase(o.itsWriteToDatabase),
+      itsLegacyWriteMode(o.itsLegacyWriteMode),
+      itsWriteStorageType(o.itsWriteStorageType),
+      itsFilenameTemplate(o.itsFilenameTemplate),
+      itsPackingType(o.itsPackingType),
+      itsAllowedMissingValues(o.itsAllowedMissingValues),
+      itsForecastTypes(o.itsForecastTypes),
+      itsLevels(o.itsLevels),
+      itsTimes(o.itsTimes),
+      itsBaseGrid(std::unique_ptr<grid>(o.itsBaseGrid->Clone()))
 {
 }
 
@@ -99,6 +142,20 @@ std::ostream& configuration::Write(std::ostream& file) const
 	file << "__itsFilenameTemplate__" << itsFilenameTemplate << std::endl;
 	file << "__itsPackingType__" << HPPackingTypeToString.at(itsPackingType) << std::endl;
 	file << "__itsAllowedMissingValues__" << itsAllowedMissingValues << std::endl;
+
+	for (size_t i = 0; i < itsForecastTypes.size(); i++)
+	{
+		file << "__itsForecastTypes__ " << i << " " << itsForecastTypes[i] << std::endl;
+	}
+
+	for (size_t i = 0; i < itsTimes.size(); i++)
+	{
+		file << "__itsTimes__ " << i << " " << itsTimes[i] << std::endl;
+	}
+	for (size_t i = 0; i < itsLevels.size(); i++)
+	{
+		file << "__itsLevels__ " << i << " " << itsLevels[i] << std::endl;
+	}
 
 	return file;
 }
@@ -403,4 +460,46 @@ size_t configuration::AllowedMissingValues() const
 void configuration::AllowedMissingValues(size_t theAllowedMissingValues)
 {
 	itsAllowedMissingValues = theAllowedMissingValues;
+}
+
+void configuration::BaseGrid(std::unique_ptr<grid> theBaseGrid)
+{
+	itsBaseGrid = std::move(theBaseGrid);
+}
+
+const grid* configuration::BaseGrid() const
+{
+	if (itsBaseGrid)
+	{
+		return itsBaseGrid.get();
+	}
+
+	return nullptr;
+}
+
+std::vector<forecast_type> configuration::ForecastTypes() const
+{
+	return itsForecastTypes;
+}
+void configuration::ForecastTypes(const std::vector<forecast_type>& theForecastTypes)
+{
+	itsForecastTypes = theForecastTypes;
+}
+
+std::vector<forecast_time> configuration::Times() const
+{
+	return itsTimes;
+}
+void configuration::Times(const std::vector<forecast_time>& theTimes)
+{
+	itsTimes = theTimes;
+}
+
+std::vector<level> configuration::Levels() const
+{
+	return itsLevels;
+}
+void configuration::Levels(const std::vector<level>& theLevels)
+{
+	itsLevels = theLevels;
 }

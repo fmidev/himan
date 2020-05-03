@@ -2,11 +2,7 @@
 #define PLUGIN_CONFIGURATION_H
 
 #include "configuration.h"
-#include "forecast_time.h"
-#include "forecast_type.h"
-#include "grid.h"
 #include "himan_common.h"
-#include "level.h"
 #include <map>
 #include <utility>
 
@@ -106,27 +102,6 @@ class plugin_configuration : public configuration
 	bool StatisticsEnabled() const;
 	void WriteStatistics();
 
-	const std::vector<level>& Levels() const
-	{
-		return itsLevels;
-	}
-
-	const std::vector<forecast_time>& Times() const
-	{
-		return itsTimes;
-	}
-
-	const std::vector<forecast_type>& ForecastTypes() const
-	{
-		return itsForecastTypes;
-	}
-
-	const grid* BaseGrid() const
-	{
-		ASSERT(itsBaseGrid);
-		return itsBaseGrid.get();
-	}
-
 	unsigned int OrdinalNumber() const;
 	void OrdinalNumber(unsigned int theOrdinalNumber);
 	unsigned int RelativeOrdinalNumber() const;
@@ -139,10 +114,6 @@ class plugin_configuration : public configuration
 	std::map<std::string, std::vector<std::string>> itsOptions;
 	std::map<std::string, std::vector<std::pair<std::string, std::string>>> itsPreconfiguredParams;
 	std::shared_ptr<statistics> itsStatistics;
-	std::vector<level> itsLevels;
-	std::vector<forecast_type> itsForecastTypes;
-	std::vector<forecast_time> itsTimes;
-	std::unique_ptr<grid> itsBaseGrid;
 	unsigned int itsOrdinalNumber;
 	unsigned int itsRelativeOrdinalNumber;
 };

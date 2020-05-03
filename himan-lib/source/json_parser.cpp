@@ -29,16 +29,13 @@
 using namespace himan;
 using namespace std;
 
-unique_ptr<grid> ParseAreaAndGridFromPoints(const boost::property_tree::ptree& pt);
-unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::property_tree::ptree& pt);
-vector<level> ParseLevels(const boost::property_tree::ptree& pt);
-vector<producer> ParseSourceProducer(const shared_ptr<configuration>& conf, const boost::property_tree::ptree& pt);
-producer ParseTargetProducer(const shared_ptr<configuration>& conf, const boost::property_tree::ptree& pt);
+void AreaAndGrid(const boost::property_tree::ptree& pt, const shared_ptr<configuration>& conf);
+void SourceProducer(const boost::property_tree::ptree& pt, const shared_ptr<configuration>& conf);
+void TargetProducer(const boost::property_tree::ptree& pt, const shared_ptr<configuration>& conf);
 vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt);
-unique_ptr<grid> ParseAreaAndGrid(const std::shared_ptr<configuration>& conf, const boost::property_tree::ptree& pt);
-vector<forecast_time> ParseTime(std::shared_ptr<configuration> conf, const boost::property_tree::ptree& pt);
-tuple<HPWriteMode, bool, bool, string> ParseWriteMode(const shared_ptr<configuration>& conf,
-                                                      const boost::property_tree::ptree& pt);
+void ParseSteps(const boost::property_tree::ptree& pt, shared_ptr<configuration>& conf,
+                const vector<raw_time>& originDateTimes);
+raw_time GetLatestOriginDateTime(const shared_ptr<configuration> conf, const string& latest);
 
 vector<level> LevelsFromString(const string& levelType, const string& levelValues);
 
@@ -84,6 +81,404 @@ vector<shared_ptr<plugin_configuration>> json_parser::Parse(shared_ptr<configura
 	return plugins;
 }
 
+template <typename T>
+boost::optional<T> ReadElement(const boost::property_tree::ptree& pt, const std::string& name)
+{
+	try
+	{
+		return pt.get<T>(name);
+	}
+	catch (const boost::property_tree::ptree_bad_path& e)
+	{
+		return boost::none;
+	}
+	catch (const exception& e)
+	{
+		throw runtime_error(string("Error parsing key " + name + ": ") + e.what());
+	}
+}
+
+void WriteMode(const shared_ptr<configuration>& conf, const boost::property_tree::ptree& pt)
+{
+	// legacy way of defining things
+
+	if (auto fw = ReadElement<string>(pt, "file_write"))
+	{
+		string theFileWriteOption = fw.get();
+
+		if (theFileWriteOption == "database")
+		{
+			conf->WriteMode(kSingleGridToAFile);
+			conf->WriteToDatabase(true);
+		}
+		else if (theFileWriteOption == "single")
+		{
+			conf->WriteMode(kAllGridsToAFile);
+		}
+		else if (theFileWriteOption == "multiple")
+		{
+			conf->WriteMode(kSingleGridToAFile);
+		}
+		else if (theFileWriteOption == "cache only")
+		{
+			conf->WriteMode(kNoFileWrite);
+		}
+		else
+		{
+			throw runtime_error("Invalid value for file_write: " + theFileWriteOption);
+		}
+
+		conf->LegacyWriteMode(true);
+	}
+
+	// new way, will overwrite legacy if both are defined
+
+	if (auto fw = ReadElement<string>(pt, "write_mode"))
+	{
+		string theWriteMode = fw.get();
+
+		if (theWriteMode == "all")
+		{
+			conf->WriteMode(kAllGridsToAFile);
+		}
+		else if (theWriteMode == "few")
+		{
+			conf->WriteMode(kFewGridsToAFile);
+		}
+		else if (theWriteMode == "single")
+		{
+			conf->WriteMode(kSingleGridToAFile);
+		}
+		else if (theWriteMode == "no")
+		{
+			conf->WriteMode(kNoFileWrite);
+		}
+		else
+		{
+			throw runtime_error("Invalid value for file_mode: " + theWriteMode);
+		}
+
+		conf->LegacyWriteMode(false);
+	}
+
+	if (auto wtd = ReadElement<bool>(pt, "write_to_database"))
+	{
+		conf->WriteToDatabase(wtd.get());
+	}
+
+	// filename template
+
+	if (auto ft = ReadElement<string>(pt, "filename_template"))
+	{
+		conf->FilenameTemplate(ft.get());
+	}
+}
+void FileCompression(const boost::property_tree::ptree& pt, std::shared_ptr<configuration>& conf)
+{
+	if (auto fileCompression = ReadElement<string>(pt, "file_compression"))
+	{
+		if (fileCompression.get() == "gzip")
+		{
+			conf->FileCompression(kGZIP);
+		}
+		else if (fileCompression.get() == "bzip2")
+		{
+			conf->FileCompression(kBZIP2);
+		}
+		else
+		{
+			conf->FileCompression(kNoCompression);
+		}
+
+		if (conf->FileCompression() != kNoCompression && conf->WriteMode() == kAllGridsToAFile)
+		{
+			itsLogger.Warning("file_mode value 'all' conflicts with file_compression, using 'single' instead");
+			conf->WriteMode(kSingleGridToAFile);
+		}
+	}
+}
+
+void ReadDataFromDatabase(const boost::property_tree::ptree& pt, std::shared_ptr<configuration>& conf)
+{
+	if (auto readFromDatabase = ReadElement<bool>(pt, "read_data_from_database"))
+	{
+		if (readFromDatabase.get() == false || conf->DatabaseType() == kNoDatabase)
+		{
+			conf->ReadFromDatabase(false);
+		}
+	}
+}
+
+void ReadFromDatabase(const boost::property_tree::ptree& pt, std::shared_ptr<configuration>& conf)
+{
+	if (auto readFromDatabase = ReadElement<bool>(pt, "read_from_database"))
+	{
+		if (readFromDatabase.get() == false || conf->DatabaseType() == kNoDatabase)
+		{
+			conf->ReadFromDatabase(false);
+		}
+	}
+}
+
+void UseCacheForWrites(const boost::property_tree::ptree& pt, std::shared_ptr<configuration>& conf)
+{
+	if (auto useCacheForWrites = ReadElement<bool>(pt, "use_cache_for_writes"))
+	{
+		conf->UseCacheForWrites(useCacheForWrites.get());
+	}
+}
+
+void UseCacheForReads(const boost::property_tree::ptree& pt, std::shared_ptr<configuration>& conf)
+{
+	if (auto useCacheForReads = ReadElement<bool>(pt, "use_cache_for_reads"))
+	{
+		conf->UseCacheForWrites(useCacheForReads.get());
+	}
+}
+
+void UseCache(const boost::property_tree::ptree& pt, std::shared_ptr<configuration>& conf)
+{
+	if (auto useCache = ReadElement<bool>(pt, "use_cache"))
+	{
+		conf->UseCacheForReads(useCache.get());
+		itsLogger.Warning("Key 'use_cache' is deprecated. Rename it to 'use_cache_for_reads'");
+	}
+}
+
+void CacheLimit(const boost::property_tree::ptree& pt, std::shared_ptr<configuration>& conf)
+{
+	if (auto cacheLimit = ReadElement<int>(pt, "cache_limit"))
+	{
+		if (cacheLimit.get() < 1)
+		{
+			itsLogger.Warning("cache_limit must be larger than 0");
+		}
+		else
+		{
+			conf->CacheLimit(cacheLimit.get());
+			plugin::cache_pool::Instance()->CacheLimit(cacheLimit.get());
+		}
+	}
+}
+
+void FileType(const boost::property_tree::ptree& pt, std::shared_ptr<configuration>& conf)
+{
+	if (auto fileType = ReadElement<std::string>(pt, "file_type"))
+	{
+		auto ft = boost::to_upper_copy(fileType.get());
+
+		if (ft == "GRIB")
+		{
+			conf->OutputFileType(kGRIB);
+		}
+		else if (ft == "GRIB1")
+		{
+			conf->OutputFileType(kGRIB1);
+		}
+		else if (ft == "GRIB2")
+		{
+			conf->OutputFileType(kGRIB2);
+		}
+		else if (ft == "FQD" || ft == "QUERYDATA")
+		{
+			conf->OutputFileType(kQueryData);
+		}
+		else
+		{
+			throw runtime_error("Invalid option for 'file_type': " + ft);
+		}
+	}
+}
+
+void AsyncExecution(const boost::property_tree::ptree& pt, std::shared_ptr<configuration>& conf)
+{
+	if (auto async = ReadElement<bool>(pt, "async"))
+	{
+		conf->AsyncExecution(async.get());
+	}
+}
+
+void DynamicMemoryAllocation(const boost::property_tree::ptree& pt, std::shared_ptr<configuration>& conf)
+{
+	if (auto dma = ReadElement<bool>(pt, "dynamic_memory_allocation"))
+	{
+		conf->UseDynamicMemoryAllocation(dma.get());
+	}
+}
+
+void WriteStorageType(const boost::property_tree::ptree& pt, std::shared_ptr<configuration>& conf)
+{
+	if (auto storageType = ReadElement<std::string>(pt, "write_storage_type"))
+	{
+		conf->WriteStorageType(HPStringToFileStorageType.at(storageType.get()));
+	}
+}
+
+void FilePackingType(const boost::property_tree::ptree& pt, std::shared_ptr<configuration>& conf)
+{
+	if (auto packingType = ReadElement<std::string>(pt, "file_packing_type"))
+	{
+		conf->PackingType(HPStringToPackingType.at(packingType.get()));
+	}
+}
+
+void AllowedMissingValues(const boost::property_tree::ptree& pt, std::shared_ptr<configuration>& conf, size_t N)
+{
+	if (auto allowedMissingValues = ReadElement<std::string>(pt, "allowed_missing_values"))
+	{
+		std::string allowed = allowedMissingValues.get();
+		if (allowed.back() == '%')
+		{
+			allowed.pop_back();
+			conf->AllowedMissingValues(static_cast<size_t>(static_cast<double>(N) * 0.01 * stod(allowed)));
+		}
+		else
+		{
+			conf->AllowedMissingValues(stol(allowed));
+		}
+	}
+}
+
+void Levels(const boost::property_tree::ptree& pt, shared_ptr<configuration>& conf)
+{
+	auto levelType = ReadElement<string>(pt, "leveltype");
+	auto levelValues = ReadElement<string>(pt, "levels");
+
+	if (levelType && levelValues)
+	{
+		conf->Levels(LevelsFromString(levelType.get(), levelValues.get()));
+	}
+}
+
+void Producers(const boost::property_tree::ptree& pt, shared_ptr<configuration>& conf)
+{
+	SourceProducer(pt, conf);
+	TargetProducer(pt, conf);
+}
+
+void ForecastTypes(const boost::property_tree::ptree& pt, std::shared_ptr<configuration>& conf)
+{
+	if (auto ftypes = ReadElement<std::string>(pt, "forecast_type"))
+	{
+		vector<string> types = himan::util::Split(ftypes.get(), ",", false);
+		vector<forecast_type> forecastTypes;
+
+		for (string& type : types)
+		{
+			boost::algorithm::to_lower(type);
+
+			if (type.find("pf") != string::npos)
+			{
+				string list = type.substr(2, string::npos);
+
+				vector<string> range = himan::util::Split(list, "-", false);
+
+				if (range.size() == 1)
+				{
+					forecastTypes.push_back(forecast_type(kEpsPerturbation, stod(range[0])));
+				}
+				else
+				{
+					ASSERT(range.size() == 2);
+
+					int start = stoi(range[0]);
+					int stop = stoi(range[1]);
+
+					while (start <= stop)
+					{
+						forecastTypes.push_back(forecast_type(kEpsPerturbation, start));
+						start++;
+					}
+				}
+			}
+			else
+			{
+				if (type == "cf")
+				{
+					forecastTypes.push_back(forecast_type(kEpsControl, 0));
+				}
+				else if (type == "det" || type == "deterministic")
+				{
+					forecastTypes.push_back(forecast_type(kDeterministic));
+				}
+				else if (type == "an" || type == "analysis")
+				{
+					forecastTypes.push_back(forecast_type(kAnalysis));
+				}
+				else if (type == "sp" || type == "statistical")
+				{
+					forecastTypes.push_back(forecast_type(kStatisticalProcessing));
+				}
+				else
+				{
+					throw runtime_error("Invalid forecast_type: " + type);
+				}
+			}
+		}
+		conf->ForecastTypes(forecastTypes);
+	}
+}
+
+void Time(const boost::property_tree::ptree& pt, shared_ptr<configuration>& conf)
+{
+	const string mask = "%Y-%m-%d %H:%M:%S";
+
+	std::vector<raw_time> originDateTimes;
+
+	if (auto time = ReadElement<string>(pt, "origintime"))
+	{
+		auto originDateTime = boost::algorithm::to_lower_copy(time.get());
+
+		if (originDateTime.find("latest") != string::npos)
+		{
+			if (conf->DatabaseType() == kNoDatabase)
+			{
+				throw std::invalid_argument("Unable to get latest time from database when no database mode is enabled");
+			}
+			originDateTimes.push_back(GetLatestOriginDateTime(conf, originDateTime));
+		}
+		else
+		{
+			originDateTimes.push_back(raw_time(originDateTime, mask));
+		}
+	}
+	else if (auto times = ReadElement<string>(pt, "origintimes"))
+	{
+		auto datesList = himan::util::Split(times.get(), ",", false);
+
+		for (const auto& dateString : datesList)
+		{
+			originDateTimes.push_back(raw_time(dateString, mask));
+		}
+	}
+
+	/* Check time steps */
+
+	if (originDateTimes.empty() == false)
+	{
+		ParseSteps(pt, conf, originDateTimes);
+	}
+}
+
+void CheckCommonOptions(const boost::property_tree::ptree& pt, shared_ptr<configuration>& conf)
+{
+	Producers(pt, conf);
+	AreaAndGrid(pt, conf);
+	Time(pt, conf);
+	FileCompression(pt, conf);
+	ReadDataFromDatabase(pt, conf);
+	ReadFromDatabase(pt, conf);
+	UseCacheForWrites(pt, conf);
+	UseCacheForReads(pt, conf);
+	UseCache(pt, conf);
+	FileType(pt, conf);
+	WriteStorageType(pt, conf);
+	FilePackingType(pt, conf);
+	AllowedMissingValues(pt, conf, conf->BaseGrid()->Size());
+	ForecastTypes(pt, conf);
+	WriteMode(conf, pt);
+}
+
 vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(shared_ptr<configuration> conf)
 {
 	itsLogger.Trace("Parsing configuration file '" + conf->ConfigurationFile() + "'");
@@ -101,314 +496,11 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 	vector<shared_ptr<plugin_configuration>> pluginContainer;
 
-	/* Check producers */
+	CheckCommonOptions(pt, conf);
 
-	conf->SourceProducers(ParseSourceProducer(conf, pt));
-	conf->TargetProducer(ParseTargetProducer(conf, pt));
-
-	/* Check area definitions */
-
-	auto g_targetGrid = ParseAreaAndGrid(conf, pt);
-
-	/* Check time definitions */
-
-	const auto g_times = ParseTime(conf, pt);
-
-	/* Check file_write */
-
-	auto parsed = ParseWriteMode(conf, pt);
-
-	if (get<0>(parsed) != kUnknown)
-	{
-		conf->WriteMode(get<0>(parsed));
-		conf->WriteToDatabase(get<1>(parsed));
-		conf->LegacyWriteMode(get<2>(parsed));
-		conf->FilenameTemplate(get<3>(parsed));
-	}
-
-	/* Check file_compression */
-
-	try
-	{
-		string theFileCompression = pt.get<string>("file_compression");
-
-		if (theFileCompression == "gzip")
-		{
-			conf->FileCompression(kGZIP);
-		}
-		else if (theFileCompression == "bzip2")
-		{
-			conf->FileCompression(kBZIP2);
-		}
-		else
-		{
-			conf->FileCompression(kNoCompression);
-		}
-
-		if (conf->FileCompression() != kNoCompression && conf->WriteMode() == kAllGridsToAFile)
-		{
-			itsLogger.Warning("file_mode value 'all' conflicts with file_compression, using 'single' instead");
-			conf->WriteMode(kSingleGridToAFile);
-		}
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		// Something was not found; do nothing
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing key file_write: ") + e.what());
-	}
-
-	/* Check read_data_from_database (legacy) */
-
-	try
-	{
-		string theReadFromDatabase = pt.get<string>("read_data_from_database");
-
-		if (!util::ParseBoolean(theReadFromDatabase) || conf->DatabaseType() == kNoDatabase)
-		{
-			conf->ReadFromDatabase(false);
-		}
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		// Something was not found; do nothing
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing key read_data_from_database: ") + e.what());
-	}
-
-	/* Check read_from_database */
-
-	try
-	{
-		string theReadFromDatabase = pt.get<string>("read_from_database");
-
-		if (!util::ParseBoolean(theReadFromDatabase) || conf->DatabaseType() == kNoDatabase)
-		{
-			conf->ReadFromDatabase(false);
-		}
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		// Something was not found; do nothing
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing key read_from_database: ") + e.what());
-	}
-
-	// Check global use_cache_for_writes option
-
-	try
-	{
-		string theUseCacheForWrites = pt.get<string>("use_cache_for_writes");
-
-		if (!util::ParseBoolean(theUseCacheForWrites))
-		{
-			conf->UseCacheForWrites(false);
-		}
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		// Something was not found; do nothing
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing key use_cache_for_writes: ") + e.what());
-	}
-
-	// Check global use_cache option
-
-	// For backwards compatibility
-	try
-	{
-		string theUseCache = pt.get<string>("use_cache");
-
-		if (!util::ParseBoolean(theUseCache))
-		{
-			conf->UseCacheForReads(false);
-		}
-		itsLogger.Warning("Key 'use_cache' is deprecated. Rename it to 'use_cache_for_reads'");
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		// Something was not found; do nothing
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing key use_cache: ") + e.what());
-	}
-
-	try
-	{
-		string theUseCache = pt.get<string>("use_cache_for_reads");
-
-		if (!util::ParseBoolean(theUseCache))
-		{
-			conf->UseCacheForReads(false);
-		}
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		// Something was not found; do nothing
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing key use_cache_for_reads: ") + e.what());
-	}
-
-	// Check global cache_limit option
-
-	try
-	{
-		int theCacheLimit = pt.get<int>("cache_limit");
-
-		if (theCacheLimit < 1)
-		{
-			itsLogger.Warning("cache_limit must be larger than 0");
-		}
-		else
-		{
-			conf->CacheLimit(theCacheLimit);
-			plugin::cache_pool::Instance()->CacheLimit(theCacheLimit);
-		}
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		// Something was not found; do nothing
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing key cache_limit: ") + e.what());
-	}
-
-	// Check global file_type option
-
-	try
-	{
-		string theFileType = boost::to_upper_copy(pt.get<string>("file_type"));
-
-		if (theFileType == "GRIB")
-		{
-			conf->itsOutputFileType = kGRIB;
-		}
-		else if (theFileType == "GRIB1")
-		{
-			conf->itsOutputFileType = kGRIB1;
-		}
-		else if (theFileType == "GRIB2")
-		{
-			conf->itsOutputFileType = kGRIB2;
-		}
-		else if (theFileType == "FQD" || theFileType == "QUERYDATA")
-		{
-			conf->itsOutputFileType = kQueryData;
-		}
-		else
-		{
-			throw runtime_error("Invalid option for 'file_type': " + theFileType);
-		}
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		// Something was not found; do nothing
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing key file_type: ") + e.what());
-	}
-
-	// Check global forecast_type option
-
-	auto g_forecastTypes = ParseForecastTypes(pt);
-
-	if (g_forecastTypes.empty())
-	{
-		// Default to deterministic
-		g_forecastTypes.push_back(forecast_type(kDeterministic));
-	}
-
-	/* Check dynamic_memory_allocation */
-
-	try
-	{
-		string theUseDynamicMemoryAllocation = pt.get<string>("dynamic_memory_allocation");
-
-		if (util::ParseBoolean(theUseDynamicMemoryAllocation))
-		{
-			conf->UseDynamicMemoryAllocation(true);
-		}
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		// Something was not found; do nothing
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing key dynamic_memory_allocation: ") + e.what());
-	}
-
-	/* Check storage_type */
-
-	try
-	{
-		string theStorageType = pt.get<string>("write_storage_type");
-
-		conf->WriteStorageType(HPStringToFileStorageType.at(theStorageType));
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		// Something was not found; do nothing
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing key storage_type: ") + e.what());
-	}
-
-	/* Check packing_type */
-
-	try
-	{
-		const string thePackingType = pt.get<string>("file_packing_type");
-
-		conf->PackingType(HPStringToPackingType.at(thePackingType));
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		// Something was not found; do nothing
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing key storage_type: ") + e.what());
-	}
-
-	/* Check allowed_missing_values */
-
-	try
-	{
-		string allowed = pt.get<string>("allowed_missing_values");
-		if (allowed.back() == '%')
-		{
-			allowed.pop_back();
-			conf->AllowedMissingValues(
-			    static_cast<size_t>(static_cast<double>(g_targetGrid->Size()) * 0.01 * stod(allowed)));
-		}
-		else
-		{
-			conf->AllowedMissingValues(stol(allowed));
-		}
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		// Something was not found; do nothing
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing key allowed_missing_values: ") + e.what());
-	}
+	// Only global scope
+	CacheLimit(pt, conf);
+	DynamicMemoryAllocation(pt, conf);
 
 	/*
 	 * Check processqueue.
@@ -426,242 +518,9 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 	for (boost::property_tree::ptree::value_type& element : pq)
 	{
-		auto times = g_times;
-		auto targetGrid = unique_ptr<grid>(g_targetGrid->Clone());
-
-		try
-		{
-			times = ParseTime(conf, element.second);
-		}
-		catch (...)
-		{
-			// do nothing
-		}
-
-		try
-		{
-			targetGrid = ParseAreaAndGrid(conf, element.second);
-		}
-		catch (...)
-		{
-			// do nothing
-		}
-
-		vector<level> g_levels;
-
-		try
-		{
-			g_levels = ParseLevels(element.second);
-		}
-		catch (exception& e)
-		{
-			throw runtime_error(string("Error parsing level information: ") + e.what());
-		}
-
-		// Check local use_cache_for_writes option
-
-		bool delayedUseCacheForWrites = conf->UseCacheForWrites();
-
-		try
-		{
-			string theUseCache = element.second.get<string>("use_cache_for_writes");
-
-			delayedUseCacheForWrites = util::ParseBoolean(theUseCache);
-		}
-		catch (boost::property_tree::ptree_bad_path& e)
-		{
-			// Something was not found; do nothing
-		}
-		catch (exception& e)
-		{
-			throw runtime_error(string("Error parsing use_cache_for_writes key: ") + e.what());
-		}
-
-		// Check local use_cache option
-
-		bool delayedUseCacheForReads = conf->UseCacheForReads();
-
-		try
-		{
-			string theUseCache = element.second.get<string>("use_cache");
-
-			delayedUseCacheForReads = util::ParseBoolean(theUseCache);
-
-			itsLogger.Warning("Key 'use_cache' is deprecated. Rename it to 'use_cache_for_reads'");
-		}
-		catch (boost::property_tree::ptree_bad_path& e)
-		{
-			// Something was not found; do nothing
-		}
-		catch (exception& e)
-		{
-			throw runtime_error(string("Error parsing use_cache key: ") + e.what());
-		}
-
-		try
-		{
-			string theUseCache = element.second.get<string>("use_cache_for_reads");
-
-			delayedUseCacheForReads = util::ParseBoolean(theUseCache);
-		}
-		catch (boost::property_tree::ptree_bad_path& e)
-		{
-			// Something was not found; do nothing
-		}
-		catch (exception& e)
-		{
-			throw runtime_error(string("Error parsing use_cache_for_reads key: ") + e.what());
-		}
-
-		// Check local file_type option
-
-		HPFileType delayedFileType = conf->itsOutputFileType;
-
-		// Check local async options
-
-		try
-		{
-			string async = element.second.get<string>("async");
-			if (async == "true")
-			{
-				conf->AsyncExecution(true);
-			}
-		}
-		catch (boost::property_tree::ptree_bad_path& e)
-		{
-			// Something was not found; do nothing
-		}
-		catch (exception& e)
-		{
-			throw runtime_error(string("Error parsing async key: ") + e.what());
-		}
-
-		try
-		{
-			string theFileType = boost::to_upper_copy(element.second.get<string>("file_type"));
-
-			if (theFileType == "GRIB")
-			{
-				delayedFileType = kGRIB;
-			}
-			else if (theFileType == "GRIB1")
-			{
-				delayedFileType = kGRIB1;
-			}
-			else if (theFileType == "GRIB2")
-			{
-				delayedFileType = kGRIB2;
-			}
-			else if (theFileType == "FQD" || theFileType == "QUERYDATA")
-			{
-				delayedFileType = kQueryData;
-			}
-			else
-			{
-				throw runtime_error("Invalid option for 'file_type': " + theFileType);
-			}
-		}
-		catch (boost::property_tree::ptree_bad_path& e)
-		{
-			// Something was not found; do nothing
-		}
-		catch (exception& e)
-		{
-			throw runtime_error(string("Error parsing meta information: ") + e.what());
-		}
-
-		// Check local file_write option
-
-		HPWriteMode delayedWriteMode = conf->WriteMode();
-		bool delayedWriteToDatabase = conf->WriteToDatabase();
-		bool delayedLegacyWriteMode = conf->LegacyWriteMode();
-		string delayedFilenameTemplate = conf->FilenameTemplate();
-		auto delayedParsed = ParseWriteMode(conf, element.second);
-		auto delayedPackingType = conf->PackingType();
-		auto delayedAllowedMissingValues = conf->AllowedMissingValues();
-
-		if (get<0>(delayedParsed) != kUnknown)
-		{
-			delayedWriteMode = get<0>(delayedParsed);
-			delayedWriteToDatabase = get<1>(delayedParsed);
-			delayedLegacyWriteMode = get<2>(delayedParsed);
-			delayedFilenameTemplate = get<3>(delayedParsed);
-		}
-
-		// Check local forecast_type option
-
-		auto forecastTypes = ParseForecastTypes(element.second);
-
-		if (forecastTypes.empty())
-		{
-			forecastTypes = g_forecastTypes;
-		}
+		const auto& pqOpts = element.second;
 
 		boost::property_tree::ptree& plugins = element.second.get_child("plugins");
-
-		// Check local producer option
-
-		vector<producer> delayedSourceProducers = conf->SourceProducers();
-
-		try
-		{
-			delayedSourceProducers = ParseSourceProducer(conf, element.second);
-		}
-		catch (...)
-		{
-		}
-
-		producer delayedTargetProducer = conf->TargetProducer();
-
-		try
-		{
-			delayedTargetProducer = ParseTargetProducer(conf, element.second);
-		}
-		catch (...)
-		{
-		}
-
-		/* Check local packing_type option */
-
-		try
-		{
-			const string thePackingType = element.second.get<string>("file_packing_type");
-
-			delayedPackingType = HPStringToPackingType.at(thePackingType);
-		}
-		catch (boost::property_tree::ptree_bad_path& e)
-		{
-			// Something was not found; do nothing
-		}
-		catch (exception& e)
-		{
-			throw runtime_error(string("Error parsing key storage_type: ") + e.what());
-		}
-
-		/* Check local allowed_missing_values */
-
-		try
-		{
-			string allowed = element.second.get<string>("allowed_missing_values");
-			if (allowed.back() == '%')
-			{
-				allowed.pop_back();
-				delayedAllowedMissingValues =
-				    static_cast<size_t>(static_cast<double>(g_targetGrid->Size()) * 0.01 * stod(allowed));
-			}
-			else
-			{
-				delayedAllowedMissingValues = stol(allowed);
-			}
-		}
-		catch (boost::property_tree::ptree_bad_path& e)
-		{
-			// Something was not found; do nothing
-		}
-		catch (exception& e)
-		{
-			throw runtime_error(string("Error parsing key allowed_missing_values: ") + e.what());
-		}
 
 		if (plugins.empty())
 		{
@@ -670,31 +529,41 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 		for (boost::property_tree::ptree::value_type& plugin : plugins)
 		{
-			shared_ptr<plugin_configuration> pc = make_shared<plugin_configuration>(*conf);
+			const auto& pluginOpts = plugin.second;
 
-			pc->itsTimes = times;
-			pc->itsForecastTypes = forecastTypes;
-			pc->itsLevels = g_levels;
-
-			pc->itsBaseGrid = unique_ptr<grid>(targetGrid->Clone());
-			pc->UseCacheForReads(delayedUseCacheForReads);
-			pc->UseCacheForWrites(delayedUseCacheForWrites);
-			pc->itsOutputFileType = delayedFileType;
-			pc->WriteMode(delayedWriteMode);
-			pc->WriteToDatabase(delayedWriteToDatabase);
-			pc->LegacyWriteMode(delayedLegacyWriteMode);
-			pc->FilenameTemplate(delayedFilenameTemplate);
-			pc->SourceProducers(delayedSourceProducers);
-			pc->TargetProducer(delayedTargetProducer);
-			pc->PackingType(delayedPackingType);
-			pc->AllowedMissingValues(delayedAllowedMissingValues);
-
-			if (plugin.second.empty())
+			if (pluginOpts.empty())
 			{
 				throw runtime_error(ClassName() + ": plugin definition is empty");
 			}
 
-			for (boost::property_tree::ptree::value_type& kv : plugin.second)
+			shared_ptr<plugin_configuration> pc = make_shared<plugin_configuration>(*conf);
+			auto pc_as_conf = std::dynamic_pointer_cast<configuration>(pc);
+
+			// First check options from "processqueue" scope
+			// {
+			//   "leveltype" : "ground",
+			//   "levels" : "0",
+			//   "plugins" : [ ... ]
+			// }
+
+			CheckCommonOptions(pqOpts, pc_as_conf);
+			AsyncExecution(pqOpts, pc_as_conf);
+			Levels(pqOpts, pc_as_conf);
+
+			// Then check options from inside one plugin
+			// plugins : [
+			//   {
+			//     "name" : "windvector",
+			//     "file_type" : "grib2",
+			//     "some_local_option_specific_to_this_plugin" : ...
+			//   }
+			// ]
+
+			CheckCommonOptions(pluginOpts, pc_as_conf);
+			AsyncExecution(pluginOpts, pc_as_conf);
+
+			// Loop through those "local options"
+			for (const boost::property_tree::ptree::value_type& kv : pluginOpts)
 			{
 				string key = kv.first;
 				string value;
@@ -762,7 +631,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 				{
 					if (value.empty())
 					{
-						for (boost::property_tree::ptree::value_type& listval : kv.second)
+						for (const boost::property_tree::ptree::value_type& listval : kv.second)
 						{
 							// pc->AddOption(key, value);
 							pc->AddOption(key, himan::util::Expand(listval.second.get<string>("")));
@@ -779,8 +648,6 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 			{
 				throw runtime_error(ClassName() + ": plugin name not found from configuration");
 			}
-
-			ASSERT(pc.unique());
 
 			pc->OrdinalNumber(static_cast<unsigned int>(pluginContainer.size()));
 			pc->RelativeOrdinalNumber(static_cast<unsigned int>(
@@ -831,8 +698,8 @@ raw_time GetLatestOriginDateTime(const shared_ptr<configuration> conf, const str
 	                    to_string(sourceProducer.Id()));
 }
 
-vector<forecast_time> ParseSteps(shared_ptr<configuration>& conf, const boost::property_tree::ptree& pt,
-                                 const vector<raw_time>& originDateTimes)
+void ParseSteps(const boost::property_tree::ptree& pt, shared_ptr<configuration>& conf,
+                const vector<raw_time>& originDateTimes)
 {
 	auto GenerateList = [&originDateTimes](const time_duration& start, const time_duration& stop,
 	                                       const time_duration& step) {
@@ -876,7 +743,8 @@ vector<forecast_time> ParseSteps(shared_ptr<configuration>& conf, const boost::p
 				times.push_back(forecast_time(originDateTime, time_duration(str)));
 			}
 		}
-		return times;
+		conf->Times(times);
+		return;
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
@@ -894,7 +762,8 @@ vector<forecast_time> ParseSteps(shared_ptr<configuration>& conf, const boost::p
 
 		conf->ForecastStep(step);
 
-		return GenerateList(start, stop, step);
+		conf->Times(GenerateList(start, stop, step));
+		return;
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
@@ -917,7 +786,8 @@ vector<forecast_time> ParseSteps(shared_ptr<configuration>& conf, const boost::p
 			}
 		}
 
-		return times;
+		conf->Times(times);
+		return;
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
@@ -937,8 +807,8 @@ vector<forecast_time> ParseSteps(shared_ptr<configuration>& conf, const boost::p
 		auto step = time_duration(pt.get<string>("step") + ":00");
 
 		conf->ForecastStep(step);
-
-		return GenerateList(start, stop, step);
+		conf->Times(GenerateList(start, stop, step));
+		return;
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
@@ -957,69 +827,12 @@ vector<forecast_time> ParseSteps(shared_ptr<configuration>& conf, const boost::p
 		auto step = time_duration("00:" + pt.get<string>("step"));
 
 		conf->ForecastStep(step);
-
-		return GenerateList(start, stop, step);
+		conf->Times(GenerateList(start, stop, step));
 	}
 	catch (exception& e)
 	{
 		throw runtime_error(string("Error parsing time information: ") + e.what());
 	}
-}
-
-vector<forecast_time> ParseTime(shared_ptr<configuration> conf, const boost::property_tree::ptree& pt)
-{
-	vector<forecast_time> theTimes;
-
-	/* Check origin time */
-	const string mask = "%Y-%m-%d %H:%M:%S";
-
-	std::vector<raw_time> originDateTimes;
-
-	try
-	{
-		auto originDateTime = pt.get<string>("origintime");
-
-		boost::algorithm::to_lower(originDateTime);
-
-		if (originDateTime.find("latest") != string::npos)
-		{
-			if (conf->DatabaseType() == kNoDatabase)
-			{
-				throw std::invalid_argument("Unable to get latest time from database when no database mode is enabled");
-			}
-			originDateTimes.push_back(GetLatestOriginDateTime(conf, originDateTime));
-		}
-		else
-		{
-			originDateTimes.push_back(raw_time(originDateTime, mask));
-		}
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		try
-		{
-			auto datesList = himan::util::Split(pt.get<string>("origintimes"), ",", false);
-
-			for (const auto& dateString : datesList)
-			{
-				originDateTimes.push_back(raw_time(dateString, mask));
-			}
-		}
-		catch (boost::property_tree::ptree_bad_path& ee)
-		{
-			throw runtime_error("Origin datetime not found with keys 'origintime' or 'origindatetimes'");
-		}
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing origin time information: ") + e.what());
-	}
-
-	ASSERT(!originDateTimes.empty());
-
-	/* Check time steps */
-
-	return ParseSteps(conf, pt, originDateTimes);
 }
 
 unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::property_tree::ptree& pt)
@@ -1159,61 +972,9 @@ unique_ptr<grid> ParseAreaAndGridFromPoints(const boost::property_tree::ptree& p
 	return g;
 }
 
-unique_ptr<grid> ParseAreaAndGrid(const shared_ptr<configuration>& conf, const boost::property_tree::ptree& pt)
+unique_ptr<grid> ParseAreaAndGridFromBbox(const boost::property_tree::ptree& pt)
 {
-	/*
-	 * Parse area and grid from different possible options.
-	 * Order or parsing:
-	 *
-	 * 1. 'source_geom_name': this is used in fetching data, it's not used to create an area instance
-	 * 2. radon style geom name: 'target_geom_name'
-	 * 3. irregular grid: 'points' and 'stations'
-	 * 4. bounding box: 'bbox'
-	 * 5. manual definition:
-	 * -> 'projection',
-	 * -> 'bottom_left_longitude', 'bottom_left_latitude',
-	 * -> 'top_right_longitude', 'top_right_latitude'
-	 * -> 'orientation'
-	 * -> 'south_pole_longitude', 'south_pole_latitude'
-	 * -> 'ni', 'nj'
-	 * -> 'scanning_mode'
-	 *
-	 */
-
-	// 1. Check for source geom name
-
-	try
-	{
-		conf->SourceGeomNames(himan::util::Split(pt.get<string>("source_geom_name"), ",", false));
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		// Something was not found; do nothing
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing area information: ") + e.what());
-	}
-
-	// 2. radon-style geom_name
-
-	auto g = ParseAreaAndGridFromDatabase(*conf, pt);
-
-	if (g)
-	{
-		return g;
-	}
-
-	// 3. Points
-
-	auto ig = ParseAreaAndGridFromPoints(pt);
-
-	if (ig)
-	{
-		return ig;
-	}
-
-	// 4. Target geometry is still not set, check for bbox
+	unique_ptr<grid> g;
 
 	try
 	{
@@ -1258,7 +1019,12 @@ unique_ptr<grid> ParseAreaAndGrid(const shared_ptr<configuration>& conf, const b
 		throw runtime_error(string("Error parsing bbox: ") + e.what());
 	}
 
-	// 5. Check for manual definition of area
+	return nullptr;
+}
+
+unique_ptr<grid> ParseAreaAndGridFromManualDefinition(const boost::property_tree::ptree& pt)
+{
+	unique_ptr<grid> g;
 
 	try
 	{
@@ -1274,7 +1040,7 @@ unique_ptr<grid> ParseAreaAndGrid(const shared_ptr<configuration>& conf, const b
 		if (projection == "latlon")
 		{
 			// clang-format off
-			return unique_ptr<latitude_longitude_grid>(new latitude_longitude_grid(
+			g = unique_ptr<latitude_longitude_grid>(new latitude_longitude_grid(
 			    mode,
 			    point(pt.get<double>("bottom_left_longitude"), pt.get<double>("bottom_left_latitude")),
 			    point(pt.get<double>("top_right_longitude"), pt.get<double>("top_right_latitude")),
@@ -1286,7 +1052,7 @@ unique_ptr<grid> ParseAreaAndGrid(const shared_ptr<configuration>& conf, const b
 		else if (projection == "rotated_latlon")
 		{
 			// clang-format off
-			return unique_ptr<rotated_latitude_longitude_grid>(new rotated_latitude_longitude_grid(
+			g = unique_ptr<rotated_latitude_longitude_grid>(new rotated_latitude_longitude_grid(
 			    mode,
 			    point(pt.get<double>("bottom_left_longitude"), pt.get<double>("bottom_left_latitude")),
 			    point(pt.get<double>("top_right_longitude"), pt.get<double>("top_right_latitude")),
@@ -1299,7 +1065,7 @@ unique_ptr<grid> ParseAreaAndGrid(const shared_ptr<configuration>& conf, const b
 		else if (projection == "stereographic")
 		{
 			// clang-format off
-			return unique_ptr<stereographic_grid>(new stereographic_grid(
+			g = unique_ptr<stereographic_grid>(new stereographic_grid(
 			    mode,
 			    point(pt.get<double>("first_point_longitude"), pt.get<double>("first_point_latitude")),
 			    pt.get<size_t>("ni"),
@@ -1319,35 +1085,105 @@ unique_ptr<grid> ParseAreaAndGrid(const shared_ptr<configuration>& conf, const b
 	}
 	catch (boost::property_tree::ptree_bad_path& e)
 	{
-		throw runtime_error(e.what());
 	}
 	catch (exception& e)
 	{
 		throw runtime_error(string("Error parsing area: ") + e.what());
 	}
+
+	return std::move(g);
 }
 
-std::vector<producer> ParseSourceProducer(const shared_ptr<configuration>& conf, const boost::property_tree::ptree& pt)
+void AreaAndGrid(const boost::property_tree::ptree& pt, const shared_ptr<configuration>& conf)
 {
-	std::vector<producer> sourceProducers;
-	vector<string> sourceProducersStr = himan::util::Split(pt.get<string>("source_producer"), ",", false);
+	/*
+	 * Parse area and grid from different possible options.
+	 * Order or parsing:
+	 *
+	 * 1. 'source_geom_name': this is used in fetching data, it's not used to create an area instance
+	 * 2. radon style geom name: 'target_geom_name'
+	 * 3. irregular grid: 'points' and 'stations'
+	 * 4. bounding box: 'bbox'
+	 * 5. manual definition:
+	 * -> 'projection',
+	 * -> 'bottom_left_longitude', 'bottom_left_latitude',
+	 * -> 'top_right_longitude', 'top_right_latitude'
+	 * -> 'orientation'
+	 * -> 'south_pole_longitude', 'south_pole_latitude'
+	 * -> 'ni', 'nj'
+	 * -> 'scanning_mode'
+	 *
+	 */
 
-	const HPDatabaseType dbtype = conf->DatabaseType();
+	// 1. Check for source geom name
 
-	if (dbtype == kRadon)
+	if (auto sourceGeom = ReadElement<string>(pt, "source_geom_name"))
 	{
-		auto r = GET_PLUGIN(radon);
+		conf->SourceGeomNames(himan::util::Split(sourceGeom.get(), ",", false));
+	}
 
-		for (const auto& prodstr : sourceProducersStr)
+	// 2. radon-style geom_name
+
+	std::unique_ptr<grid> g;
+
+	if (g = ParseAreaAndGridFromDatabase(*conf, pt))
+	{
+		conf->BaseGrid(std::move(g));
+		return;
+	}
+
+	// 3. Points
+
+	if (g = ParseAreaAndGridFromPoints(pt))
+	{
+		conf->BaseGrid(std::move(g));
+		return;
+	}
+
+	// 4. Target geometry is still not set, check for bbox
+
+	if (g = ParseAreaAndGridFromBbox(pt))
+	{
+		conf->BaseGrid(std::move(g));
+		return;
+	}
+
+	// 5. Check for manual definition of area
+
+	if (g = ParseAreaAndGridFromManualDefinition(pt))
+	{
+		conf->BaseGrid(std::move(g));
+		return;
+	}
+}
+
+void SourceProducer(const boost::property_tree::ptree& pt, const shared_ptr<configuration>& conf)
+{
+	if (auto sp = ReadElement<string>(pt, "source_producer"))
+	{
+		std::vector<producer> sourceProducers;
+		vector<string> sourceProducersStr = himan::util::Split(sp.get(), ",", false);
+
+		const HPDatabaseType dbtype = conf->DatabaseType();
+
+		if (dbtype == kRadon)
 		{
-			long pid = stol(prodstr);
+			auto r = GET_PLUGIN(radon);
 
-			producer prod(pid);
-
-			map<string, string> prodInfo = r->RadonDB().GetProducerDefinition(static_cast<unsigned long>(pid));
-
-			if (!prodInfo.empty())
+			for (const auto& prodstr : sourceProducersStr)
 			{
+				long pid = stol(prodstr);
+
+				producer prod(pid);
+
+				map<string, string> prodInfo = r->RadonDB().GetProducerDefinition(static_cast<unsigned long>(pid));
+
+				if (prodInfo.empty())
+				{
+					itsLogger.Fatal("Failed to find source producer from Radon: " + prodstr);
+					himan::Abort();
+				}
+
 				prod.Name(prodInfo["ref_prod"]);
 
 				if (!prodInfo["ident_id"].empty())
@@ -1360,91 +1196,62 @@ std::vector<producer> ParseSourceProducer(const shared_ptr<configuration>& conf,
 
 				sourceProducers.push_back(prod);
 			}
-			else
+		}
+		else if (dbtype != kNoDatabase && sourceProducers.size() == 0)
+		{
+			itsLogger.Fatal("Source producer information invalid");
+			himan::Abort();
+		}
+		else if (dbtype == kNoDatabase)
+		{
+			for (const auto& prodstr : sourceProducersStr)
 			{
-				itsLogger.Warning("Failed to find source producer from Radon: " + prodstr);
+				sourceProducers.push_back(producer(stoi(prodstr)));
 			}
 		}
-	}
-	else if (dbtype != kNoDatabase && sourceProducers.size() == 0)
-	{
-		itsLogger.Fatal("Source producer information was not found from database");
-		himan::Abort();
-	}
-	else if (dbtype == kNoDatabase)
-	{
-		for (const auto& prodstr : sourceProducersStr)
-		{
-			sourceProducers.push_back(producer(stoi(prodstr)));
-		}
-	}
 
-	return sourceProducers;
+		conf->SourceProducers(sourceProducers);
+	}
 }
 
-producer ParseTargetProducer(const shared_ptr<configuration>& conf, const boost::property_tree::ptree& pt)
+void TargetProducer(const boost::property_tree::ptree& pt, const shared_ptr<configuration>& conf)
 {
-	const HPDatabaseType dbtype = conf->DatabaseType();
-
-	/*
-	 * Target producer is also set to target info; source infos (and producers) are created
-	 * as data is fetched from files.
-	 */
-
-	long pid = stol(pt.get<string>("target_producer"));
-	producer prod(pid);
-
-	auto r = GET_PLUGIN(radon);
-	auto prodInfo = r->RadonDB().GetProducerDefinition(static_cast<unsigned long>(pid));
-
-	if (!prodInfo.empty())
+	if (auto tp = ReadElement<string>(pt, "target_producer"))
 	{
-		if (prodInfo["ident_id"].empty() || prodInfo["model_id"].empty())
+		long pid = stol(tp.get());
+		producer prod(pid);
+
+		auto r = GET_PLUGIN(radon);
+		auto prodInfo = r->RadonDB().GetProducerDefinition(static_cast<unsigned long>(pid));
+
+		if (!prodInfo.empty())
 		{
-			itsLogger.Warning("Centre or ident information not found for producer " + prodInfo["ref_prod"]);
+			if (prodInfo["ident_id"].empty() || prodInfo["model_id"].empty())
+			{
+				itsLogger.Warning("Centre or ident information not found for producer " + prodInfo["ref_prod"]);
+			}
+			else
+			{
+				prod.Centre(stol(prodInfo["ident_id"]));
+				prod.Process(stol(prodInfo["model_id"]));
+			}
+
+			prod.Name(prodInfo["ref_prod"]);
+
+			if (prodInfo["producer_class"].empty())
+			{
+				prod.Class(kGridClass);
+			}
+			else
+			{
+				prod.Class(static_cast<HPProducerClass>(stoi(prodInfo["producer_class"])));
+			}
 		}
-		else
+		else if (conf->DatabaseType() != kNoDatabase)
 		{
-			prod.Centre(stol(prodInfo["ident_id"]));
-			prod.Process(stol(prodInfo["model_id"]));
+			itsLogger.Warning("Unknown target producer: " + pt.get<string>("target_producer"));
 		}
-
-		prod.Name(prodInfo["ref_prod"]);
-
-		if (prodInfo["producer_class"].empty())
-		{
-			prod.Class(kGridClass);
-		}
-		else
-		{
-			prod.Class(static_cast<HPProducerClass>(stoi(prodInfo["producer_class"])));
-		}
-	}
-	else if (dbtype != kNoDatabase)
-	{
-		itsLogger.Warning("Unknown target producer: " + pt.get<string>("target_producer"));
-	}
-
-	return prod;
-}
-
-vector<level> ParseLevels(const boost::property_tree::ptree& pt)
-{
-	try
-	{
-		string levelTypeStr = pt.get<string>("leveltype");
-		string levelValuesStr = pt.get<string>("levels");
-
-		return LevelsFromString(levelTypeStr, levelValuesStr);
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		throw runtime_error(e.what());
-		// Something was not found; do nothing
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(e.what());
+		conf->TargetProducer(prod);
 	}
 }
 
@@ -1483,192 +1290,4 @@ vector<level> LevelsFromString(const string& levelType, const string& levelValue
 	ASSERT(!levels.empty());
 
 	return levels;
-}
-
-vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt)
-{
-	vector<forecast_type> forecastTypes;
-
-	try
-	{
-		vector<string> types = himan::util::Split(pt.get<string>("forecast_type"), ",", false);
-
-		for (string& type : types)
-		{
-			boost::algorithm::to_lower(type);
-			HPForecastType forecastType;
-
-			if (type.find("pf") != string::npos)
-			{
-				forecastType = kEpsPerturbation;
-				string list = "";
-				for (size_t i = 2; i < type.size(); i++)
-					list += type[i];
-
-				vector<string> range = himan::util::Split(list, "-", false);
-
-				if (range.size() == 1)
-				{
-					forecastTypes.push_back(forecast_type(forecastType, stod(range[0])));
-				}
-				else
-				{
-					ASSERT(range.size() == 2);
-
-					int start = stoi(range[0]);
-					int stop = stoi(range[1]);
-
-					while (start <= stop)
-					{
-						forecastTypes.push_back(forecast_type(forecastType, start));
-						start++;
-					}
-				}
-			}
-			else
-			{
-				if (type == "cf")
-				{
-					forecastTypes.push_back(forecast_type(kEpsControl, 0));
-				}
-				else if (type == "det" || type == "deterministic")
-				{
-					forecastTypes.push_back(forecast_type(kDeterministic));
-				}
-				else if (type == "an" || type == "analysis")
-				{
-					forecastTypes.push_back(forecast_type(kAnalysis));
-				}
-				else if (type == "sp" || type == "statistical")
-				{
-					forecastTypes.push_back(forecast_type(kStatisticalProcessing));
-				}
-				else
-				{
-					throw runtime_error("Invalid forecast_type: " + type);
-				}
-			}
-		}
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-	}
-	catch (const boost::exception& e)
-	{
-		throw runtime_error(string("Invalid forecast_type value"));
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing key forecast_type: ") + e.what());
-	}
-
-	return forecastTypes;
-}
-
-tuple<HPWriteMode, bool, bool, string> ParseWriteMode(const shared_ptr<configuration>& conf,
-                                                      const boost::property_tree::ptree& pt)
-{
-	HPWriteMode writeMode = kUnknown;
-	bool writeToDatabase = false;
-	bool legacyWriteMode = false;
-
-	// legacy way of defining things
-
-	try
-	{
-		string theFileWriteOption = pt.get<string>("file_write");
-
-		if (theFileWriteOption == "database")
-		{
-			writeMode = kSingleGridToAFile;
-			writeToDatabase = true;
-		}
-		else if (theFileWriteOption == "single")
-		{
-			writeMode = kAllGridsToAFile;
-			writeToDatabase = false;
-		}
-		else if (theFileWriteOption == "multiple")
-		{
-			writeMode = kSingleGridToAFile;
-			writeToDatabase = false;
-		}
-		else if (theFileWriteOption == "cache only")
-		{
-			writeMode = kNoFileWrite;
-			writeToDatabase = false;
-		}
-		else
-		{
-			throw runtime_error("Invalid value for file_write: " + theFileWriteOption);
-		}
-
-		legacyWriteMode = true;
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		// Something was not found; do nothing
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing meta information: ") + e.what());
-	}
-
-	// new way, will overwrite legacy if both are defined
-
-	try
-	{
-		string theWriteMode = pt.get<string>("write_mode");
-
-		if (theWriteMode == "all")
-		{
-			writeMode = kAllGridsToAFile;
-		}
-		else if (theWriteMode == "few")
-		{
-			writeMode = kFewGridsToAFile;
-		}
-		else if (theWriteMode == "single")
-		{
-			writeMode = kSingleGridToAFile;
-		}
-		else if (theWriteMode == "no")
-		{
-			writeMode = kNoFileWrite;
-		}
-		else
-		{
-			throw runtime_error("Invalid value for file_mode: " + theWriteMode);
-		}
-
-		writeToDatabase = util::ParseBoolean(pt.get<string>("write_to_database"));
-
-		legacyWriteMode = false;
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		// Something was not found; do nothing
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing meta information: ") + e.what());
-	}
-
-	// filename template
-
-	string filenameTemplate("");
-	try
-	{
-		filenameTemplate = pt.get<string>("filename_template");
-	}
-	catch (boost::property_tree::ptree_bad_path& e)
-	{
-		// Something was not found; do nothing
-	}
-	catch (exception& e)
-	{
-		throw runtime_error(string("Error parsing meta information: ") + e.what());
-	}
-
-	return make_tuple(writeMode, writeToDatabase, legacyWriteMode, filenameTemplate);
 }
