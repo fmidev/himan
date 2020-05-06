@@ -11,6 +11,7 @@
 
 #include "cache.h"
 #include "csv.h"
+#include "geotiff.h"
 #include "grib.h"
 #include "param.h"
 #include "querydata.h"
@@ -412,6 +413,13 @@ vector<shared_ptr<info<T>>> fetcher::FromFile(const vector<file_information>& fi
 				break;
 			}
 
+			case kGeoTIFF:
+			{
+				auto g = GET_PLUGIN(geotiff);
+				curInfos = g->FromFile<T>(inputFile, options);
+				break;
+			}
+
 			default:
 				// Unknown file type, cannot proceed
 				throw runtime_error("Input file is neither GRIB, NetCDF, QueryData nor CSV");
@@ -655,6 +663,7 @@ pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAuxili
 			f.file_type = util::FileType(file);
 			f.offset = boost::none;
 			f.length = boost::none;
+			f.message_no = boost::none;
 			f.storage_type = HPFileStorageType::kLocalFileSystem;
 
 			files.push_back(f);
