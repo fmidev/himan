@@ -70,8 +70,23 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 	// Get the latest data from producer 181.
 
 	info_t TInfo = Fetch(forecastTime, level(kHeight, 2), TParam, forecastType, false);
+	if (!TInfo)
+	{
+		myThreadedLogger.Error("No T-K data found.");
+		return;
+	}
 	info_t TDInfo = Fetch(forecastTime, level(kHeight, 2), TDParam, forecastType, false);
+        if (!TDInfo)
+        {
+		myThreadedLogger.Error("No TD-K data found.");
+                return;
+        }
 	info_t NInfo = Fetch(forecastTime, level(kHeight, 0), NParam, forecastType, false);
+        if (!NInfo)
+        {
+		myThreadedLogger.Error("No N-PRCNT data found.");
+                return;
+        }
 
 	// Change forecast origin time for producer 131 due to varying origin time with producer 181.
 
@@ -97,7 +112,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 		{
 			if (e == kFileDataNotFound)
 			{
-				myThreadedLogger.Error("No data found.");
+				myThreadedLogger.Error("No TG-K data found.");
 				forecastTime.OriginDateTime().Adjust(kHourResolution, -1);
 				i++;
 			}
@@ -120,7 +135,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 	{
 		if (e == kFileDataNotFound)
 		{
-			myThreadedLogger.Error("No data found.");
+			myThreadedLogger.Error("No FFG-MS data found.");
 		}
 		return;
 	}
@@ -128,6 +143,8 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 	// Get the latest IC-0TO1.
 
 	info_t ICNInfo;
+
+	bool ICN_forecast = true;
 
 	// Change forecast origin time to 00 or 12 if necessary.
 
@@ -152,9 +169,18 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 	{
 		if (e == kFileDataNotFound)
 		{
-			myThreadedLogger.Error("No data found.");
+			myThreadedLogger.Error("No IC-0TO1 data found.");
+			ICN_forecast = false;
 		}
-		return;
+	}
+
+	// Create ICNInfo when no forecast found. 
+
+	if (!ICNInfo)
+	{
+		ICNInfo = make_shared<info<double>>(forecastType, forecastTime, level(kGround, 0), ICNParam);
+		ICNInfo->Producer(myTargetInfo->Producer());
+		ICNInfo->Create(myTargetInfo->Base(), true);
 	}
 
 	// Get the latest LC-0TO1, available only for hour 00.
@@ -173,7 +199,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 	{
 		if (e == kFileDataNotFound)
 		{
-			myThreadedLogger.Error("No data found.");
+			myThreadedLogger.Error("No LC-0TO1 data found.");
 		}
 		return;
 	}
@@ -200,7 +226,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 		{
 			if (e == kFileDataNotFound)
 			{
-				myThreadedLogger.Error("No data found.");	
+				myThreadedLogger.Error("No RADGLO-WM2 data found.");	
 				forecastTime.OriginDateTime().Adjust(kHourResolution, -1);
 				i++;
 			}
@@ -268,6 +294,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 	forecastTime = original_forecastTime;
 	i = 0;
 	success = false;
+	bool MEPS_forecast = true;
 
 	while (success == false)
 	{
@@ -311,7 +338,8 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 			} 
 			if (i > 30)
 			{
-				return;
+				MEPS_forecast = false;
+				break;
 			}
 		}
 		catch (...)
@@ -320,8 +348,16 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 		}
 	}
 
-	if (!TInfo || !TDInfo || !TGInfo || !WGInfo || !NInfo || !RADInfo || !T0ECInfo || !T0MEPSInfo || !ICNInfo ||
-	    !LCInfo)
+	// Create T0MEPSInfo when no forecast found.
+
+	if (!T0MEPSInfo)
+	{
+		T0MEPSInfo = make_shared<info<double>>(stat_type, original_forecastTime, level(kHeight, 2), T0Param);
+		T0MEPSInfo->Producer(myTargetInfo->Producer());
+		T0MEPSInfo->Create(myTargetInfo->Base(), true);
+	}
+
+	if (!TInfo || !TDInfo || !TGInfo || !WGInfo || !NInfo || !ICNInfo || !LCInfo || !RADInfo || !T0ECInfo || !T0MEPSInfo)
 	{
 		myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
 		                         static_cast<string>(forecastLevel));
@@ -330,7 +366,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 	string deviceType = "CPU";
 
-	LOCKSTEP(myTargetInfo, TInfo, TDInfo, TGInfo, WGInfo, NInfo, RADInfo, T0ECInfo, T0MEPSInfo, ICNInfo, LCInfo)
+	LOCKSTEP(myTargetInfo, TInfo, TDInfo, TGInfo, WGInfo, NInfo, ICNInfo, LCInfo, RADInfo, T0ECInfo, T0MEPSInfo)
 
 	{
 		double T = TInfo->Value() - himan::constants::kKelvin;
@@ -338,13 +374,33 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 		double TG = TGInfo->Value() - himan::constants::kKelvin;
 		double WG = WGInfo->Value();
 		double N = NInfo->Value();
+		double ICN;
+		if (!ICN_forecast) // No forecast available.
+		{
+			ICN = kHPMissingValue;
+		}
+		else
+		{
+			ICN = ICNInfo->Value();
+		}
+		double LC = LCInfo->Value();
 		double RAD = RADInfo->Value();
 		double T0EC = T0ECInfo->Value();
-		double T0MEPS = T0MEPSInfo->Value();
-		double ICN = ICNInfo->Value();
-		double LC = LCInfo->Value();
+		double T0MEPS;
+		if (!MEPS_forecast) // No forecast available.
+		{
+			T0MEPS = kHPMissingValue;
+		}
+		else 
+		{
+			T0MEPS = T0MEPSInfo->Value();
+			if  (IsMissingValue({T0MEPS})) // MEPS hour 66 case.
+			{
+				T0MEPS = kHPMissingValue;
+			}
+		}
 
-		if (IsMissingValue({T, TD, TG, WG, N, RAD, T0EC, T0MEPS, ICN, LC}))
+		if (IsMissingValue({T, TD, TG, WG, N, ICN, LC, RAD, T0EC, T0MEPS}))
                 {
                         continue;
                 }

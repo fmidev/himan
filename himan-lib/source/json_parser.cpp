@@ -385,6 +385,31 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		throw runtime_error(string("Error parsing key storage_type: ") + e.what());
 	}
 
+	/* Check allowed_missing_values */
+
+	try
+	{
+		string allowed = pt.get<string>("allowed_missing_values");
+		if (allowed.back() == '%')
+		{
+			allowed.pop_back();
+			conf->AllowedMissingValues(
+			    static_cast<size_t>(static_cast<double>(g_targetGrid->Size()) * 0.01 * stod(allowed)));
+		}
+		else
+		{
+			conf->AllowedMissingValues(stol(allowed));
+		}
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+		// Something was not found; do nothing
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing key allowed_missing_values: ") + e.what());
+	}
+
 	/*
 	 * Check processqueue.
 	 *
@@ -553,6 +578,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		string delayedFilenameTemplate = conf->FilenameTemplate();
 		auto delayedParsed = ParseWriteMode(conf, element.second);
 		auto delayedPackingType = conf->PackingType();
+		auto delayedAllowedMissingValues = conf->AllowedMissingValues();
 
 		if (get<0>(delayedParsed) != kUnknown)
 		{
@@ -599,7 +625,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 		try
 		{
-			const string thePackingType = pt.get<string>("file_packing_type");
+			const string thePackingType = element.second.get<string>("file_packing_type");
 
 			delayedPackingType = HPStringToPackingType.at(thePackingType);
 		}
@@ -610,6 +636,31 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 		catch (exception& e)
 		{
 			throw runtime_error(string("Error parsing key storage_type: ") + e.what());
+		}
+
+		/* Check local allowed_missing_values */
+
+		try
+		{
+			string allowed = element.second.get<string>("allowed_missing_values");
+			if (allowed.back() == '%')
+			{
+				allowed.pop_back();
+				delayedAllowedMissingValues =
+				    static_cast<size_t>(static_cast<double>(g_targetGrid->Size()) * 0.01 * stod(allowed));
+			}
+			else
+			{
+				delayedAllowedMissingValues = stol(allowed);
+			}
+		}
+		catch (boost::property_tree::ptree_bad_path& e)
+		{
+			// Something was not found; do nothing
+		}
+		catch (exception& e)
+		{
+			throw runtime_error(string("Error parsing key allowed_missing_values: ") + e.what());
 		}
 
 		if (plugins.empty())
@@ -636,6 +687,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 			pc->SourceProducers(delayedSourceProducers);
 			pc->TargetProducer(delayedTargetProducer);
 			pc->PackingType(delayedPackingType);
+			pc->AllowedMissingValues(delayedAllowedMissingValues);
 
 			if (plugin.second.empty())
 			{

@@ -205,6 +205,7 @@ void plugin_configuration::WriteStatistics()
 	     << setw(30) << left << "Writing time:" << setw(7) << right << itsStatistics->itsWritingTime << " ms ("
 	     << setw(2) << writeP << "%)" << endl
 	     << setw(30) << left << "Values:" << itsStatistics->itsValueCount << endl
+	     << setw(30) << left << "Allowed missing values:" << itsAllowedMissingValues << endl
 	     << setw(30) << left << "Missing values:" << itsStatistics->itsMissingValueCount << " ("
 	     << static_cast<int>(100 * static_cast<double>(itsStatistics->itsMissingValueCount) /
 	                         static_cast<double>(itsStatistics->itsValueCount))

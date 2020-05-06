@@ -373,7 +373,7 @@ string DetermineDefaultFileName(const info<T>& info, const plugin_configuration&
 	}
 	else if (conf.WriteMode() == kFewGridsToAFile)
 	{
-		ss << "/fc{analysis_time:%Y%m%d%H%M}+{step:%03hh%02Mm}_" << conf.Name() << "#" << conf.RelativeOrdinalNumber()
+		ss << "fc{analysis_time:%Y%m%d%H%M}+{step:%03hh%02Mm}_" << conf.Name() << "#" << conf.RelativeOrdinalNumber()
 		   << ".{file_type}";
 	}
 	else if (conf.WriteMode() == kAllGridsToAFile)
@@ -388,7 +388,7 @@ string DetermineDefaultFileName(const info<T>& info, const plugin_configuration&
 		}
 		else
 		{
-			ss << "/fc{analysis_time:%Y%m%d%H%M}+{step:%03hh%02Mm}.{file_type}";
+			ss << "fc{analysis_time:%Y%m%d%H%M}+{step:%03hh%02Mm}.{file_type}";
 		}
 	}
 
@@ -456,7 +456,10 @@ himan::HPFileType util::FileType(const string& theFile)
 	{
 		return kNetCDF;
 	}
-
+	else if (ext == ".tif" || ext == ".TIFF")
+	{
+		return kGeoTIFF;
+	}
 	// Try the check the file header; CSV is not possible anymore
 
 	ifstream f(theFile.c_str(), ios::in | ios::binary);
