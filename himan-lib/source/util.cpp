@@ -456,7 +456,10 @@ himan::HPFileType util::FileType(const string& theFile)
 	{
 		return kNetCDF;
 	}
-
+	else if (ext == ".tif" || ext == ".TIFF")
+	{
+		return kGeoTIFF;
+	}
 	// Try the check the file header; CSV is not possible anymore
 
 	ifstream f(theFile.c_str(), ios::in | ios::binary);
