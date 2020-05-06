@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.4.28
+Version: 20.5.6
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 20.4.28
+Requires: himan-lib >= 20.5.6
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 20.1.20
@@ -90,6 +90,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libfog.so
 %{_libdir}/himan-plugins/libfractile.so
 %{_libdir}/himan-plugins/libfrost.so
+%{_libdir}/himan-plugins/libgeotiff.so
 %{_libdir}/himan-plugins/libgrib.so
 %{_libdir}/himan-plugins/libgust.so
 %{_libdir}/himan-plugins/libhitool.so
@@ -132,6 +133,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Wed May  6 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.5.6-1.fmi
+- Add geotiff support
+- Update to frost
 * Tue Apr 28 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.28-1.fmi
 - HPGridType enum value changes 
 * Mon Apr 27 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.4.27-1.fmi
@@ -322,7 +326,7 @@ rm -rf $RPM_BUILD_ROOT
 - More preform_hybrid optimization
 * Tue Nov 13 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.13-1.fmi
 - preform_hybrid optimization
-* Wed Nov  8 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.8-1.fmi
+* Tue Nov  8 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.8-1.fmi
 - Updates to blend
 * Wed Nov  7 2018 Mikko Partio <mikko.partio@fmi.fi> - 18.11.7-1.fmi
 - Updates to blend
