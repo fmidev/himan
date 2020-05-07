@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.5.6
+Version: 20.5.7
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -133,6 +133,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Thu May  7 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.5.7-1.fmi
+- Rename CL-FT to CEIL-M
 * Wed May  6 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.5.6-1.fmi
 - Add geotiff support
 - Update to frost
