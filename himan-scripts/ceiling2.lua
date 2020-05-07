@@ -7,7 +7,7 @@
 -- - the two changes above have no effect in SmartTool, but HIMAN uses vertical interpolation thus not raising ceiling "enough"
 -- - (freezing) drizzle no longer prevents raising low ceiling in precipitation
 
-logger:Info("Calculating Cloud ceiling number 2 in feet")
+logger:Info("Calculating Cloud ceiling number 2 in meters")
 
 local MISS = missing
 
@@ -174,8 +174,6 @@ for  i=1, #N15 do
       ceil = ceil_45
     end
   end
-
-  -- Result converted to feet
 
   ceiling[i] = ceil
 
