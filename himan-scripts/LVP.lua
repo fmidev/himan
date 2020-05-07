@@ -13,7 +13,7 @@ if not ensSize then
 end
 
 local ens1 = lagged_ensemble(param("VV2-M"), "MEPS_LAGGED_ENSEMBLE")
-local ens2 = lagged_ensemble(param("CL-2-FT"), "MEPS_LAGGED_ENSEMBLE")
+local ens2 = lagged_ensemble(param("CEIL-2-M"), "MEPS_LAGGED_ENSEMBLE")
 
 ens1:SetMaximumMissingForecasts(ensSize)
 ens2:SetMaximumMissingForecasts(ensSize)
@@ -39,7 +39,7 @@ while ens1:NextLocation() and ens2:NextLocation() do
 
   for j = 1, #vals1 do
     local val1 = vals1[j]
-    local val2 = vals2[j]
+    local val2 = vals2[j] * 3.2808
    
     if val1 < 600 or val2 <= 200 then
         numLVP = numLVP + 1

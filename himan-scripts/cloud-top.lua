@@ -7,7 +7,7 @@ logger:Info("Calculating Cloud top in feet")
 local Missing = missing
 
 local l = level(HPLevelType.kHeight, 0)
-local Ceiling = luatool:FetchWithType(current_time, l, param("CL-2-FT"), current_forecast_type)
+local Ceiling = luatool:FetchWithType(current_time, l, param("CEIL-2-M"), current_forecast_type)
 
 if not Ceiling then
   return
@@ -21,7 +21,7 @@ for i = 1, #Ceiling do
   local base = Missing
 
   if ceil == ceil then
-    base = ceil*0.3048
+    base = ceil
   end
 
   Base[i] = base

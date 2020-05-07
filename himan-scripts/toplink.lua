@@ -101,7 +101,7 @@ function Product2()
   local vis = param("VV2-M")
   local rr = param("RRR-KGM2")
   local ptype = param("PRECFORM2-N")
-  local ceil = param("CL-2-FT")
+  local ceil = param("CEIL-2-M")
   local wiparam = param("TOPL3-N")
 
   local visdata = luatool:Fetch(current_time, lvl, vis)
@@ -122,7 +122,7 @@ function Product2()
     local rrval = rrdata[i]
     local visval = visdata[i]
     local ptypeval = ptypedata[i]
-    local ceilval = ceildata[i]
+    local ceilval = ceildata[i] * 3.2808
     local sn = 0 -- snow index
     local fz = 0 -- freezing rain index
     local vvi = 0 -- visibility index

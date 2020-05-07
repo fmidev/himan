@@ -177,11 +177,11 @@ for  i=1, #N15 do
 
   -- Result converted to feet
 
-  ceiling[i] = ceil * 3.2808
+  ceiling[i] = ceil
 
 end
 
-result:SetParam(param("CL-2-FT"))
+result:SetParam(param("CEIL-2-M"))
 result:SetValues(ceiling)
 
 luatool:WriteToFile(result)
