@@ -102,7 +102,7 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	// Required source parameters
 	const params Nparam{param("N-0TO1"), param("N-PRCNT")};
 	const param TCU_CB("CBTCU-FL");
-	const param C2("CL-2-FT");
+	const param C2("CEIL-2-M");
 	const param LCL("LCL-HPA");
 
 	// Get producer meta information
@@ -284,11 +284,12 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	{
 		for (size_t j = 0; j < base[k].size(); ++j)
 		{
-			if (c_l[k][j].base < Ceiling2->Data().At(k) && c_l[k][j].amount >= bkn)
+			const auto ceil = Ceiling2->Data().At(k) * 3.2808;
+			if (c_l[k][j].base < ceil && c_l[k][j].amount >= bkn)
 			{
-				if (c_l[k][j].top > Ceiling2->Data().At(k))
+				if (c_l[k][j].top > ceil)
 				{
-					c_l[k][j].base = Ceiling2->Data().At(k);
+					c_l[k][j].base = ceil;
 				}
 				else
 				{

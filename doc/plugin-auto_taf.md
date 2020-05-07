@@ -6,7 +6,7 @@ auto_taf -plugin scans the atmosphere for cloud layers and categorizes them to b
 
 * N-0TO1
 * H-M
-* CL-2-FT
+* CEIL-2-M
 * CBTCU-FT
 * LCL-HPA
 

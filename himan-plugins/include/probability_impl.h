@@ -10,7 +10,7 @@ namespace PROB
 {
 bool AllowMissingValuesInEnsemble(const std::string& name)
 {
-	return (name == "CL-2-FT" || name == "PRECFORM-N" || name == "PRECFORM2-N" || name == "CSI-N");
+	return (name == "CEIL-2-M" || name == "PRECFORM-N" || name == "PRECFORM2-N" || name == "CSI-N");
 }
 
 template <typename T>
