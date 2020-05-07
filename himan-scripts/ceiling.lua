@@ -2,7 +2,7 @@
 -- https://wiki.fmi.fi/display/PROJEKTIT/Ceiling_ft
 -- partio 2/2015  / junila 5/2015 / partio 9/2015  / junila 8/2015  / junila 2/2017
 
-logger:Info("Calculating Cloud ceiling in feet")
+logger:Info("Calculating Cloud ceiling in meters")
 
 local Missing = missing
 
@@ -32,10 +32,10 @@ local ceiling = {}
 
 for i = 1, #Nheight do
   local nh = Nheight[i]
-  ceiling[i] = nh * 3.2808
+  ceiling[i] = nh
 end
 
-result:SetParam(param("CL-FT"))
+result:SetParam(param("CEIL-M"))
 result:SetMissingValue(Missing)
 result:SetValues(ceiling)
 
