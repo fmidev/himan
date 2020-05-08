@@ -11,6 +11,10 @@
 #ifndef CONFIGURATION_H
 #define CONFIGURATION_H
 
+#include "forecast_time.h"
+#include "forecast_type.h"
+#include "grid.h"
+#include "level.h"
 #include "producer.h"
 #include "time_duration.h"
 
@@ -26,7 +30,7 @@ class configuration
 	configuration();
 	virtual ~configuration() = default;
 
-	configuration(const configuration&) = default;
+	configuration(const configuration&);
 	configuration& operator=(const configuration&) = default;
 
 	/**
@@ -232,6 +236,18 @@ class configuration
 	size_t AllowedMissingValues() const;
 	void AllowedMissingValues(size_t theAllowedMissingValues);
 
+	std::vector<forecast_type> ForecastTypes() const;
+	void ForecastTypes(const std::vector<forecast_type>& theForecastTypes);
+
+	std::vector<forecast_time> Times() const;
+	void Times(const std::vector<forecast_time>& theForecastTimes);
+
+	std::vector<level> Levels() const;
+	void Levels(const std::vector<level>& theLevel);
+
+	void BaseGrid(std::unique_ptr<grid> theBaseGrid);
+	const grid* BaseGrid() const;
+
    protected:
 	std::vector<producer> itsSourceProducers;
 
@@ -242,7 +258,6 @@ class configuration
 
 	std::string itsConfigurationFile;
 	std::vector<std::string> itsAuxiliaryFiles;
-	std::string itsOriginTime;
 
 	bool itsReadFromDatabase;
 	short itsThreadCount;
@@ -277,6 +292,11 @@ class configuration
 	std::string itsFilenameTemplate;
 	HPPackingType itsPackingType;
 	size_t itsAllowedMissingValues;
+	std::vector<forecast_type> itsForecastTypes;
+	std::vector<level> itsLevels;
+	std::vector<forecast_time> itsTimes;
+
+	std::unique_ptr<grid> itsBaseGrid;
 };
 
 inline std::ostream& operator<<(std::ostream& file, const configuration& ob)

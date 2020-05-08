@@ -42,7 +42,6 @@ plugin_configuration::plugin_configuration(const plugin_configuration& other)
       itsOptions(other.itsOptions),
       itsPreconfiguredParams(other.itsPreconfiguredParams),
       itsStatistics(new statistics(*other.itsStatistics)),
-      itsBaseGrid(other.itsBaseGrid->Clone()),
       itsOrdinalNumber(other.itsOrdinalNumber),
       itsRelativeOrdinalNumber(other.itsRelativeOrdinalNumber)
 {
