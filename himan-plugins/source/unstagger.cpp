@@ -18,7 +18,6 @@
 
 #include "cache.h"
 #include "fetcher.h"
-#include "radon.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -36,13 +35,8 @@ void unstagger::Process(std::shared_ptr<const plugin_configuration> conf)
 	// Initialise sparse matrix for interpolation grid
 	if (itsConfiguration->UseCuda())
 	{
-		auto r = GET_PLUGIN(radon);
-
-		string query = "SELECT ni,nj FROM geom WHERE name = '" + itsConfiguration->TargetGeomName() + "' ";
-		r->RadonDB().Query(query);
-		vector<string> gridSize = r->RadonDB().FetchRow();
-
-		unstagger_cuda::Init(stoi(gridSize[0]), stoi(gridSize[1]));
+		const auto* bg = dynamic_cast<const regular_grid*> (itsConfiguration->BaseGrid());
+		unstagger_cuda::Init(bg->Ni(), bg->Nj());
 	}
 #endif
 
