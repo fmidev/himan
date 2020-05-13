@@ -4,7 +4,14 @@ Configuring himan is done through json-files, and all the common rules of writin
 * Key and value are separated with colons
 * Elements are separated by commas
 
-The json file can be divided into two parts: the global part, configuration apply for all himan operations, and the local part (processqueue) where some of the global options can be overwritten and extra options given.
+The json file can be divided into three main parts:
+* global scope
+* processqueue scope
+* plugin scope
+
+Almost all configuration options can be specified in any of the scopes. The more fine-grained scopes override the values
+defined in more general scopes. For example some option specified at plugin scope will override the same option defined
+in global scope.
 
 ##### Table of Contents  
 * [Target area](#Target_area)  

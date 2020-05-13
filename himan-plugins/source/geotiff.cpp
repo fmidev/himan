@@ -396,12 +396,15 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 	{
 		for (int bandNo = 1; bandNo <= poDataset->GetRasterCount(); bandNo++)
 		{
+			itsLogger.Info("Read from file '" + theInputFile.file_location + "- band# " + std::to_string(bandNo));
 			GDALRasterBand* poBand = poDataset->GetRasterBand(bandNo);
 			infos.push_back(MakeInfoFromGeoTIFFBand(poBand));
 		}
 	}
 	else
 	{
+		itsLogger.Info("Read from file '" + theInputFile.file_location + "' band# " +
+		               std::to_string(theInputFile.message_no.get()));
 		GDALRasterBand* poBand = poDataset->GetRasterBand(static_cast<int>(theInputFile.message_no.get()));
 		infos.push_back(MakeInfoFromGeoTIFFBand(poBand));
 	}

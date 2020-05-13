@@ -5,6 +5,7 @@ aaltom/2015-02-12
 ]]
 
 local Missing = missing
+local scale = 1
 
 logger:Info("Calculating Snow depth")
 
@@ -15,6 +16,11 @@ par3 = param("SD-M") -- Snow depth in m
 local lvl = level(HPLevelType.kHeight, 0)
 local prod = configuration:GetSourceProducer(0)
 local prod_name = prod.GetName(prod)
+
+if prod:GetId() == 131 then
+   par2 = param("SD-TM2")
+   scale = 1000
+end
 
 local sd = luatool:FetchWithType(current_time, lvl, par1, current_forecast_type)
 local sw = luatool:FetchWithType(current_time, lvl, par2, current_forecast_type)
@@ -30,11 +36,11 @@ for i=1, #sw do
   local sd = sd[i]
   local sn = Missing
 
-  if sw == sw and sd == sd then
-    if sw == 0 or sd == 0 then
+  if IsValid(sw) and IsValid(sd) then
+    if sd == 0 then
       sn = 0
     else
-      sn = sw / sd
+      sn = sw * scale / sd
     end
   end
 

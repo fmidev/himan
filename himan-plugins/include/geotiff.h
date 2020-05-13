@@ -14,9 +14,7 @@ class geotiff : public io_plugin
    public:
 	geotiff();
 
-	virtual ~geotiff()
-	{
-	}
+	virtual ~geotiff() = default;
 	geotiff(const geotiff& other) = delete;
 	geotiff& operator=(const geotiff& other) = delete;
 
@@ -30,11 +28,10 @@ class geotiff : public io_plugin
 	};
 
 	template <typename T>
-	std::vector<std::shared_ptr<info<T>>> FromFile(const file_information& inputFile, const search_options& options
-	                                               ) const;
+	std::vector<std::shared_ptr<info<T>>> FromFile(const file_information& inputFile,
+	                                               const search_options& options) const;
 	std::vector<std::shared_ptr<info<double>>> FromFile(const file_information& inputFile,
-	                                                    const search_options& options
-	                                                    ) const;
+	                                                    const search_options& options) const;
 
 	template <typename T>
 	file_information ToFile(info<T>& anInfo);
