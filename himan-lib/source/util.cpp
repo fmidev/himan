@@ -155,130 +155,130 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 	auto ReplaceTemplateValue = [&](const boost::regex& re, string& filename, Component k) {
 		boost::smatch what;
 
-		if (boost::regex_search(filename, what, re) == false)
+		while (boost::regex_search(filename, what, re))
 		{
-			return;
-		}
+			string fmt = DefaultFormat(k);
 
-		string fmt = DefaultFormat(k);
-
-		if (what.size() == 3 && string(what[2]).empty() == false)
-		{
-			fmt = string(what[2]);
-			fmt.erase(fmt.begin());  // remove starting ':'
-		}
-
-		string replacement;
-
-		switch (k)
-		{
-			case Component::kMasalaBase:
-				replacement = util::GetEnv("MASALA_PROCESSED_DATA_BASE");
-				break;
-			case Component::kAnalysisTime:
-				replacement = ftime.OriginDateTime().String(fmt);
-				break;
-			case Component::kForecastTime:
-				replacement = ftime.ValidDateTime().String(fmt);
-				break;
-			case Component::kStep:
-				replacement = ftime.Step().String(fmt);
-				break;
-			case Component::kGeometryName:
-				replacement = conf.TargetGeomName();
-				break;
-			case Component::kGridName:
-				replacement = HPGridTypeToString.at(info.Grid()->Type());
-				break;
-			case Component::kGridNi:
+			if (what.size() == 3 && string(what[2]).empty() == false)
 			{
-				if (info.Grid()->Class() == kRegularGrid)
-				{
-					replacement = (boost::format(fmt) % (dynamic_pointer_cast<regular_grid>(info.Grid())->Ni())).str();
-				}
-				break;
+				fmt = string(what[2]);
+				fmt.erase(fmt.begin());  // remove starting ':'
 			}
-			case Component::kGridNj:
-			{
-				if (info.Grid()->Class() == kRegularGrid)
-				{
-					replacement = (boost::format(fmt) % (dynamic_pointer_cast<regular_grid>(info.Grid())->Nj())).str();
-				}
-				break;
-			}
-			case Component::kParamName:
-				replacement = par.Name();
-				break;
-			case Component::kAggregationName:
-				replacement = HPAggregationTypeToString.at(par.Aggregation().Type());
-				break;
-			case Component::kAggregationDuration:
-				replacement = par.Aggregation().TimeDuration().String(fmt);
-				break;
-			case Component::kProcessingTypeName:
-				replacement = HPProcessingTypeToString.at(par.ProcessingType().Type());
-				break;
-			case Component::kProcessingTypeValue:
-				replacement = (boost::format(fmt) % par.ProcessingType().Value()).str();
-				break;
-			case Component::kProcessingTypeValue2:
-				replacement = (boost::format(fmt) % par.ProcessingType().Value2()).str();
-				break;
-			case Component::kLevelName:
-				replacement = HPLevelTypeToString.at(lvl.Type());
-				break;
-			case Component::kLevelValue:
-				replacement = (boost::format(fmt) % lvl.Value()).str();
-				break;
-			case Component::kLevelValue2:
-				replacement = (boost::format(fmt) % lvl.Value2()).str();
-				break;
-			case Component::kForecastTypeId:
-				replacement = (boost::format(fmt) % ftype.Type()).str();
-				break;
-			case Component::kForecastTypeName:
-				replacement = ForecastTypeToShortString(ftype.Type());
-				break;
-			case Component::kForecastTypeValue:
-				replacement = (boost::format(fmt) % ftype.Value()).str();
-				break;
-			case Component::kProducerId:
-				replacement = (boost::format(fmt) % prod.Id()).str();
-				break;
-			case Component::kFileType:
-				replacement = FileTypeToShortString(conf.OutputFileType());
-				break;
-			default:
-				break;
-		}
 
-		filename = boost::regex_replace(filename, re, replacement);
+			string replacement;
+
+			switch (k)
+			{
+				case Component::kMasalaBase:
+					replacement = util::GetEnv("MASALA_PROCESSED_DATA_BASE");
+					break;
+				case Component::kAnalysisTime:
+					replacement = ftime.OriginDateTime().String(fmt);
+					break;
+				case Component::kForecastTime:
+					replacement = ftime.ValidDateTime().String(fmt);
+					break;
+				case Component::kStep:
+					replacement = ftime.Step().String(fmt);
+					break;
+				case Component::kGeometryName:
+					replacement = conf.TargetGeomName();
+					break;
+				case Component::kGridName:
+					replacement = HPGridTypeToString.at(info.Grid()->Type());
+					break;
+				case Component::kGridNi:
+				{
+					if (info.Grid()->Class() == kRegularGrid)
+					{
+						replacement =
+						    (boost::format(fmt) % (dynamic_pointer_cast<regular_grid>(info.Grid())->Ni())).str();
+					}
+					break;
+				}
+				case Component::kGridNj:
+				{
+					if (info.Grid()->Class() == kRegularGrid)
+					{
+						replacement =
+						    (boost::format(fmt) % (dynamic_pointer_cast<regular_grid>(info.Grid())->Nj())).str();
+					}
+					break;
+				}
+				case Component::kParamName:
+					replacement = par.Name();
+					break;
+				case Component::kAggregationName:
+					replacement = HPAggregationTypeToString.at(par.Aggregation().Type());
+					break;
+				case Component::kAggregationDuration:
+					replacement = par.Aggregation().TimeDuration().String(fmt);
+					break;
+				case Component::kProcessingTypeName:
+					replacement = HPProcessingTypeToString.at(par.ProcessingType().Type());
+					break;
+				case Component::kProcessingTypeValue:
+					replacement = (boost::format(fmt) % par.ProcessingType().Value()).str();
+					break;
+				case Component::kProcessingTypeValue2:
+					replacement = (boost::format(fmt) % par.ProcessingType().Value2()).str();
+					break;
+				case Component::kLevelName:
+					replacement = HPLevelTypeToString.at(lvl.Type());
+					break;
+				case Component::kLevelValue:
+					replacement = (boost::format(fmt) % lvl.Value()).str();
+					break;
+				case Component::kLevelValue2:
+					replacement = (boost::format(fmt) % lvl.Value2()).str();
+					break;
+				case Component::kForecastTypeId:
+					replacement = (boost::format(fmt) % ftype.Type()).str();
+					break;
+				case Component::kForecastTypeName:
+					replacement = ForecastTypeToShortString(ftype.Type());
+					break;
+				case Component::kForecastTypeValue:
+					replacement = (boost::format(fmt) % ftype.Value()).str();
+					break;
+				case Component::kProducerId:
+					replacement = (boost::format(fmt) % prod.Id()).str();
+					break;
+				case Component::kFileType:
+					replacement = FileTypeToShortString(conf.OutputFileType());
+					break;
+				default:
+					break;
+			}
+
+			filename = boost::regex_replace(filename, re, replacement, boost::regex_constants::format_first_only);
+		}
 	};
 
 	string filename = filenameTemplate;
 
 	const static vector<pair<Component, string>> regexs{
 	    make_pair(Component::kMasalaBase, R"(\{(masala_base)\})"),
-	    make_pair(Component::kAnalysisTime, R"(\{(analysis_time)(:[%a-zA-Z_]*)*\})"),
-	    make_pair(Component::kForecastTime, R"(\{(forecast_time)(:[%a-zA-Z_]*)*\})"),
-	    make_pair(Component::kStep, R"(\{(step)(:[\.%0-9a-zA-Z]*)*\})"),
+	    make_pair(Component::kAnalysisTime, R"(\{(analysis_time)(:[%a-zA-Z_/]*)*\})"),
+	    make_pair(Component::kForecastTime, R"(\{(forecast_time)(:[%a-zA-Z_/]*)*\})"),
+	    make_pair(Component::kStep, R"(\{(step)(:[\.%0-9a-zA-Z_/]*)*\})"),
 	    make_pair(Component::kGeometryName, R"(\{(geom_name)\})"),
 	    make_pair(Component::kGridName, R"(\{(grid_name)\})"),
-	    make_pair(Component::kGridNi, R"(\{(grid_ni)(:[\.%0-9a-zA-Z]*)*\})"),
-	    make_pair(Component::kGridNj, R"(\{(grid_nj)(:[\.%0-9a-zA-Z]*)*\})"),
+	    make_pair(Component::kGridNi, R"(\{(grid_ni)(:[\.%0-9a-zA-Z_/]*)*\})"),
+	    make_pair(Component::kGridNj, R"(\{(grid_nj)(:[\.%0-9a-zA-Z_/]*)*\})"),
 	    make_pair(Component::kParamName, R"(\{(param_name)\})"),
 	    make_pair(Component::kAggregationName, R"(\{(aggregation_name)\})"),
-	    make_pair(Component::kAggregationDuration, R"(\{(aggregation_duration)(:[\.%0-9a-zA-Z]*)*\})"),
+	    make_pair(Component::kAggregationDuration, R"(\{(aggregation_duration)(:[\.%0-9a-zA-Z_/]*)*\})"),
 	    make_pair(Component::kProcessingTypeName, R"(\{(processing_type_name)\})"),
-	    make_pair(Component::kProcessingTypeValue, R"(\{(processing_type_value)(:[\.%0-9a-zA-Z]*)*\})"),
-	    make_pair(Component::kProcessingTypeValue2, R"(\{(processing_type_value2)(:[\.%0-9a-zA-Z]*)*\})"),
+	    make_pair(Component::kProcessingTypeValue, R"(\{(processing_type_value)(:[\.%0-9a-zA-Z_/]*)*\})"),
+	    make_pair(Component::kProcessingTypeValue2, R"(\{(processing_type_value2)(:[\.%0-9a-zA-Z_/]*)*\})"),
 	    make_pair(Component::kLevelName, R"(\{(level_name)\})"),
-	    make_pair(Component::kLevelValue, R"(\{(level_value)(:[\.%0-9a-zA-Z]*)*\})"),
-	    make_pair(Component::kLevelValue2, R"(\{(level_value2)(:[\.%0-9a-zA-Z]*)*\})"),
-	    make_pair(Component::kForecastTypeId, R"(\{(forecast_type_id)(:[\.%0-9a-zA-Z]*)*\})"),
+	    make_pair(Component::kLevelValue, R"(\{(level_value)(:[\.%0-9a-zA-Z_/]*)*\})"),
+	    make_pair(Component::kLevelValue2, R"(\{(level_value2)(:[\.%0-9a-zA-Z_/]*)*\})"),
+	    make_pair(Component::kForecastTypeId, R"(\{(forecast_type_id)(:[\.%0-9a-zA-Z_/]*)*\})"),
 	    make_pair(Component::kForecastTypeName, R"(\{(forecast_type_name)\})"),
-	    make_pair(Component::kForecastTypeValue, R"(\{(forecast_type_value)(:[\.%0-9a-zA-Z]*)*\})"),
-	    make_pair(Component::kProducerId, R"(\{(producer_id)(:[\.%0-9a-zA-Z]*)*\})"),
+	    make_pair(Component::kForecastTypeValue, R"(\{(forecast_type_value)(:[\.%0-9a-zA-Z_/]*)*\})"),
+	    make_pair(Component::kProducerId, R"(\{(producer_id)(:[\.%0-9a-zA-Z_/]*)*\})"),
 	    make_pair(Component::kFileType, R"(\{(file_type)\})")};
 
 	for (const auto& p : regexs)
