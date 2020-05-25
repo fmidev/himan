@@ -3,7 +3,7 @@
 %define LIBNAME himan-scripts
 Summary: himan-scripts collection
 Name: %{LIBNAME}
-Version: 20.5.13
+Version: 20.5.25
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -39,6 +39,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/himan-scripts/*.lua
 
 %changelog
+* Mon May 25 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.5.25-1.fmi
+- Add meps-cloudiness.lua
 * Wed May 13 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.5.13-1.fmi
 - Change to snow-depth/ecmwf
 * Thu May  7 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.5.7-1.fmi
