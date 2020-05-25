@@ -4,8 +4,8 @@
 #include "level.h"
 #include "logger.h"
 #include "plugin_factory.h"
-#include <NFmiLocation.h>
-#include <NFmiMetTime.h>
+//#include <NFmiLocation.h>
+//#include <NFmiMetTime.h>
 
 using namespace std;
 using namespace himan;
@@ -41,11 +41,11 @@ void frost::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
-	NFmiMetTime theTime(static_cast<short>(stoi(myTargetInfo->Time().ValidDateTime().String("%Y"))),
+	/*NFmiMetTime theTime(static_cast<short>(stoi(myTargetInfo->Time().ValidDateTime().String("%Y"))),
 	                    static_cast<short>(stoi(myTargetInfo->Time().ValidDateTime().String("%m"))),
 	                    static_cast<short>(stoi(myTargetInfo->Time().ValidDateTime().String("%d"))),
 	                    static_cast<short>(stoi(myTargetInfo->Time().ValidDateTime().String("%H"))),
-	                    static_cast<short>(stoi(myTargetInfo->Time().ValidDateTime().String("%M"))));
+	                    static_cast<short>(stoi(myTargetInfo->Time().ValidDateTime().String("%M"))));*/
 
 	const param TParam("T-K");
 	const param TDParam("TD-K");
@@ -508,7 +508,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 		// Lowering frost probability due to sun's elevation angle. Valid in 1.4.-15.9.
 
-		if ((month >= 4 && month <= 8) || (month == 9 && day <= 15))
+		/*if ((month >= 4 && month <= 8) || (month == 9 && day <= 15))
 		{
 			NFmiLocation theLocation(myTargetInfo->LatLon().X(), myTargetInfo->LatLon().Y());
 
@@ -518,7 +518,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 			angleCoef = rampDown(-1.0, 20.0, elevationAngle);
 
 			frost_prob = angleCoef * frost_prob;
-		}
+		}*/
 
 		// No frost probability on sea when there is no ice.
 
@@ -536,6 +536,18 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 		}
 
 		severe_frost_prob = min(frost_prob, severe_frost_prob);
+
+		// Simple quality control
+
+		if (frost_prob < 0.0 || frost_prob > 1.0)
+		{
+			frost_prob = MissingDouble();
+		}
+
+		if (severe_frost_prob < 0.0 || severe_frost_prob > 1.0)
+		{
+			severe_frost_prob = MissingDouble();
+		}
 
 		myTargetInfo->Index<param>(0);
 		myTargetInfo->Value(frost_prob);

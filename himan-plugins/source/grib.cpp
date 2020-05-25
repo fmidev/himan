@@ -29,7 +29,6 @@ using namespace himan::plugin;
 
 std::string GetParamNameFromGribShortName(const std::string& paramFileName, const std::string& shortName);
 
-const double gribMissing = 32700.;
 static mutex singleGribMessageCounterMutex;
 static map<string, std::mutex> singleGribMessageCounterMap;
 
@@ -1031,22 +1030,22 @@ void grib::WriteForecastType(const forecast_type& forecastType, const producer& 
 }
 
 template <typename T>
-void WriteDataValues(const vector<T>&, NFmiGribMessage&);
+void WriteDataValues(const vector<T>&, NFmiGribMessage&, double);
 
 template <>
-void WriteDataValues(const vector<double>& values, NFmiGribMessage& msg)
+void WriteDataValues(const vector<double>& values, NFmiGribMessage& msg, double missingValue)
 {
-	msg.Values(values.data(), static_cast<long>(values.size()));
+	msg.Values(values.data(), static_cast<long>(values.size()), missingValue);
 }
 
 template <>
-void WriteDataValues(const vector<float>& values, NFmiGribMessage& msg)
+void WriteDataValues(const vector<float>& values, NFmiGribMessage& msg, double missingValue)
 {
 	double* arr = new double[values.size()];
 	replace_copy_if(values.begin(), values.end(), arr, [](const float& val) { return himan::IsMissing(val); },
-	                himan::MissingDouble());
+	                missingValue);
 
-	msg.Values(arr, static_cast<long>(values.size()));
+	msg.Values(arr, static_cast<long>(values.size()), missingValue);
 
 	delete[] arr;
 }
@@ -1108,9 +1107,10 @@ template <typename T>
 void grib::WriteData(info<T>& anInfo)
 {
 	// set to missing value to a large value to prevent it from mixing up with valid
-	// values in the data
+	// values in the data. eccodes does not support nan as missing value.
 
-	itsGrib->Message().MissingValue(gribMissing);
+	const double gribMissing = 1e38;
+	itsGrib->Message().MissingValue(static_cast<T>(gribMissing));
 
 	if (itsWriteOptions.use_bitmap && anInfo.Data().MissingCount() > 0)
 	{
@@ -1137,10 +1137,10 @@ void grib::WriteData(info<T>& anInfo)
 		bitsPerValue = DetermineBitsPerValue(values, precision);
 
 		// Change missing value 'nan' to a real fp value
-		replace_if(values.begin(), values.end(), [](const T& v) { return IsMissing(v); }, gribMissing);
+		replace_if(values.begin(), values.end(), [](const T& v) { return IsMissing(v); }, static_cast<T>(gribMissing));
 
 		itsGrib->Message().BitsPerValue(bitsPerValue);
-		WriteDataValues<T>(values, itsGrib->Message());
+		WriteDataValues<T>(values, itsGrib->Message(), gribMissing);
 	}
 	else
 	{
@@ -1149,11 +1149,11 @@ void grib::WriteData(info<T>& anInfo)
 		bitsPerValue = DetermineBitsPerValue(values, precision);
 
 		// Change missing value 'nan' to a real fp value
-		anInfo.Data().MissingValue(gribMissing);
+		anInfo.Data().MissingValue(static_cast<T>(gribMissing));
 
 		itsGrib->Message().BitsPerValue(bitsPerValue);
 
-		WriteDataValues<T>(values, itsGrib->Message());
+		WriteDataValues<T>(values, itsGrib->Message(), gribMissing);
 	}
 
 	itsLogger.Trace("Using " + (precision == kHPMissingInt ? "maximum precision" : to_string(precision) + " decimals") +
@@ -2215,7 +2215,7 @@ template <>
 void ReadDataValues(vector<double>& values, NFmiGribMessage& msg)
 {
 	size_t len = msg.ValuesLength();
-	msg.GetValues(values.data(), &len);
+	msg.GetValues(values.data(), &len, himan::MissingDouble());
 }
 
 template <>
@@ -2223,7 +2223,7 @@ void ReadDataValues(vector<float>& values, NFmiGribMessage& msg)
 {
 	double* arr = new double[values.size()];
 	size_t len = msg.ValuesLength();
-	msg.GetValues(arr, &len);
+	msg.GetValues(arr, &len, himan::MissingDouble());
 
 	replace_copy_if(arr, arr + values.size(), values.begin(), [](const double& val) { return himan::IsMissing(val); },
 	                himan::MissingFloat());
@@ -2310,10 +2310,7 @@ void grib::ReadData(shared_ptr<info<T>> newInfo, bool readPackedData) const
 	else
 #endif
 	{
-		dm.MissingValue(gribMissing);
 		ReadDataValues<T>(dm.Values(), itsGrib->Message());
-
-		dm.MissingValue(MissingValue<T>());
 
 		if (decodePrecipitationForm)
 		{
