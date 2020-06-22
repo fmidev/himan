@@ -86,7 +86,7 @@ configuration::configuration(const configuration& o)
       itsForecastTypes(o.itsForecastTypes),
       itsLevels(o.itsLevels),
       itsTimes(o.itsTimes),
-      itsBaseGrid(std::unique_ptr<grid>(o.itsBaseGrid->Clone()))
+      itsBaseGrid(o.itsBaseGrid ? std::unique_ptr<grid>(o.itsBaseGrid->Clone()) : nullptr)
 {
 }
 

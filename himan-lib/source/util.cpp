@@ -1332,3 +1332,34 @@ string util::UniqueName(const info<T>& info)
 
 template string util::UniqueName(const info<double>&);
 template string util::UniqueName(const info<float>&);
+
+param util::GetParameterInfoFromDatabaseName(const producer& prod, const param& par, const level& lvl)
+{
+	logger logr("util");
+	auto r = GET_PLUGIN(radon);
+
+	auto levelInfo = r->RadonDB().GetLevelFromDatabaseName(boost::to_upper_copy(HPLevelTypeToString.at(lvl.Type())));
+
+	if (levelInfo.empty())
+	{
+		logr.Warning("Level type '" + HPLevelTypeToString.at(lvl.Type()) + "' not found from radon");
+		return par;
+	}
+
+	auto paraminfo = r->RadonDB().GetParameterFromDatabaseName(prod.Id(), par.Name(),
+	                                                           lvl.Type(), lvl.Value());
+
+	if (paraminfo.empty())
+	{
+		logr.Warning("Parameter '" + par.Name() + "' definition not found from Radon");
+		return par;
+	}
+
+	param p(paraminfo);
+
+	// database does not provide aggregation or processing type information
+	p.Aggregation(par.Aggregation());
+	p.ProcessingType(par.ProcessingType());
+
+	return p;
+}

@@ -143,8 +143,8 @@ std::string Expand(const std::string& in);
 
 template <typename T>
 void DumpVector(const std::vector<T>& arr, const std::string& name = "");
-void DumpVector(const std::vector<double>& arr, const std::string& name = "");
-void DumpVector(const std::vector<float>& arr, const std::string& name = "");
+// void DumpVector(const std::vector<double>& arr, const std::string& name = "");
+// void DumpVector(const std::vector<float>& arr, const std::string& name = "");
 
 /**
    @brief Get the value of the specified environment variable.
@@ -209,6 +209,14 @@ template <typename T>
 std::string UniqueName(const info<T>& info);
 
 /**
+ * @brief Retrieve full parameter information from database based
+ * on parameter name.
+ *
+ */
+
+param GetParameterInfoFromDatabaseName(const producer& prod, const param& par, const level& lvl);
+
+/**
  * @brief Convert vector from float to double or vice versa, retaining correct
  * missing value.
  *
@@ -258,6 +266,7 @@ inline auto zip_range(Conts&... conts)
 	return {boost::make_zip_iterator(boost::make_tuple(conts.begin()...)),
 	        boost::make_zip_iterator(boost::make_tuple(conts.end()...))};
 }
+
 
 }  // namespace util
 }  // namespace himan
