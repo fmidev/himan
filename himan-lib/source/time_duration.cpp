@@ -131,6 +131,10 @@ std::ostream& time_duration::Write(std::ostream& file) const
 
 std::string time_duration::String(const std::string& fmt) const
 {
+	if (Empty())
+	{
+		return "not_a_date_time";
+	}
 	// %H --> Total hours % 24
 	// example: 33:00:00 --> %H = 9
 	// %M --> Total minutes % 60

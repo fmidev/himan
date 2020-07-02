@@ -32,8 +32,6 @@
 using namespace himan;
 using namespace himan::plugin;
 
-#include "radon.h"
-
 geotiff::geotiff()
 {
 	itsLogger = logger("geotiff");
@@ -101,7 +99,8 @@ std::unique_ptr<grid> ReadAreaAndGrid(GDALDataset* poDataset)
 		    sm, fp, ni, nj, di, dj, std::unique_ptr<OGRSpatialReference>(spRef.Clone()), true));
 	}
 	log.Error("Unsupported projection: " + projection);
-	return nullptr;
+
+	throw kFileMetaDataNotFound;
 }
 
 param ReadParam(const std::map<std::string, std::string>& meta, const producer& prod, const param& par)
@@ -123,15 +122,16 @@ param ReadParam(const std::map<std::string, std::string>& meta, const producer& 
 	}
 
 	auto r = GET_PLUGIN(radon);
-
 	auto parameter = r->RadonDB().GetParameterFromGeoTIFF(prod.Id(), param_value);
 
-	if (parameter["name"].empty())
+	if (parameter.empty() || parameter["name"].empty())
 	{
 		return par;
 	}
 
-	return param(parameter["name"]);
+	param p(parameter["name"]);
+	p.Id(std::stoi(parameter["id"]));
+	return p;
 }
 
 level ReadLevel(const std::map<std::string, std::string>& meta, const level& lvl)
@@ -157,16 +157,20 @@ void SQLTimeMaskToCTimeMask(std::string& sqlTimeMask)
 
 forecast_time ReadTime(const std::map<std::string, std::string>& meta, const forecast_time& ftime)
 {
-	std::string origintime, validtime, mask;
+	raw_time origintime = ftime.OriginDateTime();
+	raw_time validtime = ftime.ValidDateTime();
+
+	std::string origintimestr, validtimestr, mask;
+
 	for (const auto& m : meta)
 	{
 		if (m.first == "analysis_time")
 		{
-			origintime = m.second;
+			origintimestr = m.second;
 		}
 		else if (m.first == "valid_time")
 		{
-			validtime = m.second;
+			validtimestr = m.second;
 		}
 		else if (m.first == "time_mask")
 		{
@@ -174,22 +178,22 @@ forecast_time ReadTime(const std::map<std::string, std::string>& meta, const for
 		}
 	}
 
-	if (origintime.empty())
-	{
-		return ftime;
-	}
-
-	if (validtime.empty())
-	{
-		validtime = origintime;
-	}
-
 	if (mask.find("YYYY") != std::string::npos)
 	{
 		SQLTimeMaskToCTimeMask(mask);
 	}
 
-	return forecast_time(raw_time(origintime, mask), raw_time(validtime, mask));
+	if (!origintimestr.empty() && !mask.empty())
+	{
+		origintime = raw_time(origintimestr, mask);
+	}
+
+	if (!validtimestr.empty() && !mask.empty())
+	{
+		validtime = raw_time(validtimestr, mask);
+	}
+
+	return forecast_time(origintime, validtime);
 }
 
 template <typename T>
@@ -348,7 +352,8 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 	}
 
 	// "first guess" metadata from file metadata
-	auto par = ReadParam(meta, options.prod, options.param);
+
+	auto par = ReadParam(meta, options.prod, param());
 	auto lvl = ReadLevel(meta, options.level);
 	auto ftype = ReadForecastType(meta, options.ftype);
 	auto ftime = ReadTime(meta, options.time);
@@ -362,6 +367,16 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 		auto blvl = ReadLevel(bmeta, lvl);
 		auto bftype = ReadForecastType(bmeta, ftype);
 		auto bftime = ReadTime(bmeta, ftime);
+
+		if (bpar == param() || blvl == level() || bftype == forecast_type() || bftime == forecast_time())
+		{
+			itsLogger.Warning("Unknown metadata from band");
+			itsLogger.Warning("Param: " + bpar.Name());
+			itsLogger.Warning("Level: " + static_cast<std::string>(blvl));
+			itsLogger.Warning("Time: " + bftime.OriginDateTime().String() + " step: " + bftime.Step().String("%H:%M"));
+			itsLogger.Warning("Forecast type: " + static_cast<std::string>(bftype));
+			throw kFileDataNotFound;
+		}
 
 		if (validate && options.time != bftime)
 		{
@@ -402,7 +417,13 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 		{
 			itsLogger.Info("Read from file '" + theInputFile.file_location + "' band# " + std::to_string(bandNo));
 			GDALRasterBand* poBand = poDataset->GetRasterBand(bandNo);
-			infos.push_back(MakeInfoFromGeoTIFFBand(poBand));
+			try
+			{
+				infos.push_back(MakeInfoFromGeoTIFFBand(poBand));
+			}
+			catch (const HPExceptionType& e)
+			{
+			}
 		}
 	}
 	else
@@ -410,7 +431,13 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 		itsLogger.Info("Read from file '" + theInputFile.file_location + "' band# " +
 		               std::to_string(theInputFile.message_no.get()));
 		GDALRasterBand* poBand = poDataset->GetRasterBand(static_cast<int>(theInputFile.message_no.get()));
-		infos.push_back(MakeInfoFromGeoTIFFBand(poBand));
+		try
+		{
+			infos.push_back(MakeInfoFromGeoTIFFBand(poBand));
+		}
+		catch (...)
+		{
+		}
 	}
 
 	return infos;

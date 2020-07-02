@@ -813,7 +813,7 @@ string util::GetEnv(const string& key)
 	const char* var = getenv(key.c_str());
 	if (!var)
 	{
-		throw runtime_error("Environment variable '" + string(key) + "' not found");
+		throw std::invalid_argument("Environment variable '" + string(key) + "' not found");
 	}
 	return string(var);
 }
@@ -1346,8 +1346,7 @@ param util::GetParameterInfoFromDatabaseName(const producer& prod, const param& 
 		return par;
 	}
 
-	auto paraminfo = r->RadonDB().GetParameterFromDatabaseName(prod.Id(), par.Name(),
-	                                                           lvl.Type(), lvl.Value());
+	auto paraminfo = r->RadonDB().GetParameterFromDatabaseName(prod.Id(), par.Name(), lvl.Type(), lvl.Value());
 
 	if (paraminfo.empty())
 	{
