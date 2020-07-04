@@ -1356,8 +1356,23 @@ param util::GetParameterInfoFromDatabaseName(const producer& prod, const param& 
 
 	param p(paraminfo);
 
-	// database does not provide aggregation or processing type information
-	p.Aggregation(par.Aggregation());
+	// database does not provide aggregation or processing type information,
+	// but we can guess
+	// todo: figure out a better way to deal with parametres that *always* have
+	// aggregation and/or processing type
+
+	aggregation agg;
+
+	if (p.Name() == "RRR-KGM2")
+	{
+		agg = aggregation(kAccumulation, ONE_HOUR);
+	}
+	else if (p.Name() == "RR-KGM2")
+	{
+		agg = aggregation(kAccumulation);
+	}
+
+	p.Aggregation(agg);
 	p.ProcessingType(par.ProcessingType());
 
 	return p;
