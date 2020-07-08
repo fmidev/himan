@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.6.22
+Version: 20.7.8
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -17,7 +17,7 @@ Requires: himan-lib >= 20.5.13
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 20.5.25
-Requires: libfmidb >= 20.4.6
+Requires: libfmidb >= 20.7.8
 Requires: smartmet-library-newbase >= 20.4.18
 Requires: libpqxx
 Requires: boost169-iostreams
@@ -41,7 +41,7 @@ Requires: jasper-libs
 Requires: eccodes
 %endif
 BuildRequires: libfmigrib-devel >= 20.5.25
-BuildRequires: libfmidb-devel >= 20.4.6
+BuildRequires: libfmidb-devel >= 20.7.8
 BuildRequires: smartmet-library-newbase-devel >= 20.4.18
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
@@ -133,6 +133,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Wed Jul  8 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.7.8-1.fmi
+- Newer fmidb
 * Mon Jun 22 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.6.22-1.fmi
 - grib plugin code refactoring
 * Mon May 25 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.5.25-1.fmi

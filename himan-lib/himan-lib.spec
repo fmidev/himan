@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: libfmidb >= 17.9.18
+Requires: libfmidb >= 20.7.8
 Requires: libfmigrib >= 19.10.28
 
 %if %{defined suse_version}
@@ -32,7 +32,7 @@ Requires: boost169-filesystem
 Requires: libs3
 
 %endif
-BuildRequires: libfmidb-devel >= 17.9.18
+BuildRequires: libfmidb-devel >= 20.7.8
 BuildRequires: libfmigrib-devel >= 19.10.28
 BuildRequires: zlib-devel
 BuildRequires: boost169-devel
@@ -77,6 +77,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/*
 
 %changelog
+* Wed Jul  8 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.7.8-1.fmi
+- Newer fmidb
 * Mon Jun 22 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.6.22-1.fmi
 - grib plugin code refactoring
 * Fri May 15 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.5.15-1.fmi
