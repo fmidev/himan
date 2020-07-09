@@ -1333,6 +1333,39 @@ string util::UniqueName(const info<T>& info)
 template string util::UniqueName(const info<double>&);
 template string util::UniqueName(const info<float>&);
 
+namespace
+{
+himan::aggregation GetAggregationFromParamName(const std::string& name)
+{
+	if (name == "RRR-KGM2")
+	{
+		return himan::aggregation(kAccumulation, ONE_HOUR);
+	}
+	else if (name.find("RR-") != string::npos)
+	{
+		const auto tokens = util::Split(name, "-", false);
+
+		if (tokens.size() == 2)
+		{
+			// RR-KGM2
+			return himan::aggregation(kAccumulation);
+		}
+
+		return himan::aggregation(kAccumulation, ONE_HOUR * stoi(tokens[1]));
+	}
+	else if (name.find("-MAX-") != string::npos)
+	{
+		return himan::aggregation(kMaximum);
+	}
+	else if (name.find("-MIN-") != string::npos)
+	{
+		return himan::aggregation(kMinimum);
+	}
+
+	return himan::aggregation();
+}
+}
+
 param util::GetParameterInfoFromDatabaseName(const producer& prod, const param& par, const level& lvl)
 {
 	logger logr("util");
@@ -1361,18 +1394,7 @@ param util::GetParameterInfoFromDatabaseName(const producer& prod, const param& 
 	// todo: figure out a better way to deal with parametres that *always* have
 	// aggregation and/or processing type
 
-	aggregation agg;
-
-	if (p.Name() == "RRR-KGM2")
-	{
-		agg = aggregation(kAccumulation, ONE_HOUR);
-	}
-	else if (p.Name() == "RR-KGM2")
-	{
-		agg = aggregation(kAccumulation);
-	}
-
-	p.Aggregation(agg);
+	p.Aggregation(::GetAggregationFromParamName(p.Name()));
 	p.ProcessingType(par.ProcessingType());
 
 	return p;
