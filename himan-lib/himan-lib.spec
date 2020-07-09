@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 20.6.22
+Version: 20.7.8
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
