@@ -4,7 +4,7 @@
 Summary: himan core library
 Name: %{LIBNAME}
 Version: 20.7.13
-Release: 1%{dist}.fmi
+Release: 2%{dist}.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -77,6 +77,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/*
 
 %changelog
+* Mon Jul 13 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.7.13-2.fmi
+- Bugfix for aggregation metadata processing
 * Mon Jul 13 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.7.13-1.fmi
 - grid_to_neons compatibility
 * Wed Jul  8 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.7.8-1.fmi
