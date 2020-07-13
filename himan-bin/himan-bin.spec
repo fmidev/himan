@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 20.7.8
+Version: 20.7.13
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 20.5.13
+Requires: himan-lib >= 20.7.13
 Requires: himan-plugins
 Requires: gdal >= 1.11.0
 Requires: zlib
@@ -64,6 +64,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Mon Jul 13 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.7.13-1.fmi
+- grid_to_neons compatibility in -lib
 * Wed Jul  8 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.7.8-1.fmi
 - New fmidb
 * Wed May 13 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.5.13-1.fmi
