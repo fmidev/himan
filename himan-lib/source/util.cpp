@@ -1345,7 +1345,7 @@ himan::aggregation GetAggregationFromParamName(const std::string& name)
 	{
 		const auto tokens = util::Split(name, "-", false);
 
-		if (tokens.size() == 2)
+		if (tokens.size() == 2 && tokens[1] == "KGM2")
 		{
 			// RR-KGM2
 			return himan::aggregation(kAccumulation);
@@ -1390,11 +1390,20 @@ param util::GetParameterInfoFromDatabaseName(const producer& prod, const param& 
 	param p(paraminfo);
 
 	// database does not provide aggregation or processing type information,
-	// but we can guess
+	// but we can guess, unless the calling code has already passed an aggregation
+	//
 	// todo: figure out a better way to deal with parametres that *always* have
 	// aggregation and/or processing type
 
-	p.Aggregation(::GetAggregationFromParamName(p.Name()));
+	if (par.Aggregation().Type() == kUnknownAggregationType)
+	{
+		p.Aggregation(::GetAggregationFromParamName(p.Name()));
+	}
+	else
+	{
+		p.Aggregation(par.Aggregation());
+	}
+
 	p.ProcessingType(par.ProcessingType());
 
 	return p;
