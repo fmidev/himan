@@ -1713,6 +1713,7 @@ unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message)
 
 				break;
 			}
+			break;
 		}
 
 		case 5:

@@ -137,6 +137,7 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		case kRotatedLatitudeLongitude:
 			// When working in rotated space, first point must also be rotated
 			firstPoint = dynamic_pointer_cast<rotated_latitude_longitude_grid>(myTargetInfo->Grid())->Rotate(firstPoint);
+			// fall through
 		case kLatitudeLongitude:
 		{
 			dx = vector<double>(Nj, MissingDouble());

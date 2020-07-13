@@ -657,8 +657,8 @@ shared_ptr<himan::info<T>> querydata::CreateInfo(shared_ptr<NFmiQueryData> theDa
 
 		case kNFmiStereographicArea:
 		{
-			const double di = qinfo.Area()->WorldXYWidth() / qinfo.Grid()->XNumber();
-			const double dj = qinfo.Area()->WorldXYHeight() / qinfo.Grid()->YNumber();
+			const double di = qinfo.Area()->WorldXYWidth() / static_cast<double> (qinfo.Grid()->XNumber());
+			const double dj = qinfo.Area()->WorldXYHeight() / static_cast<double> (qinfo.Grid()->YNumber());
 
 			newGrid = new stereographic_grid(
 			    kBottomLeft, point(qinfo.Area()->BottomLeftLatLon().X(), qinfo.Area()->BottomLeftLatLon().Y()), ni, nj,
