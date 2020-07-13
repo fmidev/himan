@@ -111,7 +111,7 @@ def generate(env):
     # build commands.
     env['STATICNVCCCMD'] = ' '.join([
         '$NVCC',
-	'$NVCCDEFINES',
+        '$NVCCDEFINES',
         '$NVCCPATH',
         '$NVCCFLAGS',
         '$STATICNVCCFLAGS',
@@ -120,7 +120,7 @@ def generate(env):
     ])
     env['SHAREDNVCCCMD'] = ' '.join([
         '$NVCC',
-	'$NVCCDEFINES',
+        '$NVCCDEFINES',
         '$NVCCPATH',
         '$NVCCFLAGS',
         '$SHAREDNVCCFLAGS',
@@ -136,12 +136,12 @@ def generate(env):
     # defines
 
     for i, p in enumerate(env['NVCCDEFINES']):
-	env['NVCCDEFINES'][i] = '-D' + p
+        env['NVCCDEFINES'][i] = '-D' + p
 
     # includes
 
     for i, p in enumerate(env['NVCCPATH']):
-	env['NVCCPATH'][i] = '-I' + p
+        env['NVCCPATH'][i] = '-I' + p
 
     env['STATICNVCCFLAGS'] = ''
     env['SHAREDNVCCFLAGS'] = ''

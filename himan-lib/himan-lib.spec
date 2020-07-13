@@ -14,35 +14,39 @@ Requires: glibc
 Requires: libgcc
 Requires: libstdc++
 Requires: libfmidb >= 21.3.31
-Requires: libfmigrib >= 19.10.28
+Requires: libfmigrib >= 20.6.16
 Requires: fmt >= 7.1.0
 
-%if %{defined suse_version}
-BuildRequires: bzip2
-Requires: libboost_iostreams
-Requires: libboost_filesystem
-%else
+%if %{defined el7}
+BuildRequires: scons
+Buildrequires: gdal-devel
+
+%else if %{defined el8}
+BuildRequires: python3-scons
+BuildRequires: gcc-c++ >= 8.2.1
+BuildRequires: eigen3-devel
+
+%endif
+
 BuildRequires: bzip2-devel
 BuildRequires: redhat-rpm-config
 BuildRequires: cuda-11-0
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: geos39-devel
 BuildRequires: gdal32-devel
+BuildRequires: libfmidb-devel >= 20.7.8
+BuildRequires: libfmigrib-devel >= 20.6.16
+BuildRequires: zlib-devel
+BuildRequires: boost169-devel
+BuildRequires: libs3-devel
+BuildRequires: libpqxx-devel
+BuildRequires: fmt-devel >= 7.1.0
 Requires: geos39
 Requires: gdal32-libs
 Requires: eccodes
 Requires: boost169-iostreams
 Requires: boost169-filesystem
 Requires: libs3 >= 4.1-0.6.20190408git287e4be.1.el7.fmi
-
-%endif
-BuildRequires: libfmidb-devel >= 20.7.8
-BuildRequires: libfmigrib-devel >= 19.10.28
-BuildRequires: zlib-devel
-BuildRequires: boost169-devel
-BuildRequires: scons
-BuildRequires: libs3-devel >= 4.1
-BuildRequires: fmt-devel >= 7.1.0
 
 Provides: libhiman.so
 

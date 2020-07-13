@@ -25,6 +25,19 @@ Requires: libpqxx
 Requires: boost169-iostreams
 Requires: boost169-thread
 Requires: libs3 >= 4.1
+Requires: jasper-libs
+Requires: eccodes
+Requires: gdal32-libs
+
+%if %{defined el7}
+BuildRequires: scons
+BuildRequires: eigen >= 3.3.4
+
+%else if %{defined el8}
+BuildRequires: python3-scons
+BuildRequires: eigen3-devel >= 3.3.4
+
+%endif
 
 %if %{defined suse_version}
 Requires: libjasper
@@ -36,21 +49,15 @@ BuildRequires: cuda-11-0
 BuildRequires: eccodes-devel
 BuildRequires: redhat-rpm-config
 BuildRequires: cuda-cusp-11-0 >= 0.5.1
-BuildRequires: eigen >= 3.3.4
 BuildRequires: libs3-devel >= 4.1
-
-Requires: jasper-libs
-Requires: eccodes
-%endif
 BuildRequires: libfmigrib-devel >= 20.12.2
 BuildRequires: libfmidb-devel >= 20.7.8
 BuildRequires: smartmet-library-newbase-devel >= 21.2.20
 BuildRequires: smartmet-library-gis-devel
-BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: boost169-devel
-BuildRequires: scons
 BuildRequires: fmt-devel >= 7.1.0
+%endif
 
 AutoReqProv:	no
 

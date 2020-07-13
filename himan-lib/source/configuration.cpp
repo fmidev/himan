@@ -149,7 +149,7 @@ std::ostream& configuration::Write(std::ostream& file) const
 	file << "__itsPackingType__" << HPPackingTypeToString.at(itsPackingType) << std::endl;
 	file << "__itsAllowedMissingValues__" << itsAllowedMissingValues << std::endl;
 	file << "__itsSSStateTableName__ " << itsSSStateTableName << std::endl;
-	file << "__itsProgramName__ " << itsProgramName << std::endl;
+	file << "__itsProgramName__ " << static_cast<int> (itsProgramName) << std::endl;
 
 	for (size_t i = 0; i < itsForecastTypes.size(); i++)
 	{

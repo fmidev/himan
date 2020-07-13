@@ -1,9 +1,10 @@
 import os
-import platform
 
 SConscript("scons_common.py")
 
 Import('env build_dir')
+
+assert env['IS_RHEL'] == True
 
 # Includes
 
@@ -14,7 +15,6 @@ env.Append(CPPPATH = ['/usr/include'])
 
 librarypaths = []
 
-librarypaths.append('/usr/lib64')
 env.Append(LIBPATH = librarypaths)
 
 # Libraries

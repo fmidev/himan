@@ -2748,10 +2748,10 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 
 	l.AB(ab);
 
-	newInfo->template Set<param>({p});
-	newInfo->template Set<forecast_time>({t});
-	newInfo->template Set<level>({l});
-	newInfo->template Set<forecast_type>({ty});
+	newInfo->template Iterator<param>().Add({p});
+	newInfo->template Iterator<forecast_time>().Add({t});
+	newInfo->template Iterator<level>().Add({l});
+	newInfo->template Iterator<forecast_type>().Add({ty});
 
 	unique_ptr<grid> newGrid = ReadAreaAndGrid(message, prod);
 

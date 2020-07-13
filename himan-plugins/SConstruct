@@ -15,9 +15,9 @@ includes.append('/usr/include/smartmet')
 env.Append(CPPPATH = includes)
 
 if env['RELEASE']:
-	env.Append(LIBPATH = env['WORKSPACE'] + '/himan-lib/build/release')
+    env.Append(LIBPATH = env['WORKSPACE'] + '/himan-lib/build/release')
 elif env['DEBUG']:
-	env.Append(LIBPATH = env['WORKSPACE'] + '/himan-lib/build/debug')
+    env.Append(LIBPATH = env['WORKSPACE'] + '/himan-lib/build/debug')
 
 # Libraries
 
@@ -36,6 +36,7 @@ libraries.append('boost_iostreams')
 libraries.append('boost_thread')
 
 env.Append(LIBS = libraries)
+env.Append(CCFLAGS = ['-Wno-sign-promo'])
 
 # Linker flags
 

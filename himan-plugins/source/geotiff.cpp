@@ -445,8 +445,8 @@ void ReadData(GDALRasterBand* poBand, matrix<T>& mat, const std::map<std::string
 		mat.MissingValue(static_cast<T>(poBand->GetNoDataValue(nullptr)));
 	}
 
-	ASSERT(poBand->GetXSize() == mat.SizeX());
-	ASSERT(poBand->GetYSize() == mat.SizeY());
+	ASSERT(poBand->GetXSize() == static_cast<int> (mat.SizeX()));
+	ASSERT(poBand->GetYSize() == static_cast<int> (mat.SizeY()));
 
 	int nXSize = poBand->GetXSize();
 	int nYSize = poBand->GetYSize();

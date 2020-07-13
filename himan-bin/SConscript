@@ -7,9 +7,9 @@ import os
 objects = []
 
 for file in Glob('source/*.cpp'):
-        s=os.path.basename(str(file))
-        obj='obj/'+ s.replace(".cpp","")
-	objects += env.Object(obj, file)
+    s=os.path.basename(str(file))
+    obj='obj/'+ s.replace(".cpp","")
+    objects += env.Object(obj, file)
 
 env.Program(target = 'himan', source = objects)
 
