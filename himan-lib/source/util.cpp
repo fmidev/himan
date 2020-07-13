@@ -1351,7 +1351,19 @@ himan::aggregation GetAggregationFromParamName(const std::string& name)
 			return himan::aggregation(kAccumulation);
 		}
 
-		return himan::aggregation(kAccumulation, ONE_HOUR * stoi(tokens[1]));
+		if (tokens[0] != "RR")
+		{
+			// PROB-RR-1 does not refer to 1-hour precipitation probability
+			return himan::aggregation();
+		}
+		try
+		{
+			return himan::aggregation(kAccumulation, ONE_HOUR * stoi(tokens[1]));
+		}
+		catch (const std::exception& e)
+		{
+			// de nada
+		}
 	}
 	else if (name.find("-MAX-") != string::npos)
 	{
