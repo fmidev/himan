@@ -79,7 +79,11 @@ void radon::Init()
 			itsLogger.Fatal("Failed to get connection");
 			himan::Abort();
 		}
-
+		catch (const std::exception& e)
+		{
+			itsLogger.Fatal(e.what());
+			himan::Abort();
+		}
 		itsInit = true;
 	}
 }
@@ -640,6 +644,14 @@ bool radon::SaveGrid(const info<T>& resultInfo, const file_information& finfo, c
 		case kLambertConformalConic:
 			gridType = 3;
 			break;
+		case kLambertEqualArea:
+			gridType = 140;
+			gribVersion = 2;
+			break;
+		case kTransverseMercator:
+			gridType = 12;
+			gribVersion = 2;
+			break;
 		default:
 			throw runtime_error("Unsupported projection: " + to_string(resultInfo.Grid()->Type()) + " " +
 			                    HPGridTypeToString.at(resultInfo.Grid()->Type()));
@@ -757,6 +769,27 @@ bool radon::SaveGrid(const info<T>& resultInfo, const file_information& finfo, c
 		return "NULL";
 	};
 
+	int radonFileFormat = 0;
+
+	switch (finfo.file_type)
+	{
+		case kGRIB1:
+			radonFileFormat = 1;
+			break;
+		case kGRIB2:
+			radonFileFormat = 2;
+			break;
+		case kNetCDF:
+			radonFileFormat = 4;
+			break;
+		case kGeoTIFF:
+			radonFileFormat = 5;
+			break;
+		default:
+			itsLogger.Error("Unknown file type: " + to_string(finfo.file_type));
+			himan::Abort();
+	}
+
 	query
 	    << "INSERT INTO " << fullTableName
 	    << " (producer_id, analysis_time, geometry_id, param_id, level_id, level_value, level_value2, forecast_period, "
@@ -767,7 +800,7 @@ bool radon::SaveGrid(const info<T>& resultInfo, const file_information& finfo, c
 	    << "'" << util::MakeSQLInterval(resultInfo.Time()) << "', "
 	    << static_cast<int>(resultInfo.ForecastType().Type()) << ", " << forecastTypeValue << ","
 	    << "'" << finfo.file_location << "', "
-	    << "'" << host << "', " << finfo.file_type << ", " << finfo.storage_type << ", "
+	    << "'" << host << "', " << radonFileFormat << ", " << finfo.storage_type << ", "
 	    << FormatToSQL(finfo.message_no) << ", " << FormatToSQL(finfo.offset) << ", " << FormatToSQL(finfo.length)
 	    << ")";
 
@@ -797,7 +830,7 @@ bool radon::SaveGrid(const info<T>& resultInfo, const file_information& finfo, c
 		query << "UPDATE " << fullTableName << " SET "
 		      << "file_location = '" << finfo.file_location << "', "
 		      << "file_server = '" << host << "', "
-		      << "file_format_id = " << finfo.file_type << ", "
+		      << "file_format_id = " << radonFileFormat << ", "
 		      << "file_protocol_id = " << finfo.storage_type << ", "
 		      << "message_no = " << FormatToSQL(finfo.message_no) << ", "
 		      << "byte_offset = " << FormatToSQL(finfo.offset) << ", "

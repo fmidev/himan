@@ -813,7 +813,7 @@ string util::GetEnv(const string& key)
 	const char* var = getenv(key.c_str());
 	if (!var)
 	{
-		throw runtime_error("Environment variable '" + string(key) + "' not found");
+		throw std::invalid_argument("Environment variable '" + string(key) + "' not found");
 	}
 	return string(var);
 }
@@ -1333,6 +1333,39 @@ string util::UniqueName(const info<T>& info)
 template string util::UniqueName(const info<double>&);
 template string util::UniqueName(const info<float>&);
 
+namespace
+{
+himan::aggregation GetAggregationFromParamName(const std::string& name)
+{
+	if (name == "RRR-KGM2")
+	{
+		return himan::aggregation(kAccumulation, ONE_HOUR);
+	}
+	else if (name.find("RR-") != string::npos)
+	{
+		const auto tokens = util::Split(name, "-", false);
+
+		if (tokens.size() == 2)
+		{
+			// RR-KGM2
+			return himan::aggregation(kAccumulation);
+		}
+
+		return himan::aggregation(kAccumulation, ONE_HOUR * stoi(tokens[1]));
+	}
+	else if (name.find("-MAX-") != string::npos)
+	{
+		return himan::aggregation(kMaximum);
+	}
+	else if (name.find("-MIN-") != string::npos)
+	{
+		return himan::aggregation(kMinimum);
+	}
+
+	return himan::aggregation();
+}
+}
+
 param util::GetParameterInfoFromDatabaseName(const producer& prod, const param& par, const level& lvl)
 {
 	logger logr("util");
@@ -1346,8 +1379,7 @@ param util::GetParameterInfoFromDatabaseName(const producer& prod, const param& 
 		return par;
 	}
 
-	auto paraminfo = r->RadonDB().GetParameterFromDatabaseName(prod.Id(), par.Name(),
-	                                                           lvl.Type(), lvl.Value());
+	auto paraminfo = r->RadonDB().GetParameterFromDatabaseName(prod.Id(), par.Name(), lvl.Type(), lvl.Value());
 
 	if (paraminfo.empty())
 	{
@@ -1357,8 +1389,12 @@ param util::GetParameterInfoFromDatabaseName(const producer& prod, const param& 
 
 	param p(paraminfo);
 
-	// database does not provide aggregation or processing type information
-	p.Aggregation(par.Aggregation());
+	// database does not provide aggregation or processing type information,
+	// but we can guess
+	// todo: figure out a better way to deal with parametres that *always* have
+	// aggregation and/or processing type
+
+	p.Aggregation(::GetAggregationFromParamName(p.Name()));
 	p.ProcessingType(par.ProcessingType());
 
 	return p;

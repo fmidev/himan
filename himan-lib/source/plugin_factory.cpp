@@ -78,7 +78,8 @@ std::shared_ptr<himan_plugin> plugin_factory::Plugin(const std::string& theClass
 		}
 		ReadPlugins(theClassName);
 	}
-	throw std::runtime_error("plugin_factory: Unknown plugin clone operation requested: " + theClassName);
+	itsLogger.Error("Unable to find plugin '" + theClassName + "'");
+	throw kPluginNotFound;
 }
 
 /*

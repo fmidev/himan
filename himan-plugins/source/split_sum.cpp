@@ -238,15 +238,15 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		params.push_back(parm);
 	}
 
-        if (itsConfiguration->Exists("rrs24h") && itsConfiguration->GetValue("rrs24h") == "true")
-        {
-                param parm("RRS-24-MM");
-                parm.Unit(kKgm2);
+	if (itsConfiguration->Exists("rrs24h") && itsConfiguration->GetValue("rrs24h") == "true")
+	{
+		param parm("RRS-24-MM");
+		parm.Unit(kKgm2);
 
-                parm.Aggregation(aggregation(kAccumulation, time_duration("24:00")));
+		parm.Aggregation(aggregation(kAccumulation, time_duration("24:00")));
 
-                params.push_back(parm);
-        }
+		params.push_back(parm);
+	}
 
 	// Snow
 
@@ -448,10 +448,14 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 	else
 	{
 		// Fetch data for previous step
-
-		// int paramStep = myTargetInfo->Param().Aggregation().TimeResolutionValue();
 		time_duration paramStep = myTargetInfo->Param().Aggregation().TimeDuration();
 
+		if (paramStep.Empty())
+		{
+			myThreadedLogger.Error("Parameter " + myTargetInfo->Param().Name() +
+			                       " has no aggregation duration set, unable to continue");
+			return;
+		}
 		// Skip early steps if necessary
 
 		if (myTargetInfo->Time().Step() >= paramStep)

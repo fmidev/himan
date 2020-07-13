@@ -204,7 +204,8 @@ enum HPExceptionType
 	kFileMetaDataNotFound,
 	kFileDataNotFound,
 	kFunctionNotImplemented,
-	kInvalidWriteOptions
+	kInvalidWriteOptions,
+	kPluginNotFound
 };
 
 enum HPTimeResolution

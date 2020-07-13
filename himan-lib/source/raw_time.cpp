@@ -114,7 +114,7 @@ std::string raw_time::String(const std::string& theTimeMask) const
 {
 	if (Empty())
 	{
-		throw std::runtime_error(ClassName() + ": input argument is not valid");
+		return "not_a_date_time";
 	}
 
 	if (theTimeMask == "%Y-%m-%d %H:%M:%S")

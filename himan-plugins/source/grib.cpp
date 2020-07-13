@@ -325,7 +325,7 @@ himan::time_duration DurationFromTimeRange(long unitOfTimeRange)
 		case -999:
 			return time_duration();
 		default:
-			throw runtime_error("Unsupported unit of time range: " + to_string(unitOfTimeRange));
+			throw invalid_argument("Unsupported unit of time range: " + to_string(unitOfTimeRange));
 	}
 }
 
@@ -1806,6 +1806,7 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 			logr.Warning("Parameter name not found from " + HPDatabaseTypeToString.at(dbtype) +
 			             " for no_vers: " + to_string(no_vers) + ", number: " + to_string(number) +
 			             ", timeRangeIndicator: " + to_string(timeRangeIndicator));
+			throw kFileMetaDataNotFound;
 		}
 		else
 		{
@@ -1879,6 +1880,7 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 			logr.Warning("Parameter name not found from database for discipline: " + to_string(discipline) +
 			             ", category: " + to_string(category) + ", number: " + to_string(number) +
 			             ", statistical processing: " + to_string(tosp));
+			throw kFileMetaDataNotFound;
 		}
 		else
 		{
@@ -2072,9 +2074,9 @@ himan::level ReadLevel(const search_options& opts, const producer& prod, const N
 
 		if (levelInfo.empty())
 		{
-			logr.Fatal("Unsupported level type for producer " + to_string(prod.Id()) + ": " + to_string(gribLevel) +
+			logr.Error("Unsupported level type for producer " + to_string(prod.Id()) + ": " + to_string(gribLevel) +
 			           ", grib edition " + to_string(message.Edition()));
-			himan::Abort();
+			throw kFileMetaDataNotFound;
 		}
 
 		string levelName = levelInfo["name"];
