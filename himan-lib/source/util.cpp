@@ -1302,7 +1302,7 @@ string util::UniqueName(const plugin::search_options& options)
            << options.time.ValidDateTime().String("%Y-%m-%d %H:%M:%S") << "_"
            << options.param.Name() << "_"
            << static_cast<string>(options.level) << "_"
-           << options.ftype.Type() << "_"
+           << static_cast<int> (options.ftype.Type()) << "_"
            << options.ftype.Value();
 
 	// clang-format on
@@ -1322,7 +1322,7 @@ string util::UniqueName(const info<T>& info)
            << info.Time().ValidDateTime().String("%Y-%m-%d %H:%M:%S") << "_"
            << info.Param().Name() << "_"
            << static_cast<string>(info.Level()) << "_"
-           << info.ForecastType().Type() << "_"
+           << static_cast<int> (info.ForecastType().Type()) << "_"
            << info.ForecastType().Value();
 
 	// clang-format on

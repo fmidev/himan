@@ -96,7 +96,6 @@ static S3Status getObjectDataCallback(int bufferSize, const char* buffer, void* 
 void Initialize()
 {
 	call_once(oflag, [&]() {
-
 		access_key = getenv("S3_ACCESS_KEY_ID");
 		secret_key = getenv("S3_SECRET_ACCESS_KEY");
 		security_token = getenv("S3_SESSION_TOKEN");
@@ -122,6 +121,7 @@ void Initialize()
 buffer s3::ReadFile(const file_information& fileInformation)
 {
 	Initialize();
+	logger logr("s3");
 
 	S3GetObjectHandler getObjectHandler = {responseHandler, &getObjectDataCallback};
 
@@ -130,6 +130,37 @@ buffer s3::ReadFile(const file_information& fileInformation)
 	const auto key = bucketAndFileName[1];
 
 	buffer ret;
+
+#ifdef S3_DEFAULT_REGION
+
+	// extract region name from host name, assuming aws
+	// s3.us-east-1.amazonaws.com
+	auto tokens = util::Split(fileInformation.file_server, ".", false);
+
+	if (tokens.size() == 3)
+	{
+		logr.Error("Hostname does not follow pattern s3.<regionname>.amazonaws.com");
+		throw himan::kFileDataNotFound;
+	}
+
+	const std::string region = tokens[1];
+
+	// libs3 boilerplate
+
+	// clang-format off
+
+        S3BucketContext bucketContext =
+        {
+                fileInformation.file_server.c_str(),
+                bucket.c_str(),
+                S3ProtocolHTTP,
+                S3UriStylePath,
+                access_key,
+                secret_key,
+                security_token,
+                region.c_str()
+        };
+#else
 
 	// clang-format off
 
@@ -145,8 +176,7 @@ buffer s3::ReadFile(const file_information& fileInformation)
 	};
 
 	// clang-format on
-
-	logger logr("s3");
+#endif
 
 	int count = 0;
 	do
@@ -158,9 +188,14 @@ buffer s3::ReadFile(const file_information& fileInformation)
 		const unsigned long offset = fileInformation.offset.get();
 		const unsigned long length = fileInformation.length.get();
 
-		S3_get_object(&bucketContext, key.c_str(), NULL, offset, length, NULL, &getObjectHandler, &ret);
 		logr.Debug("Reading from host=" + fileInformation.file_server + " bucket=" + bucket + " key=" + key + " " +
 		           std::to_string(offset) + ":" + std::to_string(length) + " (" + S3_get_status_name(statusG) + ")");
+
+#ifdef S3_DEFAULT_REGION
+		S3_get_object(&bucketContext, key.c_str(), NULL, offset, length, NULL, 0, &getObjectHandler, &ret);
+#else
+		S3_get_object(&bucketContext, key.c_str(), NULL, offset, length, NULL, &getObjectHandler, &ret);
+#endif
 		count++;
 	} while (S3_status_is_retryable(statusG) && count < 3);
 
@@ -229,6 +264,37 @@ void s3::WriteObject(const std::string& objectName, const buffer& buff)
 		throw std::runtime_error("Environment variable S3_HOSTNAME not defined");
 	}
 
+#ifdef S3_DEFAULT_REGION
+
+        // extract region name from host name, assuming aws
+        // s3.us-east-1.amazonaws.com
+        auto tokens = util::Split(host, ".", false);
+
+        if (tokens.size() == 3)
+        {
+                std::cerr << "Hostname does not follow pattern s3.<regionname>.amazonaws.com" << std::endl;
+                return;
+        }
+
+        const std::string region = tokens[1];
+
+        // libs3 boilerplate
+
+        // clang-format off
+
+        S3BucketContext bucketContext =
+        {
+                host,
+                bucket.c_str(),
+                S3ProtocolHTTP,
+                S3UriStylePath,
+                access_key,
+                secret_key,
+                security_token,
+                region.c_str()
+        };
+#else
+
 	// clang-format off
 
 	S3BucketContext bucketContext =
@@ -241,6 +307,7 @@ void s3::WriteObject(const std::string& objectName, const buffer& buff)
 		secret_key,
 		security_token
 	};
+#endif
 
 	// clang-format on
 
@@ -261,9 +328,14 @@ void s3::WriteObject(const std::string& objectName, const buffer& buff)
 			sleep(2 * count);
 		}
 
-		S3_put_object(&bucketContext, key.c_str(), buff.length, NULL, NULL, &putObjectHandler, &data);
 		logr.Debug("Writing to host=" + std::string(host) + " bucket=" + bucket + " key=" + key + " (" +
 		           S3_get_status_name(statusG) + ")");
+
+#ifdef S3_DEFAULT_REGION
+		S3_put_object(&bucketContext, key.c_str(), buff.length, NULL, NULL, 0, &putObjectHandler, &data);
+#else
+		S3_put_object(&bucketContext, key.c_str(), buff.length, NULL, NULL, &putObjectHandler, &data);
+#endif
 
 		count++;
 	} while (S3_status_is_retryable(statusG) && count < 3);

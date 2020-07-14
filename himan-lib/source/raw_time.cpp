@@ -182,8 +182,8 @@ void raw_time::Adjust(HPTimeResolution timeResolution, int theValue)
 	}
 	else
 	{
-		throw std::runtime_error(ClassName() + ": Invalid time adjustment unit: " + std::to_string(timeResolution) +
-		                         "'");
+		throw std::runtime_error(
+		    ClassName() + ": Invalid time adjustment unit: " + std::to_string(static_cast<int>(timeResolution)) + "'");
 	}
 }
 
@@ -210,8 +210,11 @@ std::string raw_time::ToDatabaseTime() const
 	const auto& time = itsDateTime.time_of_day();
 
 	char fmt[13];
-	snprintf(fmt, 13, "%04d%02d%02d%02d%02d", static_cast<int>(date.year()), static_cast<int>(date.month()),
-	         static_cast<int>(date.day()), static_cast<int>(time.hours()), static_cast<int>(time.minutes()));
+	if (snprintf(fmt, 13, "%04d%02u%02u%02u%02u", static_cast<int>(date.year()), static_cast<int>(date.month()),
+	             static_cast<int>(date.day()), static_cast<int>(time.hours()), static_cast<int>(time.minutes())) < 0)
+	{
+		himan::Abort();
+	}
 
 	return std::string(fmt);
 }
@@ -235,9 +238,12 @@ std::string raw_time::ToSQLTime() const
 	const auto& time = itsDateTime.time_of_day();
 
 	char fmt[20];
-	snprintf(fmt, 20, "%04d-%02d-%02d %02d:%02d:%02d", static_cast<int>(date.year()), static_cast<int>(date.month()),
-	         static_cast<int>(date.day()), static_cast<int>(time.hours()), static_cast<int>(time.minutes()),
-	         static_cast<int>(time.seconds()));
+	if (snprintf(fmt, 20, "%04d-%02u-%02u %02u:%02u:%02u", static_cast<int>(date.year()),
+	             static_cast<int>(date.month()), static_cast<int>(date.day()), static_cast<int>(time.hours()),
+	             static_cast<int>(time.minutes()), static_cast<int>(time.seconds())) < 0)
+	{
+		himan::Abort();
+	}
 
 	return std::string(fmt);
 }

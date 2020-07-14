@@ -48,7 +48,7 @@ himan::geoutil::rotation<T> himan::geoutil::rotation<T>::FromRotLatLon(const T& 
 
 	// Create a rotation quaternion from product of a series of rotations about principle axis
 	QRot = AngleAxis<T>(lonOfSouthPole, Matrix<T, 3, 1>::UnitZ()) *
-	       AngleAxis<T>(-(M_PI / 2.0 + latOfSouthPole), Matrix<T, 3, 1>::UnitY()) *
+	       AngleAxis<T>(-(T(M_PI / 2.0) + latOfSouthPole), Matrix<T, 3, 1>::UnitY()) *
 	       AngleAxis<T>(-angleOfRot, Matrix<T, 3, 1>::UnitZ());
 
 	return ret;
@@ -70,7 +70,7 @@ himan::geoutil::rotation<T> himan::geoutil::rotation<T>::ToRotLatLon(const T& la
 
 	// Create a rotation quaternion from product of a series of rotations about principle axis
 	QRot = AngleAxis<T>(angleOfRot, Matrix<T, 3, 1>::UnitZ()) *
-	       AngleAxis<T>(M_PI / 2.0 + latOfSouthPole, Matrix<T, 3, 1>::UnitY()) *
+	       AngleAxis<T>(T(M_PI / 2.0) + latOfSouthPole, Matrix<T, 3, 1>::UnitY()) *
 	       AngleAxis<T>(-lonOfSouthPole, Matrix<T, 3, 1>::UnitZ());
 
 	return ret;

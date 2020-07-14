@@ -5,6 +5,7 @@
 #include "numerical_functions.h"
 #include <Eigen/Dense>
 #include <algorithm>
+#include <numeric>
 #include <limits>
 
 using namespace himan;
@@ -104,7 +105,7 @@ std::pair<std::vector<T>, std::vector<T>> numerical_functions::LegGauss(size_t N
 
 	for (size_t n = 0; n < N - 1; ++n)
 	{
-		Jdiag1[n] = static_cast<T>((n + 1) * 1.0 / std::sqrt(2 * (n) + 1) * 1.0 / std::sqrt(2 * (n + 1) + 1));
+		Jdiag1[n] = static_cast<T>(T(n + 1) * 1.0 / std::sqrt(2 * (n) + 1) * 1.0 / std::sqrt(2 * (n + 1) + 1));
 	}
 	//-------------------------------------------------------------------------------------------------------
 

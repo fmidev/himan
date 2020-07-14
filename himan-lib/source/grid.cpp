@@ -233,7 +233,7 @@ point regular_grid::XY(const point& latlon) const
 	const double x = (projX / itsDi);
 	const double y = (projY / itsDj) * (itsScanningMode == kTopLeft ? -1 : 1);
 
-	if (x < 0 || x > itsNi - 1 || y < 0 || y > itsNj - 1)
+	if (x < 0. || x > static_cast<double> (itsNi - 1) || y < 0. || y > static_cast<double> (itsNj - 1))
 	{
 		return point(MissingDouble(), MissingDouble());
 	}

@@ -82,7 +82,8 @@ std::ostream& processing_type::Write(std::ostream& file) const
 {
 	file << "<" << ClassName() << ">" << std::endl;
 
-	file << "__itsType__ " << itsType << " (" << HPProcessingTypeToString.at(itsType) << ")" << std::endl;
+	file << "__itsType__ " << static_cast<int>(itsType) << " (" << HPProcessingTypeToString.at(itsType) << ")"
+	     << std::endl;
 	file << "__itsValue__ " << itsValue << std::endl;
 	file << "__itsValue2__ " << itsValue2 << std::endl;
 	file << "__itsNumberOfEnsembleMembers__ " << itsNumberOfEnsembleMembers << std::endl;

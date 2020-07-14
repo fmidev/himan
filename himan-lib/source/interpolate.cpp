@@ -779,9 +779,10 @@ std::pair<size_t, T> NearestPoint(regular_grid& source, point target)
 		return std::make_pair(0, MissingValue<T>());
 
 	// In case of point in wrap-around region on global grid
-	if (std::round(xy.X()) == source.Ni())
+	if (static_cast<size_t>(std::round(xy.X())) == source.Ni())
+	{
 		return std::make_pair(source.Ni() * static_cast<size_t>(std::round(xy.Y())), 1.0);
-
+	}
 	return std::make_pair(
 	    static_cast<size_t>(std::round(xy.X())) + source.Ni() * static_cast<size_t>(std::round(xy.Y())), 1.0);
 }
