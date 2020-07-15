@@ -693,7 +693,6 @@ void WriteTime(NFmiGribMessage& message, const forecast_time& ftime, const produ
 					logr.Warning("Forcing starting step from negative value to zero");
 					p1 = 0;
 				}
-
 				message.P1(p1);
 				message.P2(p2);
 				break;
@@ -1826,6 +1825,19 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 		{
 			case 0:  // forecast
 			case 1:  // analysis
+				if (prod.Id() == 131)
+				{
+					// yeah, sometimes timeRangeIndicator=0 even if shortName=tp,
+					// what can we do :shrug:
+					a = util::GetAggregationFromParamName(p.Name());
+
+					if (a.Type() != kUnknownAggregationType)
+					{
+						// only P1 used in grib if tri=0/1
+						a.TimeDuration(DurationFromTimeRange(message.UnitOfTimeRange()) *
+						               static_cast<int>(message.P1()));
+					}
+				}
 				break;
 
 			case 3:  // average

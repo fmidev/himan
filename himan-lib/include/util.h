@@ -217,6 +217,16 @@ std::string UniqueName(const info<T>& info);
 param GetParameterInfoFromDatabaseName(const producer& prod, const param& par, const level& lvl);
 
 /**
+ * @brief Try to determine aggregation from parameter name
+ *
+ * Intermediate solution while waiting for a better way to do this,
+ * perhaps through database.
+ *
+ */
+
+aggregation GetAggregationFromParamName(const std::string& name);
+
+/**
  * @brief Convert vector from float to double or vice versa, retaining correct
  * missing value.
  *
@@ -266,7 +276,6 @@ inline auto zip_range(Conts&... conts)
 	return {boost::make_zip_iterator(boost::make_tuple(conts.begin()...)),
 	        boost::make_zip_iterator(boost::make_tuple(conts.end()...))};
 }
-
 
 }  // namespace util
 }  // namespace himan

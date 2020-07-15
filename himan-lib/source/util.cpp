@@ -1333,9 +1333,7 @@ string util::UniqueName(const info<T>& info)
 template string util::UniqueName(const info<double>&);
 template string util::UniqueName(const info<float>&);
 
-namespace
-{
-himan::aggregation GetAggregationFromParamName(const std::string& name)
+aggregation util::GetAggregationFromParamName(const std::string& name)
 {
 	if (name == "RRR-KGM2")
 	{
@@ -1376,7 +1374,6 @@ himan::aggregation GetAggregationFromParamName(const std::string& name)
 
 	return himan::aggregation();
 }
-}
 
 param util::GetParameterInfoFromDatabaseName(const producer& prod, const param& par, const level& lvl)
 {
@@ -1409,7 +1406,7 @@ param util::GetParameterInfoFromDatabaseName(const producer& prod, const param& 
 
 	if (par.Aggregation().Type() == kUnknownAggregationType)
 	{
-		p.Aggregation(::GetAggregationFromParamName(p.Name()));
+		p.Aggregation(GetAggregationFromParamName(p.Name()));
 	}
 	else
 	{
