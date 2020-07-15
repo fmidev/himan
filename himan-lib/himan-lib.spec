@@ -3,8 +3,8 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 20.7.13
-Release: 3%{dist}.fmi
+Version: 20.7.15
+Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -77,6 +77,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/*
 
 %changelog
+* Wed Jul 15 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.7.15-1.fmi
+- Add configuration option ss_state_table_name
 * Mon Jul 13 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.7.13-3.fmi
 - More bugfix on the same issue
 * Mon Jul 13 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.7.13-2.fmi
