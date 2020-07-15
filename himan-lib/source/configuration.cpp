@@ -44,7 +44,8 @@ configuration::configuration()
       itsPackingType(kSimplePacking),
       itsAllowedMissingValues(std::numeric_limits<size_t>::max()),
       itsForecastTypes({forecast_type(kDeterministic)}),
-      itsBaseGrid(nullptr)
+      itsBaseGrid(nullptr),
+      itsSSStateTableName()
 {
 }
 
@@ -86,7 +87,9 @@ configuration::configuration(const configuration& o)
       itsForecastTypes(o.itsForecastTypes),
       itsLevels(o.itsLevels),
       itsTimes(o.itsTimes),
-      itsBaseGrid(o.itsBaseGrid ? std::unique_ptr<grid>(o.itsBaseGrid->Clone()) : nullptr)
+      itsBaseGrid(o.itsBaseGrid ? std::unique_ptr<grid>(o.itsBaseGrid->Clone()) : nullptr),
+      itsSSStateTableName(o.itsSSStateTableName)
+
 {
 }
 
@@ -502,4 +505,14 @@ std::vector<level> configuration::Levels() const
 void configuration::Levels(const std::vector<level>& theLevels)
 {
 	itsLevels = theLevels;
+}
+
+std::string configuration::SSStateTableName() const
+{
+	return itsSSStateTableName;
+}
+
+void configuration::SSStateTableName(const std::string& theSSStateTableName)
+{
+	itsSSStateTableName = theSSStateTableName;
 }

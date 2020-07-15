@@ -36,6 +36,7 @@ in global scope.
   * [Asynchronous execution](#Asynchronous_execution)
   * [Storage type](#Storage_type)
   * [Allowed missing values](#Allowed_missing_values)
+  * [ss_state table name](#ss_state_table_name)
 * [Environment variables](#Environment_variables)
 * [Full examples](#Full_examples)
 
@@ -571,6 +572,21 @@ Example:
 
     "allowed_missing_values" : 20000
     "allowed_missing_values" : "10%"
+
+<a name="ss_state_table_name"/>
+
+## ss_state table name
+
+In radon database a table 'ss_state' is updated after each Himan execution to provide information about the newly created data for
+smartmet server. With configuration file option 'ss_state_table_name' the table name that is reported to ss_state can be changed.
+This is required in some circumstances, for example when a special database view is used to alter the metadata before it is presented
+to smartmet server.
+
+Note: This option does not provide a way to change the name of the ss_state table itself!
+
+Example:
+
+    "ss_state_table_name" : "new_name"
 
 
 <a name="Environment_variables"/>

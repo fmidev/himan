@@ -248,6 +248,10 @@ class configuration
 	void BaseGrid(std::unique_ptr<grid> theBaseGrid);
 	const grid* BaseGrid() const;
 
+	// The name of the table that's put in to table 'ss_state'
+	std::string SSStateTableName() const;
+	void SSStateTableName(const std::string& theSSStateTableName);
+
    protected:
 	std::vector<producer> itsSourceProducers;
 
@@ -297,6 +301,7 @@ class configuration
 	std::vector<forecast_time> itsTimes;
 
 	std::unique_ptr<grid> itsBaseGrid;
+	std::string itsSSStateTableName;
 };
 
 inline std::ostream& operator<<(std::ostream& file, const configuration& ob)

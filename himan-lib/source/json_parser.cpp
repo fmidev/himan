@@ -314,6 +314,14 @@ void WriteStorageType(const boost::property_tree::ptree& pt, std::shared_ptr<con
 	}
 }
 
+void SSStateTableName(const boost::property_tree::ptree& pt, std::shared_ptr<configuration>& conf)
+{
+	if (auto tableName = ReadElement<std::string>(pt, "ss_state_table_name"))
+	{
+		conf->SSStateTableName(tableName.get());
+	}
+}
+
 void FilePackingType(const boost::property_tree::ptree& pt, std::shared_ptr<configuration>& conf)
 {
 	if (auto packingType = ReadElement<std::string>(pt, "file_packing_type"))
@@ -477,6 +485,7 @@ void CheckCommonOptions(const boost::property_tree::ptree& pt, shared_ptr<config
 	AllowedMissingValues(pt, conf, conf->BaseGrid()->Size());
 	ForecastTypes(pt, conf);
 	WriteMode(conf, pt);
+	SSStateTableName(pt, conf);
 }
 
 vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(shared_ptr<configuration> conf)

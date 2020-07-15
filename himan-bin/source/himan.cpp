@@ -130,12 +130,23 @@ void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
 
 	const int geometryId = stoi(geomInfo["id"]);
 
-	auto tableInfo = r->RadonDB().GetTableName(producerId, analysisTime, pc->TargetGeomName());
+	string tableName;
 
-	if (tableInfo.empty())
+	if (pc->SSStateTableName().empty() == false)
 	{
-		log.Error("ss_state update failed: table not found from as_grid");
-		return;
+		tableName = pc->SSStateTableName();
+	}
+	else
+	{
+		auto tableInfo = r->RadonDB().GetTableName(producerId, analysisTime, pc->TargetGeomName());
+
+		if (tableInfo.empty())
+		{
+			log.Error("ss_state update failed: table not found from as_grid");
+			return;
+		}
+
+		tableName = tableInfo["schema_name"] + "." + tableInfo["table_name"];
 	}
 
 	int inserts = 0, updates = 0;
@@ -161,7 +172,7 @@ void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
 				   << producerId << ", " << geometryId << ", "
 				   << "'" << analysisTime << "', '" << util::MakeSQLInterval(ftime) << "', "
 				   << static_cast<int>(ftype.Type()) << ", " << forecastTypeValue << ", "
-				   << "'" << tableInfo["schema_name"] << "." << tableInfo["table_name"] << "')";
+				   << "'" << tableName << "')";
 
 				r->RadonDB().Execute(ss.str());
 				inserts++;
@@ -169,7 +180,7 @@ void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
 			catch (const pqxx::unique_violation& e)
 			{
 				ss.str("");
-				ss << "UPDATE ss_state SET last_updated = now() WHERE "
+				ss << "UPDATE ss_state SET table_name = '" << tableName << "', last_updated = now() WHERE "
 				   << "producer_id = " << producerId << " AND "
 				   << "geometry_id = " << geometryId << " AND "
 				   << "analysis_time = '" << analysisTime << "' AND "
