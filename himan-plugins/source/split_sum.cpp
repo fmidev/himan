@@ -60,6 +60,7 @@ split_sum::split_sum()
 	sourceParameters["RTOPLW-WM2"] = {param("RTOPLWA-JM2"), param("RTOPLW-WM2")};
 	sourceParameters["RNETLW-WM2"] = {param("RNETLWA-JM2"), param("RNETLW-WM2")};
 	sourceParameters["RADSW-WM2"] = {param("RADSWA-JM2")};
+	sourceParameters["RNETSW-WM2"] = {param("RNETSWA-JM2"), param("RNETSW-WM2")};
 }
 
 void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
@@ -321,6 +322,13 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		params.push_back(parm);
 	}
 
+        if (itsConfiguration->Exists("netsw") && itsConfiguration->GetValue("netsw") == "true")
+        {
+                param parm("RNETSW-WM2", 311, 0, 4, 9);
+
+                params.push_back(parm);
+        }
+
 	if (params.empty())
 	{
 		itsLogger.Error("No parameter definition given, abort");
@@ -398,7 +406,7 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 
 	const bool isRadiationCalculation =
 	    (myParamName == "RADGLO-WM2" || myParamName == "RADLW-WM2" || myParamName == "RTOPLW-WM2" ||
-	     myParamName == "RNETLW-WM2" || myParamName == "RADSW-WM2");
+	     myParamName == "RNETLW-WM2" || myParamName == "RADSW-WM2" || myParamName == "RNETSW-WM2");
 
 	const bool isRateCalculation =
 	    (isRadiationCalculation || myParamName == "RRR-KGM2" || myParamName == "RRRL-KGM2" ||
@@ -537,7 +545,7 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 
 		result = (currentSum - previousSum) * invstep * scaleFactor;
 
-		if (result < 0 && myParamName != "RTOPLW-WM2" && myParamName != "RNETLW-WM2")
+		if (result < 0 && myParamName != "RTOPLW-WM2" && myParamName != "RNETLW-WM2" && myParamName != "RNETSW-WM2")
 		{
 			result = 0;
 		}
