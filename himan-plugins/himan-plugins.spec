@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.7.15
+Version: 20.7.23
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -133,6 +133,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Thu Jul 23 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.7.23-1.fmi
+- Netsw radiation to split_sum
+- Remove protocol from file (s3)
 * Wed Jul 15 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.7.15-1.fmi
 - grib metadata workarounds for some ECMWF parameters
 * Mon Jul 13 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.7.13-1.fmi
