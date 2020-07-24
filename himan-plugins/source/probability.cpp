@@ -346,7 +346,9 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 		    "More than one forecast type defined - probability can only produce 'statistical processing'");
 	}
 
-	itsForecastTypeIterator = forecast_type_iter({forecast_type(kStatisticalProcessing)});
+	const std::vector<forecast_type> type = {forecast_type(kStatisticalProcessing)};
+	itsForecastTypeIterator = forecast_type_iter(type);
+	std::const_pointer_cast<himan::plugin_configuration>(itsConfiguration)->ForecastTypes(type);
 
 	FetchRemainingLimitsForStations(conf->BaseGrid(), itsParamConfigurations, itsLogger);
 
