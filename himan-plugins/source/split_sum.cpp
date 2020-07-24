@@ -662,7 +662,7 @@ pair<shared_ptr<himan::info<double>>, shared_ptr<himan::info<double>>> split_sum
 shared_ptr<himan::info<double>> split_sum::FetchSourceData(shared_ptr<info<double>> myTargetInfo,
                                                            const forecast_time& wantedTime) const
 {
-	level wantedLevel(kHeight, 0, "HEIGHT");
+	level wantedLevel = myTargetInfo->Level();
 
 	auto params = sourceParameters[myTargetInfo->Param().Name()];
 
