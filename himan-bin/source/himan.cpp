@@ -153,9 +153,9 @@ void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
 
 	for (const auto& ftype : pc->ForecastTypes())
 	{
-		int forecastTypeValue = -1;  // default, deterministic/analysis
+		int forecastTypeValue = -1;  // default, deterministic/analysis/statistical processing
 
-		if (ftype.Type() > 2)
+		if (ftype.Type() >= 3 && ftype.Type() <= 4)
 		{
 			forecastTypeValue = static_cast<int>(ftype.Value());
 		}
