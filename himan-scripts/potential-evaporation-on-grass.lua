@@ -3,8 +3,8 @@
 
 -- Constants
 local ROO   = 1.2923
-local CP    = 1004.
-local L     = 2.5E6
+local CP    = kCp
+local L     = kL
 local STEF  = 5.67E-8
 local EM    = 0.98
 
@@ -35,23 +35,17 @@ for i=1,#temp do
 	local U = math.max(windspeed[i], 0.5)
 	local RA = 0.6 * (( math.log(8. / 0.0002) / 0.4 )^2) / U
 	local RN = netsw[i] + netlw[i] --skipping some steps and calculate net total radiation from model net radiation directly
-	local ES
-        if(temp[i] > -5.0) then
-        	ES = 6.107 * 10^(7.5 * T / (237.0 + T))
-	else
-		ES = 6.107 * 10^(9.5 * T / (265.5 + T))
-       	end
+	local ES = Es_(temp[i])
 	local E = relhum[i] * ES * RHScale
 	local KALT = ES * math.log(10.) * (1777.5 / (237. + T)^2)
 	local KORKOR = 4. * STEF * EM * ((273.1 + T)^3)
 
 	evaporation[i] = (KALT * RN + ROO * CP * (1 + KORKOR * RA / (ROO * CP)) * (ES - E) / RA) / (KALT + 0.66 * (1 + KORKOR * RA / (ROO * CP))) / L * 3600. * 3.
-	if(evaporation[i] < 0) then
-		evaporation[i] = 0
-	end
+
+	evaporation[i] = math.max(0,evaporation[i])
 end
 
-local par = param("EVAP-XX") --Name yet to be decided
+local par = param("EVAP-KGM2")
 
 result:SetParam(par)
 result:SetValues(evaporation)
