@@ -38,6 +38,7 @@ void BindEnum(lua_State* L);
 int BindErrorHandler(lua_State* L);
 void BindPlugins(lua_State* L);
 void BindLib(lua_State* L);
+void BindPhysicalConstants(lua_State* L);
 
 template <typename T>
 object VectorToTable(const std::vector<T>& vec);
@@ -147,6 +148,7 @@ void luatool::InitLua()
 	BindEnum(L);
 	BindLib(L);
 	BindPlugins(L);
+	BindPhysicalConstants(L);
 
 	myL = L;
 }
@@ -170,8 +172,6 @@ void luatool::ResetVariables(info_t myTargetInfo)
 	globals(L)["missing"] = MissingDouble();
 	globals(L)["missingf"] = MissingFloat();
 	globals(L)["kHPMissingValue"] = kHPMissingValue;  // todo: remove this constant altogether
-
-	globals(L)["kKelvin"] = constants::kKelvin;
 
 	auto h = GET_PLUGIN(hitool);
 
@@ -237,6 +237,25 @@ int BindErrorHandler(lua_State* L)
 }
 
 // clang-format off
+
+void BindPhysicalConstants(lua_State* L)
+{
+	// see himan_common.h for more information about these
+	globals(L)["kKelvin"] = constants::kKelvin;
+	globals(L)["kRw"] = constants::kRw;
+	globals(L)["kL"] = constants::kL;
+	globals(L)["kRad"] = constants::kRad;
+	globals(L)["kDeg"] = constants::kDeg;
+	globals(L)["kEp"] = constants::kEp;
+	globals(L)["kRd"] = constants::kRd;
+	globals(L)["kCp"] = constants::kCp;
+	globals(L)["kG"] = constants::kG;
+	globals(L)["kIg"] = constants::kIg;
+	globals(L)["kK"] = constants::kK;
+	globals(L)["kR"] = constants::kR;
+	globals(L)["kMW"] = constants::kMW;
+	globals(L)["kMA"] = constants::kMA;
+}
 
 void BindEnum(lua_State* L)
 {
