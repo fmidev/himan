@@ -3,7 +3,7 @@
 %define LIBNAME himan-scripts
 Summary: himan-scripts collection
 Name: %{LIBNAME}
-Version: 20.5.25
+Version: 20.7.28
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -12,7 +12,7 @@ Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: lua >= 5.1.4
-Requires: himan-plugins >= 20.3.2
+Requires: himan-plugins >= 20.7.28
 Requires: himan-lib >= 20.3.2
 
 %define debug_package %{nil}
@@ -39,6 +39,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/himan-scripts/*.lua
 
 %changelog
+* Tue Jul 28 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.7.28-1.fmi
+- Add potential-evaporation-on-grass.lua
 * Mon May 25 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.5.25-1.fmi
 - Add meps-cloudiness.lua
 * Wed May 13 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.5.13-1.fmi
