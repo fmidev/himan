@@ -45,7 +45,7 @@ for i=1,#temp do
 	evaporation[i] = math.max(0,evaporation[i])
 end
 
-local par = param("EVAP-KGM2")
+local par = param("EVARATE-KGM2S")
 
 result:SetParam(par)
 result:SetValues(evaporation)
