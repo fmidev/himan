@@ -2079,15 +2079,39 @@ himan::level ReadLevel(const search_options& opts, const producer& prod, const N
 	}
 	else
 	{
-		const long gribLevel = message.LevelType();
+		long gribLevelType = message.LevelType();
+		const long edition = message.Edition();
+
+		if (edition == 2)
+		{
+			// Special cases checked *before* checking database, because we possibly change
+			// level numbers here.
+
+			// 1. In grib2 also typeOfSecondFixedSurface is set. Radon database does
+			// not support this currently, these files seem to be very rare.
+
+			const long gribLevelType2 = message.GetLongKey("typeOfSecondFixedSurface");
+
+			if (gribLevelType == 1 && gribLevelType2 == 8)
+			{
+				// In this particular case levels GROUND and TOP are defined
+				// Change the level to ENTATM. Note: metadata is only changed
+				// in database, file metadata is left the same. This means
+				// that if reading program validates metadata, it will notice
+				// the difference.
+				// This behavior was inherited from grid_to_radon program.
+
+				gribLevelType = 10;
+			}
+		}
 
 		auto r = GET_PLUGIN(radon);
 
-		auto levelInfo = r->RadonDB().GetLevelFromGrib(prod.Id(), gribLevel, message.Edition());
+		auto levelInfo = r->RadonDB().GetLevelFromGrib(prod.Id(), gribLevelType, message.Edition());
 
 		if (levelInfo.empty())
 		{
-			logr.Error("Unsupported level type for producer " + to_string(prod.Id()) + ": " + to_string(gribLevel) +
+			logr.Error("Unsupported level type for producer " + to_string(prod.Id()) + ": " + to_string(gribLevelType) +
 			           ", grib edition " + to_string(message.Edition()));
 			throw kFileMetaDataNotFound;
 		}
@@ -2095,18 +2119,22 @@ himan::level ReadLevel(const search_options& opts, const producer& prod, const N
 		string levelName = levelInfo["name"];
 		boost::algorithm::to_lower(levelName);
 
-		// Special cases:
-
-		// 1. Check if we have a height_layer, which in grib2 is first and second leveltype 103
-
-		if (levelName == "height" && message.Edition() == 2)
+		if (edition == 2)
 		{
-			const long levelType2 = message.GetLongKey("typeOfSecondFixedSurface");
-			const long levelValue2 = message.LevelValue2();
+			// Special cases checked *after* checking database.
 
-			if (levelType2 == 103 && levelValue2 != -999 && levelValue2 != 214748364700)
+			// 1. Check if we have a height_layer, which in grib2 is first and second leveltype 103.
+
+			const long gribLevelType2 = message.GetLongKey("typeOfSecondFixedSurface");
+
+			if (gribLevelType == 103 && gribLevelType2 == 103)
 			{
-				levelName = "height_layer";
+				const long levelValue2 = message.LevelValue2();
+
+				if (levelValue2 != -999 && levelValue2 != 214748364700)
+				{
+					levelName = "height_layer";
+				}
 			}
 		}
 
