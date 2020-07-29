@@ -17,6 +17,7 @@
 #include "statistics.h"
 #include "timer.h"
 #include "util.h"
+#include "writer.h"
 #include <boost/program_options.hpp>
 #include <future>
 #include <iostream>
@@ -300,12 +301,18 @@ int main(int argc, char** argv)
 
 	vector<future<void>> asyncs;
 	vector<plugin_timing> pluginTimes;
+	shared_ptr<const plugin_configuration> lastConf;  // For pending writes we need to have some plugin's configuration
 
 	while (plugins.size() > 0)
 	{
 		auto pc = plugins[0];
 
 		plugins.erase(plugins.begin());
+
+		if (plugins.size() == 0)
+		{
+			lastConf = pc;
+		}
 
 		if (pc->AsyncExecution())
 		{
@@ -324,6 +331,9 @@ int main(int argc, char** argv)
 	{
 		fut.wait();
 	}
+
+	auto w = GET_PLUGIN(writer);
+	w->WritePendingInfos(lastConf);
 
 	if (!conf->StatisticsLabel().empty())
 	{

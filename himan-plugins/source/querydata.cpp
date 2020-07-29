@@ -391,13 +391,13 @@ querydata::querydata()
 	itsLogger = logger("querydata");
 }
 
-himan::file_information querydata::ToFile(info<double>& theInfo)
+pair<himan::HPWriteStatus, himan::file_information> querydata::ToFile(info<double>& theInfo)
 {
 	return ToFile<double>(theInfo);
 }
 
 template <typename T>
-himan::file_information querydata::ToFile(info<T>& theInfo)
+pair<himan::HPWriteStatus, himan::file_information> querydata::ToFile(info<T>& theInfo)
 {
 	file_information finfo;
 	finfo.file_location = util::MakeFileName(theInfo, *itsWriteOptions.configuration);
@@ -431,11 +431,11 @@ himan::file_information querydata::ToFile(info<T>& theInfo)
 
 	itsLogger.Info("Wrote file '" + finfo.file_location + "'");
 
-	return finfo;
+	return make_pair(HPWriteStatus::kFinished, finfo);
 }
 
-template himan::file_information querydata::ToFile<double>(info<double>&);
-template himan::file_information querydata::ToFile<float>(info<float>&);
+template pair<himan::HPWriteStatus, himan::file_information> querydata::ToFile<double>(info<double>&);
+template pair<himan::HPWriteStatus, himan::file_information> querydata::ToFile<float>(info<float>&);
 
 template <typename T>
 shared_ptr<NFmiQueryData> querydata::CreateQueryData(const info<T>& originalInfo, bool activeOnly,
@@ -657,8 +657,8 @@ shared_ptr<himan::info<T>> querydata::CreateInfo(shared_ptr<NFmiQueryData> theDa
 
 		case kNFmiStereographicArea:
 		{
-			const double di = qinfo.Area()->WorldXYWidth() / static_cast<double> (qinfo.Grid()->XNumber());
-			const double dj = qinfo.Area()->WorldXYHeight() / static_cast<double> (qinfo.Grid()->YNumber());
+			const double di = qinfo.Area()->WorldXYWidth() / static_cast<double>(qinfo.Grid()->XNumber());
+			const double dj = qinfo.Area()->WorldXYHeight() / static_cast<double>(qinfo.Grid()->YNumber());
 
 			newGrid = new stereographic_grid(
 			    kBottomLeft, point(qinfo.Area()->BottomLeftLatLon().X(), qinfo.Area()->BottomLeftLatLon().Y()), ni, nj,
