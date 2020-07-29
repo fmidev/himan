@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.7.28
+Version: 20.7.29
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -133,6 +133,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Wed Jul 29 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.7.29-1.fmi
+- Backwards compatibility WRT grid_to_radon
 * Tue Jul 28 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.7.28-1.fmi
 - Additions to luatool
 * Thu Jul 23 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.7.23-1.fmi
