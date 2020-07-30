@@ -3,6 +3,7 @@ using namespace himan;
 
 #ifdef HAVE_S3
 #include "debug.h"
+#include "timer.h"
 #include "util.h"
 #include <iostream>
 #include <libs3.h>
@@ -266,21 +267,21 @@ void s3::WriteObject(const std::string& objectName, const buffer& buff)
 
 #ifdef S3_DEFAULT_REGION
 
-        // extract region name from host name, assuming aws
-        // s3.us-east-1.amazonaws.com
-        auto tokens = util::Split(host, ".", false);
+	// extract region name from host name, assuming aws
+	// s3.us-east-1.amazonaws.com
+	auto tokens = util::Split(host, ".", false);
 
-        if (tokens.size() == 3)
-        {
-                std::cerr << "Hostname does not follow pattern s3.<regionname>.amazonaws.com" << std::endl;
-                return;
-        }
+	if (tokens.size() == 3)
+	{
+		std::cerr << "Hostname does not follow pattern s3.<regionname>.amazonaws.com" << std::endl;
+		return;
+	}
 
-        const std::string region = tokens[1];
+	const std::string region = tokens[1];
 
-        // libs3 boilerplate
+	// libs3 boilerplate
 
-        // clang-format off
+	// clang-format off
 
         S3BucketContext bucketContext =
         {
@@ -320,6 +321,8 @@ void s3::WriteObject(const std::string& objectName, const buffer& buff)
 
 	logger logr("s3");
 
+	timer t(true);
+
 	int count = 0;
 	do
 	{
@@ -346,7 +349,14 @@ void s3::WriteObject(const std::string& objectName, const buffer& buff)
 	switch (statusG)
 	{
 		case S3StatusOK:
-			break;
+		{
+			t.Stop();
+			const double time = static_cast<double>(t.GetTime());
+			const double size = util::round(static_cast<double>(buff.length) / 1024. / 1024., 1);
+			logr.Info("Wrote " + std::to_string(size) + "MB in " + std::to_string(time) + " ms (" +
+			          std::to_string(size / time) + " MB/s)");
+		}
+		break;
 		case S3StatusInternalError:
 			logr.Error(std::string(S3_get_status_name(statusG)) + ": is there a proxy blocking the connection?");
 			throw himan::kFileDataNotFound;
