@@ -190,6 +190,12 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 		{
 			auto ret = c->GetInfo<double>(name);
 
+			if (ret.empty())
+			{
+				itsLogger.Fatal("Failed to find pending write from cache with key: " + name);
+				himan::Abort();
+			}
+
 			infos.insert(infos.end(), ret.begin(), ret.end());
 		}
 
@@ -211,21 +217,21 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 		{
 			auto ret = g->CreateGribMessage(*info);
 			file_information& finfo = ret.first;
-			const NFmiGribMessage& msg = ret.second;
-			const size_t len = msg.GetLongKey("totalLength");
+			NFmiGribMessage& msg = ret.second;
+			const size_t griblength = msg.GetLongKey("totalLength");
 
-			himan::buffer& elem = list[finfo.file_location];
+			himan::buffer& buff = list[finfo.file_location];
 			int& message_no = count[finfo.file_location];
 
-			elem.data = static_cast<unsigned char*>(realloc(elem.data, elem.length + len));
+			buff.data = static_cast<unsigned char*>(realloc(buff.data, buff.length + griblength));
 
-			ret.second.GetMessage(elem.data + elem.length, len);
+			msg.GetMessage(buff.data + buff.length, griblength);
 
-			finfo.offset = elem.length;
-			finfo.length = len;
+			finfo.offset = buff.length;
+			finfo.length = griblength;
 			finfo.message_no = message_no;
 
-			elem.length += len;
+			buff.length += griblength;
 			message_no++;
 
 			finfos.push_back(make_pair(info, finfo));
