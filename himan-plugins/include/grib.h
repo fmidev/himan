@@ -61,15 +61,14 @@ class grib : public io_plugin
 	                                                    bool forceCaching) const;
 
 	template <typename T>
-	file_information ToFile(info<T>& anInfo);
-	file_information ToFile(info<double>& anInfo);
+	std::pair<HPWriteStatus, file_information> ToFile(info<T>& anInfo);
+	std::pair<HPWriteStatus, file_information> ToFile(info<double>& anInfo);
 
 	template <typename T>
 	bool CreateInfoFromGrib(const search_options& options, bool readPackedData, bool validate,
 	                        std::shared_ptr<info<T>> newInfo, const NFmiGribMessage& message,
 	                        bool readData = true) const;
 
-   private:
 	template <typename T>
 	std::pair<himan::file_information, NFmiGribMessage> CreateGribMessage(info<T>& anInfo);
 };

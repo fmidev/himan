@@ -164,7 +164,11 @@ void compiled_plugin_base::WriteToFile(const shared_ptr<info<T>> targetInfo, wri
 				continue;
 			}
 
-			aWriter->ToFile(tempInfo, itsConfiguration);
+			auto status = aWriter->ToFile(tempInfo, itsConfiguration);
+
+			// status of all writes is recorded, although currently we are
+			// only interested of pending writes
+			itsWriteStatuses.push_back(make_pair(util::UniqueName<T>(*tempInfo), status));
 
 			// check missing values
 			if (itsConfiguration->AllowedMissingValues() < tempInfo->Data().MissingCount())
@@ -483,6 +487,22 @@ void compiled_plugin_base::Finish()
 	{
 		itsTimer.Stop();
 		itsConfiguration->Statistics()->AddToProcessingTime(itsTimer.GetTime());
+	}
+
+	// Check if we have pending writes in write statuses
+
+	vector<string> pending;
+
+	util::transform_if(
+	    itsWriteStatuses.cbegin(), itsWriteStatuses.cend(), back_inserter(pending),
+	    [](const pair<string, HPWriteStatus>& element) { return element.second == HPWriteStatus::kPending; },
+	    [](const pair<string, HPWriteStatus>& element) { return element.first; });
+
+	itsBaseLogger.Trace("Pending write status for " + to_string(pending.size()) + " infos");
+
+	if (pending.empty() == false)
+	{
+		writer::AddToPending(pending);
 	}
 }
 

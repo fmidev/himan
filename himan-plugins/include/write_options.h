@@ -9,6 +9,14 @@
 
 namespace himan
 {
+enum class HPWriteStatus
+{
+	kUnknown = 0,
+	kFinished,
+	kPending,
+	kFailed
+};
+
 namespace plugin
 {
 struct write_options

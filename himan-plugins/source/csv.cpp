@@ -15,13 +15,13 @@ csv::csv()
 	itsLogger = logger("csv");
 }
 
-himan::file_information csv::ToFile(info<double>& theInfo)
+pair<himan::HPWriteStatus, himan::file_information> csv::ToFile(info<double>& theInfo)
 {
 	return ToFile<double>(theInfo);
 }
 
 template <typename T>
-himan::file_information csv::ToFile(info<T>& theInfo)
+pair<himan::HPWriteStatus, himan::file_information> csv::ToFile(info<T>& theInfo)
 {
 	if (theInfo.Grid()->Class() != kIrregularGrid)
 	{
@@ -89,11 +89,11 @@ himan::file_information csv::ToFile(info<T>& theInfo)
 	double speed = floor((bytes / 1024. / 1024.) / (duration / 1000.));
 	itsLogger.Info("Wrote file '" + finfo.file_location + "' (" + to_string(speed) + " MB/s)");
 
-	return finfo;
+	return make_pair(HPWriteStatus::kFinished, finfo);
 }
 
-template himan::file_information csv::ToFile<double>(info<double>&);
-template himan::file_information csv::ToFile<float>(info<float>&);
+template pair<himan::HPWriteStatus, himan::file_information> csv::ToFile<double>(info<double>&);
+template pair<himan::HPWriteStatus, himan::file_information> csv::ToFile<float>(info<float>&);
 
 shared_ptr<himan::info<double>> csv::FromFile(const string& inputFile, const search_options& options,
                                               bool readIfNotMatching) const

@@ -362,6 +362,8 @@ class compiled_plugin_base
 	forecast_type_iter itsForecastTypeIterator;
 	ThreadDistribution itsThreadDistribution = ThreadDistribution::kThreadForAny;
 
+	std::vector<std::pair<std::string, HPWriteStatus>> itsWriteStatuses;
+
    private:
 	logger itsBaseLogger = logger("compiled_plugin_base");
 	bool itsPluginIsInitialized = false;

@@ -62,9 +62,9 @@ class csv : public io_plugin
 	 */
 
 	template <typename T>
-	file_information ToFile(info<T>& theInfo);
+	std::pair<HPWriteStatus, file_information> ToFile(info<T>& theInfo);
 
-	file_information ToFile(info<double>& theInfo);
+	std::pair<HPWriteStatus, file_information> ToFile(info<double>& theInfo);
 };
 
 #ifndef HIMAN_AUXILIARY_INCLUDE
