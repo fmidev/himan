@@ -25,8 +25,8 @@ writer::writer() : itsWriteOptions()
 
 void writer::AddToPending(const std::vector<std::string>& names)
 {
-	pendingWrites.reserve(pendingWrites.size() + names.size());
 	std::lock_guard<std::mutex> lock(pendingMutex);
+	pendingWrites.reserve(pendingWrites.size() + names.size());
 	pendingWrites.insert(pendingWrites.end(), names.begin(), names.end());
 }
 
