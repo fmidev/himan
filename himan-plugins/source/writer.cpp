@@ -251,7 +251,7 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 			WriteToRadon(conf, elem.second, elem.first);
 		}
 	}
-	else
+	else if (pendingWrites.empty() == false)
 	{
 		itsLogger.Fatal(
 		    "Pending write started with invalid conditions: write_mode=" + HPWriteModeToString.at(conf->WriteMode()) +
