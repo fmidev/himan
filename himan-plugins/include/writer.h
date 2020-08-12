@@ -34,15 +34,23 @@ class writer : public auxiliary_plugin
 		return kAuxiliary;
 	}
 	template <typename T>
-	bool ToFile(std::shared_ptr<info<T>> theInfo, std::shared_ptr<const plugin_configuration> conf);
-	bool ToFile(std::shared_ptr<info<double>> theInfo, std::shared_ptr<const plugin_configuration> conf);
+	HPWriteStatus ToFile(std::shared_ptr<info<T>> theInfo, std::shared_ptr<const plugin_configuration> conf);
+	HPWriteStatus ToFile(std::shared_ptr<info<double>> theInfo, std::shared_ptr<const plugin_configuration> conf);
 
 	write_options WriteOptions() const;
 	void WriteOptions(const write_options& theWriteOptions);
 
+	static void AddToPending(const std::vector<std::string>& names);
+	void WritePendingInfos(std::shared_ptr<const plugin_configuration> conf);
+
    private:
 	template <typename T>
-	file_information CreateFile(info<T>& theInfo, std::shared_ptr<const plugin_configuration> conf);
+	std::pair<HPWriteStatus, file_information> CreateFile(info<T>& theInfo,
+	                                                      std::shared_ptr<const plugin_configuration> conf);
+
+	template <typename T>
+	bool WriteToRadon(std::shared_ptr<const plugin_configuration> conf, const file_information& finfo,
+	                  std::shared_ptr<himan::info<T>> info);
 
 	write_options itsWriteOptions;
 };

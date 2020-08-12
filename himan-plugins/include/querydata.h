@@ -45,13 +45,13 @@ class querydata : public io_plugin
 	 * @param theInfo
 	 * @param outputFile Name of output file
 	 * @param fileWriteOption Determine whether to write whole contents or just the active part
-	 * @return True if writing succeeds
+	 * @return Status of the write operation and the metadata of the file
 	 */
 
 	template <typename T>
-	file_information ToFile(info<T>& theInfo);
+	std::pair<HPWriteStatus, file_information> ToFile(info<T>& theInfo);
 
-	file_information ToFile(info<double>& theInfo);
+	std::pair<HPWriteStatus, file_information> ToFile(info<double>& theInfo);
 
 	/**
 	 * @brief Create in-memory querydata from given info-instance

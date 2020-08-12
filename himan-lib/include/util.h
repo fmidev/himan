@@ -227,6 +227,27 @@ param GetParameterInfoFromDatabaseName(const producer& prod, const param& par, c
 aggregation GetAggregationFromParamName(const std::string& name);
 
 /**
+ * @brief map and reduce in single function call
+ *
+ * Function naming does not follow usual Himan syntax but is
+ * in line with standard library.
+ *
+ * https://stackoverflow.com/a/52400920
+ */
+
+template <class InputIt, class OutputIt, class Pred, class Fct>
+void transform_if(InputIt first, InputIt last, OutputIt dest, Pred pred, Fct transform)
+{
+	while (first != last)
+	{
+		if (pred(*first))
+			*dest++ = transform(*first);
+
+		++first;
+	}
+}
+
+/**
  * @brief Convert vector from float to double or vice versa, retaining correct
  * missing value.
  *

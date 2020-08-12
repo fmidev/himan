@@ -1,8 +1,10 @@
 #include "writer.h"
 #include "logger.h"
 #include "plugin_factory.h"
+#include "s3.h"
 #include "statistics.h"
 #include "timer.h"
+#include "util.h"
 #include <fstream>
 
 #include "cache.h"
@@ -11,6 +13,9 @@
 #include "querydata.h"
 #include "radon.h"
 
+static std::vector<std::string> pendingWrites;
+static std::mutex pendingMutex;
+
 using namespace himan::plugin;
 
 writer::writer() : itsWriteOptions()
@@ -18,8 +23,16 @@ writer::writer() : itsWriteOptions()
 	itsLogger = logger("writer");
 }
 
+void writer::AddToPending(const std::vector<std::string>& names)
+{
+	std::lock_guard<std::mutex> lock(pendingMutex);
+	pendingWrites.reserve(pendingWrites.size() + names.size());
+	pendingWrites.insert(pendingWrites.end(), names.begin(), names.end());
+}
+
 template <typename T>
-himan::file_information writer::CreateFile(info<T>& theInfo, std::shared_ptr<const plugin_configuration> conf)
+std::pair<himan::HPWriteStatus, himan::file_information> writer::CreateFile(
+    info<T>& theInfo, std::shared_ptr<const plugin_configuration> conf)
 {
 	itsWriteOptions.configuration = conf;
 
@@ -67,17 +80,20 @@ himan::file_information writer::CreateFile(info<T>& theInfo, std::shared_ptr<con
 	throw kInvalidWriteOptions;
 }
 
-template himan::file_information writer::CreateFile<double>(info<double>&, std::shared_ptr<const plugin_configuration>);
-template himan::file_information writer::CreateFile<float>(info<float>&, std::shared_ptr<const plugin_configuration>);
+template std::pair<himan::HPWriteStatus, himan::file_information> writer::CreateFile<double>(
+    info<double>&, std::shared_ptr<const plugin_configuration>);
+template std::pair<himan::HPWriteStatus, himan::file_information> writer::CreateFile<float>(
+    info<float>&, std::shared_ptr<const plugin_configuration>);
 
-bool writer::ToFile(std::shared_ptr<info<double>> theInfo, std::shared_ptr<const plugin_configuration> conf)
+himan::HPWriteStatus writer::ToFile(std::shared_ptr<info<double>> theInfo,
+                                    std::shared_ptr<const plugin_configuration> conf)
 
 {
 	return ToFile<double>(theInfo, conf);
 }
 
 template <typename T>
-bool writer::ToFile(std::shared_ptr<info<T>> theInfo, std::shared_ptr<const plugin_configuration> conf)
+himan::HPWriteStatus writer::ToFile(std::shared_ptr<info<T>> theInfo, std::shared_ptr<const plugin_configuration> conf)
 {
 	if (!itsWriteOptions.write_empty_grid)
 	{
@@ -87,7 +103,7 @@ bool writer::ToFile(std::shared_ptr<info<T>> theInfo, std::shared_ptr<const plug
 			               theInfo->Time().OriginDateTime().String() + " step " +
 			               static_cast<std::string>(theInfo->Time().Step()) + " level " +
 			               static_cast<std::string>(theInfo->Level()));
-			return false;
+			return himan::HPWriteStatus::kFailed;
 		}
 	}
 
@@ -98,7 +114,7 @@ bool writer::ToFile(std::shared_ptr<info<T>> theInfo, std::shared_ptr<const plug
 		t.Start();
 	}
 
-	bool ret = true;
+	HPWriteStatus status = HPWriteStatus::kFinished;
 
 	if (conf->WriteMode() != kNoFileWrite)
 	{
@@ -110,35 +126,14 @@ bool writer::ToFile(std::shared_ptr<info<T>> theInfo, std::shared_ptr<const plug
 		if (theInfo->Producer().Class() == kGridClass ||
 		    (theInfo->Producer().Class() == kPreviClass && conf->WriteToDatabase() == false))
 		{
-			finfo = CreateFile<T>(*theInfo, conf);
+			auto ret = CreateFile<T>(*theInfo, conf);
+			status = ret.first;
+			finfo = ret.second;
 		}
 
-		if (conf->WriteToDatabase() == true)
+		if (status == HPWriteStatus::kFinished)
 		{
-			HPDatabaseType dbtype = conf->DatabaseType();
-
-			if (dbtype == kRadon)
-			{
-				auto r = GET_PLUGIN(radon);
-
-				// Try to save file information to radon
-				try
-				{
-					if (!r->Save<T>(*theInfo, finfo, conf->TargetGeomName()))
-					{
-						itsLogger.Error("Writing to radon failed");
-						ret = false;
-					}
-				}
-				catch (const std::exception& e)
-				{
-					itsLogger.Error("Writing to radon failed: " + std::string(e.what()));
-				}
-				catch (...)
-				{
-					itsLogger.Error("Writing to radon failed: general exception");
-				}
-			}
+			WriteToRadon(conf, finfo, theInfo);
 		}
 	}
 
@@ -158,11 +153,13 @@ bool writer::ToFile(std::shared_ptr<info<T>> theInfo, std::shared_ptr<const plug
 		conf->Statistics()->AddToWritingTime(t.GetTime());
 	}
 
-	return ret;
+	return status;
 }
 
-template bool writer::ToFile<double>(std::shared_ptr<info<double>>, std::shared_ptr<const plugin_configuration>);
-template bool writer::ToFile<float>(std::shared_ptr<info<float>>, std::shared_ptr<const plugin_configuration>);
+template himan::HPWriteStatus writer::ToFile<double>(std::shared_ptr<info<double>>,
+                                                     std::shared_ptr<const plugin_configuration>);
+template himan::HPWriteStatus writer::ToFile<float>(std::shared_ptr<info<float>>,
+                                                    std::shared_ptr<const plugin_configuration>);
 
 write_options writer::WriteOptions() const
 {
@@ -172,3 +169,133 @@ void writer::WriteOptions(const write_options& theWriteOptions)
 {
 	itsWriteOptions = theWriteOptions;
 }
+
+void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
+{
+	if (conf->WriteStorageType() == kS3ObjectStorageSystem)
+	{
+		std::lock_guard<std::mutex> lock(pendingMutex);
+		itsLogger.Info("Writing " + std::to_string(pendingWrites.size()) + " pending infos to file");
+
+		// The only case when we have pending writes is (currently) when
+		// writing to s3
+
+		// First get the infos from cache that match the names given
+		// to us by the caller
+
+		auto c = GET_PLUGIN(cache);
+
+		std::vector<std::shared_ptr<himan::info<double>>> infos;
+		for (const auto& name : pendingWrites)
+		{
+			auto ret = c->GetInfo<double>(name);
+
+			if (ret.empty())
+			{
+				itsLogger.Fatal("Failed to find pending write from cache with key: " + name);
+				himan::Abort();
+			}
+
+			infos.insert(infos.end(), ret.begin(), ret.end());
+		}
+
+		// Next create a grib message of each info and store them sequentially
+		// in a buffer. All infos that have the same filename will end up in the
+		// same buffer.
+
+		std::map<std::string, himan::buffer> list;
+		std::map<std::string, int> count;
+		std::vector<std::pair<std::shared_ptr<info<double>>, file_information>> finfos;
+
+		auto g = GET_PLUGIN(grib);
+		itsWriteOptions.configuration = conf;
+		g->WriteOptions(itsWriteOptions);
+
+		ASSERT(conf);
+
+		for (const auto& info : infos)
+		{
+			auto ret = g->CreateGribMessage(*info);
+			file_information& finfo = ret.first;
+			NFmiGribMessage& msg = ret.second;
+			const size_t griblength = msg.GetLongKey("totalLength");
+
+			himan::buffer& buff = list[finfo.file_location];
+			int& message_no = count[finfo.file_location];
+
+			buff.data = static_cast<unsigned char*>(realloc(buff.data, buff.length + griblength));
+
+			msg.GetMessage(buff.data + buff.length, griblength);
+
+			finfo.offset = buff.length;
+			finfo.length = griblength;
+			finfo.message_no = message_no;
+
+			buff.length += griblength;
+			message_no++;
+
+			finfos.push_back(make_pair(info, finfo));
+		}
+
+		// Write the buffers to s3
+
+		for (const auto& p : list)
+		{
+			s3::WriteObject(p.first, p.second);
+		}
+
+		// And finally update radon
+
+		for (const auto& elem : finfos)
+		{
+			WriteToRadon(conf, elem.second, elem.first);
+		}
+	}
+	else if (pendingWrites.empty() == false)
+	{
+		itsLogger.Fatal(
+		    "Pending write started with invalid conditions: write_mode=" + HPWriteModeToString.at(conf->WriteMode()) +
+		    ", storage_type=" + HPFileStorageTypeToString.at(conf->WriteStorageType()));
+		himan::Abort();
+	}
+}
+
+template <typename T>
+bool writer::WriteToRadon(std::shared_ptr<const plugin_configuration> conf, const file_information& finfo,
+                          std::shared_ptr<info<T>> theInfo)
+{
+	if (conf->WriteToDatabase() == true)
+	{
+		HPDatabaseType dbtype = conf->DatabaseType();
+
+		if (dbtype == kRadon)
+		{
+			auto r = GET_PLUGIN(radon);
+
+			// Try to save file information to radon
+			try
+			{
+				if (!r->Save<T>(*theInfo, finfo, conf->TargetGeomName()))
+				{
+					itsLogger.Error("Writing to radon failed");
+					return false;
+				}
+			}
+			catch (const std::exception& e)
+			{
+				itsLogger.Error("Writing to radon failed: " + std::string(e.what()));
+				return false;
+			}
+			catch (...)
+			{
+				itsLogger.Error("Writing to radon failed: general exception");
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
+template bool writer::WriteToRadon(std::shared_ptr<const plugin_configuration>, const file_information&,
+                                   std::shared_ptr<info<double>>);

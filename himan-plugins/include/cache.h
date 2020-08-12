@@ -53,6 +53,9 @@ class cache : public auxiliary_plugin
 
 	std::vector<std::shared_ptr<info<double>>> GetInfo(search_options& options, bool strict = false);
 
+	template <typename T>
+	std::vector<std::shared_ptr<info<T>>> GetInfo(const std::string& uniqueName, bool strict = false);
+
 	void Clean();
 
 	virtual std::string ClassName() const
