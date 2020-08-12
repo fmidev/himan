@@ -1043,7 +1043,7 @@ void WriteDataValues(const vector<float>& values, NFmiGribMessage& msg, double m
 	delete[] arr;
 }
 
-himan::file_information grib::ToFile(info<double>& anInfo)
+std::pair<himan::HPWriteStatus, himan::file_information> grib::ToFile(info<double>& anInfo)
 {
 	return ToFile<double>(anInfo);
 }
@@ -1361,7 +1361,7 @@ void DetermineMessageNumber(NFmiGribMessage& message, file_information& finfo, H
 	offsets.at(finfo.file_location) = offsets.at(finfo.file_location) + finfo.length.get();
 }
 
-void WriteMessageToFile(NFmiGribMessage& message, const file_information& finfo, const write_options& wopts)
+HPWriteStatus WriteMessageToFile(NFmiGribMessage& message, const file_information& finfo, const write_options& wopts)
 {
 	timer aTimer(true);
 	logger logr("grib");
@@ -1376,37 +1376,15 @@ void WriteMessageToFile(NFmiGribMessage& message, const file_information& finfo,
 		appendToFile = false;
 	}
 
-	if (finfo.storage_type == kS3ObjectStorageSystem)
+	namespace fs = boost::filesystem;
+	fs::path pathname(finfo.file_location);
+
+	if (!pathname.parent_path().empty() && !fs::is_directory(pathname.parent_path()))
 	{
-		if (wopts.configuration->WriteMode() != kSingleGridToAFile)
-		{
-			logr.Fatal("Write to S3 only supported with write_mode = single");
-			himan::Abort();
-		}
-		if (finfo.file_location.find("s3://") != string::npos)
-		{
-			logr.Fatal("File name should not start with s3:// when writing to s3");
-			himan::Abort();
-		}
-
-		himan::buffer buff;
-		buff.length = finfo.length.get();
-		buff.data = static_cast<unsigned char*>(malloc(buff.length));
-		message.GetMessage(buff.data, buff.length);
-		s3::WriteObject(finfo.file_location, buff);
+		fs::create_directories(pathname.parent_path());
 	}
-	else
-	{
-		namespace fs = boost::filesystem;
-		fs::path pathname(finfo.file_location);
 
-		if (!pathname.parent_path().empty() && !fs::is_directory(pathname.parent_path()))
-		{
-			fs::create_directories(pathname.parent_path());
-		}
-
-		message.Write(finfo.file_location, appendToFile);
-	}
+	message.Write(finfo.file_location, appendToFile);
 
 	aTimer.Stop();
 
@@ -1422,10 +1400,11 @@ void WriteMessageToFile(NFmiGribMessage& message, const file_information& finfo,
 
 	ss << verb << "file '" << finfo.file_location << "' (" << fixed << speed << " MB/s)";
 	logr.Info(ss.str());
+	return HPWriteStatus::kFinished;
 }
 
 template <typename T>
-himan::file_information grib::ToFile(info<T>& anInfo)
+std::pair<himan::HPWriteStatus, himan::file_information> grib::ToFile(info<T>& anInfo)
 {
 	if (anInfo.Grid()->Class() == kIrregularGrid && anInfo.Grid()->Type() != kReducedGaussian)
 	{
@@ -1434,9 +1413,16 @@ himan::file_information grib::ToFile(info<T>& anInfo)
 		throw kInvalidWriteOptions;
 	}
 
+	if (itsWriteOptions.configuration->WriteStorageType() == kS3ObjectStorageSystem)
+	{
+		return make_pair(HPWriteStatus::kPending, file_information());
+	}
+
 	auto ret = CreateGribMessage<T>(anInfo);
 	auto finfo = ret.first;
 	auto msg = ret.second;
+
+	HPWriteStatus status = HPWriteStatus::kUnknown;
 
 	if (itsWriteOptions.configuration->WriteMode() != kSingleGridToAFile)
 	{
@@ -1454,19 +1440,19 @@ himan::file_information grib::ToFile(info<T>& anInfo)
 		lock_guard<mutex> uniqueLock(muret.first->second);
 
 		DetermineMessageNumber(msg, finfo, itsWriteOptions.configuration->WriteMode());
-		WriteMessageToFile(msg, finfo, itsWriteOptions);
+		status = WriteMessageToFile(msg, finfo, itsWriteOptions);
 	}
 	else
 	{
 		DetermineMessageNumber(msg, finfo, itsWriteOptions.configuration->WriteMode());
-		WriteMessageToFile(msg, finfo, itsWriteOptions);
+		status = WriteMessageToFile(msg, finfo, itsWriteOptions);
 	}
 
-	return finfo;
+	return make_pair(status, finfo);
 }
 
-template himan::file_information grib::ToFile<double>(info<double>&);
-template himan::file_information grib::ToFile<float>(info<float>&);
+template std::pair<himan::HPWriteStatus, himan::file_information> grib::ToFile<double>(info<double>&);
+template std::pair<himan::HPWriteStatus, himan::file_information> grib::ToFile<float>(info<float>&);
 
 // ---------------------------------------------------------------------------
 
@@ -2079,15 +2065,39 @@ himan::level ReadLevel(const search_options& opts, const producer& prod, const N
 	}
 	else
 	{
-		const long gribLevel = message.LevelType();
+		long gribLevelType = message.LevelType();
+		const long edition = message.Edition();
+
+		if (edition == 2)
+		{
+			// Special cases checked *before* checking database, because we possibly change
+			// level numbers here.
+
+			// 1. In grib2 also typeOfSecondFixedSurface is set. Radon database does
+			// not support this currently, these files seem to be very rare.
+
+			const long gribLevelType2 = message.GetLongKey("typeOfSecondFixedSurface");
+
+			if (gribLevelType == 1 && gribLevelType2 == 8)
+			{
+				// In this particular case levels GROUND and TOP are defined
+				// Change the level to ENTATM. Note: metadata is only changed
+				// in database, file metadata is left the same. This means
+				// that if reading program validates metadata, it will notice
+				// the difference.
+				// This behavior was inherited from grid_to_radon program.
+
+				gribLevelType = 10;
+			}
+		}
 
 		auto r = GET_PLUGIN(radon);
 
-		auto levelInfo = r->RadonDB().GetLevelFromGrib(prod.Id(), gribLevel, message.Edition());
+		auto levelInfo = r->RadonDB().GetLevelFromGrib(prod.Id(), gribLevelType, message.Edition());
 
 		if (levelInfo.empty())
 		{
-			logr.Error("Unsupported level type for producer " + to_string(prod.Id()) + ": " + to_string(gribLevel) +
+			logr.Error("Unsupported level type for producer " + to_string(prod.Id()) + ": " + to_string(gribLevelType) +
 			           ", grib edition " + to_string(message.Edition()));
 			throw kFileMetaDataNotFound;
 		}
@@ -2095,18 +2105,22 @@ himan::level ReadLevel(const search_options& opts, const producer& prod, const N
 		string levelName = levelInfo["name"];
 		boost::algorithm::to_lower(levelName);
 
-		// Special cases:
-
-		// 1. Check if we have a height_layer, which in grib2 is first and second leveltype 103
-
-		if (levelName == "height" && message.Edition() == 2)
+		if (edition == 2)
 		{
-			const long levelType2 = message.GetLongKey("typeOfSecondFixedSurface");
-			const long levelValue2 = message.LevelValue2();
+			// Special cases checked *after* checking database.
 
-			if (levelType2 == 103 && levelValue2 != -999 && levelValue2 != 214748364700)
+			// 1. Check if we have a height_layer, which in grib2 is first and second leveltype 103.
+
+			const long gribLevelType2 = message.GetLongKey("typeOfSecondFixedSurface");
+
+			if (gribLevelType == 103 && gribLevelType2 == 103)
 			{
-				levelName = "height_layer";
+				const long levelValue2 = message.LevelValue2();
+
+				if (levelValue2 != -999 && levelValue2 != 214748364700)
+				{
+					levelName = "height_layer";
+				}
 			}
 		}
 

@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.7.23
+Version: 20.8.12
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 20.7.13
+Requires: himan-lib >= 20.8.12
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 20.5.25
@@ -133,6 +133,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Wed Aug 12 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.8.12-1.fmi
+- Support writing multiple grib messages in one file to s3
+* Wed Jul 29 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.7.29-1.fmi
+- Backwards compatibility WRT grid_to_radon
+* Tue Jul 28 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.7.28-1.fmi
+- Additions to luatool
 * Thu Jul 23 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.7.23-1.fmi
 - Netsw radiation to split_sum
 - Remove protocol from file (s3)

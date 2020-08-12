@@ -127,6 +127,28 @@ void plugin_factory::ReadPlugins(const std::string& pluginName)
 bool plugin_factory::Load(const std::string& thePluginFileName)
 {
 	/*
+	 * Check if library has been loaded already. We cannot first load the library and
+	 * then call its ClassName() because in some occasions that causes crashes when
+	 * API/ABI is not compatible.
+	 *
+	 * Note: this assumes that library filename matches ClassName as such:
+	 * filename: libNAME.so
+	 * ClassName: himan::plugin::NAME
+	 */
+
+	const std::string stem = boost::filesystem::path(thePluginFileName).stem().string().substr(3, std::string::npos);
+
+	if (std::find_if(itsPluginFactory.begin(), itsPluginFactory.end(),
+	                 [&stem](std::shared_ptr<plugin_container>& cont) {
+		                 return cont->Plugin()->ClassName() == "himan::plugin::" + stem;
+	                 }) != itsPluginFactory.end())
+	{
+		itsLogger.Debug("Plugin '" + stem + "' found more than once, skipping one found from '" + thePluginFileName +
+		                "'");
+		return true;
+	}
+
+	/*
 	 * Open libraries with
 	 *
 	 *   RTLD_LAZY
@@ -160,23 +182,7 @@ bool plugin_factory::Load(const std::string& thePluginFileName)
 		return false;
 	}
 
-	auto p = create_plugin();
-
-	for (size_t i = 0; i < itsPluginFactory.size(); i++)
-	{
-		if (p->ClassName() == itsPluginFactory[i]->Plugin()->ClassName())
-		{
-			itsLogger.Trace("Plugin '" + p->ClassName() + "' found more than once, skipping one found from '" +
-			                thePluginFileName + "'");
-			dlclose(theLibraryHandle);
-
-			return true;
-		}
-	}
-
-	std::shared_ptr<plugin_container> mc = std::shared_ptr<plugin_container>(new plugin_container(theLibraryHandle, p));
-
-	itsPluginFactory.push_back(mc);
+	itsPluginFactory.push_back(std::make_shared<plugin_container>(theLibraryHandle, create_plugin()));
 
 	itsLogger.Trace("Load " + thePluginFileName);
 

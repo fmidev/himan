@@ -84,6 +84,15 @@ vector<shared_ptr<himan::info<T>>> cache::GetInfo(search_options& options, bool 
 {
 	const string uniqueName = util::UniqueName(options);
 
+	return GetInfo<T>(uniqueName, strict);
+}
+
+template vector<shared_ptr<himan::info<double>>> cache::GetInfo<double>(search_options&, bool);
+template vector<shared_ptr<himan::info<float>>> cache::GetInfo<float>(search_options&, bool);
+
+template <typename T>
+vector<shared_ptr<himan::info<T>>> cache::GetInfo(const string& uniqueName, bool strict)
+{
 	vector<shared_ptr<himan::info<T>>> infos;
 
 	auto foundInfo = cache_pool::Instance()->GetInfo<T>(uniqueName, strict);
@@ -97,8 +106,8 @@ vector<shared_ptr<himan::info<T>>> cache::GetInfo(search_options& options, bool 
 	return infos;
 }
 
-template vector<shared_ptr<himan::info<double>>> cache::GetInfo<double>(search_options&, bool);
-template vector<shared_ptr<himan::info<float>>> cache::GetInfo<float>(search_options&, bool);
+template vector<shared_ptr<himan::info<double>>> cache::GetInfo<double>(const string&, bool);
+template vector<shared_ptr<himan::info<float>>> cache::GetInfo<float>(const string&, bool);
 
 void cache::Clean()
 {
