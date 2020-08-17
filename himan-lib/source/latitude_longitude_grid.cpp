@@ -276,7 +276,7 @@ bool rotated_latitude_longitude_grid::EqualsTo(const rotated_latitude_longitude_
 		return false;
 	}
 
-	if (itsSouthPole != other.SouthPole())
+	if (!point::LatLonCompare(itsSouthPole, other.SouthPole()))
 	{
 		itsLogger.Trace("SouthPole does not match: X " + to_string(itsSouthPole.X()) + " vs " +
 		                to_string(other.SouthPole().X()));

@@ -27,10 +27,7 @@ station::station(int theId, double lon, double lat) : point(lon, lat), itsId(the
 }
 bool station::operator==(const station& other) const
 {
-	bool yEquals = (fabs(itsY - other.Y()) < kCoordinateEpsilon);
-	bool xEquals = (fabs(itsX - other.X()) < kCoordinateEpsilon);
-
-	return (xEquals && yEquals && itsName == other.itsName && itsId == other.itsId);
+	return (point::LatLonCompare(*this, other) && itsName == other.itsName && itsId == other.itsId);
 }
 
 bool station::operator!=(const station& other) const
