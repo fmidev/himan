@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 20.8.12
+Version: 20.8.17
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -77,6 +77,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/*
 
 %changelog
+* Mon Aug 17 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.8.17-1.fmi
+- Minor addition to level.h
 * Wed Aug 12 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.8.12-1.fmi
 - Support writing multiple grib messages in one file to s3
 * Wed Jul 15 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.7.15-1.fmi

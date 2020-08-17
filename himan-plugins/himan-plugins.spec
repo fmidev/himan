@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.8.14
+Version: 20.8.17
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -133,6 +133,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Mon Aug 17 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.8.17-1.fmi
+- Minor change to level.h
 * Fri Aug 14 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.8.14-1.fmi
 - Fix radon query for rotlatlon areas
 * Wed Aug 12 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.8.12-1.fmi
