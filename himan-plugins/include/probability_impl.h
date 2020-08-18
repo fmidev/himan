@@ -47,7 +47,7 @@ param_configuration<std::vector<float>> ToParamConfiguration(const partial_param
 	pc.thresholds.reserve(partial.thresholds.size());
 	for (const auto& v : partial.thresholds)
 	{
-		const auto elems = himan::util::Split(v, ",", false);
+		const auto elems = himan::util::Split(v, ",");
 		std::vector<float> x;
 		for (const auto& vv : elems)
 		{

@@ -2658,7 +2658,7 @@ std::string GetParamNameFromGribShortName(const std::string& paramFileName, cons
 
 	while (getline(paramFile, line))
 	{
-		auto elems = himan::util::Split(line, ",", false);
+		auto elems = himan::util::Split(line, ",");
 
 		if (elems.size() == 2)
 		{
