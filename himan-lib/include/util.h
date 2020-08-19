@@ -51,6 +51,15 @@ std::vector<std::string> Split(const std::string& s, const std::string& delims);
 template <typename T>
 std::vector<T> Split(const std::string& s, const std::string& delims);
 
+/**
+ * @brief Expand a string containing commas and dashes to a list (vector)
+ *
+ * For example: 4,5,10-12 becomes vector of 4,5,10,11,12
+ *
+ * @param identifier which is splitted and expanded
+ * @return Vector of ints, the expanded values
+ */
+
 std::vector<int> ExpandString(const std::string& identifier);
 
 /**
