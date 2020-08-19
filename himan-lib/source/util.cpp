@@ -554,8 +554,14 @@ vector<int> util::ExpandString(const std::string& identifier)
 
 		if (split2.size() == 2)
 		{
+			int a = split2[0], b = split2[1], step = 1;
+			if (a > b)
+			{
+				step *= -1;
+			}
+
 			const auto vals = numerical_functions::Arange(
-			    split2[0], split2[1] + 1, 1);  // arange return half-open interval excluding the endvalue
+			    split2[0], split2[1] + step, step);  // arange return half-open interval excluding the endvalue
 			std::copy(vals.begin(), vals.end(), std::back_inserter(ret));
 		}
 		else if (split2.size() == 1)
