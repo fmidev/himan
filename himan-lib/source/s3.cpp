@@ -42,7 +42,7 @@ std::vector<std::string> GetBucketAndFileName(const std::string& fullFileName)
 		fileName = fileName.erase(0, 1);
 	}
 
-	auto tokens = util::Split(fileName, "/", false);
+	auto tokens = util::Split(fileName, "/");
 
 	ret.push_back(tokens[0]);
 	tokens.erase(std::begin(tokens), std::begin(tokens) + 1);
@@ -136,7 +136,7 @@ buffer s3::ReadFile(const file_information& fileInformation)
 
 	// extract region name from host name, assuming aws
 	// s3.us-east-1.amazonaws.com
-	auto tokens = util::Split(fileInformation.file_server, ".", false);
+	auto tokens = util::Split(fileInformation.file_server, ".");
 
 	if (tokens.size() == 3)
 	{
@@ -269,7 +269,7 @@ void s3::WriteObject(const std::string& objectName, const buffer& buff)
 
 	// extract region name from host name, assuming aws
 	// s3.us-east-1.amazonaws.com
-	auto tokens = util::Split(host, ".", false);
+	auto tokens = util::Split(host, ".");
 
 	if (tokens.size() == 3)
 	{

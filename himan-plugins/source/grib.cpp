@@ -343,10 +343,8 @@ void WriteAreaAndGrid(NFmiGribMessage& message, const shared_ptr<himan::grid>& g
 
 	if (edition == 2)
 	{
-		if (firstGridPoint.X() < 0)
-		{
+		while (firstGridPoint.X() < 0)
 			firstGridPoint.X(firstGridPoint.X() + 360.);
-		}
 	}
 
 	logger logr("grib");
@@ -358,12 +356,14 @@ void WriteAreaAndGrid(NFmiGribMessage& message, const shared_ptr<himan::grid>& g
 		{
 			auto rg = dynamic_pointer_cast<latitude_longitude_grid>(grid);
 
-			himan::point lastGridPoint = rg->LastPoint();
-
 			long gridType = 0;  // Grib 1
+
+			auto lastGridPoint = grid->LastPoint();
 
 			if (edition == 2)
 			{
+				while (lastGridPoint.X() < 0)
+					lastGridPoint.X(lastGridPoint.X() + 360.);
 				gridType = message.GridTypeToAnotherEdition(gridType, 2);
 			}
 
@@ -389,14 +389,18 @@ void WriteAreaAndGrid(NFmiGribMessage& message, const shared_ptr<himan::grid>& g
 		{
 			auto rg = dynamic_pointer_cast<rotated_latitude_longitude_grid>(grid);
 
+			long gridType = 10;  // Grib 1
+
 			// In grib we put rotated coordinates as first and last point
 			firstGridPoint = rg->Rotate(grid->FirstPoint());
-			himan::point lastGridPoint = rg->Rotate(rg->LastPoint());
-
-			long gridType = 10;  // Grib 1
+			auto lastGridPoint = rg->Rotate(rg->LastPoint());
 
 			if (edition == 2)
 			{
+				while (firstGridPoint.X() < 0)
+					firstGridPoint.X(firstGridPoint.X() + 360.);
+				while (lastGridPoint.X() < 0)
+					lastGridPoint.X(lastGridPoint.X() + 360.);
 				gridType = message.GridTypeToAnotherEdition(gridType, 2);
 			}
 
@@ -1607,44 +1611,17 @@ unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message)
 	}
 
 	double X0 = message.X0();
-	double Y0 = message.Y0();
+	const double Y0 = message.Y0();
 
-	// GRIB2 has longitude 0 .. 360, but in neons we have it -180 .. 180
-	// NB! ONLY FOR EC and FMI! GFS and GEM geometries are in grib2 format
+	// GRIB2 has longitude 0 .. 360, but in Himan we internally normalize it to -180 .. 180
 	//
 	// Make conversion to GRIB1 style coordinates, but in the long run we should figure out how to
 	// handle grib 1 & grib 2 longitude values in a smart way. (a single geometry
 	// can have coordinates in both ways!)
 
-	const long centre = message.Centre();
-	const long ident = message.Process();
-
-	if (message.Edition() == 2 && (centre == 98 || centre == 86) && ident != 244 && X0 != 0)
-	{
-		X0 -= 360;
-		if (X0 < -180)
-			X0 += 360;
-	}
-
-	himan::point firstPoint(X0, Y0);
-
-	if (centre == 98 && firstPoint.X() == 180)
-	{
-		/**
-		 * Global EC data area is defined as
-		 *
-		 * latitudeOfFirstGridPointInDegrees = 90;
-		 * longitudeOfFirstGridPointInDegrees = 180;
-		 * latitudeOfLastGridPointInDegrees = 0;
-		 * longitudeOfLastGridPointInDegrees = 180;
-		 *
-		 * Normalize the first value to -180.
-		 */
-
-		ASSERT(m == kBottomLeft || m == kTopLeft);  // Want to make sure we always read from left to right
-
-		firstPoint.X(-180.);
-	}
+	if (X0 > 180)
+		X0 -= 360.;
+	const himan::point firstPoint(X0, Y0);
 
 	unique_ptr<grid> newGrid;
 
@@ -1670,7 +1647,7 @@ unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message)
 			// clang-format off
 			newGrid = unique_ptr<lambert_conformal_grid>(new lambert_conformal_grid(
 			    m,
-			    point(message.X0(), message.Y0()),
+			    firstPoint,
 			    message.SizeX(),
 			    message.SizeY(),
 			    message.XLengthInMeters(),
@@ -1706,7 +1683,7 @@ unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message)
 			// clang-format off
 			newGrid = unique_ptr<stereographic_grid>(new stereographic_grid(
 			    m,
-			    point(message.X0(), message.Y0()),
+			    firstPoint,
 			    message.SizeX(),
 			    message.SizeY(),
 			    message.XLengthInMeters(),
@@ -2681,7 +2658,7 @@ std::string GetParamNameFromGribShortName(const std::string& paramFileName, cons
 
 	while (getline(paramFile, line))
 	{
-		auto elems = himan::util::Split(line, ",", false);
+		auto elems = himan::util::Split(line, ",");
 
 		if (elems.size() == 2)
 		{

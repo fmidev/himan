@@ -115,7 +115,7 @@ static void GetConfigurationParameter(const std::string& name, const std::shared
 		else
 		{
 			// station-wise threshold
-			auto elems = util::Split(p.first, "_", false);
+			auto elems = util::Split(p.first, "_");
 			if (elems.size() == 2 && elems[0] == "threshold")
 			{
 				// Note: station-wise limits only support single-value thresholds
