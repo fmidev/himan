@@ -135,6 +135,7 @@ rm -rf $RPM_BUILD_ROOT
 %changelog
 * Wed Aug 19 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.8.19-1.fmi
 - Changes in util::Split()
+- Change to as_grid query in radon plugin
 * Mon Aug 17 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.8.17-1.fmi
 - Minor change to level.h
 * Fri Aug 14 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.8.14-1.fmi
