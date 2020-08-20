@@ -538,7 +538,7 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 
 	double lowLimit = 0.0;  // value can't be lower than 0
 
-	if (myParamName == "RTOPLW-WM2" && myParamName == "RNETLW-WM2" && myParamName == "RNETSW-WM2")
+	if (myParamName == "RTOPLW-WM2" || myParamName == "RNETLW-WM2" || myParamName == "RNETSW-WM2")
 	{
 		lowLimit = himan::MissingDouble();  // no low limit
 	}
