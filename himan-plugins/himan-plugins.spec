@@ -4,7 +4,7 @@
 Summary: himan-plugins library
 Name: %{LIBNAME}
 Version: 20.8.20
-Release: 1%{dist}.fmi
+Release: 2%{dist}.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -133,6 +133,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Thu Aug 20 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.8.20-2.fmi
+- Bugfix
 * Thu Aug 20 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.8.20-1.fmi
 - Remove very small precipitation from MEPS and similar models
 * Wed Aug 19 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.8.19-1.fmi
