@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.8.19
+Version: 20.8.20
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -133,6 +133,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Thu Aug 20 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.8.20-1.fmi
+- Remove very small precipitation from MEPS and similar models
 * Wed Aug 19 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.8.19-1.fmi
 - Changes in util::Split()
 - Change to as_grid query in radon plugin
