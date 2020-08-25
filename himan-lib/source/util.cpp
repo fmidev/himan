@@ -125,6 +125,10 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 				return "fqd";
 			case kCSV:
 				return "csv";
+			case kNetCDF:
+				return "nc";
+			case kGeoTIFF:
+				return "tif";
 			default:
 				return "unknown";
 		}
