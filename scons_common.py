@@ -201,7 +201,7 @@ if env['HAVE_CUDA']:
 if env['HAVE_S3']:
         env.Append(CPPDEFINES=['HAVE_S3'])
 
-env.Append(NVCCDEFINES=['HAVE_CUDA'])
+env.Append(NVCCDEFINES=['HAVE_CUDA', 'CUB_IGNORE_DEPRECATED_CPP_DIALECT', 'THRUST_IGNORE_DEPRECATED_CPP_DIALECT'])
 
 env.Append(NVCCFLAGS = ['-m64', '-Xcompiler', '-fPIC'])
 env.Append(NVCCFLAGS = ['-Wno-deprecated-declarations'])

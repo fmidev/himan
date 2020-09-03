@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 20.8.25
+Version: 20.9.3
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -23,13 +23,13 @@ Requires: libboost_filesystem
 %else
 BuildRequires: bzip2-devel
 BuildRequires: redhat-rpm-config
-BuildRequires: cuda-10-1
+BuildRequires: cuda-11-0
 BuildRequires: gcc-c++ >= 4.8.2
 Requires: gdal
 Requires: eccodes
 Requires: boost169-iostreams
 Requires: boost169-filesystem
-Requires: libs3
+Requires: libs3 >= 4.1
 
 %endif
 BuildRequires: libfmidb-devel >= 20.7.8
@@ -37,7 +37,7 @@ BuildRequires: libfmigrib-devel >= 19.10.28
 BuildRequires: zlib-devel
 BuildRequires: boost169-devel
 BuildRequires: scons
-BuildRequires: libs3-devel
+BuildRequires: libs3-devel >= 4.1
 
 Provides: libhiman.so
 
@@ -77,6 +77,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/*
 
 %changelog
+* Thu Sep  3 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.9.3-1.fmi
+- cuda 11.0
+- libs3 4.1
 * Tue Aug 25 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.8.25-1.fmi
 - Minor changes in util
 * Thu Aug 20 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.8.20-1.fmi
