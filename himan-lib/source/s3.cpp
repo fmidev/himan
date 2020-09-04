@@ -10,6 +10,8 @@ using namespace himan;
 #include <mutex>
 #include <string.h>  // memcpy
 
+namespace
+{
 static std::once_flag oflag;
 
 const char* access_key = 0;
@@ -105,19 +107,67 @@ void Initialize()
 
 		if (!access_key)
 		{
-			logr.Fatal("Environment variable S3_ACCESS_KEY_ID not defined");
-			himan::Abort();
+			logr.Info("Environment variable S3_ACCESS_KEY_ID not defined");
 		}
 
 		if (!secret_key)
 		{
-			logr.Fatal("Environment variable S3_SECRET_ACCESS_KEY not defined");
-			himan::Abort();
+			logr.Info("Environment variable S3_SECRET_ACCESS_KEY not defined");
 		}
 
 		S3_CHECK(S3_initialize("s3", S3_INIT_ALL, NULL));
 	});
 }
+
+std::string ReadAWSRegionFromHostname(const std::string& hostname)
+{
+	if (hostname.find("amazonaws.com") != std::string::npos)
+	{
+		// extract region name from host name, assuming aws hostname like
+		// s3.us-east-1.amazonaws.com
+
+		auto tokens = util::Split(hostname, ".");
+
+		logger logr("s3");
+
+		if (tokens.size() != 4)
+		{
+			logr.Fatal("Hostname does not follow pattern s3.<regionname>.amazonaws.com");
+		}
+		else
+		{
+			logr.Trace("s3 authentication hostname: " + tokens[1]);
+			return tokens[1];
+		}
+	}
+
+	return "";
+}
+
+struct write_data
+{
+	himan::buffer buffer;
+	size_t write_ptr;
+};
+
+static int putObjectDataCallback(int bufferSize, char* buffer, void* callbackData)
+{
+	write_data* data = static_cast<write_data*>(callbackData);
+	int bytesWritten = 0;
+
+	if (data->buffer.length)
+	{
+		bytesWritten =
+		    static_cast<int>((static_cast<int>(data->buffer.length) > bufferSize) ? bufferSize : data->buffer.length);
+		memcpy(buffer, data->buffer.data + data->write_ptr, bytesWritten);
+		data->write_ptr += bytesWritten;
+		data->buffer.length -= bytesWritten;
+	}
+
+	return bytesWritten;
+}
+
+}  // namespace
 
 buffer s3::ReadFile(const file_information& fileInformation)
 {
@@ -134,27 +184,7 @@ buffer s3::ReadFile(const file_information& fileInformation)
 
 #ifdef S3_DEFAULT_REGION
 
-	std::string region;
-
-	if (fileInformation.file_server.find("amazonaws.com") != std::string::npos)
-	{
-		// extract region name from host name, assuming aws hostname like
-		// s3.us-east-1.amazonaws.com
-
-		auto tokens = util::Split(fileInformation.file_server, ".");
-
-		if (tokens.size() != 4)
-		{
-			logr.Fatal("Hostname does not follow pattern s3.<regionname>.amazonaws.com");
-		}
-		else
-		{
-			logr.Trace("s3 authentication hostname: " + tokens[1]);
-			region = tokens[1];
-		}
-	}
-
-	const char* regionp = (region.empty()) ? nullptr : region.c_str();
+	std::string region = ReadAWSRegionFromHostname(fileInformation.file_server);
 
 	// clang-format off
 
@@ -167,7 +197,7 @@ buffer s3::ReadFile(const file_information& fileInformation)
                 access_key,
                 secret_key,
                 security_token,
-                regionp
+                region.c_str()
         };
 #else
 
@@ -235,29 +265,6 @@ buffer s3::ReadFile(const file_information& fileInformation)
 	return ret;
 }
 
-struct write_data
-{
-	himan::buffer buffer;
-	size_t write_ptr;
-};
-
-static int putObjectDataCallback(int bufferSize, char* buffer, void* callbackData)
-{
-	write_data* data = static_cast<write_data*>(callbackData);
-	int bytesWritten = 0;
-
-	if (data->buffer.length)
-	{
-		bytesWritten =
-		    static_cast<int>((static_cast<int>(data->buffer.length) > bufferSize) ? bufferSize : data->buffer.length);
-		memcpy(buffer, data->buffer.data + data->write_ptr, bytesWritten);
-		data->write_ptr += bytesWritten;
-		data->buffer.length -= bytesWritten;
-	}
-
-	return bytesWritten;
-}
-
 void s3::WriteObject(const std::string& objectName, const buffer& buff)
 {
 	Initialize();
@@ -268,26 +275,17 @@ void s3::WriteObject(const std::string& objectName, const buffer& buff)
 
 	const char* host = getenv("S3_HOSTNAME");
 
+	logger logr("s3");
+
 	if (!host)
 	{
-		throw std::runtime_error("Environment variable S3_HOSTNAME not defined");
+		logr.Fatal("Environment variable S3_HOSTNAME not defined");
+		himan::Abort();
 	}
 
 #ifdef S3_DEFAULT_REGION
 
-	// extract region name from host name, assuming aws
-	// s3.us-east-1.amazonaws.com
-	auto tokens = util::Split(host, ".");
-
-	if (tokens.size() == 3)
-	{
-		std::cerr << "Hostname does not follow pattern s3.<regionname>.amazonaws.com" << std::endl;
-		return;
-	}
-
-	const std::string region = tokens[1];
-
-	// libs3 boilerplate
+	std::string region = ReadAWSRegionFromHostname(std::string(host));
 
 	// clang-format off
 
@@ -326,8 +324,6 @@ void s3::WriteObject(const std::string& objectName, const buffer& buff)
 	data.buffer.data = buff.data;
 	data.buffer.length = buff.length;
 	data.write_ptr = 0;
-
-	logger logr("s3");
 
 	timer t(true);
 
