@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 20.9.3
+Version: 20.9.4
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -29,7 +29,7 @@ Requires: gdal
 Requires: eccodes
 Requires: boost169-iostreams
 Requires: boost169-filesystem
-Requires: libs3 >= 4.1
+Requires: libs3 >= 4.1-0.6.20190408git287e4be.1.el7.fmi
 
 %endif
 BuildRequires: libfmidb-devel >= 20.7.8
@@ -77,6 +77,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/*
 
 %changelog
+* Fri Sep  4 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.9.4-1.fmi
+- Allow unauthenticated access to public s3 buckets
 * Thu Sep  3 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.9.3-1.fmi
 - cuda 11.0
 - libs3 4.1
