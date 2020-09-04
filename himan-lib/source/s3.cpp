@@ -134,19 +134,27 @@ buffer s3::ReadFile(const file_information& fileInformation)
 
 #ifdef S3_DEFAULT_REGION
 
-	// extract region name from host name, assuming aws
-	// s3.us-east-1.amazonaws.com
-	auto tokens = util::Split(fileInformation.file_server, ".");
+	std::string region;
 
-	if (tokens.size() == 3)
+	if (fileInformation.file_server.find("amazonaws.com") != std::string::npos)
 	{
-		logr.Error("Hostname does not follow pattern s3.<regionname>.amazonaws.com");
-		throw himan::kFileDataNotFound;
+		// extract region name from host name, assuming aws hostname like
+		// s3.us-east-1.amazonaws.com
+
+		auto tokens = util::Split(fileInformation.file_server, ".");
+
+		if (tokens.size() != 4)
+		{
+			logr.Fatal("Hostname does not follow pattern s3.<regionname>.amazonaws.com");
+		}
+		else
+		{
+			logr.Trace("s3 authentication hostname: " + tokens[1]);
+			region = tokens[1];
+		}
 	}
 
-	const std::string region = tokens[1];
-
-	// libs3 boilerplate
+	const char* regionp = (region.empty()) ? nullptr : region.c_str();
 
 	// clang-format off
 
@@ -159,7 +167,7 @@ buffer s3::ReadFile(const file_information& fileInformation)
                 access_key,
                 secret_key,
                 security_token,
-                region.c_str()
+                regionp
         };
 #else
 
