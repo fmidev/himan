@@ -368,7 +368,7 @@ void ForecastTypes(const boost::property_tree::ptree& pt, std::shared_ptr<config
 {
 	if (auto ftypes = ReadElement<std::string>(pt, "forecast_type"))
 	{
-		vector<string> types = himan::util::Split(ftypes.get(), ",", false);
+		vector<string> types = util::Split(ftypes.get(), ",");
 		vector<forecast_type> forecastTypes;
 
 		for (string& type : types)
@@ -379,7 +379,7 @@ void ForecastTypes(const boost::property_tree::ptree& pt, std::shared_ptr<config
 			{
 				string list = type.substr(2, string::npos);
 
-				vector<string> range = himan::util::Split(list, "-", false);
+				vector<string> range = util::Split(list, "-");
 
 				if (range.size() == 1)
 				{
@@ -452,7 +452,7 @@ void Time(const boost::property_tree::ptree& pt, shared_ptr<configuration>& conf
 	}
 	else if (auto times = ReadElement<string>(pt, "origintimes"))
 	{
-		auto datesList = himan::util::Split(times.get(), ",", false);
+		auto datesList = himan::util::Split(times.get(), ",");
 
 		for (const auto& dateString : datesList)
 		{
@@ -675,7 +675,7 @@ raw_time GetLatestOriginDateTime(const shared_ptr<configuration> conf, const str
 {
 	using namespace himan;
 
-	auto strlist = himan::util::Split(latest, "-", false);
+	auto strlist = himan::util::Split(latest, "-");
 
 	unsigned int offset = 0;
 
@@ -742,7 +742,7 @@ void ParseSteps(const boost::property_tree::ptree& pt, shared_ptr<configuration>
 
 	try
 	{
-		vector<string> timesStr = himan::util::Split(pt.get<string>("times"), ",", true);
+		vector<string> timesStr = himan::util::Split(pt.get<string>("times"), ",");
 		vector<forecast_time> times;
 
 		for (const auto& originDateTime : originDateTimes)
@@ -784,14 +784,15 @@ void ParseSteps(const boost::property_tree::ptree& pt, shared_ptr<configuration>
 
 	try
 	{
-		vector<string> timesStr = himan::util::Split(pt.get<string>("hours"), ",", true);
+		vector<int> timeValues = util::ExpandString(pt.get<string>("hours"));
+
 		vector<forecast_time> times;
 
 		for (const auto& originDateTime : originDateTimes)
 		{
-			for (const auto& str : timesStr)
+			for (const auto& timeValue : timeValues)
 			{
-				times.push_back(forecast_time(originDateTime, time_duration(str)));
+				times.push_back(forecast_time(originDateTime, time_duration(ONE_HOUR * timeValue)));
 			}
 		}
 
@@ -880,7 +881,7 @@ unique_ptr<grid> ParseAreaAndGridFromPoints(const boost::property_tree::ptree& p
 
 	try
 	{
-		vector<string> stations = himan::util::Split(pt.get<string>("points"), ",", false);
+		vector<string> stations = himan::util::Split(pt.get<string>("points"), ",");
 
 		g = unique_ptr<point_list>(new point_list());
 
@@ -890,7 +891,7 @@ unique_ptr<grid> ParseAreaAndGridFromPoints(const boost::property_tree::ptree& p
 
 		for (const string& line : stations)
 		{
-			vector<string> point = himan::util::Split(line, " ", false);
+			vector<string> point = himan::util::Split(line, " ");
 
 			if (point.size() != 2)
 			{
@@ -928,7 +929,7 @@ unique_ptr<grid> ParseAreaAndGridFromPoints(const boost::property_tree::ptree& p
 
 	try
 	{
-		vector<string> stations = himan::util::Split(pt.get<string>("stations"), ",", false);
+		vector<string> stations = himan::util::Split(pt.get<string>("stations"), ",");
 
 		g = unique_ptr<point_list>(new point_list);
 
@@ -994,7 +995,7 @@ unique_ptr<grid> ParseAreaAndGridFromBbox(const boost::property_tree::ptree& pt)
 			throw runtime_error("Only bottom_left or top_left scanning mode is supported with bbox");
 		}
 
-		vector<string> coordinates = himan::util::Split(pt.get<string>("bbox"), ",", false);
+		vector<string> coordinates = himan::util::Split(pt.get<string>("bbox"), ",");
 
 		point fp, lp;
 		if (scmode == kTopLeft)
@@ -1128,7 +1129,7 @@ void AreaAndGrid(const boost::property_tree::ptree& pt, const shared_ptr<configu
 
 	if (auto sourceGeom = ReadElement<string>(pt, "source_geom_name"))
 	{
-		conf->SourceGeomNames(himan::util::Split(sourceGeom.get(), ",", false));
+		conf->SourceGeomNames(himan::util::Split(sourceGeom.get(), ","));
 	}
 
 	// 2. radon-style geom_name
@@ -1171,7 +1172,7 @@ void SourceProducer(const boost::property_tree::ptree& pt, const shared_ptr<conf
 	if (auto sp = ReadElement<string>(pt, "source_producer"))
 	{
 		std::vector<producer> sourceProducers;
-		vector<string> sourceProducersStr = himan::util::Split(sp.get(), ",", false);
+		vector<string> sourceProducersStr = himan::util::Split(sp.get(), ",");
 
 		const HPDatabaseType dbtype = conf->DatabaseType();
 
@@ -1264,17 +1265,17 @@ void TargetProducer(const boost::property_tree::ptree& pt, const shared_ptr<conf
 	}
 }
 
-vector<level> LevelsFromString(const string& levelType, const string& levelValues)
+vector<level> LevelsFromString(const string& levelType, const string& levelValuesStr)
 {
 	HPLevelType theLevelType = HPStringToLevelType.at(boost::to_lower_copy(levelType));
 	vector<level> levels;
 
 	if (theLevelType == kHeightLayer || theLevelType == kGroundDepth || theLevelType == kPressureDelta)
 	{
-		const vector<string> levelsStr = himan::util::Split(levelValues, ",", false);
+		const vector<string> levelsStr = util::Split(levelValuesStr, ",");
 		for (size_t i = 0; i < levelsStr.size(); i++)
 		{
-			const vector<string> levelIntervals = himan::util::Split(levelsStr[i], "_", false);
+			const vector<string> levelIntervals = himan::util::Split(levelsStr[i], "_");
 
 			if (levelIntervals.size() != 2)
 			{
@@ -1289,11 +1290,11 @@ vector<level> LevelsFromString(const string& levelType, const string& levelValue
 	}
 	else
 	{
-		const vector<string> levelsStr = himan::util::Split(levelValues, ",", true);
-		for (size_t i = 0; i < levelsStr.size(); i++)
-		{
-			levels.push_back(level(theLevelType, stof(levelsStr[i]), levelType));
-		}
+		const vector<int> levelValues = util::ExpandString(levelValuesStr);
+		levels.reserve(levelValues.size());
+
+		std::transform(levelValues.begin(), levelValues.end(), std::back_inserter(levels),
+		               [&](int levelValue) { return level(theLevelType, static_cast<float>(levelValue), levelType); });
 	}
 
 	ASSERT(!levels.empty());

@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 20.8.12
+Version: 20.9.3
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -26,7 +26,7 @@ Requires: libjasper
 %else
 BuildRequires: redhat-rpm-config
 BuildRequires: gcc-c++ >= 4.8.2
-BuildRequires: cuda-10-1
+BuildRequires: cuda-11-0
 Requires: jasper
 Requires: boost169-program-options
 Requires: boost169-system
@@ -64,6 +64,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Thu Sep  3 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.9.3-1.fmi
+- cuda 11.0
 * Wed Aug 12 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.8.12-1.fmi
 - Support writing multiple grib messages in one file to s3
 * Wed Jul 15 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.7.15-1.fmi

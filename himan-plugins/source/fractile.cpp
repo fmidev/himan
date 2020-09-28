@@ -167,7 +167,7 @@ void fractile::SetParams()
 	{
 		itsFractiles.clear();
 
-		auto list = util::Split(fractiles, ",", false);
+		auto list = util::Split(fractiles, ",");
 
 		for (std::string& val : list)
 		{
@@ -201,7 +201,7 @@ void fractile::SetParams()
 		calculatedParams.push_back(p);
 	}
 
-	auto name = util::Split(paramName, "-", false);
+	auto name = util::Split(paramName, "-");
 
 	param mean(name[0] + "-MEAN-" + name[1]);
 	mean.ProcessingType(processing_type(kEnsembleMean, kHPMissingInt, kHPMissingInt, kHPMissingInt));

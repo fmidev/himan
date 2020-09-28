@@ -11,6 +11,7 @@
 #include "lambert_equal_area_grid.h"
 #include "latitude_longitude_grid.h"
 #include "level.h"
+#include "numerical_functions.h"
 #include "param.h"
 #include "plugin_factory.h"
 #include "point_list.h"
@@ -124,6 +125,10 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 				return "fqd";
 			case kCSV:
 				return "csv";
+			case kNetCDF:
+				return "nc";
+			case kGeoTIFF:
+				return "tif";
 			default:
 				return "unknown";
 		}
@@ -499,62 +504,81 @@ himan::HPFileType util::FileType(const string& theFile)
 	return ret;
 }
 
-// copied from http://stackoverflow.com/questions/236129/splitting-a-string-in-c and modified a bit
-
-vector<string> util::Split(const string& s, const string& delims, bool fill)
+namespace
 {
-	vector<string> orig_elems;
+template <typename T>
+T TypeCast(const std::string& str)
+{
+	std::istringstream ss(str);
+	T num;
+	ss >> num;
+	return num;
+}
 
-	boost::split(orig_elems, s, boost::is_any_of(delims));
+template <>
+std::string TypeCast<std::string>(const std::string& val)
+{
+	return val;
+}
+}
 
-	if (!fill || orig_elems.size() == 0)
+template <typename T>
+vector<T> util::Split(const string& s, const string& delims)
+{
+	vector<string> orig;
+
+	boost::split(orig, s, boost::is_any_of(delims));
+
+	vector<T> ret;
+	ret.reserve(orig.size());
+	std::transform(orig.begin(), orig.end(), std::back_inserter(ret),
+	               [](std::string& ss) { return ::TypeCast<T>(ss); });
+
+	return ret;
+}
+
+template vector<string> util::Split<string>(const string&, const string&);
+template vector<float> util::Split<float>(const string&, const string&);
+template vector<double> util::Split<double>(const string&, const string&);
+template vector<int> util::Split<int>(const string&, const string&);
+template vector<size_t> util::Split<size_t>(const string&, const string&);
+
+vector<int> util::ExpandString(const std::string& identifier)
+{
+	// identifier is a string with number separated by commas and dashes
+	// 1,5,10-12
+	// --> return a vector of:
+	// 1,5,10,11,12
+
+	vector<int> ret;
+	const auto split1 = Split(identifier, ",");
+	for (const auto& tok : split1)
 	{
-		return orig_elems;
-	}
+		const auto split2 = Split<int>(tok, "-");
 
-	vector<string> filled_elems;
-	vector<string> splitted_elems;
-
-	vector<string>::iterator it;
-
-	for (it = orig_elems.begin(); it != orig_elems.end();)
-	{
-		boost::split(splitted_elems, *it, boost::is_any_of("-"));
-
-		if (splitted_elems.size() == 2)
+		if (split2.size() == 2)
 		{
-			it = orig_elems.erase(it);
-
-			int first = stoi(splitted_elems[0]);
-			int last = stoi(splitted_elems.back());
-
-			if (first <= last)
+			int a = split2[0], b = split2[1], step = 1;
+			if (a > b)
 			{
-				// levels are 1-65
-				for (int i = first; i <= last; ++i)
-					filled_elems.push_back(to_string(i));
+				step *= -1;
 			}
-			else
-			{
-				// levels are 65-1
-				for (int i = first; i >= last; --i)
-					filled_elems.push_back(to_string(i));
-			}
+
+			const auto vals = numerical_functions::Arange(
+			    split2[0], split2[1] + step, step);  // arange return half-open interval excluding the endvalue
+			std::copy(vals.begin(), vals.end(), std::back_inserter(ret));
 		}
-		else
+		else if (split2.size() == 1)
 		{
-			++it;
+			ret.push_back(split2[0]);
 		}
 	}
+	return ret;
+}
 
-	vector<string> all_elems;
-
-	all_elems.reserve(orig_elems.size() + filled_elems.size());
-
-	all_elems.insert(all_elems.end(), orig_elems.begin(), orig_elems.end());
-	all_elems.insert(all_elems.end(), filled_elems.begin(), filled_elems.end());
-
-	return all_elems;
+vector<string> util::Split(const string& s, const string& delims)
+{
+	return Split<std::string>(s, delims);
 }
 
 string util::Join(const vector<string>& elements, const string& delim)
@@ -831,7 +855,7 @@ shared_ptr<info<T>> util::CSVToInfo(const vector<string>& csv)
 
 	for (auto line : csv)
 	{
-		auto elems = util::Split(line, ",", false);
+		auto elems = util::Split(line, ",");
 
 		if (elems.size() != 14)
 		{
@@ -864,7 +888,7 @@ shared_ptr<info<T>> util::CSVToInfo(const vector<string>& csv)
 		raw_time originTime(elems[1]), validTime(elems[1]);
 
 		// split HHH:MM:SS and extract hours and minutes
-		auto timeparts = Split(elems[10], ":", false);
+		auto timeparts = Split(elems[10], ":");
 
 		validTime.Adjust(kHourResolution, stoi(timeparts[0]));
 		validTime.Adjust(kMinuteResolution, stoi(timeparts[1]));
@@ -950,7 +974,7 @@ shared_ptr<info<T>> util::CSVToInfo(const vector<string>& csv)
 
 	for (auto line : csv)
 	{
-		auto elems = util::Split(line, ",", false);
+		auto elems = util::Split(line, ",");
 
 		if (elems.size() != 14)
 		{
@@ -979,7 +1003,7 @@ shared_ptr<info<T>> util::CSVToInfo(const vector<string>& csv)
 		// forecast_time
 		raw_time originTime(elems[1]), validTime(elems[1]);
 
-		auto timeparts = Split(elems[10], ":", false);
+		auto timeparts = Split(elems[10], ":");
 
 		validTime.Adjust(kHourResolution, stoi(timeparts[0]));
 		validTime.Adjust(kMinuteResolution, stoi(timeparts[1]));
@@ -1212,7 +1236,7 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 
 		gg->N(stoi(geominfo["n"]));
 
-		auto strlongitudes = himan::util::Split(geominfo["longitudes_along_parallels"], ",", false);
+		auto strlongitudes = himan::util::Split(geominfo["longitudes_along_parallels"], ",");
 		vector<int> longitudes;
 
 		for (auto& l : strlongitudes)
@@ -1341,7 +1365,7 @@ aggregation util::GetAggregationFromParamName(const std::string& name)
 	}
 	else if (name.find("RR-") != string::npos)
 	{
-		const auto tokens = util::Split(name, "-", false);
+		const auto tokens = util::Split(name, "-");
 
 		if (tokens.size() == 2 && tokens[1] == "KGM2")
 		{

@@ -42,11 +42,12 @@ const boost::unordered_map<HPLevelType, std::string> HPLevelTypeToString =
         kTopOfAtmosphere, "top")(kIsothermal, "isothermal")(kEntireAtmosphere, "entatm")(kEntireOcean, "entocean")(
         kLake, "lake")(kMaximumThetaE, "maxthetae")(kMaximumWind, "maxwind");
 
-const boost::unordered_map<std::string, HPLevelType> HPStringToLevelType = ba::map_list_of("unknown", kUnknownLevel)(
-    "ground", kGround)("pressure", kPressure)("pressure_delta", kPressureDelta)("meansea", kMeanSea)(
-    "altitude", kAltitude)("height", kHeight)("height_layer", kHeightLayer)("hybrid", kHybrid)(
-    "ground_depth", kGroundDepth)("depth", kDepth)("top", kTopOfAtmosphere)("isothermal", kIsothermal)(
-    "entatm", kEntireAtmosphere)("entocean", kEntireOcean)("lake", kLake)("maxthetae", kMaximumThetaE);
+const boost::unordered_map<std::string, HPLevelType> HPStringToLevelType =
+    ba::map_list_of("unknown", kUnknownLevel)("ground", kGround)("pressure", kPressure)(
+        "pressure_delta", kPressureDelta)("meansea", kMeanSea)("altitude", kAltitude)("height", kHeight)(
+        "height_layer", kHeightLayer)("hybrid", kHybrid)("ground_depth", kGroundDepth)("depth", kDepth)(
+        "top", kTopOfAtmosphere)("isothermal", kIsothermal)("entatm", kEntireAtmosphere)("entocean", kEntireOcean)(
+        "lake", kLake)("maxthetae", kMaximumThetaE)("maxwind", kMaximumWind);
 
 class level
 {

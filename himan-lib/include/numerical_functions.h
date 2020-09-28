@@ -3,8 +3,8 @@
 
 #include "cuda_helper.h"
 #include "himan_common.h"
-#include "plugin_configuration.h"
 #include "matrix.h"
+#include "plugin_configuration.h"
 
 namespace himan
 {
@@ -178,22 +178,33 @@ himan::matrix<T> Reduce2DGPU(const himan::matrix<T>& A, const himan::matrix<T>& 
  */
 
 template <typename T>
+std::vector<T> Arange(T start, T stop, T step)
+{
+	const T length = (stop - start) / step;
+
+	if (length <= 0 || IsMissing(length) || length >= (std::numeric_limits<T>::max() - T(1)))
+	{
+		return std::vector<T>();
+	}
+
+	std::vector<T> ret(static_cast<size_t>(ceil(length)));
+
+	ret[0] = start;
+
+	std::generate(ret.begin() + 1, ret.end(), [ v = ret[0], &step ]() mutable { return v += step; });
+	return ret;
+}
+
+template <typename T>
 std::vector<std::vector<T>> Arange(const std::vector<T>& start, const std::vector<T>& stop, T step)
 {
 	std::vector<std::vector<T>> ret(start.size());
 
+	ASSERT(start.size() == stop.size());
+
 	for (size_t i = 0; i < start.size(); i++)
 	{
-		const T length = (stop[i] - start[i]) / step;
-
-		if (length <= 0 || IsMissing(length) || length >= (std::numeric_limits<T>::max() - T(1)))
-		{
-			continue;
-		}
-
-		ret[i].resize(static_cast<size_t>(ceil(length)));
-		ret[i][0] = start[i];
-		std::generate(ret[i].begin() + 1, ret[i].end(), [ v = ret[i][0], &step ]() mutable { return v += step; });
+		ret[i] = Arange(start[i], stop[i], step);
 	}
 
 	return ret;

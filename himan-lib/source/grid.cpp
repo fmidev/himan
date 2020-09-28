@@ -155,28 +155,30 @@ bool regular_grid::EqualsTo(const regular_grid& other) const
 		return false;
 	}
 
-	if (other.BottomLeft() != BottomLeft())
+	// Regular grids are always defined in latlon so use that comparison function here
+
+	if (!point::LatLonCompare(other.BottomLeft(), BottomLeft()))
 	{
 		itsLogger.Trace("BottomLeft does not match: " + static_cast<std::string>(other.BottomLeft()) + " vs " +
 		                static_cast<std::string>(BottomLeft()));
 		return false;
 	}
 
-	if (other.TopLeft() != TopLeft())
+	if (!point::LatLonCompare(other.TopLeft() , TopLeft()))
 	{
 		itsLogger.Trace("TopLeft does not match: " + static_cast<std::string>(other.TopLeft()) + " vs " +
 		                static_cast<std::string>(TopLeft()));
 		return false;
 	}
 
-	if (other.BottomRight() != BottomRight())
+	if (!point::LatLonCompare(other.BottomRight(), BottomRight()))
 	{
 		itsLogger.Trace("BottomRight does not match: " + static_cast<std::string>(other.BottomRight()) + " vs " +
 		                static_cast<std::string>(BottomRight()));
 		return false;
 	}
 
-	if (other.TopRight() != TopRight())
+	if (!point::LatLonCompare(other.TopRight(), TopRight()))
 	{
 		itsLogger.Trace("TopRight does not match: " + static_cast<std::string>(other.TopRight()) + " vs " +
 		                static_cast<std::string>(TopRight()));
@@ -233,7 +235,7 @@ point regular_grid::XY(const point& latlon) const
 	const double x = (projX / itsDi);
 	const double y = (projY / itsDj) * (itsScanningMode == kTopLeft ? -1 : 1);
 
-	if (x < 0. || x > static_cast<double> (itsNi - 1) || y < 0. || y > static_cast<double> (itsNj - 1))
+	if (x < 0. || x > static_cast<double>(itsNi - 1) || y < 0. || y > static_cast<double>(itsNj - 1))
 	{
 		return point(MissingDouble(), MissingDouble());
 	}

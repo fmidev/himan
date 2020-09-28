@@ -609,54 +609,6 @@ bool radon::SaveGrid(const info<T>& resultInfo, const file_information& finfo, c
 		return false;
 	}
 
-	/*
-	 * 1. Get grid information
-	 * 2. Get model information
-	 * 3. Get data set information (ie model run)
-	 * 4. Insert or update
-	 */
-
-	himan::point firstGridPoint = resultInfo.Grid()->FirstPoint();
-
-	// get grib1 gridType
-
-	int gribVersion = 1;
-	int gridType = -1;
-
-	switch (resultInfo.Grid()->Type())
-	{
-		case kLatitudeLongitude:
-			gridType = 0;
-			break;
-		case kRotatedLatitudeLongitude:
-			gridType = 10;
-			break;
-		case kStereographic:
-			gridType = 5;
-			break;
-		case kReducedGaussian:
-			gridType = 24;  // "stretched" gaussian
-			break;
-		case kAzimuthalEquidistant:
-			gribVersion = 2;
-			gridType = 110;
-			break;
-		case kLambertConformalConic:
-			gridType = 3;
-			break;
-		case kLambertEqualArea:
-			gridType = 140;
-			gribVersion = 2;
-			break;
-		case kTransverseMercator:
-			gridType = 12;
-			gribVersion = 2;
-			break;
-		default:
-			throw runtime_error("Unsupported projection: " + to_string(resultInfo.Grid()->Type()) + " " +
-			                    HPGridTypeToString.at(resultInfo.Grid()->Type()));
-	}
-
 	// Start by trying to search with the geometry name. If there are duplicates, the 'wrong' geometry maybe returned if
 	// we search with the geometry definition first.
 	map<string, string> geominfo;
@@ -672,8 +624,15 @@ bool radon::SaveGrid(const info<T>& resultInfo, const file_information& finfo, c
 		{
 			auto gr = dynamic_pointer_cast<regular_grid>(resultInfo.Grid());
 
-			geominfo = itsRadonDB->GetGeometryDefinition(gr->Ni(), gr->Nj(), firstGridPoint.Y(), firstGridPoint.X(),
-			                                             gr->Di(), gr->Dj(), gribVersion, gridType);
+			// rotated coordinates as the first point for rotated_latitude_longitude
+
+			const himan::point fp =
+			    (gr->Type() == himan::kRotatedLatitudeLongitude)
+			        ? dynamic_pointer_cast<himan::rotated_latitude_longitude_grid>(gr)->Rotate(gr->FirstPoint())
+			        : gr->FirstPoint();
+
+			geominfo =
+			    itsRadonDB->GetGeometryDefinition(gr->Ni(), gr->Nj(), fp.Y(), fp.X(), gr->Di(), gr->Dj(), gr->Type());
 		}
 	}
 
@@ -817,7 +776,7 @@ bool radon::SaveGrid(const info<T>& resultInfo, const file_information& finfo, c
 
 			query.str("");
 			query << "UPDATE as_grid SET record_count = 1 WHERE schema_name = '" << schema_name
-			      << "' AND partition_name = '" << table_name << "'";
+			      << "' AND partition_name = '" << table_name << "' AND analysis_time = '" << analysisTime << "'";
 
 			itsRadonDB->Execute(query.str());
 		}

@@ -45,18 +45,17 @@ transformer::transformer()
 	itsLogger = logger("transformer");
 }
 
-vector<himan::level> transformer::LevelsFromString(const string& levelType, const string& levelValues) const
+vector<himan::level> transformer::LevelsFromString(const string& levelType, const string& levelValuesStr) const
 {
 	HPLevelType theLevelType = HPStringToLevelType.at(boost::to_lower_copy(levelType));
 
-	vector<string> levelsStr = util::Split(levelValues, ",", true);
+	vector<int> levelValues = util::ExpandString(levelValuesStr);
 
 	vector<level> levels;
+	levels.reserve(levelValues.size());
 
-	for (size_t i = 0; i < levelsStr.size(); i++)
-	{
-		levels.push_back(level(theLevelType, stof(levelsStr[i]), levelType));
-	}
+	std::transform(levelValues.begin(), levelValues.end(), std::back_inserter(levels),
+	               [&](int levelValue) { return level(theLevelType, static_cast<float>(levelValue), levelType); });
 
 	return levels;
 }
@@ -141,7 +140,7 @@ void transformer::SetAdditionalParameters()
 
 	if (itsConfiguration->Exists("rotation"))
 	{
-		itsTargetParam = util::Split(itsConfiguration->GetValue("rotation"), ",", false);
+		itsTargetParam = util::Split(itsConfiguration->GetValue("rotation"), ",");
 		itsSourceParam = itsTargetParam;
 		itsRotateVectorComponents = true;
 	}

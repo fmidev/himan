@@ -45,6 +45,7 @@ class point
 	size_t Hash() const;
 #endif
 
+	CUDA_HOST CUDA_DEVICE static bool LatLonCompare(const point& a, const point& b);
 	std::ostream& Write(std::ostream& file) const;
 
    protected:
@@ -81,9 +82,18 @@ CUDA_HOST CUDA_DEVICE inline point& point::operator=(const point& other)
 
 CUDA_HOST CUDA_DEVICE inline bool point::operator==(const point& other) const
 {
-	bool yEquals = (fabs(itsY - other.Y()) < kCoordinateEpsilon);
-	bool xEquals = (fabs(itsX - other.X()) < kCoordinateEpsilon);
+	const bool yEquals = (fabs(itsY - other.itsY) < kCoordinateEpsilon);
+	const bool xEquals = (fabs(itsX - other.itsX) < kCoordinateEpsilon);
+	return (xEquals && yEquals);
+}
 
+CUDA_HOST CUDA_DEVICE inline bool point::LatLonCompare(const point& a, const point& b)
+{
+	const bool yEquals = (fabs(a.Y() - b.Y()) < kCoordinateEpsilon);
+	const bool xEquals =
+	    (fabs(a.X() - b.X()) < kCoordinateEpsilon) ||
+	    (a.X() > 180. && (fabs((a.X() - 360.) - b.X())) < kCoordinateEpsilon) ||  // "a" has longitude > 360
+	    (b.X() > 180. && (fabs(a.X() - (b.X() - 360.))) < kCoordinateEpsilon);    // "b" has longitude > 360
 	return (xEquals && yEquals);
 }
 

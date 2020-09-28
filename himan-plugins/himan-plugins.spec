@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.8.12
+Version: 20.9.3
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -22,7 +22,7 @@ Requires: smartmet-library-newbase >= 20.4.18
 Requires: libpqxx
 Requires: boost169-iostreams
 Requires: boost169-thread
-Requires: libs3
+Requires: libs3 >= 4.1
 
 %if %{defined suse_version}
 Requires: libjasper
@@ -30,12 +30,12 @@ Requires: grib_api
 %else
 BuildRequires: gdal-devel
 BuildRequires: gcc-c++ >= 4.8.2
-BuildRequires: cuda-10-1
+BuildRequires: cuda-11-0
 BuildRequires: eccodes-devel
 BuildRequires: redhat-rpm-config
-BuildRequires: cuda-cusp-10-1 >= 0.5.1
+BuildRequires: cuda-cusp-11-0 >= 0.5.1
 BuildRequires: eigen >= 3.3.4
-BuildRequires: libs3-devel
+BuildRequires: libs3-devel >= 4.1
 
 Requires: jasper-libs
 Requires: eccodes
@@ -133,6 +133,20 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Thu Sep  3 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.9.3-1.fmi
+- cuda 11.0
+- libs3 4.1
+* Thu Aug 20 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.8.20-2.fmi
+- Bugfix
+* Thu Aug 20 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.8.20-1.fmi
+- Remove very small precipitation from MEPS and similar models
+* Wed Aug 19 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.8.19-1.fmi
+- Changes in util::Split()
+- Change to as_grid query in radon plugin
+* Mon Aug 17 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.8.17-1.fmi
+- Minor change to level.h
+* Fri Aug 14 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.8.14-1.fmi
+- Fix radon query for rotlatlon areas
 * Wed Aug 12 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.8.12-1.fmi
 - Support writing multiple grib messages in one file to s3
 * Wed Jul 29 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.7.29-1.fmi

@@ -34,7 +34,7 @@ plugin_factory::plugin_factory() : itsPluginSearchPath(), itsLogger(logger("plug
 
 	if (path != NULL)
 	{
-		std::vector<std::string> paths = util::Split(std::string(path), ":", false);
+		std::vector<std::string> paths = util::Split(std::string(path), ":");
 
 		itsPluginSearchPath.insert(itsPluginSearchPath.end(), paths.begin(), paths.end());
 	}

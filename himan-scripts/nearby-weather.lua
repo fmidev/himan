@@ -276,7 +276,7 @@ for i=1, #NEIGHBOUR do
 
     if (prevalent_type[i] == 1 or prevalent_form[i] == 0 or prevalent_form[i] == 5) then
          NEIGHBOUR[i] = NEIGHBOUR[i] + prevalent_form[i]*100+10
-    else
+    elseif (IsValid(prevalent_form[i])) then
          NEIGHBOUR[i] = NEIGHBOUR[i] + prevalent_form[i]*100+20
     end
 -- Yhditelmäsateita OSA 1. Laitetaan kaikki aluksi jatkuvan sateen teksteille

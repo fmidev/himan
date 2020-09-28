@@ -322,12 +322,12 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 		params.push_back(parm);
 	}
 
-        if (itsConfiguration->Exists("netsw") && itsConfiguration->GetValue("netsw") == "true")
-        {
-                param parm("RNETSW-WM2", 311, 0, 4, 9);
+	if (itsConfiguration->Exists("netsw") && itsConfiguration->GetValue("netsw") == "true")
+	{
+		param parm("RNETSW-WM2", 311, 0, 4, 9);
 
-                params.push_back(parm);
-        }
+		params.push_back(parm);
+	}
 
 	if (params.empty())
 	{
@@ -413,6 +413,11 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 	     myParamName == "RRRC-KGM2" || myParamName == "SNR-KGM2" || myParamName == "SNRC-KGM2" ||
 	     myParamName == "SNRL-KGM2" || myParamName == "GRR-MMH" || myParamName == "RRRS-KGM2" ||
 	     myParamName == "RRC-KGM2");
+	const bool isPrecipitationCalculation =
+	    myParamName == "RR-1-MM" || myParamName == "RR-3-MM" || myParamName == "RR-6-MM" || myParamName == "RR-12-MM" ||
+	    myParamName == "RR-24-MM" || myParamName == "RRC-3-MM" || myParamName == "RRR-KGM2" ||
+	    myParamName == "RRRC-KGM2" || myParamName == "RRRL-KGM2";
+	const long producerId = myTargetInfo->Producer().Id();
 
 	// Have to re-fetch infos each time since we might have to change element
 	// from liquid to snow to radiation so we need also different source parameters
@@ -501,9 +506,7 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 	// EC gives precipitation in meters, we are calculating millimeters
 
 	if (curSumInfo->Param().Unit() == kM ||
-	    ((myTargetInfo->Producer().Id() == 240 || myTargetInfo->Producer().Id() == 241 ||
-	      myTargetInfo->Producer().Id() == 243) &&
-	     !isRadiationCalculation))  // HIMAN-98
+	    ((producerId == 240 || producerId == 241 || producerId == 243) && !isRadiationCalculation))  // HIMAN-98
 	{
 		scaleFactor = 1000.;
 	}
@@ -533,6 +536,13 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 		step = 1;
 	}
 
+	double lowLimit = 0.0;  // value can't be lower than 0
+
+	if (myParamName == "RTOPLW-WM2" || myParamName == "RNETLW-WM2" || myParamName == "RNETSW-WM2")
+	{
+		lowLimit = himan::MissingDouble();  // no low limit
+	}
+
 	const double invstep = 1. / step;
 
 	auto& resultVec = VEC(myTargetInfo);
@@ -540,16 +550,17 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 	for (auto&& tup : zip_range(resultVec, VEC(curSumInfo), VEC(prevSumInfo)))
 	{
 		double& result = tup.get<0>();
-		double currentSum = tup.get<1>();
-		double previousSum = tup.get<2>();
+		const double currentSum = tup.get<1>();
+		const double previousSum = tup.get<2>();
 
-		result = (currentSum - previousSum) * invstep * scaleFactor;
+		result = fmax(lowLimit, ((currentSum - previousSum) * invstep * scaleFactor));
 
-		if (result < 0 && myParamName != "RTOPLW-WM2" && myParamName != "RNETLW-WM2" && myParamName != "RNETSW-WM2")
+		// STU-13786: remove precipitations smaller than 0.01mm/h for MEPS/MEPS_preop/MNWC
+		if (isPrecipitationCalculation && (producerId == 260 || producerId == 261 || producerId == 270) &&
+		    result < 0.01)
 		{
-			result = 0;
+			result = 0.0;
 		}
-
 		ASSERT(isRadiationCalculation || result >= 0 || IsMissing(result));
 	}
 

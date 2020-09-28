@@ -39,16 +39,28 @@ template <typename T>
 std::string MakeFileName(const info<T>& info, const plugin_configuration& conf);
 
 /**
- * @brief Splits a string and fills the gaps if requested
+ * @brief Splits a string and returns part in a vector
  * @param s Input string that should be splitted
  * @param delims String containing the characters that are used in splitting. If string length > 1, all characters are
- * used
- * in splitting
- * @param fill Specify if gaps should be filled. For example string 1-4 can be splitted at - and filled with 2 and 3.
- * @return Vector or strings
+ * used in splitting
+ * @return Vector of strings
  */
 
-std::vector<std::string> Split(const std::string& s, const std::string& delims, bool fill);
+std::vector<std::string> Split(const std::string& s, const std::string& delims);
+
+template <typename T>
+std::vector<T> Split(const std::string& s, const std::string& delims);
+
+/**
+ * @brief Expand a string containing commas and dashes to a list (vector)
+ *
+ * For example: 4,5,10-12 becomes vector of 4,5,10,11,12
+ *
+ * @param identifier which is splitted and expanded
+ * @return Vector of ints, the expanded values
+ */
+
+std::vector<int> ExpandString(const std::string& identifier);
 
 /**
  * @brief Join a string-vector with given delimiter
