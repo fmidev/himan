@@ -2250,6 +2250,8 @@ void ReadData(shared_ptr<info<T>> newInfo, bool readPackedData, const NFmiGribMe
 
 	bool decodePrecipitationForm = false;
 
+	logger logr("grib");
+
 #if defined GRIB_READ_PACKED_DATA && defined HAVE_CUDA
 
 	const auto paramName = newInfo->Param().Name();
@@ -2261,8 +2263,6 @@ void ReadData(shared_ptr<info<T>> newInfo, bool readPackedData, const NFmiGribMe
 	{
 		decodePrecipitationForm = true;
 	}
-
-	logger logr("grib");
 
 	if (readPackedData && decodePrecipitationForm == false && message.PackingType() == "grid_simple")
 	{
