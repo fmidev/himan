@@ -485,6 +485,10 @@ himan::HPFileType util::FileType(const string& theFile)
 	{
 		ret = kNetCDF;
 	}
+	else if (strncmp(content, "II*", 3) == 0)
+	{
+		ret = kGeoTIFF;
+	}
 	else
 	{
 		// Not GRIB or NetCDF, keep on searching
