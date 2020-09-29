@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 20.9.4
+Version: 20.9.29
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -77,6 +77,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/*
 
 %changelog
+* Tue Sep 29 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.9.29-1.fmi
+- Minor changes
 * Fri Sep  4 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.9.4-1.fmi
 - Allow unauthenticated access to public s3 buckets
 * Thu Sep  3 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.9.3-1.fmi

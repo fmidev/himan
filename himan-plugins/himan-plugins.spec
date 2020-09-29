@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.9.3
+Version: 20.9.29
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -133,6 +133,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Tue Sep 29 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.9.29-1.fmi
+- Small fix to grib1 output
 * Thu Sep  3 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.9.3-1.fmi
 - cuda 11.0
 - libs3 4.1
