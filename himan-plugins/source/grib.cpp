@@ -1767,8 +1767,8 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 		if (parmName.empty())
 		{
 			logr.Warning("Parameter name not found from " + HPDatabaseTypeToString.at(dbtype) +
-			             " for no_vers: " + to_string(no_vers) + ", number: " + to_string(number) +
-			             ", timeRangeIndicator: " + to_string(timeRangeIndicator));
+			             " for producer: " + to_string(prod.Id()) + " no_vers: " + to_string(no_vers) +
+			             ", number: " + to_string(number) + ", timeRangeIndicator: " + to_string(timeRangeIndicator));
 			throw kFileMetaDataNotFound;
 		}
 		else
@@ -1853,9 +1853,9 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 
 		if (parmName.empty())
 		{
-			logr.Warning("Parameter name not found from database for discipline: " + to_string(discipline) +
-			             ", category: " + to_string(category) + ", number: " + to_string(number) +
-			             ", statistical processing: " + to_string(tosp));
+			logr.Warning("Parameter name not found from database for producer: " + to_string(prod.Id()) +
+			             " discipline: " + to_string(discipline) + ", category: " + to_string(category) +
+			             ", number: " + to_string(number) + ", statistical processing: " + to_string(tosp));
 			throw kFileMetaDataNotFound;
 		}
 		else
