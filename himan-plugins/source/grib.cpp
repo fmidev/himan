@@ -674,6 +674,20 @@ void WriteTime(NFmiGribMessage& message, const forecast_time& ftime, const produ
 				message.TimeRangeIndicator(0);
 				message.P1((ftime.Step() / static_cast<int>(stepUnit.Hours())).Hours());
 				break;
+			case kMaximum:
+			case kMinimum:
+				// Product with a valid time ranging between reference time + P1 and reference time + P2
+				message.TimeRangeIndicator(2);
+
+				if (p1 < 0)
+				{
+					logr.Warning("Forcing starting step from negative value to zero");
+					p1 = 0;
+				}
+
+				message.P1(p1);
+				message.P2(p2);
+				break;
 			case kAverage:
 				// Average (reference time + P1 to reference time + P2)
 				message.TimeRangeIndicator(3);
@@ -1786,8 +1800,9 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 
 		switch (timeRangeIndicator)
 		{
-			case 0:  // forecast
-			case 1:  // analysis
+			case 0:   // forecast
+			case 1:   // analysis
+			case 10:  // forecast with timestep > 255
 				if (prod.Id() == 131)
 				{
 					// yeah, sometimes timeRangeIndicator=0 even if shortName=tp,
@@ -1802,6 +1817,25 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 					}
 				}
 				break;
+
+			case 2:  // typically max / min
+			         // but which one?
+			{
+				if (parmName == "FFG-MS" || parmName == "FFG3H-MS" || parmName == "WGU-MS" || parmName == "WGV-MS" ||
+				    parmName == "TMAX-K" || parmName == "TMAX12H-K")
+				{
+					a.Type(kMaximum);
+					a.TimeDuration(DurationFromTimeRange(message.UnitOfTimeRange()) *
+					               static_cast<int>(message.P2() - message.P1()));
+				}
+				else if (parmName == "TMIN-K" || parmName == "TMIN12H-K")
+				{
+					a.Type(kMinimum);
+					a.TimeDuration(DurationFromTimeRange(message.UnitOfTimeRange()) *
+					               static_cast<int>(message.P2() - message.P1()));
+				}
+			}
+			break;
 
 			case 3:  // average
 				a.Type(kAverage);
