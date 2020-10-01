@@ -104,7 +104,7 @@ void RotateVectorComponentsCPU(const grid* from, const grid* to, himan::matrix<T
 #ifdef HAVE_CUDA
 template <typename T>
 void RotateVectorComponentsGPU(const grid* from, const grid* to, himan::matrix<T>& U, himan::matrix<T>& V,
-                               cudaStream_t& stream, T* d_u, T* d_v);
+                               cudaStream_t& stream, T* d_u, T* d_v, double* d_lon);
 #endif
 
 bool IsSupportedGridForRotation(HPGridType type);
