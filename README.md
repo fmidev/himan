@@ -80,6 +80,22 @@ Himan is able to produce the following parameters, given required source data:
 * smartsymbol (weather symbol)
 * weather number
 * low visibility procedures probability
+* snow drift
+* frost
+* tropopause height
+* nearby weather (symbol)
+* cloud top
+
+# Supported file formats
+
+Himan supports a number of different input/output file formats:
+
+* grib version 1 and 2
+* querydata (FMI internal dataformat)
+* geotiff (read-only)
+* csv for point data
+
+Data can be read from and written to either traditional POSIX compatible file system or Amazon S3 and any compatible system.
 
 # Architecture
 
