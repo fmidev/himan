@@ -25,6 +25,9 @@ namespace windvector_cuda
 void RunCuda(const std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info<float>> myTargetInfo,
              const param& UParam, const param& VParam, HPWindVectorTargetType itsTargetType);
 
+double* CacheLongitudeCoordinates(const grid* g, cudaStream_t& stream);
+void FreeLongitudeCache();
+
 }  // namespace windvector_cuda
 
 #endif /* HAVE_CUDA */

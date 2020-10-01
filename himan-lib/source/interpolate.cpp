@@ -558,7 +558,7 @@ void RotateVectorComponents(const grid* from, const grid* to, himan::info<T>& UI
 
 		cudaStream_t stream;
 		CUDA_CHECK(cudaStreamCreate(&stream));
-		RotateVectorComponentsGPU<T>(from, to, UInfo.Data(), VInfo.Data(), stream, 0, 0);
+		RotateVectorComponentsGPU<T>(from, to, UInfo.Data(), VInfo.Data(), stream, 0, 0, 0);
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 	}
 	else
