@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 20.9.29
+Version: 20.10.1
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -77,6 +77,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/*
 
 %changelog
+* Thu Oct  1 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.1-1.fmi
+- Reduced gpu memory usage for vector rotation
 * Tue Sep 29 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.9.29-1.fmi
 - Minor changes
 * Fri Sep  4 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.9.4-1.fmi
