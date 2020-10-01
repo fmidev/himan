@@ -365,8 +365,8 @@ void himan::interpolate::RotateVectorComponentsGPU(const grid* from, const grid*
 		CUDA_CHECK(cudaMalloc((void**)&d_u, memsize));
 		CUDA_CHECK(cudaMalloc((void**)&d_v, memsize));
 
-		CUDA_CHECK(cudaMemcpyAsync(d_u, U.ValuesAsPOD(), memsize, cudaMemcpyHostToDevice));
-		CUDA_CHECK(cudaMemcpyAsync(d_v, V.ValuesAsPOD(), memsize, cudaMemcpyHostToDevice));
+		CUDA_CHECK(cudaMemcpyAsync(d_u, U.ValuesAsPOD(), memsize, cudaMemcpyHostToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync(d_v, V.ValuesAsPOD(), memsize, cudaMemcpyHostToDevice, stream));
 	}
 
 	logger log("interpolate_gpu");
@@ -399,7 +399,7 @@ void himan::interpolate::RotateVectorComponentsGPU(const grid* from, const grid*
 					lon[i] = from->LatLon(i).X();
 				}
 
-				CUDA_CHECK(cudaMemcpyAsync(d_lon, lon, N * sizeof(double), cudaMemcpyHostToDevice));
+				CUDA_CHECK(cudaMemcpyAsync(d_lon, lon, N * sizeof(double), cudaMemcpyHostToDevice, stream));
 
 				const double orientation = GetOrientation(from);
 				const double cone = GetCone(from);
@@ -425,7 +425,7 @@ void himan::interpolate::RotateVectorComponentsGPU(const grid* from, const grid*
 					lon[i] = from->LatLon(i).X();
 				}
 
-				CUDA_CHECK(cudaMemcpyAsync(d_lon, lon, N * sizeof(double), cudaMemcpyHostToDevice));
+				CUDA_CHECK(cudaMemcpyAsync(d_lon, lon, N * sizeof(double), cudaMemcpyHostToDevice, stream));
 
 				RotateLambert<T><<<gs, bs, 0, stream>>>(d_u, d_v, d_lon, 1, orientation, U.SizeX(), U.SizeY());
 
