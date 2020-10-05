@@ -49,14 +49,14 @@ class precipitation_rate : public compiled_plugin, private compiled_plugin_base
 	}
 
    private:
-	virtual void Calculate(std::shared_ptr<info<double>> theTargetInfo, unsigned short theThreadIndex);
+	virtual void Calculate(std::shared_ptr<info<float>> theTargetInfo, unsigned short theThreadIndex);
 };
 
 // the class factory
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-	return std::shared_ptr<precipitation_rate>(new precipitation_rate());
+	return std::make_shared<precipitation_rate>();
 }
 
 }  // namespace plugin

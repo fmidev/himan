@@ -28,7 +28,7 @@ void precipitation_rate::Process(std::shared_ptr<const plugin_configuration> con
 
 	SetParams({param("RRI-KGM2", 1171, 0, 1, 65), param("RSI-KGM2", 1193, 0, 1, 66)});
 
-	Start();
+	Start<float>();
 }
 
 /*
@@ -37,13 +37,13 @@ void precipitation_rate::Process(std::shared_ptr<const plugin_configuration> con
  * This function does the actual calculation.
  */
 
-void precipitation_rate::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
+void precipitation_rate::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short threadIndex)
 {
 	// define quotients in formulas for rain rate and solid precipitation rate as constants
-	const double rain_rate_factor = 1000.0 / 0.072;
-	const double rain_rate_exponent = 1.0 / 0.880;
-	const double snow_rate_factor = 1000.0 / 0.200;
-	const double snow_rate_exponent = 1.0 / 0.900;
+	const float rain_rate_factor = 1000.0f / 0.072f;
+	const float rain_rate_exponent = 1.0f / 0.880f;
+	const float snow_rate_factor = 1000.0f / 0.200f;
+	const float snow_rate_exponent = 1.0f / 0.900f;
 
 	// Required source parameters (Density from plug-in density; rain, snow and graupel from Harmonie model output)
 
@@ -61,10 +61,10 @@ void precipitation_rate::Calculate(shared_ptr<info<double>> myTargetInfo, unsign
 	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 	                      static_cast<string>(forecastLevel));
 
-	info_t RhoInfo = Fetch(forecastTime, forecastLevel, RhoParam, forecastType, false);
-	info_t RainInfo = Fetch(forecastTime, forecastLevel, RainParam, forecastType, false);
-	info_t SnowInfo = Fetch(forecastTime, forecastLevel, SnowParam, forecastType, false);
-	info_t GraupelInfo = Fetch(forecastTime, forecastLevel, GraupelParam, forecastType, false);
+	auto RhoInfo = Fetch<float>(forecastTime, forecastLevel, RhoParam, forecastType, false);
+	auto RainInfo = Fetch<float>(forecastTime, forecastLevel, RainParam, forecastType, false);
+	auto SnowInfo = Fetch<float>(forecastTime, forecastLevel, SnowParam, forecastType, false);
+	auto GraupelInfo = Fetch<float>(forecastTime, forecastLevel, GraupelParam, forecastType, false);
 
 	if (!RhoInfo || !RainInfo || !SnowInfo || !GraupelInfo)
 	{
@@ -85,29 +85,26 @@ void precipitation_rate::Calculate(shared_ptr<info<double>> myTargetInfo, unsign
 
 	for (auto&& tup : zip_range(targetRain, targetSolid, VEC(RhoInfo), VEC(RainInfo), VEC(SnowInfo), VEC(GraupelInfo)))
 	{
-		double& rain = tup.get<0>();
-		double& solid = tup.get<1>();
-		double Rho = tup.get<2>();
-		double Rain = tup.get<3>();
-		double Snow = tup.get<4>();
-		double Graupel = tup.get<5>();
+		float& rain = tup.get<0>();
+		float& solid = tup.get<1>();
+		float Rho = tup.get<2>();
+		float Rain = tup.get<3>();
+		float Snow = tup.get<4>();
+		float Graupel = tup.get<5>();
 
 		// Calculate rain rate if mixing ratio is not missing. If mixing ratio is negative use 0.0 kg/kg instead.
 
 		if (!IsMissingValue({Rho, Rain}))
 		{
-			double rain_rate = pow(Rho * fmax(Rain, 0.0) * rain_rate_factor, rain_rate_exponent);
-
-			rain = rain_rate;
+			rain = powf(Rho * fmaxf(Rain, 0.0) * rain_rate_factor, rain_rate_exponent);
 		}
 
 		// Calculate solid precipitation rate if mixing ratios are not missing. If sum of mixing ratios is negative use
 		// 0.0 kg/kg instead.
+
 		if (!IsMissingValue({Rho, Snow, Graupel}))
 		{
-			double sprec_rate = pow(Rho * fmax((Snow + Graupel), 0.0) * snow_rate_factor, snow_rate_exponent);
-
-			solid = sprec_rate;
+			solid = powf(Rho * fmaxf((Snow + Graupel), 0.0) * snow_rate_factor, snow_rate_exponent);
 		}
 	}
 
