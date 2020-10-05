@@ -24,7 +24,7 @@ buffer ReadFromLocalFile(const file_information& finfo)
 	}
 
 	buffer buf;
-	buf.data = new unsigned char[length];
+	buf.data = reinterpret_cast<unsigned char*>(malloc(length));
 	buf.length = length;
 
 	fread(buf.data, buf.length, 1, fp);
