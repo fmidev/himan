@@ -138,7 +138,7 @@ static void GetConfigurationParameter(const std::string& name, const std::shared
 	}
 
 	const bool spread = (iname == "T-K" || iname == "T-C" || iname == "WATLEV-CM" || iname == "TD-K" ||
-	                     iname == "P-PA" || iname == "P-HPA") &&
+	                     iname == "P-PA" || iname == "P-HPA" || iname == "WATLEV-N2000-CM") &&
 	                    (output.ProcessingType().Type() == kProbabilityLessThan ||
 	                     output.ProcessingType().Type() == kProbabilityGreaterThan);
 
