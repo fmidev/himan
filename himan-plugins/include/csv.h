@@ -24,11 +24,11 @@ class csv : public io_plugin
 	csv(const csv& other) = delete;
 	csv& operator=(const csv& other) = delete;
 
-	virtual std::string ClassName() const
+	virtual std::string ClassName() const override
 	{
 		return "himan::plugin::csv";
 	}
-	virtual HPPluginClass PluginClass() const
+	virtual HPPluginClass PluginClass() const override
 	{
 		return kAuxiliary;
 	}

@@ -42,11 +42,11 @@ class luatool : public compiled_plugin, public compiled_plugin_base
 	luatool();
 	virtual ~luatool();
 
-	virtual std::string ClassName() const
+	virtual std::string ClassName() const override
 	{
 		return "himan::plugin::luatool";
 	}
-	virtual HPPluginClass PluginClass() const
+	virtual HPPluginClass PluginClass() const override
 	{
 		return kCompiled;
 	}

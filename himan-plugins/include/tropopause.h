@@ -28,13 +28,13 @@ class tropopause : public compiled_plugin, private compiled_plugin_base
 	tropopause(const tropopause& other) = delete;
 	tropopause& operator=(const tropopause& other) = delete;
 
-	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
+	virtual void Process(std::shared_ptr<const plugin_configuration> conf) override;
 
-	virtual std::string ClassName() const
+	virtual std::string ClassName() const override
 	{
 		return "himan::plugin::tropopause";
 	}
-	virtual HPPluginClass PluginClass() const
+	virtual HPPluginClass PluginClass() const override
 	{
 		return kCompiled;
 	}

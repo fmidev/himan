@@ -25,11 +25,11 @@ class writer : public auxiliary_plugin
 	writer(const writer& other) = delete;
 	writer& operator=(const writer& other) = delete;
 
-	virtual std::string ClassName() const
+	virtual std::string ClassName() const override
 	{
 		return "himan::plugin::writer";
 	}
-	virtual HPPluginClass PluginClass() const
+	virtual HPPluginClass PluginClass() const override
 	{
 		return kAuxiliary;
 	}

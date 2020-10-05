@@ -31,13 +31,13 @@ class tke : public compiled_plugin, private compiled_plugin_base
 	tke(const tke& other) = delete;
 	tke& operator=(const tke& other) = delete;
 
-	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
+	virtual void Process(std::shared_ptr<const plugin_configuration> conf) override;
 
-	virtual std::string ClassName() const
+	virtual std::string ClassName() const override
 	{
 		return "himan::plugin::tke";
 	}
-	virtual HPPluginClass PluginClass() const
+	virtual HPPluginClass PluginClass() const override
 	{
 		return kCompiled;
 	}

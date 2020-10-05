@@ -58,11 +58,11 @@ class cache : public auxiliary_plugin
 
 	void Clean();
 
-	virtual std::string ClassName() const
+	virtual std::string ClassName() const override
 	{
 		return "himan::plugin::cache";
 	};
-	virtual HPPluginClass PluginClass() const
+	virtual HPPluginClass PluginClass() const override
 	{
 		return kAuxiliary;
 	};
@@ -108,11 +108,11 @@ class cache_pool : public auxiliary_plugin
 
 	void Clean();
 
-	virtual std::string ClassName() const
+	virtual std::string ClassName() const override
 	{
 		return "himan::plugin::cache_pool";
 	};
-	virtual HPPluginClass PluginClass() const
+	virtual HPPluginClass PluginClass() const override
 	{
 		return kAuxiliary;
 	};
