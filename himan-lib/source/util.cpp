@@ -1146,8 +1146,8 @@ void util::Unpack(vector<shared_ptr<info<T>>> infos, bool addToCache)
 		NFmiGribPacking::simple_packing::Unpack<T>(arr, pck->data, pck->bitmap, pck->unpackedLength, pck->packedLength,
 		                                           pck->coefficients, stream);
 
-		CUDA_CHECK(cudaHostUnregister(arr));
 		CUDA_CHECK(cudaStreamSynchronize(stream));
+		CUDA_CHECK(cudaHostUnregister(arr));
 
 		pdata->Clear();
 
