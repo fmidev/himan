@@ -8,7 +8,6 @@ namespace himan
 {
 namespace plugin
 {
-
 class frost : public compiled_plugin, private compiled_plugin_base
 {
    public:
@@ -20,13 +19,13 @@ class frost : public compiled_plugin, private compiled_plugin_base
 	frost(const frost& other) = delete;
 	frost& operator=(const frost& other) = delete;
 
-	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
+	virtual void Process(std::shared_ptr<const plugin_configuration> conf) override;
 
-	virtual std::string ClassName() const
+	virtual std::string ClassName() const override
 	{
 		return "himan::plugin::frost";
 	}
-	virtual HPPluginClass PluginClass() const
+	virtual HPPluginClass PluginClass() const override
 	{
 		return kCompiled;
 	}

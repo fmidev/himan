@@ -46,11 +46,11 @@ class fetcher : public auxiliary_plugin
 	fetcher(const fetcher& other) = delete;
 	fetcher& operator=(const fetcher& other) = delete;
 
-	virtual std::string ClassName() const
+	virtual std::string ClassName() const override
 	{
 		return "himan::plugin::fetcher";
 	}
-	virtual HPPluginClass PluginClass() const
+	virtual HPPluginClass PluginClass() const override
 	{
 		return kAuxiliary;
 	}

@@ -56,13 +56,13 @@ class blend : public compiled_plugin, private compiled_plugin_base
 	blend(const blend& other) = delete;
 	blend& operator=(const blend& other) = delete;
 
-	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
+	virtual void Process(std::shared_ptr<const plugin_configuration> conf) override;
 
-	virtual std::string ClassName() const
+	virtual std::string ClassName() const override
 	{
 		return "himan::plugin::blend";
 	}
-	virtual HPPluginClass PluginClass() const
+	virtual HPPluginClass PluginClass() const override
 	{
 		return kCompiled;
 	}

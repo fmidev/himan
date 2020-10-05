@@ -32,13 +32,13 @@ class weather_code_2 : public compiled_plugin, private compiled_plugin_base
 	weather_code_2(const weather_code_2& other) = delete;
 	weather_code_2& operator=(const weather_code_2& other) = delete;
 
-	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
+	virtual void Process(std::shared_ptr<const plugin_configuration> conf) override;
 
-	virtual std::string ClassName() const
+	virtual std::string ClassName() const override
 	{
 		return "himan::plugin::weather_code_2";
 	}
-	virtual HPPluginClass PluginClass() const
+	virtual HPPluginClass PluginClass() const override
 	{
 		return kCompiled;
 	}

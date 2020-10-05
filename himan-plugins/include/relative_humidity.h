@@ -27,13 +27,13 @@ class relative_humidity : public compiled_plugin, private compiled_plugin_base
 	relative_humidity(const relative_humidity& other) = delete;
 	relative_humidity& operator=(const relative_humidity& other) = delete;
 
-	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
+	virtual void Process(std::shared_ptr<const plugin_configuration> conf) override;
 
-	virtual std::string ClassName() const
+	virtual std::string ClassName() const override
 	{
 		return "himan::plugin::relative_humidity";
 	}
-	virtual HPPluginClass PluginClass() const
+	virtual HPPluginClass PluginClass() const override
 	{
 		return kCompiled;
 	}

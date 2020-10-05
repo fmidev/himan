@@ -18,11 +18,11 @@ class geotiff : public io_plugin
 	geotiff(const geotiff& other) = delete;
 	geotiff& operator=(const geotiff& other) = delete;
 
-	virtual std::string ClassName() const
+	virtual std::string ClassName() const override
 	{
 		return "himan::plugin::geotiff";
 	};
-	virtual HPPluginClass PluginClass() const
+	virtual HPPluginClass PluginClass() const override
 	{
 		return kAuxiliary;
 	};

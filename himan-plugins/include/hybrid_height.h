@@ -19,13 +19,13 @@ class hybrid_height : public compiled_plugin, private compiled_plugin_base
 	hybrid_height(const hybrid_height& other) = delete;
 	hybrid_height& operator=(const hybrid_height& other) = delete;
 
-	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
+	virtual void Process(std::shared_ptr<const plugin_configuration> conf) override;
 
-	virtual std::string ClassName() const
+	virtual std::string ClassName() const override
 	{
 		return "himan::plugin::hybrid_height";
 	}
-	virtual HPPluginClass PluginClass() const
+	virtual HPPluginClass PluginClass() const override
 	{
 		return kCompiled;
 	}

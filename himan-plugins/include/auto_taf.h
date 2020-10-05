@@ -39,19 +39,17 @@ class auto_taf : public compiled_plugin, private compiled_plugin_base
    public:
 	auto_taf();
 
-	inline virtual ~auto_taf()
-	{
-	}
+	virtual ~auto_taf() = default;
 	auto_taf(const auto_taf& other) = delete;
 	auto_taf& operator=(const auto_taf& other) = delete;
 
-	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
+	virtual void Process(std::shared_ptr<const plugin_configuration> conf) override;
 
-	virtual std::string ClassName() const
+	virtual std::string ClassName() const override
 	{
 		return "himan::plugin::auto_taf";
 	}
-	virtual HPPluginClass PluginClass() const
+	virtual HPPluginClass PluginClass() const override
 	{
 		return kCompiled;
 	}
