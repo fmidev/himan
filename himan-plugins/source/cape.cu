@@ -827,11 +827,6 @@ cape_multi_source cape_cuda::GetNHighestThetaEValuesGPU(const std::shared_ptr<co
 			CUDA_CHECK(cudaFree(d_TD));
 			CUDA_CHECK(cudaFree(d_found));
 
-			CUDA_CHECK(cudaHostUnregister(ThetaEProfile.data()));
-			CUDA_CHECK(cudaHostUnregister(TProfile.data()));
-			CUDA_CHECK(cudaHostUnregister(TDProfile.data()));
-			CUDA_CHECK(cudaHostUnregister(PProfile.data()));
-
 			return cape_multi_source();
 		}
 
