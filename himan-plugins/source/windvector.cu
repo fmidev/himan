@@ -204,8 +204,8 @@ double* himan::plugin::windvector_cuda::CacheLongitudeCoordinates(const himan::g
 
 		if (longitudeCache.find(hash) == longitudeCache.end())
 		{
-			double* lon = nullptr;
 			double* d_lon = nullptr;
+			std::vector<double> lon(g->Size());
 
 			CUDA_CHECK(cudaMallocHost((void**)&lon, g->Size() * sizeof(double)));
 			CUDA_CHECK(cudaMalloc((void**)&d_lon, g->Size() * sizeof(double)));
@@ -215,12 +215,11 @@ double* himan::plugin::windvector_cuda::CacheLongitudeCoordinates(const himan::g
 				lon[i] = g->LatLon(i).X();
 			}
 
-			CUDA_CHECK(cudaMemcpyAsync(d_lon, lon, g->Size() * sizeof(double), cudaMemcpyHostToDevice, stream));
+			CUDA_CHECK(cudaMemcpyAsync(d_lon, lon.data(), g->Size() * sizeof(double), cudaMemcpyHostToDevice, stream));
 
 			longitudeCache.emplace(hash, d_lon);
 			log.Trace("Add longitude cache for " + std::to_string(hash));
 			CUDA_CHECK(cudaStreamSynchronize(stream));
-			CUDA_CHECK(cudaFreeHost(lon));
 		}
 		else
 		{
