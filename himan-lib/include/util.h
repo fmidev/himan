@@ -239,6 +239,14 @@ param GetParameterInfoFromDatabaseName(const producer& prod, const param& par, c
 aggregation GetAggregationFromParamName(const std::string& name);
 
 /**
+ * @brief Try to determine processing type from parameter name
+ *
+ * See comments from above function
+ */
+
+processing_type GetProcessingTypeFromParamName(const std::string& name);
+
+/**
  * @brief map and reduce in single function call
  *
  * Function naming does not follow usual Himan syntax but is

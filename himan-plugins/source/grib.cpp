@@ -110,9 +110,8 @@ long DetermineProductDefinitionTemplateNumber(long agg, long proc, long ftype)
 		switch (proc)
 		{
 			default:
-				templateNumber =
-				    4;  // Derived forecasts based on a cluster of ensemble members over a circular area at a
-				        // horizontal level or in a horizontal layer at a point in time.
+				templateNumber = 12;  // Derived forecasts based on all ensemble members at a horizontal level or in a
+				                      // horizontal layer, in a continuous or non-continuous interval
 				break;
 			case kProbabilityGreaterThan:
 			case kProbabilityLessThan:
@@ -734,6 +733,7 @@ void WriteTime(NFmiGribMessage& message, const forecast_time& ftime, const produ
 	}
 	else
 	{
+		// Set in WriteParam()
 		const long templateNumber = message.ProductDefinitionTemplateNumber();
 
 		// leadtime for this prognosis
@@ -759,40 +759,53 @@ void WriteTime(NFmiGribMessage& message, const forecast_time& ftime, const produ
 			case kDifference:
 			case kMinimum:
 			case kMaximum:
-				// duration of the aggregation period
-				long unitForTimeRange = 1;  // hours
-				long lengthOfTimeRange = par.Aggregation().TimeDuration().Hours();
-				long timeOffset = par.Aggregation().TimeOffset().Hours();
+				// duration of the aggregation period, if any
 
-				if (par.Aggregation().TimeDuration().Minutes() % 60 != 0)
+				if (par.Aggregation().TimeDuration().Empty() == false)
 				{
-					unitForTimeRange = 0;  // minutes
-					lengthOfTimeRange = par.Aggregation().TimeDuration().Minutes();
+					long unitForTimeRange = 1;  // hours
+					long lengthOfTimeRange = par.Aggregation().TimeDuration().Hours();
+
+					long timeOffset = par.Aggregation().TimeOffset().Hours();
+
+					if (par.Aggregation().TimeDuration().Minutes() % 60 != 0)
+					{
+						unitForTimeRange = 0;  // minutes
+						lengthOfTimeRange = par.Aggregation().TimeDuration().Minutes();
+					}
+
+					if (unitOfTimeRange == unitForTimeRange)
+					{
+						stepValue += timeOffset;
+					}
+					else if (unitOfTimeRange == 1 && unitForTimeRange == 0)
+					{
+						stepValue += timeOffset / 60;
+					}
+					else if (unitOfTimeRange == 0 && unitForTimeRange == 1)
+					{
+						stepValue += timeOffset * 60;
+					}
+
+					message.SetLongKey("indicatorOfUnitForTimeRange", unitForTimeRange);
+					message.LengthOfTimeRange(lengthOfTimeRange);
 				}
 
-				if (unitOfTimeRange == unitForTimeRange)
-				{
-					stepValue += timeOffset;
-				}
-				else if (unitOfTimeRange == 1 && unitForTimeRange == 0)
-				{
-					stepValue += timeOffset / 60;
-				}
-				else if (unitOfTimeRange == 0 && unitForTimeRange == 1)
-				{
-					stepValue += timeOffset * 60;
-				}
-
-				message.SetLongKey("indicatorOfUnitForTimeRange", unitForTimeRange);
 				message.ForecastTime(stepValue);  // start step
-				message.LengthOfTimeRange(lengthOfTimeRange);
 
 				// for productDefinitionTemplateNumber 9,10,11,12,13,14,34,43,47,61,73,73
 				// grib2 has extra keys for "end of overall time interval"
 				if (templateNumber >= 9 && templateNumber <= 14)
 				{
 					raw_time endOfInterval = raw_time(ftime.ValidDateTime());
-					endOfInterval += par.Aggregation().TimeOffset() + par.Aggregation().TimeDuration();
+
+					if (par.Aggregation().TimeDuration().Empty() == false)
+					{
+						// If parameter is time-aggregated, adjust the end date. Otherwise
+						// end date is valid time.
+
+						endOfInterval += par.Aggregation().TimeOffset() + par.Aggregation().TimeDuration();
+					}
 
 					message.SetLongKey("yearOfEndOfOverallTimeInterval", stol(endOfInterval.String("%Y")));
 					message.SetLongKey("monthOfEndOfOverallTimeInterval", stol(endOfInterval.String("%m")));
@@ -1903,10 +1916,17 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 		p.GribCategory(category);
 
 		aggregation a;
+		processing_type pt;
 
 		const long unitForTimeRange = message.GetLongKey("indicatorOfUnitForTimeRange");
-		const auto td = DurationFromTimeRange(unitForTimeRange) * static_cast<int>(message.LengthOfTimeRange());
-		switch (message.TypeOfStatisticalProcessing())
+
+		// If there is no time aggregation, set td values to "not_a_time_duration" to indicate
+		// that there is no time aggregation (aggregation is done in some other dimension)
+		const auto td = (message.LengthOfTimeRange() == 0)
+		                    ? himan::time_duration()
+		                    : DurationFromTimeRange(unitForTimeRange) * static_cast<int>(message.LengthOfTimeRange());
+
+		switch (tosp)
 		{
 			case 0:  // Average
 				a.Type(kAverage);
@@ -1927,11 +1947,18 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 				a.Type(kMinimum);
 				a.TimeDuration(td);
 				break;
+			case 6:  // Standard deviation
+				pt.Type(kStandardDeviation);
+				break;
 		}
 
 		if (a.TimeDuration().Empty() == false)
 		{
 			p.Aggregation(a);
+		}
+		if (pt.Type() != kUnknownProcessingType)
+		{
+			p.ProcessingType(pt);
 		}
 	}
 
@@ -2408,7 +2435,10 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 		{
 			itsLogger.Trace("Parameter does not match: " + options.param.Name() + " (requested) vs " + p.Name() +
 			                " (found)");
-
+			itsLogger.Trace("Aggregation: " + static_cast<string>(options.param.Aggregation()) + " (requested) vs " +
+			                static_cast<string>(p.Aggregation()) + " (found)");
+			itsLogger.Trace("Processing type: " + static_cast<string>(options.param.ProcessingType()) +
+			                " (requested) vs " + static_cast<string>(p.ProcessingType()) + " (found)");
 			return false;
 		}
 	}

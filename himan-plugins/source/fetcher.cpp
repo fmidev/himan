@@ -32,6 +32,8 @@ string GetOtherVectorComponentName(const string& name);
 
 static std::atomic<bool> auxiliaryFilesRead(false);
 
+namespace
+{
 // Sticky param cache will store the producer that provided data.
 // With this information we can skip the regular producer loop cycle
 // (try prod 1, data not found, try prod 2) which will improve fetching
@@ -42,6 +44,12 @@ std::string UniqueName(const himan::producer& prod, const himan::param& par, con
 	return to_string(prod.Id()) + "_" + par.Name() + "_" + himan::HPLevelTypeToString.at(lev.Type());
 }
 
+void AmendParamWithAggregationAndProcessingType(param& p)
+{
+	p.Aggregation(util::GetAggregationFromParamName(p.Name()));
+	p.ProcessingType(util::GetProcessingTypeFromParamName(p.Name()));
+}
+}
 static vector<string> stickyParamCache;
 static mutex stickyMutex;
 
@@ -166,6 +174,8 @@ shared_ptr<info<T>> fetcher::Fetch(shared_ptr<const plugin_configuration> config
                                    bool readPackedData, bool suppressLogging)
 {
 	timer t(true);
+
+	AmendParamWithAggregationAndProcessingType(requestedParam);
 
 	// Check sticky param cache first
 
