@@ -140,7 +140,15 @@ std::string raw_time::FormatTime(const std::string& theTimeMask) const
 		s.imbue(std::locale(s.getloc(), new boost::posix_time::time_facet(theTimeMask.c_str())));
 	}
 
-	s << itsDateTime;
+	try
+	{
+		s << itsDateTime;
+	}
+	catch (const std::out_of_range& e)
+	{
+		std::cerr << e.what();
+		himan::Abort();
+	}
 
 	s.flush();
 
