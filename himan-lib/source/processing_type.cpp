@@ -38,6 +38,11 @@ bool processing_type::operator!=(const processing_type& other) const
 	return !(*this == other);
 }
 
+processing_type::operator std::string() const
+{
+	return HPProcessingTypeToString.at(itsType) + "/" + std::to_string(itsValue) + "/" + std::to_string(itsValue2);
+}
+
 HPProcessingType processing_type::Type() const
 {
 	return itsType;

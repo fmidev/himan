@@ -49,6 +49,7 @@ class processing_type
 
 	bool operator==(const processing_type& other) const;
 	bool operator!=(const processing_type& other) const;
+	operator std::string() const;
 
 	std::string ClassName() const
 	{

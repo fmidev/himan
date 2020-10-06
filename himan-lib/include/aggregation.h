@@ -42,6 +42,7 @@ class aggregation
 
 	bool operator==(const aggregation& other) const;
 	bool operator!=(const aggregation& other) const;
+	operator std::string() const;
 
 	std::string ClassName() const
 	{

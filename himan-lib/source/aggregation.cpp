@@ -56,6 +56,13 @@ bool aggregation::operator!=(const aggregation& other) const
 {
 	return !(*this == other);
 }
+
+aggregation::operator std::string() const
+{
+	return HPAggregationTypeToString.at(itsType) + "/" + static_cast<std::string>(itsTimeDuration) + "/" +
+	       static_cast<std::string>(itsTimeOffset);
+}
+
 HPAggregationType aggregation::Type() const
 {
 	return itsType;
