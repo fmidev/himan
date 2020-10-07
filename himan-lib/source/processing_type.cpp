@@ -24,8 +24,10 @@ bool processing_type::operator==(const processing_type& other) const
 		return true;
 	}
 
-	if (itsType != other.itsType || itsValue != other.itsValue || itsValue2 != other.itsValue2 ||
-	    itsNumberOfEnsembleMembers != other.itsNumberOfEnsembleMembers)
+	// Disregard number of ensemble members in comparison, because that's not a
+	// defining element for a processing type. It's more like extra meta data.
+	if (itsType != other.itsType || itsValue != other.itsValue || itsValue2 != other.itsValue2)
+	//	    itsNumberOfEnsembleMembers != other.itsNumberOfEnsembleMembers)
 	{
 		return false;
 	}
@@ -40,7 +42,8 @@ bool processing_type::operator!=(const processing_type& other) const
 
 processing_type::operator std::string() const
 {
-	return HPProcessingTypeToString.at(itsType) + "/" + std::to_string(itsValue) + "/" + std::to_string(itsValue2);
+	return HPProcessingTypeToString.at(itsType) + "/" + std::to_string(itsValue) + "/" + std::to_string(itsValue2) +
+	       "/" + std::to_string(itsNumberOfEnsembleMembers);
 }
 
 HPProcessingType processing_type::Type() const

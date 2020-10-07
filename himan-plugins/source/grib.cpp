@@ -1869,21 +1869,101 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 	}
 	else
 	{
-		long category = message.ParameterCategory();
-		long discipline = message.ParameterDiscipline();
+		aggregation a;
+		processing_type pt;
+
+		const long unitForTimeRange = message.GetLongKey("indicatorOfUnitForTimeRange");
+		const long category = message.ParameterCategory();
+		const long discipline = message.ParameterDiscipline();
+		const long tosp = (message.TypeOfStatisticalProcessing() == -999) ? -1 : message.TypeOfStatisticalProcessing();
+
+		// If there is no time aggregation, set td values to "not_a_time_duration" to indicate
+		// that there is no time aggregation (aggregation is done in some other dimension)
+		const auto td = (message.LengthOfTimeRange() == 0)
+		                    ? himan::time_duration()
+		                    : DurationFromTimeRange(unitForTimeRange) * static_cast<int>(message.LengthOfTimeRange());
+
+		// Type of statistical processign key is defined only for
+		// parameters "in a continuous or non-continuous time interval"
+		switch (tosp)
+		{
+			case 0:  // Average
+				a.Type(kAverage);
+				a.TimeDuration(td);
+				break;
+
+			case 1:  // Accumulation
+				a.Type(kAccumulation);
+				a.TimeDuration(td);
+				break;
+
+			case 2:  // Maximum
+				a.Type(kMaximum);
+				a.TimeDuration(td);
+				break;
+
+			case 3:  // Minimum
+				a.Type(kMinimum);
+				a.TimeDuration(td);
+				break;
+			case 6:  // Standard deviation
+				pt.Type(kStandardDeviation);
+				break;
+		}
+
+		// "derivedForecasts" is defined also for
+		// "at a point in time"
+		const long df = message.GetLongKey("derivedForecast");
+
+		switch (df)
+		{
+			case 0:  // Unweighted Mean of All Members
+			case 1:  // Weighted Mean of All Members
+				pt.Type(kEnsembleMean);
+				break;
+			case 2:  // Standard Deviation with respect to Cluster Mean
+				pt.Type(kStandardDeviation);
+				break;
+			case 4:  // Spread of All Members
+				pt.Type(kSpread);
+				break;
+			case 199:  // Extreme Forecast Index
+				pt.Type(kEFI);
+				break;
+		}
 
 		string parmName = "";
 		int parmId = 0;
-
-		const long tosp = (message.TypeOfStatisticalProcessing() == -999) ? -1 : message.TypeOfStatisticalProcessing();
 
 		if (dbtype == kRadon)
 		{
 			r = GET_PLUGIN(radon);
 
+			// Because database table param_grib2 has only column 'type_of_statistical_processing',
+			// we have to use grib2 key 'derivedForecast' to fake the value. When grib2 has
+			// productDefinitionTemplateNumber, the statistical processing is not given with
+			// 'typeOfStatisticalProcessing' but with 'derivedForecast'.
+
+			long effective_tosp = tosp;
+
+			if (tosp == -1)
+			{
+				switch (pt.Type())
+				{
+					case kEnsembleMean:
+						effective_tosp = 0;
+						break;
+					case kStandardDeviation:
+						effective_tosp = 6;
+						break;
+					default:
+						break;
+				}
+			}
+
 			auto parminfo =
 			    r->RadonDB().GetParameterFromGrib2(prod.Id(), discipline, category, number, message.LevelType(),
-			                                       static_cast<double>(message.LevelValue()), tosp);
+			                                       static_cast<double>(message.LevelValue()), effective_tosp);
 
 			if (parminfo.size())
 			{
@@ -1915,49 +1995,14 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 		p.GribDiscipline(discipline);
 		p.GribCategory(category);
 
-		aggregation a;
-		processing_type pt;
-
-		const long unitForTimeRange = message.GetLongKey("indicatorOfUnitForTimeRange");
-
-		// If there is no time aggregation, set td values to "not_a_time_duration" to indicate
-		// that there is no time aggregation (aggregation is done in some other dimension)
-		const auto td = (message.LengthOfTimeRange() == 0)
-		                    ? himan::time_duration()
-		                    : DurationFromTimeRange(unitForTimeRange) * static_cast<int>(message.LengthOfTimeRange());
-
-		switch (tosp)
-		{
-			case 0:  // Average
-				a.Type(kAverage);
-				a.TimeDuration(td);
-				break;
-
-			case 1:  // Accumulation
-				a.Type(kAccumulation);
-				a.TimeDuration(td);
-				break;
-
-			case 2:  // Maximum
-				a.Type(kMaximum);
-				a.TimeDuration(td);
-				break;
-
-			case 3:  // Minimum
-				a.Type(kMinimum);
-				a.TimeDuration(td);
-				break;
-			case 6:  // Standard deviation
-				pt.Type(kStandardDeviation);
-				break;
-		}
-
 		if (a.TimeDuration().Empty() == false)
 		{
 			p.Aggregation(a);
 		}
 		if (pt.Type() != kUnknownProcessingType)
 		{
+			const int numMemb = static_cast<int>(message.GetLongKey("numberOfForecastsInEnsemble"));
+			pt.NumberOfEnsembleMembers(numMemb == INVALID_INT_VALUE ? 255 : numMemb);
 			p.ProcessingType(pt);
 		}
 	}

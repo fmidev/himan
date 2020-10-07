@@ -1,7 +1,7 @@
 /**
  * @file aggregation.h
  *
- * @brief simple class to describe parameter aggregation metadata
+ * @brief simple class to describe *time* aggregation metadata
  */
 
 #ifndef AGGREGATION_H
