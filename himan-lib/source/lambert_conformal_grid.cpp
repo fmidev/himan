@@ -6,39 +6,6 @@
 using namespace himan;
 using namespace std;
 
-#ifdef HAVE_CUDA
-// The following two functions are used for convenience in GPU specific code:
-// in grid rotation we need the standard parallels and orientation, but in order
-// to get those we need to include this file and ogr_spatialref.h, which is a
-// lot
-// of unnecessary code to be added to already slow compilation.
-
-double GetOrientation(const himan::grid* g)
-{
-	const auto lg = dynamic_cast<const lambert_conformal_grid*>(g);
-
-	if (lg)
-	{
-		return lg->Orientation();
-	}
-
-	return MissingDouble();
-}
-
-double GetCone(const himan::grid* g)
-{
-	const auto lg = dynamic_cast<const lambert_conformal_grid*>(g);
-
-	if (lg)
-	{
-		return lg->Cone();
-	}
-
-	return MissingDouble();
-}
-
-#endif
-
 lambert_conformal_grid::lambert_conformal_grid(HPScanningMode theScanningMode, const point& theFirstPoint, size_t ni,
                                                size_t nj, double di, double dj, double orientation,
                                                double standardParallel1, double standardParallel2,

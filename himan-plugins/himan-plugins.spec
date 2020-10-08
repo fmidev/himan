@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.9.3
+Version: 20.10.8
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 20.8.12
+Requires: himan-lib >= 20.10.1
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 20.5.25
@@ -133,6 +133,17 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Thu Oct  8 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.8-1.fmi
+- Improved aggregation/processing_type handling
+- Gaussian spread for N2000 probabilities
+* Mon Oct  5 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.5-2.fmi
+- Fix bug introduced while merging
+* Mon Oct  5 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.5-1.fmi
+- precipitation_rate plugin to use float datatype
+* Thu Oct  1 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.1-1.fmi
+- Reduced gpu memory usage for vector rotation
+* Tue Sep 29 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.9.29-1.fmi
+- Small fix to grib1 output
 * Thu Sep  3 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.9.3-1.fmi
 - cuda 11.0
 - libs3 4.1

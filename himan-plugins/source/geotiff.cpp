@@ -67,7 +67,7 @@ std::unique_ptr<grid> ReadAreaAndGrid(GDALDataset* poDataset)
 	if (poDataset->GetGeoTransform(adfGeoTransform) != CE_None)
 	{
 		log.Error("File does not contain geo transformation coefficients");
-		return nullptr;
+		throw kFileMetaDataNotFound;
 	}
 
 	const double di = adfGeoTransform[1];
@@ -80,26 +80,52 @@ std::unique_ptr<grid> ReadAreaAndGrid(GDALDataset* poDataset)
 
 	if (proj.empty())
 	{
-		// Use OCRSpatialReference ?
-		return std::unique_ptr<latitude_longitude_grid>(
-		    new latitude_longitude_grid(sm, fp, ni, nj, di, dj, earth_shape<double>()));
+		log.Fatal("File does not contain spatial metadata");
+		throw kFileMetaDataNotFound;
 	}
 
-	const OGRSpatialReference spRef(proj.c_str());
-	const std::string projection = spRef.GetAttrValue("PROJECTION");
+	OGRSpatialReference spRef(proj.c_str());
+	const char* projptr = spRef.GetAttrValue("PROJECTION");
 
-	if (projection == SRS_PT_LAMBERT_AZIMUTHAL_EQUAL_AREA)
+	if (projptr != nullptr)
 	{
-		return std::unique_ptr<lambert_equal_area_grid>(new lambert_equal_area_grid(
-		    sm, fp, ni, nj, di, dj, std::unique_ptr<OGRSpatialReference>(spRef.Clone()), true));
-	}
-	else if (projection == SRS_PT_TRANSVERSE_MERCATOR)
-	{
-		return std::unique_ptr<transverse_mercator_grid>(new transverse_mercator_grid(
-		    sm, fp, ni, nj, di, dj, std::unique_ptr<OGRSpatialReference>(spRef.Clone()), true));
-	}
-	log.Error("Unsupported projection: " + projection);
+		const std::string projection = spRef.GetAttrValue("PROJECTION");
 
+		if (projection == SRS_PT_LAMBERT_AZIMUTHAL_EQUAL_AREA)
+		{
+			return std::unique_ptr<lambert_equal_area_grid>(new lambert_equal_area_grid(
+			    sm, fp, ni, nj, di, dj, std::unique_ptr<OGRSpatialReference>(spRef.Clone()), true));
+		}
+		else if (projection == SRS_PT_TRANSVERSE_MERCATOR)
+		{
+			return std::unique_ptr<transverse_mercator_grid>(new transverse_mercator_grid(
+			    sm, fp, ni, nj, di, dj, std::unique_ptr<OGRSpatialReference>(spRef.Clone()), true));
+		}
+
+		log.Error("Unsupported projection: " + projection);
+	}
+	else if (spRef.IsGeographic())
+	{
+		// No projection -- latlon with some datum
+		// spRef.GetAttrValue("DATUM|SPHEROID|AUTHORITY")
+
+		OGRErr erra = 0, errb = 0;
+		const double A = spRef.GetSemiMajor(&erra);
+		const double B = spRef.GetSemiMinor(&errb);
+
+		earth_shape<double> es;
+
+		if (erra != OGRERR_NONE || errb != OGRERR_NONE)
+		{
+			log.Error("Unable to extract datum information from file");
+		}
+		else
+		{
+			es = earth_shape<double>(A, B);
+		}
+
+		return std::unique_ptr<latitude_longitude_grid>(new latitude_longitude_grid(sm, fp, ni, nj, di, dj, es));
+	}
 	throw kFileMetaDataNotFound;
 }
 
@@ -223,6 +249,12 @@ T ConvertTo(const std::string& str)
 std::map<std::string, std::string> ParseMetadata(char** mdata, const producer& prod)
 {
 	std::map<std::string, std::string> ret;
+
+	if (mdata == nullptr)
+	{
+		return ret;
+	}
+
 	std::stringstream ss;
 	ss << "SELECT attribute, key, mask FROM geotiff_metadata WHERE producer_id = " << prod.Id();
 
@@ -243,14 +275,32 @@ std::map<std::string, std::string> ParseMetadata(char** mdata, const producer& p
 		const auto attribute = row[0];
 		const auto keyName = row[1];
 		const auto keyMask = row[2];
-		const char* m = CSLFetchNameValue(mdata, keyName.c_str());
 
-		if (m == nullptr)
+		std::string metadata;
+
+		if (keyName.empty() == false)
+		{
+			// metadata consists of key=value pairs
+			const char* m = CSLFetchNameValue(mdata, keyName.c_str());
+
+			if (m == nullptr)
+			{
+				log.Trace("Did not find expected key '" + keyName + "' from metadata");
+				continue;
+			}
+
+			metadata = std::string(m);
+		}
+		else if (mdata != nullptr)
+		{
+			// no defined keys for metadata elements
+			// in database this means that 'key' column is empty string
+			metadata = std::string(*mdata);
+		}
+		else
 		{
 			continue;
 		}
-
-		const std::string metadata = std::string(m);
 
 		// Try to extract information from free-form text fields
 		// attribute: a metadata attribute name that Himan understands, like 'analysis_time'
@@ -370,7 +420,7 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 
 		if (bpar == param() || blvl == level() || bftype == forecast_type() || bftime == forecast_time())
 		{
-			itsLogger.Warning("Unknown metadata from band");
+			itsLogger.Warning("Failed to gather all required metadata");
 			itsLogger.Warning("Param: " + bpar.Name());
 			itsLogger.Warning("Level: " + static_cast<std::string>(blvl));
 			itsLogger.Warning("Time: " + bftime.OriginDateTime().String() + " step: " + bftime.Step().String("%H:%M"));

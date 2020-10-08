@@ -50,11 +50,11 @@ class radon : public auxiliary_plugin
 	radon(const radon& other) = delete;
 	radon& operator=(const radon& other) = delete;
 
-	virtual std::string ClassName() const
+	virtual std::string ClassName() const override
 	{
 		return "himan::plugin::radon";
 	}
-	virtual HPPluginClass PluginClass() const
+	virtual HPPluginClass PluginClass() const override
 	{
 		return kAuxiliary;
 	}

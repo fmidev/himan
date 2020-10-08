@@ -31,13 +31,13 @@ class monin_obukhov : public compiled_plugin, private compiled_plugin_base
 	monin_obukhov(const monin_obukhov& other) = delete;
 	monin_obukhov& operator=(const monin_obukhov& other) = delete;
 
-	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
+	virtual void Process(std::shared_ptr<const plugin_configuration> conf) override;
 
-	virtual std::string ClassName() const
+	virtual std::string ClassName() const override
 	{
 		return "himan::plugin::monin_obukhov";
 	}
-	virtual HPPluginClass PluginClass() const
+	virtual HPPluginClass PluginClass() const override
 	{
 		return kCompiled;
 	}

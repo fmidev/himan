@@ -115,6 +115,13 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 	SetParams(theParams);
 
 	Start<float>();
+
+#ifdef HAVE_CUDA
+	if (itsConfiguration->UseCuda())
+	{
+		windvector_cuda::FreeLongitudeCache();
+	}
+#endif
 }
 
 /*
@@ -177,7 +184,6 @@ void windvector::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short 
 	if (itsConfiguration->UseCuda())
 	{
 		deviceType = "GPU";
-
 		windvector_cuda::RunCuda(itsConfiguration, myTargetInfo, UParam, VParam, itsCalculationTarget);
 	}
 	else

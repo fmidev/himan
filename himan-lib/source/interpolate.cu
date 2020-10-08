@@ -347,7 +347,8 @@ __global__ void RotateRotatedLatitudeLongitude(T* __restrict__ d_u, T* __restric
 
 template <typename T>
 void himan::interpolate::RotateVectorComponentsGPU(const grid* from, const grid* to, himan::matrix<T>& U,
-                                                   himan::matrix<T>& V, cudaStream_t& stream, T* d_u, T* d_v)
+                                                   himan::matrix<T>& V, cudaStream_t& stream, T* d_u, T* d_v,
+                                                   double* d_lon)
 {
 	const size_t N = U.Size();
 	const size_t memsize = N * sizeof(T);
@@ -355,9 +356,9 @@ void himan::interpolate::RotateVectorComponentsGPU(const grid* from, const grid*
 	const int bs = 256;
 	const int gs = N / bs + (N % bs == 0 ? 0 : 1);
 
-	double* d_lon = nullptr;
+	double* lon = nullptr;
 
-	bool release = false;
+	bool release = false, release_lon = false;
 
 	if (d_u == nullptr && d_v == nullptr)
 	{
@@ -365,11 +366,24 @@ void himan::interpolate::RotateVectorComponentsGPU(const grid* from, const grid*
 		CUDA_CHECK(cudaMalloc((void**)&d_u, memsize));
 		CUDA_CHECK(cudaMalloc((void**)&d_v, memsize));
 
-		CUDA_CHECK(cudaMemcpyAsync(d_u, U.ValuesAsPOD(), memsize, cudaMemcpyHostToDevice));
-		CUDA_CHECK(cudaMemcpyAsync(d_v, V.ValuesAsPOD(), memsize, cudaMemcpyHostToDevice));
+		CUDA_CHECK(cudaMemcpyAsync(d_u, U.ValuesAsPOD(), memsize, cudaMemcpyHostToDevice, stream));
+		CUDA_CHECK(cudaMemcpyAsync(d_v, V.ValuesAsPOD(), memsize, cudaMemcpyHostToDevice, stream));
 	}
 
 	logger log("interpolate_gpu");
+
+	auto CreateLongitudeList = [&]() {
+		release_lon = true;
+		CUDA_CHECK(cudaMalloc((void**)&d_lon, N * sizeof(double)));
+		CUDA_CHECK(cudaMallocHost((void**)&lon, N * sizeof(double)));
+
+		for (size_t i = 0; i < U.Size(); i++)
+		{
+			lon[i] = from->LatLon(i).X();
+		}
+
+		CUDA_CHECK(cudaMemcpyAsync(d_lon, lon, N * sizeof(double), cudaMemcpyHostToDevice, stream));
+	};
 
 	if (from->UVRelativeToGrid() && from->Type() != kLatitudeLongitude)
 	{
@@ -388,49 +402,33 @@ void himan::interpolate::RotateVectorComponentsGPU(const grid* from, const grid*
 
 			case himan::kLambertConformalConic:
 			{
-				CUDA_CHECK(cudaMalloc((void**)&d_lon, N * sizeof(double)));
-
-				double* lon = nullptr;
-
-				CUDA_CHECK(cudaMallocHost((void**)&lon, N * sizeof(double)));
-
-				for (size_t i = 0; i < U.Size(); i++)
+				if (d_lon == nullptr)
 				{
-					lon[i] = from->LatLon(i).X();
+					CreateLongitudeList();
 				}
 
-				CUDA_CHECK(cudaMemcpyAsync(d_lon, lon, N * sizeof(double), cudaMemcpyHostToDevice));
-
-				const double orientation = GetOrientation(from);
-				const double cone = GetCone(from);
+				const auto g = dynamic_cast<const himan::lambert_conformal_grid*>(from);
+				const double orientation = g->Orientation();
+				const double cone = g->Cone();
 
 				RotateLambert<T><<<gs, bs, 0, stream>>>(d_u, d_v, d_lon, cone, orientation, U.SizeX(), U.SizeY());
 
 				CUDA_CHECK(cudaStreamSynchronize(stream));
-				CUDA_CHECK(cudaFreeHost(lon));
 			}
 			break;
 
 			case himan::kStereographic:
 			{
-				const double orientation = dynamic_cast<const himan::stereographic_grid*>(from)->Orientation();
-				CUDA_CHECK(cudaMalloc((void**)&d_lon, N * sizeof(double)));
-
-				double* lon = nullptr;
-
-				CUDA_CHECK(cudaMallocHost((void**)&lon, N * sizeof(double)));
-
-				for (size_t i = 0; i < U.Size(); i++)
+				if (d_lon == nullptr)
 				{
-					lon[i] = from->LatLon(i).X();
+					CreateLongitudeList();
 				}
 
-				CUDA_CHECK(cudaMemcpyAsync(d_lon, lon, N * sizeof(double), cudaMemcpyHostToDevice));
+				const double orientation = dynamic_cast<const himan::stereographic_grid*>(from)->Orientation();
 
 				RotateLambert<T><<<gs, bs, 0, stream>>>(d_u, d_v, d_lon, 1, orientation, U.SizeX(), U.SizeY());
 
 				CUDA_CHECK(cudaStreamSynchronize(stream));
-				CUDA_CHECK(cudaFreeHost(lon));
 			}
 			break;
 
@@ -455,15 +453,16 @@ void himan::interpolate::RotateVectorComponentsGPU(const grid* from, const grid*
 		CUDA_CHECK(cudaFree(d_v));
 	}
 
-	if (d_lon)
+	if (release_lon)
 	{
 		CUDA_CHECK(cudaFree(d_lon));
+		CUDA_CHECK(cudaFreeHost(lon));
 	}
 }
 
 template void himan::interpolate::RotateVectorComponentsGPU<double>(const grid*, const grid*, himan::matrix<double>&,
-                                                                    himan::matrix<double>&, cudaStream_t&, double* d_u,
-                                                                    double* d_v);
+                                                                    himan::matrix<double>&, cudaStream_t&, double*,
+                                                                    double*, double*);
 template void himan::interpolate::RotateVectorComponentsGPU<float>(const grid*, const grid*, himan::matrix<float>&,
-                                                                   himan::matrix<float>&, cudaStream_t&, float* d_u,
-                                                                   float* d_v);
+                                                                   himan::matrix<float>&, cudaStream_t&, float*, float*,
+                                                                   double*);

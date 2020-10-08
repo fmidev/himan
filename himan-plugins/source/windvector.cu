@@ -10,6 +10,9 @@
 
 #undef HIMAN_AUXILIARY_INCLUDE
 
+static std::map<size_t, double*> longitudeCache;
+static std::mutex cacheMutex;
+
 /*
  * Calculate results. At this point it as assumed that U and V are in correct form.
  */
@@ -113,10 +116,12 @@ void himan::plugin::windvector_cuda::RunCuda(std::shared_ptr<const plugin_config
 
 	if (UInfo->Grid()->UVRelativeToGrid())
 	{
+		double* d_lon = windvector_cuda::CacheLongitudeCoordinates(UInfo->Grid().get(), stream);
+
 		latitude_longitude_grid dummy(kBottomLeft, point(), point(), 0, 0, earth_shape<double>());
 
 		himan::interpolate::RotateVectorComponentsGPU(UInfo->Grid().get(), &dummy, UInfo->Data(), VInfo->Data(), stream,
-		                                              d_u, d_v);
+		                                              d_u, d_v, d_lon);
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 	}
 
@@ -186,4 +191,61 @@ void himan::plugin::windvector_cuda::RunCuda(std::shared_ptr<const plugin_config
 	}
 
 	CUDA_CHECK(cudaStreamDestroy(stream));
+}
+
+double* himan::plugin::windvector_cuda::CacheLongitudeCoordinates(const himan::grid* g, cudaStream_t& stream)
+{
+	const size_t hash = g->Hash();
+	himan::logger log("windvector_cuda");
+
+	if (longitudeCache.find(hash) == longitudeCache.end())
+	{
+		std::lock_guard<std::mutex> lock(cacheMutex);
+
+		if (longitudeCache.find(hash) == longitudeCache.end())
+		{
+			double* d_lon = nullptr;
+			std::vector<double> lon(g->Size());
+
+			CUDA_CHECK(cudaMalloc((void**)&d_lon, g->Size() * sizeof(double)));
+
+			for (size_t i = 0; i < g->Size(); i++)
+			{
+				lon[i] = g->LatLon(i).X();
+			}
+			CUDA_CHECK(cudaMemcpyAsync(d_lon, lon.data(), g->Size() * sizeof(double), cudaMemcpyHostToDevice, stream));
+
+			longitudeCache.emplace(hash, d_lon);
+			log.Trace("Add longitude cache for " + std::to_string(hash));
+			CUDA_CHECK(cudaStreamSynchronize(stream));
+		}
+		else
+		{
+			log.Trace("Found longitude cache for " + std::to_string(hash));
+		}
+	}
+	else
+	{
+		log.Trace("Found longitude cache for " + std::to_string(hash));
+	}
+
+	return longitudeCache[hash];
+}
+
+void himan::plugin::windvector_cuda::FreeLongitudeCache()
+{
+	himan::logger log("windvector_cuda");
+	std::lock_guard<std::mutex> lock(cacheMutex);
+
+	for (auto& p : longitudeCache)
+	{
+		if (p.second == nullptr)
+		{
+			continue;
+		}
+		CUDA_CHECK(cudaFree(p.second));
+		log.Trace("Cleared longitude cache for " + std::to_string(p.first));
+	}
+
+	longitudeCache.clear();
 }

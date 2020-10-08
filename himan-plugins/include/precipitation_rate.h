@@ -37,26 +37,26 @@ class precipitation_rate : public compiled_plugin, private compiled_plugin_base
 	precipitation_rate(const precipitation_rate& other) = delete;
 	precipitation_rate& operator=(const precipitation_rate& other) = delete;
 
-	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
+	virtual void Process(std::shared_ptr<const plugin_configuration> conf) override;
 
-	virtual std::string ClassName() const
+	virtual std::string ClassName() const override
 	{
 		return "himan::plugin::precipitation_rate";
 	}
-	virtual HPPluginClass PluginClass() const
+	virtual HPPluginClass PluginClass() const override
 	{
 		return kCompiled;
 	}
 
    private:
-	virtual void Calculate(std::shared_ptr<info<double>> theTargetInfo, unsigned short theThreadIndex);
+	virtual void Calculate(std::shared_ptr<info<float>> theTargetInfo, unsigned short theThreadIndex);
 };
 
 // the class factory
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
-	return std::shared_ptr<precipitation_rate>(new precipitation_rate());
+	return std::make_shared<precipitation_rate>();
 }
 
 }  // namespace plugin

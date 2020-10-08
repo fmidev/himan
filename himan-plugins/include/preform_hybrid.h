@@ -38,13 +38,13 @@ class preform_hybrid : public compiled_plugin, private compiled_plugin_base
 	preform_hybrid(const preform_hybrid& other) = delete;
 	preform_hybrid& operator=(const preform_hybrid& other) = delete;
 
-	virtual void Process(std::shared_ptr<const plugin_configuration> conf);
+	virtual void Process(std::shared_ptr<const plugin_configuration> conf) override;
 
-	virtual std::string ClassName() const
+	virtual std::string ClassName() const override
 	{
 		return "himan::plugin::preform_hybrid";
 	}
-	virtual HPPluginClass PluginClass() const
+	virtual HPPluginClass PluginClass() const override
 	{
 		return kCompiled;
 	}

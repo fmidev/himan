@@ -1,6 +1,6 @@
 #pragma once
-#include "serialization.h"
 #include "himan_common.h"
+#include "serialization.h"
 #include <ostream>
 
 #ifndef EARTH_SHAPE_H
@@ -13,7 +13,7 @@ class earth_shape
 {
    public:
 	earth_shape();
-	earth_shape(T r); // sphere
+	earth_shape(T r);  // sphere
 	earth_shape(T theA, T theB);
 	~earth_shape() = default;
 	earth_shape(const earth_shape&) = default;
@@ -39,8 +39,8 @@ class earth_shape
 	T F() const;
 
 	/**
- 	 *  @brief Return squared eccentricity
- 	 */
+	 *  @brief Return squared eccentricity
+	 */
 
 	T E2() const;
 
@@ -79,65 +79,65 @@ earth_shape<T>::earth_shape(T theA, T theB) : itsA(theA), itsB(theB)
 template <typename T>
 bool earth_shape<T>::operator==(const earth_shape<T>& other) const
 {
-        if (itsA == other.itsA && itsB == other.itsB)
-        {
-                return true;
-        }
+	if (itsA == other.itsA && itsB == other.itsB)
+	{
+		return true;
+	}
 
-        // Check for missing values so that we can compare with default constructor
-        return ((IsMissing(itsA) && IsMissing(other.itsA)) && (IsMissing(itsB) && IsMissing(other.itsB)));
+	// Check for missing values so that we can compare with default constructor
+	return ((IsMissing(itsA) && IsMissing(other.itsA)) && (IsMissing(itsB) && IsMissing(other.itsB)));
 }
 
 template <typename T>
 bool earth_shape<T>::operator!=(const earth_shape<T>& other) const
 {
-        return !(*this == other);
+	return !(*this == other);
 }
 
 template <typename T>
 T earth_shape<T>::A() const
 {
-        return itsA;
+	return itsA;
 }
 
 template <typename T>
 void earth_shape<T>::A(T theA)
 {
-        itsA = theA;
+	itsA = theA;
 }
 
 template <typename T>
 T earth_shape<T>::B() const
 {
-        return itsB;
+	return itsB;
 }
 
 template <typename T>
 void earth_shape<T>::B(T theB)
 {
-        itsB = theB;
+	itsB = theB;
 }
 
 template <typename T>
 T earth_shape<T>::F() const
 {
-        return (itsA - itsB) / itsA;
+	return (itsA - itsB) / itsA;
 }
 
 template <typename T>
 T earth_shape<T>::E2() const
 {
-        return (itsA*itsA-itsB*itsB)/(itsA*itsA);
+	return (itsA * itsA - itsB * itsB) / (itsA * itsA);
 }
 
 template <typename T>
 std::ostream& himan::earth_shape<T>::Write(std::ostream& file) const
 {
-        file << "<" << ClassName() << ">" << std::endl;
-        file << "__itsA__ " << std::fixed << itsA << std::endl;
-        file << "__itsB__ " << std::fixed << itsB << std::endl;
+	file << "<" << ClassName() << ">" << std::endl;
+	file << "__itsA__ " << std::fixed << itsA << std::endl;
+	file << "__itsB__ " << std::fixed << itsB << std::endl;
 
-        return file;
+	return file;
 }
 
 template <typename T>

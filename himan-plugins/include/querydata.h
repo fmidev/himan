@@ -30,11 +30,11 @@ class querydata : public io_plugin
 	querydata(const querydata& other) = delete;
 	querydata& operator=(const querydata& other) = delete;
 
-	virtual std::string ClassName() const
+	virtual std::string ClassName() const override
 	{
 		return "himan::plugin::querydata";
 	}
-	virtual HPPluginClass PluginClass() const
+	virtual HPPluginClass PluginClass() const override
 	{
 		return kAuxiliary;
 	}
