@@ -44,7 +44,7 @@ std::string UniqueName(const himan::producer& prod, const himan::param& par, con
 	return to_string(prod.Id()) + "_" + par.Name() + "_" + himan::HPLevelTypeToString.at(lev.Type());
 }
 
-void AmendParamWithAggregationAndProcessingType(param& p)
+void AmendParamWithAggregationAndProcessingType(param& p, const forecast_time& ftime)
 {
 	if (p.ProcessingType().Type() == kUnknownProcessingType)
 	{
@@ -52,7 +52,7 @@ void AmendParamWithAggregationAndProcessingType(param& p)
 	}
 	if (p.Aggregation().Type() == kUnknownAggregationType && p.ProcessingType().Type() != kEnsembleMean)
 	{
-		p.Aggregation(util::GetAggregationFromParamName(p.Name()));
+		p.Aggregation(util::GetAggregationFromParamName(p.Name(), ftime));
 	}
 }
 }
@@ -181,7 +181,7 @@ shared_ptr<info<T>> fetcher::Fetch(shared_ptr<const plugin_configuration> config
 {
 	timer t(true);
 
-	AmendParamWithAggregationAndProcessingType(requestedParam);
+	AmendParamWithAggregationAndProcessingType(requestedParam, requestedTime);
 
 	// Check sticky param cache first
 
