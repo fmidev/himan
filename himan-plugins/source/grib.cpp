@@ -110,9 +110,8 @@ long DetermineProductDefinitionTemplateNumber(long agg, long proc, long ftype)
 		switch (proc)
 		{
 			default:
-				templateNumber =
-				    4;  // Derived forecasts based on a cluster of ensemble members over a circular area at a
-				        // horizontal level or in a horizontal layer at a point in time.
+				templateNumber = 12;  // Derived forecasts based on all ensemble members at a horizontal level or in a
+				                      // horizontal layer, in a continuous or non-continuous interval
 				break;
 			case kProbabilityGreaterThan:
 			case kProbabilityLessThan:
@@ -734,6 +733,7 @@ void WriteTime(NFmiGribMessage& message, const forecast_time& ftime, const produ
 	}
 	else
 	{
+		// Set in WriteParam()
 		const long templateNumber = message.ProductDefinitionTemplateNumber();
 
 		// leadtime for this prognosis
@@ -759,40 +759,53 @@ void WriteTime(NFmiGribMessage& message, const forecast_time& ftime, const produ
 			case kDifference:
 			case kMinimum:
 			case kMaximum:
-				// duration of the aggregation period
-				long unitForTimeRange = 1;  // hours
-				long lengthOfTimeRange = par.Aggregation().TimeDuration().Hours();
-				long timeOffset = par.Aggregation().TimeOffset().Hours();
+				// duration of the aggregation period, if any
 
-				if (par.Aggregation().TimeDuration().Minutes() % 60 != 0)
+				if (par.Aggregation().TimeDuration().Empty() == false)
 				{
-					unitForTimeRange = 0;  // minutes
-					lengthOfTimeRange = par.Aggregation().TimeDuration().Minutes();
+					long unitForTimeRange = 1;  // hours
+					long lengthOfTimeRange = par.Aggregation().TimeDuration().Hours();
+
+					long timeOffset = par.Aggregation().TimeOffset().Hours();
+
+					if (par.Aggregation().TimeDuration().Minutes() % 60 != 0)
+					{
+						unitForTimeRange = 0;  // minutes
+						lengthOfTimeRange = par.Aggregation().TimeDuration().Minutes();
+					}
+
+					if (unitOfTimeRange == unitForTimeRange)
+					{
+						stepValue += timeOffset;
+					}
+					else if (unitOfTimeRange == 1 && unitForTimeRange == 0)
+					{
+						stepValue += timeOffset / 60;
+					}
+					else if (unitOfTimeRange == 0 && unitForTimeRange == 1)
+					{
+						stepValue += timeOffset * 60;
+					}
+
+					message.SetLongKey("indicatorOfUnitForTimeRange", unitForTimeRange);
+					message.LengthOfTimeRange(lengthOfTimeRange);
 				}
 
-				if (unitOfTimeRange == unitForTimeRange)
-				{
-					stepValue += timeOffset;
-				}
-				else if (unitOfTimeRange == 1 && unitForTimeRange == 0)
-				{
-					stepValue += timeOffset / 60;
-				}
-				else if (unitOfTimeRange == 0 && unitForTimeRange == 1)
-				{
-					stepValue += timeOffset * 60;
-				}
-
-				message.SetLongKey("indicatorOfUnitForTimeRange", unitForTimeRange);
 				message.ForecastTime(stepValue);  // start step
-				message.LengthOfTimeRange(lengthOfTimeRange);
 
 				// for productDefinitionTemplateNumber 9,10,11,12,13,14,34,43,47,61,73,73
 				// grib2 has extra keys for "end of overall time interval"
 				if (templateNumber >= 9 && templateNumber <= 14)
 				{
 					raw_time endOfInterval = raw_time(ftime.ValidDateTime());
-					endOfInterval += par.Aggregation().TimeOffset() + par.Aggregation().TimeDuration();
+
+					if (par.Aggregation().TimeDuration().Empty() == false)
+					{
+						// If parameter is time-aggregated, adjust the end date. Otherwise
+						// end date is valid time.
+
+						endOfInterval += par.Aggregation().TimeOffset() + par.Aggregation().TimeDuration();
+					}
 
 					message.SetLongKey("yearOfEndOfOverallTimeInterval", stol(endOfInterval.String("%Y")));
 					message.SetLongKey("monthOfEndOfOverallTimeInterval", stol(endOfInterval.String("%m")));
@@ -1856,21 +1869,101 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 	}
 	else
 	{
-		long category = message.ParameterCategory();
-		long discipline = message.ParameterDiscipline();
+		aggregation a;
+		processing_type pt;
+
+		const long unitForTimeRange = message.GetLongKey("indicatorOfUnitForTimeRange");
+		const long category = message.ParameterCategory();
+		const long discipline = message.ParameterDiscipline();
+		const long tosp = (message.TypeOfStatisticalProcessing() == -999) ? -1 : message.TypeOfStatisticalProcessing();
+
+		// If there is no time aggregation, set td values to "not_a_time_duration" to indicate
+		// that there is no time aggregation (aggregation is done in some other dimension)
+		const auto td = (message.LengthOfTimeRange() == 0)
+		                    ? himan::time_duration()
+		                    : DurationFromTimeRange(unitForTimeRange) * static_cast<int>(message.LengthOfTimeRange());
+
+		// Type of statistical processign key is defined only for
+		// parameters "in a continuous or non-continuous time interval"
+		switch (tosp)
+		{
+			case 0:  // Average
+				a.Type(kAverage);
+				a.TimeDuration(td);
+				break;
+
+			case 1:  // Accumulation
+				a.Type(kAccumulation);
+				a.TimeDuration(td);
+				break;
+
+			case 2:  // Maximum
+				a.Type(kMaximum);
+				a.TimeDuration(td);
+				break;
+
+			case 3:  // Minimum
+				a.Type(kMinimum);
+				a.TimeDuration(td);
+				break;
+			case 6:  // Standard deviation
+				pt.Type(kStandardDeviation);
+				break;
+		}
+
+		// "derivedForecasts" is defined also for
+		// "at a point in time"
+		const long df = message.GetLongKey("derivedForecast");
+
+		switch (df)
+		{
+			case 0:  // Unweighted Mean of All Members
+			case 1:  // Weighted Mean of All Members
+				pt.Type(kEnsembleMean);
+				break;
+			case 2:  // Standard Deviation with respect to Cluster Mean
+				pt.Type(kStandardDeviation);
+				break;
+			case 4:  // Spread of All Members
+				pt.Type(kSpread);
+				break;
+			case 199:  // Extreme Forecast Index
+				pt.Type(kEFI);
+				break;
+		}
 
 		string parmName = "";
 		int parmId = 0;
-
-		const long tosp = (message.TypeOfStatisticalProcessing() == -999) ? -1 : message.TypeOfStatisticalProcessing();
 
 		if (dbtype == kRadon)
 		{
 			r = GET_PLUGIN(radon);
 
+			// Because database table param_grib2 has only column 'type_of_statistical_processing',
+			// we have to use grib2 key 'derivedForecast' to fake the value. When grib2 has
+			// productDefinitionTemplateNumber, the statistical processing is not given with
+			// 'typeOfStatisticalProcessing' but with 'derivedForecast'.
+
+			long effective_tosp = tosp;
+
+			if (tosp == -1)
+			{
+				switch (pt.Type())
+				{
+					case kEnsembleMean:
+						effective_tosp = 0;
+						break;
+					case kStandardDeviation:
+						effective_tosp = 6;
+						break;
+					default:
+						break;
+				}
+			}
+
 			auto parminfo =
 			    r->RadonDB().GetParameterFromGrib2(prod.Id(), discipline, category, number, message.LevelType(),
-			                                       static_cast<double>(message.LevelValue()), tosp);
+			                                       static_cast<double>(message.LevelValue()), effective_tosp);
 
 			if (parminfo.size())
 			{
@@ -1902,36 +1995,15 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 		p.GribDiscipline(discipline);
 		p.GribCategory(category);
 
-		aggregation a;
-
-		const long unitForTimeRange = message.GetLongKey("indicatorOfUnitForTimeRange");
-		const auto td = DurationFromTimeRange(unitForTimeRange) * static_cast<int>(message.LengthOfTimeRange());
-		switch (message.TypeOfStatisticalProcessing())
-		{
-			case 0:  // Average
-				a.Type(kAverage);
-				a.TimeDuration(td);
-				break;
-
-			case 1:  // Accumulation
-				a.Type(kAccumulation);
-				a.TimeDuration(td);
-				break;
-
-			case 2:  // Maximum
-				a.Type(kMaximum);
-				a.TimeDuration(td);
-				break;
-
-			case 3:  // Minimum
-				a.Type(kMinimum);
-				a.TimeDuration(td);
-				break;
-		}
-
 		if (a.TimeDuration().Empty() == false)
 		{
 			p.Aggregation(a);
+		}
+		if (pt.Type() != kUnknownProcessingType)
+		{
+			const int numMemb = static_cast<int>(message.GetLongKey("numberOfForecastsInEnsemble"));
+			pt.NumberOfEnsembleMembers(numMemb == INVALID_INT_VALUE ? 255 : numMemb);
+			p.ProcessingType(pt);
 		}
 	}
 
@@ -2408,7 +2480,10 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 		{
 			itsLogger.Trace("Parameter does not match: " + options.param.Name() + " (requested) vs " + p.Name() +
 			                " (found)");
-
+			itsLogger.Trace("Aggregation: " + static_cast<string>(options.param.Aggregation()) + " (requested) vs " +
+			                static_cast<string>(p.Aggregation()) + " (found)");
+			itsLogger.Trace("Processing type: " + static_cast<string>(options.param.ProcessingType()) +
+			                " (requested) vs " + static_cast<string>(p.ProcessingType()) + " (found)");
 			return false;
 		}
 	}

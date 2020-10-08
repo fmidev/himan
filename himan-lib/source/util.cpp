@@ -1399,8 +1399,26 @@ aggregation util::GetAggregationFromParamName(const std::string& name)
 	{
 		return himan::aggregation(kMinimum);
 	}
-
+	else if (name.find("-MEAN-") != string::npos)
+	{
+		return himan::aggregation(kAverage);
+	}
 	return himan::aggregation();
+}
+
+processing_type util::GetProcessingTypeFromParamName(const string& name)
+{
+	if (name.find("-STDDEV-") != string::npos)
+	{
+		return himan::processing_type(kStandardDeviation);
+	}
+	else if (name.find("EFI-") != string::npos)
+	{
+		return himan::processing_type(kEFI);
+	}
+	// No support for fractile/probability yet
+
+	return himan::processing_type();
 }
 
 param util::GetParameterInfoFromDatabaseName(const producer& prod, const param& par, const level& lvl)
@@ -1432,7 +1450,18 @@ param util::GetParameterInfoFromDatabaseName(const producer& prod, const param& 
 	// todo: figure out a better way to deal with parametres that *always* have
 	// aggregation and/or processing type
 
-	if (par.Aggregation().Type() == kUnknownAggregationType)
+	if (par.ProcessingType().Type() == kUnknownProcessingType)
+	{
+		p.ProcessingType(GetProcessingTypeFromParamName(p.Name()));
+	}
+	else
+	{
+		p.ProcessingType(par.ProcessingType());
+	}
+
+	// If processing type is ensemble mean, do not set aggregation to mean as aggregation
+	// mainly describes *time* based aggregation. But we don't know that from database name only.
+	if (par.Aggregation().Type() == kUnknownAggregationType && p.ProcessingType().Type() != kEnsembleMean)
 	{
 		p.Aggregation(GetAggregationFromParamName(p.Name()));
 	}
@@ -1440,8 +1469,6 @@ param util::GetParameterInfoFromDatabaseName(const producer& prod, const param& 
 	{
 		p.Aggregation(par.Aggregation());
 	}
-
-	p.ProcessingType(par.ProcessingType());
 
 	return p;
 }

@@ -1,7 +1,7 @@
 /**
  * @file aggregation.h
  *
- * @brief simple class to describe parameter aggregation metadata
+ * @brief simple class to describe *time* aggregation metadata
  */
 
 #ifndef AGGREGATION_H
@@ -42,6 +42,7 @@ class aggregation
 
 	bool operator==(const aggregation& other) const;
 	bool operator!=(const aggregation& other) const;
+	operator std::string() const;
 
 	std::string ClassName() const
 	{
