@@ -27,6 +27,10 @@ const boost::unordered_map<HPAggregationType, std::string> HPAggregationTypeToSt
     ba::map_list_of(kUnknownAggregationType, "unknown")(kAverage, "average")(kAccumulation, "accumulation")(
         kMaximum, "maximum")(kMinimum, "minimum")(kDifference, "difference");
 
+const boost::unordered_map<std::string, HPAggregationType> HPStringToAggregationType =
+    ba::map_list_of("unknown", kUnknownAggregationType)("average", kAverage)("accumulation", kAccumulation)(
+        "maximum", kMaximum)("minimum", kMinimum)("difference", kDifference);
+
 class aggregation
 {
    public:
