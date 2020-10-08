@@ -1820,7 +1820,7 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 				{
 					// yeah, sometimes timeRangeIndicator=0 even if shortName=tp,
 					// what can we do :shrug:
-					a = util::GetAggregationFromParamName(p.Name());
+					a = util::GetAggregationFromParamName(p.Name(), forecast_time());
 
 					if (a.Type() != kUnknownAggregationType)
 					{

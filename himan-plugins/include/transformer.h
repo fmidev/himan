@@ -53,8 +53,8 @@ class transformer : public compiled_plugin, private compiled_plugin_base
 
 	double itsBase;
 	double itsScale;
-	std::vector<std::string> itsSourceParam;
-	std::vector<std::string> itsTargetParam;
+	std::vector<param> itsSourceParam;
+	std::vector<param> itsTargetParam;
 	std::vector<level> itsSourceLevels;
 	bool itsApplyLandSeaMask;
 	double itsLandSeaMaskThreshold;

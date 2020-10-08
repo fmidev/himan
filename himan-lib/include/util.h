@@ -236,7 +236,7 @@ param GetParameterInfoFromDatabaseName(const producer& prod, const param& par, c
  *
  */
 
-aggregation GetAggregationFromParamName(const std::string& name);
+aggregation GetAggregationFromParamName(const std::string& name, const forecast_time& ftime);
 
 /**
  * @brief Try to determine processing type from parameter name
