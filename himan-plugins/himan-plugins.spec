@@ -4,7 +4,7 @@
 Summary: himan-plugins library
 Name: %{LIBNAME}
 Version: 20.10.8
-Release: 2%{dist}.fmi
+Release: 3%{dist}.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -133,6 +133,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Thu Oct  8 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.8-3.fmi
+- New release
 * Thu Oct  8 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.8-2.fmi
 - Additional features to transformer
 - Fix to turbulence
