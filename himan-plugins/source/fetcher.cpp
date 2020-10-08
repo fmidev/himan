@@ -46,8 +46,14 @@ std::string UniqueName(const himan::producer& prod, const himan::param& par, con
 
 void AmendParamWithAggregationAndProcessingType(param& p)
 {
-	p.Aggregation(util::GetAggregationFromParamName(p.Name()));
-	p.ProcessingType(util::GetProcessingTypeFromParamName(p.Name()));
+	if (p.ProcessingType().Type() == kUnknownProcessingType)
+	{
+		p.ProcessingType(util::GetProcessingTypeFromParamName(p.Name()));
+	}
+	if (p.Aggregation().Type() == kUnknownAggregationType && p.ProcessingType().Type() != kEnsembleMean)
+	{
+		p.Aggregation(util::GetAggregationFromParamName(p.Name()));
+	}
 }
 }
 static vector<string> stickyParamCache;

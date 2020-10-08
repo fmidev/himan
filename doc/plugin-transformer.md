@@ -43,6 +43,26 @@ target_param: define target parameter name
 
     "target_param" : "T-C"
 
+target_param_aggregation: define target parameter (time) aggregation type
+
+    "target_param_aggregation" : "average"
+
+target_param_processing_type: define target parameter processing type
+
+    "target_param_processing_type" : "standard deviation"
+
+source_param: define source parameter name
+
+    "source_param" : "T-K"
+
+source_param_aggregation: define source parameter (time) aggregation type
+
+    "source_param_aggregation" : "average"
+
+source_param_processing_type: define source parameter processing type
+
+    "source_param_processing_type" : "standard deviation"
+
 source_level_type: define source level type (default: target level type, ie. no level change is made)
 
     "source_level_type" : "height"

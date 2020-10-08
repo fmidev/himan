@@ -140,7 +140,9 @@ void transformer::SetAdditionalParameters()
 
 	if (itsConfiguration->Exists("rotation"))
 	{
-		itsTargetParam = util::Split(itsConfiguration->GetValue("rotation"), ",");
+		const auto spl = util::Split(itsConfiguration->GetValue("rotation"), ",");
+		for_each(spl.begin(), spl.end(), [&](const std::string& str) { itsTargetParam.emplace_back(str); });
+
 		itsSourceParam = itsTargetParam;
 		itsRotateVectorComponents = true;
 	}
@@ -148,7 +150,7 @@ void transformer::SetAdditionalParameters()
 	{
 		if (!itsConfiguration->GetValue("target_param").empty())
 		{
-			itsTargetParam = vector<string>({itsConfiguration->GetValue("target_param")});
+			itsTargetParam = vector<param>({param(itsConfiguration->GetValue("target_param"))});
 		}
 		else
 		{
@@ -156,14 +158,38 @@ void transformer::SetAdditionalParameters()
 		}
 	}
 
+	if (!itsConfiguration->GetValue("target_param_aggregation").empty())
+	{
+		itsTargetParam[0].Aggregation(
+		    {HPStringToAggregationType.at(itsConfiguration->GetValue("target_param_aggregation"))});
+	}
+
+	if (!itsConfiguration->GetValue("target_param_processing_type").empty())
+	{
+		itsTargetParam[0].ProcessingType(
+		    {HPStringToProcessingType.at(itsConfiguration->GetValue("target_param_processing_type"))});
+	}
+
 	if (!itsConfiguration->GetValue("source_param").empty())
 	{
-		itsSourceParam = vector<string>({itsConfiguration->GetValue("source_param")});
+		itsSourceParam = vector<param>({param(itsConfiguration->GetValue("source_param"))});
 	}
 	else
 	{
 		itsSourceParam = itsTargetParam;
 		itsLogger.Trace("Source_param not specified, source_param set to target_param");
+	}
+
+	if (!itsConfiguration->GetValue("source_param_aggregation").empty())
+	{
+		itsSourceParam[0].Aggregation(
+		    {HPStringToAggregationType.at(itsConfiguration->GetValue("source_param_aggregation"))});
+	}
+
+	if (!itsConfiguration->GetValue("source_param_processing_type").empty())
+	{
+		itsSourceParam[0].ProcessingType(
+		    {HPStringToProcessingType.at(itsConfiguration->GetValue("source_param_processing_type"))});
 	}
 
 	if (itsSourceParam.size() != itsTargetParam.size())
@@ -325,22 +351,15 @@ void transformer::Process(shared_ptr<const plugin_configuration> conf)
 		}
 	}
 
-	vector<param> theParams;
-
-	for (const auto& name : itsTargetParam)
-	{
-		theParams.push_back(param(name));
-	}
-
 	if (itsInterpolationMethod != kUnknownInterpolationMethod)
 	{
-		for (auto& p : theParams)
+		for (auto& p : itsTargetParam)
 		{
 			p.InterpolationMethod(itsInterpolationMethod);
 		}
 	}
 
-	SetParams(theParams);
+	SetParams(itsTargetParam);
 
 	Start();
 }
@@ -355,10 +374,8 @@ void transformer::Rotate(shared_ptr<info<double>> myTargetInfo)
 		return;
 	}
 
-	auto a = Fetch(myTargetInfo->Time(), myTargetInfo->Level(), param(itsSourceParam[0]), myTargetInfo->ForecastType(),
-	               false);
-	auto b = Fetch(myTargetInfo->Time(), myTargetInfo->Level(), param(itsSourceParam[1]), myTargetInfo->ForecastType(),
-	               false);
+	auto a = Fetch(myTargetInfo->Time(), myTargetInfo->Level(), itsSourceParam[0], myTargetInfo->ForecastType(), false);
+	auto b = Fetch(myTargetInfo->Time(), myTargetInfo->Level(), itsSourceParam[1], myTargetInfo->ForecastType(), false);
 
 	myTargetInfo->Index<param>(0);
 	myTargetInfo->Data().Set(VEC(a));
@@ -411,14 +428,14 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 	try
 	{
 		sourceInfo = f->Fetch(itsConfiguration, forecastTime, itsSourceLevels[myTargetInfo->Index<level>()],
-		                      param(itsSourceParam[0]), forecastType, itsConfiguration->UseCudaForPacking());
+		                      itsSourceParam[0], forecastType, itsConfiguration->UseCudaForPacking());
 	}
 	catch (HPExceptionType& e)
 	{
 		if (e == kFileDataNotFound && itsDoTimeInterpolation)
 		{
-			sourceInfo = InterpolateTime(forecastTime, itsSourceLevels[myTargetInfo->Index<level>()],
-			                             param(itsSourceParam[0]), forecastType);
+			sourceInfo = InterpolateTime(forecastTime, itsSourceLevels[myTargetInfo->Index<level>()], itsSourceParam[0],
+			                             forecastType);
 		}
 
 		if (!sourceInfo)
@@ -429,7 +446,7 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 		}
 	}
 
-	if (itsSourceParam[0] == itsTargetParam[0] &&
+	if (itsSourceParam[0].Name() == itsTargetParam[0].Name() &&
 	    (sourceInfo->Param().Aggregation().Type() != kUnknownAggregationType ||
 	     sourceInfo->Param().ProcessingType().Type() != kUnknownProcessingType))
 	{
