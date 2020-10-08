@@ -1361,7 +1361,7 @@ string util::UniqueName(const info<T>& info)
 template string util::UniqueName(const info<double>&);
 template string util::UniqueName(const info<float>&);
 
-aggregation util::GetAggregationFromParamName(const std::string& name)
+aggregation util::GetAggregationFromParamName(const std::string& name, const forecast_time& ftime)
 {
 	if (name == "RRR-KGM2")
 	{
@@ -1374,7 +1374,7 @@ aggregation util::GetAggregationFromParamName(const std::string& name)
 		if (tokens.size() == 2 && tokens[1] == "KGM2")
 		{
 			// RR-KGM2
-			return himan::aggregation(kAccumulation);
+			return himan::aggregation(kAccumulation, ftime.Step());
 		}
 
 		if (tokens[0] != "RR")
@@ -1463,7 +1463,7 @@ param util::GetParameterInfoFromDatabaseName(const producer& prod, const param& 
 	// mainly describes *time* based aggregation. But we don't know that from database name only.
 	if (par.Aggregation().Type() == kUnknownAggregationType && p.ProcessingType().Type() != kEnsembleMean)
 	{
-		p.Aggregation(GetAggregationFromParamName(p.Name()));
+		p.Aggregation(GetAggregationFromParamName(p.Name(), forecast_time()));
 	}
 	else
 	{
