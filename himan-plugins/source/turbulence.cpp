@@ -187,7 +187,7 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 		double VWS = sqrt(pow((nextU - prevU) / (nextH - prevH), 2) + pow((nextV - prevV) / (nextH - prevH), 2));
 		double DEF = sqrt(pow(get<0>(gradU).At(index) - get<1>(gradV).At(index), 2) +
 		                  pow(get<0>(gradV).At(index) + get<1>(gradU).At(index), 2));
-		double CVG = -get<0>(gradU).At(index) + get<1>(gradV).At(index);
+		double CVG = -get<0>(gradU).At(index) - get<1>(gradV).At(index);
 
 		// Calculate scaling factor
 		double S;
