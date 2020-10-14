@@ -389,10 +389,10 @@ struct base
 	matrix<T> data;
 	std::shared_ptr<packed_data> pdata;
 
-	base() : grid(), data(0, 0, 1, MissingValue<T>()), pdata(new packed_data)
+	base() : grid(), data(0, 0, 1, MissingValue<T>()), pdata(std::make_shared<packed_data>())
 	{
 	}
-	base(std::shared_ptr<himan::grid> grid_, const matrix<T>& data_) : grid(grid_), data(data_), pdata(new packed_data)
+	base(std::shared_ptr<himan::grid> grid_, const matrix<T>& data_) : grid(grid_), data(data_), pdata(std::make_shared<packed_data>())
 	{
 	}
 };
