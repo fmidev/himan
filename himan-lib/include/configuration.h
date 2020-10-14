@@ -252,6 +252,9 @@ class configuration
 	std::string SSStateTableName() const;
 	void SSStateTableName(const std::string& theSSStateTableName);
 
+	HPProgramName ProgramName() const;
+	void ProgramName(HPProgramName theName);
+
    protected:
 	std::vector<producer> itsSourceProducers;
 
@@ -302,6 +305,8 @@ class configuration
 
 	std::unique_ptr<grid> itsBaseGrid;
 	std::string itsSSStateTableName;
+
+	HPProgramName itsProgramName;
 };
 
 inline std::ostream& operator<<(std::ostream& file, const configuration& ob)

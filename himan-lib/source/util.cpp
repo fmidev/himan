@@ -157,6 +157,34 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 				return "";
 		}
 	};
+
+	auto GetMasalaBase = [](HPProgramName name) -> string {
+		switch (name)
+		{
+			case kHiman:
+				return util::GetEnv("MASALA_PROCESSED_DATA_BASE");
+			case kGridToRadon:
+				try
+				{
+					return util::GetEnv("MASALA_REF_BASE");
+				}
+				catch (const invalid_argument& e)
+				{
+					try
+					{
+						return util::GetEnv("NEONS_REF_BASE");
+					}
+					catch (const invalid_argument& ee)
+					{
+						throw invalid_argument(
+						    "Neither 'MASALA_REF_BASE' nor 'NEONS_REF_BASE' environment variable defined");
+					}
+				}
+			default:
+				return "";
+		}
+	};
+
 	auto ReplaceTemplateValue = [&](const boost::regex& re, string& filename, Component k) {
 		boost::smatch what;
 
@@ -175,7 +203,7 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 			switch (k)
 			{
 				case Component::kMasalaBase:
-					replacement = util::GetEnv("MASALA_PROCESSED_DATA_BASE");
+					replacement = GetMasalaBase(conf.ProgramName());
 					break;
 				case Component::kAnalysisTime:
 					replacement = ftime.OriginDateTime().String(fmt);
