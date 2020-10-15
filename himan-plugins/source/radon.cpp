@@ -323,6 +323,7 @@ string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<v
 		      << " AND l.name = upper('" << level_name << "')"
 		      << " AND t.level_value = " << levelValue << " AND t.level_value2 = " << levelValue2
 		      << " AND t.forecast_period = '" << himan::util::MakeSQLInterval(options.time) << "'"
+		      << " AND t.file_format_id NOT IN (3,4)" // no netcdf
 		      << " AND forecast_type_id IN (" << forecastTypeId << ")"
 		      << " AND forecast_type_value = " << forecastTypeValue << " AND g.id IN (";
 
@@ -363,6 +364,7 @@ string CreateFileSQLQuery(himan::plugin::search_options& options, const vector<v
 			      << " AND level_name = upper('" << level_name << "') "
 			      << " AND level_value = " << levelValue << " AND level_value2 = " << levelValue2
 			      << " AND forecast_period = '" << himan::util::MakeSQLInterval(options.time) << "'"
+			      << " AND t.file_format_id NOT IN (3,4)"  // no netcdf
 			      << " AND geometry_id = " << geomid << " AND forecast_type_id IN (" << forecastTypeId << ")"
 			      << " AND forecast_type_value = " << forecastTypeValue << " UNION ALL";
 		}
