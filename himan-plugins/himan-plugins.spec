@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.10.13
+Version: 20.10.15
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 20.10.1
+Requires: himan-lib >= 20.10.15
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 20.5.25
@@ -133,6 +133,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Thu Oct 15 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.15-1.fmi
+- Control masala_base directory environment variable name
 * Tue Oct 13 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.13-1.fmi
 - Revert fix to turbulence
 * Thu Oct  8 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.8-3.fmi

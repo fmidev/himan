@@ -3,8 +3,8 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 20.10.8
-Release: 2%{dist}.fmi
+Version: 20.10.15
+Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -77,6 +77,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/*
 
 %changelog
+* Thu Oct 15 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.15-1.fmi
+- Control masala_base directory environment variable name
 * Thu Oct  8 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.8-2.fmi
 - Improved aggregation/processing_type handling
 * Thu Oct  8 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.8-1.fmi
