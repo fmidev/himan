@@ -15,6 +15,7 @@
 #include "lambert_conformal_grid.h"
 #include "latitude_longitude_grid.h"
 #include "level.h"
+#include "matrix.h"
 #include "packed_data.h"
 #include "param.h"
 #include "point_list.h"
@@ -25,7 +26,6 @@
 #include "stereographic_grid.h"
 #include <limits>  // for std::numeric_limits<size_t>::max();
 #include <vector>
-#include "matrix.h"
 
 #define VEC(I) I->Data().Values()
 
@@ -389,10 +389,11 @@ struct base
 	matrix<T> data;
 	std::shared_ptr<packed_data> pdata;
 
-	base() : grid(), data(0, 0, 1, MissingValue<T>()), pdata(new packed_data)
+	base() : grid(), data(0, 0, 1, MissingValue<T>()), pdata(std::make_shared<packed_data>())
 	{
 	}
-	base(std::shared_ptr<himan::grid> grid_, const matrix<T>& data_) : grid(grid_), data(data_), pdata(new packed_data)
+	base(std::shared_ptr<himan::grid> grid_, const matrix<T>& data_)
+	    : grid(grid_), data(data_), pdata(std::make_shared<packed_data>())
 	{
 	}
 };

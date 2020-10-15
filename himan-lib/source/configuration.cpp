@@ -45,7 +45,8 @@ configuration::configuration()
       itsAllowedMissingValues(std::numeric_limits<size_t>::max()),
       itsForecastTypes({forecast_type(kDeterministic)}),
       itsBaseGrid(nullptr),
-      itsSSStateTableName()
+      itsSSStateTableName(),
+      itsProgramName(kHiman)
 {
 }
 
@@ -88,8 +89,8 @@ configuration::configuration(const configuration& o)
       itsLevels(o.itsLevels),
       itsTimes(o.itsTimes),
       itsBaseGrid(o.itsBaseGrid ? std::unique_ptr<grid>(o.itsBaseGrid->Clone()) : nullptr),
-      itsSSStateTableName(o.itsSSStateTableName)
-
+      itsSSStateTableName(o.itsSSStateTableName),
+      itsProgramName(o.itsProgramName)
 {
 }
 
@@ -145,6 +146,8 @@ std::ostream& configuration::Write(std::ostream& file) const
 	file << "__itsFilenameTemplate__" << itsFilenameTemplate << std::endl;
 	file << "__itsPackingType__" << HPPackingTypeToString.at(itsPackingType) << std::endl;
 	file << "__itsAllowedMissingValues__" << itsAllowedMissingValues << std::endl;
+	file << "__itsSSStateTableName__ " << itsSSStateTableName << std::endl;
+	file << "__itsProgramName__ " << itsProgramName << std::endl;
 
 	for (size_t i = 0; i < itsForecastTypes.size(); i++)
 	{
@@ -515,4 +518,14 @@ std::string configuration::SSStateTableName() const
 void configuration::SSStateTableName(const std::string& theSSStateTableName)
 {
 	itsSSStateTableName = theSSStateTableName;
+}
+
+HPProgramName configuration::ProgramName() const
+{
+	return itsProgramName;
+}
+
+void configuration::ProgramName(HPProgramName theName)
+{
+	itsProgramName = theName;
 }

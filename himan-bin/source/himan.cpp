@@ -265,6 +265,7 @@ int main(int argc, char** argv)
 	try
 	{
 		conf = ParseCommandLine(argc, argv);
+		conf->ProgramName(kHiman);
 	}
 	catch (const std::exception& e)
 	{
