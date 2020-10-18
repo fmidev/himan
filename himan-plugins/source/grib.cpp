@@ -622,7 +622,7 @@ void WriteAreaAndGrid(NFmiGribMessage& message, const shared_ptr<himan::grid>& g
 
 void WriteTime(NFmiGribMessage& message, const forecast_time& ftime, const producer& prod, const param& par)
 {
-	message.DataDate(stol(ftime.OriginDateTime().String("%Y%m%d")));
+	message.DataDate(stol(ftime.OriginDateTime().ToDate()));
 	message.DataTime(stol(ftime.OriginDateTime().String("%H%M")));
 
 	logger logr("grib");

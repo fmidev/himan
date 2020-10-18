@@ -255,12 +255,12 @@ std::map<std::string, std::string> ParseMetadata(char** mdata, const producer& p
 		return ret;
 	}
 
-	std::stringstream ss;
-	ss << "SELECT attribute, key, mask FROM geotiff_metadata WHERE producer_id = " << prod.Id();
+	std::string query =
+	    fmt::format("SELECT attribute, key, mask FROM geotiff_metadata WHERE producer_id = {}", prod.Id());
 
 	auto r = GET_PLUGIN(radon);
 
-	r->RadonDB().Query(ss.str());
+	r->RadonDB().Query(query);
 
 	logger log("geotiff");
 

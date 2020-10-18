@@ -4,6 +4,7 @@
  */
 
 #include "raw_time.h"
+#include <fmt/chrono.h>
 #include <mutex>
 
 static std::mutex formatMutex;
@@ -38,8 +39,8 @@ raw_time::raw_time(const std::string& theDateTime, const std::string& theTimeMas
 
 	if (Empty())
 	{
-		throw std::runtime_error(ClassName() + ": Unable to create time from '" + theDateTime + "' with mask '" +
-		                         theTimeMask + "'");
+		throw std::runtime_error(
+		    fmt::format("{}: Unable to create time from '{}' with mask '{}'", ClassName(), theDateTime, theTimeMask));
 	}
 }
 
@@ -125,34 +126,29 @@ std::string raw_time::String(const std::string& theTimeMask) const
 	{
 		return ToDatabaseTime();
 	}
+	else if (theTimeMask == "%Y%m%d")
+	{
+		return ToDate();
+	}
+	else if (theTimeMask == "%H%M%S")
+	{
+		return ToTime();
+	}
 
 	return FormatTime(theTimeMask);
 }
 
 std::string raw_time::FormatTime(const std::string& theTimeMask) const
 {
-	std::stringstream s;
-
-	// https://stackoverflow.com/questions/11121454/c-why-is-my-date-parsing-not-threadsafe
-
-	{
-		std::lock_guard<std::mutex> lock(formatMutex);
-		s.imbue(std::locale(s.getloc(), new boost::posix_time::time_facet(theTimeMask.c_str())));
-	}
-
 	try
 	{
-		s << itsDateTime;
+		return fmt::format(fmt::format("{{:{}}}", theTimeMask), boost::posix_time::to_tm(itsDateTime));
 	}
-	catch (const std::out_of_range& e)
+	catch (const std::exception& e)
 	{
-		std::cerr << e.what();
+		fmt::print("{}\n", e.what());
 		himan::Abort();
 	}
-
-	s.flush();
-
-	return s.str();
 }
 
 void raw_time::Adjust(HPTimeResolution timeResolution, int theValue)
@@ -190,8 +186,7 @@ void raw_time::Adjust(HPTimeResolution timeResolution, int theValue)
 	}
 	else
 	{
-		throw std::runtime_error(
-		    ClassName() + ": Invalid time adjustment unit: " + std::to_string(static_cast<int>(timeResolution)) + "'");
+		throw std::runtime_error(fmt::format("{}: Invalid time adjustment unit: {}", timeResolution));
 	}
 }
 
@@ -214,17 +209,15 @@ std::ostream& raw_time::Write(std::ostream& file) const
 
 std::string raw_time::ToDatabaseTime() const
 {
-	const auto& date = itsDateTime.date();
-	const auto& time = itsDateTime.time_of_day();
-
-	char fmt[13];
-	if (snprintf(fmt, 13, "%04d%02u%02u%02u%02u", static_cast<int>(date.year()), static_cast<int>(date.month()),
-	             static_cast<int>(date.day()), static_cast<int>(time.hours()), static_cast<int>(time.minutes())) < 0)
+	try
 	{
+		return fmt::format("{:%Y%m%d%H%M}", boost::posix_time::to_tm(itsDateTime));
+	}
+	catch (const std::exception& e)
+	{
+		fmt::print("{}\n", e.what());
 		himan::Abort();
 	}
-
-	return std::string(fmt);
 }
 
 void raw_time::FromDatabaseTime(const std::string& databaseTime)
@@ -242,18 +235,42 @@ void raw_time::FromDatabaseTime(const std::string& databaseTime)
 
 std::string raw_time::ToSQLTime() const
 {
-	const auto& date = itsDateTime.date();
-	const auto& time = itsDateTime.time_of_day();
-
-	char fmt[20];
-	if (snprintf(fmt, 20, "%04d-%02u-%02u %02u:%02u:%02u", static_cast<int>(date.year()),
-	             static_cast<int>(date.month()), static_cast<int>(date.day()), static_cast<int>(time.hours()),
-	             static_cast<int>(time.minutes()), static_cast<int>(time.seconds())) < 0)
+	try
 	{
+		return fmt::format("{:%Y-%m-%d %H:%M:%S}", boost::posix_time::to_tm(itsDateTime));
+	}
+	catch (const std::exception& e)
+	{
+		fmt::print("{}\n", e.what());
 		himan::Abort();
 	}
+}
 
-	return std::string(fmt);
+std::string raw_time::ToDate() const
+{
+	try
+	{
+		// FMT_COMPILE with c++17
+		return fmt::format("{:%Y%m%d}", boost::posix_time::to_tm(itsDateTime));
+	}
+	catch (const std::exception& e)
+	{
+		fmt::print("{}\n", e.what());
+		himan::Abort();
+	}
+}
+
+std::string raw_time::ToTime() const
+{
+	try
+	{
+		return fmt::format("{:%H%M%S}", boost::posix_time::to_tm(itsDateTime));
+	}
+	catch (const std::exception& e)
+	{
+		fmt::print("{}\n", e.what());
+		himan::Abort();
+	}
 }
 
 void raw_time::FromSQLTime(const std::string& SQLTime)

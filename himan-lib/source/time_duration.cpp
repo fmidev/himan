@@ -1,7 +1,7 @@
 #include "time_duration.h"
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/format.hpp>
 #include <boost/regex.hpp>
+#include <fmt/core.h>
 
 using namespace himan;
 
@@ -29,7 +29,8 @@ time_duration::time_duration(HPTimeResolution theTimeResolution, long theTimeRes
 			itsDuration = minutes(theTimeResolutionValue);
 			break;
 		default:
-			throw std::runtime_error("Unsupported time resolution: " + HPTimeResolutionToString.at(theTimeResolution));
+			throw std::runtime_error(
+			    fmt::format("Unsupported time resolution: {}", HPTimeResolutionToString.at(theTimeResolution)));
 	}
 }
 time_duration time_duration::operator+(const time_duration& other) const
@@ -191,7 +192,15 @@ std::string time_duration::String(const std::string& fmt) const
 		boost::smatch what;
 		if (boost::regex_search(fmt, what, re))
 		{
-			ret = boost::regex_replace(ret, re, (boost::format("%" + std::string(what[1]) + "d") % value).str());
+			try
+			{
+				ret = boost::regex_replace(ret, re, fmt::format(fmt::format("{{:0{}d}}", std::string(what[1])), value));
+			}
+			catch (const std::exception& e)
+			{
+				fmt::print("{}\n", e.what());
+				himan::Abort();
+			}
 		}
 	}
 

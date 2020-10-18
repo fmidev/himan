@@ -47,6 +47,7 @@ BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: boost169-devel
 BuildRequires: scons
+BuildRequires: fmt-devel
 
 AutoReqProv:	no
 

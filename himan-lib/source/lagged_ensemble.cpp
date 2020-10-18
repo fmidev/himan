@@ -71,8 +71,8 @@ std::vector<std::pair<forecast_type, time_duration>> CreateNamedEnsembleConfigur
 		return config;
 	}
 
-	throw std::runtime_error("Unable to create named ensemble for " + name +
-	                         ", allowed values are: MEPS_SINGLE_ENSEMBLE,MEPS_LAGGED_ENSEMBLE");
+	throw std::runtime_error(fmt::format(
+	    "Unable to create named ensemble for {}, allowed values are: MEPS_SINGLE_ENSEMBLE,MEPS_LAGGED_ENSEMBLE", name));
 }
 }
 
@@ -96,7 +96,7 @@ lagged_ensemble::lagged_ensemble(const param& parameter, size_t expectedEnsemble
 	}
 	if (theStep.Hours() < 0)
 	{
-		itsLogger.Fatal("Step has to be positive (" + std::to_string(theStep.Hours()) + ")");
+		itsLogger.Fatal(fmt::format("Step has to be positive ({})", theStep.Hours()));
 		himan::Abort();
 	}
 
@@ -148,7 +148,7 @@ void lagged_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, 
 	int missing = 0;
 	int loaded = 0;
 
-	itsLogger.Info("Initial analysis time is " + time.OriginDateTime().String());
+	itsLogger.Info(fmt::format("Initial analysis time is {}", time.OriginDateTime().ToSQLTime()));
 
 	for (const auto& p : itsDesiredForecasts)
 	{
@@ -162,7 +162,8 @@ void lagged_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, 
 			itsLogger.Trace("Negative leadtime, skipping");
 			continue;
 		}
-		itsLogger.Trace("Fetching " + static_cast<std::string>(ftype) + " with lag " + static_cast<std::string>(lag));
+		itsLogger.Trace(
+		    fmt::format("Fetching {} with lag {}", static_cast<std::string>(ftype), static_cast<std::string>(lag)));
 
 		try
 		{
@@ -191,8 +192,8 @@ void lagged_ensemble::VerifyValidForecastCount(int numLoadedForecasts, int numMi
 	{
 		if (numMissingForecasts > itsMaximumMissingForecasts)
 		{
-			itsLogger.Fatal("Maximum number of missing fields " + std::to_string(numMissingForecasts) + "/" +
-			                std::to_string(itsMaximumMissingForecasts) + " reached, aborting");
+			itsLogger.Error(fmt::format("Maximum number of missing fields {}/{} reached", numMissingForecasts,
+			                            itsMaximumMissingForecasts));
 			throw kFileDataNotFound;
 		}
 	}
@@ -200,12 +201,12 @@ void lagged_ensemble::VerifyValidForecastCount(int numLoadedForecasts, int numMi
 	{
 		if (numMissingForecasts > 0)
 		{
-			itsLogger.Fatal("Missing " + std::to_string(numMissingForecasts) + " of " +
-			                std::to_string(itsMaximumMissingForecasts) + " allowed missing fields of data");
+			itsLogger.Error(fmt::format("Missing {} of {} allowed missing fields", numMissingForecasts,
+			                            itsMaximumMissingForecasts));
 			throw kFileDataNotFound;
 		}
 	}
-	itsLogger.Info("Succesfully loaded " + std::to_string(numLoadedForecasts) + " fields");
+	itsLogger.Info(fmt::format("Succesfully loaded {} fields", numLoadedForecasts));
 }
 
 }  // namespace himan

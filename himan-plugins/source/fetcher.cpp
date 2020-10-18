@@ -41,7 +41,7 @@ namespace
 
 std::string UniqueName(const himan::producer& prod, const himan::param& par, const himan::level& lev)
 {
-	return to_string(prod.Id()) + "_" + par.Name() + "_" + himan::HPLevelTypeToString.at(lev.Type());
+	return fmt::format("{}_{}_{}", prod.Id(), par.Name(), lev.Type());
 }
 
 void AmendParamWithAggregationAndProcessingType(param& p, const forecast_time& ftime)
@@ -70,30 +70,15 @@ map<string, boost::shared_mutex> singleFetcherMap;
 string CreateNotFoundString(const vector<producer>& prods, const forecast_type& ftype, const forecast_time& time,
                             const level& lev, const vector<param>& params)
 {
-	stringstream str;
+	vector<long> prodIds;
+	for_each(prods.begin(), prods.end(), [&prodIds](const producer& prod) { prodIds.push_back(prod.Id()); });
+	vector<string> paramNames;
+	for_each(params.begin(), params.end(), [&paramNames](const param& par) { paramNames.push_back(par.Name()); });
 
-	str << "No valid data found for producer(s): ";
-
-	for (const auto& prod : prods)
-	{
-		str << prod.Id() << ",";
-	}
-
-	str.seekp(-1, ios_base::end);
-
-	str << " origintime: " << time.OriginDateTime().String() << ", step: " << static_cast<string>(time.Step())
-	    << " param(s): ";
-
-	for (const auto& par : params)
-	{
-		str << par.Name() << ",";
-	}
-
-	str.seekp(-1, ios_base::end);
-
-	str << " level: " << static_cast<string>(lev) << " forecast type: " << static_cast<string>(ftype);
-
-	return str.str();
+	return fmt::format(
+	    "No valid data found for producer(s): {}, origintime: {}, step: {}, param(s): {}, level: {}, forecast_type: {}",
+	    fmt::join(prodIds, ","), time.OriginDateTime().ToSQLTime(), static_cast<string>(time.Step()),
+	    fmt::join(paramNames, ","), static_cast<string>(lev), static_cast<string>(ftype));
 }
 
 namespace
@@ -279,9 +264,9 @@ shared_ptr<info<T>> fetcher::FetchFromProducerSingle(search_options& opts, bool 
 
 		if (newLevel != opts.level || newLevel.Value() != opts.level.Value())
 		{
-			itsLogger.Trace("Transform level " + static_cast<string>(opts.level) + " to " +
-			                static_cast<string>(newLevel) + " for producer " + to_string(opts.prod.Id()) +
-			                ", parameter " + opts.param.Name());
+			itsLogger.Trace(fmt::format("Transform level {} to {} for producer {}, param {}",
+			                            static_cast<string>(opts.level), static_cast<string>(newLevel), opts.prod.Id(),
+			                            opts.param.Name()));
 
 			opts.level = newLevel;
 		}
@@ -623,10 +608,11 @@ vector<shared_ptr<info<T>>> fetcher::FetchFromDatabase(search_options& opts, boo
 		if (files.size() == 0)
 		{
 			const string ref_prod = opts.prod.Name();
-			const string analtime = opts.time.OriginDateTime().String("%Y%m%d%H%M%S");
+			const string analtime = opts.time.OriginDateTime().String("%Y%m%d%H%M");
 			const vector<string> sourceGeoms = opts.configuration->SourceGeomNames();
-			itsLogger.Trace("No geometries found for producer " + ref_prod + ", analysistime " + analtime +
-			                ", source geom name(s) '" + util::Join(sourceGeoms, ",") + "', param " + opts.param.Name());
+			itsLogger.Trace(
+			    fmt::format("No geometries found for producer {}, analysistime {}, source geom name(s) {}, param {}",
+			                ref_prod, analtime, fmt::join(sourceGeoms, ","), opts.param.Name()));
 		}
 		else
 		{
@@ -722,8 +708,7 @@ pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAuxili
 				}
 
 				t.Stop();
-				itsLogger.Debug("Auxiliary files read finished in " + to_string(t.GetTime()) +
-				                "ms, cache size: " + to_string(c->Size()));
+				itsLogger.Debug(fmt::format("Auxiliary files read finished in {} ms, cache size: {}", t.GetTime(), c->Size()));
 			});
 
 			auxiliaryFilesRead = true;
@@ -850,7 +835,7 @@ bool fetcher::ApplyLandSeaMask(std::shared_ptr<const plugin_configuration> confi
 	raw_time originTime = requestedTime.OriginDateTime();
 	forecast_time firstTime(originTime, originTime);
 
-	itsLogger.Trace("Applying land-sea mask with threshold " + to_string(itsLandSeaMaskThreshold));
+	itsLogger.Trace(fmt::format("Applying land-sea mask with threshold {}", itsLandSeaMaskThreshold));
 
 	try
 	{
@@ -919,7 +904,7 @@ void fetcher::LandSeaMaskThreshold(double theLandSeaMaskThreshold)
 {
 	if (theLandSeaMaskThreshold < -1 || theLandSeaMaskThreshold > 1)
 	{
-		itsLogger.Fatal("Invalid value for land sea mask threshold: " + to_string(theLandSeaMaskThreshold));
+		itsLogger.Fatal(fmt::format("Invalid value for land sea mask threshold: {}", theLandSeaMaskThreshold));
 		himan::Abort();
 	}
 
