@@ -146,8 +146,7 @@ void ensemble::VerifyValidForecastCount(int numMissingForecasts)
 	{
 		if (numMissingForecasts >= itsMaximumMissingForecasts)
 		{
-			itsLogger.Fatal("maximum number of missing fields (" + std::to_string(itsMaximumMissingForecasts) +
-			                ") reached, aborting");
+			itsLogger.Error(fmt::format("Maximum number of missing fields ({}) reached", itsMaximumMissingForecasts));
 			throw kFileDataNotFound;
 		}
 	}
@@ -157,14 +156,13 @@ void ensemble::VerifyValidForecastCount(int numMissingForecasts)
 	{
 		if (numMissingForecasts > 0)
 		{
-			itsLogger.Fatal("missing " + std::to_string(numMissingForecasts) + " of " +
-			                std::to_string(itsMaximumMissingForecasts) + " allowed missing fields of data");
+			itsLogger.Error(fmt::format("Missing {} of {} allowed missing fields", numMissingForecasts,
+			                            itsMaximumMissingForecasts));
 			throw kFileDataNotFound;
 		}
 	}
 
-	itsLogger.Info("succesfully loaded " + std::to_string(itsForecasts.size()) + "/" +
-	               std::to_string(itsDesiredForecasts.size()) + " fields");
+	itsLogger.Info(fmt::format("Succesfully loaded {}/{} fields", itsForecasts.size(), itsDesiredForecasts.size()));
 }
 
 void ensemble::ResetLocation()

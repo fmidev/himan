@@ -1349,41 +1349,36 @@ template void util::Flip<float>(matrix<float>&);
 string util::UniqueName(const plugin::search_options& options)
 {
 	ASSERT(options.configuration->DatabaseType() == kNoDatabase || options.prod.Id() != kHPMissingInt);
-	stringstream ss;
 
-	// clang-format off
-
-        ss << options.prod.Id() << "_"
-           << options.time.OriginDateTime().String("%Y-%m-%d %H:%M:%S") << "_"
-           << options.time.ValidDateTime().String("%Y-%m-%d %H:%M:%S") << "_"
-           << options.param.Name() << "_"
-           << static_cast<string>(options.level) << "_"
-           << static_cast<int> (options.ftype.Type()) << "_"
-           << options.ftype.Value();
-
-	// clang-format on
-
-	return ss.str();
+	try
+	{
+		return fmt::format("{}_{}_{}_{}_{}_{}_{}", options.prod.Id(), options.time.OriginDateTime().ToSQLTime(),
+		                   options.time.ValidDateTime().ToSQLTime(), options.param.Name(),
+		                   static_cast<string>(options.level), static_cast<int>(options.ftype.Type()),
+		                   options.ftype.Value());
+	}
+	catch (const std::exception& e)
+	{
+		fmt::print("{}\n", e.what());
+		himan::Abort();
+	}
 }
 
 template <typename T>
 string util::UniqueName(const info<T>& info)
 {
-	stringstream ss;
-
-	// clang-format off
-
-        ss << info.Producer().Id() << "_"
-           << info.Time().OriginDateTime().String("%Y-%m-%d %H:%M:%S") << "_"
-           << info.Time().ValidDateTime().String("%Y-%m-%d %H:%M:%S") << "_"
-           << info.Param().Name() << "_"
-           << static_cast<string>(info.Level()) << "_"
-           << static_cast<int> (info.ForecastType().Type()) << "_"
-           << info.ForecastType().Value();
-
-	// clang-format on
-
-	return ss.str();
+	try
+	{
+		return fmt::format("{}_{}_{}_{}_{}_{}_{}", info.Producer().Id(), info.Time().OriginDateTime().ToSQLTime(),
+		                   info.Time().ValidDateTime().ToSQLTime(), info.Param().Name(),
+		                   static_cast<string>(info.Level()), static_cast<int>(info.ForecastType().Type()),
+		                   info.ForecastType().Value());
+	}
+	catch (const std::exception& e)
+	{
+		fmt::print("{}\n", e.what());
+		himan::Abort();
+	}
 }
 
 template string util::UniqueName(const info<double>&);

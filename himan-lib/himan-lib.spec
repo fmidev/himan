@@ -15,6 +15,7 @@ Requires: libgcc
 Requires: libstdc++
 Requires: libfmidb >= 20.7.8
 Requires: libfmigrib >= 19.10.28
+Requires: fmt
 
 %if %{defined suse_version}
 BuildRequires: bzip2
@@ -38,6 +39,7 @@ BuildRequires: zlib-devel
 BuildRequires: boost169-devel
 BuildRequires: scons
 BuildRequires: libs3-devel >= 4.1
+BuildRequires: fmt-devel
 
 Provides: libhiman.so
 

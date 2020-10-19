@@ -622,7 +622,7 @@ void WriteAreaAndGrid(NFmiGribMessage& message, const shared_ptr<himan::grid>& g
 
 void WriteTime(NFmiGribMessage& message, const forecast_time& ftime, const producer& prod, const param& par)
 {
-	message.DataDate(stol(ftime.OriginDateTime().String("%Y%m%d")));
+	message.DataDate(stol(ftime.OriginDateTime().ToDate()));
 	message.DataTime(stol(ftime.OriginDateTime().String("%H%M")));
 
 	logger logr("grib");
@@ -1342,13 +1342,6 @@ void DetermineMessageNumber(NFmiGribMessage& message, file_information& finfo, H
 	// all grib headers etc
 	finfo.length = message.GetLongKey("totalLength");
 
-	if (writeMode == kSingleGridToAFile)
-	{
-		finfo.offset = 0;
-		finfo.message_no = 0;
-		return;
-	}
-
 	// appending to a file is a serial operation -- two threads cannot
 	// do it to a single file simultaneously. therefore offset is just
 	// the size of the file so far.
@@ -1461,6 +1454,7 @@ std::pair<himan::HPWriteStatus, himan::file_information> grib::ToFile(info<T>& a
 
 		// Acquire mutex to (possibly) modify map containing "file name":"mutex" pairs
 		unique_lock<mutex> sflock(singleGribMessageCounterMutex);
+
 		// create or refer to a mutex for this specific file name
 		muret = singleGribMessageCounterMap.emplace(piecewise_construct, forward_as_tuple(finfo.file_location),
 		                                            forward_as_tuple());
@@ -1475,7 +1469,8 @@ std::pair<himan::HPWriteStatus, himan::file_information> grib::ToFile(info<T>& a
 	}
 	else
 	{
-		DetermineMessageNumber(msg, finfo, itsWriteOptions.configuration->WriteMode());
+		finfo.offset = 0;
+		finfo.message_no = 0;
 		status = WriteMessageToFile(msg, finfo, itsWriteOptions);
 	}
 

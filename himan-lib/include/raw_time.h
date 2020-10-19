@@ -80,12 +80,16 @@ class raw_time
 	bool Empty() const;
 	bool IsLeapYear() const;
 
+	std::string ToDatabaseTime() const;
+	std::string ToDate() const;
+	std::string ToTime() const;
+	std::string ToSQLTime() const;
+
    private:
 	std::string FormatTime(const std::string& theTimeMask) const;
-	std::string ToDatabaseTime() const;
+
 	void FromDatabaseTime(const std::string& databaseTime);
 
-	std::string ToSQLTime() const;
 	void FromSQLTime(const std::string& SQLTime);
 
 	boost::posix_time::ptime itsDateTime;
