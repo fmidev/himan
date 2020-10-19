@@ -27,7 +27,7 @@ class lambert_equal_area_grid : public regular_grid
 	lambert_equal_area_grid(const lambert_equal_area_grid& other);
 	lambert_equal_area_grid& operator=(const lambert_equal_area_grid& other) = delete;
 
-	virtual std::string ClassName() const
+	virtual std::string ClassName() const override
 	{
 		return "himan::lambert_equal_area_grid";
 	}

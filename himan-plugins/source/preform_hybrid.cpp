@@ -697,9 +697,7 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 vector<double> Add(vector<double> vec, double a)
 {
-	for (auto& v : vec)
-		v += a;
-
+	for_each(vec.begin(), vec.end(), [a](double& d) { d += a; });
 	return vec;
 }
 
@@ -813,10 +811,7 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 			{
 				wAvg = h->VerticalAverage<double>(param("VV-MS"), base, top);
 
-				for (double& d : wAvg)
-				{
-					d *= 1000;
-				}
+				for_each(wAvg.begin(), wAvg.end(), [](double& d) { d *= 1000.; });
 			}
 		}
 

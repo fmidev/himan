@@ -123,16 +123,16 @@ void stability_simple::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned
 	}
 
 	myTargetInfo->Find<param>(KIParam);
-	auto& KI = VEC(myTargetInfo);
+	auto& ki = VEC(myTargetInfo);
 
 	myTargetInfo->Find<param>(CTIParam);
-	auto& CTI = VEC(myTargetInfo);
+	auto& cti = VEC(myTargetInfo);
 
 	myTargetInfo->Find<param>(VTIParam);
-	auto& VTI = VEC(myTargetInfo);
+	auto& vti = VEC(myTargetInfo);
 
 	myTargetInfo->Find<param>(TTIParam);
-	auto& TTI = VEC(myTargetInfo);
+	auto& tti = VEC(myTargetInfo);
 
 	const auto& t850 = VEC(T850Info);
 	const auto& td850 = VEC(TD850Info);
@@ -140,7 +140,7 @@ void stability_simple::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned
 	const auto& td700 = VEC(TD700Info);
 	const auto& t500 = VEC(T500Info);
 
-	for (size_t i = 0; i < TTI.size(); i++)
+	for (size_t i = 0; i < tti.size(); i++)
 	{
 		const double T850 = t850[i];
 		const double T700 = t700[i];
@@ -148,10 +148,10 @@ void stability_simple::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned
 		const double TD850 = td850[i];
 		const double TD700 = td700[i];
 
-		KI[i] = ::KI(T850, T700, T500, TD850, TD700);
-		CTI[i] = ::CTI(T500, TD850);
-		VTI[i] = ::VTI(T850, T500);
-		TTI[i] = ::TTI(T850, T500, TD850);
+		ki[i] = ::KI(T850, T700, T500, TD850, TD700);
+		cti[i] = ::CTI(T500, TD850);
+		vti[i] = ::VTI(T850, T500);
+		tti[i] = ::TTI(T850, T500, TD850);
 	}
 
 	myThreadedLogger.Info("[" + deviceType + "] Missing: " + to_string(util::MissingPercent(*myTargetInfo)) + "%");

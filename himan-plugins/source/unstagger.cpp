@@ -35,7 +35,7 @@ void unstagger::Process(std::shared_ptr<const plugin_configuration> conf)
 	// Initialise sparse matrix for interpolation grid
 	if (itsConfiguration->UseCuda())
 	{
-		const auto* bg = dynamic_cast<const regular_grid*> (itsConfiguration->BaseGrid());
+		const auto* bg = dynamic_cast<const regular_grid*>(itsConfiguration->BaseGrid());
 		unstagger_cuda::Init(bg->Ni(), bg->Nj());
 	}
 #endif
@@ -176,4 +176,7 @@ void unstagger::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short 
 	myTargetInfo->Grid()->UVRelativeToGrid(UInfo->Grid()->UVRelativeToGrid());
 	myTargetInfo->Index<param>(1);
 	myTargetInfo->Grid()->UVRelativeToGrid(VInfo->Grid()->UVRelativeToGrid());
+
+	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
+	                      "/" + to_string(myTargetInfo->Data().Size()));
 }

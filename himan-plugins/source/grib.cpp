@@ -1446,7 +1446,7 @@ std::pair<himan::HPWriteStatus, himan::file_information> grib::ToFile(info<T>& a
 	auto finfo = ret.first;
 	auto msg = ret.second;
 
-	HPWriteStatus status = HPWriteStatus::kUnknown;
+	HPWriteStatus status;
 
 	if (itsWriteOptions.configuration->WriteMode() != kSingleGridToAFile)
 	{
@@ -2441,13 +2441,6 @@ template <typename T>
 bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData, bool readIfNotMatching,
                               shared_ptr<info<T>> newInfo, const NFmiGribMessage& message, bool readData) const
 {
-	shared_ptr<radon> r;
-
-	if (options.configuration->DatabaseType() == kRadon)
-	{
-		r = GET_PLUGIN(radon);
-	}
-
 	bool dataIsValid = true;
 
 	auto prod = ReadProducer(options, message);
@@ -2723,11 +2716,9 @@ void UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restrict__ un
 	size_t i, idx = 0;
 	int v = 1;
 
-	short j = 0;
-
 	for (i = 0; i < len; i++)
 	{
-		for (j = 7; j >= 0; j--)
+		for (short j = 7; j >= 0; j--)
 		{
 			if (BitTest(bitmap[i], j))
 			{

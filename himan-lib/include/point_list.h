@@ -26,7 +26,7 @@ class point_list : public irregular_grid
 	point_list(const point_list& other);
 	point_list& operator=(const point_list& other) = delete;
 
-	std::string ClassName() const
+	std::string ClassName() const override
 	{
 		return "himan::point_list";
 	}

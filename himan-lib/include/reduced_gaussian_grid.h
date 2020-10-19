@@ -24,7 +24,7 @@ class reduced_gaussian_grid : public irregular_grid
 	reduced_gaussian_grid(const reduced_gaussian_grid& other);
 	reduced_gaussian_grid& operator=(const reduced_gaussian_grid& other) = delete;
 
-	std::string ClassName() const
+	std::string ClassName() const override
 	{
 		return "himan::gaussian_grid";
 	}
