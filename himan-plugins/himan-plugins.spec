@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.10.15
+Version: 20.10.19
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -47,7 +47,7 @@ BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: boost169-devel
 BuildRequires: scons
-BuildRequires: fmt-devel
+BuildRequires: fmt-devel >= 6.0.0
 
 AutoReqProv:	no
 
@@ -134,6 +134,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Mon Oct 19 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.19-1.fmi
+- Add dependency to fmt (a string formatting library)
+- Exclude netcdf data from radon query results
 * Thu Oct 15 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.15-1.fmi
 - Control masala_base directory environment variable name
 * Tue Oct 13 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.13-1.fmi

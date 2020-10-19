@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 20.10.15
+Version: 20.10.19
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -20,6 +20,7 @@ Requires: zlib
 Requires: libfmidb
 Requires: xerces-c
 BuildRequires: boost169-devel
+BuildRequires: fmt-devel > 6.0.0
 
 %if %{defined suse_version}
 Requires: libjasper
@@ -64,6 +65,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Mon Oct 19 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.19-1.fmi
+- Add dependency to fmt (a string formatting library)
 * Thu Oct 15 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.15-1.fmi
 - Control masala_base directory environment variable name
 * Thu Sep  3 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.9.3-1.fmi
