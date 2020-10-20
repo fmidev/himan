@@ -1537,6 +1537,7 @@ void BindLib(lua_State* L)
 	          def("MoistLift_", &metutil::MoistLift_<double>), 
 	          def("DryLift_", &metutil::DryLift_<double>),
 		  def("FlightLevel_", &metutil::FlightLevel_),
+		  def("ElevationAngle_", &metutil::ElevationAngle_),
 		  // himan namespace
 		  def("IsMissing", static_cast<bool(*)(double)>(&::IsMissing)),
 		  def("IsValid", static_cast<bool(*)(double)>(&::IsValid))];
