@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.10.19
+Version: 20.10.20
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -134,6 +134,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Mon Oct 20 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.20-1.fmi
+- Bugfix for grib write
 * Mon Oct 19 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.19-1.fmi
 - Add dependency to fmt (a string formatting library)
 - Exclude netcdf data from radon query results

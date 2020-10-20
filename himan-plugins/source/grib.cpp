@@ -1471,6 +1471,7 @@ std::pair<himan::HPWriteStatus, himan::file_information> grib::ToFile(info<T>& a
 	{
 		finfo.offset = 0;
 		finfo.message_no = 0;
+		finfo.length = msg.GetLongKey("totalLength");
 		status = WriteMessageToFile(msg, finfo, itsWriteOptions);
 	}
 
