@@ -1025,6 +1025,11 @@ void Process(modifier_mean& mod, const object& data, const object& height)
 
 namespace radon_wrapper
 {
+std::string GetLatestTime(std::shared_ptr<radon> r, const producer& prod, const std::string& geomName, int offset)
+{
+	return r->RadonDB().GetLatestTime(static_cast<int>(prod.Id()), geomName, offset);
+}
+
 std::string GetProducerMetaData(std::shared_ptr<radon> r, const producer& prod, const std::string& attName)
 {
 	return r->RadonDB().GetProducerMetaData(prod.Id(), attName);
@@ -1589,6 +1594,7 @@ void BindPlugins(lua_State* L)
 	              .def("GetHeightUnit", &hitool_wrapper::GetHeightUnit),
 	          class_<radon, std::shared_ptr<radon>>("radon")
 	              .def(constructor<>())
+		      .def("GetLatestTime", &radon_wrapper::GetLatestTime)
 	              .def("GetProducerMetaData", &radon_wrapper::GetProducerMetaData)];
 }
 
