@@ -1357,6 +1357,8 @@ void BindLib(lua_State* L)
 	              .def("GetY", LUA_CMEMFN(double, point, Y, void)),
 	          class_<producer>("producer")
 	              .def(constructor<>())
+	              .def(constructor<int>())
+	              .def(constructor<int, const std::string&>())
 	              .def("ClassName", &producer::ClassName)
 	              .def("SetName", LUA_MEMFN(void, producer, Name, const std::string&))
 	              .def("GetName", LUA_CMEMFN(std::string, producer, Name, void))

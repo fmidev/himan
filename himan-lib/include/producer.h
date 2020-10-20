@@ -33,7 +33,8 @@ class producer
 	producer();
 	explicit producer(long theFmiProducerId);
 	producer(long theCentre, long theProcess);
-	producer(long theFmiProducerId, long theCentre, long theProcess, const std::string& theNeonsName);
+	producer(long theFmiProducerId, long theCentre, long theProcess, const std::string& theRadonName);
+	producer(long theFmiProducerId, const std::string& theRadonName);
 
 	~producer() = default;
 

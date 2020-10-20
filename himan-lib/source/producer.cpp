@@ -39,13 +39,23 @@ producer::producer(long theCentre, long theProcess)
 {
 }
 
-producer::producer(long theFmiProducerId, long theCentre, long theProcess, const std::string& theNeonsName)
+producer::producer(long theFmiProducerId, long theCentre, long theProcess, const std::string& theRadonName)
     : itsFmiProducerId(theFmiProducerId),
       itsProcess(theProcess),
       itsCentre(theCentre),
       itsTableVersion(kHPMissingInt),
       itsClass(kGridClass),
-      itsNeonsName(theNeonsName)
+      itsNeonsName(theRadonName)
+{
+}
+
+producer::producer(long theFmiProducerId, const std::string& theRadonName)
+    : itsFmiProducerId(theFmiProducerId),
+      itsProcess(kHPMissingInt),
+      itsCentre(kHPMissingInt),
+      itsTableVersion(kHPMissingInt),
+      itsClass(kGridClass),
+      itsNeonsName(theRadonName)
 {
 }
 
