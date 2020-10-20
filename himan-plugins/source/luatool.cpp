@@ -1,5 +1,6 @@
 #include "luatool.h"
 #include "ensemble.h"
+#include "fetcher.h"
 #include "forecast_time.h"
 #include "hitool.h"
 #include "lagged_ensemble.h"
@@ -1565,7 +1566,9 @@ void BindPlugins(lua_State* L)
                                                            const param&, const forecast_type&))
 	              .def("Fetch", LUA_CMEMFN(object, luatool, Fetch, const forecast_time&, const level&, const param&))
 	              .def("FetchWithType", LUA_CMEMFN(object, luatool, Fetch, const forecast_time&, const level&,
-	                                               const param&, const forecast_type&)),
+	                                               const param&, const forecast_type&))
+	              .def("FetchWithProducer", LUA_CMEMFN(object, luatool, Fetch, const forecast_time&, const level&,
+	                                               const param&, const forecast_type&, const producer& prod, const std::string& geomName)),
 	          class_<hitool, std::shared_ptr<hitool>>("hitool")
 	              .def(constructor<>())
 	              .def("ClassName", &hitool::ClassName)
@@ -1621,6 +1624,27 @@ luabind::object luatool::Fetch(const forecast_time& theTime, const level& theLev
                                const forecast_type& theType) const
 {
 	auto x = compiled_plugin_base::Fetch(theTime, theLevel, theParam, theType, false);
+
+	if (!x)
+	{
+		return object();
+	}
+	return VectorToTable<double>(x->Data().Values());
+}
+
+luabind::object luatool::Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam,
+                               const forecast_type& theType, const producer& prod, const std::string& geomName) const
+{
+	auto cnf = std::make_shared<plugin_configuration>(*itsConfiguration);
+	if (geomName.empty() == false)
+	{
+		cnf->SourceGeomNames({geomName});
+	}
+
+	cnf->SourceProducers({prod});
+
+	auto f = GET_PLUGIN(fetcher);
+	auto x = f->Fetch(cnf, theTime, theLevel, theParam, theType, false);
 
 	if (!x)
 	{
