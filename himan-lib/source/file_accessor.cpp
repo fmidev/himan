@@ -7,11 +7,11 @@ buffer ReadFromLocalFile(const file_information& finfo)
 {
 	FILE* fp = fopen(finfo.file_location.c_str(), "rb");
 
-	long offset = 0, length = 0;
+	long length = 0;
 
 	if (finfo.offset && finfo.length)
 	{
-		offset = finfo.offset.get();
+		long offset = finfo.offset.get();
 		length = finfo.length.get();
 		fseek(fp, offset, SEEK_SET);
 	}

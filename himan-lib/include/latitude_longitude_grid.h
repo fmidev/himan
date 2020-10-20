@@ -38,7 +38,7 @@ class latitude_longitude_grid : public regular_grid
 	latitude_longitude_grid(const latitude_longitude_grid& other);
 	latitude_longitude_grid& operator=(const latitude_longitude_grid& other) = delete;
 
-	virtual std::string ClassName() const
+	virtual std::string ClassName() const override
 	{
 		return "himan::latitude_longitude_grid";
 	}
@@ -104,7 +104,7 @@ class rotated_latitude_longitude_grid : public latitude_longitude_grid
 
 	virtual std::ostream& Write(std::ostream& file) const;
 
-	virtual std::string ClassName() const
+	virtual std::string ClassName() const override
 	{
 		return "himan::rotated_latitude_longitude_grid";
 	}

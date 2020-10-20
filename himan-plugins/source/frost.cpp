@@ -76,17 +76,17 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 		return;
 	}
 	info_t TDInfo = Fetch(forecastTime, level(kHeight, 2), TDParam, forecastType, false);
-        if (!TDInfo)
-        {
+	if (!TDInfo)
+	{
 		myThreadedLogger.Error("No TD-K data found.");
-                return;
-        }
+		return;
+	}
 	info_t NInfo = Fetch(forecastTime, level(kHeight, 0), NParam, forecastType, false);
-        if (!NInfo)
-        {
+	if (!NInfo)
+	{
 		myThreadedLogger.Error("No N-PRCNT data found.");
-                return;
-        }
+		return;
+	}
 
 	// Change forecast origin time for producer 131 due to varying origin time with producer 181.
 
@@ -101,7 +101,6 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 	while (success == false)
 	{
-
 		try
 		{
 			cnf->SourceProducers({producer(131, 98, 150, "ECG")});
@@ -116,7 +115,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 				forecastTime.OriginDateTime().Adjust(kHourResolution, -1);
 				i++;
 			}
-			if (i > 100) 
+			if (i > 100)
 			{
 				return;
 			}
@@ -174,7 +173,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 		}
 	}
 
-	// Create ICNInfo when no forecast found. 
+	// Create ICNInfo when no forecast found.
 
 	if (!ICNInfo)
 	{
@@ -214,7 +213,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 	i = 0;
 
 	while (success == false)
-	{ 
+	{
 		try
 		{
 			cnf->SourceProducers({producer(240, 86, 240, "ECGMTA")});
@@ -226,11 +225,11 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 		{
 			if (e == kFileDataNotFound)
 			{
-				myThreadedLogger.Error("No RADGLO-WM2 data found.");	
+				myThreadedLogger.Error("No RADGLO-WM2 data found.");
 				forecastTime.OriginDateTime().Adjust(kHourResolution, -1);
 				i++;
 			}
-			if (i > 100) 
+			if (i > 100)
 			{
 				return;
 			}
@@ -335,7 +334,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 					forecastTime.OriginDateTime().Adjust(kHourResolution, -1);
 					i++;
 				}
-			} 
+			}
 			if (i > 30)
 			{
 				MEPS_forecast = false;
@@ -357,7 +356,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 		T0MEPSInfo->Create(myTargetInfo->Base(), true);
 	}
 
-	if (!TInfo || !TDInfo || !TGInfo || !WGInfo || !NInfo || !ICNInfo || !LCInfo || !RADInfo || !T0ECInfo || !T0MEPSInfo)
+	if (!TGInfo || !WGInfo || !ICNInfo || !LCInfo || !RADInfo || !T0ECInfo || !T0MEPSInfo)
 	{
 		myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
 		                         static_cast<string>(forecastLevel));
@@ -375,7 +374,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 		double WG = WGInfo->Value();
 		double N = NInfo->Value();
 		double ICN;
-		if (!ICN_forecast) // No forecast available.
+		if (!ICN_forecast)  // No forecast available.
 		{
 			ICN = kHPMissingValue;
 		}
@@ -387,23 +386,23 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 		double RAD = RADInfo->Value();
 		double T0EC = T0ECInfo->Value();
 		double T0MEPS;
-		if (!MEPS_forecast) // No forecast available.
+		if (!MEPS_forecast)  // No forecast available.
 		{
 			T0MEPS = kHPMissingValue;
 		}
-		else 
+		else
 		{
 			T0MEPS = T0MEPSInfo->Value();
-			if  (IsMissingValue({T0MEPS})) // MEPS hour 66 case.
+			if (IsMissingValue({T0MEPS}))  // MEPS hour 66 case.
 			{
 				T0MEPS = kHPMissingValue;
 			}
 		}
 
 		if (IsMissingValue({T, TD, TG, WG, N, ICN, LC, RAD, T0EC, T0MEPS}))
-                {
-                        continue;
-                }
+		{
+			continue;
+		}
 
 		// Calculating indexes and coefficients.
 
@@ -446,7 +445,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 		// Calculating frost and severe frost probability.
 
-		double frost_prob = MissingDouble();
+		double frost_prob;
 
 		if (T < -3.0)
 		{
@@ -510,14 +509,14 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 		/*if ((month >= 4 && month <= 8) || (month == 9 && day <= 15))
 		{
-			NFmiLocation theLocation(myTargetInfo->LatLon().X(), myTargetInfo->LatLon().Y());
+		    NFmiLocation theLocation(myTargetInfo->LatLon().X(), myTargetInfo->LatLon().Y());
 
-			double elevationAngle = theLocation.ElevationAngle(theTime);
-			double angleCoef = kHPMissingValue;
+		    double elevationAngle = theLocation.ElevationAngle(theTime);
+		    double angleCoef = kHPMissingValue;
 
-			angleCoef = rampDown(-1.0, 20.0, elevationAngle);
+		    angleCoef = rampDown(-1.0, 20.0, elevationAngle);
 
-			frost_prob = angleCoef * frost_prob;
+		    frost_prob = angleCoef * frost_prob;
 		}*/
 
 		// No frost probability on sea when there is no ice.

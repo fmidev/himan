@@ -33,8 +33,7 @@ void AreaAndGrid(const boost::property_tree::ptree& pt, const shared_ptr<configu
 void SourceProducer(const boost::property_tree::ptree& pt, const shared_ptr<configuration>& conf);
 void TargetProducer(const boost::property_tree::ptree& pt, const shared_ptr<configuration>& conf);
 vector<forecast_type> ParseForecastTypes(const boost::property_tree::ptree& pt);
-void ParseSteps(const boost::property_tree::ptree& pt, shared_ptr<configuration>& conf,
-                const vector<raw_time>& originDateTimes);
+void Steps(const boost::property_tree::ptree& pt, shared_ptr<configuration>& conf);
 raw_time GetLatestOriginDateTime(const shared_ptr<configuration> conf, const string& latest);
 
 vector<level> LevelsFromString(const string& levelType, const string& levelValues);
@@ -427,7 +426,7 @@ void ForecastTypes(const boost::property_tree::ptree& pt, std::shared_ptr<config
 	}
 }
 
-void Time(const boost::property_tree::ptree& pt, shared_ptr<configuration>& conf)
+std::vector<raw_time> OriginTime(const boost::property_tree::ptree& pt, shared_ptr<configuration>& conf)
 {
 	const string mask = "%Y-%m-%d %H:%M:%S";
 
@@ -460,19 +459,14 @@ void Time(const boost::property_tree::ptree& pt, shared_ptr<configuration>& conf
 		}
 	}
 
-	/* Check time steps */
-
-	if (originDateTimes.empty() == false)
-	{
-		ParseSteps(pt, conf, originDateTimes);
-	}
+	return originDateTimes;
 }
 
 void CheckCommonOptions(const boost::property_tree::ptree& pt, shared_ptr<configuration>& conf)
 {
 	Producers(pt, conf);
 	AreaAndGrid(pt, conf);
-	Time(pt, conf);
+	Steps(pt, conf);
 	FileCompression(pt, conf);
 	ReadDataFromDatabase(pt, conf);
 	ReadFromDatabase(pt, conf);
@@ -707,9 +701,27 @@ raw_time GetLatestOriginDateTime(const shared_ptr<configuration> conf, const str
 	                    to_string(sourceProducer.Id()));
 }
 
-void ParseSteps(const boost::property_tree::ptree& pt, shared_ptr<configuration>& conf,
-                const vector<raw_time>& originDateTimes)
+void Steps(const boost::property_tree::ptree& pt, shared_ptr<configuration>& conf)
 {
+	auto originDateTimes = OriginTime(pt, conf);
+
+	if (originDateTimes.empty())
+	{
+		const auto oldTimes = conf->Times();
+		if (oldTimes.empty())
+		{
+			return;
+		}
+
+		set<raw_time> uniqTimes;
+		for_each(oldTimes.begin(), oldTimes.end(),
+		         [&uniqTimes](const forecast_time& ftime) { uniqTimes.insert(ftime.OriginDateTime()); });
+
+		copy(uniqTimes.begin(), uniqTimes.end(), std::back_inserter(originDateTimes));
+	}
+
+	ASSERT(originDateTimes.empty() == false);
+
 	auto GenerateList = [&originDateTimes](const time_duration& start, const time_duration& stop,
 	                                       const time_duration& step) {
 		vector<forecast_time> times;
@@ -839,9 +851,12 @@ void ParseSteps(const boost::property_tree::ptree& pt, shared_ptr<configuration>
 		conf->ForecastStep(step);
 		conf->Times(GenerateList(start, stop, step));
 	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+	}
 	catch (exception& e)
 	{
-		throw runtime_error(string("Error parsing time information: ") + e.what());
+		throw runtime_error(string("Error parsing time information from 'start_minute': ") + e.what());
 	}
 }
 

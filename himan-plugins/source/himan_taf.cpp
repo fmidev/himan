@@ -39,9 +39,6 @@ void himan_taf::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void himan_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 {
-	// Get producer meta information
-	producer prod = itsConfiguration->SourceProducer(0);
-
 	auto myThreadedLogger = logger("himan_taf_pluginThread #" + to_string(threadIndex));
 
 	forecast_time forecastTime = myTargetInfo->Time();

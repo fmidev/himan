@@ -89,7 +89,7 @@ template <typename T>
 bool InterpolateArea(const grid* baseGrid, std::shared_ptr<info<T>> source);
 
 template <typename T>
-bool Interpolate(const grid* baseGrid, std::vector<std::shared_ptr<info<T>>>& infos);
+bool Interpolate(const grid* baseGrid, const std::vector<std::shared_ptr<info<T>>>& infos);
 
 bool IsVectorComponent(const std::string& paramName);
 
@@ -132,7 +132,7 @@ template <typename T>
 std::pair<size_t, T> NearestPoint(reduced_gaussian_grid& source, point target);
 
 template <typename T>
-std::pair<size_t, T> NearestPoint(regular_grid& source, point target);
+std::pair<size_t, T> NearestPoint(const regular_grid& source, point target);
 }
 }
 

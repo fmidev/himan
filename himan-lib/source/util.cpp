@@ -1270,6 +1270,7 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 
 		auto strlongitudes = himan::util::Split(geominfo["longitudes_along_parallels"], ",");
 		vector<int> longitudes;
+		longitudes.reserve(strlongitudes.size());
 
 		for (auto& l : strlongitudes)
 		{

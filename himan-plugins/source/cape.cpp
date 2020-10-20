@@ -177,10 +177,7 @@ float Max(const vector<float>& vec)
 
 void MultiplyWith(vector<float>& vec, float multiplier)
 {
-	for (float& val : vec)
-	{
-		val *= multiplier;
-	}
+	for_each(vec.begin(), vec.end(), [multiplier](float& f) { f *= multiplier; });
 }
 
 template <typename T>
@@ -1598,9 +1595,6 @@ vector<pair<vector<float>, vector<float>>> cape::GetLFCCPU(shared_ptr<info<float
 				continue;
 			}
 
-			float& Tresult = (IsMissing(tup.get<6>())) ? tup.get<6>() : tup.get<8>();
-			float& Presult = (IsMissing(tup.get<7>())) ? tup.get<7>() : tup.get<9>();
-
 			const float prevdiff = prevTparcel - prevTenv;
 			const float diff = Tparcel - Tenv;
 			const bool isFirstLFC = (diff >= 0 || fabs(diff) < 1e-4) && IsMissing(prevdiff) && IsMissing(tup.get<6>());
@@ -1608,6 +1602,9 @@ vector<pair<vector<float>, vector<float>>> cape::GetLFCCPU(shared_ptr<info<float
 
 			if (isFirstLFC || isLastLFC)
 			{
+				float& Tresult = (IsMissing(tup.get<6>())) ? tup.get<6>() : tup.get<8>();
+				float& Presult = (IsMissing(tup.get<7>())) ? tup.get<7>() : tup.get<9>();
+
 				// Parcel is now warmer than environment, we have found LFC and entering CAPE zone
 
 				if (IsMissing(prevTparcel))

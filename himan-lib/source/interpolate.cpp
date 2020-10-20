@@ -164,7 +164,7 @@ template bool ReorderPoints<double>(const grid*, std::shared_ptr<info<double>>);
 template bool ReorderPoints<float>(const grid*, std::shared_ptr<info<float>>);
 
 template <typename T>
-bool Interpolate(const grid* baseGrid, std::vector<std::shared_ptr<info<T>>>& infos)
+bool Interpolate(const grid* baseGrid, const std::vector<std::shared_ptr<info<T>>>& infos)
 {
 	for (const auto& info : infos)
 	{
@@ -252,8 +252,8 @@ bool Interpolate(const grid* baseGrid, std::vector<std::shared_ptr<info<T>>>& in
 	return true;
 }
 
-template bool Interpolate<double>(const grid*, std::vector<std::shared_ptr<info<double>>>&);
-template bool Interpolate<float>(const grid*, std::vector<std::shared_ptr<info<float>>>&);
+template bool Interpolate<double>(const grid*, const std::vector<std::shared_ptr<info<double>>>&);
+template bool Interpolate<float>(const grid*, const std::vector<std::shared_ptr<info<float>>>&);
 
 bool IsVectorComponent(const std::string& paramName)
 {
@@ -772,7 +772,7 @@ std::pair<size_t, T> NearestPoint(reduced_gaussian_grid& source, point target)
 }
 
 template <typename T>
-std::pair<size_t, T> NearestPoint(regular_grid& source, point target)
+std::pair<size_t, T> NearestPoint(const regular_grid& source, point target)
 {
 	auto xy = source.XY(target);
 	if (IsMissing(xy.X()) || IsMissing(xy.Y()))

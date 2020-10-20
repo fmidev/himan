@@ -258,13 +258,7 @@ vec CalculateStormRelativeHelicity(shared_ptr<const plugin_configuration> conf, 
 		prevZInfo = ZInfo;
 	}
 
-	for (auto& v : SRH)
-	{
-		if (v == 0)
-		{
-			v = MissingDouble();
-		}
-	}
+	replace_if(SRH.begin(), SRH.end(), [](const double& v) { return v == 0.; }, MissingDouble());
 
 	return SRH;
 }

@@ -29,7 +29,7 @@ class lambert_conformal_grid : public regular_grid
 	lambert_conformal_grid(const lambert_conformal_grid& other);
 	lambert_conformal_grid& operator=(const lambert_conformal_grid& other) = delete;
 
-	virtual std::string ClassName() const
+	virtual std::string ClassName() const override
 	{
 		return "himan::lambert_conformal_grid";
 	}
