@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 20.10.19
+Version: 20.10.26
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 20.10.15
+Requires: himan-lib >= 20.10.26
 Requires: himan-plugins
 Requires: gdal >= 1.11.0
 Requires: zlib
@@ -65,6 +65,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Mon Oct 26 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.26-1.fmi
+- Changes in lib headers
 * Mon Oct 19 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.19-1.fmi
 - Add dependency to fmt (a string formatting library)
 * Thu Oct 15 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.15-1.fmi
