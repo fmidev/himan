@@ -553,6 +553,20 @@ local lcl = LCL_(P, T, TD)
 print("lcl pressure: " .. lcl.P .. " temperature: " .. lcl.T .. " specific humidity: " .. lcl.Q)
 ```
 
+## ElevationAngle_
+
+Calculate sun elevation angle.
+
+```
+-- ElevationAngle_(point, time)
+
+local point = result:GetLatLon(1)
+local time = current_time:GetValidDateTime()
+
+print(ElevationAngle_(point, time))
+```
+
+
 # Examples
 
 To launch a lua script, we'll need the lua script itself and a himan configuration in json format.
