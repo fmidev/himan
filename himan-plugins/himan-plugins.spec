@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.10.26
+Version: 20.10.28
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -134,6 +134,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Wed Oct 28 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.28-1.fmi
+- More additions to luatool
 * Mon Oct 26 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.26-1.fmi
 - Additions to luatool
 * Tue Oct 20 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.20-1.fmi

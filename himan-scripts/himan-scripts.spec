@@ -3,7 +3,7 @@
 %define LIBNAME himan-scripts
 Summary: himan-scripts collection
 Name: %{LIBNAME}
-Version: 20.10.26
+Version: 20.10.28
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -39,6 +39,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/himan-scripts/*.lua
 
 %changelog
+* Wed Oct 28 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.28-1.fmi
+- Add snwc-maxwind.lua
 * Mon Oct 26 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.26-1.fmi
 - Add snwc-radiation.lua
 * Mon Sep 14 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.9.14-1.fmi
