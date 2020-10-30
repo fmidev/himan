@@ -1374,6 +1374,43 @@ void DetermineMessageNumber(NFmiGribMessage& message, file_information& finfo, H
 			// the existing files and start numbering from there
 			NFmiGrib rdr;
 			rdr.Open(finfo.file_location);
+			const int msgCount = rdr.MessageCount();
+
+			if (msgCount == INVALID_INT_VALUE)
+			{
+				// HIMAN-319
+				// Existing grib file is not finished correctly, it has 'GRIB'
+				// but not '7777'
+				//
+				// What can we do now? We cannot append to this file because that will
+				// cause problems to readers.
+				//
+				// 1. Abort and log this information
+				//  + Not destructive
+				//  - Needs manual intervention
+				//  - Log line is easily lost as a lot of logging is produced
+				//
+				// 2. Rename invalid file to something else and continue
+				//    with new file
+				//  + No data is lost
+				//  + Processing can continue without intervention
+				//  - Old file is left as an 'orphan', it will not be cleaned
+				//
+				// 3. Remove invalid file
+				//  + Clean solution
+				//  + Processing can continue without intervention
+				//  - Data is lost, could be very bad (if accidentally the filename is
+				//    the same as some very important data file)
+				//  - Possible existing memory mapping of file will cause signals
+				//    to reading programs
+				//
+				// Choose option 2.
+
+				logger logr("grib");
+				logr.Warning(fmt::format("Renaming invalid and incomplete grib file '{}' to '{}.invalid'",
+				                         finfo.file_location, finfo.file_location));
+				boost::filesystem::rename(finfo.file_location, fmt::format("{}.invalid", finfo.file_location));
+			}
 			messages[finfo.file_location] = rdr.MessageCount();
 			offsets[finfo.file_location] = boost::filesystem::file_size(finfo.file_location);
 		}
