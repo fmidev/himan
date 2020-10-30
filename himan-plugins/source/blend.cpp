@@ -124,11 +124,11 @@ bool blend::ParseConfigurationOptions(const shared_ptr<const plugin_configuratio
 		return false;
 	}
 
-	const string hours = conf->GetValue("hours");
+	const string hours = conf->GetValue("producer_hours");
 
 	if ((itsCalculationMode == kCalculateBias || itsCalculationMode == kCalculateMAE) && hours.empty())
 	{
-		throw std::runtime_error(ClassName() + ": number of previous hours ('hours') for calculation not specified");
+		throw std::runtime_error(ClassName() + ": number of previous hours ('producer_hours') for calculation not specified");
 	}
 	if (itsCalculationMode == kCalculateBias || itsCalculationMode == kCalculateMAE)
 	{
