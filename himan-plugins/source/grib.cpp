@@ -1410,9 +1410,14 @@ void DetermineMessageNumber(NFmiGribMessage& message, file_information& finfo, H
 				logr.Warning(fmt::format("Renaming invalid and incomplete grib file '{}' to '{}.invalid'",
 				                         finfo.file_location, finfo.file_location));
 				boost::filesystem::rename(finfo.file_location, fmt::format("{}.invalid", finfo.file_location));
+				offsets[finfo.file_location] = 0;
+				messages[finfo.file_location] = 0;
 			}
-			messages[finfo.file_location] = rdr.MessageCount();
-			offsets[finfo.file_location] = boost::filesystem::file_size(finfo.file_location);
+			else
+			{
+				messages[finfo.file_location] = msgCount;
+				offsets[finfo.file_location] = boost::filesystem::file_size(finfo.file_location);
+			}
 		}
 	}
 
