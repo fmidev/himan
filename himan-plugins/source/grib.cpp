@@ -1404,14 +1404,48 @@ void DetermineMessageNumber(NFmiGribMessage& message, file_information& finfo, H
 				//  - Possible existing memory mapping of file will cause signals
 				//    to reading programs
 				//
-				// Choose option 2.
+				// 4. Truncate file so that invalid message is removed
+				//   + Clean solution
+				//   + Processing can continue without intervention
+				//   + Older messages are left intact and information is radon is accurate
+				//   - Slow operation
+				//
+				// Choose option 4.
 
 				logger logr("grib");
-				logr.Warning(fmt::format("Renaming invalid and incomplete grib file '{}' to '{}.invalid'",
-				                         finfo.file_location, finfo.file_location));
-				boost::filesystem::rename(finfo.file_location, fmt::format("{}.invalid", finfo.file_location));
-				offsets[finfo.file_location] = 0;
-				messages[finfo.file_location] = 0;
+				logr.Warning(fmt::format("Found incomplete grib file '{}', truncating to last complete message",
+				                         finfo.file_location));
+
+				ifstream fp(finfo.file_location.c_str(), ios::in | ios::binary | ios::ate);
+				ASSERT(fp);
+
+				const long long origlen = fp.tellg();
+				long len = origlen;
+				char buffer[8];
+
+				for (int i = 8; i <= origlen; i++)
+				{
+					fp.seekg(-i, fp.end);
+					fp.read(buffer, 8);
+					if (strncmp(buffer, "7777GRIB", 8) == 0)
+					{
+						break;
+					}
+					len = fp.tellg();
+				}
+
+				if (len <= 8)
+				{
+					logr.Error(fmt::format("Unable to truncate file '{}', remove it manually", finfo.file_location));
+					himan::Abort();
+				}
+
+				len -= 4;
+				boost::filesystem::resize_file(finfo.file_location, len);
+
+				logr.Debug(fmt::format("Truncated file '{}' from {} to {} bytes", finfo.file_location, origlen, len));
+
+				return DetermineMessageNumber(message, finfo, writeMode);
 			}
 			else
 			{
