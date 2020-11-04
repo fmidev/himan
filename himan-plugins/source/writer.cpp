@@ -30,13 +30,33 @@ void writer::AddToPending(const std::vector<std::string>& names)
 	pendingWrites.insert(pendingWrites.end(), names.begin(), names.end());
 }
 
+void ReadConfigurationWriteOptions(write_options& writeOptions)
+{
+	// Other options in write_options struct could also be checked here,
+	// but they are really not that interesting hence I'm skipping them
+	// at this stage.
+
+	const std::string precision = writeOptions.configuration->GetValue("write_options.precision");
+
+	if (precision.empty() == false)
+	{
+		writeOptions.precision = std::stoi(precision);
+	}
+}
+
 template <typename T>
 std::pair<himan::HPWriteStatus, himan::file_information> writer::CreateFile(
     info<T>& theInfo, std::shared_ptr<const plugin_configuration> conf)
 {
 	itsWriteOptions.configuration = conf;
 
-	switch (itsWriteOptions.configuration->OutputFileType())
+	// do not modify write configuration of fetcher instance,
+	// as it may be shared among many writes
+	auto wo = itsWriteOptions;
+
+	ReadConfigurationWriteOptions(wo);
+
+	switch (wo.configuration->OutputFileType())
 	{
 		case kGRIB:
 		case kGRIB1:
@@ -44,7 +64,7 @@ std::pair<himan::HPWriteStatus, himan::file_information> writer::CreateFile(
 		{
 			auto theGribWriter = GET_PLUGIN(grib);
 
-			theGribWriter->WriteOptions(itsWriteOptions);
+			theGribWriter->WriteOptions(wo);
 			return theGribWriter->ToFile<T>(theInfo);
 		}
 		case kQueryData:
@@ -56,24 +76,23 @@ std::pair<himan::HPWriteStatus, himan::file_information> writer::CreateFile(
 			}
 
 			auto theWriter = GET_PLUGIN(querydata);
-			theWriter->WriteOptions(itsWriteOptions);
+			theWriter->WriteOptions(wo);
 
 			return theWriter->ToFile<T>(theInfo);
 		}
-		case kNetCDF:
-			break;
 
 		case kCSV:
 		{
 			auto theWriter = GET_PLUGIN(csv);
-			theWriter->WriteOptions(itsWriteOptions);
+			theWriter->WriteOptions(wo);
 
 			return theWriter->ToFile<T>(theInfo);
 		}
 		// Must have this or compiler complains
+		case kNetCDF:
 		default:
-			itsLogger.Error(fmt::format("Invalid file type: {}",
-			                            HPFileTypeToString.at(itsWriteOptions.configuration->OutputFileType())));
+			itsLogger.Error(
+			    fmt::format("Invalid file type: {}", HPFileTypeToString.at(wo.configuration->OutputFileType())));
 			break;
 	}
 

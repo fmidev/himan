@@ -134,7 +134,7 @@ long DetermineProductDefinitionTemplateNumber(long agg, long proc, long ftype)
 }
 
 template <typename T>
-long DetermineBitsPerValue(const vector<T>& values, double precision)
+long DetermineBitsPerValue(const vector<T>& values, int precision)
 {
 	/*
 	 * Calculate the minimum amount of bits required to represent the data in the precision specified.
@@ -191,7 +191,7 @@ long DetermineBitsPerValue(const vector<T>& values, double precision)
 	// Fallback if the calculation above fails
 	if (bitsPerValue < 0 || bitsPerValue > 24)
 	{
-		log.Error("bits per value calculation failed, defaulting to 24");
+		log.Error(fmt::format("Bits per value calculation failed for precision={}, defaulting to 24", precision));
 		log.Trace("D=" + to_string(static_cast<int>(D)) + " min=" + to_string(min) + " max=" + to_string(max) +
 		          " range=" + to_string(range));
 		bitsPerValue = 24;
