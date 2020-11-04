@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.10.30
+Version: 20.11.4
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -134,6 +134,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Wed Nov  4 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.4-1.fmi
+- Allow decimal precision to set at configuration
 * Fri Oct 30 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.30-1.fmi
 - Bugfix to blend
 * Wed Oct 28 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.28-1.fmi
