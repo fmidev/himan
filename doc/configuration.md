@@ -37,6 +37,7 @@ in global scope.
   * [Storage type](#Storage_type)
   * [Allowed missing values](#Allowed_missing_values)
   * [ss_state table name](#ss_state_table_name)
+  * [grib decimal precision](#grib_decimal_precision)
 * [Environment variables](#Environment_variables)
 * [Full examples](#Full_examples)
 
@@ -590,12 +591,13 @@ Example:
     "ss_state_table_name" : "new_name"
 
 
-## grib precision
+<a name="grib_decimal_precision"/>
+
+## grib decimal precision
 
 When writing output files in grib format, the precision is controlled in two ways: in radon database table param_precision contains
 the decimal precision (how many numbers after decimal point) for many parameters. This can be overridden with configuration file option
-'write_options.precision'. Option can only be specified in plugin scope. If neither is present, default setting is used. To specify
-maximum precision use value 999999.
+'write_options.precision'. Option can only be specified in plugin scope. If neither is present, default setting is used.
 
 Example:
 
