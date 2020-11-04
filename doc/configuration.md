@@ -532,13 +532,14 @@ By default Himan plugins are executed in a serialized fashion, mostly because ma
 
 This can be avoided by using the configuration file key 'async'. By default the value is false, confirming to the serialized execution. It can be set to true for any individual plugin or processqueue element scope.
 
+Example:
 
-                {
-			"async" : true,
-                        "leveltype" : "...",
-                        "levels" : "...",
-                        "plugins" : [ { "name" : "...", "async" : false } ]
-                }
+    {
+	"async" : true,
+        "leveltype" : "...",
+        "levels" : "...",
+        "plugins" : [ { "name" : "...", "async" : false } ]
+    }
 
 **Note! Asynchronous execution should only be enabled for those plugins that have no other plugins as dependants!**
 
@@ -587,6 +588,22 @@ Note: This option does not provide a way to change the name of the ss_state tabl
 Example:
 
     "ss_state_table_name" : "new_name"
+
+
+## grib precision
+
+When writing output files in grib format, the precision is controlled in two ways: in radon database table param_precision contains
+the decimal precision (how many numbers after decimal point) for many parameters. This can be overridden with configuration file option
+'write_options.precision'. Option can only be specified in plugin scope. If neither is present, default setting is used. To specify
+maximum precision use value 999999.
+
+Example:
+
+
+    {
+        "...",
+        "plugins" : [ { "name" : "...", "write_options.precision" : 2 } ]
+    }
 
 
 <a name="Environment_variables"/>
