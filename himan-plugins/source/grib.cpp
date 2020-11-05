@@ -1420,10 +1420,10 @@ void DetermineMessageNumber(NFmiGribMessage& message, file_information& finfo, H
 				ASSERT(fp);
 
 				const long long origlen = fp.tellg();
-				long len = origlen;
+				long long len = origlen;
 				char buffer[8];
 
-				for (int i = 8; i <= origlen; i++)
+				for (long long i = 8; i <= origlen; i++)
 				{
 					fp.seekg(-i, fp.end);
 					fp.read(buffer, 8);
