@@ -247,6 +247,10 @@ void windvector::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short 
 			c->Replace(sources[0]);
 			c->Replace(sources[1]);
 		}
+		else
+		{
+			myTargetInfo->Grid()->UVRelativeToGrid(sources[0]->Grid()->UVRelativeToGrid());
+		}
 
 		myTargetInfo->Index<param>(0);
 		auto& A = VEC(myTargetInfo);
