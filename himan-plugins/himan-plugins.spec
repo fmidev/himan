@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.11.4
+Version: 20.11.5
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -16,7 +16,7 @@ Requires: libstdc++
 Requires: himan-lib >= 20.10.26
 Requires: lua >= 5.1.4
 Requires: unixODBC
-Requires: libfmigrib >= 20.5.25
+Requires: libfmigrib >= 20.11.3
 Requires: libfmidb >= 20.7.8
 Requires: smartmet-library-newbase >= 20.4.18
 Requires: libpqxx
@@ -134,6 +134,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Thu Nov  5 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.5-1.fmi
+- Fix for case where reading incomplete grib file crashed Himan
 * Wed Nov  4 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.4-1.fmi
 - Allow decimal precision to set at configuration
 * Fri Oct 30 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.30-1.fmi
