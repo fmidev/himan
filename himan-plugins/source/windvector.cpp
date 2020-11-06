@@ -225,7 +225,7 @@ void windvector::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short 
 			SetAB(myTargetInfo, sources[0]);
 		}
 
-		ASSERT(UInfo->Grid()->Type() == VInfo->Grid()->Type());
+		ASSERT(sources[0]->Grid()->Type() == sources[1]->Grid()->Type());
 
 #ifdef HAVE_CUDA
 		if (sources[0]->PackedData()->HasData())
