@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.11.5
+Version: 20.11.9
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -134,6 +134,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Mon Nov  9 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.5-1.fmi
+- Modifications to windvector
 * Thu Nov  5 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.5-1.fmi
 - Fix for case where reading incomplete grib file crashed Himan
 * Wed Nov  4 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.4-1.fmi
