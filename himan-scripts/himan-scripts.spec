@@ -3,7 +3,7 @@
 %define LIBNAME himan-scripts
 Summary: himan-scripts collection
 Name: %{LIBNAME}
-Version: 20.11.4
+Version: 20.11.9
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -39,6 +39,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/himan-scripts/*.lua
 
 %changelog
+* Mon Nov  9 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.9-1.fmi
+- Add snwc-cloudiness-and-precipitation.lua
+- Add snwc-cloudlayers.lua
 * Wed Nov  4 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.4-1.fmi
 - Add snwc-copy-smartmet.lua
 * Wed Oct 28 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.28-1.fmi
