@@ -45,6 +45,7 @@ class windvector : public compiled_plugin, private compiled_plugin_base
 
 	HPWindVectorTargetType itsCalculationTarget;
 	bool itsVectorCalculation;
+	bool itsReverseCalculation;
 };
 
 // the class factory
