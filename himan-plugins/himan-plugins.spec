@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.11.9
+Version: 20.11.12
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 20.10.26
+Requires: himan-lib >= 20.11.12
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 20.11.3
@@ -134,7 +134,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
-* Mon Nov  9 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.5-1.fmi
+* Thu Nov 12 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.12-1.fmi
+- turbulence plugin cuda version
+* Mon Nov  9 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.9-1.fmi
 - Modifications to windvector
 * Thu Nov  5 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.5-1.fmi
 - Fix for case where reading incomplete grib file crashed Himan

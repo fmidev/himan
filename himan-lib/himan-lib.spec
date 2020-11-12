@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 20.10.26
+Version: 20.11.12
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -79,6 +79,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/*
 
 %changelog
+* Thu Nov 12 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.12-1.fmi
+- Fix to CentralDifference()
 * Mon Oct 26 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.26-1.fmi
 - Additions to metutil
 - Changes to producer & json_parser
