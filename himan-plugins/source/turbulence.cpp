@@ -11,6 +11,14 @@
 using namespace std;
 using namespace himan::plugin;
 
+#ifdef HAVE_CUDA
+namespace turbulence_cuda
+{
+extern void Process(std::shared_ptr<const himan::plugin_configuration> conf,
+                    std::shared_ptr<himan::info<float>> myTargetInfo);
+}
+#endif
+
 turbulence::turbulence()
 {
 	itsLogger = logger("turbulence");
@@ -41,7 +49,7 @@ void turbulence::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	SetParams({TI, TI2});
 
-	Start();
+	Start<float>();
 }
 
 /*
@@ -50,7 +58,7 @@ void turbulence::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
+void turbulence::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short threadIndex)
 {
 	/*
 	 * Required source parameters
@@ -82,140 +90,169 @@ void turbulence::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	myThreadedLogger.Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 	                       static_cast<string>(forecastLevel));
 
-	info_t UInfo, VInfo, HInfo, prevUInfo, prevVInfo, prevHInfo, nextUInfo, nextVInfo, nextHInfo;
+	string deviceType;
 
-	prevHInfo = Fetch(forecastTime, prevLevel, HParam, forecastType, false);
-	prevUInfo = Fetch(forecastTime, prevLevel, UParam, forecastType, false);
-	prevVInfo = Fetch(forecastTime, prevLevel, VParam, forecastType, false);
+#ifdef HAVE_CUDA
 
-	nextHInfo = Fetch(forecastTime, nextLevel, HParam, forecastType, false);
-	nextUInfo = Fetch(forecastTime, nextLevel, UParam, forecastType, false);
-	nextVInfo = Fetch(forecastTime, nextLevel, VParam, forecastType, false);
-
-	HInfo = Fetch(forecastTime, forecastLevel, HParam, forecastType, false);
-	UInfo = Fetch(forecastTime, forecastLevel, UParam, forecastType, false);
-	VInfo = Fetch(forecastTime, forecastLevel, VParam, forecastType, false);
-
-	if (!(prevHInfo && prevUInfo && prevVInfo && nextHInfo && nextUInfo && nextVInfo && HInfo && UInfo && VInfo))
+	if (itsConfiguration->UseCuda())
 	{
-		myThreadedLogger.Info("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
-		                      static_cast<string>(forecastLevel));
-		return;
+		deviceType = "GPU";
+
+		turbulence_cuda::Process(itsConfiguration, myTargetInfo);
 	}
-
-	// If calculating for hybrid levels, A/B vertical coordinates must be set
-	// (copied from source)
-	myTargetInfo->Index<param>(0);
-	SetAB(myTargetInfo, HInfo);
-
-	myTargetInfo->Index<param>(1);
-	SetAB(myTargetInfo, HInfo);
-
-	string deviceType = "CPU";
-
-	ASSERT(myTargetInfo->Grid()->Class() == kRegularGrid);
-
-	auto gr = dynamic_pointer_cast<regular_grid>(myTargetInfo->Grid());
-
-	const double Di = gr->Di();
-	const double Dj = gr->Dj();
-	point firstPoint = myTargetInfo->Grid()->FirstPoint();
-
-	const size_t Ni = gr->Ni();
-	const size_t Nj = gr->Nj();
-
-	vector<double> dx, dy;
-
-	switch (UInfo->Grid()->Type())
+	else
+#endif
 	{
-		case kLambertConformalConic:
-		{
-			dx = vector<double>(Nj, Di);
-			dy = vector<double>(Ni, Dj);
-			break;
-		};
-		case kRotatedLatitudeLongitude:
-			// When working in rotated space, first point must also be rotated
-			firstPoint = dynamic_pointer_cast<rotated_latitude_longitude_grid>(myTargetInfo->Grid())->Rotate(firstPoint);
-			// fall through
-		case kLatitudeLongitude:
-		{
-			dx = vector<double>(Nj, MissingDouble());
-			dy = vector<double>(Ni, MissingDouble());
+		shared_ptr<info<float>> UInfo, VInfo, HInfo, prevUInfo, prevVInfo, prevHInfo, nextUInfo, nextVInfo, nextHInfo;
 
-			for (size_t i = 0; i < Ni; ++i)
+		prevHInfo = Fetch<float>(forecastTime, prevLevel, HParam, forecastType, false);
+		prevUInfo = Fetch<float>(forecastTime, prevLevel, UParam, forecastType, false);
+		prevVInfo = Fetch<float>(forecastTime, prevLevel, VParam, forecastType, false);
+
+		nextHInfo = Fetch<float>(forecastTime, nextLevel, HParam, forecastType, false);
+		nextUInfo = Fetch<float>(forecastTime, nextLevel, UParam, forecastType, false);
+		nextVInfo = Fetch<float>(forecastTime, nextLevel, VParam, forecastType, false);
+
+		HInfo = Fetch<float>(forecastTime, forecastLevel, HParam, forecastType, false);
+		UInfo = Fetch<float>(forecastTime, forecastLevel, UParam, forecastType, false);
+		VInfo = Fetch<float>(forecastTime, forecastLevel, VParam, forecastType, false);
+
+		if (!(prevHInfo && prevUInfo && prevVInfo && nextHInfo && nextUInfo && nextVInfo && HInfo && UInfo && VInfo))
+		{
+			myThreadedLogger.Info("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
+			                      static_cast<string>(forecastLevel));
+			return;
+		}
+
+		// If calculating for hybrid levels, A/B vertical coordinates must be set
+		// (copied from source)
+		myTargetInfo->Index<param>(0);
+		SetAB(myTargetInfo, HInfo);
+
+		myTargetInfo->Index<param>(1);
+		SetAB(myTargetInfo, HInfo);
+
+		deviceType = "CPU";
+
+		ASSERT(myTargetInfo->Grid()->Class() == kRegularGrid);
+
+		auto gr = dynamic_pointer_cast<regular_grid>(myTargetInfo->Grid());
+
+		const float Di = static_cast<float>(gr->Di());
+		const float Dj = static_cast<float>(gr->Dj());
+		point firstPoint = myTargetInfo->Grid()->FirstPoint();
+
+		const size_t Ni = gr->Ni();
+		const size_t Nj = gr->Nj();
+
+		vector<float> dx, dy;
+
+		switch (UInfo->Grid()->Type())
+		{
+			case kLambertConformalConic:
 			{
-				dy[i] = util::LatitudeLength(0) * Dj / 360;
-			}
-
-			for (size_t j = 0; j < Nj; ++j)
+				dx = vector<float>(Nj, Di);
+				dy = vector<float>(Ni, Dj);
+				break;
+			};
+			case kRotatedLatitudeLongitude:
+				// When working in rotated space, first point must also be rotated
+				firstPoint =
+				    dynamic_pointer_cast<rotated_latitude_longitude_grid>(myTargetInfo->Grid())->Rotate(firstPoint);
+				// fall through
+			case kLatitudeLongitude:
 			{
-				dx[j] = util::LatitudeLength(firstPoint.Y() + double(j) * Dj) * Di / 360;
+				dx = vector<float>(Nj, MissingFloat());
+				dy = vector<float>(Ni, MissingFloat());
+
+				for (size_t i = 0; i < Ni; ++i)
+				{
+					dy[i] = util::LatitudeLength(0.0f) * Dj / 360.0f;
+				}
+
+				for (size_t j = 0; j < Nj; ++j)
+				{
+					dx[j] = util::LatitudeLength(static_cast<float>(firstPoint.Y()) + float(j) * Dj) * Di / 360.0f;
+				}
+				break;
 			}
-			break;
-		}
-		default:
-		{
-			myThreadedLogger.Error("Grid not supported for CAT calculation.");
-			exit(1);
-		}
-	}
-
-	pair<matrix<double>, matrix<double>> gradU = util::CentralDifference(UInfo->Data(), dx, dy);
-	pair<matrix<double>, matrix<double>> gradV = util::CentralDifference(VInfo->Data(), dx, dy);
-
-	LOCKSTEP(myTargetInfo, UInfo, VInfo, HInfo, prevUInfo, prevVInfo, prevHInfo, nextUInfo, nextVInfo, nextHInfo)
-	{
-		size_t index = myTargetInfo->LocationIndex();
-		double U = UInfo->Value();
-		double V = VInfo->Value();
-		double H = HInfo->Value();
-		double prevU = prevUInfo->Value();
-		double prevV = prevVInfo->Value();
-		double prevH = prevHInfo->Value();
-		double nextU = nextUInfo->Value();
-		double nextV = nextVInfo->Value();
-		double nextH = nextHInfo->Value();
-
-		if (IsMissingValue({U, V, H, prevU, prevV, prevH, nextU, nextV, nextH}))
-		{
-			continue;
+			default:
+			{
+				myThreadedLogger.Error("Grid not supported for CAT calculation.");
+				himan::Abort();
+			}
 		}
 
-		// Precalculation of wind shear, deformation and convergence
-		double WS = sqrt(pow((prevU + U + nextU) / 3, 2) + pow((prevV + V + nextV) / 3, 2));
-		double VWS = sqrt(pow((nextU - prevU) / (nextH - prevH), 2) + pow((nextV - prevV) / (nextH - prevH), 2));
-		double DEF = sqrt(pow(get<0>(gradU).At(index) - get<1>(gradV).At(index), 2) +
-		                  pow(get<0>(gradV).At(index) + get<1>(gradU).At(index), 2));
-		double CVG = -get<0>(gradU).At(index) - get<1>(gradV).At(index);
-
-		// Calculate scaling factor
-		double S;
-		double ScaleMax = 40;
-		double ScaleMin = 10;
-		if (WS >= ScaleMax)
+		bool jPositive;
+		if (gr->ScanningMode() == kTopLeft)
 		{
-			S = 1;
+			jPositive = false;
 		}
-		else if (WS >= ScaleMin && WS < ScaleMax)
+		else if (gr->ScanningMode() == kBottomLeft)
 		{
-			S = WS / ScaleMax;
+			jPositive = true;
 		}
 		else
 		{
-			S = ScaleMin / ScaleMax;
+			myThreadedLogger.Error("Grid not supported for CAT calculation.");
+			himan::Abort();
 		}
 
-		// Calculation of turbulence indices
-		double TI = S * VWS * DEF;
-		double TI2 = S * VWS * (DEF + CVG);
+		pair<matrix<float>, matrix<float>> gradU = util::CentralDifference(UInfo->Data(), dx, dy, jPositive);
+		pair<matrix<float>, matrix<float>> gradV = util::CentralDifference(VInfo->Data(), dx, dy, jPositive);
 
-		// return result
-		myTargetInfo->Index<param>(0);
-		myTargetInfo->Value(TI);
+		LOCKSTEP(myTargetInfo, UInfo, VInfo, HInfo, prevUInfo, prevVInfo, prevHInfo, nextUInfo, nextVInfo, nextHInfo)
+		{
+			size_t index = myTargetInfo->LocationIndex();
+			float U = UInfo->Value();
+			float V = VInfo->Value();
+			float prevU = prevUInfo->Value();
+			float prevV = prevVInfo->Value();
+			float prevH = prevHInfo->Value();
+			float nextU = nextUInfo->Value();
+			float nextV = nextVInfo->Value();
+			float nextH = nextHInfo->Value();
 
-		myTargetInfo->Index<param>(1);
-		myTargetInfo->Value(TI2);
+			if (IsMissingValue({U, V, prevU, prevV, prevH, nextU, nextV, nextH}))
+			{
+				continue;
+			}
+
+			// Precalculation of wind shear, deformation and convergence
+			float WS = sqrt(pow((prevU + U + nextU) / 3.0f, 2.0f) + pow((prevV + V + nextV) / 3.0f, 2.0f));
+			float VWS = sqrt(pow((nextU - prevU) / (nextH - prevH), 2.0f) + pow((nextV - prevV) / (nextH - prevH), 2.0f));
+			float DEF = sqrt(pow(get<0>(gradU).At(index) - get<1>(gradV).At(index), 2.0f) +
+			                  pow(get<0>(gradV).At(index) + get<1>(gradU).At(index), 2.0f));
+			float CVG = -get<0>(gradU).At(index) - get<1>(gradV).At(index);
+
+			// Calculate scaling factor
+			float S;
+			float ScaleMax = 40;
+			float ScaleMin = 10;
+			if (WS >= ScaleMax)
+			{
+				S = 1;
+			}
+			else if (WS >= ScaleMin && WS < ScaleMax)
+			{
+				S = WS / ScaleMax;
+			}
+			else
+			{
+				S = ScaleMin / ScaleMax;
+			}
+
+			// Calculation of turbulence indices
+			float TI = S * VWS * DEF;
+			float TI2 = S * VWS * (DEF + CVG);
+
+			// return result
+			myTargetInfo->Index<param>(0);
+			myTargetInfo->Value(TI);
+
+			myTargetInfo->Index<param>(1);
+			myTargetInfo->Value(TI2);
+		}
 	}
 
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
