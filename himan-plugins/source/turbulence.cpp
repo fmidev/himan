@@ -220,9 +220,10 @@ void turbulence::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short 
 
 			// Precalculation of wind shear, deformation and convergence
 			float WS = sqrt(pow((prevU + U + nextU) / 3.0f, 2.0f) + pow((prevV + V + nextV) / 3.0f, 2.0f));
-			float VWS = sqrt(pow((nextU - prevU) / (nextH - prevH), 2.0f) + pow((nextV - prevV) / (nextH - prevH), 2.0f));
+			float VWS =
+			    sqrt(pow((nextU - prevU) / (nextH - prevH), 2.0f) + pow((nextV - prevV) / (nextH - prevH), 2.0f));
 			float DEF = sqrt(pow(get<0>(gradU).At(index) - get<1>(gradV).At(index), 2.0f) +
-			                  pow(get<0>(gradV).At(index) + get<1>(gradU).At(index), 2.0f));
+			                 pow(get<0>(gradV).At(index) + get<1>(gradU).At(index), 2.0f));
 			float CVG = -get<0>(gradU).At(index) - get<1>(gradV).At(index);
 
 			// Calculate scaling factor
