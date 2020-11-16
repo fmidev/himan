@@ -35,6 +35,7 @@ const himan::param CINParam("CIN-JKG");
 const himan::param PParam("P-HPA");
 const himan::param TParam("T-K");
 const himan::param ZParam("HL-M");
+const himan::param RHParam("RH-PRCNT");
 
 const double mucape_search_limit = 550.;         // hPa
 const double mucape_maxima_search_limit = 650.;  // hPa

@@ -121,8 +121,8 @@ tuple<vec2d, vec2d, vec2d> GetSampledSourceData(shared_ptr<const himan::plugin_c
 		{
 			PInfo = f->Fetch<float>(conf, myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType(), false);
 			TInfo = f->Fetch<float>(conf, myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType(), false);
-			RHInfo = f->Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("RH-PRCNT"),
-			                         myTargetInfo->ForecastType(), false);
+			RHInfo =
+			    f->Fetch<float>(conf, myTargetInfo->Time(), curLevel, RHParam, myTargetInfo->ForecastType(), false);
 		}
 		catch (const HPExceptionType& e)
 		{
@@ -1742,8 +1742,7 @@ cape_source cape::GetSurfaceValues(shared_ptr<info<float>> myTargetInfo)
 	 */
 
 	auto TInfo = Fetch<float>(myTargetInfo->Time(), itsBottomLevel, TParam, myTargetInfo->ForecastType(), false);
-	auto RHInfo =
-	    Fetch<float>(myTargetInfo->Time(), itsBottomLevel, param("RH-PRCNT"), myTargetInfo->ForecastType(), false);
+	auto RHInfo = Fetch<float>(myTargetInfo->Time(), itsBottomLevel, RHParam, myTargetInfo->ForecastType(), false);
 	auto PInfo = Fetch<float>(myTargetInfo->Time(), itsBottomLevel, PParam, myTargetInfo->ForecastType(), false);
 
 	if (!TInfo || !RHInfo || !PInfo)
@@ -2042,8 +2041,7 @@ cape_multi_source cape::GetNHighestThetaEValuesCPU(shared_ptr<info<float>> myTar
 	while (true)
 	{
 		auto TInfo = Fetch<float>(myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType(), false);
-		auto RHInfo =
-		    Fetch<float>(myTargetInfo->Time(), curLevel, param("RH-PRCNT"), myTargetInfo->ForecastType(), false);
+		auto RHInfo = Fetch<float>(myTargetInfo->Time(), curLevel, RHParam, myTargetInfo->ForecastType(), false);
 		auto PInfo = Fetch<float>(myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType(), false);
 
 		if (!TInfo || !RHInfo || !PInfo)
