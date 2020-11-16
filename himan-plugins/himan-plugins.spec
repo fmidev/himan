@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.11.12
+Version: 20.11.16
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -134,6 +134,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Mon Nov 16 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.12-1.fmi
+- cape cuda code optimization
+- frost support smartmet nwc
 * Thu Nov 12 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.12-1.fmi
 - turbulence plugin cuda version
 * Mon Nov  9 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.9-1.fmi
