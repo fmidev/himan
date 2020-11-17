@@ -508,8 +508,9 @@ __global__ void ThetaEKernel(float* __restrict__ d_T, const float* __restrict__ 
 	}
 }
 
-__global__ void MixingRatioKernel(const float* __restrict__ d_T, const float* __restrict__ d_Pstart,
-                                  const float* __restrict__ d_Pstop, const float* __restrict__ d_RH,
+__global__ void MixingRatioKernel(const __half* __restrict__ d_T, const float* __restrict__ d_Pstart,
+                                  const float* __restrict__ d_Pstop, const __half* __restrict__ d_RH,
+                                  const float* __restrict__ d_Tfirst, const float* __restrict__ d_RHfirst,
                                   float* __restrict__ d_Tpot, float* __restrict__ d_MR, size_t k, size_t n, size_t N)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -520,7 +521,7 @@ __global__ void MixingRatioKernel(const float* __restrict__ d_T, const float* __
 
 	if (idx < N)
 	{
-		const float T = d_T[idx * n + k];
+		const float T = d_Tfirst[idx] - __half2float(d_T[idx * n + k]);
 		float P = d_Pstart[idx] - 1.f * k;
 
 		if (P < d_Pstop[idx])
@@ -528,7 +529,8 @@ __global__ void MixingRatioKernel(const float* __restrict__ d_T, const float* __
 			P = himan::MissingFloat();
 		}
 
-		const float RH = d_RH[idx * n + k];
+		const float RH = d_RHfirst[idx] - __half2float(d_RH[idx * n + k]);
+
 		ASSERT((T > 150 && T < 350) || IsMissing(T));
 		ASSERT((P > 100 && P < 1500) || IsMissing(P));
 		ASSERT((RH >= 0 && RH < 102) || IsMissing(RH));
@@ -552,12 +554,20 @@ __global__ void MixingRatioFinalizeKernel(float* __restrict__ d_T, float* __rest
 
 		ASSERT((P > 100 && P < 1500) || IsMissing(P));
 
-		const float T = Tpot * pow((P / 1000.), 0.2854);
+		float T = Tpot * pow((P / 1000.), 0.2854);
 		const float Es = metutil::Es_<float>(T);  // Saturated water vapor pressure
 		const float E = metutil::E_<float>(MR, 100 * P);
 		const float RH = fminf(102., E / Es * 100);
+
 		d_TD[idx] = metutil::DewPointFromRH_<float>(T, RH);
 		d_T[idx] = T;
+
+		if (isnan(T) || isnan(d_TD[idx]))
+		{
+			// half is mangling the missing value-nan
+			d_T[idx] = himan::MissingFloat();
+			d_TD[idx] = himan::MissingFloat();
+		}
 	}
 }
 
@@ -709,7 +719,6 @@ __global__ void MeanKernel(const float* __restrict__ d_Tpot, const float* __rest
 		if (IsValid(d_Tpot[idx]))
 		{
 			// trapezoidal integration
-
 			d_range[idx] += 1;
 			d_meanTpot[idx] += (d_prevTpot[idx] + d_Tpot[idx]) * 0.5;
 			d_meanMR[idx] += (d_prevMR[idx] + d_MR[idx]) * 0.5;
@@ -729,20 +738,21 @@ __global__ void MeanFinalizeKernel(float* __restrict__ d_meanTpot, float* __rest
 	}
 }
 
-__global__ void CopyProfileValuesKernel(float* __restrict__ d_profile, const float* __restrict__ d_arr, int i, size_t n,
-                                        size_t N)
+__global__ void CopyProfileValuesKernel(const float* __restrict__ d_first, __half* __restrict__ d_profile,
+                                        const float* __restrict__ d_arr, int i, size_t n, size_t N)
 {
 	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < N)
 	{
-		d_profile[idx * n + i] = d_arr[idx];
+		d_profile[idx * n + i] = __float2half(d_first[idx] - d_arr[idx]);
 	}
 }
 
-__global__ void SampleKernel(const float* __restrict__ d_x, const float* __restrict__ d_y,
-                             const float* __restrict__ d_x0, const float* __restrict__ d_x1,
-                             float* __restrict__ d_sampled, size_t levelCount, size_t sampleCount, size_t N)
+__global__ void SampleKernel(const __half* __restrict__ d_x, const __half* __restrict__ d_y,
+                             const float* __restrict__ d_yfirst, const float* __restrict__ d_x0,
+                             const float* __restrict__ d_x1, __half* __restrict__ d_sampled, float* d_first,
+                             size_t levelCount, size_t sampleCount, size_t N)
 {
 	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -752,6 +762,7 @@ __global__ void SampleKernel(const float* __restrict__ d_x, const float* __restr
 		// we might have the case where starting level is outside the
 		// profile
 		int h = 0;
+
 		for (int i = 0; i < sampleCount; i++)
 		{
 			float sample = d_x0[idx] - static_cast<float>(i);
@@ -761,18 +772,26 @@ __global__ void SampleKernel(const float* __restrict__ d_x, const float* __restr
 				sample = himan::MissingFloat();
 			}
 
-			d_sampled[idx * sampleCount + i] = himan::MissingFloat();
+			d_sampled[idx * sampleCount + i] = __float2half(himan::MissingFloat());
 
 			for (int j = 1; j < levelCount; j++)
 			{
-				const float x1 = d_x[idx * levelCount + j - 1];
-				const float y1 = d_y[idx * levelCount + j - 1];
-				const float x2 = d_x[idx * levelCount + j];
-				const float y2 = d_y[idx * levelCount + j];
+				const int ii = idx * levelCount + j - 1;
+				const float x1 = d_x0[idx] - __half2float(d_x[ii]);
+				const float y1 = d_yfirst[idx] - __half2float(d_y[ii]);
+				const float x2 = d_x0[idx] - __half2float(d_x[ii + 1]);
+				const float y2 = d_yfirst[idx] - __half2float(d_y[ii + 1]);
 
 				if (x1 >= sample && x2 <= sample)
 				{
-					d_sampled[idx * sampleCount + h] = interpolation::Linear<float>(sample, x1, x2, y1, y2);
+					const float val = interpolation::Linear<float>(sample, x1, x2, y1, y2);
+
+					if (h == 0)
+					{
+						d_first[idx] = val;
+					}
+
+					d_sampled[idx * sampleCount + h] = __float2half(d_first[idx] - val);
 					h++;
 					break;
 				}
@@ -1012,22 +1031,23 @@ cape_multi_source cape_cuda::GetNHighestThetaEValuesGPU(const std::shared_ptr<co
 
 void GetSampledSourceDataGPU(std::shared_ptr<const himan::plugin_configuration> conf,
                              std::shared_ptr<himan::info<float>> myTargetInfo, const float* d_P500m,
-                             const float* d_Psurface, float* d_temperatureSample, float* d_humiditySample,
-                             const himan::level& startLevel, const himan::level& stopLevel, unsigned int sampleCount,
-                             cudaStream_t& stream)
+                             const float* d_Psurface, const float* d_Tsurface, const float* d_RHsurface,
+                             __half* d_temperatureSample, __half* d_humiditySample, float* __restrict__ d_Tfirst,
+                             float* __restrict__ d_RHfirst, const himan::level& startLevel,
+                             const himan::level& stopLevel, unsigned int sampleCount, cudaStream_t& stream)
 {
 	using namespace himan;
 	const size_t N = myTargetInfo->SizeLocations();
 	level curLevel = startLevel;
 
 	const int levelCount = 1 + static_cast<int>(curLevel.Value() - stopLevel.Value());
-	float* d_pressureProfile = 0;
-	float* d_temperatureProfile = 0;
-	float* d_humidityProfile = 0;
+	__half* d_pressureProfile = 0;
+	__half* d_temperatureProfile = 0;
+	__half* d_humidityProfile = 0;
 	float* d_arr = 0;
-	CUDA_CHECK(cudaMalloc((float**)&d_temperatureProfile, N * levelCount * sizeof(float)));
-	CUDA_CHECK(cudaMalloc((float**)&d_pressureProfile, N * levelCount * sizeof(float)));
-	CUDA_CHECK(cudaMalloc((float**)&d_humidityProfile, N * levelCount * sizeof(float)));
+	CUDA_CHECK(cudaMalloc((__half**)&d_temperatureProfile, N * levelCount * sizeof(__half)));
+	CUDA_CHECK(cudaMalloc((__half**)&d_pressureProfile, N * levelCount * sizeof(__half)));
+	CUDA_CHECK(cudaMalloc((__half**)&d_humidityProfile, N * levelCount * sizeof(__half)));
 	CUDA_CHECK(cudaMalloc((float**)&d_arr, N * sizeof(float)));
 
 	const int blockSize = 256;
@@ -1039,15 +1059,18 @@ void GetSampledSourceDataGPU(std::shared_ptr<const himan::plugin_configuration> 
 	{
 		auto TInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType());
 		cuda::PrepareInfo(TInfo, d_arr, stream, conf->UseCacheForReads());
-		CopyProfileValuesKernel<<<gridSize, blockSize, 0, stream>>>(d_temperatureProfile, d_arr, k, levelCount, N);
+		CopyProfileValuesKernel<<<gridSize, blockSize, 0, stream>>>(d_Tsurface, d_temperatureProfile, d_arr, k,
+		                                                            levelCount, N);
 
 		auto PInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType());
 		cuda::PrepareInfo(PInfo, d_arr, stream, conf->UseCacheForReads());
-		CopyProfileValuesKernel<<<gridSize, blockSize, 0, stream>>>(d_pressureProfile, d_arr, k, levelCount, N);
+		CopyProfileValuesKernel<<<gridSize, blockSize, 0, stream>>>(d_Psurface, d_pressureProfile, d_arr, k, levelCount,
+		                                                            N);
 
 		auto RHInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, RHParam, myTargetInfo->ForecastType());
 		cuda::PrepareInfo(RHInfo, d_arr, stream, conf->UseCacheForReads());
-		CopyProfileValuesKernel<<<gridSize, blockSize, 0, stream>>>(d_humidityProfile, d_arr, k, levelCount, N);
+		CopyProfileValuesKernel<<<gridSize, blockSize, 0, stream>>>(d_RHsurface, d_humidityProfile, d_arr, k,
+		                                                            levelCount, N);
 
 		k++;
 		curLevel.Value(curLevel.Value() - 1);
@@ -1056,10 +1079,11 @@ void GetSampledSourceDataGPU(std::shared_ptr<const himan::plugin_configuration> 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 	CUDA_CHECK(cudaFree(d_arr));
 
-	SampleKernel<<<gridSize, blockSize, 0, stream>>>(d_pressureProfile, d_temperatureProfile, d_Psurface, d_P500m,
-	                                                 d_temperatureSample, levelCount, sampleCount, N);
-	SampleKernel<<<gridSize, blockSize, 0, stream>>>(d_pressureProfile, d_humidityProfile, d_Psurface, d_P500m,
-	                                                 d_humiditySample, levelCount, sampleCount, N);
+	SampleKernel<<<gridSize, blockSize, 0, stream>>>(d_pressureProfile, d_temperatureProfile, d_Tsurface, d_Psurface,
+	                                                 d_P500m, d_temperatureSample, d_Tfirst, levelCount, sampleCount,
+	                                                 N);
+	SampleKernel<<<gridSize, blockSize, 0, stream>>>(d_pressureProfile, d_humidityProfile, d_RHsurface, d_Psurface,
+	                                                 d_P500m, d_humiditySample, d_RHfirst, levelCount, sampleCount, N);
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 	CUDA_CHECK(cudaFree(d_pressureProfile));
@@ -1088,46 +1112,75 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	h->Time(myTargetInfo->Time());
 	h->ForecastType(myTargetInfo->ForecastType());
 
-	auto PInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType(), false);
+	auto PInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType(), false);
+	auto TInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType(), false);
+	auto RHInfo =
+	    cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, RHParam, myTargetInfo->ForecastType(), false);
 
-	if (!PInfo || PInfo->Data().MissingCount() == PInfo->SizeLocations())
+	if (!PInfo || PInfo->Data().MissingCount() == PInfo->SizeLocations() || !TInfo || !RHInfo)
 	{
 		return std::make_tuple(std::vector<float>(), std::vector<float>(), std::vector<float>());
 	}
 
-	auto dPVec = VEC(PInfo);
+	auto PSurface = VEC(PInfo);
+	auto TSurface = VEC(TInfo);
+	auto RHSurface = VEC(RHInfo);
 
 	auto P500m = h->VerticalValue<double>(PParam, 500.);
 	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 500.);
 
-	auto PSurface = util::Convert<double, float>(dPVec);
 	auto P500mf = util::Convert<double, float>(P500m);
 
 	float* d_Psurface = 0;
 	float* d_P500m = 0;
+	float* d_Tsurface = 0;
+	float* d_RHsurface = 0;
+	float* d_Tfirst = 0;
+	float* d_RHfirst = 0;
 
 	CUDA_CHECK(cudaMalloc((float**)&d_Psurface, N * sizeof(float)));
 	CUDA_CHECK(cudaMalloc((float**)&d_P500m, N * sizeof(float)));
+	CUDA_CHECK(cudaMalloc((float**)&d_Tsurface, N * sizeof(float)));
+	CUDA_CHECK(cudaMalloc((float**)&d_RHsurface, N * sizeof(float)));
+	CUDA_CHECK(cudaMalloc((float**)&d_Tfirst, N * sizeof(float)));
+	CUDA_CHECK(cudaMalloc((float**)&d_RHfirst, N * sizeof(float)));
 
 	CUDA_CHECK(cudaMemcpyAsync(d_Psurface, PSurface.data(), N * sizeof(float), cudaMemcpyHostToDevice, stream));
 	CUDA_CHECK(cudaMemcpyAsync(d_P500m, P500mf.data(), N * sizeof(float), cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_Tsurface, TSurface.data(), N * sizeof(float), cudaMemcpyHostToDevice, stream));
+	CUDA_CHECK(cudaMemcpyAsync(d_RHsurface, RHSurface.data(), N * sizeof(float), cudaMemcpyHostToDevice, stream));
 
 	// maximum number of samples is much more than number of read levels
 	// for every 1hPa step we need one sample
 	unsigned int sampleCount = 0;
 	for (size_t i = 0; i < N; i++)
 	{
-		sampleCount = max(sampleCount, static_cast<int>(ceil(PSurface[i] - P500mf[i])));
+		sampleCount = max(sampleCount, static_cast<unsigned int>(ceil(PSurface[i] - P500mf[i])));
 	}
 
-	float* d_temperatureSample = 0;
-	float* d_humiditySample = 0;
+	// Use half-precision data type to store the samples and the vertical profile from which the samples
+	// are created (that's in function GetSampledSourceDataGPU()).
+	//
+	// 16-bit floating precision data type allows only 1024 distinct values between 2e-14 ... 2e15. That
+	// is too little to provide reasonable loss of accuracy for us. Therefore in the half-profiles and samples
+	// we store the offset of the sampled variable relative to some base value. This enables us to store smaller
+	// values (in absolute magnitude) and therefore allow more precision.
+	//
+	// The original value can be restored using the base value (32-bit) and offset (16-bit), ie. each sampled
+	// value is a direct derivative from the base. Another alternative would have been to store each sample as and
+	// offset of the previous value: this would have given even smaller values (=more precision), but code-wise
+	// calculating the original value would be more complicated as when recovering value for sample order number
+	// x we'd need to access all values between base and x.
 
-	CUDA_CHECK(cudaMalloc((float**)&d_humiditySample, N * sampleCount * sizeof(float)));
-	CUDA_CHECK(cudaMalloc((float**)&d_temperatureSample, N * sampleCount * sizeof(float)));
+	__half* d_temperatureSample = 0;
+	__half* d_humiditySample = 0;
 
-	GetSampledSourceDataGPU(conf, myTargetInfo, d_P500m, d_Psurface, d_temperatureSample, d_humiditySample,
-	                        itsBottomLevel, stopLevel.second, sampleCount, stream);
+	CUDA_CHECK(cudaMalloc((__half**)&d_humiditySample, N * sampleCount * sizeof(__half)));
+	CUDA_CHECK(cudaMalloc((__half**)&d_temperatureSample, N * sampleCount * sizeof(__half)));
+
+	GetSampledSourceDataGPU(conf, myTargetInfo, d_P500m, d_Psurface, d_Tsurface, d_RHsurface, d_temperatureSample,
+	                        d_humiditySample, d_Tfirst, d_RHfirst, itsBottomLevel, stopLevel.second, sampleCount,
+	                        stream);
 
 	float* d_Tpot = 0;
 	float* d_MR = 0;
@@ -1136,8 +1189,6 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	float* d_meanTpot = 0;
 	float* d_meanMR = 0;
 	float* d_range = 0;
-	float* d_T = 0;
-	float* d_TD = 0;
 
 	CUDA_CHECK(cudaMalloc((float**)&d_Tpot, N * sizeof(float)));
 	CUDA_CHECK(cudaMalloc((float**)&d_MR, N * sizeof(float)));
@@ -1154,7 +1205,8 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	for (unsigned int k = 0; k < sampleCount; k++)
 	{
 		MixingRatioKernel<<<gridSize, blockSize, 0, stream>>>(d_temperatureSample, d_Psurface, d_P500m,
-		                                                      d_humiditySample, d_Tpot, d_MR, k, sampleCount, N);
+		                                                      d_humiditySample, d_Tfirst, d_RHfirst, d_Tpot, d_MR, k,
+		                                                      sampleCount, N);
 		if (k > 0)
 		{
 			MeanKernel<<<gridSize, blockSize, 0, stream>>>(d_Tpot, d_MR, d_prevTpot, d_prevMR, d_meanTpot, d_meanMR,
@@ -1177,6 +1229,13 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	CUDA_CHECK(cudaFree(d_prevMR));
 	CUDA_CHECK(cudaFree(d_range));
 	CUDA_CHECK(cudaFree(d_P500m));
+	CUDA_CHECK(cudaFree(d_Tsurface));
+	CUDA_CHECK(cudaFree(d_RHsurface));
+	CUDA_CHECK(cudaFree(d_Tfirst));
+	CUDA_CHECK(cudaFree(d_RHfirst));
+
+	float* d_T = 0;
+	float* d_TD = 0;
 
 	CUDA_CHECK(cudaMalloc((float**)&d_TD, N * sizeof(float)));
 	CUDA_CHECK(cudaMalloc((float**)&d_T, N * sizeof(float)));
@@ -1188,6 +1247,7 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 
 	CUDA_CHECK(cudaMemcpyAsync(T.data(), d_T, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
 	CUDA_CHECK(cudaMemcpyAsync(TD.data(), d_TD, sizeof(float) * N, cudaMemcpyDeviceToHost, stream));
+
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
 	CUDA_CHECK(cudaFree(d_meanTpot));
