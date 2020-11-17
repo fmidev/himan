@@ -175,7 +175,8 @@ void ProbabilityWithGaussianSpread(std::shared_ptr<himan::info<T>> targetInfo, c
 		                                                       // https://www.johndcook.com/erf_and_normal_cdf.pdf
 		                                                       // probability is now -∞ -> threshold
 
-		if (paramConf.output.ProcessingType().Type() == himan::kProbabilityGreaterThan)
+		if (paramConf.output.ProcessingType().Type() == himan::kProbabilityGreaterThan ||
+		    paramConf.output.ProcessingType().Type() == himan::kProbabilityGreaterThanOrEqual)
 		{
 			probability = 1 - probability;
 		}

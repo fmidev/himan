@@ -74,6 +74,8 @@ long DetermineProductDefinitionTemplateNumber(long agg, long proc, long ftype)
 				break;
 			case kProbabilityGreaterThan:
 			case kProbabilityLessThan:
+			case kProbabilityGreaterThanOrEqual:
+			case kProbabilityLessThanOrEqual:
 			case kProbabilityBetween:
 			case kProbabilityEquals:
 			case kProbabilityNotEquals:
@@ -115,6 +117,8 @@ long DetermineProductDefinitionTemplateNumber(long agg, long proc, long ftype)
 				break;
 			case kProbabilityGreaterThan:
 			case kProbabilityLessThan:
+			case kProbabilityGreaterThanOrEqual:
+			case kProbabilityLessThanOrEqual:
 			case kProbabilityBetween:
 			case kProbabilityEquals:
 			case kProbabilityNotEquals:
@@ -891,10 +895,12 @@ void WriteParameter(NFmiGribMessage& message, const param& par, const producer& 
 			default:
 				break;
 			case kProbabilityGreaterThan:  // Probability of event above upper limit
+			case kProbabilityGreaterThanOrEqual:
 				message.SetLongKey("probabilityType", 1);
 				message.SetLongKey("scaledValueOfUpperLimit", static_cast<long>(par.ProcessingType().Value()));
 				break;
 			case kProbabilityLessThan:  // Probability of event below lower limit
+			case kProbabilityLessThanOrEqual:
 				message.SetLongKey("probabilityType", 0);
 				message.SetLongKey("scaledValueOfLowerLimit", static_cast<long>(par.ProcessingType().Value()));
 				break;
