@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.11.16
+Version: 20.11.18
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -47,7 +47,7 @@ BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: boost169-devel
 BuildRequires: scons
-BuildRequires: fmt-devel >= 6.0.0
+BuildRequires: fmt-devel >= 7.1.0
 
 AutoReqProv:	no
 
@@ -134,7 +134,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
-* Mon Nov 16 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.12-1.fmi
+* Wed Nov 18 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.18-1.fmi
+- fmt7
+* Tue Nov 17 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.17-1.fmi
+- cape cuda code more optimization
+* Mon Nov 16 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.16-1.fmi
 - cape cuda code optimization
 - frost support smartmet nwc
 * Thu Nov 12 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.12-1.fmi
