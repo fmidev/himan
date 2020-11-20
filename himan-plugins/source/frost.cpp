@@ -69,7 +69,7 @@ info_t BackwardsFetchFromProducer(shared_ptr<plugin_configuration>& cnf, const f
 
 	if (!ret)
 	{
-		logr.Error(fmt::format("No {} data found", par.Name()));
+		logr.Warning(fmt::format("No {} data found", par.Name()));
 	}
 
 	return ret;
@@ -153,7 +153,6 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 		ICNInfo = make_shared<info<double>>(forecastType, ec_forecastTime, level(kGround, 0), ICNParam);
 		ICNInfo->Producer(myTargetInfo->Producer());
 		ICNInfo->Create(myTargetInfo->Base(), true);
-		ICNInfo->Data().Fill(MissingDouble());
 	}
 
 	// Get the latest LC-0TO1, available only for hour 00.
@@ -201,6 +200,14 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 	info_t T0MEPSInfo = BackwardsFetchFromProducer(cnf, stat_type, meps_forecastTime, level(kHeight, 2), T0Param, -3);
 
+	// MEPS is optional data
+	if (!T0MEPSInfo)
+	{
+		T0MEPSInfo = make_shared<info<double>>(stat_type, meps_forecastTime, level(kHeight, 2), T0Param);
+		T0MEPSInfo->Producer(myTargetInfo->Producer());
+		T0MEPSInfo->Create(myTargetInfo->Base(), true);
+	}
+
 	if (!TGInfo || !WGInfo || !ICNInfo || !LCInfo || !RADInfo || !T0ECInfo || !T0MEPSInfo)
 	{
 		myThreadedLogger.Warning(fmt::format("Skipping step {}, level {}",
@@ -213,6 +220,8 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 	const int month = stoi(original_forecastTime.ValidDateTime().String("%m"));
 	const int day = stoi(original_forecastTime.ValidDateTime().String("%d"));
+
+	myThreadedLogger.Info("Got all needed data");
 
 	LOCKSTEP(myTargetInfo, TInfo, TDInfo, TGInfo, WGInfo, NInfo, ICNInfo, LCInfo, RADInfo, T0ECInfo, T0MEPSInfo)
 
@@ -228,7 +237,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 		double T0EC = T0ECInfo->Value();
 		double T0MEPS = T0MEPSInfo->Value();
 
-		if (IsMissingValue({T, TD, TG, WG, N, ICN, LC, RAD, T0EC, T0MEPS}))
+		if (IsMissingValue({T, TD, TG, WG, N, LC, RAD, T0EC}))
 		{
 			continue;
 		}
