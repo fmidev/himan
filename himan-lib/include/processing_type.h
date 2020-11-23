@@ -16,7 +16,9 @@ enum HPProcessingType
 {
 	kUnknownProcessingType = 0,
 	kProbabilityGreaterThan,
+	kProbabilityGreaterThanOrEqual,
 	kProbabilityLessThan,
+	kProbabilityLessThanOrEqual,
 	kProbabilityBetween,
 	kProbabilityEquals,
 	kProbabilityNotEquals,
@@ -28,19 +30,21 @@ enum HPProcessingType
 	kEFI
 };
 
-const boost::unordered_map<HPProcessingType, std::string> HPProcessingTypeToString =
-    ba::map_list_of(kUnknownProcessingType, "unknown")(kProbabilityGreaterThan, "probability greater than")(
-        kProbabilityLessThan, "probability less than")(kProbabilityBetween, "probability between")(
-        kProbabilityEquals, "probability equals")(kProbabilityNotEquals, "probability not equals")(
-        kProbabilityEqualsIn, "probability equals in")(kFractile, "fractile")(kEnsembleMean, "ensemble mean")(
-        kSpread, "spread")(kStandardDeviation, "standard deviation")(kEFI, "efi");
+const boost::unordered_map<HPProcessingType, std::string> HPProcessingTypeToString = ba::map_list_of(
+    kUnknownProcessingType, "unknown")(kProbabilityGreaterThan, "probability greater than")(
+    kProbabilityGreaterThanOrEqual, "probability greater than or equal")(kProbabilityLessThan, "probability less than")(
+    kProbabilityLessThanOrEqual, "probability less than or equal")(kProbabilityBetween, "probability between")(
+    kProbabilityEquals, "probability equals")(kProbabilityNotEquals, "probability not equals")(
+    kProbabilityEqualsIn, "probability equals in")(kFractile, "fractile")(kEnsembleMean, "ensemble mean")(
+    kSpread, "spread")(kStandardDeviation, "standard deviation")(kEFI, "efi");
 
-const boost::unordered_map<std::string, HPProcessingType> HPStringToProcessingType =
-    ba::map_list_of("unknown", kUnknownProcessingType)("probability greater than", kProbabilityGreaterThan)(
-        "probability less than", kProbabilityLessThan)("probability between", kProbabilityBetween)(
-        "probability equals", kProbabilityEquals)("probability not equals", kProbabilityNotEquals)(
-        "probability equals in", kProbabilityEqualsIn)("fractile", kFractile)("ensemble mean", kEnsembleMean)(
-        "spread", kSpread)("standard deviation", kStandardDeviation)("efi", kEFI);
+const boost::unordered_map<std::string, HPProcessingType> HPStringToProcessingType = ba::map_list_of(
+    "unknown", kUnknownProcessingType)("probability greater than", kProbabilityGreaterThan)(
+    "probability greater than or equal", kProbabilityGreaterThanOrEqual)("probability less than", kProbabilityLessThan)(
+    "probability less than or equal", kProbabilityLessThanOrEqual)("probability between", kProbabilityBetween)(
+    "probability equals", kProbabilityEquals)("probability not equals", kProbabilityNotEquals)(
+    "probability equals in", kProbabilityEqualsIn)("fractile", kFractile)("ensemble mean", kEnsembleMean)(
+    "spread", kSpread)("standard deviation", kStandardDeviation)("efi", kEFI);
 
 class processing_type
 {

@@ -316,6 +316,8 @@ void BindEnum(lua_State* L)
 				 value("kUnknownProcessingType", kUnknownProcessingType),
 				 value("kProbabilityGreaterThan", kProbabilityGreaterThan),
 				 value("kProbabilityLessThan", kProbabilityLessThan),
+				 value("kProbabilityGreaterThan", kProbabilityGreaterThanOrEqual),
+				 value("kProbabilityLessThan", kProbabilityLessThanOrEqual),
 				 value("kProbabilityBetween", kProbabilityBetween),
 				 value("kProbabilityEquals", kProbabilityEquals),
 				 value("kProbabilityNotEquals", kProbabilityNotEquals),
