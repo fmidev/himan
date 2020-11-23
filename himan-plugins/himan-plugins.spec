@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.11.18
+Version: 20.11.23
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 20.11.12
+Requires: himan-lib >= 20.11.23
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 20.11.3
@@ -134,6 +134,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Mon Nov 23 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.23-1.fmi
+- Changes/fixes in probability, frost
 * Wed Nov 18 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.18-1.fmi
 - fmt7
 * Tue Nov 17 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.17-1.fmi
