@@ -17,6 +17,7 @@
 #include "point_list.h"
 #include "reduced_gaussian_grid.h"
 #include "stereographic_grid.h"
+#include "transverse_mercator_grid.h"
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/format.hpp>
@@ -1195,9 +1196,21 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 	// (in most cases that's not *not* the one used by the weather model).
 	// Exception to this lambert conformal conic where we use radius 6367470.
 
-	if (geominfo["grid_type_id"] == "1")
+	int gridid;
+
+	try
 	{
-		// clang-format off
+		gridid = stoi(geominfo["grid_type_id"]);
+	}
+	catch (const exception& e)
+	{
+		throw invalid_argument(fmt::format("{} is not an integer", geominfo["grid_type_id"]));
+	}
+
+	switch (gridid)
+	{
+		case 1:
+			// clang-format off
 		return unique_ptr<latitude_longitude_grid>(new latitude_longitude_grid(
 		    scmode,
 		    point(stod(geominfo["long_orig"]), stod(geominfo["lat_orig"])),
@@ -1207,11 +1220,10 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    stod(geominfo["pas_latitude"]),
 		    earth_shape<double>(6371220.)
 		));
-		// clang-format on
-	}
-	else if (geominfo["grid_type_id"] == "4")
-	{
-		// clang-format off
+			// clang-format on
+
+		case 4:
+			// clang-format off
 		return unique_ptr<rotated_latitude_longitude_grid>(new rotated_latitude_longitude_grid(
 		    scmode,
 		    point(stod(geominfo["long_orig"]), stod(geominfo["lat_orig"])),
@@ -1222,11 +1234,10 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    earth_shape<double>(6371220.),
 		    point(stod(geominfo["geom_parm_2"]), stod(geominfo["geom_parm_1"])), true)
 		);
-		// clang-format on
-	}
-	else if (geominfo["grid_type_id"] == "2")
-	{
-		// clang-format off
+			// clang-format on
+
+		case 2:
+			// clang-format off
 		return unique_ptr<stereographic_grid>(new stereographic_grid(
 		    scmode,
 		    point(stod(geominfo["long_orig"]), stod(geominfo["lat_orig"])),
@@ -1238,34 +1249,32 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    earth_shape<double>(6371220.),
 		    false
 		));
-		// clang-format on
-	}
+			// clang-format on
 
-	else if (geominfo["grid_type_id"] == "6")
-	{
-		auto g = unique_ptr<reduced_gaussian_grid>(new reduced_gaussian_grid);
-		g->EarthShape(earth_shape<double>(6371220.));
-
-		reduced_gaussian_grid* const gg = dynamic_cast<reduced_gaussian_grid*>(g.get());
-
-		gg->N(stoi(geominfo["n"]));
-
-		auto strlongitudes = himan::util::Split(geominfo["longitudes_along_parallels"], ",");
-		vector<int> longitudes;
-		longitudes.reserve(strlongitudes.size());
-
-		for (auto& l : strlongitudes)
+		case 6:
 		{
-			longitudes.push_back(stoi(l));
+			auto g = unique_ptr<reduced_gaussian_grid>(new reduced_gaussian_grid);
+			g->EarthShape(earth_shape<double>(6371220.));
+
+			reduced_gaussian_grid* const gg = dynamic_cast<reduced_gaussian_grid*>(g.get());
+
+			gg->N(stoi(geominfo["n"]));
+
+			auto strlongitudes = himan::util::Split(geominfo["longitudes_along_parallels"], ",");
+			vector<int> longitudes;
+			longitudes.reserve(strlongitudes.size());
+
+			for (auto& l : strlongitudes)
+			{
+				longitudes.push_back(stoi(l));
+			}
+
+			gg->NumberOfPointsAlongParallels(longitudes);
+			return std::move(g);
 		}
 
-		gg->NumberOfPointsAlongParallels(longitudes);
-		return std::move(g);
-	}
-
-	else if (geominfo["grid_type_id"] == "5")
-	{
-		// clang-format off
+		case 5:
+			// clang-format off
 		return unique_ptr<lambert_conformal_grid>(new lambert_conformal_grid(
 		    scmode,
 		    point(stod(geominfo["first_point_lon"]), stod(geominfo["first_point_lat"])),
@@ -1279,12 +1288,10 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    earth_shape<double>(6367470.),
 		    false
 		));
-		// clang-format on
-	}
+			// clang-format on
 
-	else if (geominfo["grid_type_id"] == "7")
-	{
-		// clang-format off
+		case 7:
+			// clang-format off
 		return unique_ptr<lambert_equal_area_grid>(new lambert_equal_area_grid(
 		    scmode,
 		    point(stod(geominfo["first_point_lon"]), stod(geominfo["first_point_lat"])),
@@ -1297,12 +1304,29 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    earth_shape<double>(6371220.),
 		    false
 		));
-		// clang-format on
-	}
+			// clang-format on
 
-	else
-	{
-		throw invalid_argument("Invalid grid type id for geometry " + geom_name);
+		case 8:
+			// clang-format off
+		return unique_ptr<transverse_mercator_grid>(new transverse_mercator_grid(
+		    scmode,
+		    point(stod(geominfo["first_point_lon"]), stod(geominfo["first_point_lat"])),
+		    stoi(geominfo["ni"]),
+		    stoi(geominfo["nj"]),
+		    stod(geominfo["di"]),
+		    stod(geominfo["dj"]),
+		    stod(geominfo["orientation"]),
+		    stod(geominfo["latin"]),
+		    stod(geominfo["scale"]),
+		    0, // TODO: false easting, this value might not be correct
+		    0, // TODO: false northing, this value might not be correct
+		    earth_shape<double>(6371220.),
+		    false
+		));
+			// clang-format on
+
+		default:
+			throw invalid_argument("Invalid grid type id for geometry " + geom_name);
 	}
 }
 
