@@ -423,7 +423,8 @@ vector<himan::file_information> radon::Files(search_options& options)
 		return ret;
 	}
 
-	itsLogger.Trace("Found data for parameter " + options.param.Name() + " from radon geometry " + values[1]);
+	itsLogger.Trace(fmt::format("Found data for parameter {} from radon geometry {}, file name '{}' position {}/{}:{}",
+	                            options.param.Name(), values[1], values[0], values[6], values[2], values[3]));
 
 	file_information finfo;
 	finfo.file_location = values[0];
