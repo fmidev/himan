@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.11.23
+Version: 20.12.2
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -16,7 +16,7 @@ Requires: libstdc++
 Requires: himan-lib >= 20.11.23
 Requires: lua >= 5.1.4
 Requires: unixODBC
-Requires: libfmigrib >= 20.11.3
+Requires: libfmigrib >= 20.12.2
 Requires: libfmidb >= 20.7.8
 Requires: smartmet-library-newbase >= 20.4.18
 Requires: libpqxx
@@ -40,7 +40,7 @@ BuildRequires: libs3-devel >= 4.1
 Requires: jasper-libs
 Requires: eccodes
 %endif
-BuildRequires: libfmigrib-devel >= 20.5.25
+BuildRequires: libfmigrib-devel >= 20.12.2
 BuildRequires: libfmidb-devel >= 20.7.8
 BuildRequires: smartmet-library-newbase-devel >= 20.4.18
 BuildRequires: scons
@@ -134,6 +134,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Wed Dec  2 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.12.2-1.fmi
+- Changes in fmigrib
+- Initial partial support for writing transverse mercator gribs
 * Mon Nov 23 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.23-1.fmi
 - Changes/fixes in probability, frost
 * Wed Nov 18 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.18-1.fmi
