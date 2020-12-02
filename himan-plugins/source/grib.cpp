@@ -11,6 +11,7 @@
 #include "s3.h"
 #include "stereographic_grid.h"
 #include "timer.h"
+#include "transverse_mercator_grid.h"
 #include "util.h"
 #include <algorithm>
 #include <boost/filesystem.hpp>
@@ -536,6 +537,39 @@ void WriteAreaAndGrid(NFmiGribMessage& message, const shared_ptr<himan::grid>& g
 			{
 				message.SetLongKey("LaDInDegrees", 60);
 			}
+
+			break;
+		}
+
+		case kTransverseMercator:
+		{
+			auto tmg = dynamic_pointer_cast<transverse_mercator_grid>(grid);
+
+			if (edition == 1)
+			{
+				logr.Fatal("transverse mercator only supported with grib2");
+				himan::Abort();
+			}
+
+			message.GridType(12);
+
+			message.SizeX(static_cast<long>(tmg->Ni()));
+			message.SizeY(static_cast<long>(tmg->Nj()));
+
+			message.SetLongKey("longitudeOfReferencePoint", static_cast<long>(tmg->Orientation() * 1000000));
+			message.SetLongKey("latitudeOfReferencePoint", static_cast<long>(tmg->StandardParallel() * 1000000));
+
+			message.SetLongKey("XR", 100 * static_cast<long>(0));  // TODO
+			message.SetLongKey("YR", 100 * static_cast<long>(0));
+			message.SetLongKey("scaleFactorAtReferencePoint", static_cast<long>(tmg->Scale()));
+			message.SetLongKey("X1", 0);  // TODO
+			message.SetLongKey("X2", 0);
+			message.SetLongKey("Y1", 0);
+			message.SetLongKey("Y2", 0);
+			message.SetLongKey("Di", static_cast<long>(tmg->Di() * 100));
+			message.SetLongKey("Dj", static_cast<long>(tmg->Dj() * 100));
+
+			scmode = tmg->ScanningMode();
 
 			break;
 		}
