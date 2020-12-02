@@ -377,6 +377,12 @@ void transformer::Rotate(shared_ptr<info<double>> myTargetInfo)
 	auto a = Fetch(myTargetInfo->Time(), myTargetInfo->Level(), itsSourceParam[0], myTargetInfo->ForecastType(), false);
 	auto b = Fetch(myTargetInfo->Time(), myTargetInfo->Level(), itsSourceParam[1], myTargetInfo->ForecastType(), false);
 
+	if (!a || !b)
+	{
+		itsLogger.Error("Data not found");
+		return;
+	}
+
 	myTargetInfo->Index<param>(0);
 	myTargetInfo->Data().Set(VEC(a));
 	myTargetInfo->Grid()->UVRelativeToGrid(a->Grid()->UVRelativeToGrid());
