@@ -16,9 +16,9 @@ local editor_time = forecast_time(editor_origintime, current_time:GetValidDateTi
 
 local H0 = level(HPLevelType.kHeight, 0)
 local CC = luatool:FetchWithType(current_time, H0, param("N-0TO1"), current_forecast_type)
-local CH = luatool:FetchWithProducer(editor_time, H0, param("NH-PRCNT"), current_forecast_type, editor_prod, "")
-local CM = luatool:FetchWithProducer(editor_time, H0, param("NM-PRCNT"), current_forecast_type, editor_prod, "")
-local CL = luatool:FetchWithProducer(editor_time, H0, param("NL-PRCNT"), current_forecast_type, editor_prod, "")
+local CH = luatool:FetchWithType(current_time, H0, param("NH-0TO1"), current_forecast_type)
+local CM = luatool:FetchWithType(current_time, H0, param("NM-0TO1"), current_forecast_type)
+local CL = luatool:FetchWithType(current_time, H0, param("NL-0TO1"), current_forecast_type)
 
 if not CC or not CH or not CM or not CL then
   return
@@ -30,9 +30,9 @@ local _CL = {}
 
 for i=1, #CC do
   local cc = CC[i]
-  local ch = CH[i] * 0.01
-  local cm = CM[i] * 0.01
-  local cl = CL[i] * 0.01
+  local ch = CH[i]
+  local cm = CM[i]
+  local cl = CL[i]
 
   _CH[i] = ch
   _CM[i] = cm
