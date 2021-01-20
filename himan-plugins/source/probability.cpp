@@ -136,7 +136,7 @@ static void GetConfigurationParameter(const std::string& name, const std::shared
 	{
 		output.ProcessingType().Type(kProbabilityGreaterThanOrEqual);
 	}
-	std::cout << output.Name() << " " << HPProcessingTypeToString.at(output.ProcessingType().Type()) << "\n";
+
 	const auto iname = param.Name();
 
 	if (iname == "XX-X")
