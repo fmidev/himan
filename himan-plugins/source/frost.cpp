@@ -187,7 +187,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 	cnf->SourceProducers({producer(242, 86, 242, "ECM_PROB")});
 	cnf->SourceGeomNames({"ECGLO0200", "ECEUR0200"});
-	info_t T0ECInfo = BackwardsFetchFromProducer(cnf, stat_type, ec_forecastTime, level(kGround, 0), T0Param, -12);
+	info_t T0ECInfo = BackwardsFetchFromProducer(cnf, stat_type, ec_forecastTime, level(kHeight, 2), T0Param, -12);
 
 	// Get the latest MEPS PROB-TC-0 from hour 00, 03, 06, 09, 12, 15, 18 or 21. If not found get earlier.
 
