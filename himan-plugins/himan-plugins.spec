@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.12.2
+Version: 21.1.27
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -134,6 +134,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Wed Jan 27 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.1.27-1.fmi
+- Change to frost
 * Wed Dec  2 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.12.2-1.fmi
 - Changes in fmigrib
 - Initial partial support for writing transverse mercator gribs
