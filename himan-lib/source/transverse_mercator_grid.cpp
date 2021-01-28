@@ -184,8 +184,3 @@ double transverse_mercator_grid::Scale() const
 {
 	return itsSpatialReference->GetProjParm(SRS_PP_SCALE_FACTOR, MissingDouble());
 }
-
-OGRSpatialReference transverse_mercator_grid::SpatialReference() const
-{
-	return OGRSpatialReference(*itsSpatialReference);
-}

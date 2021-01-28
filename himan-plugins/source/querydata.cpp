@@ -237,7 +237,7 @@ NFmiHPlaceDescriptor CreateGrid(himan::info<T>& info)
 			   << " UNIT[\"degree\",0.0174532925199433]]";
 
 			theArea =
-			    new NFmiGdalArea(ss.str(), g->SpatialReference(), 0, 0, g->Di() * (static_cast<double>(g->Ni()) - 1),
+			    new NFmiGdalArea(ss.str(), *g->SpatialReference(), 0, 0, g->Di() * (static_cast<double>(g->Ni()) - 1),
 			                     g->Dj() * (static_cast<double>(g->Nj()) - 1));
 			break;
 		}

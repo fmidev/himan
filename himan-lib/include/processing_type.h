@@ -98,8 +98,7 @@ class processing_type
 	template <class Archive>
 	void serialize(Archive& ar)
 	{
-		ar(CEREAL_NVP(itsType), CEREAL_NVP(itsFirstValue), CEREAL_NVP(itsSecondValue),
-		   CEREAL_NVP(itsNumberOfEnsembleMembers));
+		ar(CEREAL_NVP(itsType), CEREAL_NVP(itsValue), CEREAL_NVP(itsValue2), CEREAL_NVP(itsNumberOfEnsembleMembers));
 	}
 #endif
 };

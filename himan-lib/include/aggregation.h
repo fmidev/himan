@@ -75,7 +75,7 @@ class aggregation
 	template <class Archive>
 	void serialize(Archive& ar)
 	{
-		ar(CEREAL_NVP(itsType), CEREAL_NVP(itsTimeDuration));
+		ar(CEREAL_NVP(itsType), CEREAL_NVP(itsTimeDuration), CEREAL_NVP(itsTimeOffset));
 	}
 #endif
 };

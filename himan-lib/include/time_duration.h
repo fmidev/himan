@@ -1,6 +1,35 @@
 #pragma once
 #include "himan_common.h"
+#include "serialization.h"
 #include <boost/date_time/posix_time/posix_time_types.hpp>
+
+#ifdef SERIALIZATION
+#include <boost/date_time.hpp>
+#include <boost/date_time/posix_time/time_parsers.hpp>
+
+namespace cereal
+{
+template <class Archive>
+inline std::string save_minimal(const Archive& ar, const boost::posix_time::time_duration& td)
+{
+	return boost::posix_time::to_iso_string(td);
+}
+
+template <class Archive>
+inline void load_minimal(const Archive& ar, boost::posix_time::time_duration& td, const std::string& str)
+{
+	if (str == "not-a-date-time")
+	{
+		td = boost::posix_time::time_duration(boost::posix_time::not_a_date_time);
+	}
+	else
+	{
+		td = boost::posix_time::duration_from_string(str);
+	}
+}
+}  // namespace cereal
+
+#endif
 
 namespace himan
 {
@@ -62,6 +91,16 @@ class time_duration
 
    private:
 	boost::posix_time::time_duration itsDuration;
+
+#ifdef SERIALIZATION
+	friend class cereal::access;
+
+	template <class Archive>
+	void serialize(Archive& ar)
+	{
+		ar(CEREAL_NVP(itsDuration));
+	}
+#endif
 };
 
 inline std::ostream& operator<<(std::ostream& file, const time_duration& ob)

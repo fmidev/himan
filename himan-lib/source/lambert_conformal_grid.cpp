@@ -186,11 +186,6 @@ double lambert_conformal_grid::StandardParallel2() const
 	return itsSpatialReference->GetProjParm(SRS_PP_STANDARD_PARALLEL_2, 0.0);
 }
 
-OGRSpatialReference lambert_conformal_grid::SpatialReference() const
-{
-	return OGRSpatialReference(*itsSpatialReference);
-}
-
 double lambert_conformal_grid::Cone() const
 {
 	const double sp1 = StandardParallel1(), sp2 = StandardParallel2();

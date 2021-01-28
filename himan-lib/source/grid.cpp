@@ -429,6 +429,11 @@ std::unique_ptr<OGRPolygon> regular_grid::Geometry() const
 	return std::move(geometry);
 }
 
+std::unique_ptr<OGRSpatialReference> regular_grid::SpatialReference() const
+{
+	return std::unique_ptr<OGRSpatialReference>(itsSpatialReference->Clone());
+}
+
 //--------------- irregular grid
 
 irregular_grid::irregular_grid(HPGridType type) : grid(kIrregularGrid, type, false)

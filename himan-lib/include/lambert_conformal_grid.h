@@ -44,8 +44,6 @@ class lambert_conformal_grid : public regular_grid
 	double StandardParallel1() const;
 	double StandardParallel2() const;
 
-	OGRSpatialReference SpatialReference() const;
-
 	size_t Hash() const override;
 	double Cone() const;
 
@@ -57,9 +55,23 @@ class lambert_conformal_grid : public regular_grid
 	friend class cereal::access;
 
 	template <class Archive>
-	void serialize(Archive& ar)
+	void serialize(Archive& ar) const
 	{
-		ar(cereal::base_class<regular_grid>(this));
+		ar(CEREAL_NVP(itsScanningMode), CEREAL_NVP(FirstPoint()), CEREAL_NVP(itsNi), CEREAL_NVP(itsNj),
+		   CEREAL_NVP(itsDi), CEREAL_NVP(itsDj), CEREAL_NVP(itsSpatialReference));
+	}
+
+	template <class Archive>
+	static void load_and_construct(Archive& ar, cereal::construct<lambert_conformal_grid>& construct)
+	{
+		HPScanningMode sm;
+		point fp;
+		size_t ni, nj;
+		double di, dj;
+		std::unique_ptr<OGRSpatialReference> sp;
+
+		ar(sm, fp, ni, nj, di, dj, sp);
+		construct(sm, fp, ni, nj, di, dj, std::move(sp));
 	}
 #endif
 };
@@ -72,6 +84,7 @@ inline std::ostream& operator<<(std::ostream& file, const lambert_conformal_grid
 
 #ifdef SERIALIZATION
 CEREAL_REGISTER_TYPE(himan::lambert_conformal_grid);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(himan::regular_grid, himan::lambert_conformal_grid);
 #endif
 
 #endif /* LAMBERT_CONFORMAL_GRID_H */

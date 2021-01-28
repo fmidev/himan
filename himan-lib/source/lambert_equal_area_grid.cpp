@@ -171,8 +171,3 @@ double lambert_equal_area_grid::StandardParallel() const
 {
 	return itsSpatialReference->GetProjParm(SRS_PP_LATITUDE_OF_CENTER, MissingDouble());
 }
-
-OGRSpatialReference lambert_equal_area_grid::SpatialReference() const
-{
-	return OGRSpatialReference(*itsSpatialReference);
-}
