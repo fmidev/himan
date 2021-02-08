@@ -37,49 +37,66 @@ pair<himan::HPWriteStatus, himan::file_information> csv::ToFile(info<T>& theInfo
 	finfo.file_type = kCSV;
 	finfo.storage_type = itsWriteOptions.configuration->WriteStorageType();
 
-	boost::filesystem::path pathname(finfo.file_location);
+	namespace bf = boost::filesystem;
 
-	if (!pathname.parent_path().empty() && !boost::filesystem::is_directory(pathname.parent_path()))
+	bf::path pathname(finfo.file_location);
+
+	if (!pathname.parent_path().empty() && !bf::is_directory(pathname.parent_path()))
 	{
-		boost::filesystem::create_directories(pathname.parent_path());
+		bf::create_directories(pathname.parent_path());
 	}
 
-	ofstream out(finfo.file_location);
+	ofstream out;
 
-	ASSERT(out.is_open());
+	const bool writeHeader = (bf::exists(pathname) == false);
 
-	out << "#producer_id,origintime,station_id,station_name,longitude,latitude,param_name,level_name,level_value,level_"
-	       "value2,"
-	       "forecast_period,forecast_type_id,forecast_type_value,value"
-	    << endl;
+	if (itsWriteOptions.configuration->WriteMode() == kAllGridsToAFile ||
+	    itsWriteOptions.configuration->WriteMode() == kFewGridsToAFile)
+	{
+		out.open(finfo.file_location, ios::out | ios::app);
+	}
+	else
+	{
+		out.open(finfo.file_location, ios::out);
+	}
 
-	theInfo.First();
-	theInfo.template Reset<param>();
+	if (!out.is_open())
+	{
+		itsLogger.Fatal(fmt::format("Failed to open file '{}'", finfo.file_location));
+		himan::Abort();
+	}
+
+	if (writeHeader)
+	{
+		out << "#producer_id,origintime,station_id,station_name,longitude,latitude,param_name,level_name,level_value,"
+		       "level_"
+		       "value2,"
+		       "forecast_period,forecast_type_id,forecast_type_value,value"
+		    << endl;
+	}
 
 	const auto originTime = theInfo.Time().OriginDateTime().String();
-	while (theInfo.Next())
+
+	for (theInfo.ResetLocation(); theInfo.NextLocation();)
 	{
-		for (theInfo.ResetLocation(); theInfo.NextLocation();)
-		{
-			station s = theInfo.Station();
+		station s = theInfo.Station();
 
-			// If station has some missing elements, skip them in CSV output
-			const string stationId = (s.Id() != kHPMissingInt) ? "" : to_string(s.Id());
-			const string stationName = (s.Name() != "Himan default station") ? "" : s.Name();
+		// If station has some missing elements, skip them in CSV output
+		const string stationId = (s.Id() != kHPMissingInt) ? "" : to_string(s.Id());
+		const string stationName = (s.Name() != "Himan default station") ? "" : s.Name();
 
-			// boost cast handles floats more elegantly
-			const string lon = (IsKHPMissingValue(s.X())) ? "" : to_string(s.X());
-			const string lat = (IsKHPMissingValue(s.Y())) ? "" : to_string(s.Y());
+		// boost cast handles floats more elegantly
+		const string lon = (IsKHPMissingValue(s.X())) ? "" : to_string(s.X());
+		const string lat = (IsKHPMissingValue(s.Y())) ? "" : to_string(s.Y());
 
-			out << theInfo.Producer().Id() << "," << originTime << "," << stationId << "," << stationName << "," << lon
-			    << "," << lat << "," << theInfo.Param().Name() << "," << HPLevelTypeToString.at(theInfo.Level().Type())
-			    << "," << theInfo.Level().Value() << "," << theInfo.Level().Value2() << ","
-			    << util::MakeSQLInterval(theInfo.Time()) << "," << theInfo.ForecastType().Type() << ","
-			    << theInfo.ForecastType().Value() << "," << theInfo.Value() << endl;
-		}
-
-		out.flush();
+		out << theInfo.Producer().Id() << "," << originTime << "," << stationId << "," << stationName << "," << lon
+		    << "," << lat << "," << theInfo.Param().Name() << "," << HPLevelTypeToString.at(theInfo.Level().Type())
+		    << "," << theInfo.Level().Value() << "," << theInfo.Level().Value2() << ","
+		    << util::MakeSQLInterval(theInfo.Time()) << "," << theInfo.ForecastType().Type() << ","
+		    << theInfo.ForecastType().Value() << "," << theInfo.Value() << endl;
 	}
+
+	out.flush();
 
 	aTimer.Stop();
 
