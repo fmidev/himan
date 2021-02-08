@@ -104,7 +104,7 @@ pair<himan::HPWriteStatus, himan::file_information> csv::ToFile(info<T>& theInfo
 	double bytes = static_cast<double>(boost::filesystem::file_size(finfo.file_location));
 
 	double speed = floor((bytes / 1024. / 1024.) / (duration / 1000.));
-	itsLogger.Info("Wrote file '" + finfo.file_location + "' (" + to_string(speed) + " MB/s)");
+	itsLogger.Info(fmt::format("Wrote file '{}' ({} MB/s)", finfo.file_location, speed));
 
 	return make_pair(HPWriteStatus::kFinished, finfo);
 }
@@ -169,7 +169,7 @@ shared_ptr<himan::info<T>> csv::FromFile(const string& inputFile, const search_o
 		if (all->Param() != options.param)
 		{
 			itsLogger.Debug("Param does not match");
-			itsLogger.Debug(options.param.Name() + " vs " + all->Param().Name());
+			itsLogger.Debug(fmt::format("{} vs {}", options.param.Name(), all->Param().Name()));
 		}
 		else if (find(params.begin(), params.end(), all->Param()) == params.end())
 		{
@@ -179,7 +179,8 @@ shared_ptr<himan::info<T>> csv::FromFile(const string& inputFile, const search_o
 		if (all->Level() != options.level)
 		{
 			itsLogger.Debug("Level does not match");
-			itsLogger.Debug(static_cast<string>(options.level) + " vs " + static_cast<string>(all->Level()));
+			itsLogger.Debug(
+			    fmt::format("{} vs {}", static_cast<string>(options.level), static_cast<string>(all->Level())));
 		}
 		else if (find(levels.begin(), levels.end(), all->Level()) == levels.end())
 		{
@@ -189,10 +190,10 @@ shared_ptr<himan::info<T>> csv::FromFile(const string& inputFile, const search_o
 		if (all->Time() != options.time)
 		{
 			itsLogger.Debug("Time does not match");
-			itsLogger.Debug("Origin time " + static_cast<string>(optsTime.OriginDateTime()) + " vs " +
-			                static_cast<string>(all->Time().OriginDateTime()));
-			itsLogger.Debug("Forecast time: " + static_cast<string>(optsTime.ValidDateTime()) + " vs " +
-			                static_cast<string>(all->Time().ValidDateTime()));
+			itsLogger.Debug(fmt::format("Origin time {} vs {}", static_cast<string>(optsTime.OriginDateTime()),
+			                            static_cast<string>(all->Time().OriginDateTime())));
+			itsLogger.Debug(fmt::format("Forecast time: {} vs {}", static_cast<string>(optsTime.ValidDateTime()),
+			                            static_cast<string>(all->Time().ValidDateTime())));
 		}
 		else if (find(times.begin(), times.end(), all->Time()) == times.end())
 		{
@@ -202,7 +203,8 @@ shared_ptr<himan::info<T>> csv::FromFile(const string& inputFile, const search_o
 		if (all->ForecastType() != options.ftype)
 		{
 			itsLogger.Debug("Forecast type does not match");
-			itsLogger.Debug(static_cast<string>(options.ftype) + " vs " + static_cast<string>(all->ForecastType()));
+			itsLogger.Debug(
+			    fmt::format("{} vs {}", static_cast<string>(options.ftype), static_cast<string>(all->ForecastType())));
 		}
 		else if (find(ftypes.begin(), ftypes.end(), all->ForecastType()) == ftypes.end())
 		{
@@ -221,7 +223,7 @@ shared_ptr<himan::info<T>> csv::FromFile(const string& inputFile, const search_o
 
 	if (times.size() == 0 || params.size() == 0 || levels.size() == 0 || ftypes.size() == 0)
 	{
-		itsLogger.Error("Did not find valid data from file '" + inputFile + "'");
+		itsLogger.Error(fmt::format("Did not find valid data from file '{}'", inputFile));
 		throw kFileDataNotFound;
 	}
 
@@ -245,9 +247,8 @@ shared_ptr<himan::info<T>> csv::FromFile(const string& inputFile, const search_o
 		dynamic_pointer_cast<point_list>(requested->Grid())->Stations(stations);
 	}
 
-	itsLogger.Debug("Read " + to_string(times.size()) + " times, " + to_string(levels.size()) + " levels, " +
-	                to_string(ftypes.size()) + " forecast types and " + to_string(params.size()) +
-	                " params from file '" + inputFile + "'");
+	itsLogger.Debug(fmt::format("Read {} times, {} levels, {} forecast types and {} params from file '{}", times.size(),
+	                            levels.size(), ftypes.size(), params.size(), inputFile));
 
 	requested->First();
 	requested->template Reset<param>();
