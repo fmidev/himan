@@ -57,8 +57,8 @@ bool CopyData(himan::info<T>& theInfo, NFmiFastQueryInfo& qinfo, bool applyScale
 
 	if (applyScaleAndBase)
 	{
-		scale = static_cast<float> (theInfo.Param().Scale());
-		base = static_cast<float> (theInfo.Param().Base());
+		scale = static_cast<float>(theInfo.Param().Scale());
+		base = static_cast<float>(theInfo.Param().Base());
 	}
 
 	if (theInfo.Grid()->Class() == himan::kRegularGrid &&
@@ -428,6 +428,11 @@ pair<himan::HPWriteStatus, himan::file_information> querydata::ToFile(info<T>& t
 	if (itsWriteOptions.configuration->WriteMode() == kAllGridsToAFile)
 	{
 		activeOnly = false;
+	}
+	else if (itsWriteOptions.configuration->WriteMode() == kFewGridsToAFile)
+	{
+		itsLogger.Fatal("Write option 'few' is not supported with querydata");
+		himan::Abort();
 	}
 
 	auto qdata = CreateQueryData<T>(theInfo, activeOnly, true);

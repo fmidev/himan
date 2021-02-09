@@ -282,6 +282,10 @@ void FileType(const boost::property_tree::ptree& pt, std::shared_ptr<configurati
 		{
 			conf->OutputFileType(kQueryData);
 		}
+		else if (ft == "CSV")
+		{
+			conf->OutputFileType(kCSV);
+		}
 		else
 		{
 			throw runtime_error("Invalid option for 'file_type': " + ft);
