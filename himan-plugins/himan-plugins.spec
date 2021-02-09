@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 21.1.27
+Version: 21.2.9
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -134,6 +134,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Tue Feb  9 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.2.9-1.fmi
+- Enable csv as output file format
 * Wed Jan 27 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.1.27-1.fmi
 - Change to frost
 * Wed Dec  2 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.12.2-1.fmi
