@@ -53,12 +53,12 @@ bool CopyData(himan::info<T>& theInfo, NFmiFastQueryInfo& qinfo, bool applyScale
 	theInfo.ResetLocation();
 	qinfo.ResetLocation();
 
-	double scale = 1, base = 0;
+	float scale = 1, base = 0;
 
 	if (applyScaleAndBase)
 	{
-		scale = theInfo.Param().Scale();
-		base = theInfo.Param().Base();
+		scale = static_cast<float>(theInfo.Param().Scale());
+		base = static_cast<float>(theInfo.Param().Base());
 	}
 
 	if (theInfo.Grid()->Class() == himan::kRegularGrid &&
@@ -78,7 +78,12 @@ bool CopyData(himan::info<T>& theInfo, NFmiFastQueryInfo& qinfo, bool applyScale
 			do
 			{
 				qinfo.NextLocation();
-				qinfo.FloatValue(static_cast<float>(theInfo.Data().At(x, y) * scale + base));
+				const float val = static_cast<float>(theInfo.Data().At(x, y));
+
+				if (val != kFloatMissing)
+				{
+					qinfo.FloatValue(val * scale + base);
+				}
 				x++;
 			} while (x < ni);
 
@@ -90,7 +95,12 @@ bool CopyData(himan::info<T>& theInfo, NFmiFastQueryInfo& qinfo, bool applyScale
 		// Grid is irregular OR source & dest are both kBottomLeft
 		while (theInfo.NextLocation() && qinfo.NextLocation())
 		{
-			qinfo.FloatValue(static_cast<float>(theInfo.Value() * scale + base));
+			const float val = static_cast<float>(theInfo.Value());
+
+			if (val != kFloatMissing)
+			{
+				qinfo.FloatValue(val * scale + base);
+			}
 		}
 	}
 
@@ -418,6 +428,11 @@ pair<himan::HPWriteStatus, himan::file_information> querydata::ToFile(info<T>& t
 	if (itsWriteOptions.configuration->WriteMode() == kAllGridsToAFile)
 	{
 		activeOnly = false;
+	}
+	else if (itsWriteOptions.configuration->WriteMode() == kFewGridsToAFile)
+	{
+		itsLogger.Fatal("Write option 'few' is not supported with querydata");
+		himan::Abort();
 	}
 
 	auto qdata = CreateQueryData<T>(theInfo, activeOnly, true);

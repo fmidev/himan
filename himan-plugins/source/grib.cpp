@@ -11,6 +11,7 @@
 #include "s3.h"
 #include "stereographic_grid.h"
 #include "timer.h"
+#include "transverse_mercator_grid.h"
 #include "util.h"
 #include <algorithm>
 #include <boost/filesystem.hpp>
@@ -74,6 +75,8 @@ long DetermineProductDefinitionTemplateNumber(long agg, long proc, long ftype)
 				break;
 			case kProbabilityGreaterThan:
 			case kProbabilityLessThan:
+			case kProbabilityGreaterThanOrEqual:
+			case kProbabilityLessThanOrEqual:
 			case kProbabilityBetween:
 			case kProbabilityEquals:
 			case kProbabilityNotEquals:
@@ -115,6 +118,8 @@ long DetermineProductDefinitionTemplateNumber(long agg, long proc, long ftype)
 				break;
 			case kProbabilityGreaterThan:
 			case kProbabilityLessThan:
+			case kProbabilityGreaterThanOrEqual:
+			case kProbabilityLessThanOrEqual:
 			case kProbabilityBetween:
 			case kProbabilityEquals:
 			case kProbabilityNotEquals:
@@ -134,7 +139,7 @@ long DetermineProductDefinitionTemplateNumber(long agg, long proc, long ftype)
 }
 
 template <typename T>
-long DetermineBitsPerValue(const vector<T>& values, double precision)
+long DetermineBitsPerValue(const vector<T>& values, int precision)
 {
 	/*
 	 * Calculate the minimum amount of bits required to represent the data in the precision specified.
@@ -191,7 +196,7 @@ long DetermineBitsPerValue(const vector<T>& values, double precision)
 	// Fallback if the calculation above fails
 	if (bitsPerValue < 0 || bitsPerValue > 24)
 	{
-		log.Error("bits per value calculation failed, defaulting to 24");
+		log.Error(fmt::format("Bits per value calculation failed for precision={}, defaulting to 24", precision));
 		log.Trace("D=" + to_string(static_cast<int>(D)) + " min=" + to_string(min) + " max=" + to_string(max) +
 		          " range=" + to_string(range));
 		bitsPerValue = 24;
@@ -536,6 +541,39 @@ void WriteAreaAndGrid(NFmiGribMessage& message, const shared_ptr<himan::grid>& g
 			break;
 		}
 
+		case kTransverseMercator:
+		{
+			auto tmg = dynamic_pointer_cast<transverse_mercator_grid>(grid);
+
+			if (edition == 1)
+			{
+				logr.Fatal("transverse mercator only supported with grib2");
+				himan::Abort();
+			}
+
+			message.GridType(12);
+
+			message.SizeX(static_cast<long>(tmg->Ni()));
+			message.SizeY(static_cast<long>(tmg->Nj()));
+
+			message.SetLongKey("longitudeOfReferencePoint", static_cast<long>(tmg->Orientation() * 1000000));
+			message.SetLongKey("latitudeOfReferencePoint", static_cast<long>(tmg->StandardParallel() * 1000000));
+
+			message.SetLongKey("XR", 100 * static_cast<long>(0));  // TODO
+			message.SetLongKey("YR", 100 * static_cast<long>(0));
+			message.SetLongKey("scaleFactorAtReferencePoint", static_cast<long>(tmg->Scale()));
+			message.SetLongKey("X1", 0);  // TODO
+			message.SetLongKey("X2", 0);
+			message.SetLongKey("Y1", 0);
+			message.SetLongKey("Y2", 0);
+			message.SetLongKey("Di", static_cast<long>(tmg->Di() * 100));
+			message.SetLongKey("Dj", static_cast<long>(tmg->Dj() * 100));
+
+			scmode = tmg->ScanningMode();
+
+			break;
+		}
+
 		default:
 			logr.Fatal("Invalid projection while writing grib: " + to_string(grid->Type()));
 			himan::Abort();
@@ -622,7 +660,7 @@ void WriteAreaAndGrid(NFmiGribMessage& message, const shared_ptr<himan::grid>& g
 
 void WriteTime(NFmiGribMessage& message, const forecast_time& ftime, const producer& prod, const param& par)
 {
-	message.DataDate(stol(ftime.OriginDateTime().String("%Y%m%d")));
+	message.DataDate(stol(ftime.OriginDateTime().ToDate()));
 	message.DataTime(stol(ftime.OriginDateTime().String("%H%M")));
 
 	logger logr("grib");
@@ -891,10 +929,12 @@ void WriteParameter(NFmiGribMessage& message, const param& par, const producer& 
 			default:
 				break;
 			case kProbabilityGreaterThan:  // Probability of event above upper limit
+			case kProbabilityGreaterThanOrEqual:
 				message.SetLongKey("probabilityType", 1);
 				message.SetLongKey("scaledValueOfUpperLimit", static_cast<long>(par.ProcessingType().Value()));
 				break;
 			case kProbabilityLessThan:  // Probability of event below lower limit
+			case kProbabilityLessThanOrEqual:
 				message.SetLongKey("probabilityType", 0);
 				message.SetLongKey("scaledValueOfLowerLimit", static_cast<long>(par.ProcessingType().Value()));
 				break;
@@ -1342,13 +1382,6 @@ void DetermineMessageNumber(NFmiGribMessage& message, file_information& finfo, H
 	// all grib headers etc
 	finfo.length = message.GetLongKey("totalLength");
 
-	if (writeMode == kSingleGridToAFile)
-	{
-		finfo.offset = 0;
-		finfo.message_no = 0;
-		return;
-	}
-
 	// appending to a file is a serial operation -- two threads cannot
 	// do it to a single file simultaneously. therefore offset is just
 	// the size of the file so far.
@@ -1381,8 +1414,84 @@ void DetermineMessageNumber(NFmiGribMessage& message, file_information& finfo, H
 			// the existing files and start numbering from there
 			NFmiGrib rdr;
 			rdr.Open(finfo.file_location);
-			messages[finfo.file_location] = rdr.MessageCount();
-			offsets[finfo.file_location] = boost::filesystem::file_size(finfo.file_location);
+			const int msgCount = rdr.MessageCount();
+
+			if (msgCount == INVALID_INT_VALUE)
+			{
+				// HIMAN-319
+				// Existing grib file is not finished correctly, it has 'GRIB'
+				// but not '7777'
+				//
+				// What can we do now? We cannot append to this file because that will
+				// cause problems to readers.
+				//
+				// 1. Abort and log this information
+				//  + Not destructive
+				//  - Needs manual intervention
+				//  - Log line is easily lost as a lot of logging is produced
+				//
+				// 2. Rename invalid file to something else and continue
+				//    with new file
+				//  + No data is lost
+				//  + Processing can continue without intervention
+				//  - Old file is left as an 'orphan', it will not be cleaned
+				//
+				// 3. Remove invalid file
+				//  + Clean solution
+				//  + Processing can continue without intervention
+				//  - Data is lost, could be very bad (if accidentally the filename is
+				//    the same as some very important data file)
+				//  - Possible existing memory mapping of file will cause signals
+				//    to reading programs
+				//
+				// 4. Truncate file so that invalid message is removed
+				//   + Clean solution
+				//   + Processing can continue without intervention
+				//   + Older messages are left intact and information is radon is accurate
+				//   - Slow operation
+				//
+				// Choose option 4.
+
+				logger logr("grib");
+				logr.Warning(fmt::format("Found incomplete grib file '{}', truncating to last complete message",
+				                         finfo.file_location));
+
+				ifstream fp(finfo.file_location.c_str(), ios::in | ios::binary | ios::ate);
+				ASSERT(fp);
+
+				const long long origlen = fp.tellg();
+				long long len = origlen;
+				char buffer[8];
+
+				for (long long i = 8; i <= origlen; i++)
+				{
+					fp.seekg(-i, fp.end);
+					fp.read(buffer, 8);
+					if (strncmp(buffer, "7777GRIB", 8) == 0)
+					{
+						break;
+					}
+					len = fp.tellg();
+				}
+
+				if (len <= 8)
+				{
+					logr.Error(fmt::format("Unable to truncate file '{}', remove it manually", finfo.file_location));
+					himan::Abort();
+				}
+
+				len -= 4;
+				boost::filesystem::resize_file(finfo.file_location, len);
+
+				logr.Debug(fmt::format("Truncated file '{}' from {} to {} bytes", finfo.file_location, origlen, len));
+
+				return DetermineMessageNumber(message, finfo, writeMode);
+			}
+			else
+			{
+				messages[finfo.file_location] = msgCount;
+				offsets[finfo.file_location] = boost::filesystem::file_size(finfo.file_location);
+			}
 		}
 	}
 
@@ -1453,7 +1562,7 @@ std::pair<himan::HPWriteStatus, himan::file_information> grib::ToFile(info<T>& a
 	auto finfo = ret.first;
 	auto msg = ret.second;
 
-	HPWriteStatus status = HPWriteStatus::kUnknown;
+	HPWriteStatus status;
 
 	if (itsWriteOptions.configuration->WriteMode() != kSingleGridToAFile)
 	{
@@ -1461,6 +1570,7 @@ std::pair<himan::HPWriteStatus, himan::file_information> grib::ToFile(info<T>& a
 
 		// Acquire mutex to (possibly) modify map containing "file name":"mutex" pairs
 		unique_lock<mutex> sflock(singleGribMessageCounterMutex);
+
 		// create or refer to a mutex for this specific file name
 		muret = singleGribMessageCounterMap.emplace(piecewise_construct, forward_as_tuple(finfo.file_location),
 		                                            forward_as_tuple());
@@ -1475,7 +1585,9 @@ std::pair<himan::HPWriteStatus, himan::file_information> grib::ToFile(info<T>& a
 	}
 	else
 	{
-		DetermineMessageNumber(msg, finfo, itsWriteOptions.configuration->WriteMode());
+		finfo.offset = 0;
+		finfo.message_no = 0;
+		finfo.length = msg.GetLongKey("totalLength");
 		status = WriteMessageToFile(msg, finfo, itsWriteOptions);
 	}
 
@@ -2446,13 +2558,6 @@ template <typename T>
 bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData, bool readIfNotMatching,
                               shared_ptr<info<T>> newInfo, const NFmiGribMessage& message, bool readData) const
 {
-	shared_ptr<radon> r;
-
-	if (options.configuration->DatabaseType() == kRadon)
-	{
-		r = GET_PLUGIN(radon);
-	}
-
 	bool dataIsValid = true;
 
 	auto prod = ReadProducer(options, message);
@@ -2728,11 +2833,9 @@ void UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restrict__ un
 	size_t i, idx = 0;
 	int v = 1;
 
-	short j = 0;
-
 	for (i = 0; i < len; i++)
 	{
-		for (j = 7; j >= 0; j--)
+		for (short j = 7; j >= 0; j--)
 		{
 			if (BitTest(bitmap[i], j))
 			{

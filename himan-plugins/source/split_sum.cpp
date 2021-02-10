@@ -369,7 +369,7 @@ void split_sum::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short 
 		infos.push_back(newInfo);  // extend lifetime over this loop
 
 		threads.push_back(new thread(&split_sum::DoParam, this, newInfo, myTargetInfo->Param().Name(),
-		                             to_string(threadIndex) + "_" + to_string(subThreadIndex)));
+		                             fmt::format("{}_{}", threadIndex, subThreadIndex)));
 
 		if (subThreadIndex % SUB_THREAD_COUNT == 0)
 		{
@@ -564,9 +564,8 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 		ASSERT(isRadiationCalculation || result >= 0 || IsMissing(result));
 	}
 
-	myThreadedLogger.Info("[" + deviceType + "] Parameter " + myParamName +
-	                      " missing values: " + to_string(myTargetInfo->Data().MissingCount()) + "/" +
-	                      to_string(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info(fmt::format("[{}] Parameter: {} missing values: {}/{}", deviceType, myParamName,
+	                                  myTargetInfo->Data().MissingCount(), myTargetInfo->Data().Size()));
 }
 
 pair<shared_ptr<himan::info<double>>, shared_ptr<himan::info<double>>> split_sum::GetSourceDataForRate(

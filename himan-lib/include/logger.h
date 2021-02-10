@@ -8,6 +8,8 @@
 
 #include "himan_common.h"
 #include "serialization.h"
+#include <fmt/core.h>
+#include <fmt/format.h>
 #include <stdio.h>
 
 namespace himan
@@ -27,7 +29,7 @@ class logger
 	{
 		if (itsDebugState <= kTraceMsg)
 		{
-			printf("Trace::%s %s\n", itsUserName.c_str(), msg.c_str());
+			fmt::print("Trace::{} {}\n", itsUserName, msg);
 		}
 	};
 
@@ -35,7 +37,7 @@ class logger
 	{
 		if (itsDebugState <= kDebugMsg)
 		{
-			printf("Debug::%s %s\n", itsUserName.c_str(), msg.c_str());
+			fmt::print("Debug::{} {}\n", itsUserName, msg);
 		}
 	};
 
@@ -43,7 +45,7 @@ class logger
 	{
 		if (itsDebugState <= kInfoMsg)
 		{
-			printf("Info::%s %s\n", itsUserName.c_str(), msg.c_str());
+			fmt::print("Info::{} {}\n", itsUserName, msg);
 		}
 	};
 
@@ -51,7 +53,7 @@ class logger
 	{
 		if (itsDebugState <= kWarningMsg)
 		{
-			printf("Warning::%s %s\n", itsUserName.c_str(), msg.c_str());
+			fmt::print("Warning::{} {}\n", itsUserName, msg);
 		}
 	};
 
@@ -59,13 +61,13 @@ class logger
 	{
 		if (itsDebugState <= kErrorMsg)
 		{
-			printf("Error::%s %s\n", itsUserName.c_str(), msg.c_str());
+			fmt::print("Error::{} {}\n", itsUserName, msg);
 		}
 	};
 
 	void Fatal(const std::string& msg) const
 	{
-		printf("Fatal::%s %s\n", itsUserName.c_str(), msg.c_str());
+		fmt::print("Fatal::{} {}\n", itsUserName, msg);
 	};
 
 	static HPDebugState MainDebugState;

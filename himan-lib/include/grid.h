@@ -166,7 +166,7 @@ class regular_grid : public grid
 
 	/* Return grid point value (incl. fractions) of a given latlon point */
 	virtual point XY(const point& latlon) const;
-	virtual point LatLon(size_t i) const;
+	virtual point LatLon(size_t i) const override;
 
 	/*
 	 * Functions that are only valid for some grid types, but for ease
@@ -178,8 +178,8 @@ class regular_grid : public grid
 	virtual point TopRight() const;
 	virtual point TopLeft() const;
 	virtual point BottomRight() const;
-	virtual point FirstPoint() const;
-	virtual point LastPoint() const;
+	virtual point FirstPoint() const override;
+	virtual point LastPoint() const override;
 
 	virtual HPScanningMode ScanningMode() const;
 
@@ -191,7 +191,7 @@ class regular_grid : public grid
 
 	virtual std::string Proj4String() const;
 	virtual std::unique_ptr<OGRPolygon> Geometry() const;
-	virtual earth_shape<double> EarthShape() const;
+	virtual earth_shape<double> EarthShape() const override;
 
    protected:
 	bool EqualsTo(const regular_grid& other) const;

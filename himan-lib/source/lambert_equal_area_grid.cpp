@@ -25,12 +25,11 @@ lambert_equal_area_grid::lambert_equal_area_grid(HPScanningMode theScanningMode,
 {
 	itsLogger = logger("lambert_equal_area_grid");
 
-	std::stringstream ss;
-	ss << "+proj=laea +lat_0=" << theStandardParallel << " +lon_0=" << theOrientation << " +a=" << std::fixed
-	   << earthShape.A() << " +b=" << earthShape.B() << " +units=m +no_defs +wktext";
+	const std::string ref = fmt::format("+proj=laea +lat_0={} +lon_0={} +a={} +b={} +units=m +no_defs +wktext",
+	                                    theStandardParallel, theOrientation, earthShape.A(), earthShape.B());
 
 	itsSpatialReference = std::unique_ptr<OGRSpatialReference>(new OGRSpatialReference());
-	itsSpatialReference->importFromProj4(ss.str().c_str());
+	itsSpatialReference->importFromProj4(ref.c_str());
 
 	CreateCoordinateTransformations(theFirstPoint, firstPointIsProjected);
 	itsLogger.Trace(Proj4String());
@@ -138,15 +137,14 @@ bool lambert_equal_area_grid::EqualsTo(const lambert_equal_area_grid& other) con
 
 	if (Orientation() != other.Orientation())
 	{
-		itsLogger.Trace("Orientation does not match: " + std::to_string(Orientation()) + " vs " +
-		                std::to_string(other.Orientation()));
+		itsLogger.Trace(fmt::format("Orientation does not match: {} vs {}", Orientation(), other.Orientation()));
 		return false;
 	}
 
 	if (StandardParallel() != other.StandardParallel())
 	{
-		itsLogger.Trace("Standard latitude does not match: " + std::to_string(StandardParallel()) + " vs " +
-		                std::to_string(other.StandardParallel()));
+		itsLogger.Trace(
+		    fmt::format("Standard latitude does not match: {} vs {}", StandardParallel(), other.StandardParallel()));
 		return false;
 	}
 

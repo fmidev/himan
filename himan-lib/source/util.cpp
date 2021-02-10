@@ -17,6 +17,7 @@
 #include "point_list.h"
 #include "reduced_gaussian_grid.h"
 #include "stereographic_grid.h"
+#include "transverse_mercator_grid.h"
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/format.hpp>
@@ -157,6 +158,34 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 				return "";
 		}
 	};
+
+	auto GetMasalaBase = [](HPProgramName name) -> string {
+		switch (name)
+		{
+			case kHiman:
+				return util::GetEnv("MASALA_PROCESSED_DATA_BASE");
+			case kGridToRadon:
+				try
+				{
+					return util::GetEnv("MASALA_REF_BASE");
+				}
+				catch (const invalid_argument& e)
+				{
+					try
+					{
+						return util::GetEnv("NEONS_REF_BASE");
+					}
+					catch (const invalid_argument& ee)
+					{
+						throw invalid_argument(
+						    "Neither 'MASALA_REF_BASE' nor 'NEONS_REF_BASE' environment variable defined");
+					}
+				}
+			default:
+				return "";
+		}
+	};
+
 	auto ReplaceTemplateValue = [&](const boost::regex& re, string& filename, Component k) {
 		boost::smatch what;
 
@@ -175,7 +204,7 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 			switch (k)
 			{
 				case Component::kMasalaBase:
-					replacement = util::GetEnv("MASALA_PROCESSED_DATA_BASE");
+					replacement = GetMasalaBase(conf.ProgramName());
 					break;
 				case Component::kAnalysisTime:
 					replacement = ftime.OriginDateTime().String(fmt);
@@ -621,7 +650,7 @@ double util::ToPower(double value, double power)
 }
 
 template <typename T>
-pair<matrix<T>, matrix<T>> util::CentralDifference(matrix<T>& A, vector<T>& dx, vector<T>& dy)
+pair<matrix<T>, matrix<T>> util::CentralDifference(matrix<T>& A, vector<T>& dx, vector<T>& dy, bool jPositive)
 {
 	matrix<T> dA_dx(A.SizeX(), A.SizeY(), 1, A.MissingValue());
 	matrix<T> dA_dy(A.SizeX(), A.SizeY(), 1, A.MissingValue());
@@ -631,88 +660,70 @@ pair<matrix<T>, matrix<T>> util::CentralDifference(matrix<T>& A, vector<T>& dx, 
 
 	ASSERT(dy.size() == A.SizeX() && dx.size() == A.SizeY());
 
-	// calculate for inner field
-	for (int j = 1; j < ASizeY - 1; ++j)  // rows
+	// compute x-derivative
+	for (int j = 0; j < ASizeY; ++j)
 	{
+		T dxj = jPositive ? dx[j] : dx[ASizeY - 1 - j];
 		for (int i = 1; i < ASizeX - 1; ++i)  // columns
 		{
 			dA_dx.Set(i, j, 0,
-			          (A.At(i + 1, j, 0) - A.At(i - 1, j, 0)) / (2 * dx[j]));  // central difference in x-direction
-			dA_dy.Set(i, j, 0,
-			          (A.At(i, j + 1, 0) - A.At(i, j - 1, 0)) / (2 * dy[i]));  // central difference in y-direction
+			          (A.At(i + 1, j, 0) - A.At(i - 1, j, 0)) / (2 * dxj));  // central difference in x-direction
+		}
+
+		// left boundary
+		dA_dx.Set(0, j, 0, (A.At(1, j, 0) - A.At(0, j, 0)) / dxj);  // forward difference in x-direction
+
+		// right boundary
+		dA_dx.Set(ASizeX - 1, j, 0,
+		          (A.At(ASizeX - 1, j, 0) - A.At(ASizeX - 2, j, 0)) / dxj);  // backward difference in x-direction
+	}
+
+	if (jPositive)
+	{
+		for (int i = 0; i < ASizeX; ++i)
+		{
+			for (int j = 1; j < ASizeY - 1; ++j)
+			{
+				dA_dy.Set(i, j, 0,
+				          (A.At(i, j + 1, 0) - A.At(i, j - 1, 0)) / (2 * dy[i]));  // central difference in y-direction
+			}
+			dA_dy.Set(i, 0, 0, (A.At(i, 1, 0) - A.At(i, 0, 0)) / dy[i]);  // forward difference in y-direction
+			dA_dy.Set(i, ASizeY - 1, 0,
+			          (A.At(i, ASizeY - 1, 0) - A.At(i, ASizeY - 2, 0)) / dy[i]);  // backward difference in y-direction
 		}
 	}
-
-	// treat boundaries separately
-	for (int i = 1; i < ASizeX - 1; ++i)  // rows
+	else
 	{
-		// calculate for upper boundary
-		dA_dx.Set(i, 0, 0, (A.At(i + 1, 0, 0) - A.At(i - 1, 0, 0)) / (2 * dx[0]));  // central difference in x-direction
-		dA_dy.Set(i, 0, 0, (A.At(i, 1, 0) - A.At(i, 0, 0)) / dy[i]);  // foreward difference in y-direction
-
-		// calculate for lower boundary
-		dA_dx.Set(i, ASizeY - 1, 0,
-		          (A.At(i + 1, ASizeY - 1, 0) - A.At(i - 1, ASizeY - 1, 0)) /
-		              (2 * dx[ASizeY - 1]));  // central difference in x-direction
-		dA_dy.Set(i, ASizeY - 1, 0,
-		          (A.At(i, ASizeY - 1, 0) - A.At(i, ASizeY - 2, 0)) / dy[i]);  // backward difference in y-direction
+		for (int i = 0; i < ASizeX; ++i)
+		{
+			for (int j = 1; j < ASizeY - 1; ++j)
+			{
+				dA_dy.Set(i, j, 0,
+				          -(A.At(i, j + 1, 0) - A.At(i, j - 1, 0)) / (2 * dy[i]));  // central difference in y-direction
+			}
+			dA_dy.Set(i, 0, 0, -(A.At(i, 1, 0) - A.At(i, 0, 0)) / dy[i]);  // forward difference in y-direction
+			dA_dy.Set(
+			    i, ASizeY - 1, 0,
+			    -(A.At(i, ASizeY - 1, 0) - A.At(i, ASizeY - 2, 0)) / dy[i]);  // backward difference in y-direction
+		}
 	}
-
-	for (int j = 1; j < ASizeY - 1; ++j)  // columns
-	{
-		// calculate for left boundary
-		dA_dx.Set(0, j, 0, (A.At(1, j, 0) - A.At(0, j, 0)) / dx[j]);  // foreward difference in x-direction
-		dA_dy.Set(0, j, 0, (A.At(0, j + 1, 0) - A.At(0, j - 1, 0)) / (2 * dy[0]));  // central difference in y-direction
-
-		// calculate for right boundary
-		dA_dx.Set(ASizeX - 1, j, 0,
-		          (A.At(ASizeX - 1, j, 0) - A.At(ASizeX - 2, j, 0)) / dx[j]);  // backward difference in x-direction
-		dA_dy.Set(ASizeX - 1, j, 0,
-		          (A.At(ASizeX - 1, j + 1, 0) - A.At(ASizeX - 1, j - 1, 0)) /
-		              (2 * dy[ASizeX - 1]));  // central difference in y-direction
-	}
-
-	// corner values last
-	// top left
-	dA_dx.Set(0, 0, 0, (A.At(1, 0, 0) - A.At(0, 0, 0)) / dx[0]);  // foreward difference in x-direction
-	dA_dy.Set(0, 0, 0, (A.At(0, 1, 0) - A.At(0, 0, 0)) / dy[0]);  // foreward difference in y-direction
-
-	// top right
-	dA_dx.Set(ASizeX - 1, 0, 0,
-	          (A.At(ASizeX - 1, 0, 0) - A.At(ASizeX - 2, 0, 0)) / dx[0]);  // foreward difference in x-direction
-	dA_dy.Set(
-	    ASizeX - 1, 0, 0,
-	    (A.At(ASizeX - 1, 1, 0) - A.At(ASizeX - 1, 0, 0)) / dy[ASizeX - 1]);  // backward difference in y-direction
-
-	// bottom left
-	dA_dx.Set(
-	    0, ASizeY - 1, 0,
-	    (A.At(1, ASizeY - 1, 0) - A.At(0, ASizeY - 1, 0)) / dx[ASizeY - 1]);  // foreward difference in x-direction
-	dA_dy.Set(0, ASizeY - 1, 0,
-	          (A.At(0, ASizeY - 1, 0) - A.At(0, ASizeY - 2, 0)) / dy[0]);  // backward difference in y-direction
-
-	// bottom right
-	dA_dx.Set(ASizeX - 1, ASizeY - 1, 0,
-	          (A.At(ASizeX - 1, ASizeY - 1, 0) - A.At(ASizeX - 2, ASizeY - 1, 0)) /
-	              dx[ASizeY - 1]);  // backward difference in x-direction
-	dA_dy.Set(ASizeX - 1, ASizeY - 1, 0,
-	          (A.At(ASizeX - 1, ASizeY - 1, 0) - A.At(ASizeX - 1, ASizeY - 2, 0)) /
-	              dy[ASizeX - 1]);  // backward difference in y-direction
 
 	pair<matrix<T>, matrix<T>> ret(dA_dx, dA_dy);
 	return ret;
 }
 
 template pair<matrix<double>, matrix<double>> util::CentralDifference<double>(matrix<double>& A, vector<double>& dx,
-                                                                              vector<double>& dy);
+                                                                              vector<double>& dy, bool jPositive);
 template pair<matrix<float>, matrix<float>> util::CentralDifference<float>(matrix<float>& A, vector<float>& dx,
-                                                                           vector<float>& dy);
-
-double util::LatitudeLength(double phi)
+                                                                           vector<float>& dy, bool jPositive);
+template <typename T>
+T util::LatitudeLength(T phi)
 {
-	double cos_phi = cos(phi * constants::kDeg);
-	return 2 * boost::math::constants::pi<double>() * constants::kR * abs(cos_phi);
+	T cos_phi = cos(phi * static_cast<T>(constants::kDeg));
+	return 2 * boost::math::constants::pi<T>() * static_cast<float>(constants::kR) * abs(cos_phi);
 }
+template double util::LatitudeLength(double phi);
+template float util::LatitudeLength(float phi);
 
 double util::round(double val, unsigned short numdigits)
 {
@@ -1185,9 +1196,21 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 	// (in most cases that's not *not* the one used by the weather model).
 	// Exception to this lambert conformal conic where we use radius 6367470.
 
-	if (geominfo["grid_type_id"] == "1")
+	int gridid;
+
+	try
 	{
-		// clang-format off
+		gridid = stoi(geominfo["grid_type_id"]);
+	}
+	catch (const exception& e)
+	{
+		throw invalid_argument(fmt::format("{} is not an integer", geominfo["grid_type_id"]));
+	}
+
+	switch (gridid)
+	{
+		case 1:
+			// clang-format off
 		return unique_ptr<latitude_longitude_grid>(new latitude_longitude_grid(
 		    scmode,
 		    point(stod(geominfo["long_orig"]), stod(geominfo["lat_orig"])),
@@ -1197,11 +1220,10 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    stod(geominfo["pas_latitude"]),
 		    earth_shape<double>(6371220.)
 		));
-		// clang-format on
-	}
-	else if (geominfo["grid_type_id"] == "4")
-	{
-		// clang-format off
+			// clang-format on
+
+		case 4:
+			// clang-format off
 		return unique_ptr<rotated_latitude_longitude_grid>(new rotated_latitude_longitude_grid(
 		    scmode,
 		    point(stod(geominfo["long_orig"]), stod(geominfo["lat_orig"])),
@@ -1212,11 +1234,10 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    earth_shape<double>(6371220.),
 		    point(stod(geominfo["geom_parm_2"]), stod(geominfo["geom_parm_1"])), true)
 		);
-		// clang-format on
-	}
-	else if (geominfo["grid_type_id"] == "2")
-	{
-		// clang-format off
+			// clang-format on
+
+		case 2:
+			// clang-format off
 		return unique_ptr<stereographic_grid>(new stereographic_grid(
 		    scmode,
 		    point(stod(geominfo["long_orig"]), stod(geominfo["lat_orig"])),
@@ -1228,33 +1249,32 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    earth_shape<double>(6371220.),
 		    false
 		));
-		// clang-format on
-	}
+			// clang-format on
 
-	else if (geominfo["grid_type_id"] == "6")
-	{
-		auto g = unique_ptr<reduced_gaussian_grid>(new reduced_gaussian_grid);
-		g->EarthShape(earth_shape<double>(6371220.));
-
-		reduced_gaussian_grid* const gg = dynamic_cast<reduced_gaussian_grid*>(g.get());
-
-		gg->N(stoi(geominfo["n"]));
-
-		auto strlongitudes = himan::util::Split(geominfo["longitudes_along_parallels"], ",");
-		vector<int> longitudes;
-
-		for (auto& l : strlongitudes)
+		case 6:
 		{
-			longitudes.push_back(stoi(l));
+			auto g = unique_ptr<reduced_gaussian_grid>(new reduced_gaussian_grid);
+			g->EarthShape(earth_shape<double>(6371220.));
+
+			reduced_gaussian_grid* const gg = dynamic_cast<reduced_gaussian_grid*>(g.get());
+
+			gg->N(stoi(geominfo["n"]));
+
+			auto strlongitudes = himan::util::Split(geominfo["longitudes_along_parallels"], ",");
+			vector<int> longitudes;
+			longitudes.reserve(strlongitudes.size());
+
+			for (auto& l : strlongitudes)
+			{
+				longitudes.push_back(stoi(l));
+			}
+
+			gg->NumberOfPointsAlongParallels(longitudes);
+			return std::move(g);
 		}
 
-		gg->NumberOfPointsAlongParallels(longitudes);
-		return std::move(g);
-	}
-
-	else if (geominfo["grid_type_id"] == "5")
-	{
-		// clang-format off
+		case 5:
+			// clang-format off
 		return unique_ptr<lambert_conformal_grid>(new lambert_conformal_grid(
 		    scmode,
 		    point(stod(geominfo["first_point_lon"]), stod(geominfo["first_point_lat"])),
@@ -1268,12 +1288,10 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    earth_shape<double>(6367470.),
 		    false
 		));
-		// clang-format on
-	}
+			// clang-format on
 
-	else if (geominfo["grid_type_id"] == "7")
-	{
-		// clang-format off
+		case 7:
+			// clang-format off
 		return unique_ptr<lambert_equal_area_grid>(new lambert_equal_area_grid(
 		    scmode,
 		    point(stod(geominfo["first_point_lon"]), stod(geominfo["first_point_lat"])),
@@ -1286,12 +1304,29 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    earth_shape<double>(6371220.),
 		    false
 		));
-		// clang-format on
-	}
+			// clang-format on
 
-	else
-	{
-		throw invalid_argument("Invalid grid type id for geometry " + geom_name);
+		case 8:
+			// clang-format off
+		return unique_ptr<transverse_mercator_grid>(new transverse_mercator_grid(
+		    scmode,
+		    point(stod(geominfo["first_point_lon"]), stod(geominfo["first_point_lat"])),
+		    stoi(geominfo["ni"]),
+		    stoi(geominfo["nj"]),
+		    stod(geominfo["di"]),
+		    stod(geominfo["dj"]),
+		    stod(geominfo["orientation"]),
+		    stod(geominfo["latin"]),
+		    stod(geominfo["scale"]),
+		    0, // TODO: false easting, this value might not be correct
+		    0, // TODO: false northing, this value might not be correct
+		    earth_shape<double>(6371220.),
+		    false
+		));
+			// clang-format on
+
+		default:
+			throw invalid_argument("Invalid grid type id for geometry " + geom_name);
 	}
 }
 
@@ -1321,41 +1356,36 @@ template void util::Flip<float>(matrix<float>&);
 string util::UniqueName(const plugin::search_options& options)
 {
 	ASSERT(options.configuration->DatabaseType() == kNoDatabase || options.prod.Id() != kHPMissingInt);
-	stringstream ss;
 
-	// clang-format off
-
-        ss << options.prod.Id() << "_"
-           << options.time.OriginDateTime().String("%Y-%m-%d %H:%M:%S") << "_"
-           << options.time.ValidDateTime().String("%Y-%m-%d %H:%M:%S") << "_"
-           << options.param.Name() << "_"
-           << static_cast<string>(options.level) << "_"
-           << static_cast<int> (options.ftype.Type()) << "_"
-           << options.ftype.Value();
-
-	// clang-format on
-
-	return ss.str();
+	try
+	{
+		return fmt::format("{}_{}_{}_{}_{}_{}_{}", options.prod.Id(), options.time.OriginDateTime().ToSQLTime(),
+		                   options.time.ValidDateTime().ToSQLTime(), options.param.Name(),
+		                   static_cast<string>(options.level), static_cast<int>(options.ftype.Type()),
+		                   options.ftype.Value());
+	}
+	catch (const std::exception& e)
+	{
+		fmt::print("{}\n", e.what());
+		himan::Abort();
+	}
 }
 
 template <typename T>
 string util::UniqueName(const info<T>& info)
 {
-	stringstream ss;
-
-	// clang-format off
-
-        ss << info.Producer().Id() << "_"
-           << info.Time().OriginDateTime().String("%Y-%m-%d %H:%M:%S") << "_"
-           << info.Time().ValidDateTime().String("%Y-%m-%d %H:%M:%S") << "_"
-           << info.Param().Name() << "_"
-           << static_cast<string>(info.Level()) << "_"
-           << static_cast<int> (info.ForecastType().Type()) << "_"
-           << info.ForecastType().Value();
-
-	// clang-format on
-
-	return ss.str();
+	try
+	{
+		return fmt::format("{}_{}_{}_{}_{}_{}_{}", info.Producer().Id(), info.Time().OriginDateTime().ToSQLTime(),
+		                   info.Time().ValidDateTime().ToSQLTime(), info.Param().Name(),
+		                   static_cast<string>(info.Level()), static_cast<int>(info.ForecastType().Type()),
+		                   info.ForecastType().Value());
+	}
+	catch (const std::exception& e)
+	{
+		fmt::print("{}\n", e.what());
+		himan::Abort();
+	}
 }
 
 template string util::UniqueName(const info<double>&);

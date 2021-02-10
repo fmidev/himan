@@ -3,7 +3,7 @@
 %define LIBNAME himan-scripts
 Summary: himan-scripts collection
 Name: %{LIBNAME}
-Version: 20.9.14
+Version: 20.12.9
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -12,8 +12,8 @@ Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: lua >= 5.1.4
-Requires: himan-plugins >= 20.7.28
-Requires: himan-lib >= 20.3.2
+Requires: himan-plugins >= 20.10.26
+Requires: himan-lib >= 20.10.26
 
 %define debug_package %{nil}
 
@@ -39,6 +39,17 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/himan-scripts/*.lua
 
 %changelog
+* Wed Dec  9 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.12.9-1.fmi
+- Changes to snwc-cloudlayers.lua
+* Mon Nov  9 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.9-1.fmi
+- Add snwc-cloudiness-and-precipitation.lua
+- Add snwc-cloudlayers.lua
+* Wed Nov  4 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.4-1.fmi
+- Add snwc-copy-smartmet.lua
+* Wed Oct 28 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.28-1.fmi
+- Add snwc-maxwind.lua
+* Mon Oct 26 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.26-1.fmi
+- Add snwc-radiation.lua
 * Mon Sep 14 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.9.14-1.fmi
 - Minor update to nearby weather
 * Tue Jul 28 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.7.28-1.fmi

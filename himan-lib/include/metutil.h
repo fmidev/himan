@@ -68,5 +68,49 @@ int LowConvection_(Type T0m, Type T850)
 
 double FlightLevel_(double P);
 
+/**
+ * @brief Calculate (local) solar time
+ *
+ * https://www.pveducation.org/pvcdrom/properties-of-sunlight/solar-time
+ *
+ * Equation of Time correction is not used.
+ *
+ * @param latlon point in question in latitude longitude coordinates
+ * @param rt time in question in UTC time zone
+ * @return local solar time
+ */
+
+raw_time SolarTime_(const point& latlon, const raw_time& rt);
+
+/**
+ * @brief Calculate elevation angle.
+ *
+ * Function taken from newbase, comments from there:
+ * * [Venäläinen: lisenssiaattitutkimus ANNEX (A3)]
+ * * These calculations of a elevation angle of the Sun does not give very
+ * * accurate estimations. This inaccuracy is partly caused by
+ * * the inaccurate calculations of declination angle.
+ * * The time given as a parameter must be a local solar time.
+ *
+ * * [Venäläinen: lisenssiaattitutkimus ANNEX (A4)]
+ * * The time given as a parameter must be a local solar time.
+ * * These calculations of a declination angle of the Sun does not give very accurate
+ * * estimations. May be the inaccuracy is mostly caused because of inaccurate
+ * * calculation of the yearAngle (a measure to Earths circulation around the Sun).
+ * * This inaccuracy causes an inaccurate elevation angle. But the calculation
+ * * of the elevation angle uses also the method NFmiLocation::AtzimuthAngle(),
+ * * where calculates a correction term, which quite successfully compensates
+ * * errors of the elevation angle.
+ *
+ * * The time given as a parameter must be a local solar time. Here the
+ * * atzimuth angle = 0 when the Sun is in the North.
+ * * There's also an odd correction term anEqualizerTerm (Laura Thölix:
+ * * pro gradu, page 16), which perhaps somehow compensates the inaccurate
+ * * calculation of the yearAngle (a measure to the Earths circulaton around the Sun).
+ *
+ */
+
+double ElevationAngle_(const point& latlon, const raw_time& rt);
+
 }  // namespace metutil
 }  // namespace himan

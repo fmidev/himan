@@ -124,11 +124,11 @@ bool blend::ParseConfigurationOptions(const shared_ptr<const plugin_configuratio
 		return false;
 	}
 
-	const string hours = conf->GetValue("hours");
+	const string hours = conf->GetValue("producer_hours");
 
 	if ((itsCalculationMode == kCalculateBias || itsCalculationMode == kCalculateMAE) && hours.empty())
 	{
-		throw std::runtime_error(ClassName() + ": number of previous hours ('hours') for calculation not specified");
+		throw std::runtime_error(ClassName() + ": number of previous hours ('producer_hours') for calculation not specified");
 	}
 	if (itsCalculationMode == kCalculateBias || itsCalculationMode == kCalculateMAE)
 	{
@@ -448,7 +448,6 @@ void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short 
 	}
 
 	const forecast_type forecastType = itsBlendProducer.type;
-	const level targetLevel = targetInfo->Level();
 	const forecast_time current = targetInfo->Time();
 
 	const raw_time originDateTime = current.OriginDateTime();
@@ -764,12 +763,8 @@ void blend::CalculateBlend(shared_ptr<info<double>> targetInfo, unsigned short t
 
 		for (size_t i = 0; i < weights.size(); i++)
 		{
-			double sum = 0.0;
-			for (const double& w : collectedWeights)
-			{
-				// currentWeights already pruned of missing values
-				sum += 1.0 / w;  // could be zero
-			}
+			const double sum = accumulate(collectedWeights.begin(), collectedWeights.end(), 0.0,
+			                              [](double acc, double d) { return acc + 1.0 / d; });
 
 			ASSERT(sum != 0);
 
@@ -782,11 +777,7 @@ void blend::CalculateBlend(shared_ptr<info<double>> targetInfo, unsigned short t
 		}
 		else
 		{
-			double sw = 0.0;
-			for (const auto& w : weights)
-			{
-				sw += w;
-			}
+			const double sw = accumulate(weights.begin(), weights.end(), 0.0);
 
 			if (sw > 0.0)
 			{
@@ -826,7 +817,7 @@ void blend::WriteToFile(const info_t targetInfo, write_options writeOptions)
 {
 	auto aWriter = GET_PLUGIN(writer);
 
-	if (itsCalculationMode == kCalculateMAE || itsCalculationMode == kCalculateMAE)
+	if (itsCalculationMode == kCalculateMAE || itsCalculationMode == kCalculateBias)
 	{
 		// Add more precision as MAE/Bias fields are not actually what they claim
 		// (for example T-K)

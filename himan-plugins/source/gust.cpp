@@ -8,14 +8,13 @@
 #include "forecast_time.h"
 #include "level.h"
 #include "logger.h"
+#include "metutil.h"
 #include "numerical_functions.h"
 #include "plugin_factory.h"
 #include <thread>
 
 #include "hitool.h"
 #include "radon.h"
-#include <NFmiLocation.h>
-#include <NFmiMetTime.h>
 
 using namespace std;
 using namespace himan;
@@ -106,12 +105,6 @@ void gust::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void gust::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
-	NFmiMetTime theTime(static_cast<short>(stoi(myTargetInfo->Time().ValidDateTime().String("%Y"))),
-	                    static_cast<short>(stoi(myTargetInfo->Time().ValidDateTime().String("%m"))),
-	                    static_cast<short>(stoi(myTargetInfo->Time().ValidDateTime().String("%d"))),
-	                    static_cast<short>(stoi(myTargetInfo->Time().ValidDateTime().String("%H"))),
-	                    static_cast<short>(stoi(myTargetInfo->Time().ValidDateTime().String("%M"))));
-
 	auto myThreadedLogger = logger("gust_pluginThread #" + to_string(threadIndex));
 
 	/*
@@ -196,8 +189,7 @@ void gust::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threa
 	vector<double> lowAndMiddleClouds(gridSize, himan::MissingDouble());
 
 	thread t(&DeltaT, itsConfiguration, T_LowestLevelInfo, forecastTime, forecastType, gridSize, boost::ref(dT));
-	thread t2(&LowAndMiddleClouds, boost::ref(lowAndMiddleClouds), LCloudInfo, MCloudInfo, HCloudInfo,
-	                 TCloudInfo);
+	thread t2(&LowAndMiddleClouds, boost::ref(lowAndMiddleClouds), LCloudInfo, MCloudInfo, HCloudInfo, TCloudInfo);
 
 	// calc boundary layer height
 	vector<double> z_boundaryl(gridSize, himan::MissingDouble());
@@ -370,8 +362,7 @@ void gust::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threa
 		double cloudCover = (LCloudInfo->Value() + MCloudInfo->Value()) * 100;
 		topo *= himan::constants::kIg;
 
-		NFmiLocation theLocation(myTargetInfo->LatLon().X(), myTargetInfo->LatLon().Y());
-		double elevationAngle = theLocation.ElevationAngle(theTime);
+		double elevationAngle = metutil::ElevationAngle_(myTargetInfo->LatLon(), forecastTime.ValidDateTime());
 
 		/* Calculations go here */
 

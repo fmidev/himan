@@ -30,7 +30,7 @@ class transverse_mercator_grid : public regular_grid
 	transverse_mercator_grid(const transverse_mercator_grid& other);
 	transverse_mercator_grid& operator=(const transverse_mercator_grid& other) = delete;
 
-	virtual std::string ClassName() const
+	virtual std::string ClassName() const override
 	{
 		return "himan::transverse_mercator_grid";
 	}

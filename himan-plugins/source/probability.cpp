@@ -82,13 +82,21 @@ static void GetConfigurationParameter(const std::string& name, const std::shared
 		}
 		else if (p.first == "comparison")
 		{
-			if (p.second == "<=")
+			if (p.second == "<")
 			{
 				output.ProcessingType().Type(kProbabilityLessThan);
 			}
-			else if (p.second == ">=")
+			else if (p.second == "<=")
+			{
+				output.ProcessingType().Type(kProbabilityLessThanOrEqual);
+			}
+			else if (p.second == ">")
 			{
 				output.ProcessingType().Type(kProbabilityGreaterThan);
+			}
+			else if (p.second == ">=")
+			{
+				output.ProcessingType().Type(kProbabilityGreaterThanOrEqual);
 			}
 			else if (p.second == "=")
 			{
@@ -126,7 +134,7 @@ static void GetConfigurationParameter(const std::string& name, const std::shared
 
 	if (output.ProcessingType().Type() == kUnknownProcessingType)
 	{
-		output.ProcessingType().Type(kProbabilityGreaterThan);
+		output.ProcessingType().Type(kProbabilityGreaterThanOrEqual);
 	}
 
 	const auto iname = param.Name();
@@ -140,7 +148,9 @@ static void GetConfigurationParameter(const std::string& name, const std::shared
 	const bool spread = (iname == "T-K" || iname == "T-C" || iname == "WATLEV-CM" || iname == "TD-K" ||
 	                     iname == "P-PA" || iname == "P-HPA" || iname == "WATLEV-N2000-CM") &&
 	                    (output.ProcessingType().Type() == kProbabilityLessThan ||
-	                     output.ProcessingType().Type() == kProbabilityGreaterThan);
+	                     output.ProcessingType().Type() == kProbabilityLessThanOrEqual ||
+	                     output.ProcessingType().Type() == kProbabilityGreaterThan ||
+	                     output.ProcessingType().Type() == kProbabilityGreaterThanOrEqual);
 
 	outParamConfig->useGaussianSpread = spread;
 	outParamConfig->parameter = param;
@@ -415,9 +425,15 @@ void probability::Calculate(std::shared_ptr<info<float>> myTargetInfo, unsigned 
 			switch (pc.output.ProcessingType().Type())
 			{
 				case kProbabilityLessThan:
+					Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::less<float>());
+					break;
+				case kProbabilityLessThanOrEqual:
 					Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::less_equal<float>());
 					break;
 				case kProbabilityGreaterThan:
+					Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::greater<float>());
+					break;
+				case kProbabilityGreaterThanOrEqual:
 					Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::greater_equal<float>());
 					break;
 				case kProbabilityEquals:

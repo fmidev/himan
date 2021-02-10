@@ -1,5 +1,6 @@
 #include "luatool.h"
 #include "ensemble.h"
+#include "fetcher.h"
 #include "forecast_time.h"
 #include "hitool.h"
 #include "lagged_ensemble.h"
@@ -264,18 +265,22 @@ void BindEnum(lua_State* L)
 	         .enum_("constants")[
 				 value("kUnknownLevel", kUnknownLevel),
 				 value("kGround", kGround),
+				 value("kMaximumWind", kMaximumWind),
 				 value("kTopOfAtmosphere", kTopOfAtmosphere),
+				 value("kIsothermal", kIsothermal),
+				 value("kLake", kLake),
 				 value("kPressure", kPressure),
+				 value("kPressureDelta", kPressureDelta),
 				 value("kMeanSea", kMeanSea),
 				 value("kAltitude", kAltitude),
 				 value("kHeight", kHeight),
+				 value("kHeightLayer", kHeightLayer),
 				 value("kHybrid", kHybrid),
 				 value("kGroundDepth", kGroundDepth),
 				 value("kDepth", kDepth),
 				 value("kEntireAtmosphere", kEntireAtmosphere),
 				 value("kEntireOcean", kEntireOcean),
-				 value("kMaximumThetaE", kMaximumThetaE),
-				 value("kHeightLayer", kHeightLayer)],
+				 value("kMaximumThetaE", kMaximumThetaE)],
 	     class_<HPTimeResolution>("HPTimeResolution")
 	         .enum_("constants")[
 				 value("kUnknownTimeResolution", kUnknownTimeResolution),
@@ -311,6 +316,8 @@ void BindEnum(lua_State* L)
 				 value("kUnknownProcessingType", kUnknownProcessingType),
 				 value("kProbabilityGreaterThan", kProbabilityGreaterThan),
 				 value("kProbabilityLessThan", kProbabilityLessThan),
+				 value("kProbabilityGreaterThan", kProbabilityGreaterThanOrEqual),
+				 value("kProbabilityLessThan", kProbabilityLessThanOrEqual),
 				 value("kProbabilityBetween", kProbabilityBetween),
 				 value("kProbabilityEquals", kProbabilityEquals),
 				 value("kProbabilityNotEquals", kProbabilityNotEquals),
@@ -1025,6 +1032,11 @@ void Process(modifier_mean& mod, const object& data, const object& height)
 
 namespace radon_wrapper
 {
+std::string GetLatestTime(std::shared_ptr<radon> r, const producer& prod, const std::string& geomName, int offset)
+{
+	return r->RadonDB().GetLatestTime(static_cast<int>(prod.Id()), geomName, offset);
+}
+
 std::string GetProducerMetaData(std::shared_ptr<radon> r, const producer& prod, const std::string& attName)
 {
 	return r->RadonDB().GetProducerMetaData(prod.Id(), attName);
@@ -1357,6 +1369,8 @@ void BindLib(lua_State* L)
 	              .def("GetY", LUA_CMEMFN(double, point, Y, void)),
 	          class_<producer>("producer")
 	              .def(constructor<>())
+	              .def(constructor<int>())
+	              .def(constructor<int, const std::string&>())
 	              .def("ClassName", &producer::ClassName)
 	              .def("SetName", LUA_MEMFN(void, producer, Name, const std::string&))
 	              .def("GetName", LUA_CMEMFN(std::string, producer, Name, void))
@@ -1537,6 +1551,7 @@ void BindLib(lua_State* L)
 	          def("MoistLift_", &metutil::MoistLift_<double>), 
 	          def("DryLift_", &metutil::DryLift_<double>),
 		  def("FlightLevel_", &metutil::FlightLevel_),
+		  def("ElevationAngle_", &metutil::ElevationAngle_),
 		  // himan namespace
 		  def("IsMissing", static_cast<bool(*)(double)>(&::IsMissing)),
 		  def("IsValid", static_cast<bool(*)(double)>(&::IsValid))];
@@ -1557,7 +1572,9 @@ void BindPlugins(lua_State* L)
                                                            const param&, const forecast_type&))
 	              .def("Fetch", LUA_CMEMFN(object, luatool, Fetch, const forecast_time&, const level&, const param&))
 	              .def("FetchWithType", LUA_CMEMFN(object, luatool, Fetch, const forecast_time&, const level&,
-	                                               const param&, const forecast_type&)),
+	                                               const param&, const forecast_type&))
+	              .def("FetchWithProducer", LUA_CMEMFN(object, luatool, Fetch, const forecast_time&, const level&,
+	                                               const param&, const forecast_type&, const producer& prod, const std::string& geomName)),
 	          class_<hitool, std::shared_ptr<hitool>>("hitool")
 	              .def(constructor<>())
 	              .def("ClassName", &hitool::ClassName)
@@ -1586,6 +1603,7 @@ void BindPlugins(lua_State* L)
 	              .def("GetHeightUnit", &hitool_wrapper::GetHeightUnit),
 	          class_<radon, std::shared_ptr<radon>>("radon")
 	              .def(constructor<>())
+		      .def("GetLatestTime", &radon_wrapper::GetLatestTime)
 	              .def("GetProducerMetaData", &radon_wrapper::GetProducerMetaData)];
 }
 
@@ -1612,6 +1630,27 @@ luabind::object luatool::Fetch(const forecast_time& theTime, const level& theLev
                                const forecast_type& theType) const
 {
 	auto x = compiled_plugin_base::Fetch(theTime, theLevel, theParam, theType, false);
+
+	if (!x)
+	{
+		return object();
+	}
+	return VectorToTable<double>(x->Data().Values());
+}
+
+luabind::object luatool::Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam,
+                               const forecast_type& theType, const producer& prod, const std::string& geomName) const
+{
+	auto cnf = std::make_shared<plugin_configuration>(*itsConfiguration);
+	if (geomName.empty() == false)
+	{
+		cnf->SourceGeomNames({geomName});
+	}
+
+	cnf->SourceProducers({prod});
+
+	auto f = GET_PLUGIN(fetcher);
+	auto x = f->Fetch(cnf, theTime, theLevel, theParam, theType, false);
 
 	if (!x)
 	{

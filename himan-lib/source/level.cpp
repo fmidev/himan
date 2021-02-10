@@ -4,7 +4,7 @@
  */
 
 #include "level.h"
-
+#include <fmt/core.h>
 #include <ostream>
 
 using namespace himan;
@@ -25,7 +25,12 @@ level::level(HPLevelType theType, double theValue)
 }
 
 level::level(HPLevelType theType, double theValue, const std::string& theName)
-    : itsType(theType), itsValue(theValue), itsValue2(kHPMissingValue), itsIndex(kHPMissingInt), itsName(theName), itsAB()
+    : itsType(theType),
+      itsValue(theValue),
+      itsValue2(kHPMissingValue),
+      itsIndex(kHPMissingInt),
+      itsName(theName),
+      itsAB()
 {
 }
 
@@ -51,11 +56,11 @@ bool level::operator!=(const level& other) const
 }
 level::operator std::string() const
 {
-	std::string out = HPLevelTypeToString.at(itsType) + "/" + std::to_string(itsValue);
+	std::string out = fmt::format("{}/{}", HPLevelTypeToString.at(itsType), itsValue);
 
 	if (!IsKHPMissingValue(itsValue2))
 	{
-		out += "/" + std::to_string(itsValue2);
+		out = fmt::format("{}/{}", out, itsValue2);
 	}
 
 	return out;

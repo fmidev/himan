@@ -121,8 +121,8 @@ tuple<vec2d, vec2d, vec2d> GetSampledSourceData(shared_ptr<const himan::plugin_c
 		{
 			PInfo = f->Fetch<float>(conf, myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType(), false);
 			TInfo = f->Fetch<float>(conf, myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType(), false);
-			RHInfo = f->Fetch<float>(conf, myTargetInfo->Time(), curLevel, param("RH-PRCNT"),
-			                         myTargetInfo->ForecastType(), false);
+			RHInfo =
+			    f->Fetch<float>(conf, myTargetInfo->Time(), curLevel, RHParam, myTargetInfo->ForecastType(), false);
 		}
 		catch (const HPExceptionType& e)
 		{
@@ -177,10 +177,7 @@ float Max(const vector<float>& vec)
 
 void MultiplyWith(vector<float>& vec, float multiplier)
 {
-	for (float& val : vec)
-	{
-		val *= multiplier;
-	}
+	for_each(vec.begin(), vec.end(), [multiplier](float& f) { f *= multiplier; });
 }
 
 template <typename T>
@@ -1598,9 +1595,6 @@ vector<pair<vector<float>, vector<float>>> cape::GetLFCCPU(shared_ptr<info<float
 				continue;
 			}
 
-			float& Tresult = (IsMissing(tup.get<6>())) ? tup.get<6>() : tup.get<8>();
-			float& Presult = (IsMissing(tup.get<7>())) ? tup.get<7>() : tup.get<9>();
-
 			const float prevdiff = prevTparcel - prevTenv;
 			const float diff = Tparcel - Tenv;
 			const bool isFirstLFC = (diff >= 0 || fabs(diff) < 1e-4) && IsMissing(prevdiff) && IsMissing(tup.get<6>());
@@ -1608,6 +1602,9 @@ vector<pair<vector<float>, vector<float>>> cape::GetLFCCPU(shared_ptr<info<float
 
 			if (isFirstLFC || isLastLFC)
 			{
+				float& Tresult = (IsMissing(tup.get<6>())) ? tup.get<6>() : tup.get<8>();
+				float& Presult = (IsMissing(tup.get<7>())) ? tup.get<7>() : tup.get<9>();
+
 				// Parcel is now warmer than environment, we have found LFC and entering CAPE zone
 
 				if (IsMissing(prevTparcel))
@@ -1745,8 +1742,7 @@ cape_source cape::GetSurfaceValues(shared_ptr<info<float>> myTargetInfo)
 	 */
 
 	auto TInfo = Fetch<float>(myTargetInfo->Time(), itsBottomLevel, TParam, myTargetInfo->ForecastType(), false);
-	auto RHInfo =
-	    Fetch<float>(myTargetInfo->Time(), itsBottomLevel, param("RH-PRCNT"), myTargetInfo->ForecastType(), false);
+	auto RHInfo = Fetch<float>(myTargetInfo->Time(), itsBottomLevel, RHParam, myTargetInfo->ForecastType(), false);
 	auto PInfo = Fetch<float>(myTargetInfo->Time(), itsBottomLevel, PParam, myTargetInfo->ForecastType(), false);
 
 	if (!TInfo || !RHInfo || !PInfo)
@@ -2045,8 +2041,7 @@ cape_multi_source cape::GetNHighestThetaEValuesCPU(shared_ptr<info<float>> myTar
 	while (true)
 	{
 		auto TInfo = Fetch<float>(myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType(), false);
-		auto RHInfo =
-		    Fetch<float>(myTargetInfo->Time(), curLevel, param("RH-PRCNT"), myTargetInfo->ForecastType(), false);
+		auto RHInfo = Fetch<float>(myTargetInfo->Time(), curLevel, RHParam, myTargetInfo->ForecastType(), false);
 		auto PInfo = Fetch<float>(myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType(), false);
 
 		if (!TInfo || !RHInfo || !PInfo)

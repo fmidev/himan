@@ -30,13 +30,33 @@ void writer::AddToPending(const std::vector<std::string>& names)
 	pendingWrites.insert(pendingWrites.end(), names.begin(), names.end());
 }
 
+void ReadConfigurationWriteOptions(write_options& writeOptions)
+{
+	// Other options in write_options struct could also be checked here,
+	// but they are really not that interesting hence I'm skipping them
+	// at this stage.
+
+	const std::string precision = writeOptions.configuration->GetValue("write_options.precision");
+
+	if (precision.empty() == false)
+	{
+		writeOptions.precision = std::stoi(precision);
+	}
+}
+
 template <typename T>
 std::pair<himan::HPWriteStatus, himan::file_information> writer::CreateFile(
     info<T>& theInfo, std::shared_ptr<const plugin_configuration> conf)
 {
 	itsWriteOptions.configuration = conf;
 
-	switch (itsWriteOptions.configuration->OutputFileType())
+	// do not modify write configuration of fetcher instance,
+	// as it may be shared among many writes
+	auto wo = itsWriteOptions;
+
+	ReadConfigurationWriteOptions(wo);
+
+	switch (wo.configuration->OutputFileType())
 	{
 		case kGRIB:
 		case kGRIB1:
@@ -44,7 +64,7 @@ std::pair<himan::HPWriteStatus, himan::file_information> writer::CreateFile(
 		{
 			auto theGribWriter = GET_PLUGIN(grib);
 
-			theGribWriter->WriteOptions(itsWriteOptions);
+			theGribWriter->WriteOptions(wo);
 			return theGribWriter->ToFile<T>(theInfo);
 		}
 		case kQueryData:
@@ -56,24 +76,23 @@ std::pair<himan::HPWriteStatus, himan::file_information> writer::CreateFile(
 			}
 
 			auto theWriter = GET_PLUGIN(querydata);
-			theWriter->WriteOptions(itsWriteOptions);
+			theWriter->WriteOptions(wo);
 
 			return theWriter->ToFile<T>(theInfo);
 		}
-		case kNetCDF:
-			break;
 
 		case kCSV:
 		{
 			auto theWriter = GET_PLUGIN(csv);
-			theWriter->WriteOptions(itsWriteOptions);
+			theWriter->WriteOptions(wo);
 
 			return theWriter->ToFile<T>(theInfo);
 		}
 		// Must have this or compiler complains
+		case kNetCDF:
 		default:
-			throw std::runtime_error(ClassName() + ": Invalid file type: " +
-			                         HPFileTypeToString.at(itsWriteOptions.configuration->OutputFileType()));
+			itsLogger.Error(
+			    fmt::format("Invalid file type: {}", HPFileTypeToString.at(wo.configuration->OutputFileType())));
 			break;
 	}
 
@@ -175,7 +194,7 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 	if (conf->WriteStorageType() == kS3ObjectStorageSystem)
 	{
 		std::lock_guard<std::mutex> lock(pendingMutex);
-		itsLogger.Info("Writing " + std::to_string(pendingWrites.size()) + " pending infos to file");
+		itsLogger.Info(fmt::format("Writing {} pending infos to file", pendingWrites.size()));
 
 		// The only case when we have pending writes is (currently) when
 		// writing to s3
@@ -192,7 +211,7 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 
 			if (ret.empty())
 			{
-				itsLogger.Fatal("Failed to find pending write from cache with key: " + name);
+				itsLogger.Fatal(fmt::format("Failed to find pending write from cache with key: {}", name));
 				himan::Abort();
 			}
 
@@ -253,9 +272,9 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 	}
 	else if (pendingWrites.empty() == false)
 	{
-		itsLogger.Fatal(
-		    "Pending write started with invalid conditions: write_mode=" + HPWriteModeToString.at(conf->WriteMode()) +
-		    ", storage_type=" + HPFileStorageTypeToString.at(conf->WriteStorageType()));
+		itsLogger.Fatal(fmt::format("Pending write started with invalid conditions: write_mode: {}, storage_type: {}",
+		                            HPWriteModeToString.at(conf->WriteMode()),
+		                            HPFileStorageTypeToString.at(conf->WriteStorageType())));
 		himan::Abort();
 	}
 }
@@ -283,7 +302,7 @@ bool writer::WriteToRadon(std::shared_ptr<const plugin_configuration> conf, cons
 			}
 			catch (const std::exception& e)
 			{
-				itsLogger.Error("Writing to radon failed: " + std::string(e.what()));
+				itsLogger.Error(fmt::format("Writing to radon failed: {}", e.what()));
 				return false;
 			}
 			catch (...)

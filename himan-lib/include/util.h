@@ -97,12 +97,13 @@ void Unpack(std::vector<std::shared_ptr<info<T>>> infos, bool addToCache = true)
  * @param A Data field of input values
  * @param dx vector of x-spacing as function of y
  * @param dy vector of y-spacing as function of x
+ * @param jPositive bool that indicates y-axis direction in the data
  * @return pair of dA/dx,dA/Dy
  */
 
 template <typename T>
 std::pair<himan::matrix<T>, himan::matrix<T>> CentralDifference(himan::matrix<T>& A, std::vector<T>& dx,
-                                                                std::vector<T>& dy);
+                                                                std::vector<T>& dy, bool jPositive);
 
 /**
  * @brief Round a double to requested precision
@@ -119,7 +120,8 @@ double round(double val, unsigned short numdigits);
  * @return Length of Latitude
  */
 
-double LatitudeLength(double phi);
+template <typename T>
+T LatitudeLength(T phi);
 
 /**
  * @brief Make SQL style interval value from forecast time

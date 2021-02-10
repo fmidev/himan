@@ -1,3 +1,4 @@
+#include <fmt/core.h>
 #include <forecast_type.h>
 
 using namespace himan;
@@ -52,5 +53,5 @@ bool forecast_type::operator!=(const forecast_type& other) const
 }
 forecast_type::operator std::string() const
 {
-	return HPForecastTypeToString.at(itsForecastType) + "/" + std::to_string(static_cast<int>(itsForecastTypeValue));
+	return fmt::format("{}/{}", HPForecastTypeToString.at(itsForecastType), itsForecastTypeValue);
 }

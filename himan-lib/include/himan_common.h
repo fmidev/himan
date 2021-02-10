@@ -297,6 +297,12 @@ const boost::unordered_map<std::string, HPFileStorageType> HPStringToFileStorage
 	("s3", kS3ObjectStorageSystem)
 	;
 
+enum HPProgramName {
+	kUnknownProgram = 0,
+	kHiman,
+	kGridToRadon
+};
+
 // clang-format on
 
 namespace constants
