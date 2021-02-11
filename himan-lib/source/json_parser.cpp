@@ -103,6 +103,8 @@ void WriteMode(const shared_ptr<configuration>& conf, const boost::property_tree
 
 	if (auto fw = ReadElement<string>(pt, "file_write"))
 	{
+		itsLogger.Warning("Configuration option 'file_write' is deprecated - use 'write_mode' instead");
+
 		string theFileWriteOption = fw.get();
 
 		if (theFileWriteOption == "database")
