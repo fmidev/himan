@@ -17,6 +17,7 @@ static std::once_flag oflag;
 const char* access_key = 0;
 const char* secret_key = 0;
 const char* security_token = 0;
+S3Protocol protocol = S3ProtocolHTTP;
 
 thread_local S3Status statusG = S3StatusOK;
 
@@ -115,6 +116,26 @@ void Initialize()
 			logr.Info("Environment variable S3_SECRET_ACCESS_KEY not defined");
 		}
 
+		try
+		{
+			const auto envproto = himan::util::GetEnv("S3_PROTOCOL");
+			if (envproto == "https")
+			{
+				protocol = S3ProtocolHTTPS;
+			}
+			else if (envproto == "http")
+			{
+				protocol = S3ProtocolHTTP;
+			}
+			else
+			{
+				logr.Warning(fmt::format("Unrecognized value found from env variable S3_PROTOCOL: '{}'", envproto));
+			}
+		}
+		catch (const std::invalid_argument& e)
+		{
+		}
+
 		S3_CHECK(S3_initialize("s3", S3_INIT_ALL, NULL));
 	});
 }
@@ -192,7 +213,7 @@ buffer s3::ReadFile(const file_information& fileInformation)
         {
                 fileInformation.file_server.c_str(),
                 bucket.c_str(),
-                S3ProtocolHTTP,
+                protocol,
                 S3UriStylePath,
                 access_key,
                 secret_key,
@@ -207,7 +228,7 @@ buffer s3::ReadFile(const file_information& fileInformation)
 	{
 		fileInformation.file_server.c_str(),
 		bucket.c_str(),
-		S3ProtocolHTTP,
+		protocol,
 		S3UriStylePath,
 		access_key,
 		secret_key,
@@ -293,7 +314,7 @@ void s3::WriteObject(const std::string& objectName, const buffer& buff)
         {
                 host,
                 bucket.c_str(),
-                S3ProtocolHTTP,
+                protocol,
                 S3UriStylePath,
                 access_key,
                 secret_key,
@@ -308,7 +329,7 @@ void s3::WriteObject(const std::string& objectName, const buffer& buff)
 	{
 		host,
 		bucket.c_str(),
-		S3ProtocolHTTP,
+		protocol,
 		S3UriStylePath,
 		access_key,
 		secret_key,
