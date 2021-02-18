@@ -26,13 +26,13 @@
 
 #endif
 
-#include "NFmiFastQueryInfo.h"
-#include <NFmiGdalArea.h>
-#include <NFmiLatLonArea.h>
-#include <NFmiQueryData.h>
-#include <NFmiRotatedLatLonArea.h>
-#include <NFmiStereographicArea.h>
-#include <NFmiTimeList.h>
+#include "newbase/NFmiFastQueryInfo.h"
+#include <newbase/NFmiGdalArea.h>
+#include <newbase/NFmiLatLonArea.h>
+#include <newbase/NFmiQueryData.h>
+#include <newbase/NFmiRotatedLatLonArea.h>
+#include <newbase/NFmiStereographicArea.h>
+#include <newbase/NFmiTimeList.h>
 
 #ifdef __clang__
 

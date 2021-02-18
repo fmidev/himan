@@ -27,6 +27,10 @@ stereographic_grid::stereographic_grid(HPScanningMode theScanningMode, const poi
 	itsSpatialReference = std::unique_ptr<OGRSpatialReference>(new OGRSpatialReference());
 	itsSpatialReference->importFromProj4(ss.str().c_str());
 
+#if GDAL_VERSION_MAJOR > 1
+	itsSpatialReference->SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+#endif
+
 	CreateCoordinateTransformations(theFirstPoint, firstPointIsProjected);
 	itsLogger.Trace(Proj4String());
 }
@@ -38,6 +42,11 @@ stereographic_grid::stereographic_grid(HPScanningMode theScanningMode, const poi
 {
 	itsLogger = logger("stereographic_grid");
 	itsSpatialReference = std::move(spRef);
+
+#if GDAL_VERSION_MAJOR > 1
+	itsSpatialReference->SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+#endif
+
 	CreateCoordinateTransformations(theFirstPoint, firstPointIsProjected);
 	itsLogger.Trace(Proj4String());
 }
@@ -63,19 +72,13 @@ void stereographic_grid::CreateCoordinateTransformations(const point& firstPoint
 
 	double lat = firstPoint.Y(), lon = firstPoint.X();
 
-	if (firstPointIsProjected)
+	if (firstPointIsProjected == false)
 	{
-		if (!itsXYToLatLonTransformer->Transform(1, &lon, &lat))
+		if (!itsLatLonToXYTransformer->Transform(1, &lon, &lat))
 		{
-			itsLogger.Fatal("Failed to get first point latlon");
+			itsLogger.Fatal("Failed to get false easting and northing");
 			himan::Abort();
 		}
-	}
-
-	if (!itsLatLonToXYTransformer->Transform(1, &lon, &lat))
-	{
-		itsLogger.Fatal("Failed to get false easting and northing");
-		himan::Abort();
 	}
 
 	if (fabs(lon) < 1e-4 and fabs(lat) < 1e-4)

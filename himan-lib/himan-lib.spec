@@ -26,7 +26,10 @@ BuildRequires: bzip2-devel
 BuildRequires: redhat-rpm-config
 BuildRequires: cuda-11-0
 BuildRequires: gcc-c++ >= 4.8.2
-Requires: gdal
+BuildRequires: geos39-devel
+BuildRequires: gdal32-devel
+Requires: geos39
+Requires: gdal32-lib
 Requires: eccodes
 Requires: boost169-iostreams
 Requires: boost169-filesystem

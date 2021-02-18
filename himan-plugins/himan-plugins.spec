@@ -18,7 +18,9 @@ Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 20.12.2
 Requires: libfmidb >= 20.7.8
-Requires: smartmet-library-newbase >= 20.4.18
+Requires: smartmet-library-newbase >= 21.2.18
+Requires: smartmet-library-gis
+Requires: smartmet-library-macgyver
 Requires: libpqxx
 Requires: boost169-iostreams
 Requires: boost169-thread
@@ -28,7 +30,7 @@ Requires: libs3 >= 4.1
 Requires: libjasper
 Requires: grib_api
 %else
-BuildRequires: gdal-devel
+BuildRequires: gdal32-devel
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-11-0
 BuildRequires: eccodes-devel
@@ -42,7 +44,9 @@ Requires: eccodes
 %endif
 BuildRequires: libfmigrib-devel >= 20.12.2
 BuildRequires: libfmidb-devel >= 20.7.8
-BuildRequires: smartmet-library-newbase-devel >= 20.4.18
+BuildRequires: smartmet-library-newbase-devel >= 21.2.18
+BuildRequires: smartmet-library-gis-devel
+BuildRequires: smartmet-library-macgyver-devel
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: boost169-devel

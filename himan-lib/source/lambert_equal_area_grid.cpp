@@ -13,6 +13,11 @@ lambert_equal_area_grid::lambert_equal_area_grid(HPScanningMode theScanningMode,
 {
 	itsLogger = logger("lambert_equal_area_grid");
 	itsSpatialReference = std::move(spRef);
+
+#if GDAL_VERSION_MAJOR > 1
+	itsSpatialReference->SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+#endif
+
 	CreateCoordinateTransformations(theFirstPoint, firstPointIsProjected);
 	itsLogger.Trace(Proj4String());
 }
@@ -30,6 +35,10 @@ lambert_equal_area_grid::lambert_equal_area_grid(HPScanningMode theScanningMode,
 
 	itsSpatialReference = std::unique_ptr<OGRSpatialReference>(new OGRSpatialReference());
 	itsSpatialReference->importFromProj4(ref.c_str());
+
+#if GDAL_VERSION_MAJOR > 1
+	itsSpatialReference->SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+#endif
 
 	CreateCoordinateTransformations(theFirstPoint, firstPointIsProjected);
 	itsLogger.Trace(Proj4String());
@@ -57,19 +66,13 @@ void lambert_equal_area_grid::CreateCoordinateTransformations(const point& first
 
 	double lat = firstPoint.Y(), lon = firstPoint.X();
 
-	if (firstPointIsProjected)
+	if (firstPointIsProjected == false)
 	{
-		if (!itsXYToLatLonTransformer->Transform(1, &lon, &lat))
+		if (!itsLatLonToXYTransformer->Transform(1, &lon, &lat))
 		{
-			itsLogger.Fatal("Failed to get first point latlon");
+			itsLogger.Fatal("Failed to get false easting and northing");
 			himan::Abort();
 		}
-	}
-
-	if (!itsLatLonToXYTransformer->Transform(1, &lon, &lat))
-	{
-		itsLogger.Fatal("Failed to get false easting and northing");
-		himan::Abort();
 	}
 
 	if (fabs(lon) < 1e-4 and fabs(lat) < 1e-4)

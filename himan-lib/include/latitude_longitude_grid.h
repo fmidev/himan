@@ -14,7 +14,6 @@
 #include <mutex>
 #include <string>
 
-class NFmiRotatedLatLonArea;
 namespace himan
 {
 class latitude_longitude_grid : public regular_grid
