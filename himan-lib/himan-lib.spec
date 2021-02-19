@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 20.10.19
+Version: 21.2.9
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -15,7 +15,7 @@ Requires: libgcc
 Requires: libstdc++
 Requires: libfmidb >= 20.7.8
 Requires: libfmigrib >= 19.10.28
-Requires: fmt >= 6.0.0
+Requires: fmt >= 7.1.0
 
 %if %{defined suse_version}
 BuildRequires: bzip2
@@ -39,7 +39,7 @@ BuildRequires: zlib-devel
 BuildRequires: boost169-devel
 BuildRequires: scons
 BuildRequires: libs3-devel >= 4.1
-BuildRequires: fmt-devel >= 6.0.0
+BuildRequires: fmt-devel >= 7.1.0
 
 Provides: libhiman.so
 
@@ -79,6 +79,17 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/*
 
 %changelog
+* Tue Feb  9 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.2.9-1.fmi
+- Enable csv as output file format
+* Mon Nov 23 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.23-1.fmi
+- Minor changes
+* Wed Nov 18 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.18-1.fmi
+- fmt7
+* Thu Nov 12 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.12-1.fmi
+- Fix to CentralDifference()
+* Mon Oct 26 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.26-1.fmi
+- Additions to metutil
+- Changes to producer & json_parser
 * Mon Oct 19 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.19-1.fmi
 - Add dependency to fmt (a string formatting library)
 * Thu Oct 15 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.15-1.fmi

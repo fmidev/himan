@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 20.10.20
+Version: 21.2.9
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -13,10 +13,10 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 20.10.15
+Requires: himan-lib >= 20.11.23
 Requires: lua >= 5.1.4
 Requires: unixODBC
-Requires: libfmigrib >= 20.5.25
+Requires: libfmigrib >= 20.12.2
 Requires: libfmidb >= 20.7.8
 Requires: smartmet-library-newbase >= 20.4.18
 Requires: libpqxx
@@ -40,14 +40,14 @@ BuildRequires: libs3-devel >= 4.1
 Requires: jasper-libs
 Requires: eccodes
 %endif
-BuildRequires: libfmigrib-devel >= 20.5.25
+BuildRequires: libfmigrib-devel >= 20.12.2
 BuildRequires: libfmidb-devel >= 20.7.8
 BuildRequires: smartmet-library-newbase-devel >= 20.4.18
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: boost169-devel
 BuildRequires: scons
-BuildRequires: fmt-devel >= 6.0.0
+BuildRequires: fmt-devel >= 7.1.0
 
 AutoReqProv:	no
 
@@ -134,7 +134,37 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
-* Mon Oct 20 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.20-1.fmi
+* Tue Feb  9 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.2.9-1.fmi
+- Enable csv as output file format
+* Wed Jan 27 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.1.27-1.fmi
+- Change to frost
+* Wed Dec  2 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.12.2-1.fmi
+- Changes in fmigrib
+- Initial partial support for writing transverse mercator gribs
+* Mon Nov 23 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.23-1.fmi
+- Changes/fixes in probability, frost
+* Wed Nov 18 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.18-1.fmi
+- fmt7
+* Tue Nov 17 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.17-1.fmi
+- cape cuda code more optimization
+* Mon Nov 16 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.16-1.fmi
+- cape cuda code optimization
+- frost support smartmet nwc
+* Thu Nov 12 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.12-1.fmi
+- turbulence plugin cuda version
+* Mon Nov  9 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.9-1.fmi
+- Modifications to windvector
+* Thu Nov  5 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.5-1.fmi
+- Fix for case where reading incomplete grib file crashed Himan
+* Wed Nov  4 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.4-1.fmi
+- Allow decimal precision to set at configuration
+* Fri Oct 30 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.30-1.fmi
+- Bugfix to blend
+* Wed Oct 28 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.28-1.fmi
+- More additions to luatool
+* Mon Oct 26 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.26-1.fmi
+- Additions to luatool
+* Tue Oct 20 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.20-1.fmi
 - Bugfix for grib write
 * Mon Oct 19 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.10.19-1.fmi
 - Add dependency to fmt (a string formatting library)
