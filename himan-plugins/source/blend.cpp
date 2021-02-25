@@ -35,12 +35,12 @@ const int kHirlamForecastLength = 54;
 const int kMepsForecastLength = 66;
 const int kGfsForecastLength = 240;
 
-const producer kLapsProd(109, 86, 109, "LAPSSCAN");
-string kLapsGeom = "LAPSSCANLARGE";
+const producer kObsProd(281, 86, 202, "SMARTMETNWC");
+string kObsGeom = "MEPS2500D";
 
 // Each blend producer is composed of these original producers. We use forecast_types to distinguish them
 // from each other, and this way we don't have to create bunch of extra producers.
-const blend_producer LAPS(forecast_type(kAnalysis), 0, 1);
+const blend_producer OBS(forecast_type(kAnalysis), 0, 1);
 const blend_producer MOS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kMos)), kMosForecastLength,
                          12);
 const blend_producer ECMWF(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kEcmwf)),
@@ -57,7 +57,7 @@ blend::blend() : itsCalculationMode(kCalculateNone), itsNumHours(0), itsAnalysis
 	itsLogger = logger("blend");
 }
 
-// Create observation analysis time (ie. LAPS analysis time) from analysis hour that's
+// Create observation analysis time (ie. OBS analysis time) from analysis hour that's
 // given in conf file
 forecast_time MakeAnalysisTime(const forecast_time& currentTime, int analysisHour)
 {
@@ -99,9 +99,15 @@ std::string IdToName(size_t id)
 // - analysis time (obs)
 bool blend::ParseConfigurationOptions(const shared_ptr<const plugin_configuration>& conf)
 {
+	// backwards compatibility
 	if (conf->GetValue("laps_geometry").empty() == false)
 	{
-		kLapsGeom = conf->GetValue("laps_geometry");
+		kObsGeom = conf->GetValue("laps_geometry");
+	}
+
+	if (conf->GetValue("obs_geometry").empty() == false)
+	{
+		kObsGeom = conf->GetValue("obs_geometry");
 	}
 
 	const string mode = conf->GetValue("mode");
@@ -238,7 +244,7 @@ blend::FetchMAEAndBiasSource(shared_ptr<info<double>>& targetInfo, const forecas
 	const level& currentLevel = targetInfo->Level();
 
 	shared_ptr<info<double>> analysis =
-	    Fetch(itsAnalysisTime, currentLevel, currentParam, LAPS.type, {kLapsGeom}, kLapsProd);
+	    Fetch(itsAnalysisTime, currentLevel, currentParam, OBS.type, {kObsGeom}, kObsProd);
 
 	if (!analysis)
 	{
