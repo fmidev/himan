@@ -101,6 +101,7 @@ void stereographic_grid::CreateCoordinateTransformations(const point& firstPoint
 	   << " +x_0=" << fe << " +y_0=" << fn;
 
 	itsSpatialReference->importFromProj4(ss.str().c_str());
+
 	itsLatLonToXYTransformer = std::unique_ptr<OGRCoordinateTransformation>(
 	    OGRCreateCoordinateTransformation(geogCS.get(), itsSpatialReference.get()));
 	itsXYToLatLonTransformer = std::unique_ptr<OGRCoordinateTransformation>(
@@ -162,10 +163,9 @@ bool stereographic_grid::EqualsTo(const stereographic_grid& other) const
 		return false;
 	}
 
-	if (Orientation() != other.Orientation())
+	if (!itsSpatialReference->IsSame(other.itsSpatialReference.get()))
 	{
-		itsLogger.Trace("Orientation does not match: " + to_string(Orientation()) + " vs " +
-		                to_string(other.Orientation()));
+		itsLogger.Trace("Areas are not equal");
 		return false;
 	}
 

@@ -117,6 +117,7 @@ bool regular_grid::EqualsTo(const regular_grid& other) const
 		return false;
 	}
 
+#if 0
 	const auto es = EarthShape();
 	const auto oes = other.EarthShape();
 
@@ -128,7 +129,7 @@ bool regular_grid::EqualsTo(const regular_grid& other) const
 
 		return false;
 	}
-
+#endif
 	const double kEpsilon = 0.0001;
 
 	if (fabs(other.itsDi - itsDi) > kEpsilon)
@@ -164,7 +165,7 @@ bool regular_grid::EqualsTo(const regular_grid& other) const
 		return false;
 	}
 
-	if (!point::LatLonCompare(other.TopLeft() , TopLeft()))
+	if (!point::LatLonCompare(other.TopLeft(), TopLeft()))
 	{
 		itsLogger.Trace("TopLeft does not match: " + static_cast<std::string>(other.TopLeft()) + " vs " +
 		                static_cast<std::string>(TopLeft()));
