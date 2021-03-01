@@ -68,7 +68,7 @@ void time_series::Fetch(std::shared_ptr<const plugin_configuration> config, fore
  * */
 
 template <class InputIt>
-himan::info_t Max(InputIt begin, InputIt end)
+std::shared_ptr<himan::info<double>> Max(InputIt begin, InputIt end)
 {
 	// Empty series
 	if (begin == end)
@@ -84,7 +84,7 @@ himan::info_t Max(InputIt begin, InputIt end)
 
 	// Set first field as first set of maximum values
 	auto maxInfo = make_shared<himan::info<double>>(**begin);
-	maxInfo->Base(make_shared<himan::base<double>>(shared_ptr<himan::grid>(maxInfo->Grid()->Clone()),
+	maxInfo->Base(make_shared<himan::base<double>>(std::shared_ptr<himan::grid>(maxInfo->Grid()->Clone()),
 	                                               himan::matrix<double>(maxInfo->Data())));
 
 	++begin;
@@ -112,7 +112,7 @@ himan::info_t Max(InputIt begin, InputIt end)
 }
 
 template <class InputIt>
-himan::info_t Mean(InputIt begin, InputIt end)
+std::shared_ptr<himan::info<double>> Mean(InputIt begin, InputIt end)
 {
 	if (begin == end)
 		return nullptr;
@@ -127,7 +127,7 @@ himan::info_t Mean(InputIt begin, InputIt end)
 
 	// Set first field as first set of mean values
 	auto meanInfo = make_shared<himan::info<double>>(**begin);
-	meanInfo->Base(make_shared<himan::base<double>>(shared_ptr<himan::grid>(meanInfo->Grid()->Clone()),
+	meanInfo->Base(make_shared<himan::base<double>>(std::shared_ptr<himan::grid>(meanInfo->Grid()->Clone()),
 	                                                himan::matrix<double>(meanInfo->Data())));
 
 	++begin;
@@ -192,7 +192,7 @@ void pot_gfs::Process(std::shared_ptr<const plugin_configuration> conf)
 	Start();
 }
 
-void pot_gfs::Calculate(info_t myTargetInfo, unsigned short threadIndex)
+void pot_gfs::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	/*
 	 * Required source parameters
@@ -272,7 +272,7 @@ void pot_gfs::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	}
 
 	// find max
-	info_t CAPEMaxInfo;
+	std::shared_ptr<info<double>> CAPEMaxInfo;
 	CAPEMaxInfo = Max(CAPEts.begin(), CAPEts.end());
 
 	// create time series RR
@@ -280,7 +280,7 @@ void pot_gfs::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	RRts.Fetch(itsConfiguration, startTime, kHourResolution, 1, 3, forecastLevel, forecastType);
 
 	// fnd mean
-	info_t RRMeanInfo;
+	std::shared_ptr<info<double>> RRMeanInfo;
 	RRMeanInfo = Mean(RRts.begin(), RRts.end());
 
 	if (!CAPEMaxInfo || !RRMeanInfo)

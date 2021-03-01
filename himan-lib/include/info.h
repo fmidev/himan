@@ -920,8 +920,6 @@ class info
 #endif
 };
 
-typedef std::shared_ptr<info<double>> info_t;
-
 #include "info_impl.h"
 
 }  // namespace himan

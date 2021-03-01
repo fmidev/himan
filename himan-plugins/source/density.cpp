@@ -53,9 +53,9 @@ void density::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short th
 
 	double PScale = 1;
 
-	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, false);
+	shared_ptr<info<double>> TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, false);
 
-	info_t PInfo;
+	shared_ptr<info<double>> PInfo;
 	bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
 
 	if (!isPressureLevel)

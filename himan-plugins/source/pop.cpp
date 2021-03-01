@@ -79,7 +79,7 @@ void pop::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void pop::Calculate(info_t myTargetInfo, unsigned short threadIndex)
+void pop::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	// Macro comments in Finnish, my addition in English
 

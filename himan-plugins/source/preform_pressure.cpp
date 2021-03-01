@@ -81,7 +81,7 @@ void preform_pressure::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex)
+void preform_pressure::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	// Required source parameters
 
@@ -120,23 +120,23 @@ void preform_pressure::Calculate(info_t myTargetInfo, unsigned short threadIndex
 
 	// Source infos
 
-	info_t TInfo = Fetch(forecastTime, groundLevel, TParam, forecastType, false);
-	info_t T700Info = Fetch(forecastTime, P700, TParam, forecastType, false);
-	info_t T850Info = Fetch(forecastTime, P850, TParam, forecastType, false);
-	info_t T925Info = Fetch(forecastTime, P925, TParam, forecastType, false);
+	shared_ptr<info<double>> TInfo = Fetch(forecastTime, groundLevel, TParam, forecastType, false);
+	shared_ptr<info<double>> T700Info = Fetch(forecastTime, P700, TParam, forecastType, false);
+	shared_ptr<info<double>> T850Info = Fetch(forecastTime, P850, TParam, forecastType, false);
+	shared_ptr<info<double>> T925Info = Fetch(forecastTime, P925, TParam, forecastType, false);
 
-	info_t RHInfo = Fetch(forecastTime, surface2mLevel, RHParam, forecastType, false);
-	info_t RH700Info = Fetch(forecastTime, P700, RHParam, forecastType, false);
-	info_t RH850Info = Fetch(forecastTime, P850, RHParam, forecastType, false);
-	info_t RH925Info = Fetch(forecastTime, P925, RHParam, forecastType, false);
+	shared_ptr<info<double>> RHInfo = Fetch(forecastTime, surface2mLevel, RHParam, forecastType, false);
+	shared_ptr<info<double>> RH700Info = Fetch(forecastTime, P700, RHParam, forecastType, false);
+	shared_ptr<info<double>> RH850Info = Fetch(forecastTime, P850, RHParam, forecastType, false);
+	shared_ptr<info<double>> RH925Info = Fetch(forecastTime, P925, RHParam, forecastType, false);
 
-	info_t W925Info = Fetch(forecastTime, P925, WParams, forecastType, false);
-	info_t W850Info = Fetch(forecastTime, P850, WParams, forecastType, false);
+	shared_ptr<info<double>> W925Info = Fetch(forecastTime, P925, WParams, forecastType, false);
+	shared_ptr<info<double>> W850Info = Fetch(forecastTime, P850, WParams, forecastType, false);
 
-	info_t RRInfo = Fetch(forecastTime, surface0mLevel, RRParams, forecastType, false);
-	info_t PInfo = Fetch(forecastTime, surface0mLevel, PParams, forecastType, false);
+	shared_ptr<info<double>> RRInfo = Fetch(forecastTime, surface0mLevel, RRParams, forecastType, false);
+	shared_ptr<info<double>> PInfo = Fetch(forecastTime, surface0mLevel, PParams, forecastType, false);
 
-	info_t SNRInfo = Fetch(forecastTime, surface0mLevel, SNRParam, forecastType, false);
+	shared_ptr<info<double>> SNRInfo = Fetch(forecastTime, surface0mLevel, SNRParam, forecastType, false);
 
 	if (!TInfo || !T700Info || !T850Info || !T925Info || !RHInfo || !RH700Info || !RH850Info || !RH925Info ||
 	    !W925Info || !W850Info || !RRInfo || !PInfo || !SNRInfo)

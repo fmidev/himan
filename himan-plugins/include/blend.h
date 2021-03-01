@@ -69,7 +69,8 @@ class blend : public compiled_plugin, private compiled_plugin_base
 
    protected:
 	virtual void Calculate(std::shared_ptr<info<double>> targetInfo, unsigned short threadIndex) override;
-	virtual void WriteToFile(const info_t targetInfo, write_options opts = write_options()) override;
+	virtual void WriteToFile(const std::shared_ptr<info<double>> targetInfo,
+	                         write_options opts = write_options()) override;
 
    private:
 	void CalculateBlend(std::shared_ptr<info<double>> targetInfo, unsigned short threadIndex);
@@ -81,13 +82,15 @@ class blend : public compiled_plugin, private compiled_plugin_base
 	void SetupOutputForecastTimes(std::shared_ptr<info<double>> Info, const raw_time& latestOrigin,
 	                              const forecast_time& current, int maxStep, int originTimeStep);
 	bool ParseConfigurationOptions(const std::shared_ptr<const plugin_configuration>& conf);
-	std::vector<info_t> FetchRawGrids(std::shared_ptr<info<double>> targetInfo, unsigned short threadIdx) const;
-	std::vector<info_t> FetchMAEAndBiasGrids(std::shared_ptr<info<double>> targetInfo, unsigned short threadIdx,
-	                                         blend_mode type) const;
+	std::vector<std::shared_ptr<info<double>>> FetchRawGrids(std::shared_ptr<info<double>> targetInfo,
+	                                                         unsigned short threadIdx) const;
+	std::vector<std::shared_ptr<info<double>>> FetchMAEAndBiasGrids(std::shared_ptr<info<double>> targetInfo,
+	                                                                unsigned short threadIdx, blend_mode type) const;
 
-	std::tuple<info_t, info_t, info_t, info_t> FetchMAEAndBiasSource(std::shared_ptr<info<double>>& targetInfo,
-	                                                                 const forecast_time& calcTime,
-	                                                                 blend_mode type) const;
+	std::tuple<std::shared_ptr<info<double>>, std::shared_ptr<info<double>>, std::shared_ptr<info<double>>,
+	           std::shared_ptr<info<double>>>
+	FetchMAEAndBiasSource(std::shared_ptr<info<double>>& targetInfo, const forecast_time& calcTime,
+	                      blend_mode type) const;
 
 	blend_mode itsCalculationMode;
 	int itsNumHours;

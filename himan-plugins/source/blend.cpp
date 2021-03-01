@@ -128,7 +128,8 @@ bool blend::ParseConfigurationOptions(const shared_ptr<const plugin_configuratio
 
 	if ((itsCalculationMode == kCalculateBias || itsCalculationMode == kCalculateMAE) && hours.empty())
 	{
-		throw std::runtime_error(ClassName() + ": number of previous hours ('producer_hours') for calculation not specified");
+		throw std::runtime_error(ClassName() +
+		                         ": number of previous hours ('producer_hours') for calculation not specified");
 	}
 	if (itsCalculationMode == kCalculateBias || itsCalculationMode == kCalculateMAE)
 	{
@@ -229,14 +230,15 @@ void blend::Calculate(shared_ptr<info<double>> targetInfo, unsigned short thread
 	}
 }
 
-tuple<info_t, info_t, info_t, info_t> blend::FetchMAEAndBiasSource(shared_ptr<info<double>>& targetInfo,
-                                                                   const forecast_time& calcTime, blend_mode type) const
+tuple<shared_ptr<info<double>>, shared_ptr<info<double>>, shared_ptr<info<double>>, shared_ptr<info<double>>>
+blend::FetchMAEAndBiasSource(shared_ptr<info<double>>& targetInfo, const forecast_time& calcTime, blend_mode type) const
 {
 	const param& currentParam = targetInfo->Param();
 	const forecast_time& currentTime = targetInfo->Time();
 	const level& currentLevel = targetInfo->Level();
 
-	info_t analysis = Fetch(itsAnalysisTime, currentLevel, currentParam, LAPS.type, {kLapsGeom}, kLapsProd);
+	shared_ptr<info<double>> analysis =
+	    Fetch(itsAnalysisTime, currentLevel, currentParam, LAPS.type, {kLapsGeom}, kLapsProd);
 
 	if (!analysis)
 	{
@@ -252,7 +254,7 @@ tuple<info_t, info_t, info_t, info_t> blend::FetchMAEAndBiasSource(shared_ptr<in
 
 	itsLogger.Debug("Fetching RAW");
 
-	info_t forecast = Fetch(rawTime, currentLevel, currentParam, itsBlendProducer.type);
+	shared_ptr<info<double>> forecast = Fetch(rawTime, currentLevel, currentParam, itsBlendProducer.type);
 
 	if (!forecast)
 	{
@@ -293,24 +295,24 @@ tuple<info_t, info_t, info_t, info_t> blend::FetchMAEAndBiasSource(shared_ptr<in
 		itsLogger.Debug("Fetching previous BIAS");
 
 		ASSERT(prevTime.OriginDateTime().String("%H") == calcTime.OriginDateTime().String("%H"));
-		info_t prev = Fetch(prevTime, currentLevel, currentParam, itsBlendProducer.type,
-		                    {itsConfiguration->TargetGeomName()}, kBlendBiasProd);
+		shared_ptr<info<double>> prev = Fetch(prevTime, currentLevel, currentParam, itsBlendProducer.type,
+		                                      {itsConfiguration->TargetGeomName()}, kBlendBiasProd);
 
 		return make_tuple(analysis, forecast, prev, nullptr);
 	}
 	else if (type == kCalculateMAE)
 	{
 		itsLogger.Debug("Fetching previous MAE");
-		info_t prev = Fetch(prevTime, currentLevel, currentParam, itsBlendProducer.type,
-		                    {itsConfiguration->TargetGeomName()}, kBlendWeightProd);
+		shared_ptr<info<double>> prev = Fetch(prevTime, currentLevel, currentParam, itsBlendProducer.type,
+		                                      {itsConfiguration->TargetGeomName()}, kBlendWeightProd);
 
 		// Get latest BIAS
 		prevTime.OriginDateTime().Adjust(kHourResolution, 24);
 		prevTime.ValidDateTime().Adjust(kHourResolution, 24);
 
 		itsLogger.Info("Fetching latest BIAS");
-		info_t bias = Fetch(prevTime, currentLevel, currentParam, itsBlendProducer.type,
-		                    {itsConfiguration->TargetGeomName()}, kBlendBiasProd);
+		shared_ptr<info<double>> bias = Fetch(prevTime, currentLevel, currentParam, itsBlendProducer.type,
+		                                      {itsConfiguration->TargetGeomName()}, kBlendBiasProd);
 
 		return make_tuple(analysis, forecast, prev, bias);
 	}
@@ -460,7 +462,7 @@ void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short 
 	// Problem: targetInfo has information for the data that we want to fetch, but because of the convoluted way of
 	// calculating everything, this doesn't match with the data we want to write out.
 	// Solution: Create a new info and write that out.
-	info_t Info = make_shared<info<double>>(*targetInfo);
+	shared_ptr<info<double>> Info = make_shared<info<double>>(*targetInfo);
 	vector<forecast_type> ftypes{itsBlendProducer.type};
 
 	if (mode == kCalculateBias)
@@ -562,7 +564,8 @@ void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short 
 	targetInfo->Base(b);
 }
 
-std::vector<info_t> blend::FetchRawGrids(shared_ptr<info<double>> targetInfo, unsigned short threadIdx) const
+std::vector<shared_ptr<info<double>>> blend::FetchRawGrids(shared_ptr<info<double>> targetInfo,
+                                                           unsigned short threadIdx) const
 {
 	auto log = logger("calculateBlend_FetchRawGrids#" + to_string(threadIdx));
 
@@ -571,11 +574,11 @@ std::vector<info_t> blend::FetchRawGrids(shared_ptr<info<double>> targetInfo, un
 	const level& currentLevel = targetInfo->Level();
 
 	std::vector<forecast_type> types = {MOS.type, ECMWF.type, HIRLAM.type, MEPS.type, GFS.type};
-	std::vector<info_t> ret(5);
+	std::vector<shared_ptr<info<double>>> ret(5);
 
 	for (size_t i = 0; i < types.size(); i++)
 	{
-		info_t raw = Fetch(currentTime, currentLevel, currentParam, types[i]);
+		shared_ptr<info<double>> raw = Fetch(currentTime, currentLevel, currentParam, types[i]);
 
 		ret[i] = raw;
 	}
@@ -589,8 +592,8 @@ std::vector<info_t> blend::FetchRawGrids(shared_ptr<info<double>> targetInfo, un
 	return ret;
 }
 
-std::vector<info_t> blend::FetchMAEAndBiasGrids(shared_ptr<info<double>> targetInfo, unsigned short threadIdx,
-                                                blend_mode type) const
+std::vector<shared_ptr<info<double>>> blend::FetchMAEAndBiasGrids(shared_ptr<info<double>> targetInfo,
+                                                                  unsigned short threadIdx, blend_mode type) const
 {
 	ASSERT(type == kCalculateMAE || type == kCalculateBias);
 
@@ -600,7 +603,7 @@ std::vector<info_t> blend::FetchMAEAndBiasGrids(shared_ptr<info<double>> targetI
 	logger log("calculateBlend_Fetch" + typestr + "Grids#" + to_string(threadIdx));
 
 	std::vector<forecast_type> types = {MOS.type, ECMWF.type, HIRLAM.type, MEPS.type, GFS.type};
-	std::vector<info_t> ret(5);
+	std::vector<shared_ptr<info<double>>> ret(5);
 
 	// try to fetch bias/mae fields from current day or day before that, ie
 	// newest or second newest
@@ -644,9 +647,9 @@ void blend::CalculateBlend(shared_ptr<info<double>> targetInfo, unsigned short t
 	// NOTE: If one of the grids is missing, we should still put an empty grid there. Since all the stages assume that
 	// F[i], B[i], W[i] are all of the same model! This means that the ordering is fixed for the return vector of
 	// FetchRawGrids, FetchBiasGrids, FetchMAEGrids.
-	vector<info_t> forecasts = FetchRawGrids(targetInfo, threadIdx);
+	vector<shared_ptr<info<double>>> forecasts = FetchRawGrids(targetInfo, threadIdx);
 
-	if (std::all_of(forecasts.begin(), forecasts.end(), [&](info_t i) { return i == nullptr; }))
+	if (std::all_of(forecasts.begin(), forecasts.end(), [&](shared_ptr<info<double>> i) { return i == nullptr; }))
 	{
 		log.Error("Failed to acquire any source data");
 		return;
@@ -662,8 +665,8 @@ void blend::CalculateBlend(shared_ptr<info<double>> targetInfo, unsigned short t
 	}
 
 	// Load all the precalculated bias factors from BLENDB
-	vector<info_t> biases = FetchMAEAndBiasGrids(targetInfo, threadIdx, kCalculateBias);
-	if (std::all_of(biases.begin(), biases.end(), [&](info_t i) { return i == nullptr; }))
+	vector<shared_ptr<info<double>>> biases = FetchMAEAndBiasGrids(targetInfo, threadIdx, kCalculateBias);
+	if (std::all_of(biases.begin(), biases.end(), [&](shared_ptr<info<double>> i) { return i == nullptr; }))
 	{
 		log.Error("Failed to acquire any bias grids");
 	}
@@ -677,9 +680,9 @@ void blend::CalculateBlend(shared_ptr<info<double>> targetInfo, unsigned short t
 	}
 
 	// Load all the precalculated weights from BLENDW
-	vector<info_t> preweights = FetchMAEAndBiasGrids(targetInfo, threadIdx, kCalculateMAE);
+	vector<shared_ptr<info<double>>> preweights = FetchMAEAndBiasGrids(targetInfo, threadIdx, kCalculateMAE);
 
-	if (std::all_of(preweights.begin(), preweights.end(), [&](info_t i) { return i == nullptr; }))
+	if (std::all_of(preweights.begin(), preweights.end(), [&](shared_ptr<info<double>> i) { return i == nullptr; }))
 	{
 		log.Error("Failed to acquire any MAE grids");
 	}
@@ -716,9 +719,9 @@ void blend::CalculateBlend(shared_ptr<info<double>> targetInfo, unsigned short t
 
 		for (const auto& tup : zip_range(forecasts, preweights, biases))
 		{
-			info_t f = tup.get<0>();
-			info_t w = tup.get<1>();
-			info_t b = tup.get<2>();
+			shared_ptr<info<double>> f = tup.get<0>();
+			shared_ptr<info<double>> w = tup.get<1>();
+			shared_ptr<info<double>> b = tup.get<2>();
 
 			if (!f)
 			{
@@ -813,7 +816,7 @@ void blend::CalculateBlend(shared_ptr<info<double>> targetInfo, unsigned short t
 	         to_string(targetInfo->Data().Size()));
 }
 
-void blend::WriteToFile(const info_t targetInfo, write_options writeOptions)
+void blend::WriteToFile(const shared_ptr<info<double>> targetInfo, write_options writeOptions)
 {
 	auto aWriter = GET_PLUGIN(writer);
 

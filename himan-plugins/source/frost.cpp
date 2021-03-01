@@ -39,12 +39,12 @@ void frost::Process(std::shared_ptr<const plugin_configuration> conf)
 	Start();
 }
 
-info_t BackwardsFetchFromProducer(shared_ptr<plugin_configuration>& cnf, const forecast_type& ftype,
-                                  const forecast_time& ftime, const level& lvl, const param& par, int adjust,
-                                  bool adjustValidTime = false)
+shared_ptr<info<double>> BackwardsFetchFromProducer(shared_ptr<plugin_configuration>& cnf, const forecast_type& ftype,
+                                                    const forecast_time& ftime, const level& lvl, const param& par,
+                                                    int adjust, bool adjustValidTime = false)
 {
 	auto f = GET_PLUGIN(fetcher);
-	info_t ret;
+	shared_ptr<info<double>> ret;
 	auto myftime = ftime;
 	logger logr("frost");
 
@@ -104,19 +104,19 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 	// Get the latest data from producer defined in configuration file.
 
-	info_t TInfo = Fetch(original_forecastTime, level(kHeight, 2), TParam, forecastType, false);
+	shared_ptr<info<double>> TInfo = Fetch(original_forecastTime, level(kHeight, 2), TParam, forecastType, false);
 	if (!TInfo)
 	{
 		myThreadedLogger.Error("No T-K data found.");
 		return;
 	}
-	info_t TDInfo = Fetch(original_forecastTime, level(kHeight, 2), TDParam, forecastType, false);
+	shared_ptr<info<double>> TDInfo = Fetch(original_forecastTime, level(kHeight, 2), TDParam, forecastType, false);
 	if (!TDInfo)
 	{
 		myThreadedLogger.Error("No TD-K data found.");
 		return;
 	}
-	info_t NInfo = Fetch(original_forecastTime, level(kHeight, 0), NParams, forecastType, false);
+	shared_ptr<info<double>> NInfo = Fetch(original_forecastTime, level(kHeight, 0), NParams, forecastType, false);
 	if (!NInfo)
 	{
 		myThreadedLogger.Error("No N-PRCNT/N-0TO1 data found.");
@@ -135,16 +135,18 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 	cnf->SourceProducers({producer(131, 98, 150, "ECG")});
 	cnf->SourceGeomNames({"ECGLO0100", "ECEUR0100"});
 
-	info_t TGInfo =
+	shared_ptr<info<double>> TGInfo =
 	    BackwardsFetchFromProducer(cnf, forecastType, ec_forecastTime, level(kGroundDepth, 0, 7), TGParam, -6);
 
 	// Get the latest FFG-MS.
 
-	info_t WGInfo = BackwardsFetchFromProducer(cnf, forecastType, ec_forecastTime, level(kGround, 0), WGParam, -6);
+	shared_ptr<info<double>> WGInfo =
+	    BackwardsFetchFromProducer(cnf, forecastType, ec_forecastTime, level(kGround, 0), WGParam, -6);
 
 	// Get the latest IC-0TO1.
 
-	info_t ICNInfo = BackwardsFetchFromProducer(cnf, forecastType, ec_forecastTime, level(kGround, 0), ICNParam, -6);
+	shared_ptr<info<double>> ICNInfo =
+	    BackwardsFetchFromProducer(cnf, forecastType, ec_forecastTime, level(kGround, 0), ICNParam, -6);
 
 	// Create ICNInfo when no forecast found.
 
@@ -159,13 +161,15 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 	forecast_time LC_time(ec_forecastTime.OriginDateTime(), ec_forecastTime.OriginDateTime());
 
-	info_t LCInfo = BackwardsFetchFromProducer(cnf, forecastType, LC_time, level(kGround, 0), LCParam, -6, true);
+	shared_ptr<info<double>> LCInfo =
+	    BackwardsFetchFromProducer(cnf, forecastType, LC_time, level(kGround, 0), LCParam, -6, true);
 
 	// Get the latest RADGLO-WM2.
 
 	cnf->SourceProducers({producer(240, 86, 240, "ECGMTA")});
 
-	info_t RADInfo = BackwardsFetchFromProducer(cnf, forecastType, ec_forecastTime, level(kHeight, 0), RADParam, -6);
+	shared_ptr<info<double>> RADInfo =
+	    BackwardsFetchFromProducer(cnf, forecastType, ec_forecastTime, level(kHeight, 0), RADParam, -6);
 
 	// Get the latest ECMWF PROB-TC-0. If not found, get earlier.
 
@@ -187,7 +191,8 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 	cnf->SourceProducers({producer(242, 86, 242, "ECM_PROB")});
 	cnf->SourceGeomNames({"ECGLO0200", "ECEUR0200"});
-	info_t T0ECInfo = BackwardsFetchFromProducer(cnf, stat_type, ec_forecastTime, level(kHeight, 2), T0Param, -12);
+	shared_ptr<info<double>> T0ECInfo =
+	    BackwardsFetchFromProducer(cnf, stat_type, ec_forecastTime, level(kHeight, 2), T0Param, -12);
 
 	// Get the latest MEPS PROB-TC-0 from hour 00, 03, 06, 09, 12, 15, 18 or 21. If not found get earlier.
 
@@ -198,7 +203,8 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 	cnf->SourceProducers({producer(260, 86, 204, "MEPSMTA")});
 	cnf->SourceGeomNames({"MEPS2500D"});
 
-	info_t T0MEPSInfo = BackwardsFetchFromProducer(cnf, stat_type, meps_forecastTime, level(kHeight, 2), T0Param, -3);
+	shared_ptr<info<double>> T0MEPSInfo =
+	    BackwardsFetchFromProducer(cnf, stat_type, meps_forecastTime, level(kHeight, 2), T0Param, -3);
 
 	// MEPS is optional data
 	if (!T0MEPSInfo)

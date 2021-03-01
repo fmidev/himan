@@ -92,7 +92,7 @@ class fetcher : public auxiliary_plugin
 	 * @param requestedLevel
 	 * @param requestedParam
 	 * @param readPackedData Whether to read unpacked data (from grib only!). Caller must do unpacking.
-	 * @return shared_ptr to info-instance
+	 * @return std::shared_ptr to info-instance
 	 */
 
 	template <typename T>
@@ -166,7 +166,7 @@ class fetcher : public auxiliary_plugin
 	 * @param readPackedData Whether to read packed data. Caller must do unpacking.
 	 * @param forceCaching Force caching of data even if it does not match searched data
 	 *
-	 * @return A vector of shared_ptr'd infos.
+	 * @return A vector of std::shared_ptr'd infos.
 	 */
 
 	template <typename T>
@@ -217,7 +217,8 @@ class fetcher : public auxiliary_plugin
 	 * Processing is threaded.
 	 */
 
-	void AuxiliaryFilesRotateAndInterpolate(const search_options& opts, std::vector<info_t>& infos);
+	void AuxiliaryFilesRotateAndInterpolate(const search_options& opts,
+	                                        std::vector<std::shared_ptr<himan::info<double>>>& infos);
 
 	template <typename T>
 	std::shared_ptr<himan::info<T>> FetchFromProducer(search_options& opts, bool readPackedData, bool suppressLogging);

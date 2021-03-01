@@ -72,17 +72,18 @@ void weather_code_2::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned s
 	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 	                      static_cast<string>(forecastLevel));
 
-	info_t CloudInfo = Fetch(forecastTime, HLevel, CloudParam, forecastType, false);
-	info_t PrecformInfo = Fetch(forecastTime, HLevel, PrecformParam, forecastType, false);
-	info_t TotalPrecInfo = Fetch(forecastTime, HLevel, TotalPrecParam, forecastType, false);
-	info_t TotalCloudCoverInfo = Fetch(forecastTime, HLevel, TotalCloudCoverParam, forecastType, false);
-	info_t LowCloudCoverInfo = Fetch(forecastTime, HLevel, LowCloudCoverParam, forecastType, false);
-	info_t MedCloudCoverInfo = Fetch(forecastTime, HLevel, MedCloudCoverParam, forecastType, false);
-	info_t HighCloudCoverInfo = Fetch(forecastTime, HLevel, HighCloudCoverParam, forecastType, false);
-	info_t FogInfo = Fetch(forecastTime, HLevel, FogParam, forecastType, false);
-	info_t T0mInfo = Fetch(forecastTime, T0mLevel, TGParam, forecastType, false);
-	info_t T850Info = Fetch(forecastTime, RH850Level, TParam, forecastType, false);
-	info_t KInfo = Fetch(forecastTime, HLevel, KParam, forecastType, false);
+	shared_ptr<info<double>> CloudInfo = Fetch(forecastTime, HLevel, CloudParam, forecastType, false);
+	shared_ptr<info<double>> PrecformInfo = Fetch(forecastTime, HLevel, PrecformParam, forecastType, false);
+	shared_ptr<info<double>> TotalPrecInfo = Fetch(forecastTime, HLevel, TotalPrecParam, forecastType, false);
+	shared_ptr<info<double>> TotalCloudCoverInfo =
+	    Fetch(forecastTime, HLevel, TotalCloudCoverParam, forecastType, false);
+	shared_ptr<info<double>> LowCloudCoverInfo = Fetch(forecastTime, HLevel, LowCloudCoverParam, forecastType, false);
+	shared_ptr<info<double>> MedCloudCoverInfo = Fetch(forecastTime, HLevel, MedCloudCoverParam, forecastType, false);
+	shared_ptr<info<double>> HighCloudCoverInfo = Fetch(forecastTime, HLevel, HighCloudCoverParam, forecastType, false);
+	shared_ptr<info<double>> FogInfo = Fetch(forecastTime, HLevel, FogParam, forecastType, false);
+	shared_ptr<info<double>> T0mInfo = Fetch(forecastTime, T0mLevel, TGParam, forecastType, false);
+	shared_ptr<info<double>> T850Info = Fetch(forecastTime, RH850Level, TParam, forecastType, false);
+	shared_ptr<info<double>> KInfo = Fetch(forecastTime, HLevel, KParam, forecastType, false);
 
 	if (!CloudInfo || !PrecformInfo || !TotalPrecInfo || !TotalCloudCoverInfo || !LowCloudCoverInfo ||
 	    !MedCloudCoverInfo || !HighCloudCoverInfo || !FogInfo || !T0mInfo || !T850Info || !KInfo)

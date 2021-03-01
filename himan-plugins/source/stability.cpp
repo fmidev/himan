@@ -24,22 +24,23 @@ typedef vector<double> vec;
 
 pair<vec, vec> GetSRHSourceData(const shared_ptr<info<double>>& myTargetInfo, shared_ptr<hitool> h);
 vec CalculateBulkShear(const vec& U, const vec& V);
-vec CalculateBulkShear(info_t& myTargetInfo, shared_ptr<hitool>& h, double stopHeight);
-vec CalculateEffectiveBulkShear(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo,
+vec CalculateBulkShear(shared_ptr<info<double>>& myTargetInfo, shared_ptr<hitool>& h, double stopHeight);
+vec CalculateEffectiveBulkShear(shared_ptr<const plugin_configuration>& conf, shared_ptr<info<double>>& myTargetInfo,
                                 shared_ptr<hitool>& h, const level& sourceLevel, const level& targetLevel);
 
 #ifdef HAVE_CUDA
 namespace stabilitygpu
 {
-void Process(shared_ptr<const plugin_configuration> conf, info_t myTargetInfo);
+void Process(shared_ptr<const plugin_configuration> conf, shared_ptr<info<double>> myTargetInfo);
 }
 #endif
 
 namespace STABILITY
 {
-himan::info_t Fetch(std::shared_ptr<const plugin_configuration>& conf,
-                    std::shared_ptr<himan::info<double>>& myTargetInfo, const himan::level& lev,
-                    const himan::param& par, bool returnPacked = false);
+std::shared_ptr<himan::info<double>> Fetch(std::shared_ptr<const plugin_configuration>& conf,
+                                             std::shared_ptr<himan::info<double>>& myTargetInfo,
+                                             const himan::level& lev, const himan::param& par,
+                                             bool returnPacked = false);
 
 vec Shear(const vec& lowerValues, const vec& upperValues)
 {
@@ -71,9 +72,9 @@ vec Shear(std::shared_ptr<himan::plugin::hitool>& h, const himan::param& par, do
 	return Shear(h, par, lower, upper);
 }
 
-himan::info_t Fetch(std::shared_ptr<const plugin_configuration>& conf,
-                    std::shared_ptr<himan::info<double>>& myTargetInfo, const himan::level& lev,
-                    const himan::param& par, bool useCuda)
+std::shared_ptr<info<double>> Fetch(std::shared_ptr<const plugin_configuration>& conf,
+                                      std::shared_ptr<himan::info<double>>& myTargetInfo, const himan::level& lev,
+                                      const himan::param& par, bool useCuda)
 {
 	const forecast_time forecastTime = myTargetInfo->Time();
 	const forecast_type forecastType = myTargetInfo->ForecastType();
@@ -83,7 +84,7 @@ himan::info_t Fetch(std::shared_ptr<const plugin_configuration>& conf,
 	return f->Fetch(conf, forecastTime, lev, par, forecastType, useCuda && conf->UseCudaForPacking());
 }
 
-pair<vec, vec> GetEBSLevelData(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo,
+pair<vec, vec> GetEBSLevelData(shared_ptr<const plugin_configuration>& conf, shared_ptr<info<double>>& myTargetInfo,
                                shared_ptr<hitool>& h, const level& sourceLevel, const level& targetLevel)
 {
 	auto ELInfo = STABILITY::Fetch(conf, myTargetInfo, sourceLevel, param("EL-LAST-M"));
@@ -184,7 +185,7 @@ void stability::Process(std::shared_ptr<const plugin_configuration> conf)
 	Start();
 }
 
-vec CalculateStormRelativeHelicity(shared_ptr<const plugin_configuration> conf, info_t& myTargetInfo,
+vec CalculateStormRelativeHelicity(shared_ptr<const plugin_configuration> conf, shared_ptr<info<double>>& myTargetInfo,
                                    shared_ptr<hitool> h, double stopHeight, const pair<vec, vec>& UVId)
 {
 	auto Uid = UVId.first;
@@ -263,7 +264,7 @@ vec CalculateStormRelativeHelicity(shared_ptr<const plugin_configuration> conf, 
 	return SRH;
 }
 
-vec CalculateBulkRichardsonNumber(shared_ptr<const plugin_configuration> conf, info_t& myTargetInfo,
+vec CalculateBulkRichardsonNumber(shared_ptr<const plugin_configuration> conf, shared_ptr<info<double>>& myTargetInfo,
                                   shared_ptr<hitool> h)
 {
 	auto CAPEInfo = STABILITY::Fetch(conf, myTargetInfo, level(kHeightLayer, 500, 0), param("CAPE-JKG"));
@@ -285,7 +286,7 @@ vec CalculateBulkRichardsonNumber(shared_ptr<const plugin_configuration> conf, i
 	return BRN;
 }
 
-vec CalculateEnergyHelicityIndex(shared_ptr<const plugin_configuration> conf, info_t& myTargetInfo)
+vec CalculateEnergyHelicityIndex(shared_ptr<const plugin_configuration> conf, shared_ptr<info<double>>& myTargetInfo)
 {
 	auto CAPEInfo = STABILITY::Fetch(conf, myTargetInfo, level(kHeightLayer, 500, 0), param("CAPE-JKG"));
 
@@ -302,7 +303,8 @@ vec CalculateEnergyHelicityIndex(shared_ptr<const plugin_configuration> conf, in
 	return EHI;
 }
 
-void CalculateHelicityIndices(shared_ptr<const plugin_configuration> conf, info_t& myTargetInfo, shared_ptr<hitool> h)
+void CalculateHelicityIndices(shared_ptr<const plugin_configuration> conf, shared_ptr<info<double>>& myTargetInfo,
+                              shared_ptr<hitool> h)
 {
 	auto UVId = GetSRHSourceData(myTargetInfo, h);
 
@@ -326,8 +328,9 @@ void CalculateHelicityIndices(shared_ptr<const plugin_configuration> conf, info_
 	myTargetInfo->Data().Set(BRN);
 }
 
-tuple<vec, vec, vec, info_t, info_t, info_t> GetLiftedIndicesSourceData(shared_ptr<const plugin_configuration>& conf,
-                                                                        info_t& myTargetInfo, shared_ptr<hitool>& h)
+tuple<vec, vec, vec, shared_ptr<info<double>>, shared_ptr<info<double>>, shared_ptr<info<double>>>
+GetLiftedIndicesSourceData(shared_ptr<const plugin_configuration>& conf, shared_ptr<info<double>>& myTargetInfo,
+                           shared_ptr<hitool>& h)
 {
 	auto T500 = h->VerticalAverage<double>(TParam, 0., 500.);
 	auto P500 = h->VerticalAverage<double>(PParam, 0., 500.);
@@ -389,7 +392,8 @@ vec CalculateThetaE(shared_ptr<hitool>& h, double startHeight, double stopHeight
 	return ret;
 }
 
-void CalculateThetaEIndices(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo, shared_ptr<hitool>& h)
+void CalculateThetaEIndices(shared_ptr<const plugin_configuration>& conf, shared_ptr<info<double>>& myTargetInfo,
+                            shared_ptr<hitool>& h)
 {
 	vec thetae = CalculateThetaE(h, 2, 3000);
 
@@ -398,7 +402,8 @@ void CalculateThetaEIndices(shared_ptr<const plugin_configuration>& conf, info_t
 	myTargetInfo->Data().Set(thetae);
 }
 
-void CalculateLiftedIndices(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo, shared_ptr<hitool>& h)
+void CalculateLiftedIndices(shared_ptr<const plugin_configuration>& conf, shared_ptr<info<double>>& myTargetInfo,
+                            shared_ptr<hitool>& h)
 {
 	auto src = GetLiftedIndicesSourceData(conf, myTargetInfo, h);
 
@@ -433,7 +438,8 @@ void CalculateLiftedIndices(shared_ptr<const plugin_configuration>& conf, info_t
 	}
 }
 
-vec CalculateCapeShear(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo, const vec& EBS)
+vec CalculateCapeShear(shared_ptr<const plugin_configuration>& conf, shared_ptr<info<double>>& myTargetInfo,
+                       const vec& EBS)
 {
 	auto CAPEInfo = STABILITY::Fetch(conf, myTargetInfo, MaxThetaELevel, param("CAPE-JKG"));
 
@@ -449,7 +455,7 @@ vec CalculateCapeShear(shared_ptr<const plugin_configuration>& conf, info_t& myT
 	return ret;
 }
 
-void CalculateBulkShearIndices(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo,
+void CalculateBulkShearIndices(shared_ptr<const plugin_configuration>& conf, shared_ptr<info<double>>& myTargetInfo,
                                shared_ptr<hitool>& h)
 {
 	myTargetInfo->Find<param>(BSParam);
@@ -480,8 +486,8 @@ void CalculateBulkShearIndices(shared_ptr<const plugin_configuration>& conf, inf
 	myTargetInfo->Data().Set(muMaxEBS);
 }
 
-void CalculateConvectiveSeverityIndex(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo,
-                                      shared_ptr<hitool>& h)
+void CalculateConvectiveSeverityIndex(shared_ptr<const plugin_configuration>& conf,
+                                      shared_ptr<info<double>>& myTargetInfo, shared_ptr<hitool>& h)
 {
 	// For CSI we need mixed layer maximum EBS too, which is not needed anywhere else
 	const auto mlEBS = CalculateEffectiveBulkShear(conf, myTargetInfo, h, HalfKMLevel, MaxWindLevel);
@@ -717,7 +723,7 @@ pair<vec, vec> GetSRHSourceData(const shared_ptr<info<double>>& myTargetInfo, sh
 	return make_pair(Uid, Vid);
 }
 
-void stability::WriteToFile(const info_t targetInfo, write_options writeOptions)
+void stability::WriteToFile(const shared_ptr<info<double>> targetInfo, write_options writeOptions)
 {
 	auto aWriter = GET_PLUGIN(writer);
 
@@ -759,7 +765,7 @@ vec CalculateBulkShear(const vec& U, const vec& V)
 	return BS;
 }
 
-vec CalculateBulkShear(info_t& myTargetInfo, shared_ptr<hitool>& h, double stopHeight)
+vec CalculateBulkShear(shared_ptr<info<double>>& myTargetInfo, shared_ptr<hitool>& h, double stopHeight)
 {
 	const auto U = STABILITY::Shear(h, UParam, 10, stopHeight, myTargetInfo->SizeLocations());
 	const auto V = STABILITY::Shear(h, VParam, 10, stopHeight, myTargetInfo->SizeLocations());
@@ -767,7 +773,7 @@ vec CalculateBulkShear(info_t& myTargetInfo, shared_ptr<hitool>& h, double stopH
 	return CalculateBulkShear(U, V);
 }
 
-vec CalculateEffectiveBulkShear(shared_ptr<const plugin_configuration>& conf, info_t& myTargetInfo,
+vec CalculateEffectiveBulkShear(shared_ptr<const plugin_configuration>& conf, shared_ptr<info<double>>& myTargetInfo,
                                 shared_ptr<hitool>& h, const level& sourceLevel, const level& targetLevel)
 {
 	const auto Levels = STABILITY::GetEBSLevelData(conf, myTargetInfo, h, sourceLevel, targetLevel);

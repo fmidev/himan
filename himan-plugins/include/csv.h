@@ -42,7 +42,7 @@ class csv : public io_plugin
 	 * @param file Input file name
 	 * @param options Search options (param, level, time)
 	 *
-	 * @return A vector of shared_ptr'd infos. Vector size is always 0 or 1.
+	 * @return A vector of std::shared_ptr'd infos. Vector size is always 0 or 1.
 	 */
 
 	template <typename T>

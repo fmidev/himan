@@ -47,7 +47,7 @@ class transformer : public compiled_plugin, private compiled_plugin_base
 	// Check and write json parameters needed for transformer plug-in to local variables.
 	void SetAdditionalParameters();
 	std::vector<level> LevelsFromString(const std::string& levelType, const std::string& levelValues) const;
-	void Rotate(himan::info_t myTargetInfo);
+	void Rotate(std::shared_ptr<info<double>> myTargetInfo);
 	std::shared_ptr<info<double>> InterpolateTime(const forecast_time& ftime, const level& lev, const param& par,
 	                                              const forecast_type& ftype) const;
 

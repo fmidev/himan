@@ -57,13 +57,13 @@ void monin_obukhov::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned sh
 	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 	                      static_cast<string>(forecastLevel));
 
-	info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, false);
-	info_t SHFInfo = Fetch(forecastTime, forecastLevel, SHFParam, forecastType, false);
-	info_t PrevSHFInfo = Fetch(forecastTimePrev, forecastLevel, SHFParam, forecastType, false);
-	info_t LHFInfo = Fetch(forecastTime, forecastLevel, LHFParam, forecastType, false);
-	info_t PrevLHFInfo = Fetch(forecastTimePrev, forecastLevel, LHFParam, forecastType, false);
-	info_t U_SInfo = Fetch(forecastTime, forecastLevel, U_SParam, forecastType, false);
-	info_t PInfo = Fetch(forecastTime, forecastLevel, PParam, forecastType, false);
+	shared_ptr<info<double>> TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, false);
+	shared_ptr<info<double>> SHFInfo = Fetch(forecastTime, forecastLevel, SHFParam, forecastType, false);
+	shared_ptr<info<double>> PrevSHFInfo = Fetch(forecastTimePrev, forecastLevel, SHFParam, forecastType, false);
+	shared_ptr<info<double>> LHFInfo = Fetch(forecastTime, forecastLevel, LHFParam, forecastType, false);
+	shared_ptr<info<double>> PrevLHFInfo = Fetch(forecastTimePrev, forecastLevel, LHFParam, forecastType, false);
+	shared_ptr<info<double>> U_SInfo = Fetch(forecastTime, forecastLevel, U_SParam, forecastType, false);
+	shared_ptr<info<double>> PInfo = Fetch(forecastTime, forecastLevel, PParam, forecastType, false);
 
 	// determine length of forecast step to calculate surface heat flux in W/m2
 	const double seconds =

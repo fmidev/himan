@@ -44,7 +44,8 @@ class stability : public compiled_plugin, private compiled_plugin_base
 	}
 
    protected:
-	void WriteToFile(const info_t targetInfo, write_options writeOptions = write_options()) override;
+	void WriteToFile(const std::shared_ptr<info<double>> targetInfo,
+	                 write_options writeOptions = write_options()) override;
 
    private:
 	void Calculate(std::shared_ptr<info<double>> theTargetInfo, unsigned short theThreadIndex);

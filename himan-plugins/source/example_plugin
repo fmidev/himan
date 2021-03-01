@@ -52,7 +52,7 @@ void example_plugin::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void example_plugin::Calculate(info_t myTargetInfo, unsigned short threadIndex)
+void example_plugin::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	/*
 	 * Required source parameters
@@ -75,7 +75,7 @@ void example_plugin::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	myThreadedLogger.Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 	                       static_cast<string>(forecastLevel));
 
-	info_t exampleInfo = Fetch(forecastTime, forecastLevel, exampleParam);
+	shared_ptr<info<double>> exampleInfo = Fetch(forecastTime, forecastLevel, exampleParam);
 
 	if (!exampleInfo)
 	{
