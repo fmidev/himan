@@ -118,9 +118,9 @@ void tpot::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threa
 	double TBase = 0;
 	double TDBase = 0;
 
-	info_t TInfo = Fetch(forecastTime, forecastLevel, param("T-K"), myTargetInfo->ForecastType(),
-	                     itsConfiguration->UseCudaForPacking());
-	info_t TDInfo, PInfo;
+	shared_ptr<info<double>> TInfo = Fetch(forecastTime, forecastLevel, param("T-K"), myTargetInfo->ForecastType(),
+	                                       itsConfiguration->UseCudaForPacking());
+	shared_ptr<info<double>> TDInfo, PInfo;
 
 	bool isPressureLevel = (myTargetInfo->Level().Type() == kPressure);
 

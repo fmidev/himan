@@ -71,9 +71,9 @@ void visibility::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short
 	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 	                      static_cast<string>(forecastLevel));
 
-	info_t RHInfo = Fetch(forecastTime, RHLevel, RHParam, forecastType, false);
-	info_t PFInfo = Fetch(forecastTime, NLevel, PFParams, forecastType, false);
-	info_t RRInfo = Fetch(forecastTime, NLevel, RRParam, forecastType, false);
+	shared_ptr<info<double>> RHInfo = Fetch(forecastTime, RHLevel, RHParam, forecastType, false);
+	shared_ptr<info<double>> PFInfo = Fetch(forecastTime, NLevel, PFParams, forecastType, false);
+	shared_ptr<info<double>> RRInfo = Fetch(forecastTime, NLevel, RRParam, forecastType, false);
 
 	if (!RRInfo || !RHInfo || !PFInfo)
 	{

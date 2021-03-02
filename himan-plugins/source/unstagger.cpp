@@ -92,7 +92,7 @@ void unstagger::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short 
 
 	auto f = GET_PLUGIN(fetcher);
 
-	info_t UInfo, VInfo;
+	shared_ptr<info<double>> UInfo, VInfo;
 
 	try
 	{

@@ -396,6 +396,17 @@ struct base
 	    : grid(grid_), data(data_), pdata(std::make_shared<packed_data>())
 	{
 	}
+
+#ifdef SERIALIZATION
+	friend class cereal::access;
+
+	template <class Archive>
+	void serialize(Archive& ar)
+	{
+		// packed data is not serialized as it contains raw pointers
+		ar(CEREAL_NVP(grid), CEREAL_NVP(data));
+	}
+#endif
 };
 
 template <typename T>
@@ -910,8 +921,6 @@ class info
 };
 
 #include "info_impl.h"
-
-typedef std::shared_ptr<info<double>> info_t;
 
 }  // namespace himan
 

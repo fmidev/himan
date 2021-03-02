@@ -262,7 +262,7 @@ class compiled_plugin_base
 	 * @param theParams List of parameters (in a vector)
 	 * @param returnPacked Flag for returning data either packed or unpacked
 	 * @param theType
-	 * @return shared_ptr<info> on success, null-pointer if data not found
+	 * @return std::shared_ptr<info> on success, null-pointer if data not found
 	 */
 
 	template <typename T>
@@ -270,8 +270,10 @@ class compiled_plugin_base
 	                               const forecast_type& theType = forecast_type(kDeterministic),
 	                               bool returnPacked = false) const;
 
-	virtual info_t Fetch(const forecast_time& theTime, const level& theLevel, const himan::params& theParams,
-	                     const forecast_type& theType = forecast_type(kDeterministic), bool returnPacked = false) const;
+	virtual std::shared_ptr<info<double>> Fetch(const forecast_time& theTime, const level& theLevel,
+	                                            const himan::params& theParams,
+	                                            const forecast_type& theType = forecast_type(kDeterministic),
+	                                            bool returnPacked = false) const;
 
 	/**
 	 * @brief Fetch source data with given requirements
@@ -314,7 +316,7 @@ class compiled_plugin_base
 	 * @param theParams List of parameters (in a vector)
 	 * @param returnPacked Flag for returning data either packed or unpacked
 	 * @param theType
-	 * @return shared_ptr<info> on success, un-initialized shared_ptr if data not found
+	 * @return std::shared_ptr<info> on success, un-initialized std::shared_ptr if data not found
 	 */
 
 	template <typename T>
@@ -322,8 +324,10 @@ class compiled_plugin_base
 	                               const forecast_type& theType = forecast_type(kDeterministic),
 	                               bool returnPacked = false) const;
 
-	virtual info_t Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam,
-	                     const forecast_type& theType = forecast_type(kDeterministic), bool returnPacked = false) const;
+	virtual std::shared_ptr<info<double>> Fetch(const forecast_time& theTime, const level& theLevel,
+	                                            const param& theParam,
+	                                            const forecast_type& theType = forecast_type(kDeterministic),
+	                                            bool returnPacked = false) const;
 
 	template <typename T>
 	std::shared_ptr<info<T>> Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam,

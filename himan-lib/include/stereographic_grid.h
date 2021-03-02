@@ -62,10 +62,25 @@ class stereographic_grid : public regular_grid
 	friend class cereal::access;
 
 	template <class Archive>
-	void serialize(Archive& ar)
+	void serialize(Archive& archive) const
 	{
-		ar(cereal::base_class<regular_grid>(this));
+		archive(CEREAL_NVP(itsScanningMode), CEREAL_NVP(FirstPoint()), CEREAL_NVP(itsNi), CEREAL_NVP(itsNj),
+		        CEREAL_NVP(itsDi), CEREAL_NVP(itsDj), CEREAL_NVP(itsSpatialReference));
 	}
+
+	template <class Archive>
+	static void load_and_construct(Archive& ar, cereal::construct<stereographic_grid>& construct)
+	{
+		HPScanningMode sm;
+		point fp;
+		size_t ni, nj;
+		double di, dj;
+		std::unique_ptr<OGRSpatialReference> sp;
+
+		ar(sm, fp, ni, nj, di, dj, sp);
+		construct(sm, fp, ni, nj, di, dj, std::move(sp));
+	}
+
 #endif
 };
 
@@ -77,6 +92,7 @@ inline std::ostream& operator<<(std::ostream& file, const stereographic_grid& ob
 
 #ifdef SERIALIZATION
 CEREAL_REGISTER_TYPE(himan::stereographic_grid);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(himan::regular_grid, himan::stereographic_grid);
 #endif
 
 #endif /* STEREOGRAPHIC_GRID_H */

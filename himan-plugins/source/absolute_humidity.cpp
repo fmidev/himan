@@ -53,10 +53,10 @@ void absolute_humidity::Calculate(shared_ptr<info<double>> myTargetInfo, unsigne
 	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 	                      static_cast<string>(forecastLevel));
 
-	info_t RhoInfo = Fetch(forecastTime, forecastLevel, RhoParam, forecastType, false);
-	info_t RainInfo = Fetch(forecastTime, forecastLevel, RainParam, forecastType, false);
-	info_t SnowInfo = Fetch(forecastTime, forecastLevel, SnowParam, forecastType, false);
-	info_t GraupelInfo = Fetch(forecastTime, forecastLevel, GraupelParam, forecastType, false);
+	shared_ptr<info<double>> RhoInfo = Fetch(forecastTime, forecastLevel, RhoParam, forecastType, false);
+	shared_ptr<info<double>> RainInfo = Fetch(forecastTime, forecastLevel, RainParam, forecastType, false);
+	shared_ptr<info<double>> SnowInfo = Fetch(forecastTime, forecastLevel, SnowParam, forecastType, false);
+	shared_ptr<info<double>> GraupelInfo = Fetch(forecastTime, forecastLevel, GraupelParam, forecastType, false);
 
 	if (!RhoInfo || !RainInfo || !SnowInfo || !GraupelInfo)
 	{

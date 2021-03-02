@@ -97,7 +97,7 @@ void auto_taf::Process(std::shared_ptr<const plugin_configuration> conf)
 	Start();
 }
 
-void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
+void auto_taf::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	// Required source parameters
 	const params Nparam{param("N-0TO1"), param("N-PRCNT")};
@@ -122,7 +122,7 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	// 1. find height of cb base and convert to feet
 	level HL500 = level(kHeightLayer, 500, 0);
 
-	info_t LCL500 = Fetch(forecastTime, HL500, LCL, forecastType, false);
+	shared_ptr<info<double>> LCL500 = Fetch(forecastTime, HL500, LCL, forecastType, false);
 	if (!LCL500)
 	{
 		myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()));
@@ -150,8 +150,8 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	auto cbbase =
 	    h->VerticalHeight<double>(param("P-HPA"), levelsMin.second.Value(), levelsMax.first.Value(), VEC(LCL500));
 
-	info_t TC = Fetch(forecastTime, level(kHeight, 0.0), TCU_CB, forecastType, false);
-	info_t Ceiling2 = Fetch(forecastTime, level(kHeight, 0.0), C2, forecastType, false);
+	shared_ptr<info<double>> TC = Fetch(forecastTime, level(kHeight, 0.0), TCU_CB, forecastType, false);
+	shared_ptr<info<double>> Ceiling2 = Fetch(forecastTime, level(kHeight, 0.0), C2, forecastType, false);
 
 	if (!TC || !Ceiling2)
 	{
@@ -192,8 +192,10 @@ void auto_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 
 	for (size_t j = lastLevel - 1; j > firstLevel; --j)
 	{
-		info_t N = Fetch(forecastTime, level(kHybrid, static_cast<double>(j)), Nparam, forecastType, false);
-		info_t Height = Fetch(forecastTime, level(kHybrid, static_cast<double>(j)), param("HL-M"), forecastType, false);
+		shared_ptr<info<double>> N =
+		    Fetch(forecastTime, level(kHybrid, static_cast<double>(j)), Nparam, forecastType, false);
+		shared_ptr<info<double>> Height =
+		    Fetch(forecastTime, level(kHybrid, static_cast<double>(j)), param("HL-M"), forecastType, false);
 
 		if (!N || !Height)
 		{

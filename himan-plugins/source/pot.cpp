@@ -33,7 +33,7 @@ void pot::Process(std::shared_ptr<const plugin_configuration> conf)
 	Start();
 }
 
-void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
+void pot::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	/*
 	 * Required source parameters
@@ -57,8 +57,8 @@ void pot::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	myThreadedLogger.Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 	                       static_cast<string>(forecastLevel));
 
-	info_t CAPEMuInfo, CAPEMlInfo, CbTopMaxInfo, RRInfo, LclMuInfo, LclMlInfo, LclMuTempInfo, LclMlTempInfo, LplMuInfo,
-	    LplMlInfo;
+	shared_ptr<info<double>> CAPEMuInfo, CAPEMlInfo, CbTopMaxInfo, RRInfo, LclMuInfo, LclMlInfo, LclMuTempInfo,
+	    LclMlTempInfo, LplMuInfo, LplMlInfo;
 
 	// Fetch params
 	CAPEMuInfo = Fetch(forecastTime, MU, CapeParamHiman, forecastType, false);

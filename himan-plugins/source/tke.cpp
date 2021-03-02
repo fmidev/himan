@@ -52,7 +52,7 @@ void tke::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void tke::Calculate(info_t myTargetInfo, unsigned short threadIndex)
+void tke::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	/*
 	 * Required source parameters
@@ -84,16 +84,18 @@ void tke::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	myThreadedLogger.Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 	                       static_cast<string>(forecastLevel));
 
-	info_t FrvelInfo = Fetch(forecastTime, groundLevel, FrvelParam, forecastType, false);
-	info_t MoninObukhovInfo = Fetch(forecastTime, groundLevel, MoninObukhovParam, forecastType, false);
-	info_t MixHgtInfo = Fetch(forecastTime, groundLevel, MixHgtParam, forecastType, false);
-	info_t TGInfo = Fetch(forecastTime, level(himan::kGroundDepth, 0, 7), TGParam, forecastType, false);
-	info_t PGInfo = Fetch(forecastTime, groundLevel, PGParam, forecastType, false);
-	info_t SHFInfo = Fetch(forecastTime, groundLevel, SHFParam, forecastType, false);
-	info_t SHFPrevInfo = Fetch(forecastTimePrev, groundLevel, SHFParam, forecastType, false);
-	info_t LHFInfo = Fetch(forecastTime, groundLevel, LHFParam, forecastType, false);
-	info_t LHFPrevInfo = Fetch(forecastTimePrev, groundLevel, LHFParam, forecastType, false);
-	info_t ZInfo = Fetch(forecastTime, forecastLevel, ZParam, forecastType, false);
+	shared_ptr<info<double>> FrvelInfo = Fetch(forecastTime, groundLevel, FrvelParam, forecastType, false);
+	shared_ptr<info<double>> MoninObukhovInfo =
+	    Fetch(forecastTime, groundLevel, MoninObukhovParam, forecastType, false);
+	shared_ptr<info<double>> MixHgtInfo = Fetch(forecastTime, groundLevel, MixHgtParam, forecastType, false);
+	shared_ptr<info<double>> TGInfo =
+	    Fetch(forecastTime, level(himan::kGroundDepth, 0, 7), TGParam, forecastType, false);
+	shared_ptr<info<double>> PGInfo = Fetch(forecastTime, groundLevel, PGParam, forecastType, false);
+	shared_ptr<info<double>> SHFInfo = Fetch(forecastTime, groundLevel, SHFParam, forecastType, false);
+	shared_ptr<info<double>> SHFPrevInfo = Fetch(forecastTimePrev, groundLevel, SHFParam, forecastType, false);
+	shared_ptr<info<double>> LHFInfo = Fetch(forecastTime, groundLevel, LHFParam, forecastType, false);
+	shared_ptr<info<double>> LHFPrevInfo = Fetch(forecastTimePrev, groundLevel, LHFParam, forecastType, false);
+	shared_ptr<info<double>> ZInfo = Fetch(forecastTime, forecastLevel, ZParam, forecastType, false);
 
 	if (!(FrvelInfo && MoninObukhovInfo && MixHgtInfo && TGInfo && PGInfo && SHFInfo && SHFPrevInfo && LHFInfo &&
 	      LHFPrevInfo && ZInfo))

@@ -50,7 +50,7 @@ class grib : public io_plugin
 	 * @param readPackedData Whether to read packed data (from grib). Caller must do unpacking.
 	 * @param forceCaching Force caching of data even if it does not match searched data
 	 *
-	 * @return A vector of shared_ptr'd infos.
+	 * @return A vector of std::shared_ptr'd infos.
 	 */
 
 	template <typename T>

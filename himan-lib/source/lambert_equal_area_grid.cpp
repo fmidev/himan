@@ -138,16 +138,9 @@ bool lambert_equal_area_grid::EqualsTo(const lambert_equal_area_grid& other) con
 		return false;
 	}
 
-	if (Orientation() != other.Orientation())
+	if (!itsSpatialReference->IsSame(other.itsSpatialReference.get()))
 	{
-		itsLogger.Trace(fmt::format("Orientation does not match: {} vs {}", Orientation(), other.Orientation()));
-		return false;
-	}
-
-	if (StandardParallel() != other.StandardParallel())
-	{
-		itsLogger.Trace(
-		    fmt::format("Standard latitude does not match: {} vs {}", StandardParallel(), other.StandardParallel()));
+		itsLogger.Trace("Areas are not equal");
 		return false;
 	}
 
@@ -177,9 +170,4 @@ double lambert_equal_area_grid::Orientation() const
 double lambert_equal_area_grid::StandardParallel() const
 {
 	return itsSpatialReference->GetProjParm(SRS_PP_LATITUDE_OF_CENTER, MissingDouble());
-}
-
-OGRSpatialReference lambert_equal_area_grid::SpatialReference() const
-{
-	return OGRSpatialReference(*itsSpatialReference);
 }

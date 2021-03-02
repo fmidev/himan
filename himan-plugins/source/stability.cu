@@ -21,7 +21,7 @@ extern std::vector<double> Shear(std::shared_ptr<himan::plugin::hitool>& h, cons
 std::vector<double> Shear(std::shared_ptr<himan::plugin::hitool>& h, const himan::param& par,
                           const std::vector<double>& lowerHeight, const std::vector<double>& upperHeight);
 std::pair<std::vector<double>, std::vector<double>> GetEBSLevelData(std::shared_ptr<const plugin_configuration>& conf,
-                                                                    info_t& myTargetInfo,
+                                                                    std::shared_ptr<info<double>>& myTargetInfo,
                                                                     std::shared_ptr<plugin::hitool>& h,
                                                                     const level& sourceLevel, const level& targetLevel);
 }

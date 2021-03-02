@@ -16,8 +16,8 @@ __global__ void TransformerKernel(const T* __restrict__ d_source, T* __restrict_
 
 namespace transformergpu
 {
-void Process(std::shared_ptr<const himan::plugin_configuration> conf, info_t myTargetInfo, info_t sourceInfo,
-             double scale, double base)
+void Process(std::shared_ptr<const himan::plugin_configuration> conf, std::shared_ptr<info<double>> myTargetInfo,
+             std::shared_ptr<info<double>> sourceInfo, double scale, double base)
 {
 	cudaStream_t stream;
 

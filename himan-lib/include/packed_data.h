@@ -15,7 +15,6 @@
 
 #ifndef HAVE_CUDA
 // Define shells so that compilation succeeds
-#include "serialization.h"
 namespace himan
 {
 struct packed_data
@@ -24,16 +23,6 @@ struct packed_data
 	{
 		return false;
 	}
-
-   private:
-#ifdef SERIALIZATION
-	friend class cereal::access;
-
-	template <class Archive>
-	void serialize(Archive& ar)
-	{
-	}
-#endif
 };
 
 #else

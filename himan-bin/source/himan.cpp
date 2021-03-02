@@ -40,9 +40,18 @@ void UploadRunStatisticsToDatabase(const shared_ptr<configuration>& conf, const 
 {
 	stringstream json, query;
 
+	const string content = conf->ConfigurationFileContent();
+	string configname;
+
 	// read configuration file
-	ifstream ifs(conf->ConfigurationFile());
-	string content((istreambuf_iterator<char>(ifs)), (istreambuf_iterator<char>()));
+	if (conf->ConfigurationFileName() == "-")
+	{
+		configname = conf->StatisticsLabel();
+	}
+	else
+	{
+		configname = conf->ConfigurationFileName();
+	}
 
 	// create json out of timings
 	json << "{ \"plugins\" : [";
@@ -73,7 +82,7 @@ void UploadRunStatisticsToDatabase(const shared_ptr<configuration>& conf, const 
 	query << "INSERT INTO himan_run_statistics (hostname, finish_time, configuration_name, configuration, statistics) VALUES ("
 	      << "'" << host << "', "
 	      << "'" << timestr << "', "
-	      << "'" << conf->ConfigurationFile() << "', "
+	      << "'" << configname << "', "
 	      << "'" << content << "'::json, "
 	      << "'" << json.str() << "'::json)";
 
@@ -768,7 +777,22 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 
 	if (!confFile.empty())
 	{
-		conf->ConfigurationFile(confFile);
+		conf->ConfigurationFileName(confFile);
+		if (confFile == "-")
+		{
+			stringstream ss;
+			for (string line; getline(cin, line);)
+			{
+				ss << line;
+			}
+			conf->ConfigurationFileContent(ss.str());
+		}
+		else
+		{
+			ifstream ifs(confFile);
+			string content = string((istreambuf_iterator<char>(ifs)), (istreambuf_iterator<char>()));
+			conf->ConfigurationFileContent(content);
+		}
 	}
 	else
 	{

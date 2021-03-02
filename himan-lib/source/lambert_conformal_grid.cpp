@@ -152,24 +152,9 @@ bool lambert_conformal_grid::EqualsTo(const lambert_conformal_grid& other) const
 		return false;
 	}
 
-	if (Orientation() != other.Orientation())
+	if (!itsSpatialReference->IsSame(other.itsSpatialReference.get()))
 	{
-		itsLogger.Trace("Orientation does not match: " + to_string(Orientation()) + " vs " +
-		                to_string(other.Orientation()));
-		return false;
-	}
-
-	if (StandardParallel1() != StandardParallel1())
-	{
-		itsLogger.Trace("Standard latitude 1 does not match: " + to_string(StandardParallel1()) + " vs " +
-		                to_string(other.StandardParallel1()));
-		return false;
-	}
-
-	if (StandardParallel2() != other.StandardParallel2())
-	{
-		itsLogger.Trace("Standard latitude 2 does not match: " + to_string(StandardParallel2()) + " vs " +
-		                to_string(other.StandardParallel2()));
+		itsLogger.Trace("Areas are not equal");
 		return false;
 	}
 
@@ -199,11 +184,6 @@ double lambert_conformal_grid::StandardParallel1() const
 double lambert_conformal_grid::StandardParallel2() const
 {
 	return itsSpatialReference->GetProjParm(SRS_PP_STANDARD_PARALLEL_2, 0.0);
-}
-
-OGRSpatialReference lambert_conformal_grid::SpatialReference() const
-{
-	return OGRSpatialReference(*itsSpatialReference);
 }
 
 double lambert_conformal_grid::Cone() const

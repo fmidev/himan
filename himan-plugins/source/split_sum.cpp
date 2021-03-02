@@ -358,7 +358,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 void split_sum::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	vector<thread*> threads;
-	vector<info_t> infos;
+	vector<shared_ptr<info<double>>> infos;
 
 	int subThreadIndex = 0;
 
@@ -390,7 +390,7 @@ void split_sum::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short 
 	}
 }
 
-void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string subThreadIndex) const
+void split_sum::DoParam(shared_ptr<info<double>> myTargetInfo, std::string myParamName, string subThreadIndex) const
 {
 	ASSERT(myTargetInfo);
 	ASSERT(myTargetInfo->Param().Name() == myParamName);
@@ -422,8 +422,8 @@ void split_sum::DoParam(info_t myTargetInfo, std::string myParamName, string sub
 	// Have to re-fetch infos each time since we might have to change element
 	// from liquid to snow to radiation so we need also different source parameters
 
-	info_t curSumInfo;
-	info_t prevSumInfo;
+	shared_ptr<info<double>> curSumInfo;
+	shared_ptr<info<double>> prevSumInfo;
 
 	if (myTargetInfo->Time().Step().Minutes() == 0)
 	{

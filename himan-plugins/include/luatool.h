@@ -64,13 +64,13 @@ class luatool : public compiled_plugin, public compiled_plugin_base
 	luabind::object Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam,
 	                      const forecast_type& theType, const producer& prod, const std::string& geomName) const;
 
-	void WriteToFile(const info_t targetInfo, write_options opts = write_options()) override;
-	void WriteToFile(const info_t targetInfo);
+	void WriteToFile(const std::shared_ptr<info<double>> targetInfo, write_options opts = write_options()) override;
+	void WriteToFile(const std::shared_ptr<info<double>> targetInfo);
 
    private:
 	void Calculate(std::shared_ptr<info<double>> theTargetInfo, unsigned short theThreadIndex) override;
 	void InitLua();
-	void ResetVariables(info_t myTargetInfo);
+	void ResetVariables(std::shared_ptr<info<double>> myTargetInfo);
 	bool ReadFile(const std::string& luaFile);
 
 	write_options itsWriteOptions;

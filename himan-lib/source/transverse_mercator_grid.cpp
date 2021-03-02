@@ -145,24 +145,9 @@ bool transverse_mercator_grid::EqualsTo(const transverse_mercator_grid& other) c
 		return false;
 	}
 
-	if (Orientation() != other.Orientation())
+	if (!itsSpatialReference->IsSame(other.itsSpatialReference.get()))
 	{
-		itsLogger.Trace("Orientation does not match: " + std::to_string(Orientation()) + " vs " +
-		                std::to_string(other.Orientation()));
-		return false;
-	}
-
-	if (StandardParallel() != other.StandardParallel())
-	{
-		itsLogger.Trace("Standard latitude does not match: " + std::to_string(StandardParallel()) + " vs " +
-		                std::to_string(other.StandardParallel()));
-		return false;
-	}
-
-	if (Scale() != other.Scale())
-	{
-		itsLogger.Trace("Scale does not match: " + std::to_string(StandardParallel()) + " vs " +
-		                std::to_string(other.StandardParallel()));
+		itsLogger.Trace("Areas are not equal");
 		return false;
 	}
 
@@ -198,9 +183,4 @@ double transverse_mercator_grid::StandardParallel() const
 double transverse_mercator_grid::Scale() const
 {
 	return itsSpatialReference->GetProjParm(SRS_PP_SCALE_FACTOR, MissingDouble());
-}
-
-OGRSpatialReference transverse_mercator_grid::SpatialReference() const
-{
-	return OGRSpatialReference(*itsSpatialReference);
 }

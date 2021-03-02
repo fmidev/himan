@@ -117,6 +117,7 @@ bool regular_grid::EqualsTo(const regular_grid& other) const
 		return false;
 	}
 
+#if 0
 	const auto es = EarthShape();
 	const auto oes = other.EarthShape();
 
@@ -128,7 +129,7 @@ bool regular_grid::EqualsTo(const regular_grid& other) const
 
 		return false;
 	}
-
+#endif
 	const double kEpsilon = 0.0001;
 
 	if (fabs(other.itsDi - itsDi) > kEpsilon)
@@ -164,7 +165,7 @@ bool regular_grid::EqualsTo(const regular_grid& other) const
 		return false;
 	}
 
-	if (!point::LatLonCompare(other.TopLeft() , TopLeft()))
+	if (!point::LatLonCompare(other.TopLeft(), TopLeft()))
 	{
 		itsLogger.Trace("TopLeft does not match: " + static_cast<std::string>(other.TopLeft()) + " vs " +
 		                static_cast<std::string>(TopLeft()));
@@ -426,6 +427,11 @@ std::unique_ptr<OGRPolygon> regular_grid::Geometry() const
 	auto geometry = std::unique_ptr<OGRPolygon>(new OGRPolygon());
 	geometry->addRing(&ring);
 	return std::move(geometry);
+}
+
+std::unique_ptr<OGRSpatialReference> regular_grid::SpatialReference() const
+{
+	return std::unique_ptr<OGRSpatialReference>(itsSpatialReference->Clone());
 }
 
 //--------------- irregular grid
