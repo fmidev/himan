@@ -129,8 +129,11 @@ class configuration
 	void ThreadCount(short theThreadCount);
 	short ThreadCount() const;
 
-	std::string ConfigurationFile() const;
-	void ConfigurationFile(const std::string& theConfigurationFile);
+	std::string ConfigurationFileName() const;
+	void ConfigurationFileName(const std::string& theConfigurationFileName);
+
+	std::string ConfigurationFileContent() const;
+	void ConfigurationFileContent(const std::string& theConfigurationFileContent);
 
 	void StatisticsLabel(const std::string& theStatisticsLabel);
 	std::string StatisticsLabel() const;
@@ -263,7 +266,8 @@ class configuration
 	HPFileCompression itsFileCompression;
 	HPDatabaseType itsDatabaseType;
 
-	std::string itsConfigurationFile;
+	std::string itsConfigurationFileName;
+	std::string itsConfigurationFileContent;
 	std::vector<std::string> itsAuxiliaryFiles;
 
 	bool itsReadFromDatabase;

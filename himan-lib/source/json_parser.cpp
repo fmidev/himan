@@ -65,7 +65,7 @@ json_parser::json_parser()
 }
 vector<shared_ptr<plugin_configuration>> json_parser::Parse(shared_ptr<configuration> conf)
 {
-	if (conf->ConfigurationFile().empty())
+	if (conf->ConfigurationFileName().empty())
 	{
 		throw runtime_error("Configuration file not defined");
 	}
@@ -490,13 +490,15 @@ void CheckCommonOptions(const boost::property_tree::ptree& pt, shared_ptr<config
 
 vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(shared_ptr<configuration> conf)
 {
-	itsLogger.Trace("Parsing configuration file '" + conf->ConfigurationFile() + "'");
+	itsLogger.Trace("Parsing configuration file '" + conf->ConfigurationFileName() + "'");
 
 	boost::property_tree::ptree pt;
 
 	try
 	{
-		boost::property_tree::json_parser::read_json(conf->ConfigurationFile(), pt);
+		std::stringstream ss;
+		ss << conf->ConfigurationFileContent();
+		boost::property_tree::json_parser::read_json(ss, pt);
 	}
 	catch (exception& e)
 	{

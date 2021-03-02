@@ -14,7 +14,8 @@ configuration::configuration()
       itsWriteMode(kAllGridsToAFile),
       itsFileCompression(kNoCompression),
       itsDatabaseType(kRadon),
-      itsConfigurationFile(),
+      itsConfigurationFileName(),
+      itsConfigurationFileContent(),
       itsAuxiliaryFiles(),
       itsReadFromDatabase(true),
       itsThreadCount(-1),
@@ -56,7 +57,8 @@ configuration::configuration(const configuration& o)
       itsWriteMode(o.itsWriteMode),
       itsFileCompression(o.itsFileCompression),
       itsDatabaseType(o.itsDatabaseType),
-      itsConfigurationFile(o.itsConfigurationFile),
+      itsConfigurationFileName(o.itsConfigurationFileName),
+      itsConfigurationFileContent(o.itsConfigurationFileContent),
       itsAuxiliaryFiles(o.itsAuxiliaryFiles),
       itsReadFromDatabase(o.itsReadFromDatabase),
       itsThreadCount(o.itsThreadCount),
@@ -117,7 +119,7 @@ std::ostream& configuration::Write(std::ostream& file) const
 
 	file << "__itsStatisticsLabel__ " << itsStatisticsLabel << std::endl;
 
-	file << "__itsConfigurationFile__ " << itsConfigurationFile << std::endl;
+	file << "__itsConfigurationFileName__ " << itsConfigurationFileName << std::endl;
 
 	file << "__itsCudaDeviceId__ " << itsCudaDeviceId << std::endl;
 	file << "__itsUseCudaForPacking__ " << itsUseCudaForPacking << std::endl;
@@ -224,13 +226,21 @@ void configuration::ThreadCount(short theThreadCount)
 {
 	itsThreadCount = theThreadCount;
 }
-std::string configuration::ConfigurationFile() const
+std::string configuration::ConfigurationFileName() const
 {
-	return itsConfigurationFile;
+	return itsConfigurationFileName;
 }
-void configuration::ConfigurationFile(const std::string& theConfigurationFile)
+void configuration::ConfigurationFileName(const std::string& theConfigurationFileName)
 {
-	itsConfigurationFile = theConfigurationFile;
+	itsConfigurationFileName = theConfigurationFileName;
+}
+std::string configuration::ConfigurationFileContent() const
+{
+	return itsConfigurationFileContent;
+}
+void configuration::ConfigurationFileContent(const std::string& theConfigurationFileContent)
+{
+	itsConfigurationFileContent = theConfigurationFileContent;
 }
 const std::vector<producer>& configuration::SourceProducers() const
 {

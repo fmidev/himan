@@ -417,8 +417,13 @@ string DetermineDefaultFileName(const info<T>& info, const plugin_configuration&
 			// legacy mode for 'all grids to a file' does not support database
 			// --> no need for 'base'
 
+			if (conf.ConfigurationFileName() == "-")
+			{
+				std::cerr << "Legacy write mode not supported when reading configuration from stdin" << std::endl;
+			}
+
 			ss.str("");
-			ss << conf.ConfigurationFile() << ".{file_type}";
+			ss << conf.ConfigurationFileName() << ".{file_type}";
 		}
 		else
 		{
