@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 21.2.23
+Version: 21.3.2
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -82,6 +82,13 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/*
 
 %changelog
+* Tue Mar  2 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.3.2-1.fmi
+- Fix serialization code
+- Read configuration from stdin
+* Wed Feb 24 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.2.24-1.fmi
+- Hotfix to gdal-triggered crash
+* Tue Feb 23 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.2.23-2.fmi
+- Hotfix to gdal-triggered crash
 * Tue Feb 23 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.2.23-1.fmi
 - gdal 3.2
 * Tue Feb  9 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.2.9-1.fmi
