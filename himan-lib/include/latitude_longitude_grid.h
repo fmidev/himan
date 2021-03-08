@@ -50,7 +50,10 @@ class latitude_longitude_grid : public regular_grid
 	bool operator!=(const grid& other) const;
 
 	point XY(const point& latlon) const override;
+	std::vector<point> XY(const regular_grid& target) const override;
 	point LatLon(size_t locationIndex) const override;
+	point LatLon(const point& projected) const override;
+	virtual point Projected(const point& latlon) const override;
 
 	size_t Hash() const override;
 
@@ -58,6 +61,9 @@ class latitude_longitude_grid : public regular_grid
 
 	virtual std::string Proj4String() const override;
 	virtual earth_shape<double> EarthShape() const override;
+
+	virtual std::unique_ptr<OGRSpatialReference> SpatialReference() const override;
+	virtual std::vector<point> GridPointsInProjectionSpace() const override;
 
    protected:
 	bool EqualsTo(const latitude_longitude_grid& other) const;
@@ -128,16 +134,21 @@ class rotated_latitude_longitude_grid : public latitude_longitude_grid
 	point FirstPoint() const override;
 	// return grid xy coordinates for normal latlon
 	point XY(const point& latlon) const override;
+	std::vector<point> XY(const regular_grid& target) const override;
 	// return latlon for grid running index
 	point LatLon(size_t locationIndex) const override;
+	point LatLon(const point& rotated) const override;
+
 	// return rotated point for grid running index
 	point RotatedLatLon(size_t locationIndex) const;
 	// return rotated point for normal latlon
 	point Rotate(const point& latlon) const;
+	virtual point Projected(const point& latlon) const override;
 
 	size_t Hash() const override;
 
 	virtual std::string Proj4String() const override;
+	virtual std::unique_ptr<OGRSpatialReference> SpatialReference() const override;
 
    private:
 	bool EqualsTo(const rotated_latitude_longitude_grid& other) const;

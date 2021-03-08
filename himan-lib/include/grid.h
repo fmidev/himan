@@ -156,6 +156,13 @@ class grid
 
 	virtual earth_shape<double> EarthShape() const = 0;
 
+	/**
+	 * @brief Create a list of point locations for a grid in the grids native coordinate system
+	 *
+	 */
+
+	virtual std::vector<point> GridPointsInProjectionSpace() const;
+
    protected:
 	grid(HPGridClass gridClass, HPGridType gridType, bool itsUVRelativeToGrid);
 
@@ -210,7 +217,18 @@ class regular_grid : public grid
 
 	/* Return grid point value (incl. fractions) of a given latlon point */
 	virtual point XY(const point& latlon) const;
+
+	/* Return grid point value (location) of a given target grid */
+	virtual std::vector<point> XY(const regular_grid& to) const;
+
+	/* Return latitude-longitude value for a given location index */
 	virtual point LatLon(size_t i) const override;
+
+	/* Return latitude-longitude value for a given point in projected space */
+	virtual point LatLon(const point& projected) const;
+
+	/* Return projected value for a given latitude-longitude point */
+	virtual point Projected(const point& latlon) const;
 
 	/*
 	 * Functions that are only valid for some grid types, but for ease
@@ -237,7 +255,8 @@ class regular_grid : public grid
 	virtual std::unique_ptr<OGRPolygon> Geometry() const;
 	virtual earth_shape<double> EarthShape() const override;
 
-	std::unique_ptr<OGRSpatialReference> SpatialReference() const;
+	virtual std::unique_ptr<OGRSpatialReference> SpatialReference() const;
+	virtual std::vector<point> GridPointsInProjectionSpace() const override;
 
    protected:
 	regular_grid(HPGridType gridType, HPScanningMode scMode, double di, double dj, size_t ni, size_t nj,
