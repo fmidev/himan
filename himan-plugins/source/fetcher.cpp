@@ -828,6 +828,10 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vec
 			himan::Abort();
 		}
 	}
+	else
+	{
+		itsLogger.Trace("Interpolation disabled");
+	}
 }
 
 template <typename T>
@@ -1001,13 +1005,20 @@ void fetcher::RotateVectorComponents(vector<shared_ptr<info<T>>>& components, co
 			// and put it to cache.
 
 			std::vector<shared_ptr<info<T>>> list({other});
-			if (itsDoInterpolation && interpolate::Interpolate(target, list))
+			if (itsDoInterpolation)
 			{
-				if (itsUseCache && config->UseCacheForReads() && !other->PackedData()->HasData())
+				if (interpolate::Interpolate(target, list))
 				{
-					auto c = GET_PLUGIN(cache);
-					c->Insert<T>(other);
+					if (itsUseCache && config->UseCacheForReads() && !other->PackedData()->HasData())
+					{
+						auto c = GET_PLUGIN(cache);
+						c->Insert<T>(other);
+					}
 				}
+			}
+			else
+			{
+				itsLogger.Trace("Interpolation disabled");
 			}
 		}
 	}

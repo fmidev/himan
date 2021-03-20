@@ -86,6 +86,9 @@ bool InterpolateArea(const grid* baseGrid, std::shared_ptr<info<T>> source)
 
 	auto method = InterpolationMethod(source->Param().Name(), source->Param().InterpolationMethod());
 
+	logger logr("interpolation");
+	logr.Trace(fmt::format("Grid interpolation with method '{}'", HPInterpolationMethodToString.at(method)));
+
 	if (interpolate::interpolator<T>().Interpolate(*source->Base(), target, method))
 	{
 		auto interpGrid = std::shared_ptr<grid>(baseGrid->Clone());
