@@ -275,5 +275,13 @@ std::string raw_time::ToTime() const
 
 void raw_time::FromSQLTime(const std::string& SQLTime)
 {
-	itsDateTime = boost::posix_time::time_from_string(SQLTime);
+	try
+	{
+		itsDateTime = boost::posix_time::time_from_string(SQLTime);
+	}
+	catch (const std::out_of_range& e)
+	{
+		fmt::print("Invalid datemask given for FromSQLTime(): {}\n", e.what());
+		himan::Abort();
+	}
 }
