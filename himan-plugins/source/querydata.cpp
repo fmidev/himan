@@ -48,8 +48,6 @@ bool CopyData(himan::info<T>& theInfo, NFmiFastQueryInfo& qinfo, bool applyScale
 {
 	ASSERT(theInfo.Data().Size() == qinfo.SizeLocations());
 
-	// convert missing value to kFloatMissing
-	theInfo.Data().MissingValue(kFloatMissing);
 	theInfo.ResetLocation();
 	qinfo.ResetLocation();
 
@@ -78,11 +76,15 @@ bool CopyData(himan::info<T>& theInfo, NFmiFastQueryInfo& qinfo, bool applyScale
 			do
 			{
 				qinfo.NextLocation();
-				const float val = static_cast<float>(theInfo.Data().At(x, y));
+				const T val = theInfo.Data().At(x, y);
 
-				if (val != kFloatMissing)
+				if (himan::IsValid(val))
 				{
-					qinfo.FloatValue(val * scale + base);
+					qinfo.FloatValue(static_cast<float>(val) * scale + base);
+				}
+				else
+				{
+					qinfo.FloatValue(kFloatMissing);
 				}
 				x++;
 			} while (x < ni);
@@ -454,6 +456,8 @@ pair<himan::HPWriteStatus, himan::file_information> querydata::ToFile(info<T>& t
 
 template pair<himan::HPWriteStatus, himan::file_information> querydata::ToFile<double>(info<double>&);
 template pair<himan::HPWriteStatus, himan::file_information> querydata::ToFile<float>(info<float>&);
+template pair<himan::HPWriteStatus, himan::file_information> querydata::ToFile<short>(info<short>&);
+template pair<himan::HPWriteStatus, himan::file_information> querydata::ToFile<unsigned char>(info<unsigned char>&);
 
 template <typename T>
 shared_ptr<NFmiQueryData> querydata::CreateQueryData(const info<T>& originalInfo, bool activeOnly,
@@ -563,6 +567,8 @@ shared_ptr<NFmiQueryData> querydata::CreateQueryData(const info<T>& originalInfo
 
 template shared_ptr<NFmiQueryData> querydata::CreateQueryData<double>(const info<double>&, bool, bool);
 template shared_ptr<NFmiQueryData> querydata::CreateQueryData<float>(const info<float>&, bool, bool);
+template shared_ptr<NFmiQueryData> querydata::CreateQueryData<short>(const info<short>&, bool, bool);
+template shared_ptr<NFmiQueryData> querydata::CreateQueryData<unsigned char>(const info<unsigned char>&, bool, bool);
 
 template <typename T>
 shared_ptr<himan::info<T>> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData) const
@@ -716,16 +722,23 @@ shared_ptr<himan::info<T>> querydata::CreateInfo(shared_ptr<NFmiQueryData> theDa
 			{
 				ASSERT(newInfo->template Index<param>() == qinfo.ParamIndex());
 
-				matrix<T> dm(ni, nj, 1, static_cast<double>(32700.f));
+				matrix<T> dm(ni, nj, 1, MissingValue<T>());
 				size_t i;
 
 				for (qinfo.ResetLocation(), i = 0; qinfo.NextLocation() && i < ni * nj; i++)
 				{
-					dm.Set(i, static_cast<T>(qinfo.FloatValue()));
+					const float val = qinfo.FloatValue();
+
+					if (val == kFloatMissing)
+					{
+						dm.Set(i, MissingValue<T>());
+					}
+					else
+					{
+						dm.Set(i, static_cast<T>(val));
+					}
 				}
 
-				// convert kFloatMissing to nan
-				dm.MissingValue(MissingValue<T>());
 				b = newInfo->Base();
 				b->data = move(dm);
 			}
@@ -737,3 +750,5 @@ shared_ptr<himan::info<T>> querydata::CreateInfo(shared_ptr<NFmiQueryData> theDa
 
 template shared_ptr<himan::info<double>> querydata::CreateInfo<double>(shared_ptr<NFmiQueryData>) const;
 template shared_ptr<himan::info<float>> querydata::CreateInfo<float>(shared_ptr<NFmiQueryData>) const;
+template shared_ptr<himan::info<short>> querydata::CreateInfo<short>(shared_ptr<NFmiQueryData>) const;
+template shared_ptr<himan::info<unsigned char>> querydata::CreateInfo<unsigned char>(shared_ptr<NFmiQueryData>) const;

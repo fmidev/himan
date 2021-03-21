@@ -43,6 +43,17 @@ int DataTypeId<double>()
 	return 2;
 }
 
+template <>
+int DataTypeId<short>()
+{
+	return 3;
+}
+template <>
+int DataTypeId<unsigned char>()
+{
+	return 4;
+}
+
 bool IsSupportedGridForRotation(HPGridType type)
 {
 	switch (type)
@@ -106,6 +117,8 @@ bool InterpolateArea(const grid* baseGrid, std::shared_ptr<info<T>> source)
 
 template bool InterpolateArea<double>(const grid*, std::shared_ptr<info<double>>);
 template bool InterpolateArea<float>(const grid*, std::shared_ptr<info<float>>);
+template bool InterpolateArea<short>(const grid*, std::shared_ptr<info<short>>);
+template bool InterpolateArea<unsigned char>(const grid*, std::shared_ptr<info<unsigned char>>);
 
 template <typename T>
 bool ReorderPoints(const grid* baseGrid, std::shared_ptr<info<T>> info)
@@ -165,6 +178,8 @@ bool ReorderPoints(const grid* baseGrid, std::shared_ptr<info<T>> info)
 
 template bool ReorderPoints<double>(const grid*, std::shared_ptr<info<double>>);
 template bool ReorderPoints<float>(const grid*, std::shared_ptr<info<float>>);
+template bool ReorderPoints<short>(const grid*, std::shared_ptr<info<short>>);
+template bool ReorderPoints<unsigned char>(const grid*, std::shared_ptr<info<unsigned char>>);
 
 template <typename T>
 bool Interpolate(const grid* baseGrid, const std::vector<std::shared_ptr<info<T>>>& infos)
@@ -257,6 +272,8 @@ bool Interpolate(const grid* baseGrid, const std::vector<std::shared_ptr<info<T>
 
 template bool Interpolate<double>(const grid*, const std::vector<std::shared_ptr<info<double>>>&);
 template bool Interpolate<float>(const grid*, const std::vector<std::shared_ptr<info<float>>>&);
+template bool Interpolate<short>(const grid*, const std::vector<std::shared_ptr<info<short>>>&);
+template bool Interpolate<unsigned char>(const grid*, const std::vector<std::shared_ptr<info<unsigned char>>>&);
 
 bool IsVectorComponent(const std::string& paramName)
 {
@@ -537,6 +554,9 @@ void RotateVectorComponentsCPU(const grid* from, const grid* to, himan::matrix<T
 template void RotateVectorComponentsCPU<double>(const grid*, const grid*, himan::matrix<double>&,
                                                 himan::matrix<double>&);
 template void RotateVectorComponentsCPU<float>(const grid*, const grid*, himan::matrix<float>&, himan::matrix<float>&);
+template void RotateVectorComponentsCPU<short>(const grid*, const grid*, himan::matrix<short>&, himan::matrix<short>&);
+template void RotateVectorComponentsCPU<unsigned char>(const grid*, const grid*, himan::matrix<unsigned char>&,
+                                                       himan::matrix<unsigned char>&);
 
 template <typename T>
 void RotateVectorComponents(const grid* from, const grid* to, himan::info<T>& UInfo, himan::info<T>& VInfo,
@@ -576,6 +596,9 @@ void RotateVectorComponents(const grid* from, const grid* to, himan::info<T>& UI
 
 template void RotateVectorComponents<double>(const grid*, const grid*, info<double>&, info<double>&, bool);
 template void RotateVectorComponents<float>(const grid*, const grid*, info<float>&, info<float>&, bool);
+template void RotateVectorComponents<short>(const grid*, const grid*, info<short>&, info<short>&, bool);
+template void RotateVectorComponents<unsigned char>(const grid*, const grid*, info<unsigned char>&,
+                                                    info<unsigned char>&, bool);
 
 template <typename T>
 std::pair<std::vector<size_t>, std::vector<T>> InterpolationWeights(reduced_gaussian_grid& source, point target)
