@@ -35,8 +35,8 @@ class geotiff : public io_plugin
 	                                                    bool readData = true) const;
 
 	template <typename T>
-	file_information ToFile(info<T>& anInfo);
-	file_information ToFile(info<double>& anInfo);
+	std::pair<HPWriteStatus, file_information> ToFile(info<T>& anInfo);
+	std::pair<HPWriteStatus, file_information> ToFile(info<double>& anInfo);
 
    private:
 };
