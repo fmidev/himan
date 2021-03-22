@@ -120,7 +120,11 @@ template <typename T>
 std::pair<std::vector<size_t>, std::vector<T>> InterpolationWeights(reduced_gaussian_grid& source, point target);
 
 template <typename T>
-std::pair<std::vector<size_t>, std::vector<T>> InterpolationWeights(regular_grid& source, point target);
+std::pair<std::vector<size_t>, std::vector<T>> InterpolationWeights(const regular_grid& source, const point& target);
+
+template <typename T>
+std::vector<std::pair<std::vector<size_t>, std::vector<T>>> InterpolationWeights(const regular_grid& source,
+                                                                                 const std::vector<point>& targets);
 
 /**
  * @brief Provide the nearest point index for a single target point with weight 1.0
@@ -132,7 +136,10 @@ template <typename T>
 std::pair<size_t, T> NearestPoint(reduced_gaussian_grid& source, point target);
 
 template <typename T>
-std::pair<size_t, T> NearestPoint(const regular_grid& source, point target);
+std::pair<size_t, T> NearestPoint(const regular_grid& source, const point& target);
+
+template <typename T>
+std::vector<std::pair<size_t, T>> NearestPoint(const regular_grid& source, const std::vector<point>& targets);
 }
 }
 
