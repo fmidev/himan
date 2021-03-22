@@ -32,7 +32,7 @@ latitude_longitude_grid::latitude_longitude_grid(HPScanningMode theScanningMode,
 }
 
 latitude_longitude_grid::latitude_longitude_grid(const latitude_longitude_grid& other)
-    : regular_grid(other), itsFirstPoint(other.itsFirstPoint)
+    : regular_grid(other), itsFirstPoint(other.itsFirstPoint), itsEarthShape(other.itsEarthShape)
 {
 	itsLogger = logger("latitude_longitude_grid");
 }
@@ -52,6 +52,88 @@ bool latitude_longitude_grid::IsGlobal() const
 	if (static_cast<double>(Ni()) * Di() == 360.0)
 		return true;
 	return false;
+}
+
+std::vector<point> latitude_longitude_grid::GridPointsInProjectionSpace() const
+{
+	std::vector<point> ret;
+	ret.reserve(Size());
+
+	point first = Projected(FirstPoint());
+
+	first.X(std::stod(fmt::format("{:.7f}", first.X())));
+	first.Y(std::stod(fmt::format("{:.7f}", first.Y())));
+
+	const double dj = itsDj * (itsScanningMode == kTopLeft ? -1 : 1);
+
+	for (size_t y = 0; y < Nj(); y++)
+	{
+		for (size_t x = 0; x < Ni(); x++)
+		{
+			ret.emplace_back(fma(static_cast<double>(x), itsDi, first.X()), fma(static_cast<double>(y), dj, first.Y()));
+		}
+	}
+
+	return ret;
+}
+
+std::vector<point> latitude_longitude_grid::XY(const regular_grid& target) const
+{
+	// Almost the same function as regular_grid::XY(), but we here we rely
+	// on class function XY(point) to check the grid containment
+	// and do not utilize OGRCoordinateTransform class
+
+	// 1. Create list of points in the projection space of the
+	// target grid.
+
+	const auto targetProj = target.GridPointsInProjectionSpace();
+
+	// 2. Transform the points to the projection space of the source
+	// grid
+	// 3. Transform projected coordinates to grid space
+
+	auto targetsp = target.SpatialReference();
+	auto sp = std::unique_ptr<OGRSpatialReference>(new OGRSpatialReference);
+	sp->importFromProj4(Proj4String().c_str());
+
+	vector<point> sourceXY;
+
+	if (sp->IsSame(targetsp.get()))
+	{
+		const double ni = static_cast<double>(itsNi - 1);
+		const double nj = static_cast<double>(itsNj - 1);
+		const double di = itsDi;
+		const double dj = itsDj * (itsScanningMode == kTopLeft ? -1 : 1);
+		point soff = Projected(FirstPoint());
+
+		// ROUND offset point decimals: when dealing with rotated latitude longitude
+		// the back-forth transformation adds inaccuracy in the order of 10e-9 which
+		// skews the grid with just a tiny amount
+
+		soff.X(std::stod(fmt::format("{:.7f}", soff.X())));
+		soff.Y(std::stod(fmt::format("{:.7f}", soff.Y())));
+
+		for (const auto& p : targetProj)
+		{
+			double x = (p.X() - soff.X()) / di, y = (p.Y() - soff.Y()) / dj;
+
+			if (x < 0. || x > ni || y < 0. || y > nj)
+			{
+				x = y = MissingDouble();
+			}
+			sourceXY.emplace_back(x, y);
+		}
+	}
+	else
+	{
+		sourceXY.reserve(targetProj.size());
+		for (const auto& p : targetProj)
+		{
+			sourceXY.push_back(XY(target.LatLon(p)));
+		}
+	}
+
+	return sourceXY;
 }
 
 point latitude_longitude_grid::XY(const himan::point& latlon) const
@@ -106,6 +188,11 @@ point latitude_longitude_grid::XY(const himan::point& latlon) const
 	return point(x, y);
 }
 
+point latitude_longitude_grid::LatLon(const point& projected) const
+{
+	return projected;
+}
+
 point latitude_longitude_grid::LatLon(size_t locationIndex) const
 {
 	ASSERT(locationIndex < Size());
@@ -141,9 +228,20 @@ point latitude_longitude_grid::LatLon(size_t locationIndex) const
 
 std::string latitude_longitude_grid::Proj4String() const
 {
-	return "+proj=longlat +a=" + to_string(itsEarthShape.A()) + " +b=" + to_string(itsEarthShape.B()) + " +no_defs";
+	return fmt::format("+proj=longlat +a={} +b={} +no_defs", itsEarthShape.A(), itsEarthShape.B());
 }
 
+std::unique_ptr<OGRSpatialReference> latitude_longitude_grid::SpatialReference() const
+{
+	auto sp = std::unique_ptr<OGRSpatialReference>(new OGRSpatialReference());
+	sp->importFromProj4(Proj4String().c_str());
+	return std::move(sp);
+}
+
+point latitude_longitude_grid::Projected(const point& latlon) const
+{
+	return latlon;
+}
 size_t latitude_longitude_grid::Hash() const
 {
 	vector<size_t> hashes;
@@ -214,7 +312,6 @@ rotated_latitude_longitude_grid::rotated_latitude_longitude_grid(HPScanningMode 
 	itsToRotLatLon = himan::geoutil::rotation<double>().ToRotLatLon(theSouthPole.Y() * constants::kDeg,
 	                                                                theSouthPole.X() * constants::kDeg, 0);
 
-	itsEarthShape = earthShape;
 	itsGridType = kRotatedLatitudeLongitude;
 	itsLogger = logger("rotated_latitude_longitude_grid");
 	itsLogger.Trace(Proj4String());
@@ -238,7 +335,6 @@ rotated_latitude_longitude_grid::rotated_latitude_longitude_grid(HPScanningMode 
 	itsToRotLatLon = himan::geoutil::rotation<double>().ToRotLatLon(theSouthPole.Y() * constants::kDeg,
 	                                                                theSouthPole.X() * constants::kDeg, 0);
 
-	itsEarthShape = earthShape;
 	itsGridType = kRotatedLatitudeLongitude;
 	itsLogger = logger("rotated_latitude_longitude_grid");
 	itsLogger.Trace(Proj4String());
@@ -278,10 +374,8 @@ bool rotated_latitude_longitude_grid::EqualsTo(const rotated_latitude_longitude_
 
 	if (!point::LatLonCompare(itsSouthPole, other.SouthPole()))
 	{
-		itsLogger.Trace("SouthPole does not match: X " + to_string(itsSouthPole.X()) + " vs " +
-		                to_string(other.SouthPole().X()));
-		itsLogger.Trace("SouthPole does not match: Y " + to_string(itsSouthPole.Y()) + " vs " +
-		                to_string(other.SouthPole().Y()));
+		itsLogger.Trace(fmt::format("SouthPole does not match: X {} vs {}", itsSouthPole.X(), other.SouthPole().X()));
+		itsLogger.Trace(fmt::format("SouthPole does not match: Y {} vs {}", itsSouthPole.Y(), other.SouthPole().Y()));
 		return false;
 	}
 
@@ -314,6 +408,15 @@ point rotated_latitude_longitude_grid::Rotate(const point& latlon) const
 point rotated_latitude_longitude_grid::XY(const point& latlon) const
 {
 	return latitude_longitude_grid::XY(Rotate(latlon));
+}
+
+point rotated_latitude_longitude_grid::LatLon(const point& rotated) const
+{
+	himan::geoutil::position<double> p(rotated.Y() * constants::kDeg, rotated.X() * constants::kDeg, 0.0,
+	                                   earth_shape<double>(1.0));
+	himan::geoutil::rotate(p, itsFromRotLatLon);
+
+	return point(p.Lon(earth_shape<double>(1.0)) * constants::kRad, p.Lat(earth_shape<double>(1.0)) * constants::kRad);
 }
 
 point rotated_latitude_longitude_grid::LatLon(size_t locationIndex) const
@@ -362,9 +465,25 @@ std::string rotated_latitude_longitude_grid::Proj4String() const
 	// Hirlamilla kiertokulma on 0
 	// Tuurilla ne laivatkin seilaa
 
-	std::stringstream ss;
-	ss << "+proj=ob_tran +o_proj=longlat +lon_0=" << itsSouthPole.X()
-	   << " +o_lon_p=0 +o_lat_p=" << itsSouthPole.Y() * -1 << " +a=" << fixed << itsEarthShape.A()
-	   << " +b=" << itsEarthShape.B() << " +to_meter=0.0174532925199 +no_defs";
-	return ss.str();
+	return fmt::format(
+	    "+proj=ob_tran +o_proj=longlat +lon_0={} +o_lon_p=0 +o_lat_p={} +a={} +b={} +to_meter=0.0174532925199 "
+	    "+no_defs",
+	    itsSouthPole.X(), (itsSouthPole.Y() * -1), itsEarthShape.A(), itsEarthShape.B());
+}
+
+std::unique_ptr<OGRSpatialReference> rotated_latitude_longitude_grid::SpatialReference() const
+{
+	auto sp = std::unique_ptr<OGRSpatialReference>(new OGRSpatialReference());
+	sp->importFromProj4(Proj4String().c_str());
+	return std::move(sp);
+}
+
+std::vector<point> rotated_latitude_longitude_grid::XY(const regular_grid& to) const
+{
+	return latitude_longitude_grid::XY(to);
+}
+
+point rotated_latitude_longitude_grid::Projected(const point& latlon) const
+{
+	return Rotate(latlon);
 }
