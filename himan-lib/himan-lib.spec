@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 21.3.2
+Version: 21.3.22
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -82,6 +82,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/*
 
 %changelog
+* Mon Mar 22 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.3.22-1.fmi
+- Add more accurate bulk area interpolation function
 * Tue Mar  2 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.3.2-1.fmi
 - Fix serialization code
 - Read configuration from stdin
