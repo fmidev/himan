@@ -82,7 +82,7 @@ void grid::UVRelativeToGrid(bool theUVRelativeToGrid)
 }
 std::vector<point> grid::GridPointsInProjectionSpace() const
 {
-	throw runtime_error("grid::GridPointInProjectionSpace() called");
+	throw runtime_error("grid::GridPointsInProjectionSpace() called");
 }
 
 //--------------- regular grid
