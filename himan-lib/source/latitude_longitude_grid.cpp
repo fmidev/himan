@@ -97,36 +97,19 @@ std::vector<point> latitude_longitude_grid::XY(const regular_grid& target) const
 	sp->importFromProj4(Proj4String().c_str());
 
 	vector<point> sourceXY;
+	sourceXY.reserve(targetProj.size());
 
 	if (sp->IsSame(targetsp.get()))
 	{
-		const double ni = static_cast<double>(itsNi - 1);
-		const double nj = static_cast<double>(itsNj - 1);
-		const double di = itsDi;
-		const double dj = itsDj * (itsScanningMode == kTopLeft ? -1 : 1);
-		point soff = Projected(FirstPoint());
-
-		// ROUND offset point decimals: when dealing with rotated latitude longitude
-		// the back-forth transformation adds inaccuracy in the order of 10e-9 which
-		// skews the grid with just a tiny amount
-
-		soff.X(std::stod(fmt::format("{:.7f}", soff.X())));
-		soff.Y(std::stod(fmt::format("{:.7f}", soff.Y())));
+		itsLogger.Trace("Spatial references are equal, no need to do transformation");
 
 		for (const auto& p : targetProj)
 		{
-			double x = (p.X() - soff.X()) / di, y = (p.Y() - soff.Y()) / dj;
-
-			if (x < 0. || x > ni || y < 0. || y > nj)
-			{
-				x = y = MissingDouble();
-			}
-			sourceXY.emplace_back(x, y);
+			sourceXY.push_back(XY(p));
 		}
 	}
 	else
 	{
-		sourceXY.reserve(targetProj.size());
 		for (const auto& p : targetProj)
 		{
 			sourceXY.push_back(XY(target.LatLon(p)));
@@ -478,9 +461,39 @@ std::unique_ptr<OGRSpatialReference> rotated_latitude_longitude_grid::SpatialRef
 	return std::move(sp);
 }
 
-std::vector<point> rotated_latitude_longitude_grid::XY(const regular_grid& to) const
+std::vector<point> rotated_latitude_longitude_grid::XY(const regular_grid& target) const
 {
-	return latitude_longitude_grid::XY(to);
+	const auto targetProj = target.GridPointsInProjectionSpace();
+
+	// 2. Transform the points to the projection space of the source
+	// grid
+	// 3. Transform projected coordinates to grid space
+
+	auto targetsp = target.SpatialReference();
+	auto sp = std::unique_ptr<OGRSpatialReference>(new OGRSpatialReference);
+	sp->importFromProj4(Proj4String().c_str());
+
+	vector<point> sourceXY;
+	sourceXY.reserve(targetProj.size());
+
+	if (sp->IsSame(targetsp.get()))
+	{
+		itsLogger.Trace("Spatial references are equal, no need to do transformation");
+
+		for (const auto& p : targetProj)
+		{
+			sourceXY.push_back(latitude_longitude_grid::XY(p));
+		}
+	}
+	else
+	{
+		for (const auto& p : targetProj)
+		{
+			sourceXY.push_back(XY(target.LatLon(p)));
+		}
+	}
+
+	return sourceXY;
 }
 
 point rotated_latitude_longitude_grid::Projected(const point& latlon) const
