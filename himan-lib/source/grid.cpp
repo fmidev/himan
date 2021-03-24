@@ -497,6 +497,7 @@ std::vector<point> regular_grid::XY(const regular_grid& target) const
 
 	if (itsSpatialReference->IsSame(tosp.get()))
 	{
+		itsLogger.Trace("Spatial references are equal, no need to do transformation");
 		sourceProj = targetProj;
 	}
 	else
