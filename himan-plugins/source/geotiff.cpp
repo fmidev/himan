@@ -131,6 +131,8 @@ std::unique_ptr<grid> ReadAreaAndGrid(GDALDataset* poDataset)
 
 param ReadParam(const std::map<std::string, std::string>& meta, const producer& prod, const param& par)
 {
+	logger logr("geotiff");
+
 	std::string param_value;
 
 	for (const auto& m : meta)
@@ -152,6 +154,8 @@ param ReadParam(const std::map<std::string, std::string>& meta, const producer& 
 
 	if (parameter.empty() || parameter["name"].empty())
 	{
+		logr.Trace(
+		    fmt::format("Parameter information matching '{}' not found from table 'param_geotiff'", param_value));
 		return par;
 	}
 

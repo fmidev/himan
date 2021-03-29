@@ -25,9 +25,7 @@ class example_plugin : public compiled_plugin, private compiled_plugin_base
    public:
 	example_plugin();
 
-	inline virtual ~example_plugin()
-	{
-	}
+	inline virtual ~example_plugin() = default;
 	example_plugin(const example_plugin& other) = delete;
 	example_plugin& operator=(const example_plugin& other) = delete;
 

@@ -524,18 +524,18 @@ void WriteAreaAndGrid(NFmiGribMessage& message, const shared_ptr<himan::grid>& g
 			message.SizeX(static_cast<long>(lccg->Ni()));
 			message.SizeY(static_cast<long>(lccg->Nj()));
 
-			message.SetLongKey("Latin1InDegrees", static_cast<long>(lccg->StandardParallel1()));
+			message.SetDoubleKey("Latin1InDegrees", lccg->StandardParallel1());
 
 			if (!IsKHPMissingValue(lccg->StandardParallel2()))
 			{
-				message.SetLongKey("Latin2InDegrees", static_cast<long>(lccg->StandardParallel2()));
+				message.SetDoubleKey("Latin2InDegrees", lccg->StandardParallel2());
 			}
 
 			scmode = lccg->ScanningMode();
 
 			if (edition == 2)
 			{
-				message.SetLongKey("LaDInDegrees", 60);
+				message.SetDoubleKey("LaDInDegrees", lccg->StandardParallel1());
 			}
 
 			break;
@@ -1792,8 +1792,8 @@ unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message)
 			    message.XLengthInMeters(),
 			    message.YLengthInMeters(),
 			    message.GridOrientation(),
-			    static_cast<double>(message.GetLongKey("Latin1InDegrees")),
-			    static_cast<double>(message.GetLongKey("Latin2InDegrees")),
+			    static_cast<double>(message.GetDoubleKey("Latin1InDegrees")),
+			    static_cast<double>(message.GetDoubleKey("Latin2InDegrees")),
 			    ReadEarthShape(message),
 			    false
 			));
