@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 21.3.22
+Version: 21.3.29
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -137,6 +137,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Mon Mar 29 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.3.29-1.fmi
+- Read coordinates from grib with double precision
 * Mon Mar 22 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.3.22-1.fmi
 - Add more accurate bulk area interpolation function
 * Tue Mar  2 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.3.2-1.fmi
