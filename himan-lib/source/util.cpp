@@ -1203,21 +1203,19 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 	using himan::kBottomLeft;
 	using himan::kTopLeft;
 
+	logger logr("util");
+
 	auto r = GET_PLUGIN(radon);
 
 	auto geominfo = r->RadonDB().GetGeometryDefinition(geom_name);
 
 	if (geominfo.empty())
 	{
-		throw invalid_argument(geom_name + " not found from database.");
+		logr.Fatal(fmt::format("Geometry '{}' not found from database", geom_name));
+		himan::Abort();
 	}
 
 	const auto scmode = HPScanningModeFromString.at(geominfo["scanning_mode"]);
-
-	// Until shape of earth is added to radon, hard code default value for all geoms
-	// in radon to sphere with radius 6371220, which is the one used in newbase
-	// (in most cases that's not *not* the one used by the weather model).
-	// Exception to this lambert conformal conic where we use radius 6367470.
 
 	int gridid;
 
@@ -1225,10 +1223,29 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 	{
 		gridid = stoi(geominfo["grid_type_id"]);
 	}
-	catch (const exception& e)
+	catch (const invalid_argument& e)
 	{
-		throw invalid_argument(fmt::format("{} is not an integer", geominfo["grid_type_id"]));
+		logr.Fatal(fmt::format("{} is not an integer", geominfo["grid_type_id"]));
+		himan::Abort();
 	}
+
+	// Until shape of earth is added to radon, hard code default value for all geoms
+	// in radon to sphere with radius 6371220, which is the one used in newbase
+	// (in most cases that's not *not* the one used by the weather model).
+	// Exception to this lambert conformal conic where we use radius 6367470.
+
+	auto earth = (gridid == 5) ? earth_shape<double>(6367470.) : earth_shape<double>(6371220.);
+
+	try
+	{
+		earth = earth_shape<double>(stod(geominfo["earth_semi_major"]), stod(geominfo["earth_semi_minor"]));
+	}
+	catch (const invalid_argument& e)
+	{
+	}
+
+	// TODO: in the future when proj4 string information has more coverage in radon,
+	// we can just create the area directly with that without the switch below
 
 	switch (gridid)
 	{
@@ -1241,7 +1258,7 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    stol(geominfo["row_cnt"]),
 		    stod(geominfo["pas_longitude"]),
 		    stod(geominfo["pas_latitude"]),
-		    earth_shape<double>(6371220.)
+		    earth
 		));
 			// clang-format on
 
@@ -1254,7 +1271,7 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    stol(geominfo["row_cnt"]),
 		    stod(geominfo["pas_longitude"]),
 		    stod(geominfo["pas_latitude"]),
-		    earth_shape<double>(6371220.),
+		    earth,
 		    point(stod(geominfo["geom_parm_2"]), stod(geominfo["geom_parm_1"])), true)
 		);
 			// clang-format on
@@ -1269,7 +1286,7 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    stod(geominfo["pas_longitude"]),
 		    stod(geominfo["pas_latitude"]),
 		    stod(geominfo["geom_parm_1"]),
-		    earth_shape<double>(6371220.),
+		    earth,
 		    false
 		));
 			// clang-format on
@@ -1277,7 +1294,7 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		case 6:
 		{
 			auto g = unique_ptr<reduced_gaussian_grid>(new reduced_gaussian_grid);
-			g->EarthShape(earth_shape<double>(6371220.));
+			g->EarthShape(earth);
 
 			reduced_gaussian_grid* const gg = dynamic_cast<reduced_gaussian_grid*>(g.get());
 
@@ -1308,7 +1325,7 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    stod(geominfo["orientation"]),
 		    stod(geominfo["latin1"]),
 		    (geominfo["latin2"].empty() ? stod(geominfo["latin1"]) : stod(geominfo["latin2"])),
-		    earth_shape<double>(6367470.),
+		    earth,
 		    false
 		));
 			// clang-format on
@@ -1324,7 +1341,7 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    stod(geominfo["dj"]),
 		    stod(geominfo["orientation"]),
 		    stod(geominfo["latin"]),
-		    earth_shape<double>(6371220.),
+		    earth,
 		    false
 		));
 			// clang-format on
@@ -1343,13 +1360,14 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    stod(geominfo["scale"]),
 		    0, // TODO: false easting, this value might not be correct
 		    0, // TODO: false northing, this value might not be correct
-		    earth_shape<double>(6371220.),
+		    earth,
 		    false
 		));
 			// clang-format on
 
 		default:
-			throw invalid_argument("Invalid grid type id for geometry " + geom_name);
+			logr.Fatal(fmt::format("Invalid grid type id '{}' for geometry '{}'", gridid, geom_name));
+			himan::Abort();
 	}
 }
 
