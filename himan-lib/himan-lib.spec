@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 21.3.24
+Version: 21.4.1
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -82,6 +82,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/*
 
 %changelog
+* Thu Apr  1 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.1-1.fmi
+- Read area configuration from proj4 string
 * Wed Mar 24 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.3.24-1.fmi
 - Tuning bulk area interpolation
 * Mon Mar 22 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.3.22-1.fmi
