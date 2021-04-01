@@ -1346,35 +1346,38 @@ void TargetProducer(const boost::property_tree::ptree& pt, const shared_ptr<conf
 		long pid = stol(tp.get());
 		producer prod(pid);
 
-		auto r = GET_PLUGIN(radon);
-		auto prodInfo = r->RadonDB().GetProducerDefinition(static_cast<unsigned long>(pid));
-
-		if (!prodInfo.empty())
+		if (conf->DatabaseType() != kNoDatabase)
 		{
-			if (prodInfo["ident_id"].empty() || prodInfo["model_id"].empty())
-			{
-				itsLogger.Warning("Centre or ident information not found for producer " + prodInfo["ref_prod"]);
-			}
-			else
-			{
-				prod.Centre(stol(prodInfo["ident_id"]));
-				prod.Process(stol(prodInfo["model_id"]));
-			}
+			auto r = GET_PLUGIN(radon);
+			auto prodInfo = r->RadonDB().GetProducerDefinition(static_cast<unsigned long>(pid));
 
-			prod.Name(prodInfo["ref_prod"]);
+			if (!prodInfo.empty())
+			{
+				if (prodInfo["ident_id"].empty() || prodInfo["model_id"].empty())
+				{
+					itsLogger.Warning("Centre or ident information not found for producer " + prodInfo["ref_prod"]);
+				}
+				else
+				{
+					prod.Centre(stol(prodInfo["ident_id"]));
+					prod.Process(stol(prodInfo["model_id"]));
+				}
 
-			if (prodInfo["producer_class"].empty())
-			{
-				prod.Class(kGridClass);
+				prod.Name(prodInfo["ref_prod"]);
+
+				if (prodInfo["producer_class"].empty())
+				{
+					prod.Class(kGridClass);
+				}
+				else
+				{
+					prod.Class(static_cast<HPProducerClass>(stoi(prodInfo["producer_class"])));
+				}
 			}
-			else
+			else if (conf->DatabaseType() != kNoDatabase)
 			{
-				prod.Class(static_cast<HPProducerClass>(stoi(prodInfo["producer_class"])));
+				itsLogger.Warning("Unknown target producer: " + pt.get<string>("target_producer"));
 			}
-		}
-		else if (conf->DatabaseType() != kNoDatabase)
-		{
-			itsLogger.Warning("Unknown target producer: " + pt.get<string>("target_producer"));
 		}
 		conf->TargetProducer(prod);
 	}
