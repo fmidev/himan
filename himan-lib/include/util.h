@@ -157,8 +157,6 @@ std::string Expand(const std::string& in);
 
 template <typename T>
 void DumpVector(const std::vector<T>& arr, const std::string& name = "");
-// void DumpVector(const std::vector<double>& arr, const std::string& name = "");
-// void DumpVector(const std::vector<float>& arr, const std::string& name = "");
 
 /**
    @brief Get the value of the specified environment variable.

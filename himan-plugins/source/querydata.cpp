@@ -226,8 +226,9 @@ NFmiHPlaceDescriptor CreateGrid(himan::info<T>& info)
 		}
 
 		case himan::kLambertConformalConic:
+		case himan::kTransverseMercator:
 		{
-			auto g = std::dynamic_pointer_cast<himan::lambert_conformal_grid>(info.Grid());
+			auto g = std::dynamic_pointer_cast<himan::regular_grid>(info.Grid());
 
 			std::stringstream ss;
 			ss << "GEOGCS[\"MEPS\","
@@ -243,7 +244,9 @@ NFmiHPlaceDescriptor CreateGrid(himan::info<T>& info)
 		}
 
 		default:
-			throw std::runtime_error("No supported projection found");
+			himan::logger logr("querydata");
+			logr.Fatal(fmt::format("'{}' projection not supported", himan::HPGridTypeToString.at(info.Grid()->Type())));
+			himan::Abort();
 	}
 
 	ASSERT(theArea);

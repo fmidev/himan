@@ -18,7 +18,8 @@ in global scope.
   * [Method 1: Using pre-defined areas from database ](#Target_area_1)
   * [Method 2: Defining area with `bbox` ](#Target_area_2)
   * [Method 3: Defining area in detail ](#Target_area_3)
-  * [Method 4: List of points ](#Target_area_4)
+  * [Method 4: Using proj4 string ](#Target_area_4)
+  * [Method 5: List of points ](#Target_area_5)
 * [Target grid](#Target_grid)
 * [Source area and grid](#Source_area_and_grid)
 * [Producers](#Producers)
@@ -125,7 +126,26 @@ Example:
 
 <a name="Target_area_4"/>
 
-## Method 4: List of points
+## Method 4: Using proj4 string for area details
+
+An area can be defined by giving the corresponding proj4 string.
+
+    "proj4": "+proj=lcc +lat_0=63 +lon_0=15 +lat_1=63 +lat_2=63 +x_0=1058511.28262988 +y_0=1298134.00243759 +R=6367470 +units=m +no_defs"
+
+
+Grid information needs to be defined separately when using `proj4`. Basically the following keys also need to be defined:
+
+* scanning_mode
+* first_point_longitude
+* first_point_latitude
+* di
+* dj
+* ni
+* nj
+
+<a name="Target_area_5"/>
+
+## Method 5: List of points
 
 List of points isn't exactly an area, but Himan treats it as one. It can be defined in two ways: 
 * with key `points`, point coordinates are given in the configuration file, or 

@@ -161,6 +161,8 @@ param ReadParam(const std::map<std::string, std::string>& meta, const producer& 
 
 	param p(parameter["name"]);
 	p.Id(std::stoi(parameter["id"]));
+	p.InterpolationMethod(par.InterpolationMethod());
+
 	return p;
 }
 
@@ -407,7 +409,7 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 
 	// "first guess" metadata from file metadata
 
-	auto par = ReadParam(meta, options.prod, param());
+	auto par = ReadParam(meta, options.prod, options.param);
 	auto lvl = ReadLevel(meta, options.level);
 	auto ftype = ReadForecastType(meta, options.ftype);
 	auto ftime = ReadTime(meta, options.time);

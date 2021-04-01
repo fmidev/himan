@@ -2174,6 +2174,8 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 		logr.Trace("Unable to determine himan parameter unit for grib unit " + message.ParameterUnit());
 	}
 
+	p.InterpolationMethod(options.param.InterpolationMethod());
+
 	return p;
 }
 
