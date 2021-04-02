@@ -1,16 +1,15 @@
-# Use CentOS 7 as baseline
-FROM centos:7
+# Use CentOS 8 as baseline
+FROM centos:8
 
-# Add Himan repository
-RUN echo -e "[himan]\nname=Himan\nbaseurl=https://download.fmi.fi/himan/rhel/7/x86_64\nenabled=1\ngpgcheck=0\n" > /etc/yum.repos.d/himan.repo
+# Add smartmet open and epel repositories
+RUN rpm -ivh https://download.fmi.fi/smartmet-open/rhel/8/x86_64/smartmet-open-release-21.3.26-2.el8.fmi.noarch.rpm \
+             https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 
-# Add smartmet-open repository (newbase library)
-# Add epel repository
-# Add postgres 9.5 repo for libpqxx 5
-
-RUN rpm -ivh https://download.fmi.fi/smartmet-open/rhel/7/x86_64/smartmet-open-17.9.1-1.el7.fmi.noarch.rpm \
-             https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm \
-             https://download.postgresql.org/pub/repos/yum/9.5/redhat/rhel-7-x86_64/pgdg-centos95-9.5-3.noarch.rpm
+# Use eccodes from smartmet open
+RUN dnf -y install dnf-plugins-core && \
+    dnf config-manager --set-enabled PowerTools && \
+    dnf -y module disable postgresql && \
+    dnf config-manager --setopt="epel.exclude=eccodes*" --save
 
 # Install Himan and dependencies
 RUN yum -y install \
