@@ -432,6 +432,10 @@ void ReadData(GDALRasterBand* poBand, matrix<T>& mat, const std::map<std::string
 	{
 		mat.MissingValue(ConvertTo<T>(meta.at("missing_value")));
 	}
+	else
+	{
+		mat.MissingValue(static_cast<T>(poBand->GetNoDataValue(nullptr)));
+	}
 
 	ASSERT(poBand->GetXSize() == mat.SizeX());
 	ASSERT(poBand->GetYSize() == mat.SizeY());
@@ -444,8 +448,19 @@ void ReadData(GDALRasterBand* poBand, matrix<T>& mat, const std::map<std::string
 	{
 		throw std::runtime_error("Read failed");
 	}
+
+	const T offset = static_cast<T>(poBand->GetOffset(nullptr));
+	const T scale = static_cast<T>(poBand->GetScale(nullptr));
+
 	// Change missingvalue to our own
 	mat.MissingValue(MissingValue<T>());
+
+	// Apply scale and base
+	if (offset != 0 || scale != 1)
+	{
+		auto& data = mat.Values();
+		for_each(data.begin(), data.end(), [=](T& val) { val = static_cast<T>(val * scale + offset); });
+	}
 }
 
 std::vector<std::shared_ptr<info<double>>> geotiff::FromFile(const file_information& theInputFile,
