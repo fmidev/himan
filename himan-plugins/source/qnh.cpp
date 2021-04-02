@@ -112,9 +112,10 @@ void qnh::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 
 	// Current time and level
 
-	info_t topoInfo = Fetch(forecastTime, groundLevel, topoParam,
-	                        forecastType);  // surface elevation (as geopotential [m2/s2]) from database
-	info_t pressureInfo =
+	shared_ptr<info<double>> topoInfo =
+	    Fetch(forecastTime, groundLevel, topoParam,
+	          forecastType);  // surface elevation (as geopotential [m2/s2]) from database
+	shared_ptr<info<double>> pressureInfo =
 	    Fetch(forecastTime, groundLevel, PParams, forecastType);  // ground level (= 0 m) pressure [Pa] from database
 
 	if (!topoInfo || !pressureInfo)

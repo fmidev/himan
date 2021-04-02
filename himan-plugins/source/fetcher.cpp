@@ -650,7 +650,7 @@ template vector<shared_ptr<info<float>>> fetcher::FetchFromDatabase<float>(searc
 pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAuxiliaryFiles(search_options& opts,
                                                                                          bool readPackedData)
 {
-	vector<info_t> ret;
+	vector<shared_ptr<info<double>>> ret;
 	HPDataFoundFrom source = HPDataFoundFrom::kAuxFile;
 
 	if (!opts.configuration->AuxiliaryFiles().empty())
@@ -708,7 +708,8 @@ pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAuxili
 				}
 
 				t.Stop();
-				itsLogger.Debug(fmt::format("Auxiliary files read finished in {} ms, cache size: {}", t.GetTime(), c->Size()));
+				itsLogger.Debug(
+				    fmt::format("Auxiliary files read finished in {} ms, cache size: {}", t.GetTime(), c->Size()));
 			});
 
 			auxiliaryFilesRead = true;
@@ -741,18 +742,18 @@ pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAuxili
 	return make_pair(source, ret);
 }
 
-void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vector<info_t>& infos)
+void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vector<shared_ptr<info<double>>>& infos)
 {
 	// Step 1. Rotate if needed
 
 	const grid* baseGrid = opts.configuration->BaseGrid();
 
-	auto eq = [](const info_t& a, const info_t& b) {
+	auto eq = [](const shared_ptr<info<double>>& a, const shared_ptr<info<double>>& b) {
 		return a->Param() == b->Param() && a->Level() == b->Level() && a->Time() == b->Time() &&
 		       a->ForecastType() == b->ForecastType();
 	};
 
-	vector<info_t> skip;
+	vector<shared_ptr<info<double>>> skip;
 
 	for (const auto& component : infos)
 	{
@@ -761,12 +762,13 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vec
 		const auto name = component->Param().Name();
 
 		if (interpolate::IsVectorComponent(name) &&
-		    count_if(skip.begin(), skip.end(), [&](const info_t& info) { return eq(info, component); }) == 0 &&
+		    count_if(skip.begin(), skip.end(),
+		             [&](const shared_ptr<info<double>>& info) { return eq(info, component); }) == 0 &&
 		    interpolate::IsSupportedGridForRotation(from) && component->Grid()->UVRelativeToGrid() && to != from)
 		{
 			auto otherName = GetOtherVectorComponentName(name);
 
-			info_t u, v, other;
+			shared_ptr<info<double>> u, v, other;
 
 			for (const auto temp : infos)
 			{
@@ -825,6 +827,10 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vec
 			itsLogger.Fatal("Interpolation failed");
 			himan::Abort();
 		}
+	}
+	else
+	{
+		itsLogger.Trace("Interpolation disabled");
 	}
 }
 
@@ -999,13 +1005,20 @@ void fetcher::RotateVectorComponents(vector<shared_ptr<info<T>>>& components, co
 			// and put it to cache.
 
 			std::vector<shared_ptr<info<T>>> list({other});
-			if (itsDoInterpolation && interpolate::Interpolate(target, list))
+			if (itsDoInterpolation)
 			{
-				if (itsUseCache && config->UseCacheForReads() && !other->PackedData()->HasData())
+				if (interpolate::Interpolate(target, list))
 				{
-					auto c = GET_PLUGIN(cache);
-					c->Insert<T>(other);
+					if (itsUseCache && config->UseCacheForReads() && !other->PackedData()->HasData())
+					{
+						auto c = GET_PLUGIN(cache);
+						c->Insert<T>(other);
+					}
 				}
+			}
+			else
+			{
+				itsLogger.Trace("Interpolation disabled");
 			}
 		}
 	}

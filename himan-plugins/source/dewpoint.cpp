@@ -80,8 +80,9 @@ void dewpoint::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short t
 		double TBase = 0;
 		double RHScale = 1;
 
-		info_t TInfo = Fetch(forecastTime, forecastLevel, TParam, forecastType, itsConfiguration->UseCudaForPacking());
-		info_t RHInfo =
+		shared_ptr<info<double>> TInfo =
+		    Fetch(forecastTime, forecastLevel, TParam, forecastType, itsConfiguration->UseCudaForPacking());
+		shared_ptr<info<double>> RHInfo =
 		    Fetch(forecastTime, forecastLevel, RHParam, forecastType, itsConfiguration->UseCudaForPacking());
 
 		if (!TInfo || !RHInfo)

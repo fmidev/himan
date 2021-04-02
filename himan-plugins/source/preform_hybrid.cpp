@@ -166,8 +166,8 @@ void preform_hybrid::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned s
 
 	// Source infos
 
-	info_t RRInfo = Fetch(forecastTime, surface0mLevel, RRParam, forecastType, false);
-	info_t TInfo = Fetch(forecastTime, surface2mLevel, TParam, forecastType, false);
+	shared_ptr<info<double>> RRInfo = Fetch(forecastTime, surface0mLevel, RRParam, forecastType, false);
+	shared_ptr<info<double>> TInfo = Fetch(forecastTime, surface2mLevel, TParam, forecastType, false);
 
 	if (!RRInfo || !TInfo)
 	{
@@ -176,8 +176,8 @@ void preform_hybrid::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned s
 		return;
 	}
 
-	info_t stratus;
-	info_t freezingArea;
+	shared_ptr<info<double>> stratus;
+	shared_ptr<info<double>> freezingArea;
 
 	/*
 	 * Spinoff thread will calculate freezing area while main thread calculates

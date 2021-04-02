@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 21.2.9
+Version: 21.4.1
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -13,12 +13,14 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 20.11.23
+Requires: himan-lib >= 21.3.22
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 20.12.2
 Requires: libfmidb >= 20.7.8
-Requires: smartmet-library-newbase >= 20.4.18
+Requires: smartmet-library-newbase >= 21.2.20
+Requires: smartmet-library-gis
+Requires: smartmet-library-macgyver
 Requires: libpqxx
 Requires: boost169-iostreams
 Requires: boost169-thread
@@ -28,7 +30,7 @@ Requires: libs3 >= 4.1
 Requires: libjasper
 Requires: grib_api
 %else
-BuildRequires: gdal-devel
+BuildRequires: gdal32-devel
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-11-0
 BuildRequires: eccodes-devel
@@ -42,7 +44,8 @@ Requires: eccodes
 %endif
 BuildRequires: libfmigrib-devel >= 20.12.2
 BuildRequires: libfmidb-devel >= 20.7.8
-BuildRequires: smartmet-library-newbase-devel >= 20.4.18
+BuildRequires: smartmet-library-newbase-devel >= 21.2.20
+BuildRequires: smartmet-library-gis-devel
 BuildRequires: scons
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: boost169-devel
@@ -134,6 +137,16 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Thu Apr  1 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.1-1.fmi
+- Honor user-set interpolation method for parameter
+* Mon Mar 29 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.3.29-1.fmi
+- Read coordinates from grib with double precision
+* Mon Mar 22 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.3.22-1.fmi
+- Add more accurate bulk area interpolation function
+* Tue Mar  2 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.3.2-1.fmi
+- Fix serialization code
+* Tue Feb 23 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.2.23-1.fmi
+- gdal 3.2
 * Tue Feb  9 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.2.9-1.fmi
 - Enable csv as output file format
 * Wed Jan 27 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.1.27-1.fmi

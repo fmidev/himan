@@ -86,6 +86,9 @@ bool InterpolateArea(const grid* baseGrid, std::shared_ptr<info<T>> source)
 
 	auto method = InterpolationMethod(source->Param().Name(), source->Param().InterpolationMethod());
 
+	logger logr("interpolation");
+	logr.Trace(fmt::format("Grid interpolation with method '{}'", HPInterpolationMethodToString.at(method)));
+
 	if (interpolate::interpolator<T>().Interpolate(*source->Base(), target, method))
 	{
 		auto interpGrid = std::shared_ptr<grid>(baseGrid->Clone());
@@ -698,10 +701,8 @@ std::pair<std::vector<size_t>, std::vector<T>> InterpolationWeights(reduced_gaus
 }
 
 template <typename T>
-std::pair<std::vector<size_t>, std::vector<T>> InterpolationWeights(regular_grid& source, point target)
+std::pair<std::vector<size_t>, std::vector<T>> InterpolationWeights(const regular_grid& source, const point& xy)
 {
-	auto xy = source.XY(target);
-
 	if (IsMissing(xy.X()) || IsMissing(xy.Y()))
 		return std::make_pair(std::vector<size_t>{0}, std::vector<T>{MissingValue<T>()});
 
@@ -730,6 +731,21 @@ std::pair<std::vector<size_t>, std::vector<T>> InterpolationWeights(regular_grid
 	}
 
 	return std::make_pair(idxs, weights);
+}
+
+template <typename T>
+std::vector<std::pair<std::vector<size_t>, std::vector<T>>> InterpolationWeights(const regular_grid& source,
+                                                                                 const std::vector<point>& targets)
+{
+	std::vector<std::pair<std::vector<size_t>, std::vector<T>>> ret;
+	ret.reserve(targets.size());
+
+	for (const auto& xy : targets)
+	{
+		ret.push_back(InterpolationWeights<T>(source, xy));
+	}
+
+	return ret;
 }
 
 template <typename T>
@@ -772,12 +788,12 @@ std::pair<size_t, T> NearestPoint(reduced_gaussian_grid& source, point target)
 }
 
 template <typename T>
-std::pair<size_t, T> NearestPoint(const regular_grid& source, point target)
+std::pair<size_t, T> NearestPoint(const regular_grid& source, const point& xy)
 {
-	auto xy = source.XY(target);
 	if (IsMissing(xy.X()) || IsMissing(xy.Y()))
+	{
 		return std::make_pair(0, MissingValue<T>());
-
+	}
 	// In case of point in wrap-around region on global grid
 	if (static_cast<size_t>(std::round(xy.X())) == source.Ni())
 	{
@@ -787,64 +803,132 @@ std::pair<size_t, T> NearestPoint(const regular_grid& source, point target)
 	    static_cast<size_t>(std::round(xy.X())) + source.Ni() * static_cast<size_t>(std::round(xy.Y())), 1.0);
 }
 
+template <typename T>
+std::vector<std::pair<size_t, T>> NearestPoint(const regular_grid& source, const std::vector<point>& targets)
+{
+	std::vector<std::pair<size_t, T>> ret;
+	ret.reserve(targets.size());
+
+	for (const auto& xy : targets)
+	{
+		ret.push_back(NearestPoint<T>(source, xy));
+	}
+
+	return ret;
+}
+
 // area_interpolation class member functions definitions
 template <typename T>
 area_interpolation<T>::area_interpolation(grid& source, grid& target, HPInterpolationMethod method)
     : itsInterpolation(target.Size(), source.Size())
 {
 	std::vector<Triplet<T>> coefficients;
-	// compute weights in the interpolation matrix line by line, i.e. point by point on target grid
-	for (size_t i = 0; i < target.Size(); ++i)
+
+	std::string useOldMethod = "no";
+	try
 	{
-		std::pair<std::vector<size_t>, std::vector<T>> w;
-		switch (source.Type())
+		useOldMethod = util::GetEnv("HIMAN_USE_OLD_PROJECTION_METHOD");
+	}
+	catch (...)
+	{
+	}
+
+	// default to using new 'bulk' method
+	if (source.Class() == target.Class() && source.Class() == kRegularGrid && useOldMethod == "no")
+	{
+		const regular_grid& sg = dynamic_cast<regular_grid&>(source);
+		const regular_grid& tg = dynamic_cast<regular_grid&>(target);
+
+		std::vector<point> xy = sg.XY(tg);
+		std::vector<std::pair<std::vector<size_t>, std::vector<T>>> ws;
+
+		if (method == kBiLinear)
 		{
-			case kLatitudeLongitude:
-			case kRotatedLatitudeLongitude:
-			case kStereographic:
-			case kLambertConformalConic:
-			case kLambertEqualArea:
-			case kTransverseMercator:
-				if (method == kBiLinear)
-				{
-					w = InterpolationWeights<T>(dynamic_cast<regular_grid&>(source), target.LatLon(i));
-				}
-				else if (method == kNearestPoint)
-				{
-					auto np = NearestPoint<T>(dynamic_cast<regular_grid&>(source), target.LatLon(i));
-					w.first.push_back(np.first);
-					w.second.push_back(np.second);
-				}
-				else
-				{
-					throw std::bad_typeid();
-				}
-				break;
-			case kReducedGaussian:
-				if (method == kBiLinear)
-				{
-					w = InterpolationWeights<T>(dynamic_cast<reduced_gaussian_grid&>(source), target.LatLon(i));
-				}
-				else if (method == kNearestPoint)
-				{
-					auto np = NearestPoint<T>(dynamic_cast<reduced_gaussian_grid&>(source), target.LatLon(i));
-					w.first.push_back(np.first);
-					w.second.push_back(np.second);
-				}
-				else
-				{
-					throw std::bad_typeid();
-				}
-				break;
-			default:
-				// what to throw?
-				throw std::bad_typeid();
-				break;
+			ws = InterpolationWeights<T>(sg, xy);
+		}
+		else if (method == kNearestPoint)
+		{
+			auto np = NearestPoint<T>(sg, xy);
+
+			for (size_t i = 0; i < np.size(); i++)
+			{
+				std::pair<std::vector<size_t>, std::vector<T>> w;
+				w.first.push_back(np[i].first);
+				w.second.push_back(np[i].second);
+				ws.push_back(w);
+			}
+		}
+		else
+		{
+			throw std::bad_typeid();
 		}
 
-		for (size_t j = 0; j < w.first.size(); ++j)
+		for (size_t i = 0; i < ws.size(); i++)
 		{
-			coefficients.push_back(Triplet<T>(static_cast<int>(i), static_cast<int>(w.first[j]), w.second[j]));
+			const auto& w = ws[i];
+			for (size_t j = 0; j < w.first.size(); ++j)
+			{
+				coefficients.push_back(Triplet<T>(static_cast<int>(i), static_cast<int>(w.first[j]), w.second[j]));
+			}
+		}
+	}
+	else
+	{
+		// compute weights in the interpolation matrix line by line, i.e. point by point on target grid
+		for (size_t i = 0; i < target.Size(); ++i)
+		{
+			std::pair<std::vector<size_t>, std::vector<T>> w;
+			switch (source.Type())
+			{
+				case kLatitudeLongitude:
+				case kRotatedLatitudeLongitude:
+				case kStereographic:
+				case kLambertConformalConic:
+				case kLambertEqualArea:
+				case kTransverseMercator:
+					if (method == kBiLinear)
+					{
+						w = InterpolationWeights<T>(dynamic_cast<regular_grid&>(source),
+						                            dynamic_cast<regular_grid&>(source).XY(target.LatLon(i)));
+					}
+					else if (method == kNearestPoint)
+					{
+						auto np = NearestPoint<T>(dynamic_cast<regular_grid&>(source),
+						                          dynamic_cast<regular_grid&>(source).XY(target.LatLon(i)));
+						w.first.push_back(np.first);
+						w.second.push_back(np.second);
+					}
+					else
+					{
+						throw std::bad_typeid();
+					}
+					break;
+				case kReducedGaussian:
+					if (method == kBiLinear)
+					{
+						w = InterpolationWeights<T>(dynamic_cast<reduced_gaussian_grid&>(source), target.LatLon(i));
+					}
+					else if (method == kNearestPoint)
+					{
+						auto np = NearestPoint<T>(dynamic_cast<reduced_gaussian_grid&>(source), target.LatLon(i));
+						w.first.push_back(np.first);
+						w.second.push_back(np.second);
+					}
+					else
+					{
+						throw std::bad_typeid();
+					}
+					break;
+				default:
+					// what to throw?
+					throw std::bad_typeid();
+					break;
+			}
+
+			for (size_t j = 0; j < w.first.size(); ++j)
+			{
+				coefficients.push_back(Triplet<T>(static_cast<int>(i), static_cast<int>(w.first[j]), w.second[j]));
+			}
 		}
 	}
 

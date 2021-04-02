@@ -74,9 +74,9 @@ void seaicing::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short t
 	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 	                      static_cast<string>(forecastLevel));
 
-	info_t TInfo = Fetch(forecastTime, TLevel, TParam, forecastType, false);
-	info_t TgInfo = Fetch(forecastTime, ground, TParam, forecastType, false);
-	info_t FfInfo = Fetch(forecastTime, FfLevel, FfParam, forecastType, false);
+	shared_ptr<info<double>> TInfo = Fetch(forecastTime, TLevel, TParam, forecastType, false);
+	shared_ptr<info<double>> TgInfo = Fetch(forecastTime, ground, TParam, forecastType, false);
+	shared_ptr<info<double>> FfInfo = Fetch(forecastTime, FfLevel, FfParam, forecastType, false);
 
 	if (!TInfo || !TgInfo || !FfInfo)
 	{

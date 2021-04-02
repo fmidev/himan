@@ -72,13 +72,14 @@ struct intTot
 	intTot() = default;
 };
 
-void DeltaT(const shared_ptr<const plugin_configuration>& conf, info_t T_lowestLevel, const forecast_time& ftime,
-            const forecast_type& ftype, size_t gridSize, deltaT& dT);
-void DeltaTot(deltaTot& dTot, const info_t& T_lowestLevel, size_t gridSize);
+void DeltaT(const shared_ptr<const plugin_configuration>& conf, shared_ptr<info<double>> T_lowestLevel,
+            const forecast_time& ftime, const forecast_type& ftype, size_t gridSize, deltaT& dT);
+void DeltaTot(deltaTot& dTot, const shared_ptr<info<double>>& T_lowestLevel, size_t gridSize);
 void IntT(intT& iT, const deltaT& dT, size_t gridSize);
 void IntTot(intTot& iTot, const deltaTot& dTot, size_t gridSize);
-void LowAndMiddleClouds(vector<double>& lowAndMiddleClouds, const info_t& lowClouds, const info_t& middleClouds,
-                        const info_t& highClouds, const info_t& totalClouds);
+void LowAndMiddleClouds(vector<double>& lowAndMiddleClouds, const shared_ptr<info<double>>& lowClouds,
+                        const shared_ptr<info<double>>& middleClouds, const shared_ptr<info<double>>& highClouds,
+                        const shared_ptr<info<double>>& totalClouds);
 
 gust::gust()
 {
@@ -161,7 +162,8 @@ void gust::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threa
 		H10 = level(kHeight, 10);
 	}
 
-	info_t GustInfo, T_LowestLevelInfo, BLHInfo, TopoInfo, LCloudInfo, MCloudInfo, HCloudInfo, TCloudInfo;
+	shared_ptr<info<double>> GustInfo, T_LowestLevelInfo, BLHInfo, TopoInfo, LCloudInfo, MCloudInfo, HCloudInfo,
+	    TCloudInfo;
 
 	// Current time and level
 
@@ -498,8 +500,8 @@ void gust::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threa
 	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
 
-void DeltaT(const shared_ptr<const plugin_configuration>& conf, info_t T_lowestLevel, const forecast_time& ftime,
-            const forecast_type& ftype, size_t gridSize, deltaT& dT)
+void DeltaT(const shared_ptr<const plugin_configuration>& conf, shared_ptr<info<double>> T_lowestLevel,
+            const forecast_time& ftime, const forecast_type& ftype, size_t gridSize, deltaT& dT)
 {
 	auto h = GET_PLUGIN(hitool);
 
@@ -558,7 +560,7 @@ void DeltaT(const shared_ptr<const plugin_configuration>& conf, info_t T_lowestL
 	}
 }
 
-void DeltaTot(deltaTot& dTot, const info_t& T_lowestLevel, size_t gridSize)
+void DeltaTot(deltaTot& dTot, const shared_ptr<info<double>>& T_lowestLevel, size_t gridSize)
 {
 	dTot.deltaTot_100 = vector<double>(gridSize, 0);
 	dTot.deltaTot_200 = vector<double>(gridSize, 0);
@@ -642,8 +644,9 @@ void IntTot(intTot& iTot, const deltaTot& dTot, size_t gridSize)
 	}
 }
 
-void LowAndMiddleClouds(vector<double>& lowAndMiddleClouds, const info_t& lowClouds, const info_t& middleClouds,
-                        const info_t& highClouds, const info_t& totalClouds)
+void LowAndMiddleClouds(vector<double>& lowAndMiddleClouds, const shared_ptr<info<double>>& lowClouds,
+                        const shared_ptr<info<double>>& middleClouds, const shared_ptr<info<double>>& highClouds,
+                        const shared_ptr<info<double>>& totalClouds)
 {
 	for (size_t i = 0; i < lowAndMiddleClouds.size(); ++i)
 	{

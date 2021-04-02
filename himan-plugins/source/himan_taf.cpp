@@ -37,7 +37,7 @@ void himan_taf::Process(std::shared_ptr<const plugin_configuration> conf)
 	Start();
 }
 
-void himan_taf::Calculate(info_t myTargetInfo, unsigned short threadIndex)
+void himan_taf::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	auto myThreadedLogger = logger("himan_taf_pluginThread #" + to_string(threadIndex));
 

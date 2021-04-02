@@ -42,18 +42,18 @@ class time_series
 	{
 		return itsInfos.size();
 	};
-	std::vector<info_t>::iterator begin()
+	std::vector<std::shared_ptr<info<double>>>::iterator begin()
 	{
 		return itsInfos.begin();
 	};
-	std::vector<info_t>::iterator end()
+	std::vector<std::shared_ptr<info<double>>>::iterator end()
 	{
 		return itsInfos.end();
 	};
 
    private:
 	param itsParam;
-	std::vector<info_t> itsInfos;
+	std::vector<std::shared_ptr<info<double>>> itsInfos;
 };
 
 /**

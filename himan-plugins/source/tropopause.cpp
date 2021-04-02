@@ -27,7 +27,7 @@ void tropopause::Process(std::shared_ptr<const plugin_configuration> conf)
 	Start();
 }
 
-void tropopause::Calculate(info_t myTargetInfo, unsigned short threadIndex)
+void tropopause::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	const param H("HL-M");
 	const param T("T-K");

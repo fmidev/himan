@@ -7,6 +7,7 @@ Import('env build_dir')
 
 # Includes
 
+env.Append(CPPPATH = ['/usr/geos39/include'])
 env.Append(CPPPATH = ['/usr/include'])
 
 # Library paths

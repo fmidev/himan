@@ -5,12 +5,14 @@
 #include "json_parser.h"
 #include "interpolate.h"
 #include "lambert_conformal_grid.h"
+#include "lambert_equal_area_grid.h"
 #include "latitude_longitude_grid.h"
 #include "plugin_factory.h"
 #include "point.h"
 #include "point_list.h"
 #include "reduced_gaussian_grid.h"
 #include "stereographic_grid.h"
+#include "transverse_mercator_grid.h"
 #include "util.h"
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/property_tree/json_parser.hpp>
@@ -65,7 +67,7 @@ json_parser::json_parser()
 }
 vector<shared_ptr<plugin_configuration>> json_parser::Parse(shared_ptr<configuration> conf)
 {
-	if (conf->ConfigurationFile().empty())
+	if (conf->ConfigurationFileName().empty())
 	{
 		throw runtime_error("Configuration file not defined");
 	}
@@ -103,6 +105,8 @@ void WriteMode(const shared_ptr<configuration>& conf, const boost::property_tree
 
 	if (auto fw = ReadElement<string>(pt, "file_write"))
 	{
+		itsLogger.Warning("Configuration option 'file_write' is deprecated - use 'write_mode' instead");
+
 		string theFileWriteOption = fw.get();
 
 		if (theFileWriteOption == "database")
@@ -488,13 +492,15 @@ void CheckCommonOptions(const boost::property_tree::ptree& pt, shared_ptr<config
 
 vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(shared_ptr<configuration> conf)
 {
-	itsLogger.Trace("Parsing configuration file '" + conf->ConfigurationFile() + "'");
+	itsLogger.Trace("Parsing configuration file '" + conf->ConfigurationFileName() + "'");
 
 	boost::property_tree::ptree pt;
 
 	try
 	{
-		boost::property_tree::json_parser::read_json(conf->ConfigurationFile(), pt);
+		std::stringstream ss;
+		ss << conf->ConfigurationFileContent();
+		boost::property_tree::json_parser::read_json(ss, pt);
 	}
 	catch (exception& e)
 	{
@@ -1001,6 +1007,87 @@ unique_ptr<grid> ParseAreaAndGridFromPoints(const boost::property_tree::ptree& p
 	return g;
 }
 
+unique_ptr<grid> ParseAreaAndGridFromProj4String(const boost::property_tree::ptree& pt)
+{
+	unique_ptr<grid> g;
+
+	try
+	{
+		const auto sm = HPScanningModeFromString.at(pt.get<string>("scanning_mode"));
+
+		if (sm != kBottomLeft && sm != kTopLeft)
+		{
+			throw runtime_error("Only bottom_left or top_left scanning mode is supported");
+		}
+
+		const string proj4 = pt.get<string>("proj4");
+		const point fp(pt.get<double>("first_point_longitude"), pt.get<double>("first_point_latitude"));
+		const size_t ni = pt.get<size_t>("ni");
+		const size_t nj = pt.get<size_t>("nj");
+		const double di = pt.get<double>("di");
+		const double dj = pt.get<double>("dj");
+
+		OGRSpatialReference sp;
+		sp.importFromProj4(proj4.c_str());
+
+		const char* projptr = sp.GetAttrValue("PROJECTION");
+		himan::logger log("json_parser");
+
+		if (projptr != nullptr)
+		{
+			const std::string projection = sp.GetAttrValue("PROJECTION");
+
+			if (projection == SRS_PT_LAMBERT_AZIMUTHAL_EQUAL_AREA)
+			{
+				return std::unique_ptr<lambert_equal_area_grid>(new lambert_equal_area_grid(
+				    sm, fp, ni, nj, di, dj, std::unique_ptr<OGRSpatialReference>(sp.Clone()), false));
+			}
+			else if (projection == SRS_PT_TRANSVERSE_MERCATOR)
+			{
+				return std::unique_ptr<transverse_mercator_grid>(new transverse_mercator_grid(
+				    sm, fp, ni, nj, di, dj, std::unique_ptr<OGRSpatialReference>(sp.Clone()), false));
+			}
+			else if (projection == SRS_PT_LAMBERT_CONFORMAL_CONIC_2SP)
+			{
+				return std::unique_ptr<lambert_conformal_grid>(new lambert_conformal_grid(
+				    sm, fp, ni, nj, di, dj, std::unique_ptr<OGRSpatialReference>(sp.Clone()), false));
+			}
+
+			log.Error("Unsupported projection: " + projection);
+		}
+		else if (sp.IsGeographic())
+		{
+			// No projection -- latlon with some datum
+
+			OGRErr erra = 0, errb = 0;
+			const double A = sp.GetSemiMajor(&erra);
+			const double B = sp.GetSemiMinor(&errb);
+
+			earth_shape<double> es;
+
+			if (erra != OGRERR_NONE || errb != OGRERR_NONE)
+			{
+				log.Error("Unable to extract datum information from file");
+			}
+			else
+			{
+				es = earth_shape<double>(A, B);
+			}
+
+			return std::unique_ptr<latitude_longitude_grid>(new latitude_longitude_grid(sm, fp, ni, nj, di, dj, es));
+		}
+	}
+	catch (boost::property_tree::ptree_bad_path& e)
+	{
+	}
+	catch (exception& e)
+	{
+		throw runtime_error(string("Error parsing proj4: ") + e.what());
+	}
+
+	return nullptr;
+}
+
 unique_ptr<grid> ParseAreaAndGridFromBbox(const boost::property_tree::ptree& pt)
 {
 	unique_ptr<grid> g;
@@ -1133,7 +1220,8 @@ void AreaAndGrid(const boost::property_tree::ptree& pt, const shared_ptr<configu
 	 * 2. radon style geom name: 'target_geom_name'
 	 * 3. irregular grid: 'points' and 'stations'
 	 * 4. bounding box: 'bbox'
-	 * 5. manual definition:
+	 * 5. proj4 string
+	 * 6. manual definition:
 	 * -> 'projection',
 	 * -> 'bottom_left_longitude', 'bottom_left_latitude',
 	 * -> 'top_right_longitude', 'top_right_latitude'
@@ -1177,7 +1265,15 @@ void AreaAndGrid(const boost::property_tree::ptree& pt, const shared_ptr<configu
 		return;
 	}
 
-	// 5. Check for manual definition of area
+	// 5. Check for proj4 string
+
+	if (g = ParseAreaAndGridFromProj4String(pt))
+	{
+		conf->BaseGrid(std::move(g));
+		return;
+	}
+
+	// 6. Check for manual definition of area
 
 	if (g = ParseAreaAndGridFromManualDefinition(pt))
 	{
@@ -1250,35 +1346,38 @@ void TargetProducer(const boost::property_tree::ptree& pt, const shared_ptr<conf
 		long pid = stol(tp.get());
 		producer prod(pid);
 
-		auto r = GET_PLUGIN(radon);
-		auto prodInfo = r->RadonDB().GetProducerDefinition(static_cast<unsigned long>(pid));
-
-		if (!prodInfo.empty())
+		if (conf->DatabaseType() != kNoDatabase)
 		{
-			if (prodInfo["ident_id"].empty() || prodInfo["model_id"].empty())
-			{
-				itsLogger.Warning("Centre or ident information not found for producer " + prodInfo["ref_prod"]);
-			}
-			else
-			{
-				prod.Centre(stol(prodInfo["ident_id"]));
-				prod.Process(stol(prodInfo["model_id"]));
-			}
+			auto r = GET_PLUGIN(radon);
+			auto prodInfo = r->RadonDB().GetProducerDefinition(static_cast<unsigned long>(pid));
 
-			prod.Name(prodInfo["ref_prod"]);
+			if (!prodInfo.empty())
+			{
+				if (prodInfo["ident_id"].empty() || prodInfo["model_id"].empty())
+				{
+					itsLogger.Warning("Centre or ident information not found for producer " + prodInfo["ref_prod"]);
+				}
+				else
+				{
+					prod.Centre(stol(prodInfo["ident_id"]));
+					prod.Process(stol(prodInfo["model_id"]));
+				}
 
-			if (prodInfo["producer_class"].empty())
-			{
-				prod.Class(kGridClass);
+				prod.Name(prodInfo["ref_prod"]);
+
+				if (prodInfo["producer_class"].empty())
+				{
+					prod.Class(kGridClass);
+				}
+				else
+				{
+					prod.Class(static_cast<HPProducerClass>(stoi(prodInfo["producer_class"])));
+				}
 			}
-			else
+			else if (conf->DatabaseType() != kNoDatabase)
 			{
-				prod.Class(static_cast<HPProducerClass>(stoi(prodInfo["producer_class"])));
+				itsLogger.Warning("Unknown target producer: " + pt.get<string>("target_producer"));
 			}
-		}
-		else if (conf->DatabaseType() != kNoDatabase)
-		{
-			itsLogger.Warning("Unknown target producer: " + pt.get<string>("target_producer"));
 		}
 		conf->TargetProducer(prod);
 	}

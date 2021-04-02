@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 21.2.9
+Version: 21.4.1
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -26,7 +26,10 @@ BuildRequires: bzip2-devel
 BuildRequires: redhat-rpm-config
 BuildRequires: cuda-11-0
 BuildRequires: gcc-c++ >= 4.8.2
-Requires: gdal
+BuildRequires: geos39-devel
+BuildRequires: gdal32-devel
+Requires: geos39
+Requires: gdal32-libs
 Requires: eccodes
 Requires: boost169-iostreams
 Requires: boost169-filesystem
@@ -79,6 +82,21 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/*
 
 %changelog
+* Thu Apr  1 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.1-1.fmi
+- Read area configuration from proj4 string
+* Wed Mar 24 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.3.24-1.fmi
+- Tuning bulk area interpolation
+* Mon Mar 22 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.3.22-1.fmi
+- Add more accurate bulk area interpolation function
+* Tue Mar  2 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.3.2-1.fmi
+- Fix serialization code
+- Read configuration from stdin
+* Wed Feb 24 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.2.24-1.fmi
+- Hotfix to gdal-triggered crash
+* Tue Feb 23 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.2.23-2.fmi
+- Hotfix to gdal-triggered crash
+* Tue Feb 23 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.2.23-1.fmi
+- gdal 3.2
 * Tue Feb  9 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.2.9-1.fmi
 - Enable csv as output file format
 * Mon Nov 23 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.11.23-1.fmi

@@ -26,13 +26,13 @@
 
 #endif
 
-#include "NFmiFastQueryInfo.h"
-#include <NFmiGdalArea.h>
-#include <NFmiLatLonArea.h>
-#include <NFmiQueryData.h>
-#include <NFmiRotatedLatLonArea.h>
-#include <NFmiStereographicArea.h>
-#include <NFmiTimeList.h>
+#include "newbase/NFmiFastQueryInfo.h"
+#include <newbase/NFmiGdalArea.h>
+#include <newbase/NFmiLatLonArea.h>
+#include <newbase/NFmiQueryData.h>
+#include <newbase/NFmiRotatedLatLonArea.h>
+#include <newbase/NFmiStereographicArea.h>
+#include <newbase/NFmiTimeList.h>
 
 #ifdef __clang__
 
@@ -226,8 +226,9 @@ NFmiHPlaceDescriptor CreateGrid(himan::info<T>& info)
 		}
 
 		case himan::kLambertConformalConic:
+		case himan::kTransverseMercator:
 		{
-			auto g = std::dynamic_pointer_cast<himan::lambert_conformal_grid>(info.Grid());
+			auto g = std::dynamic_pointer_cast<himan::regular_grid>(info.Grid());
 
 			std::stringstream ss;
 			ss << "GEOGCS[\"MEPS\","
@@ -237,13 +238,15 @@ NFmiHPlaceDescriptor CreateGrid(himan::info<T>& info)
 			   << " UNIT[\"degree\",0.0174532925199433]]";
 
 			theArea =
-			    new NFmiGdalArea(ss.str(), g->SpatialReference(), 0, 0, g->Di() * (static_cast<double>(g->Ni()) - 1),
+			    new NFmiGdalArea(ss.str(), *g->SpatialReference(), 0, 0, g->Di() * (static_cast<double>(g->Ni()) - 1),
 			                     g->Dj() * (static_cast<double>(g->Nj()) - 1));
 			break;
 		}
 
 		default:
-			throw std::runtime_error("No supported projection found");
+			himan::logger logr("querydata");
+			logr.Fatal(fmt::format("'{}' projection not supported", himan::HPGridTypeToString.at(info.Grid()->Type())));
+			himan::Abort();
 	}
 
 	ASSERT(theArea);

@@ -21,8 +21,8 @@ mutex paramMutex;
 #ifdef HAVE_CUDA
 namespace transformergpu
 {
-void Process(shared_ptr<const himan::plugin_configuration> conf, himan::info_t myTargetInfo, himan::info_t sourceInfo,
-             double scale, double base);
+void Process(shared_ptr<const himan::plugin_configuration> conf, shared_ptr<himan::info<double>> myTargetInfo,
+             shared_ptr<himan::info<double>> sourceInfo, double scale, double base);
 }
 #endif
 
@@ -429,7 +429,7 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 		f->LandSeaMaskThreshold(itsLandSeaMaskThreshold);
 	}
 
-	info_t sourceInfo;
+	shared_ptr<info<double>> sourceInfo;
 
 	try
 	{

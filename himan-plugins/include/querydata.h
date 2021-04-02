@@ -78,7 +78,7 @@ class querydata : public io_plugin
 	/**
 	 * @brief Create info from a given querydata
 	 * @param theData
-	 * @return shared_ptr to info instance
+	 * @return std::shared_ptr to info instance
 	 */
 
 	template <typename T>

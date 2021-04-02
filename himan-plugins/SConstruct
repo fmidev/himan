@@ -10,7 +10,7 @@ Import('env build_dir')
 includes = []
 
 includes.append('./include')
-includes.append('/usr/include/smartmet/newbase')
+includes.append('/usr/include/smartmet')
 
 env.Append(CPPPATH = includes)
 

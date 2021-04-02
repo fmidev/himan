@@ -5,8 +5,6 @@
  *
  */
 
-#include <boost/lexical_cast.hpp>
-
 #include "example_header.h"
 #include "forecast_time.h"
 #include "level.h"
@@ -27,13 +25,9 @@ void example_plugin::Process(std::shared_ptr<const plugin_configuration> conf)
 	/*
 	 * Set target parameter properties
 	 * - name PARM_NAME, this name is found from neons. For example: T-K
-	 * - univ_id UNIV_ID, newbase-id, ie code table 204
-	 * - grib1 id must be in database
-	 * - grib2 descriptor X'Y'Z, http://www.nco.ncep.noaa.gov/pmb/docs/grib2/grib2_table4-2.shtml
-	 *
 	 */
 
-	param theRequestedParam(PARM_NAME, UNIV_ID, GRIB2DISCIPLINE, GRIB2CATEGORY, GRIB2NUMBER);
+	param theRequestedParam(PARM_NAME);
 
 	// If this param is also used as a source param for other calculations
 	// (like for example dewpoint, relative humidity), unit should also be
@@ -52,12 +46,12 @@ void example_plugin::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void example_plugin::Calculate(info_t myTargetInfo, unsigned short threadIndex)
+void example_plugin::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	/*
 	 * Required source parameters
 	 *
-	 * eg. param PParam("P-Pa"); for pressure in pascals
+	 * eg. param PParam("P-PA"); for pressure in pascals
 	 *
 	 */
 
@@ -70,18 +64,18 @@ void example_plugin::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
 
-	auto myThreadedLogger = logger("example_pluginThread #" + boost::lexical_cast<string> (threadIndex)));
+	auto myThreadedLogger = logger(fmt::format("example_pluginThread #{}", threadIndex));
 
-	myThreadedLogger.Debug("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-	                       static_cast<string>(forecastLevel));
+	myThreadedLogger.Debug(fmt::format("Calculating time {} level {}",
+	                                   static_cast<string>(forecastTime.ValidDateTime()),
+	                                   static_cast<string>(forecastLevel)));
 
-	info_t exampleInfo = Fetch(forecastTime, forecastLevel, exampleParam);
+	shared_ptr<info<double>> exampleInfo = Fetch(forecastTime, forecastLevel, exampleParam);
 
 	if (!exampleInfo)
 	{
-		myThreadedLogger.Info("Skipping step " + boost::lexical_cast<string>(forecastTime.Step()) + ", level " +
-		                      static_cast<string>(forecastLevel));
-
+		myThreadedLogger.Info(
+		    fmt::format("Skipping step {} level {}", forecastTime.Step().String(), static_cast<string>(forecastLevel)));
 		return;
 	}
 
@@ -95,23 +89,18 @@ void example_plugin::Calculate(info_t myTargetInfo, unsigned short threadIndex)
 	const double a = 0.125;
 	const double b = 15;
 
-	LOCKSTEP(myTargetInfo, exampleInfo)
-	{
-		double x = exampleInfo->Value();
+	auto& target = VEC(myTargetInfo);
 
-		if (x == kFloatMissing)
-		{
-			continue;
-		}
+	for (auto&& tup : zip_range(target, VEC(exampleInfo)))
+	{
+		double& result = tup.get<0>();
+		const double x = tup.get<1>();
 
 		/* Calculations go here */
 
-		double y = a * example + b;
-
-		myTargetInfo->Value(y);
+		result = a * x + b;
 	}
 
-	myThreadedLogger.Info("[" + deviceType +
-	                      "] Missing values: " + boost::lexical_cast<string>(myTargetInfo->Data()->MissingCount()) +
-	                      "/" + boost::lexical_cast<string>(myTargetInfo->Data()->Size()));
+	myThreadedLogger.Info("[{}] Missing values: {}/{}", deviceType, myTargetInfo->Data()->MissingCount(),
+	                      myTargetInfo->Data()->Size());
 }

@@ -17,12 +17,34 @@ static std::once_flag oflag;
 const char* access_key = 0;
 const char* secret_key = 0;
 const char* security_token = 0;
+S3Protocol protocol = S3ProtocolHTTP;
 
 thread_local S3Status statusG = S3StatusOK;
 
 void CheckS3Error(S3Status errarg, const char* file, const int line);
 
 #define S3_CHECK(errarg) CheckS3Error(errarg, __FILE__, __LINE__)
+
+void HandleS3Error(himan::logger& logr)
+{
+	switch (statusG)
+	{
+		case S3StatusInternalError:
+			logr.Error(fmt::format("{}: is there a proxy blocking the connection?", S3_get_status_name(statusG)));
+			throw himan::kFileDataNotFound;
+		case S3StatusFailedToConnect:
+			logr.Error(fmt::format("{}: is proxy required but not set?", S3_get_status_name(statusG)));
+			throw himan::kFileDataNotFound;
+		case S3StatusErrorInvalidAccessKeyId:
+			logr.Error(fmt::format(
+			    "{}: are Temporary Security Credentials used without security token (env: S3_SESSION_TOKEN)?",
+			    S3_get_status_name(statusG)));
+			throw himan::kFileDataNotFound;
+		default:
+			logr.Error(S3_get_status_name(statusG));
+			throw himan::kFileDataNotFound;
+	}
+}
 
 std::vector<std::string> GetBucketAndFileName(const std::string& fullFileName)
 {
@@ -115,6 +137,26 @@ void Initialize()
 			logr.Info("Environment variable S3_SECRET_ACCESS_KEY not defined");
 		}
 
+		try
+		{
+			const auto envproto = himan::util::GetEnv("S3_PROTOCOL");
+			if (envproto == "https")
+			{
+				protocol = S3ProtocolHTTPS;
+			}
+			else if (envproto == "http")
+			{
+				protocol = S3ProtocolHTTP;
+			}
+			else
+			{
+				logr.Warning(fmt::format("Unrecognized value found from env variable S3_PROTOCOL: '{}'", envproto));
+			}
+		}
+		catch (const std::invalid_argument& e)
+		{
+		}
+
 		S3_CHECK(S3_initialize("s3", S3_INIT_ALL, NULL));
 	});
 }
@@ -136,7 +178,7 @@ std::string ReadAWSRegionFromHostname(const std::string& hostname)
 		}
 		else
 		{
-			logr.Trace("s3 authentication hostname: " + tokens[1]);
+			logr.Trace(fmt::format("s3 authentication hostname: {}", tokens[1]));
 			return tokens[1];
 		}
 	}
@@ -192,7 +234,7 @@ buffer s3::ReadFile(const file_information& fileInformation)
         {
                 fileInformation.file_server.c_str(),
                 bucket.c_str(),
-                S3ProtocolHTTP,
+                protocol,
                 S3UriStylePath,
                 access_key,
                 secret_key,
@@ -207,7 +249,7 @@ buffer s3::ReadFile(const file_information& fileInformation)
 	{
 		fileInformation.file_server.c_str(),
 		bucket.c_str(),
-		S3ProtocolHTTP,
+		protocol,
 		S3UriStylePath,
 		access_key,
 		secret_key,
@@ -227,8 +269,8 @@ buffer s3::ReadFile(const file_information& fileInformation)
 		const unsigned long offset = fileInformation.offset.get();
 		const unsigned long length = fileInformation.length.get();
 
-		logr.Debug("Reading from host=" + fileInformation.file_server + " bucket=" + bucket + " key=" + key + " " +
-		           std::to_string(offset) + ":" + std::to_string(length) + " (" + S3_get_status_name(statusG) + ")");
+		logr.Debug(fmt::format("Reading from host={} bucket={} key={} {}:{} ({})", fileInformation.file_server, bucket,
+		                       key, offset, length, S3_get_status_name(statusG)));
 
 #ifdef S3_DEFAULT_REGION
 		S3_get_object(&bucketContext, key.c_str(), NULL, offset, length, NULL, 0, &getObjectHandler, &ret);
@@ -242,19 +284,9 @@ buffer s3::ReadFile(const file_information& fileInformation)
 	{
 		case S3StatusOK:
 			break;
-		case S3StatusInternalError:
-			logr.Error(std::string(S3_get_status_name(statusG)) + ": is there a proxy blocking the connection?");
-			throw himan::kFileDataNotFound;
-		case S3StatusFailedToConnect:
-			logr.Error(std::string(S3_get_status_name(statusG)) + ": is proxy required but not set?");
-			throw himan::kFileDataNotFound;
-		case S3StatusErrorInvalidAccessKeyId:
-			logr.Error(std::string(S3_get_status_name(statusG)) +
-			           ": are Temporary Security Credentials used without security token (env: S3_SESSION_TOKEN)?");
-			throw himan::kFileDataNotFound;
 		default:
-			logr.Error(S3_get_status_name(statusG));
-			throw himan::kFileDataNotFound;
+			HandleS3Error(logr);
+			break;
 	}
 
 	if (ret.length == 0)
@@ -293,7 +325,7 @@ void s3::WriteObject(const std::string& objectName, const buffer& buff)
         {
                 host,
                 bucket.c_str(),
-                S3ProtocolHTTP,
+                protocol,
                 S3UriStylePath,
                 access_key,
                 secret_key,
@@ -308,7 +340,7 @@ void s3::WriteObject(const std::string& objectName, const buffer& buff)
 	{
 		host,
 		bucket.c_str(),
-		S3ProtocolHTTP,
+		protocol,
 		S3UriStylePath,
 		access_key,
 		secret_key,
@@ -335,8 +367,8 @@ void s3::WriteObject(const std::string& objectName, const buffer& buff)
 			sleep(2 * count);
 		}
 
-		logr.Debug("Writing to host=" + std::string(host) + " bucket=" + bucket + " key=" + key + " (" +
-		           S3_get_status_name(statusG) + ")");
+		logr.Debug(
+		    fmt::format("Writing to host={} bucket={} key={} ({})", host, bucket, key, S3_get_status_name(statusG)));
 
 #ifdef S3_DEFAULT_REGION
 		S3_put_object(&bucketContext, key.c_str(), buff.length, NULL, NULL, 0, &putObjectHandler, &data);
@@ -361,19 +393,9 @@ void s3::WriteObject(const std::string& objectName, const buffer& buff)
 			          std::to_string(size / time) + " MB/s)");
 		}
 		break;
-		case S3StatusInternalError:
-			logr.Error(std::string(S3_get_status_name(statusG)) + ": is there a proxy blocking the connection?");
-			throw himan::kFileDataNotFound;
-		case S3StatusFailedToConnect:
-			logr.Error(std::string(S3_get_status_name(statusG)) + ": is proxy required but not set?");
-			throw himan::kFileDataNotFound;
-		case S3StatusErrorInvalidAccessKeyId:
-			logr.Error(std::string(S3_get_status_name(statusG)) +
-			           ": are Temporary Security Credentials used without security token (env: S3_SESSION_TOKEN)?");
-			throw himan::kFileDataNotFound;
 		default:
-			logr.Error(S3_get_status_name(statusG));
-			throw himan::kFileDataNotFound;
+			HandleS3Error(logr);
+			break;
 	}
 }
 

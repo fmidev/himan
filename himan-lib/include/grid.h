@@ -19,9 +19,41 @@
 #include "point.h"
 #include "serialization.h"
 
+class OGRPolygon;
+
+#ifdef SERIALIZATION
+#include <ogr_spatialref.h>
+
+namespace cereal
+{
+template <class Archive>
+inline std::string save_minimal(const Archive& ar, const OGRSpatialReference& sp)
+{
+	char* projstr;
+	if (sp.exportToWkt(&projstr) != OGRERR_NONE)
+	{
+		throw std::runtime_error("Failed to get WKT");
+	}
+
+	std::string proj(projstr);
+	CPLFree(projstr);
+
+	return proj;
+}
+
+template <class Archive>
+inline void load_minimal(const Archive& ar, OGRSpatialReference& sp, const std::string& str)
+{
+	if (sp.importFromWkt(str.c_str()) != OGRERR_NONE)
+	{
+		throw std::runtime_error("Failed to import from WKT");
+	}
+}
+}  // namespace cereal
+#else
 class OGRSpatialReference;
 class OGRCoordinateTransformation;
-class OGRPolygon;
+#endif
 
 namespace himan
 {
@@ -72,6 +104,7 @@ const boost::unordered_map<HPScanningMode, std::string> HPScanningModeToString =
 class grid
 {
    public:
+	grid() = delete;
 	virtual ~grid() = default;
 
 	grid(const grid&) = default;
@@ -123,6 +156,13 @@ class grid
 
 	virtual earth_shape<double> EarthShape() const = 0;
 
+	/**
+	 * @brief Create a list of point locations for a grid in the grids native coordinate system
+	 *
+	 */
+
+	virtual std::vector<point> GridPointsInProjectionSpace() const;
+
    protected:
 	grid(HPGridClass gridClass, HPGridType gridType, bool itsUVRelativeToGrid);
 
@@ -143,21 +183,32 @@ class grid
 	bool itsUVRelativeToGrid;
 
 #ifdef SERIALIZATION
+
 	friend class cereal::access;
 
 	template <class Archive>
 	void serialize(Archive& ar)
 	{
-		ar(CEREAL_NVP(itsGridClass), CEREAL_NVP(itsGridType), CEREAL_NVP(itsLogger), CEREAL_NVP(itsUVRelativeToGrid));
+		ar(CEREAL_NVP(itsGridClass), CEREAL_NVP(itsGridType), CEREAL_NVP(itsUVRelativeToGrid));
 	}
+
+	template <class Archive>
+	static void load_and_construct(Archive& ar, cereal::construct<grid>& construct)
+	{
+		HPGridClass c;
+		HPGridType t;
+		bool uv;
+		ar(c, t, uv);
+		construct(c, t, uv);
+	}
+
 #endif
 };
 
 class regular_grid : public grid
 {
    public:
-	regular_grid(HPGridType gridType, HPScanningMode scMode, double di, double dj, size_t ni, size_t nj,
-	             bool uvRelativeToGrid = false);
+	regular_grid() = delete;
 	~regular_grid() = default;
 	regular_grid(const regular_grid&);
 	regular_grid& operator=(const regular_grid& other) = delete;
@@ -166,7 +217,18 @@ class regular_grid : public grid
 
 	/* Return grid point value (incl. fractions) of a given latlon point */
 	virtual point XY(const point& latlon) const;
+
+	/* Return grid point value (location) of a given target grid */
+	virtual std::vector<point> XY(const regular_grid& to) const;
+
+	/* Return latitude-longitude value for a given location index */
 	virtual point LatLon(size_t i) const override;
+
+	/* Return latitude-longitude value for a given point in projected space */
+	virtual point LatLon(const point& projected) const;
+
+	/* Return projected value for a given latitude-longitude point */
+	virtual point Projected(const point& latlon) const;
 
 	/*
 	 * Functions that are only valid for some grid types, but for ease
@@ -193,7 +255,13 @@ class regular_grid : public grid
 	virtual std::unique_ptr<OGRPolygon> Geometry() const;
 	virtual earth_shape<double> EarthShape() const override;
 
+	virtual std::unique_ptr<OGRSpatialReference> SpatialReference() const;
+	virtual std::vector<point> GridPointsInProjectionSpace() const override;
+
    protected:
+	regular_grid(HPGridType gridType, HPScanningMode scMode, double di, double dj, size_t ni, size_t nj,
+	             bool uvRelativeToGrid = false);
+
 	bool EqualsTo(const regular_grid& other) const;
 
 	HPScanningMode itsScanningMode;
@@ -207,12 +275,23 @@ class regular_grid : public grid
 	size_t itsNj;
 
 #ifdef SERIALIZATION
+
 	friend class cereal::access;
 
 	template <class Archive>
 	void serialize(Archive& ar)
 	{
-		ar(cereal::base_class<grid>(this), CEREAL_NVP(itsScanningMode));
+		ar(CEREAL_NVP(itsScanningMode), CEREAL_NVP(itsDi), CEREAL_NVP(itsDj), CEREAL_NVP(itsNi), CEREAL_NVP(itsNj));
+	}
+
+	template <class Archive>
+	static void load_and_construct(Archive& ar, cereal::construct<regular_grid>& construct)
+	{
+		HPScanningMode sm;
+		double di, dj;
+		size_t ni, nj;
+		ar(sm, di, dj, ni, nj);
+		construct(sm, di, dj, ni, nj);
 	}
 #endif
 };
@@ -253,5 +332,10 @@ inline std::ostream& operator<<(std::ostream& file, const regular_grid& ob)
 }
 
 }  // namespace himan
+
+#ifdef SERIALIZATION
+CEREAL_REGISTER_TYPE(himan::regular_grid);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(himan::grid, himan::regular_grid);
+#endif
 
 #endif /* GRID_H */

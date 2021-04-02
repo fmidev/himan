@@ -131,6 +131,8 @@ std::unique_ptr<grid> ReadAreaAndGrid(GDALDataset* poDataset)
 
 param ReadParam(const std::map<std::string, std::string>& meta, const producer& prod, const param& par)
 {
+	logger logr("geotiff");
+
 	std::string param_value;
 
 	for (const auto& m : meta)
@@ -152,11 +154,15 @@ param ReadParam(const std::map<std::string, std::string>& meta, const producer& 
 
 	if (parameter.empty() || parameter["name"].empty())
 	{
+		logr.Trace(
+		    fmt::format("Parameter information matching '{}' not found from table 'param_geotiff'", param_value));
 		return par;
 	}
 
 	param p(parameter["name"]);
 	p.Id(std::stoi(parameter["id"]));
+	p.InterpolationMethod(par.InterpolationMethod());
+
 	return p;
 }
 
@@ -403,7 +409,7 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 
 	// "first guess" metadata from file metadata
 
-	auto par = ReadParam(meta, options.prod, param());
+	auto par = ReadParam(meta, options.prod, options.param);
 	auto lvl = ReadLevel(meta, options.level);
 	auto ftype = ReadForecastType(meta, options.ftype);
 	auto ftime = ReadTime(meta, options.time);

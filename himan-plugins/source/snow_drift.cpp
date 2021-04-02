@@ -23,10 +23,10 @@ double DriftMagnitude(double ff, double mi);
 double DriftIndex(double sv);
 double MobilityIndex(double da, double sa);
 
-void CalculateSnowDriftIndex(info_t& myTargetInfo, const std::vector<double>& T, const std::vector<double>& FF,
-                             const std::vector<double>& FFG, const std::vector<double>& SF,
-                             const std::vector<double>& pSA, const std::vector<double>& pDA,
-                             const std::vector<bool>& mask)
+void CalculateSnowDriftIndex(std::shared_ptr<info<double>>& myTargetInfo, const std::vector<double>& T,
+                             const std::vector<double>& FF, const std::vector<double>& FFG,
+                             const std::vector<double>& SF, const std::vector<double>& pSA,
+                             const std::vector<double>& pDA, const std::vector<bool>& mask)
 {
 	myTargetInfo->Find<param>(SDIParam);
 	auto& SI = VEC(myTargetInfo);
@@ -130,7 +130,7 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 
 	const std::string deviceType = "CPU";
 
-	info_t pSAInfo, pDAInfo;  // data from previous time step
+	std::shared_ptr<info<double>> pSAInfo, pDAInfo;  // data from previous time step
 
 	for (myTargetInfo->Reset<forecast_time>(); myTargetInfo->Next<forecast_time>();)
 	{

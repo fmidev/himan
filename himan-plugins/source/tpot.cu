@@ -66,7 +66,7 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 	const int blockSize = 512;
 	const int gridSize = N / blockSize + (N % blockSize == 0 ? 0 : 1);
 
-	info_t TDInfo;
+	std::shared_ptr<info<double>> TDInfo;
 
 	auto TInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("T-K"),
 	                                 myTargetInfo->ForecastType());

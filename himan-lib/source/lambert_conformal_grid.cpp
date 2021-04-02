@@ -29,6 +29,10 @@ lambert_conformal_grid::lambert_conformal_grid(HPScanningMode theScanningMode, c
 	itsSpatialReference = std::unique_ptr<OGRSpatialReference>(new OGRSpatialReference());
 	itsSpatialReference->importFromProj4(ss.str().c_str());
 
+#if GDAL_VERSION_MAJOR > 1
+	itsSpatialReference->SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+#endif
+
 	CreateCoordinateTransformations(theFirstPoint, firstPointIsProjected);
 	itsLogger.Trace(Proj4String());
 }
@@ -40,6 +44,11 @@ lambert_conformal_grid::lambert_conformal_grid(HPScanningMode theScanningMode, c
 {
 	itsLogger = logger("lambert_conformal_grid");
 	itsSpatialReference = std::move(spRef);
+
+#if GDAL_VERSION_MAJOR > 1
+	itsSpatialReference->SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
+#endif
+
 	CreateCoordinateTransformations(theFirstPoint, firstPointIsProjected);
 	itsLogger.Trace(Proj4String());
 }
@@ -65,19 +74,13 @@ void lambert_conformal_grid::CreateCoordinateTransformations(const point& firstP
 
 	double lat = firstPoint.Y(), lon = firstPoint.X();
 
-	if (firstPointIsProjected)
+	if (firstPointIsProjected == false)
 	{
-		if (!itsXYToLatLonTransformer->Transform(1, &lon, &lat))
+		if (!itsLatLonToXYTransformer->Transform(1, &lon, &lat))
 		{
-			itsLogger.Error("Failed to get first point latlon");
+			itsLogger.Error("Failed to get false easting and northing");
 			return;
 		}
-	}
-
-	if (!itsLatLonToXYTransformer->Transform(1, &lon, &lat))
-	{
-		itsLogger.Error("Failed to get false easting and northing");
-		return;
 	}
 
 	if (fabs(lon) < 1e-4 and fabs(lat) < 1e-4)
@@ -149,24 +152,9 @@ bool lambert_conformal_grid::EqualsTo(const lambert_conformal_grid& other) const
 		return false;
 	}
 
-	if (Orientation() != other.Orientation())
+	if (!itsSpatialReference->IsSame(other.itsSpatialReference.get()))
 	{
-		itsLogger.Trace("Orientation does not match: " + to_string(Orientation()) + " vs " +
-		                to_string(other.Orientation()));
-		return false;
-	}
-
-	if (StandardParallel1() != StandardParallel1())
-	{
-		itsLogger.Trace("Standard latitude 1 does not match: " + to_string(StandardParallel1()) + " vs " +
-		                to_string(other.StandardParallel1()));
-		return false;
-	}
-
-	if (StandardParallel2() != other.StandardParallel2())
-	{
-		itsLogger.Trace("Standard latitude 2 does not match: " + to_string(StandardParallel2()) + " vs " +
-		                to_string(other.StandardParallel2()));
+		itsLogger.Trace("Areas are not equal");
 		return false;
 	}
 
@@ -196,11 +184,6 @@ double lambert_conformal_grid::StandardParallel1() const
 double lambert_conformal_grid::StandardParallel2() const
 {
 	return itsSpatialReference->GetProjParm(SRS_PP_STANDARD_PARALLEL_2, 0.0);
-}
-
-OGRSpatialReference lambert_conformal_grid::SpatialReference() const
-{
-	return OGRSpatialReference(*itsSpatialReference);
 }
 
 double lambert_conformal_grid::Cone() const

@@ -14,7 +14,6 @@
 #include <mutex>
 #include <string>
 
-class NFmiRotatedLatLonArea;
 namespace himan
 {
 class latitude_longitude_grid : public regular_grid
@@ -51,7 +50,10 @@ class latitude_longitude_grid : public regular_grid
 	bool operator!=(const grid& other) const;
 
 	point XY(const point& latlon) const override;
+	std::vector<point> XY(const regular_grid& target) const override;
 	point LatLon(size_t locationIndex) const override;
+	point LatLon(const point& projected) const override;
+	virtual point Projected(const point& latlon) const override;
 
 	size_t Hash() const override;
 
@@ -59,6 +61,9 @@ class latitude_longitude_grid : public regular_grid
 
 	virtual std::string Proj4String() const override;
 	virtual earth_shape<double> EarthShape() const override;
+
+	virtual std::unique_ptr<OGRSpatialReference> SpatialReference() const override;
+	virtual std::vector<point> GridPointsInProjectionSpace() const override;
 
    protected:
 	bool EqualsTo(const latitude_longitude_grid& other) const;
@@ -71,11 +76,23 @@ class latitude_longitude_grid : public regular_grid
 	friend class cereal::access;
 
 	template <class Archive>
-	void serialize(Archive& ar)
+	void serialize(Archive& ar) const
 	{
-		ar(cereal::base_class<regular_grid>(this), CEREAL_NVP(itsFirstPoint), CEREAL_NVP(itsEarthShape)
+		ar(CEREAL_NVP(itsScanningMode), CEREAL_NVP(itsFirstPoint), CEREAL_NVP(itsNi), CEREAL_NVP(itsNj),
+		   CEREAL_NVP(itsDi), CEREAL_NVP(itsDj), CEREAL_NVP(itsEarthShape));
+	}
 
-		);
+	template <class Archive>
+	static void load_and_construct(Archive& ar, cereal::construct<latitude_longitude_grid>& construct)
+	{
+		HPScanningMode sm;
+		point fp;
+		size_t ni, nj;
+		double di, dj;
+		earth_shape<double> es;
+
+		ar(sm, fp, ni, nj, di, dj, es);
+		construct(sm, fp, ni, nj, di, dj, es);
 	}
 #endif
 };
@@ -117,16 +134,21 @@ class rotated_latitude_longitude_grid : public latitude_longitude_grid
 	point FirstPoint() const override;
 	// return grid xy coordinates for normal latlon
 	point XY(const point& latlon) const override;
+	std::vector<point> XY(const regular_grid& target) const override;
 	// return latlon for grid running index
 	point LatLon(size_t locationIndex) const override;
+	point LatLon(const point& rotated) const override;
+
 	// return rotated point for grid running index
 	point RotatedLatLon(size_t locationIndex) const;
 	// return rotated point for normal latlon
 	point Rotate(const point& latlon) const;
+	virtual point Projected(const point& latlon) const override;
 
 	size_t Hash() const override;
 
 	virtual std::string Proj4String() const override;
+	virtual std::unique_ptr<OGRSpatialReference> SpatialReference() const override;
 
    private:
 	bool EqualsTo(const rotated_latitude_longitude_grid& other) const;
@@ -139,9 +161,24 @@ class rotated_latitude_longitude_grid : public latitude_longitude_grid
 	friend class cereal::access;
 
 	template <class Archive>
-	void serialize(Archive& ar)
+	void serialize(Archive& ar) const
 	{
-		ar(cereal::base_class<latitude_longitude_grid>(this), CEREAL_NVP(itsSouthPole));
+		ar(CEREAL_NVP(itsScanningMode), CEREAL_NVP(itsFirstPoint), CEREAL_NVP(itsNi), CEREAL_NVP(itsNj),
+		   CEREAL_NVP(itsDi), CEREAL_NVP(itsDj), CEREAL_NVP(itsEarthShape), CEREAL_NVP(itsSouthPole));
+	}
+
+	template <class Archive>
+	static void load_and_construct(Archive& ar, cereal::construct<rotated_latitude_longitude_grid>& construct)
+	{
+		HPScanningMode sm;
+		point fp, sp;
+		size_t ni, nj;
+		double di, dj;
+		earth_shape<double> es;
+
+		ar(sm, fp, ni, nj, di, dj, es, sp);
+
+		construct(sm, fp, ni, nj, di, dj, es, sp);
 	}
 #endif
 };
@@ -155,5 +192,7 @@ inline std::ostream& operator<<(std::ostream& file, const rotated_latitude_longi
 #ifdef SERIALIZATION
 CEREAL_REGISTER_TYPE(himan::latitude_longitude_grid);
 CEREAL_REGISTER_TYPE(himan::rotated_latitude_longitude_grid);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(himan::regular_grid, himan::latitude_longitude_grid);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(himan::latitude_longitude_grid, himan::rotated_latitude_longitude_grid);
 #endif
 #endif /* LATITUDE_LONGITUDE_GRID_H */

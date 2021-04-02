@@ -80,6 +80,10 @@ void grid::UVRelativeToGrid(bool theUVRelativeToGrid)
 {
 	itsUVRelativeToGrid = theUVRelativeToGrid;
 }
+std::vector<point> grid::GridPointsInProjectionSpace() const
+{
+	throw runtime_error("grid::GridPointsInProjectionSpace() called");
+}
 
 //--------------- regular grid
 
@@ -117,6 +121,7 @@ bool regular_grid::EqualsTo(const regular_grid& other) const
 		return false;
 	}
 
+#if 0
 	const auto es = EarthShape();
 	const auto oes = other.EarthShape();
 
@@ -128,7 +133,7 @@ bool regular_grid::EqualsTo(const regular_grid& other) const
 
 		return false;
 	}
-
+#endif
 	const double kEpsilon = 0.0001;
 
 	if (fabs(other.itsDi - itsDi) > kEpsilon)
@@ -164,7 +169,7 @@ bool regular_grid::EqualsTo(const regular_grid& other) const
 		return false;
 	}
 
-	if (!point::LatLonCompare(other.TopLeft() , TopLeft()))
+	if (!point::LatLonCompare(other.TopLeft(), TopLeft()))
 	{
 		itsLogger.Trace("TopLeft does not match: " + static_cast<std::string>(other.TopLeft()) + " vs " +
 		                static_cast<std::string>(TopLeft()));
@@ -211,12 +216,12 @@ std::string regular_grid::Proj4String() const
 	return proj;
 }
 
-point regular_grid::XY(const point& latlon) const
+point regular_grid::Projected(const point& latlon) const
 {
 	double projX = latlon.X(), projY = latlon.Y();
 	ASSERT(itsLatLonToXYTransformer);
 
-	// 1. Transform latlon to projected coordinates.
+	// Transform latlon to projected coordinates.
 	// Projected coordinates are in meters, with false easting and
 	// false northing applied so that point 0,0 is top left or bottom left,
 	// depending on the scanning mode.
@@ -228,16 +233,40 @@ point regular_grid::XY(const point& latlon) const
 		return point();
 	}
 
+	return point(projX, projY);
+}
+
+point regular_grid::XY(const point& latlon) const
+{
+	// 1. Get latlon point in projected space
+	const point proj = Projected(latlon);
+
 	// 2. Transform projected coordinates (meters) to grid xy (no unit).
 	// Projected coordinates run from 0 ... area width and 0 ... area height.
 	// Grid point coordinates run from 0 ... ni and 0 ... nj.
 
-	const double x = (projX / itsDi);
-	const double y = (projY / itsDj) * (itsScanningMode == kTopLeft ? -1 : 1);
+	const double x = (proj.X() / itsDi);
+	const double y = (proj.Y() / itsDj) * (itsScanningMode == kTopLeft ? -1 : 1);
 
 	if (x < 0. || x > static_cast<double>(itsNi - 1) || y < 0. || y > static_cast<double>(itsNj - 1))
 	{
 		return point(MissingDouble(), MissingDouble());
+	}
+
+	return point(x, y);
+}
+
+point regular_grid::LatLon(const point& projected) const
+{
+	double x = projected.X();
+	double y = projected.Y();
+
+	ASSERT(itsXYToLatLonTransformer);
+	if (!itsXYToLatLonTransformer->Transform(1, &x, &y))
+	{
+		itsLogger.Error("Error determining latitude longitude value for xy point " + std::to_string(x) + "," +
+		                std::to_string(y));
+		return point();
 	}
 
 	return point(x, y);
@@ -255,15 +284,7 @@ point regular_grid::LatLon(size_t locationIndex) const
 	double x = static_cast<double>(iIndex) * itsDi;
 	double y = static_cast<double>(jIndex) * itsDj * (itsScanningMode == kTopLeft ? -1 : 1);
 
-	ASSERT(itsXYToLatLonTransformer);
-	if (!itsXYToLatLonTransformer->Transform(1, &x, &y))
-	{
-		itsLogger.Error("Error determining latitude longitude value for xy point " + std::to_string(x) + "," +
-		                std::to_string(y));
-		return point();
-	}
-
-	return point(x, y);
+	return LatLon(point(x, y));
 }
 
 size_t regular_grid::Size() const
@@ -290,7 +311,8 @@ point regular_grid::BottomLeft() const
 		case kTopLeft:
 			return LatLon(itsNj * itsNi - itsNi);
 		default:
-			throw runtime_error("Unhandled scanning mode: " + HPScanningModeToString.at(itsScanningMode));
+			itsLogger.Fatal(fmt::format("Unhandled scanning mode: {}", HPScanningModeToString.at(itsScanningMode)));
+			himan::Abort();
 	}
 }
 point regular_grid::TopRight() const
@@ -302,7 +324,8 @@ point regular_grid::TopRight() const
 		case kTopLeft:
 			return LatLon(itsNi - 1);
 		default:
-			throw runtime_error("Unhandled scanning mode: " + HPScanningModeToString.at(itsScanningMode));
+			itsLogger.Fatal(fmt::format("Unhandled scanning mode: {}", HPScanningModeToString.at(itsScanningMode)));
+			himan::Abort();
 	}
 }
 point regular_grid::TopLeft() const
@@ -314,7 +337,8 @@ point regular_grid::TopLeft() const
 		case kTopLeft:
 			return LatLon(0);
 		default:
-			throw runtime_error("Unhandled scanning mode: " + HPScanningModeToString.at(itsScanningMode));
+			itsLogger.Fatal(fmt::format("Unhandled scanning mode: {}", HPScanningModeToString.at(itsScanningMode)));
+			himan::Abort();
 	}
 }
 point regular_grid::BottomRight() const
@@ -326,7 +350,8 @@ point regular_grid::BottomRight() const
 		case kTopLeft:
 			return LatLon(itsNi * itsNj - 1);
 		default:
-			throw runtime_error("Unhandled scanning mode: " + HPScanningModeToString.at(itsScanningMode));
+			itsLogger.Fatal(fmt::format("Unhandled scanning mode: {}", HPScanningModeToString.at(itsScanningMode)));
+			himan::Abort();
 	}
 }
 
@@ -353,14 +378,16 @@ earth_shape<double> regular_grid::EarthShape() const
 
 	if (err != OGRERR_NONE)
 	{
-		throw runtime_error("Unable to get Semi Major");
+		itsLogger.Fatal("Unable to get Semi Major");
+		himan::Abort();
 	}
 
 	const double B = itsSpatialReference->GetSemiMinor(&err);
 
 	if (err != OGRERR_NONE)
 	{
-		throw runtime_error("Unable to get Semi Minor");
+		itsLogger.Fatal("Unable to get Semi Minor");
+		himan::Abort();
 	}
 
 	return earth_shape<double>(A, B);
@@ -426,6 +453,91 @@ std::unique_ptr<OGRPolygon> regular_grid::Geometry() const
 	auto geometry = std::unique_ptr<OGRPolygon>(new OGRPolygon());
 	geometry->addRing(&ring);
 	return std::move(geometry);
+}
+
+std::unique_ptr<OGRSpatialReference> regular_grid::SpatialReference() const
+{
+	return std::unique_ptr<OGRSpatialReference>(itsSpatialReference->Clone());
+}
+
+std::vector<point> regular_grid::GridPointsInProjectionSpace() const
+{
+	std::vector<point> ret;
+	ret.reserve(Size());
+
+	point first = Projected(FirstPoint());
+
+	const double dj = itsDj * (itsScanningMode == kTopLeft ? -1 : 1);
+
+	for (size_t y = 0; y < Nj(); y++)
+	{
+		for (size_t x = 0; x < Ni(); x++)
+		{
+			ret.emplace_back(fma(static_cast<double>(x), itsDi, first.X()), fma(static_cast<double>(y), dj, first.Y()));
+		}
+	}
+
+	return ret;
+}
+
+std::vector<point> regular_grid::XY(const regular_grid& target) const
+{
+	// 1. Create list of points in the projection space of the
+	// target grid.
+
+	const auto targetProj = target.GridPointsInProjectionSpace();
+
+	// 2. Transform the points to the projection space of the source
+	// grid
+
+	auto tosp = target.SpatialReference();
+	const point soff = Projected(FirstPoint());
+
+	vector<point> sourceProj;
+
+	if (itsSpatialReference->IsSame(tosp.get()))
+	{
+		itsLogger.Trace("Spatial references are equal, no need to do transformation");
+		sourceProj = targetProj;
+	}
+	else
+	{
+		sourceProj.reserve(targetProj.size());
+
+		auto xform = std::unique_ptr<OGRCoordinateTransformation>(
+		    OGRCreateCoordinateTransformation(target.SpatialReference().get(), itsSpatialReference.get()));
+
+		for (const auto& p : targetProj)
+		{
+			double x = p.X(), y = p.Y();
+
+			if (!xform->Transform(1, &x, &y))
+				himan::Abort();
+			sourceProj.emplace_back(x, y);
+		}
+	}
+
+	// 3. Transform projected coordinates to grid space
+
+	const double ni = static_cast<double>(itsNi - 1);
+	const double nj = static_cast<double>(itsNj - 1);
+	const double di = itsDi;
+	const double dj = itsDj * (itsScanningMode == kTopLeft ? -1 : 1);
+
+	std::vector<point> sourceXY;
+	sourceXY.reserve(sourceProj.size());
+
+	for (auto& p : sourceProj)
+	{
+		double x = (p.X() - soff.X()) / di, y = (p.Y() - soff.Y()) / dj;
+
+		if (x < 0. || x > ni || y < 0. || y > nj)
+		{
+			x = y = MissingDouble();
+		}
+		sourceXY.emplace_back(x, y);
+	}
+	return sourceXY;
 }
 
 //--------------- irregular grid

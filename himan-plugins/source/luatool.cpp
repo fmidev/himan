@@ -154,7 +154,7 @@ void luatool::InitLua()
 	myL = L;
 }
 
-void luatool::ResetVariables(info_t myTargetInfo)
+void luatool::ResetVariables(std::shared_ptr<info<double>> myTargetInfo)
 {
 	// Set some variable that are needed in luatool calculations
 	// but are too hard or complicated to create in the lua side
@@ -478,7 +478,7 @@ void SetValuesFromMatrix(std::shared_ptr<info<T>>& anInfo, const matrix<T>& mat)
 	}
 }
 template <typename T>
-object GetValues(info_t& anInfo)
+object GetValues(std::shared_ptr<info<double>>& anInfo)
 {
 	return VectorToTable<double>(VEC(anInfo));
 }
@@ -1563,7 +1563,7 @@ void BindPlugins(lua_State* L)
 {
 	module(L)[class_<compiled_plugin_base>("compiled_plugin_base")
 	              .def(constructor<>())
-	              .def("WriteToFile", LUA_MEMFN(void, luatool, WriteToFile, const info_t targetInfo)),
+	              .def("WriteToFile", LUA_MEMFN(void, luatool, WriteToFile, const std::shared_ptr<info<double>> targetInfo)),
 	          class_<luatool, compiled_plugin_base>("luatool")
 	              .def(constructor<>())
 	              .def("ClassName", &luatool::ClassName)
@@ -1712,12 +1712,12 @@ std::vector<T> TableToVector(const object& table)
 	return ret;
 }
 
-void luatool::WriteToFile(const info_t targetInfo, write_options writeOptions)
+void luatool::WriteToFile(const std::shared_ptr<info<double>> targetInfo, write_options writeOptions)
 {
 	// Do nothing, override is needed to prevent double write
 }
 
-void luatool::WriteToFile(const info_t targetInfo)
+void luatool::WriteToFile(const std::shared_ptr<info<double>> targetInfo)
 {
 	compiled_plugin_base::WriteToFile(targetInfo, itsWriteOptions);
 }
