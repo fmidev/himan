@@ -205,6 +205,23 @@ long DetermineBitsPerValue(const vector<T>& values, int precision)
 	return bitsPerValue;
 }
 
+template <>
+long DetermineBitsPerValue(const vector<short>& values, int precision)
+{
+	auto mm = std::minmax_element(values.begin(), values.end());
+	const int range = *mm.second - *mm.first;
+	if (range == 0)
+		return 0;
+
+	return static_cast<int>(ceil(log2(range + 1)));
+}
+
+template <>
+long DetermineBitsPerValue(const vector<unsigned char>& values, int precision)
+{
+	return 8;
+}
+
 template <typename T>
 void EncodePrecipitationFormToGrib2(vector<T>& arr)
 {
@@ -1094,24 +1111,21 @@ void WriteForecastType(NFmiGribMessage& message, const forecast_type& forecastTy
 }
 
 template <typename T>
-void WriteDataValues(const vector<T>&, NFmiGribMessage&, double);
-
-template <>
-void WriteDataValues(const vector<double>& values, NFmiGribMessage& msg, double missingValue)
-{
-	msg.Values(values.data(), static_cast<long>(values.size()), missingValue);
-}
-
-template <>
-void WriteDataValues(const vector<float>& values, NFmiGribMessage& msg, double missingValue)
+void WriteDataValues(const vector<T>& values, NFmiGribMessage& msg, double missingValue)
 {
 	double* arr = new double[values.size()];
-	replace_copy_if(values.begin(), values.end(), arr, [](const float& val) { return himan::IsMissing(val); },
+	replace_copy_if(values.begin(), values.end(), arr, [](const T& val) { return himan::IsMissing(val); },
 	                missingValue);
 
 	msg.Values(arr, static_cast<long>(values.size()), missingValue);
 
 	delete[] arr;
+}
+
+template <>
+void WriteDataValues(const vector<double>& values, NFmiGribMessage& msg, double missingValue)
+{
+	msg.Values(values.data(), static_cast<long>(values.size()), missingValue);
 }
 
 std::pair<himan::HPWriteStatus, himan::file_information> grib::ToFile(info<double>& anInfo)
@@ -1375,6 +1389,8 @@ pair<himan::file_information, NFmiGribMessage> grib::CreateGribMessage(info<T>& 
 
 template pair<himan::file_information, NFmiGribMessage> grib::CreateGribMessage<double>(info<double>&);
 template pair<himan::file_information, NFmiGribMessage> grib::CreateGribMessage<float>(info<float>&);
+template pair<himan::file_information, NFmiGribMessage> grib::CreateGribMessage<short>(info<short>&);
+template pair<himan::file_information, NFmiGribMessage> grib::CreateGribMessage<unsigned char>(info<unsigned char>&);
 
 void DetermineMessageNumber(NFmiGribMessage& message, file_information& finfo, HPWriteMode writeMode)
 {
@@ -1596,6 +1612,8 @@ std::pair<himan::HPWriteStatus, himan::file_information> grib::ToFile(info<T>& a
 
 template std::pair<himan::HPWriteStatus, himan::file_information> grib::ToFile<double>(info<double>&);
 template std::pair<himan::HPWriteStatus, himan::file_information> grib::ToFile<float>(info<float>&);
+template std::pair<himan::HPWriteStatus, himan::file_information> grib::ToFile<short>(info<short>&);
+template std::pair<himan::HPWriteStatus, himan::file_information> grib::ToFile<unsigned char>(info<unsigned char>&);
 
 // ---------------------------------------------------------------------------
 
@@ -2441,26 +2459,23 @@ himan::producer ReadProducer(const search_options& options, const NFmiGribMessag
 }
 
 template <typename T>
-void ReadDataValues(vector<T>&, const NFmiGribMessage& msg);
-
-template <>
-void ReadDataValues(vector<double>& values, const NFmiGribMessage& msg)
-{
-	size_t len = msg.ValuesLength();
-	msg.GetValues(values.data(), &len, himan::MissingDouble());
-}
-
-template <>
-void ReadDataValues(vector<float>& values, const NFmiGribMessage& msg)
+void ReadDataValues(vector<T>& values, const NFmiGribMessage& msg)
 {
 	double* arr = new double[values.size()];
 	size_t len = msg.ValuesLength();
 	msg.GetValues(arr, &len, himan::MissingDouble());
 
 	replace_copy_if(arr, arr + values.size(), values.begin(), [](const double& val) { return himan::IsMissing(val); },
-	                himan::MissingFloat());
+	                himan::MissingValue<T>());
 
 	delete[] arr;
+}
+
+template <>
+void ReadDataValues(vector<double>& values, const NFmiGribMessage& msg)
+{
+	size_t len = msg.ValuesLength();
+	msg.GetValues(values.data(), &len, himan::MissingDouble());
 }
 
 template <typename T>
@@ -2814,6 +2829,12 @@ template vector<shared_ptr<himan::info<double>>> grib::FromFile<double>(const fi
                                                                         bool, bool) const;
 template vector<shared_ptr<himan::info<float>>> grib::FromFile<float>(const file_information&, const search_options&,
                                                                       bool, bool) const;
+template vector<shared_ptr<himan::info<short>>> grib::FromFile<short>(const file_information&, const search_options&,
+                                                                      bool, bool) const;
+template vector<shared_ptr<himan::info<unsigned char>>> grib::FromFile<unsigned char>(const file_information&,
+                                                                                      const search_options&, bool,
+                                                                                      bool) const;
+
 /**
  * @brief UnpackBitmap
  *

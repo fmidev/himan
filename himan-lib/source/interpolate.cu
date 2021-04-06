@@ -466,3 +466,10 @@ template void himan::interpolate::RotateVectorComponentsGPU<double>(const grid*,
 template void himan::interpolate::RotateVectorComponentsGPU<float>(const grid*, const grid*, himan::matrix<float>&,
                                                                    himan::matrix<float>&, cudaStream_t&, float*, float*,
                                                                    double*);
+template void himan::interpolate::RotateVectorComponentsGPU<short>(const grid*, const grid*, himan::matrix<short>&,
+                                                                   himan::matrix<short>&, cudaStream_t&, short*, short*,
+                                                                   double*);
+template void himan::interpolate::RotateVectorComponentsGPU<unsigned char>(const grid*, const grid*,
+                                                                           himan::matrix<unsigned char>&,
+                                                                           himan::matrix<unsigned char>&, cudaStream_t&,
+                                                                           unsigned char*, unsigned char*, double*);

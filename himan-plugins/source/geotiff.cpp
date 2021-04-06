@@ -58,6 +58,8 @@ file_information geotiff::ToFile(info<T>& anInfo)
 
 template file_information geotiff::ToFile<double>(info<double>&);
 template file_information geotiff::ToFile<float>(info<float>&);
+template file_information geotiff::ToFile<short>(info<short>&);
+template file_information geotiff::ToFile<unsigned char>(info<unsigned char>&);
 
 std::unique_ptr<grid> ReadAreaAndGrid(GDALDataset* poDataset)
 {
@@ -230,6 +232,18 @@ forecast_time ReadTime(const std::map<std::string, std::string>& meta, const for
 
 template <typename T>
 GDALDataType TypeToGDALType();
+
+template <>
+GDALDataType TypeToGDALType<unsigned char>()
+{
+	return GDT_Byte;
+}
+
+template <>
+GDALDataType TypeToGDALType<short>()
+{
+	return GDT_Int16;
+}
 
 template <>
 GDALDataType TypeToGDALType<float>()
@@ -503,3 +517,8 @@ template std::vector<std::shared_ptr<info<double>>> geotiff::FromFile<double>(co
                                                                               const search_options&, bool, bool) const;
 template std::vector<std::shared_ptr<info<float>>> geotiff::FromFile<float>(const file_information&,
                                                                             const search_options&, bool, bool) const;
+template std::vector<std::shared_ptr<info<short>>> geotiff::FromFile<short>(const file_information&,
+                                                                            const search_options&, bool, bool) const;
+template std::vector<std::shared_ptr<info<unsigned char>>> geotiff::FromFile<unsigned char>(const file_information&,
+                                                                                            const search_options&, bool,
+                                                                                            bool) const;
