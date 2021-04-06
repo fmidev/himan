@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 21.4.1
+Version: 21.4.6
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -17,7 +17,7 @@ Requires: himan-lib >= 21.3.22
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 20.12.2
-Requires: libfmidb >= 20.7.8
+Requires: libfmidb >= 21.3.31
 Requires: smartmet-library-newbase >= 21.2.20
 Requires: smartmet-library-gis
 Requires: smartmet-library-macgyver
@@ -137,6 +137,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Tue Apr  6 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.6-1.fmi
+- short and unsigned char info types
 * Thu Apr  1 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.1-1.fmi
 - Honor user-set interpolation method for parameter
 * Mon Mar 29 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.3.29-1.fmi

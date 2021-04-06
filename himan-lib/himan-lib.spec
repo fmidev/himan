@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 21.4.1
+Version: 21.4.6
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: libfmidb >= 20.7.8
+Requires: libfmidb >= 21.3.31
 Requires: libfmigrib >= 19.10.28
 Requires: fmt >= 7.1.0
 
@@ -82,6 +82,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/*
 
 %changelog
+* Tue Apr  6 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.6-1.fmi
+- short and unsigned char info types
+- read earth shape information from radon
 * Thu Apr  1 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.1-1.fmi
 - Read area configuration from proj4 string
 * Wed Mar 24 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.3.24-1.fmi
