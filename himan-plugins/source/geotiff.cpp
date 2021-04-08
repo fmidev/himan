@@ -19,6 +19,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/regex.hpp>
 #include <ogr_spatialref.h>
+#include <thread>
 
 #include "plugin_factory.h"
 #include "radon.h"
@@ -32,34 +33,138 @@
 using namespace himan;
 using namespace himan::plugin;
 
+template <typename T>
+GDALDataType TypeToGDALType();
+
+template <>
+GDALDataType TypeToGDALType<unsigned char>()
+{
+	return GDT_Byte;
+}
+
+template <>
+GDALDataType TypeToGDALType<short>()
+{
+	return GDT_Int16;
+}
+
+template <>
+GDALDataType TypeToGDALType<float>()
+{
+	return GDT_Float32;
+}
+
+template <>
+GDALDataType TypeToGDALType<double>()
+{
+	return GDT_Float64;
+}
+
+template <typename T>
+T ConvertTo(const std::string& str)
+{
+	std::istringstream ss(str);
+	T num;
+	ss >> num;
+	return num;
+}
+
+static std::once_flag oflag;
+
 geotiff::geotiff()
 {
+	call_once(oflag, [&]() { GDALRegister_GTiff(); });
+
 	itsLogger = logger("geotiff");
 }
 
-himan::file_information geotiff::ToFile(info<double>& anInfo)
+std::pair<HPWriteStatus, file_information> geotiff::ToFile(info<double>& anInfo)
 {
 	return ToFile<double>(anInfo);
 }
 
 template <typename T>
-file_information geotiff::ToFile(info<T>& anInfo)
+std::pair<HPWriteStatus, file_information> geotiff::ToFile(info<T>& anInfo)
 {
 	if (anInfo.Grid()->Class() == kIrregularGrid && anInfo.Grid()->Type() != kReducedGaussian)
 	{
-		itsLogger.Error("Unable to write irregular grid of type " + HPGridTypeToString.at(anInfo.Grid()->Type()) +
-		                " to geotiff");
+		itsLogger.Error(fmt::format("Unable to write irregular grid of type {} to geotiff",
+		                            HPGridTypeToString.at(anInfo.Grid()->Type())));
 		throw kInvalidWriteOptions;
 	}
 
-	itsLogger.Fatal("No support for writing geotiff data");
-	himan::Abort();
+	GDALDriver* driver = GetGDALDriverManager()->GetDriverByName("GTiff");
+
+	if (!driver)
+	{
+		itsLogger.Fatal("Unable to load GTiff driver from GDAL");
+		himan::Abort();
+	}
+
+	file_information finfo;
+	finfo.file_location = util::MakeFileName(anInfo, *itsWriteOptions.configuration);
+	finfo.file_type = kGeoTIFF;
+	finfo.storage_type = itsWriteOptions.configuration->WriteStorageType();
+
+	// We use Create() method as there is nothing to copy from
+	// (CreateCopy() being the alternative)
+
+	const regular_grid* g = dynamic_cast<regular_grid*>(anInfo.Grid().get());
+	const point fp = g->Projected(g->TopLeft());
+	const GDALDataType dtype = TypeToGDALType<T>();
+	const int ni = static_cast<int>(g->Ni());
+	const int nj = static_cast<int>(g->Nj());
+
+	// Enable compression
+	char** opts = NULL;
+	opts = CSLSetNameValue(opts, "COMPRESS", "DEFLATE");
+
+	GDALDataset* ds = driver->Create(finfo.file_location.c_str(), ni, nj, 1, dtype, opts);
+
+	double adfGeoTransform[6] = {fp.X(), g->Di(), 0, fp.Y(), 0, -1 * g->Dj()};
+
+	matrix<T> values = anInfo.Data();
+
+	if (g->ScanningMode() != kTopLeft)
+	{
+		util::Flip<T>(values);
+	}
+
+	ds->SetGeoTransform(adfGeoTransform);
+
+	OGRSpatialReference sp;
+
+	sp.importFromProj4(g->Proj4String().c_str());
+
+	const std::string geom = itsWriteOptions.configuration->TargetGeomName().empty()
+	                             ? anInfo.Producer().Name()
+	                             : itsWriteOptions.configuration->TargetGeomName();
+	sp.SetProjCS(geom.c_str());
+
+	// sp.dumpReadable();
+
+	ds->SetSpatialRef(&sp);
+
+	GDALRasterBand* poBand = ds->GetRasterBand(1);
+	poBand->SetNoDataValue(anInfo.Data().MissingValue());
+
+	if (poBand->RasterIO(GF_Write, 0, 0, ni, nj, values.ValuesAsPOD(), ni, nj, dtype, 0, 0) != OGRERR_NONE)
+	{
+		itsLogger.Error("File write failed");
+		himan::Abort();
+	}
+
+	GDALClose(ds);
+
+	itsLogger.Info(fmt::format("Wrote file '{}'", finfo.file_location));
+
+	return std::make_pair(HPWriteStatus::kFinished, finfo);
 }
 
-template file_information geotiff::ToFile<double>(info<double>&);
-template file_information geotiff::ToFile<float>(info<float>&);
-template file_information geotiff::ToFile<short>(info<short>&);
-template file_information geotiff::ToFile<unsigned char>(info<unsigned char>&);
+template std::pair<HPWriteStatus, file_information> geotiff::ToFile<double>(info<double>&);
+template std::pair<HPWriteStatus, file_information> geotiff::ToFile<float>(info<float>&);
+template std::pair<HPWriteStatus, file_information> geotiff::ToFile<short>(info<short>&);
+template std::pair<HPWriteStatus, file_information> geotiff::ToFile<unsigned char>(info<unsigned char>&);
 
 std::unique_ptr<grid> ReadAreaAndGrid(GDALDataset* poDataset)
 {
@@ -230,42 +335,6 @@ forecast_time ReadTime(const std::map<std::string, std::string>& meta, const for
 	return forecast_time(origintime, validtime);
 }
 
-template <typename T>
-GDALDataType TypeToGDALType();
-
-template <>
-GDALDataType TypeToGDALType<unsigned char>()
-{
-	return GDT_Byte;
-}
-
-template <>
-GDALDataType TypeToGDALType<short>()
-{
-	return GDT_Int16;
-}
-
-template <>
-GDALDataType TypeToGDALType<float>()
-{
-	return GDT_Float32;
-}
-
-template <>
-GDALDataType TypeToGDALType<double>()
-{
-	return GDT_Float64;
-}
-
-template <typename T>
-T ConvertTo(const std::string& str)
-{
-	std::istringstream ss(str);
-	T num;
-	ss >> num;
-	return num;
-}
-
 std::map<std::string, std::string> ParseMetadata(char** mdata, const producer& prod)
 {
 	std::map<std::string, std::string> ret;
@@ -363,6 +432,10 @@ void ReadData(GDALRasterBand* poBand, matrix<T>& mat, const std::map<std::string
 	{
 		mat.MissingValue(ConvertTo<T>(meta.at("missing_value")));
 	}
+	else
+	{
+		mat.MissingValue(static_cast<T>(poBand->GetNoDataValue(nullptr)));
+	}
 
 	ASSERT(poBand->GetXSize() == mat.SizeX());
 	ASSERT(poBand->GetYSize() == mat.SizeY());
@@ -375,8 +448,19 @@ void ReadData(GDALRasterBand* poBand, matrix<T>& mat, const std::map<std::string
 	{
 		throw std::runtime_error("Read failed");
 	}
+
+	const T offset = static_cast<T>(poBand->GetOffset(nullptr));
+	const T scale = static_cast<T>(poBand->GetScale(nullptr));
+
 	// Change missingvalue to our own
 	mat.MissingValue(MissingValue<T>());
+
+	// Apply scale and base
+	if (offset != 0 || scale != 1)
+	{
+		auto& data = mat.Values();
+		for_each(data.begin(), data.end(), [=](T& val) { val = static_cast<T>(val * scale + offset); });
+	}
 }
 
 std::vector<std::shared_ptr<info<double>>> geotiff::FromFile(const file_information& theInputFile,
@@ -393,7 +477,6 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 {
 	std::vector<std::shared_ptr<himan::info<T>>> infos;
 
-	GDALRegister_GTiff();
 	// GDALRegister_COG(); // not working, maybe due to using an oldish gdal version
 
 	std::unique_ptr<GDALDataset, std::function<void(GDALDataset*)>> poDataset(

@@ -527,7 +527,7 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 
 	desc.add_options()
 		("help,h", "print out help message")
-		("type,t", po::value(&outfileType), "output file type, one of: grib, grib2, csv, querydata")
+		("type,t", po::value(&outfileType), "output file type, one of: grib, grib2, csv, querydata, geotiff")
 		("compression,c", po::value(&outfileCompression), "output file compression, one of: gz, bzip2")
 		("version,v", "display version number")
 		("configuration-file,f", po::value(&confFile), "configuration file")
@@ -700,6 +700,10 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		else if (outfileType == "csv")
 		{
 			conf->OutputFileType(kCSV);
+		}
+		else if (outfileType == "geotiff")
+		{
+			conf->OutputFileType(kGeoTIFF);
 		}
 		else
 		{
