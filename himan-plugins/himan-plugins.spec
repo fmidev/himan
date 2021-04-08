@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 21.4.6
+Version: 21.4.8
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -137,6 +137,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Thu Apr  8 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.8-1.fmi
+- Initial support for writing geotiff
 * Tue Apr  6 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.6-1.fmi
 - short and unsigned char info types
 * Thu Apr  1 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.1-1.fmi

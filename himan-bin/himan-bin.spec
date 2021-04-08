@@ -3,7 +3,7 @@
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 21.3.2
+Version: 21.4.8
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -14,7 +14,7 @@ Requires: glibc
 Requires: libgcc
 Requires: libstdc++
 Requires: himan-lib >= 21.3.2
-Requires: himan-plugins
+Requires: himan-plugins >= 21.4.8
 Requires: zlib
 Requires: libfmidb
 Requires: xerces-c
@@ -64,6 +64,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Thu Apr  8 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.8-1.fmi
+- Initial support for writing geotiff
 * Tue Mar  2 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.3.2-1.fmi
 - Read configuration from stdin
 * Tue Feb 23 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.2.23-1.fmi
