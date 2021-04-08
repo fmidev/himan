@@ -87,7 +87,7 @@ for i=1, #EL500 do
   end
 
   --If no TOP from above, check also with MU values, for elev. conv. only from blw 3,5km
-  if ( IsMissing(res[i]) and (LFCmu[i]<LCL500[i]) and (LFCmu[i]>650)) then
+  if ( IsMissing(res[i]) and (TbaseMU[i]<Tbase[i]) and (LFCmu[i]>650)) then
     -- TCU
     if ((TbaseMU[i]-TtopMU[i]>TCUlimit) and ((NL[i]>0) or (NM[i]>0)) and (CINmu[i]>CINlimTCU)) then
       res[i] =  FlightLevel_(ELmu[i]*100)
