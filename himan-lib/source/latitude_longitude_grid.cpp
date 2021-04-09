@@ -211,7 +211,7 @@ point latitude_longitude_grid::LatLon(size_t locationIndex) const
 
 std::string latitude_longitude_grid::Proj4String() const
 {
-	return fmt::format("+proj=longlat +a={} +b={} +no_defs", itsEarthShape.A(), itsEarthShape.B());
+	return fmt::format("+proj=longlat {} +no_defs", itsEarthShape.Proj4String());
 }
 
 std::unique_ptr<OGRSpatialReference> latitude_longitude_grid::SpatialReference() const
@@ -449,9 +449,9 @@ std::string rotated_latitude_longitude_grid::Proj4String() const
 	// Tuurilla ne laivatkin seilaa
 
 	return fmt::format(
-	    "+proj=ob_tran +o_proj=longlat +lon_0={} +o_lon_p=0 +o_lat_p={} +a={} +b={} +to_meter=0.0174532925199 "
+	    "+proj=ob_tran +o_proj=longlat +lon_0={} +o_lon_p=0 +o_lat_p={} {} +to_meter=0.0174532925199 "
 	    "+no_defs",
-	    itsSouthPole.X(), (itsSouthPole.Y() * -1), itsEarthShape.A(), itsEarthShape.B());
+	    itsSouthPole.X(), (itsSouthPole.Y() * -1), itsEarthShape.Proj4String());
 }
 
 std::unique_ptr<OGRSpatialReference> rotated_latitude_longitude_grid::SpatialReference() const

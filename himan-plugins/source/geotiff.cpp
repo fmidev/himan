@@ -136,6 +136,14 @@ std::pair<HPWriteStatus, file_information> geotiff::ToFile(info<T>& anInfo)
 
 	sp.importFromProj4(g->Proj4String().c_str());
 
+	// If earth shape is WGS84, set datum also to WGS84, since AFAIK
+	// no other datum uses it as ellipsoid.
+
+	if (g->EarthShape().Name() == "WGS84")
+	{
+		sp.SetWellKnownGeogCS("WGS84");
+	}
+
 	const std::string geom = itsWriteOptions.configuration->TargetGeomName().empty()
 	                             ? anInfo.Producer().Name()
 	                             : itsWriteOptions.configuration->TargetGeomName();

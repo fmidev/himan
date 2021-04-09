@@ -1,6 +1,7 @@
 #pragma once
 #include "himan_common.h"
 #include "serialization.h"
+#include <fmt/format.h>
 #include <ostream>
 
 #ifndef EARTH_SHAPE_H
@@ -47,6 +48,7 @@ class earth_shape
 	T E2() const;
 
 	std::string Name() const;
+	std::string Proj4String() const;
 
 	std::ostream& Write(std::ostream& file) const;
 
@@ -144,6 +146,26 @@ template <typename T>
 std::string earth_shape<T>::Name() const
 {
 	return itsName;
+}
+
+template <typename T>
+std::string earth_shape<T>::Proj4String() const
+{
+	if (itsName == "GRS80" || itsName == "WGS84")
+	{
+		return fmt::format("+ellps={}", itsName);
+	}
+
+	if (IsValid<T>(itsA) && IsValid<T>(itsB))
+	{
+		if (itsA == itsB)
+		{
+			return fmt::format("+R={}", itsA);
+		}
+		return fmt::format("+a={} +b={}", itsA, itsB);
+	}
+
+	return "";
 }
 
 template <typename T>

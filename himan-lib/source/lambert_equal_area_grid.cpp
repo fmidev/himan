@@ -30,8 +30,8 @@ lambert_equal_area_grid::lambert_equal_area_grid(HPScanningMode theScanningMode,
 {
 	itsLogger = logger("lambert_equal_area_grid");
 
-	const std::string ref = fmt::format("+proj=laea +lat_0={} +lon_0={} +a={} +b={} +units=m +no_defs +wktext",
-	                                    theStandardParallel, theOrientation, earthShape.A(), earthShape.B());
+	const std::string ref = fmt::format("+proj=laea +lat_0={} +lon_0={} {} +units=m +no_defs +wktext",
+	                                    theStandardParallel, theOrientation, earthShape.Proj4String());
 
 	itsSpatialReference = std::unique_ptr<OGRSpatialReference>(new OGRSpatialReference());
 	itsSpatialReference->importFromProj4(ref.c_str());

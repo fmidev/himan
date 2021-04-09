@@ -390,7 +390,19 @@ earth_shape<double> regular_grid::EarthShape() const
 		himan::Abort();
 	}
 
-	return earth_shape<double>(A, B);
+	int epsg = itsSpatialReference->GetEPSGGeogCS();
+
+	std::string name;
+	if (A == B && A == 6371220)
+	{
+		name = "newbase";
+	}
+	else if (epsg == 4326)
+	{
+		name = "WGS84";
+	}
+
+	return earth_shape<double>(A, B, name);
 }
 
 ostream& regular_grid::Write(std::ostream& file) const

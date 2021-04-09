@@ -1238,7 +1238,11 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 
 	try
 	{
-		earth = earth_shape<double>(stod(geominfo["earth_semi_major"]), stod(geominfo["earth_semi_minor"]));
+		earth =
+		    earth_shape<double>(stod(geominfo["earth_semi_major"]), stod(geominfo["earth_semi_minor"]),
+		                        geominfo.count("earth_ellipsoid_name") == 1 && !geominfo["earth_ellipsoid_name"].empty()
+		                            ? geominfo["earth_ellipsoid_name"]
+		                            : "");
 	}
 	catch (const invalid_argument& e)
 	{
