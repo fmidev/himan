@@ -146,6 +146,10 @@ std::ostream& operator<<(std::ostream& file, const earth_shape<T>& ob)
 	return ob.Write(file);
 }
 
+const earth_shape<double> ELLIPS_NEWBASE(6371220);
+const earth_shape<double> ELLIPS_WGS84(6378137, 6356752.31424783);
+const earth_shape<double> ELLIPS_GRS80(6378137, 6356752.31414028);
+
 }  // namespace himan
 
 #endif /* EARTH_SHAPE_H */
