@@ -15,6 +15,8 @@ class earth_shape
 	earth_shape();
 	earth_shape(T r);  // sphere
 	earth_shape(T theA, T theB);
+	earth_shape(T theA, T theB, const std::string& theName);
+
 	~earth_shape() = default;
 	earth_shape(const earth_shape&) = default;
 
@@ -44,11 +46,14 @@ class earth_shape
 
 	T E2() const;
 
+	std::string Name() const;
+
 	std::ostream& Write(std::ostream& file) const;
 
    private:
-	T itsA;  // size of major axis in meters
-	T itsB;  // size of minor axis in meters
+	T itsA;               // size of major axis in meters
+	T itsB;               // size of minor axis in meters
+	std::string itsName;  // Name to describe "well-known" values
 
 #ifdef SERIALIZATION
 	friend class cereal::access;
@@ -56,23 +61,28 @@ class earth_shape
 	template <class Archive>
 	void serialize(Archive& ar)
 	{
-		ar(CEREAL_NVP(itsA), CEREAL_NVP(itsB));
+		ar(CEREAL_NVP(itsA), CEREAL_NVP(itsB), CEREAL_NCP(itsName));
 	}
 #endif
 };
 
 template <typename T>
-earth_shape<T>::earth_shape() : itsA(MissingValue<T>()), itsB(MissingValue<T>())
+earth_shape<T>::earth_shape() : itsA(MissingValue<T>()), itsB(MissingValue<T>()), itsName()
 {
 }
 
 template <typename T>
-earth_shape<T>::earth_shape(T r) : itsA(r), itsB(r)
+earth_shape<T>::earth_shape(T r) : itsA(r), itsB(r), itsName()
 {
 }
 
 template <typename T>
-earth_shape<T>::earth_shape(T theA, T theB) : itsA(theA), itsB(theB)
+earth_shape<T>::earth_shape(T theA, T theB) : itsA(theA), itsB(theB), itsName()
+{
+}
+
+template <typename T>
+earth_shape<T>::earth_shape(T theA, T theB, const std::string& theName) : itsA(theA), itsB(theB), itsName(theName)
 {
 }
 
@@ -131,12 +141,18 @@ T earth_shape<T>::E2() const
 }
 
 template <typename T>
+std::string earth_shape<T>::Name() const
+{
+	return itsName;
+}
+
+template <typename T>
 std::ostream& himan::earth_shape<T>::Write(std::ostream& file) const
 {
 	file << "<" << ClassName() << ">" << std::endl;
 	file << "__itsA__ " << std::fixed << itsA << std::endl;
 	file << "__itsB__ " << std::fixed << itsB << std::endl;
-
+	file << "__itsName__" << itsName << std::endl;
 	return file;
 }
 
@@ -146,9 +162,9 @@ std::ostream& operator<<(std::ostream& file, const earth_shape<T>& ob)
 	return ob.Write(file);
 }
 
-const earth_shape<double> ELLIPS_NEWBASE(6371220);
-const earth_shape<double> ELLIPS_WGS84(6378137, 6356752.31424783);
-const earth_shape<double> ELLIPS_GRS80(6378137, 6356752.31414028);
+const earth_shape<double> ELLIPS_NEWBASE(6371220, 6371220, "newbase");
+const earth_shape<double> ELLIPS_WGS84(6378137, 6356752.31424783, "WGS84");
+const earth_shape<double> ELLIPS_GRS80(6378137, 6356752.31414028, "GRS80");
 
 }  // namespace himan
 
