@@ -33,13 +33,12 @@ transverse_mercator_grid::transverse_mercator_grid(HPScanningMode scanningMode, 
 {
 	itsLogger = logger("transverse_mercator_grid");
 
-	std::stringstream ss;
-	ss << "+proj=tmerc +lat_0=" << standardParallel << " +lon_0=" << orientation << " +k_0=" << scale << std::fixed
-	   << " +x_0=" << falseEasting << " +y_0=" << falseNorthing << " +a=" << earthShape.A() << " +b=" << earthShape.B()
-	   << " +units=m +no_defs +wktext";
+	const std::string ref =
+	    fmt::format("+proj=tmerc +lat_0={} +lon_0={} +k_0={} +x_0={} +y_0={} {} +units=m +no_defs +wktext",
+	                standardParallel, orientation, scale, falseEasting, falseNorthing, earthShape.Proj4String());
 
 	itsSpatialReference = std::unique_ptr<OGRSpatialReference>(new OGRSpatialReference());
-	itsSpatialReference->importFromProj4(ss.str().c_str());
+	itsSpatialReference->importFromProj4(ref.c_str());
 
 #if GDAL_VERSION_MAJOR > 1
 	itsSpatialReference->SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);

@@ -20,14 +20,12 @@ lambert_conformal_grid::lambert_conformal_grid(HPScanningMode theScanningMode, c
 		himan::Abort();
 	}
 
-	std::stringstream ss;
-
-	ss << "+proj=lcc +lat_1=" << standardParallel1 << " +lat_2=" << standardParallel2 << " +lat_0=" << standardParallel1
-	   << " +lon_0=" << orientation << " +a=" << fixed << earthShape.A() << " +b=" << earthShape.B()
-	   << " +units=m +no_defs +wktext";
+	const std::string ref =
+	    fmt::format("+proj=lcc +lat_1={} +lat_2={} +lat_0={} +lon_0={} {} +units=m +no_defs +wktext", standardParallel1,
+	                standardParallel2, standardParallel1, orientation, earthShape.Proj4String());
 
 	itsSpatialReference = std::unique_ptr<OGRSpatialReference>(new OGRSpatialReference());
-	itsSpatialReference->importFromProj4(ss.str().c_str());
+	itsSpatialReference->importFromProj4(ref.c_str());
 
 #if GDAL_VERSION_MAJOR > 1
 	itsSpatialReference->SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);

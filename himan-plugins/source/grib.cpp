@@ -35,6 +35,35 @@ void UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restrict__ un
 static mutex singleGribMessageCounterMutex;
 static map<string, std::mutex> singleGribMessageCounterMap;
 
+earth_shape<double> DetermineEarthShapeForProducer(const producer& prod, const earth_shape<double>& defaultShape)
+{
+	// The curated list below is confirmed to be correct and different from for
+	// example grib information. This ellipsoid information refers to the value
+	// used when coordinates are derived for the output data (not for example
+	// what earth shape is used by the physics core)
+	//
+	// Using producer-level granularity should be enough for now, because even if
+	// a producer has multiple different projections/geoms (like ecmwf), they are
+	// all using the same reference ellipsoid (as far as we know). Of course a case
+	// might arise where data is projected to different ellipsoids by some producer,
+	// but we can deal with that when it happens.
+
+	switch (prod.Id())
+	{
+		case 4:    // MEPS
+		case 7:    // MNWC
+		case 10:   // MEPS_PREOP
+		case 11:   // CMEPS_PREOP
+		case 260:  // MEPSMTA
+		case 261:  // MEPS_PREOPMTA
+		case 265:  // CMEPS_PREOPMTA
+		case 270:  // MNWCMTA
+			return earth_shape<double>(6367470.);
+		default:
+			return defaultShape;
+	}
+}
+
 long DetermineProductDefinitionTemplateNumber(long agg, long proc, long ftype)
 {
 	// Determine which code table to use to represent our data
@@ -596,49 +625,68 @@ void WriteAreaAndGrid(NFmiGribMessage& message, const shared_ptr<himan::grid>& g
 			himan::Abort();
 	}
 
-#if 0
-	// Earth shape is not set yet, as it will change many of the test results (metadata changes)
-	// and we don't want to do that until we have set the *correct* radius for those producers
-	// that we have it for. Remember that at this point we force all producers to use radius
-	// found from newbase.
-
-	// Set earth shape
-
-	const double a = grid->EarthShape().A(), b = grid->EarthShape().B();
-
-	if (a == b)
+	if (message.Edition() == 2)
 	{
-		// sphere
-		if (edition == 1)
+		// Set earth shape correctly to grib2 metadata
+		//
+		// Do not bother to do this for grib1 as it does not have
+		// correct keys to describe but two different spheres; if
+		// writing grib1 just go with the default value 6367470 m
+		//
+		// The default value for writing gribs is also 6367470 m, whereas
+		// when reading gribs it is 6371220 m. This is to maintain
+		// backwards compatibility; with time we hope to have the
+		// correct values in place in code and database.
+
+		const auto earth = DetermineEarthShapeForProducer(prod, earth_shape<double>(6367470));
+		const string name = earth.Name();
+
+		if (name.empty())
 		{
-			message.SetLongKey("earthIsOblate", 0);
-
-			long flag = message.ResolutionAndComponentFlags();
-
-			flag &= ~(1UL << 6);
-
-			message.ResolutionAndComponentFlags(flag);
-		}
-		else
-		{
-			if (a == 6367470)
+			if (earth.A() == earth.B())
 			{
-				message.SetLongKey("shapeOfTheEarth", 0);
+				if (earth.A() == 6367470)
+				{
+					message.SetLongKey("shapeOfTheEarth", 0);
+				}
+				else
+				{
+					message.SetLongKey("scaleFactorOfRadiusOfSphericalEarth", 1);
+					message.SetLongKey("scaledValueOfRadiusOfSphericalEarth", static_cast<long>(earth.A()));
+				}
 			}
 			else
 			{
+				message.SetLongKey("shapeOfTheEarth", 7);
+				message.SetLongKey("scaleFactorOfEarthMajorAxis", 1);
+				message.SetLongKey("scaledValueOfEarthMajorAxis", static_cast<long>(earth.A()));
+				message.SetLongKey("scaleFactorOfEarthMinorAxis", 1);
+				message.SetLongKey("scaledValueOfEarthMinorAxis", static_cast<long>(earth.B()));
+			}
+		}
+		else
+		{
+			if (name == "newbase")
+			{
 				message.SetLongKey("shapeOfTheEarth", 1);
 				message.SetLongKey("scaleFactorOfRadiusOfSphericalEarth", 1);
-				message.SetLongKey("scaledValueOfRadiusOfSphericalEarth", a);
+				message.SetLongKey("scaledValueOfRadiusOfSphericalEarth", static_cast<long>(earth.A()));
+			}
+			else if (name == "WGS84")
+			{
+				message.SetLongKey("shapeOfTheEarth", 5);
+			}
+			else if (name == "GRS80")
+			{
+				message.SetLongKey("shapeOfTheEarth", 4);
+			}
+			else
+			{
+				logr.Warning(fmt::format("Don't know how to write earth shape '{}' to grib", name));
 			}
 		}
 	}
-	else
-	{
-		itsLogger.Fatal("A spheroid, really?");
-		himan::Abort();
-	}
-#endif
+
 	message.Centre(prod.Centre() == kHPMissingInt ? 86 : prod.Centre());
 	message.Process(prod.Process() == kHPMissingInt ? 255 : prod.Process());
 
@@ -1619,6 +1667,10 @@ template std::pair<himan::HPWriteStatus, himan::file_information> grib::ToFile<u
 
 himan::earth_shape<double> ReadEarthShape(const NFmiGribMessage& msg)
 {
+	// cannot trust this information too much :-(
+	// it is still kept here for now to maintain backwards compatibility
+	// with the data we produce currently
+
 	double a = himan::MissingDouble(), b = himan::MissingDouble();
 	if (msg.Edition() == 1)
 	{
@@ -1739,7 +1791,7 @@ himan::earth_shape<double> ReadEarthShape(const NFmiGribMessage& msg)
 	return himan::earth_shape<double>(a, b);
 }
 
-unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message)
+unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message, const producer& prod)
 {
 	bool iNegative = message.IScansNegatively();
 	bool jPositive = message.JScansPositively();
@@ -1782,6 +1834,9 @@ unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message)
 
 	unique_ptr<grid> newGrid;
 
+	auto earth = ReadEarthShape(message);
+	earth = DetermineEarthShapeForProducer(prod, earth);
+
 	switch (message.NormalizedGridType())
 	{
 		case 0:
@@ -1794,7 +1849,7 @@ unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message)
 			    static_cast<size_t>(message.SizeY()),
 			    message.iDirectionIncrement(),
 			    message.jDirectionIncrement(),
-			    ReadEarthShape(message)
+			    earth
 			));
 			// clang-format on
 			break;
@@ -1812,7 +1867,7 @@ unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message)
 			    message.GridOrientation(),
 			    static_cast<double>(message.GetDoubleKey("Latin1InDegrees")),
 			    static_cast<double>(message.GetDoubleKey("Latin2InDegrees")),
-			    ReadEarthShape(message),
+			    earth,
 			    false
 			));
 			// clang-format off
@@ -1828,7 +1883,7 @@ unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message)
 
 				gg->N(static_cast<int>(message.GetLongKey("N")));
 				gg->NumberOfPointsAlongParallels(message.PL());
-				gg->EarthShape(ReadEarthShape(message));
+				gg->EarthShape(earth);
 
 				break;
 			}
@@ -1846,7 +1901,7 @@ unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message)
 			    message.XLengthInMeters(),
 			    message.YLengthInMeters(),
 			    message.GridOrientation(),
-			    ReadEarthShape(message),
+			    earth,
 			    false
 			));
 			// clang-format off
@@ -1863,7 +1918,7 @@ unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message)
 			    static_cast<size_t>(message.SizeY()),
 			    message.iDirectionIncrement(),
 			    message.jDirectionIncrement(),
-			    ReadEarthShape(message),
+			    earth,
 			    point(message.SouthPoleX(), message.SouthPoleY())
 			));
 			// clang-format on
@@ -2698,7 +2753,7 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 	newInfo->template Set<level>({l});
 	newInfo->template Set<forecast_type>({ty});
 
-	unique_ptr<grid> newGrid = ReadAreaAndGrid(message);
+	unique_ptr<grid> newGrid = ReadAreaAndGrid(message, prod);
 
 	ASSERT(newGrid);
 

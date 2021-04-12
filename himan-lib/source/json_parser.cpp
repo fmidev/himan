@@ -891,7 +891,7 @@ unique_ptr<grid> ParseAreaAndGridFromDatabase(configuration& conf, const boost::
 	}
 	catch (exception& e)
 	{
-		itsLogger.Fatal(string("Error parsing area information: ") + e.what());
+		itsLogger.Fatal(string("Error parsing target area information found from database: ") + e.what());
 		himan::Abort();
 	}
 

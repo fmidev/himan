@@ -18,14 +18,11 @@ stereographic_grid::stereographic_grid(HPScanningMode theScanningMode, const poi
 		himan::Abort();
 	}
 
-	std::stringstream ss;
-
-	ss << "+proj=stere +lat_0=90 +lat_ts=60"
-	   << " +lon_0=" << theOrientation << " +k=1 +units=m"
-	   << " +a=" << fixed << earthShape.A() << " +b=" << earthShape.B() << " +wktext +no_defs";
+	const std::string ref = fmt::format("+proj=stere +lat_0=90 +lat_ts=60 +lon_0={} +k=1 +units=m {} +wktext +no_defs",
+	                                    theOrientation, earthShape.Proj4String());
 
 	itsSpatialReference = std::unique_ptr<OGRSpatialReference>(new OGRSpatialReference());
-	itsSpatialReference->importFromProj4(ss.str().c_str());
+	itsSpatialReference->importFromProj4(ref.c_str());
 
 #if GDAL_VERSION_MAJOR > 1
 	itsSpatialReference->SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
