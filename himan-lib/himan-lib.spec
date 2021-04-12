@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 21.4.6
+Version: 21.4.12
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -82,6 +82,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/*
 
 %changelog
+* Mon Apr 12 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.12-1.fmi
+- wgs84 support for data structures
 * Tue Apr  6 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.6-1.fmi
 - short and unsigned char info types
 - read earth shape information from radon
