@@ -90,6 +90,8 @@ class radon : public auxiliary_plugin
 
 	void PoolMaxWorkers(int maxWorkers);
 
+	std::string GetVersion() const;
+
    private:
 	/**
 	 * @brief Connect to database
