@@ -166,7 +166,12 @@ cflags_difficult.append('-Wctor-dtor-privacy')
 
 # Default flags (common for release/debug)
 
-env.Append(CCFLAGS = '-std=c++14')
+cpp_standard = 'c++11'
+
+if env['OS_VERSION'] >= 8:
+    cpp_standard = 'c++14'
+
+env.Append(CCFLAGS = '-std=' + cpp_standard)
 env.Append(CCFLAGS = '-fPIC')
 env.Append(CCFLAGS = cflags_normal)
 env.Append(CCFLAGS = cflags_extra)
@@ -207,7 +212,7 @@ env.Append(NVCCFLAGS = ['-gencode=arch=compute_70,code=sm_70'])
 #	env.Append(NVCCFLAGS = ['-std=c++14'])
 
 #else:
-env.AppendUnique(NVCCFLAGS = ['-std=c++14'])
+env.AppendUnique(NVCCFLAGS = ['-std=' + cpp_standard])
 env.AppendUnique(NVCCFLAGS = ('-isystem', '/usr/include/boost169'))
 env.AppendUnique(NVCCFLAGS = ('-isystem', '/usr/gdal32/include'))
 
