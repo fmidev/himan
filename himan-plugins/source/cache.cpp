@@ -73,6 +73,8 @@ void cache::Insert(shared_ptr<info<T>> anInfo, bool pin)
 
 template void cache::Insert<double>(shared_ptr<info<double>>, bool);
 template void cache::Insert<float>(shared_ptr<info<float>>, bool);
+template void cache::Insert<short>(shared_ptr<info<short>>, bool);
+template void cache::Insert<unsigned char>(shared_ptr<info<unsigned char>>, bool);
 
 vector<shared_ptr<himan::info<double>>> cache::GetInfo(search_options& options, bool strict)
 {
@@ -89,6 +91,8 @@ vector<shared_ptr<himan::info<T>>> cache::GetInfo(search_options& options, bool 
 
 template vector<shared_ptr<himan::info<double>>> cache::GetInfo<double>(search_options&, bool);
 template vector<shared_ptr<himan::info<float>>> cache::GetInfo<float>(search_options&, bool);
+template vector<shared_ptr<himan::info<short>>> cache::GetInfo<short>(search_options&, bool);
+template vector<shared_ptr<himan::info<unsigned char>>> cache::GetInfo<unsigned char>(search_options&, bool);
 
 template <typename T>
 vector<shared_ptr<himan::info<T>>> cache::GetInfo(const string& uniqueName, bool strict)
@@ -108,6 +112,8 @@ vector<shared_ptr<himan::info<T>>> cache::GetInfo(const string& uniqueName, bool
 
 template vector<shared_ptr<himan::info<double>>> cache::GetInfo<double>(const string&, bool);
 template vector<shared_ptr<himan::info<float>>> cache::GetInfo<float>(const string&, bool);
+template vector<shared_ptr<himan::info<short>>> cache::GetInfo<short>(const string&, bool);
+template vector<shared_ptr<himan::info<unsigned char>>> cache::GetInfo<unsigned char>(const string&, bool);
 
 void cache::Clean()
 {
@@ -142,6 +148,8 @@ void cache::Replace(shared_ptr<info<T>> anInfo, bool pin)
 
 template void cache::Replace<double>(shared_ptr<info<double>>, bool);
 template void cache::Replace<float>(shared_ptr<info<float>>, bool);
+template void cache::Replace<short>(shared_ptr<info<short>>, bool);
+template void cache::Replace<unsigned char>(shared_ptr<info<unsigned char>>, bool);
 
 cache_pool* cache_pool::itsInstance = NULL;
 
@@ -194,6 +202,8 @@ void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info<T>> anI
 
 template void cache_pool::Insert<double>(const string&, shared_ptr<himan::info<double>>, bool);
 template void cache_pool::Insert<float>(const string&, shared_ptr<himan::info<float>>, bool);
+template void cache_pool::Insert<short>(const string&, shared_ptr<himan::info<short>>, bool);
+template void cache_pool::Insert<unsigned char>(const string&, shared_ptr<himan::info<unsigned char>>, bool);
 
 template <typename T>
 void cache_pool::Replace(const string& uniqueName, shared_ptr<himan::info<T>> anInfo, bool pin)
@@ -223,6 +233,8 @@ void cache_pool::Replace(const string& uniqueName, shared_ptr<himan::info<T>> an
 
 template void cache_pool::Replace<double>(const string&, shared_ptr<himan::info<double>>, bool);
 template void cache_pool::Replace<float>(const string&, shared_ptr<himan::info<float>>, bool);
+template void cache_pool::Replace<short>(const string&, shared_ptr<himan::info<short>>, bool);
+template void cache_pool::Replace<unsigned char>(const string&, shared_ptr<himan::info<unsigned char>>, bool);
 
 void cache_pool::UpdateTime(const std::string& uniqueName)
 {
@@ -275,6 +287,14 @@ struct cache_visitor : public boost::static_visitor<std::shared_ptr<himan::info<
 	{
 		return make_shared<himan::info<T>>(*fnd);
 	}
+	shared_ptr<himan::info<T>> operator()(shared_ptr<himan::info<short>>& fnd) const
+	{
+		return make_shared<himan::info<T>>(*fnd);
+	}
+	shared_ptr<himan::info<T>> operator()(shared_ptr<himan::info<unsigned char>>& fnd) const
+	{
+		return make_shared<himan::info<T>>(*fnd);
+	}
 };
 }  // namespace
 
@@ -319,6 +339,8 @@ shared_ptr<himan::info<T>> cache_pool::GetInfo(const string& uniqueName, bool st
 
 template shared_ptr<himan::info<double>> cache_pool::GetInfo<double>(const string&, bool);
 template shared_ptr<himan::info<float>> cache_pool::GetInfo<float>(const string&, bool);
+template shared_ptr<himan::info<short>> cache_pool::GetInfo<short>(const string&, bool);
+template shared_ptr<himan::info<unsigned char>> cache_pool::GetInfo<unsigned char>(const string&, bool);
 
 size_t cache_pool::Size() const
 {

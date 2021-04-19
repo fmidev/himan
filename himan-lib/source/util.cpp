@@ -455,6 +455,8 @@ string util::MakeFileName(const info<T>& info, const plugin_configuration& conf)
 
 template string util::MakeFileName<double>(const info<double>&, const plugin_configuration&);
 template string util::MakeFileName<float>(const info<float>&, const plugin_configuration&);
+template string util::MakeFileName<short>(const info<short>&, const plugin_configuration&);
+template string util::MakeFileName<unsigned char>(const info<unsigned char>&, const plugin_configuration&);
 
 himan::HPFileType util::FileType(const string& theFile)
 {
@@ -721,6 +723,7 @@ template pair<matrix<double>, matrix<double>> util::CentralDifference<double>(ma
                                                                               vector<double>& dy, bool jPositive);
 template pair<matrix<float>, matrix<float>> util::CentralDifference<float>(matrix<float>& A, vector<float>& dx,
                                                                            vector<float>& dy, bool jPositive);
+
 template <typename T>
 T util::LatitudeLength(T phi)
 {
@@ -791,14 +794,14 @@ void util::DumpVector(const vector<T>& vec, const string& name)
 		min = (val < min) ? val : min;
 		max = (val > max) ? val : max;
 		count++;
-		sum += val;
+		sum = static_cast<T>(sum + val);
 	}
 
 	T mean = numeric_limits<T>::quiet_NaN();
 
 	if (count > 0)
 	{
-		mean = sum / static_cast<T>(count);
+		mean = static_cast<T>(sum / static_cast<T>(count));
 	}
 
 	if (!name.empty())
@@ -813,18 +816,18 @@ void util::DumpVector(const vector<T>& vec, const string& name)
 	{
 		long binn = (count < 10) ? count : 10;
 
-		T binw = (max - min) / static_cast<T>(binn);
+		T binw = static_cast<T>((max - min) / static_cast<T>(binn));
 
 		T binmin = min;
-		T binmax = binmin + binw;
+		T binmax = static_cast<T>(binmin + binw);
 
 		cout << "distribution (bins=" << binn << "):" << endl;
 
 		for (int i = 1; i <= binn; i++)
 		{
-			if (i == binn)
-				binmax += 0.001f;
-
+			// if (i == binn)
+			//	binmax += 0.001f;
+			//
 			count = 0;
 
 			for (const T& val : vec)
@@ -838,19 +841,21 @@ void util::DumpVector(const vector<T>& vec, const string& name)
 				}
 			}
 
-			if (i == binn)
-				binmax -= 0.001f;
+			// if (i == binn)
+			//	binmax -= 0.001f;
 
 			cout << binmin << ":" << binmax << " " << count << std::endl;
 
-			binmin += binw;
-			binmax += binw;
+			binmin = static_cast<T>(binmin + binw);
+			binmax = static_cast<T>(binmax + binw);
 		}
 	}
 }
 
 template void util::DumpVector<double>(const vector<double>&, const string&);
 template void util::DumpVector<float>(const vector<float>&, const string&);
+template void util::DumpVector<short>(const vector<short>&, const string&);
+template void util::DumpVector<unsigned char>(const vector<unsigned char>&, const string&);
 
 string util::GetEnv(const string& key)
 {
@@ -1076,6 +1081,8 @@ shared_ptr<info<T>> util::CSVToInfo(const vector<string>& csv)
 
 template shared_ptr<info<double>> util::CSVToInfo<double>(const vector<string>&);
 template shared_ptr<info<float>> util::CSVToInfo<float>(const vector<string>&);
+template shared_ptr<info<short>> util::CSVToInfo<short>(const vector<string>&);
+template shared_ptr<info<unsigned char>> util::CSVToInfo<unsigned char>(const vector<string>&);
 
 double util::MissingPercent(const himan::info<double>& info)
 {
@@ -1159,8 +1166,17 @@ void util::Unpack(vector<shared_ptr<info<T>>> infos, bool addToCache)
 		ASSERT(arr);
 
 		const auto pck = std::dynamic_pointer_cast<simple_packed>(pdata);
-		NFmiGribPacking::simple_packing::Unpack<T>(arr, pck->data, pck->bitmap, pck->unpackedLength, pck->packedLength,
-		                                           pck->coefficients, stream);
+
+		if (std::is_same<T, double>::value || std::is_same<T, float>::value)
+		{
+			NFmiGribPacking::simple_packing::Unpack<T>(arr, pck->data, pck->bitmap, pck->unpackedLength,
+			                                           pck->packedLength, pck->coefficients, stream);
+		}
+		else
+		{
+			fmt::print("cuda unpacking for other data types than double and float not implemented yet\n");
+			himan::Abort();
+		}
 
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 		CUDA_CHECK(cudaHostUnregister(arr));
@@ -1177,6 +1193,8 @@ void util::Unpack(vector<shared_ptr<info<T>>> infos, bool addToCache)
 
 template void util::Unpack<double>(vector<shared_ptr<info<double>>>, bool);
 template void util::Unpack<float>(vector<shared_ptr<info<float>>>, bool);
+template void util::Unpack<short>(vector<shared_ptr<info<short>>>, bool);
+template void util::Unpack<unsigned char>(vector<shared_ptr<info<unsigned char>>>, bool);
 
 #endif
 
@@ -1185,21 +1203,19 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 	using himan::kBottomLeft;
 	using himan::kTopLeft;
 
+	logger logr("util");
+
 	auto r = GET_PLUGIN(radon);
 
 	auto geominfo = r->RadonDB().GetGeometryDefinition(geom_name);
 
 	if (geominfo.empty())
 	{
-		throw invalid_argument(geom_name + " not found from database.");
+		logr.Fatal(fmt::format("Geometry '{}' not found from database", geom_name));
+		himan::Abort();
 	}
 
 	const auto scmode = HPScanningModeFromString.at(geominfo["scanning_mode"]);
-
-	// Until shape of earth is added to radon, hard code default value for all geoms
-	// in radon to sphere with radius 6371220, which is the one used in newbase
-	// (in most cases that's not *not* the one used by the weather model).
-	// Exception to this lambert conformal conic where we use radius 6367470.
 
 	int gridid;
 
@@ -1207,10 +1223,33 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 	{
 		gridid = stoi(geominfo["grid_type_id"]);
 	}
-	catch (const exception& e)
+	catch (const invalid_argument& e)
 	{
-		throw invalid_argument(fmt::format("{} is not an integer", geominfo["grid_type_id"]));
+		logr.Fatal(fmt::format("{} is not an integer", geominfo["grid_type_id"]));
+		himan::Abort();
 	}
+
+	// Until shape of earth is added to radon, hard code default value for all geoms
+	// in radon to sphere with radius 6371220, which is the one used in newbase
+	// (in most cases that's not *not* the one used by the weather model).
+	// Exception to this lambert conformal conic where we use radius 6367470.
+
+	auto earth = (gridid == 5) ? earth_shape<double>(6367470.) : earth_shape<double>(6371220.);
+
+	try
+	{
+		earth =
+		    earth_shape<double>(stod(geominfo["earth_semi_major"]), stod(geominfo["earth_semi_minor"]),
+		                        geominfo.count("earth_ellipsoid_name") == 1 && !geominfo["earth_ellipsoid_name"].empty()
+		                            ? geominfo["earth_ellipsoid_name"]
+		                            : "");
+	}
+	catch (const invalid_argument& e)
+	{
+	}
+
+	// TODO: in the future when proj4 string information has more coverage in radon,
+	// we can just create the area directly with that without the switch below
 
 	switch (gridid)
 	{
@@ -1223,7 +1262,7 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    stol(geominfo["row_cnt"]),
 		    stod(geominfo["pas_longitude"]),
 		    stod(geominfo["pas_latitude"]),
-		    earth_shape<double>(6371220.)
+		    earth
 		));
 			// clang-format on
 
@@ -1236,7 +1275,7 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    stol(geominfo["row_cnt"]),
 		    stod(geominfo["pas_longitude"]),
 		    stod(geominfo["pas_latitude"]),
-		    earth_shape<double>(6371220.),
+		    earth,
 		    point(stod(geominfo["geom_parm_2"]), stod(geominfo["geom_parm_1"])), true)
 		);
 			// clang-format on
@@ -1251,7 +1290,7 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    stod(geominfo["pas_longitude"]),
 		    stod(geominfo["pas_latitude"]),
 		    stod(geominfo["geom_parm_1"]),
-		    earth_shape<double>(6371220.),
+		    earth,
 		    false
 		));
 			// clang-format on
@@ -1259,7 +1298,7 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		case 6:
 		{
 			auto g = unique_ptr<reduced_gaussian_grid>(new reduced_gaussian_grid);
-			g->EarthShape(earth_shape<double>(6371220.));
+			g->EarthShape(earth);
 
 			reduced_gaussian_grid* const gg = dynamic_cast<reduced_gaussian_grid*>(g.get());
 
@@ -1290,7 +1329,7 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    stod(geominfo["orientation"]),
 		    stod(geominfo["latin1"]),
 		    (geominfo["latin2"].empty() ? stod(geominfo["latin1"]) : stod(geominfo["latin2"])),
-		    earth_shape<double>(6367470.),
+		    earth,
 		    false
 		));
 			// clang-format on
@@ -1306,7 +1345,7 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    stod(geominfo["dj"]),
 		    stod(geominfo["orientation"]),
 		    stod(geominfo["latin"]),
-		    earth_shape<double>(6371220.),
+		    earth,
 		    false
 		));
 			// clang-format on
@@ -1325,13 +1364,14 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    stod(geominfo["scale"]),
 		    0, // TODO: false easting, this value might not be correct
 		    0, // TODO: false northing, this value might not be correct
-		    earth_shape<double>(6371220.),
+		    earth,
 		    false
 		));
 			// clang-format on
 
 		default:
-			throw invalid_argument("Invalid grid type id for geometry " + geom_name);
+			logr.Fatal(fmt::format("Invalid grid type id '{}' for geometry '{}'", gridid, geom_name));
+			himan::Abort();
 	}
 }
 
@@ -1357,6 +1397,8 @@ void util::Flip(matrix<T>& mat)
 
 template void util::Flip<double>(matrix<double>&);
 template void util::Flip<float>(matrix<float>&);
+template void util::Flip<short>(matrix<short>&);
+template void util::Flip<unsigned char>(matrix<unsigned char>&);
 
 string util::UniqueName(const plugin::search_options& options)
 {
@@ -1395,6 +1437,8 @@ string util::UniqueName(const info<T>& info)
 
 template string util::UniqueName(const info<double>&);
 template string util::UniqueName(const info<float>&);
+template string util::UniqueName(const info<short>&);
+template string util::UniqueName(const info<unsigned char>&);
 
 aggregation util::GetAggregationFromParamName(const std::string& name, const forecast_time& ftime)
 {

@@ -10,7 +10,7 @@ Himan is a weather parameter post processing tool.
 * Written in C++11
 * Partial support for GPU's through Cuda
 * Actively developed and supported by the Finnish Meteorological Institute
-* yum repository available for RHEL7
+* yum repository available for RHEL7 and RHEL8
 * Licensed under MIT license
 
 # Parameter list
@@ -45,10 +45,10 @@ Himan is able to produce the following parameters, given required source data:
 * density of dry air
 * liquid and solid precipitation from mixing ratios
 * absolute humidity
-* sounding indices
-  * CAPE
-  * CIN
-  * LPL, LCL, LFC, EL height and temperature
+* cape and cin & lpl lcl, lfc, el height and temperature
+  * surface based
+  * lowest 500m
+  * most unstable
 * weather symbol (two different versions)
 * monin-obukhov length
 * wind gust
@@ -81,10 +81,13 @@ Himan is able to produce the following parameters, given required source data:
 * weather number
 * low visibility procedures probability
 * snow drift
-* frost
+* frost probability
 * tropopause height
 * nearby weather (symbol)
 * cloud top
+* surface roughness
+* potential evaporation
+* precipitation phase
 
 # Supported file formats
 
@@ -92,7 +95,7 @@ Himan supports a number of different input/output file formats:
 
 * grib version 1 and 2
 * querydata (FMI internal dataformat)
-* geotiff (read-only)
+* geotiff
 * csv for point data
 
 Data can be read from and written to either traditional POSIX compatible file system or Amazon S3 and any compatible system.

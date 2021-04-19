@@ -111,6 +111,8 @@ pair<himan::HPWriteStatus, himan::file_information> csv::ToFile(info<T>& theInfo
 
 template pair<himan::HPWriteStatus, himan::file_information> csv::ToFile<double>(info<double>&);
 template pair<himan::HPWriteStatus, himan::file_information> csv::ToFile<float>(info<float>&);
+template pair<himan::HPWriteStatus, himan::file_information> csv::ToFile<short>(info<short>&);
+template pair<himan::HPWriteStatus, himan::file_information> csv::ToFile<unsigned char>(info<unsigned char>&);
 
 shared_ptr<himan::info<double>> csv::FromFile(const string& inputFile, const search_options& options,
                                               bool readIfNotMatching) const
@@ -282,3 +284,6 @@ shared_ptr<himan::info<T>> csv::FromFile(const string& inputFile, const search_o
 
 template shared_ptr<himan::info<double>> csv::FromFile<double>(const string&, const search_options&, bool) const;
 template shared_ptr<himan::info<float>> csv::FromFile<float>(const string&, const search_options&, bool) const;
+template shared_ptr<himan::info<short>> csv::FromFile<short>(const string&, const search_options&, bool) const;
+template shared_ptr<himan::info<unsigned char>> csv::FromFile<unsigned char>(const string&, const search_options&,
+                                                                             bool) const;

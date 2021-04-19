@@ -43,6 +43,8 @@ namespace himan
 inline CUDA_HOST CUDA_DEVICE double MissingDouble() {return nan("0x7fffffff");}
 inline CUDA_HOST CUDA_DEVICE float MissingFloat() {return nanf("0x7fffffff");} // Cuda version of nanf(char*) has a bug and does not respect the argument given.
 										// Bug is fixed in a later Cuda release (> 9.1)
+inline CUDA_HOST CUDA_DEVICE short MissingShort() { return static_cast<short> (-32768); }
+inline CUDA_HOST CUDA_DEVICE unsigned char MissingUnsignedChar() { return static_cast<unsigned char> (255); }
 
 const int kHPMissingInt = 999999;
 const double kHPMissingValue = -999.;
@@ -67,15 +69,27 @@ inline CUDA_HOST CUDA_DEVICE bool IsMissingFloat(const float& value)
 
 inline CUDA_HOST CUDA_DEVICE bool IsMissing(double value) {return IsMissingDouble(value);}
 inline CUDA_HOST CUDA_DEVICE bool IsMissing(float value) {return IsMissingFloat(value);}
+inline CUDA_HOST CUDA_DEVICE bool IsMissing(short value) {return value == MissingShort(); }
+inline CUDA_HOST CUDA_DEVICE bool IsMissing(unsigned char value) {return value == MissingUnsignedChar(); }
 
 inline CUDA_HOST CUDA_DEVICE bool IsValid(double value) { return !IsMissingDouble(value);}
 inline CUDA_HOST CUDA_DEVICE bool IsValid(float value) {return !IsMissingFloat(value);}
+inline CUDA_HOST CUDA_DEVICE bool IsValid(short value) {return !IsMissing(value);}
+inline CUDA_HOST CUDA_DEVICE bool IsValid(unsigned char value) {return !IsMissing(value);}
 
 // templatized MissingValue() for double & float is useful in template functions
 // where "typename" is float or double
 
 template <typename T>
 CUDA_HOST CUDA_DEVICE T MissingValue() { return std::numeric_limits<T>::max(); }
+
+template <>
+CUDA_HOST CUDA_DEVICE
+inline unsigned char MissingValue() { return MissingUnsignedChar(); }
+
+template <>
+CUDA_HOST CUDA_DEVICE
+inline short MissingValue() { return MissingShort(); }
 
 template <>
 CUDA_HOST CUDA_DEVICE

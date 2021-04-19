@@ -9,6 +9,7 @@
 
 #include "cache.h"
 #include "csv.h"
+#include "geotiff.h"
 #include "grib.h"
 #include "querydata.h"
 #include "radon.h"
@@ -84,6 +85,14 @@ std::pair<himan::HPWriteStatus, himan::file_information> writer::CreateFile(
 		case kCSV:
 		{
 			auto theWriter = GET_PLUGIN(csv);
+			theWriter->WriteOptions(wo);
+
+			return theWriter->ToFile<T>(theInfo);
+		}
+
+		case kGeoTIFF:
+		{
+			auto theWriter = GET_PLUGIN(geotiff);
 			theWriter->WriteOptions(wo);
 
 			return theWriter->ToFile<T>(theInfo);
