@@ -11,15 +11,15 @@ import sys
 NOCUDA = env['NOCUDA']
 
 if not NOCUDA:
-	cuda_toolkit_path = '/usr/local/cuda'
+    cuda_toolkit_path = '/usr/local/cuda'
 
-	if os.environ.get('CUDA_TOOLKIT_PATH') is not None:
-        	cuda_toolkit_path = os.environ['CUDA_TOOLKIT_PATH']
+    if os.environ.get('CUDA_TOOLKIT_PATH') is not None:
+        cuda_toolkit_path = os.environ['CUDA_TOOLKIT_PATH']
 
 have_cuda = False
 
 if not NOCUDA and os.path.isfile(cuda_toolkit_path + '/lib64/libcudart.so'):
-	have_cuda = True
+    have_cuda = True
 
 # List all auxiliary plugins
 
@@ -37,55 +37,55 @@ compiled_plugins = ['icing', 'split_sum', 'seaicing', 'hybrid_pressure', 'hybrid
 cuda_plugins = ['dewpoint', 'tpot', 'windvector', 'vvms', 'relative_humidity', 'transformer', 'stability', 'cape', 'unstagger', 'turbulence']
 
 if have_cuda:
-	env.Tool('cuda')
+    env.Tool('cuda')
 
 else:
-	compiled_plugins.extend(cuda_plugins)
+    compiled_plugins.extend(cuda_plugins)
 
 for p in auxiliary_plugins:
 
-	file = 'source/' + p + '.cpp'
-	env.SharedLibrary(target = p, source = [file])
+    file = 'source/' + p + '.cpp'
+    env.SharedLibrary(target = p, source = [file])
 
 for p in compiled_plugins:
 
-	file = 'source/' + p + '.cpp'
-	base = 'source/compiled_plugin_base.cpp'
+    file = 'source/' + p + '.cpp'
+    base = 'source/compiled_plugin_base.cpp'
 
-	files = [file, base]
+    files = [file, base]
 
-	env.SharedLibrary(target = p, source = files)
+    env.SharedLibrary(target = p, source = files)
 
 if have_cuda:
-	for p in cuda_plugins:
-		objects = []
+    for p in cuda_plugins:
+        objects = []
 
-		# cpp base class
-		base = 'source/compiled_plugin_base.cpp'
-		obj='obj/'+ base.replace(".cpp","")
-		objects += env.SharedObject(obj, base)
+        # cpp base class
+        base = 'source/compiled_plugin_base.cpp'
+        obj='obj/'+ base.replace(".cpp","")
+        objects += env.SharedObject(obj, base)
 
-		# cuda helper class
-		cubase = 'source/cuda_plugin_helper.cu'
-		cuobj='obj/'+ cubase.replace(".cu","")
-		objects += env.SharedObject(cuobj, cubase)
+        # cuda helper class
+        cubase = 'source/cuda_plugin_helper.cu'
+        cuobj='obj/'+ cubase.replace(".cu","")
+        objects += env.SharedObject(cuobj, cubase)
 
-		# cpp class definition
-		file="source/" + p + ".cpp"
-		obj='obj/'+ file.replace(".cpp","")
-		objects += env.SharedObject(obj, file)
+        # cpp class definition
+        file="source/" + p + ".cpp"
+        obj='obj/'+ file.replace(".cpp","")
+        objects += env.SharedObject(obj, file)
 
-		# cuda functions definition
-		cufile="source/" + p + ".cu"	
-                obj='obj/cu_'+ cufile.replace(".cu","")
+        # cuda functions definition
+        cufile="source/" + p + ".cu"
+        obj='obj/cu_'+ cufile.replace(".cu","")
 
-		if p == "unstagger":
-			nvcc = env['NVCCFLAGS'][:] # need to copy flags or changes affect all cufiles
-			if '-G' in nvcc:
-				nvcc.remove('-G')
-	                objects += env.SharedObject(obj, cufile, NVCCFLAGS=nvcc)
+        if p == "unstagger":
+            nvcc = env['NVCCFLAGS'][:] # need to copy flags or changes affect all cufiles
+            if '-G' in nvcc:
+                nvcc.remove('-G')
+                objects += env.SharedObject(obj, cufile, NVCCFLAGS=nvcc)
 
-		else:
-	                objects += env.SharedObject(obj, cufile)
+        else:
+            objects += env.SharedObject(obj, cufile)
 
-		env.SharedLibrary(target = p, source = objects)
+        env.SharedLibrary(target = p, source = objects)

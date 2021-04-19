@@ -4,21 +4,15 @@
 import os
 import platform
 
-OS_NAME = platform.linux_distribution()[0]
-OS_VERSION = float('.'.join(platform.linux_distribution()[1].split('.')[:2]))
-
-IS_RHEL = False
-IS_SLES = False
-
-if OS_NAME == "Red Hat Enterprise Linux Server" or OS_NAME == "CentOS Linux":
-	IS_RHEL=True
-elif OS_NAME == "SUSE Linux Enterprise Server ":
-	IS_SLES=True
-
 # Should also get compiler version here but it seems to be rather
 # complicated with python subprocess -module
 
 env = Environment(ENV = {'PATH' : os.environ['PATH']})
+
+env['OS_NAME'] = platform.linux_distribution()[0]
+env['OS_VERSION'] = float('.'.join(platform.linux_distribution()[1].split('.')[:2]))
+env['IS_RHEL'] = (env['OS_NAME'] == "Red Hat Enterprise Linux" or env['OS_NAME'] == "CentOS Linux")
+env['IS_SLES'] = (env['OS_NAME'] == "SUSE Linux Enterprise Server")
 
 # Get color output from gcc / clang
 try:
@@ -68,7 +62,8 @@ env['RELEASE'] = RELEASE
 
 # Workspace
 
-env['WORKSPACE'] = "%s/../" % os.getcwd()
+#env['WORKSPACE'] = "%s/../" % os.getcwd()
+env['WORKSPACE'] = "/home/dev/partio/himan/"
 
 # cuda toolkit path
 
@@ -171,21 +166,17 @@ cflags_difficult.append('-Wctor-dtor-privacy')
 
 # Default flags (common for release/debug)
 
-if IS_GCC:
-	env.Append(CCFLAGS = '-std=c++11')
-else:
-	env.Append(CCFLAGS = '-std=c++11')
-
+env.Append(CCFLAGS = '-std=c++14')
 env.Append(CCFLAGS = '-fPIC')
 env.Append(CCFLAGS = cflags_normal)
 env.Append(CCFLAGS = cflags_extra)
 
 env.AppendUnique(CCFLAGS=('-isystem', '/usr/include/boost169'))
 env.AppendUnique(CCFLAGS=('-isystem', '/usr/gdal32/include'))
+env.AppendUnique(CCFLAGS=('-isystem', '/usr/include/eigen3'))
 
 if IS_CLANG:
 	env.AppendUnique(CCFLAGS=('-isystem', '/usr/include/smartmet/newbase'))
-	env.AppendUnique(CCFLAGS=('-isystem', '/usr/include/Eigen'))
 	env.AppendUnique(CCFLAGS=('-isystem', '/opt/llvm-5.0.0/include'))
 	env.AppendUnique(CCFLAGS=('-isystem', '/opt/llvm-5.0.0/include/c++/v1'))
 
@@ -195,7 +186,7 @@ env.Append(LINKFLAGS = ['-rdynamic','-Wl,--as-needed'])
 
 # Defines
 
-env.Append(CPPDEFINES=['UNIX'])
+env.Append(CPPDEFINES=['UNIX','BOOST_NO_CXX11_HDR_ARRAY'])
 
 if env['HAVE_CUDA']:
         env.Append(CPPDEFINES=['HAVE_CUDA'])
@@ -216,7 +207,7 @@ env.Append(NVCCFLAGS = ['-gencode=arch=compute_70,code=sm_70'])
 #	env.Append(NVCCFLAGS = ['-std=c++14'])
 
 #else:
-env.AppendUnique(NVCCFLAGS = ['-std=c++11'])
+env.AppendUnique(NVCCFLAGS = ['-std=c++14'])
 env.AppendUnique(NVCCFLAGS = ('-isystem', '/usr/include/boost169'))
 env.AppendUnique(NVCCFLAGS = ('-isystem', '/usr/gdal32/include'))
 
@@ -238,7 +229,7 @@ env.Append(NOCUDA = NOCUDA)
 
 if RELEASE:
 	env.Append(CPPDEFINES = ['NDEBUG'])
-	env.Append(CCFLAGS = ['-O2'])
+	env.Append(CCFLAGS = ['-O2', '-g'])
 
 	env.Append(NVCCFLAGS = ['-O2'])
 	env.Append(NVCCDEFINES = ['NDEBUG'])
@@ -265,7 +256,7 @@ def PhonyTargets(env = None, **kw):
         for target,action in kw.items():
                 env.AlwaysBuild(env.Alias(target, [], action))
 
-PhonyTargets(CPPCHECK = 'cppcheck --std=c++11 --enable=all -I ./include -I ../himan-lib/include ./')
+PhonyTargets(CPPCHECK = 'cppcheck --std=c++14 --enable=all -I ./include -I ../himan-lib/include ./')
 PhonyTargets(SCANBUILD = 'scan-build make debug')
 
 Export('env build_dir')

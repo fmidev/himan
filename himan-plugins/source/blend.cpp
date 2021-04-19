@@ -3,7 +3,7 @@
 #include "plugin_factory.h"
 #include "radon.h"
 #include "writer.h"
-
+#include <numeric>
 #include <algorithm>
 #include <mutex>
 #include <thread>

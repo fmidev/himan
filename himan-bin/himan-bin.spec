@@ -21,13 +21,19 @@ Requires: xerces-c
 BuildRequires: boost169-devel
 BuildRequires: fmt-devel >= 7.1.0
 
-%if %{defined suse_version}
-Requires: libjasper
-%else
+%if %{defined el7}
+BuildRequires: scons
+Requires: jasper
+
+%else if %{defined el8}
+BuildRequires: python3-scons
+Requires: jasper-libs
+
+%endif
+
 BuildRequires: redhat-rpm-config
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-11-0
-Requires: jasper
 Requires: boost169-program-options
 Requires: boost169-system
 Requires: boost169-regex
@@ -35,8 +41,6 @@ Requires: boost169-iostreams
 Requires: boost169-thread
 Requires: bzip2-libs
 
-%endif
-BuildRequires: scons
 Provides: himan
 
 AutoReqProv:	no
