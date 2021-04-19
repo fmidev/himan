@@ -202,8 +202,11 @@ env.Append(NVCCDEFINES=['HAVE_CUDA', 'CUB_IGNORE_DEPRECATED_CPP_DIALECT', 'THRUS
 
 env.Append(NVCCFLAGS = ['-m64', '-Xcompiler', '-fPIC'])
 env.Append(NVCCFLAGS = ['-Wno-deprecated-declarations'])
-env.Append(NVCCFLAGS = ['-gencode=arch=compute_35,code=sm_35'])
-env.Append(NVCCFLAGS = ['-gencode=arch=compute_52,code=sm_52'])
+
+if env['OS_VERSION'] < 8:
+    env.Append(NVCCFLAGS = ['-gencode=arch=compute_35,code=sm_35'])
+    env.Append(NVCCFLAGS = ['-gencode=arch=compute_52,code=sm_52'])
+
 env.Append(NVCCFLAGS = ['-gencode=arch=compute_60,code=sm_60'])
 env.Append(NVCCFLAGS = ['-gencode=arch=compute_70,code=sm_70'])
 
