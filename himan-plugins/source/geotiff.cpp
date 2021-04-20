@@ -216,6 +216,11 @@ std::unique_ptr<grid> ReadAreaAndGrid(GDALDataset* poDataset)
 			return std::unique_ptr<transverse_mercator_grid>(new transverse_mercator_grid(
 			    sm, fp, ni, nj, di, dj, std::unique_ptr<OGRSpatialReference>(spRef.Clone()), true));
 		}
+		else if (projection == SRS_PT_LAMBERT_CONFORMAL_CONIC_1SP || projection == SRS_PT_LAMBERT_CONFORMAL_CONIC_2SP)
+		{
+			return std::unique_ptr<lambert_conformal_grid>(new lambert_conformal_grid(
+			    sm, fp, ni, nj, di, dj, std::unique_ptr<OGRSpatialReference>(spRef.Clone()), true));
+		}
 
 		log.Error("Unsupported projection: " + projection);
 	}
