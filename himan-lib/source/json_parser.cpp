@@ -1353,11 +1353,7 @@ void TargetProducer(const boost::property_tree::ptree& pt, const shared_ptr<conf
 
 			if (!prodInfo.empty())
 			{
-				if (prodInfo["ident_id"].empty() || prodInfo["model_id"].empty())
-				{
-					itsLogger.Warning("Centre or ident information not found for producer " + prodInfo["ref_prod"]);
-				}
-				else
+				if (!prodInfo["ident_id"].empty() && !prodInfo["model_id"].empty())
 				{
 					prod.Centre(stol(prodInfo["ident_id"]));
 					prod.Process(stol(prodInfo["model_id"]));
