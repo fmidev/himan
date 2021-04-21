@@ -379,7 +379,6 @@ std::map<std::string, std::string> ParseMetadata(char** mdata, const producer& p
 		const auto keyMask = row[2];
 
 		std::string metadata;
-
 		if (keyName.empty() == false)
 		{
 			// metadata consists of key=value pairs
@@ -420,17 +419,17 @@ std::map<std::string, std::string> ParseMetadata(char** mdata, const producer& p
 			boost::smatch what;
 			if (boost::regex_search(metadata, what, re) == false || what.size() == 0)
 			{
-				log.Warning("Regex did not match for attribute " + attribute);
-				log.Warning("Regex: '" + keyMask + "' Metadata: '" + metadata + "'");
+				log.Warning(fmt::format("Regex did not match for attribute {}", attribute));
+				log.Warning(fmt::format("Regex: '{}' Metadata: '{}'", keyMask, metadata));
 			}
 
 			if (what.size() != 2)
 			{
-				log.Fatal("Regex matched too many times: " + std::to_string(what.size() - 1));
+				log.Fatal(fmt::format("Regex matched too many times: {}", what.size() - 1));
 				himan::Abort();
 			}
 
-			log.Debug("Regex match for " + attribute + ": " + what[1]);
+			log.Debug(fmt::format("Regex match for {}: {}", attribute, std::string(what[1])));
 			ret[attribute] = what[1];
 		}
 	}
@@ -450,8 +449,8 @@ void ReadData(GDALRasterBand* poBand, matrix<T>& mat, const std::map<std::string
 		mat.MissingValue(static_cast<T>(poBand->GetNoDataValue(nullptr)));
 	}
 
-	ASSERT(poBand->GetXSize() == static_cast<int> (mat.SizeX()));
-	ASSERT(poBand->GetYSize() == static_cast<int> (mat.SizeY()));
+	ASSERT(poBand->GetXSize() == static_cast<int>(mat.SizeX()));
+	ASSERT(poBand->GetYSize() == static_cast<int>(mat.SizeY()));
 
 	int nXSize = poBand->GetXSize();
 	int nYSize = poBand->GetYSize();
@@ -506,8 +505,8 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 
 	if (meta.size() == 0)
 	{
-		itsLogger.Error("Failed to parse metadata from " + theInputFile.file_location);
-		return infos;
+		itsLogger.Trace(
+		    fmt::format("No elements recognized from global metadata from '{}'", theInputFile.file_location));
 	}
 
 	auto area = ReadAreaAndGrid(poDataset.get());
