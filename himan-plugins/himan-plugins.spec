@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 21.4.12
+Version: 21.4.21
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -144,6 +144,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Wed Apr 21 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.21-1.fmi
+- Bugfix for gcc8 related issue
+- Check radon version on startup
 * Mon Apr 12 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.12-1.fmi
 - wgs84 support for data structures
 * Thu Apr  8 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.8-1.fmi
