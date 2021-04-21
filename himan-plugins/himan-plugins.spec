@@ -4,7 +4,7 @@
 Summary: himan-plugins library
 Name: %{LIBNAME}
 Version: 21.4.21
-Release: 1%{dist}.fmi
+Release: 2%{dist}.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -144,6 +144,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Wed Apr 21 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.21-2.fmi
+- Tweak for geotiff reading
 * Wed Apr 21 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.21-1.fmi
 - Bugfix for gcc8 related issue
 - Check radon version on startup
