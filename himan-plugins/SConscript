@@ -83,7 +83,7 @@ if have_cuda:
             nvcc = env['NVCCFLAGS'][:] # need to copy flags or changes affect all cufiles
             if '-G' in nvcc:
                 nvcc.remove('-G')
-                objects += env.SharedObject(obj, cufile, NVCCFLAGS=nvcc)
+            objects += env.SharedObject(obj, cufile, NVCCFLAGS=nvcc)
 
         else:
             objects += env.SharedObject(obj, cufile)

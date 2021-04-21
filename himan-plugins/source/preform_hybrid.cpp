@@ -429,15 +429,9 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 	vector<param> params = {minusAreaParam, plusAreaParam,   plusAreaSfcParam, numZeroLevelsParam,
 	                        rhAvgParam,     rhAvgUpperParam, rhMeltParam,      rhMeltUpperParam};
-	vector<forecast_time> times = {ftime};
-	vector<level> levels = {level(kHeight, 0, "HEIGHT")};
+	auto ret = make_shared<info<double>>(vector<forecast_type>{forecast_type()}, vector<forecast_time>{ftime},
+	                                     vector<level>{level(kHeight, 0, "HEIGHT")}, params);
 
-	auto ret = make_shared<info<double>>();
-
-	ret->Set<param>(params);
-	ret->Set<level>(levels);
-	ret->Set<forecast_time>(times);
-	ret->Set<forecast_type>({forecast_type()});
 	ret->Create(baseGrid);
 
 	const size_t N = ret->Data().Size();
@@ -723,15 +717,10 @@ void preform_hybrid::Stratus(shared_ptr<const plugin_configuration> conf, const 
 
 	vector<param> params = {stratusBaseParam,     stratusTopParam,         stratusTopTempParam,
 	                        stratusMeanTempParam, stratusUpperLayerNParam, stratusVerticalVelocityParam};
-	vector<forecast_time> times = {ftime};
-	vector<level> levels = {level(kHeight, 0, "HEIGHT")};
 
-	auto ret = make_shared<info<double>>();
+	auto ret = make_shared<info<double>>(vector<forecast_type>{forecast_type()}, vector<forecast_time>{ftime},
+	                                     vector<level>{level(kHeight, 0, "HEIGHT")}, params);
 
-	ret->Set<param>(params);
-	ret->Set<level>(levels);
-	ret->Set<forecast_time>(times);
-	ret->Set<forecast_type>({forecast_type()});  // doesn't matter what we put here
 	ret->Create(baseGrid);
 
 	const vector<double> layerVec(ret->Data().Size(), layer);

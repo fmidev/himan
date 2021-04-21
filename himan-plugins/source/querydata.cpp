@@ -573,19 +573,13 @@ template shared_ptr<NFmiQueryData> querydata::CreateQueryData<unsigned char>(con
 template <typename T>
 shared_ptr<himan::info<T>> querydata::CreateInfo(shared_ptr<NFmiQueryData> theData) const
 {
-	auto newInfo = make_shared<info<T>>();
 	grid* newGrid = 0;
 
 	NFmiQueryInfo qinfo = theData.get();
 
-	producer p(230, 86, 230, "HIMAN");
-	p.TableVersion(203);
-
-	newInfo->Producer(p);
-
 	// Times
 
-	vector<forecast_time> theTimes;
+	vector<forecast_time> times;
 
 	raw_time originTime(string(qinfo.OriginTime().ToStr(kYYYYMMDDHHMM)), "%Y%m%d%H%M");
 
@@ -593,15 +587,12 @@ shared_ptr<himan::info<T>> querydata::CreateInfo(shared_ptr<NFmiQueryData> theDa
 	{
 		raw_time ct(string(qinfo.Time().ToStr(kYYYYMMDDHHMM)), "%Y%m%d%H%M");
 
-		forecast_time t(originTime, ct);
-		theTimes.push_back(t);
+		times.emplace_back(originTime, ct);
 	}
-
-	newInfo->template Set<forecast_time>(theTimes);
 
 	// Levels
 
-	vector<level> theLevels;
+	vector<level> levels;
 
 	for (qinfo.ResetLevel(); qinfo.NextLevel();)
 	{
@@ -630,29 +621,25 @@ shared_ptr<himan::info<T>> querydata::CreateInfo(shared_ptr<NFmiQueryData> theDa
 				break;
 		}
 
-		level l(lt, qinfo.Level()->LevelValue());
-
-		theLevels.push_back(l);
+		levels.emplace_back(lt, qinfo.Level()->LevelValue());
 	}
-
-	newInfo->template Set<level>(theLevels);
 
 	// Parameters
 
-	vector<himan::param> theParams;
+	vector<himan::param> params;
 
 	for (qinfo.ResetParam(); qinfo.NextParam();)
 	{
-		param par(string(qinfo.Param().GetParamName()), qinfo.Param().GetParamIdent());
-		theParams.push_back(par);
+		params.emplace_back(string(qinfo.Param().GetParamName()), qinfo.Param().GetParamIdent());
 	}
 
-	newInfo->template Set<param>(theParams);
+	vector<forecast_type> ftypes{forecast_type(kDeterministic)};
 
-	vector<forecast_type> ftypes;
-	ftypes.push_back(forecast_type(kDeterministic));
+	auto newInfo = make_shared<info<T>>(ftypes, times, levels, params);
+	producer p(230, 86, 230, "HIMAN");
+	p.TableVersion(203);
 
-	newInfo->template Set<forecast_type>(ftypes);
+	newInfo->Producer(p);
 
 	// Grid
 

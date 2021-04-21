@@ -15,6 +15,8 @@
 using namespace std;
 using namespace himan::plugin;
 
+const int RADON_MIN_REQUIRED_VERSION = -1;
+const int RADON_MIN_RECOMMENDED_VERSION = 20210409;
 const int MAX_WORKERS = 32;
 static once_flag oflag;
 static map<string, string> tableNameCache;
@@ -68,11 +70,55 @@ void radon::Init()
 				{
 					NFmiRadonDBPool::Instance()->MaxWorkers(MAX_WORKERS);
 				}
+
 				itsLogger.Info("Connected to radon (db=" + radonName + ", host=" + radonHost + ":" +
 				               std::to_string(radonPort) + ")");
+
+				try
+				{
+					itsRadonDB = std::unique_ptr<NFmiRadonDB>(NFmiRadonDBPool::Instance()->GetConnection());
+					const std::string radonVersion = GetVersion();
+
+					const int v = std::stoi(radonVersion);
+
+					if (v < RADON_MIN_REQUIRED_VERSION)
+					{
+						itsLogger.Fatal(fmt::format("Radon version '{}' is too old, at least '{}' is required", v,
+						                            RADON_MIN_REQUIRED_VERSION));
+						himan::Abort();
+					}
+					else if (v < RADON_MIN_RECOMMENDED_VERSION)
+					{
+						itsLogger.Warning(fmt::format("Radon version '{}' found, at least '{}' is recommended", v,
+						                              RADON_MIN_RECOMMENDED_VERSION));
+					}
+					else
+					{
+						itsLogger.Debug(fmt::format("Radon version '{}' found", v));
+					}
+				}
+				catch (const std::invalid_argument& e)
+				{
+					itsLogger.Debug(fmt::format("Unable to determine radon version: {}", e.what()));
+				}
+				catch (const pqxx::failure& e)
+				{
+					itsLogger.Trace(fmt::format("pqxx error fetching radon version"));
+				}
+				catch (const std::exception& e)
+				{
+					itsLogger.Trace(fmt::format("Unknown error fetching radon version: {}", e.what()));
+				}
+				catch (...)
+				{
+				}
+
 			});
 
-			itsRadonDB = std::unique_ptr<NFmiRadonDB>(NFmiRadonDBPool::Instance()->GetConnection());
+			if (!itsRadonDB)
+			{
+				itsRadonDB = std::unique_ptr<NFmiRadonDB>(NFmiRadonDBPool::Instance()->GetConnection());
+			}
 		}
 		catch (int e)
 		{
@@ -84,6 +130,7 @@ void radon::Init()
 			itsLogger.Fatal(e.what());
 			himan::Abort();
 		}
+
 		itsInit = true;
 	}
 }
@@ -834,3 +881,18 @@ template bool radon::SaveGrid<double>(const info<double>&, const file_informatio
 template bool radon::SaveGrid<float>(const info<float>&, const file_information&, const string&);
 template bool radon::SaveGrid<short>(const info<short>&, const file_information&, const string&);
 template bool radon::SaveGrid<unsigned char>(const info<unsigned char>&, const file_information&, const string&);
+
+std::string radon::GetVersion() const
+{
+	const std::string query("SELECT radon_version_f()");
+	itsRadonDB->Query(query);
+
+	const std::vector<std::string> row = itsRadonDB->FetchRow();
+
+	if (row.empty())
+	{
+		throw std::out_of_range("radon version not defined");
+	}
+
+	return row[0];
+}

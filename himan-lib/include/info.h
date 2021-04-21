@@ -264,7 +264,7 @@ class iterator
 
 	void Replace(const U& theNewValue)
 	{
-		itsElements[itsIndex] = theNewValue;
+		itsElements.at(itsIndex) = theNewValue;
 	}
 	/**
 	 * @return Current index value

@@ -229,13 +229,8 @@ shared_ptr<himan::info<T>> csv::FromFile(const string& inputFile, const search_o
 		throw kFileDataNotFound;
 	}
 
-	requested = make_shared<info<T>>();
+	requested = make_shared<info<T>>(ftypes, times, levels, params);
 	requested->Producer(options.prod);
-
-	requested->template Set<forecast_time>(times);
-	requested->template Set<param>(params);
-	requested->template Set<level>(levels);
-	requested->template Set<forecast_type>(ftypes);
 
 	auto b = make_shared<base<T>>();
 	b->grid = shared_ptr<grid>(new point_list());  // placeholder
