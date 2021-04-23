@@ -233,7 +233,11 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 			// When working in rotated space, first point must also be rotated
 			firstPoint =
 			    std::dynamic_pointer_cast<rotated_latitude_longitude_grid>(myTargetInfo->Grid())->Rotate(firstPoint);
-			// fall through
+#if defined __GNUC__ && __GNUC__ >= 7
+			[[fallthrough]];
+#else
+			// fall-through
+#endif
 		case kLatitudeLongitude:
 		{
 			dx = std::vector<float>(Nj, MissingFloat());
