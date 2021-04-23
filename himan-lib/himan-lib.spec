@@ -41,6 +41,7 @@ BuildRequires: boost169-devel
 BuildRequires: libs3-devel
 BuildRequires: libpqxx-devel
 BuildRequires: fmt-devel >= 7.1.0
+BuildRequires: eccodes
 Requires: geos39
 Requires: gdal32-libs
 Requires: eccodes
