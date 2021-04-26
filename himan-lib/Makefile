@@ -26,16 +26,7 @@ createlink:
 	  ln -fs ../scons_common.py; \
 	fi;
 rpm:    clean createlink
-	mkdir -p $(rpmsourcedir) ; \
-	if [ -a $(LIB)-lib.spec ]; \
-        then \
-          tar -C ../ --dereference --exclude-vcs \
-                   -zcf $(rpmsourcedir)/$(LIB)-lib.tar.gz $(LIB)-lib ; \
-          rpmbuild -ta $(rpmsourcedir)/$(LIB)-lib.tar.gz ; \
-        else \
-          echo $(rpmerr); \
-        fi;
-
+	rpmbuild --build-in-place -bb himan-lib.spec
 install:
 	mkdir -p $(DESTDIR)/usr/lib64 $(DESTDIR)/usr/include/himan
 	@if [ -f "build/release/lib$(LIB).so" ]; then \

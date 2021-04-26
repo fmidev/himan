@@ -35,16 +35,8 @@ createlink:
 	  ln -fs ../scons_common.py; \
 	fi;
 rpm:    clean createlink
-	mkdir -p $(rpmsourcedir) ; \
-        if [ -a $(PROG)-bin.spec ]; \
-        then \
-          tar -C ../ --dereference --exclude-vcs \
-                   -zcf $(rpmsourcedir)/$(PROG)-bin.tar.gz $(PROG)-bin ; \
-          rpmbuild -ta $(rpmsourcedir)/$(PROG)-bin.tar.gz ; \
-          rm -f $(rpmsourcedir)/$(LIB).tar.gz ; \
-        else \
-          echo $(rpmerr); \
-        fi;
+	cd ../himan-lib && make
+	cd ../himan-bin && rpmbuild --build-in-place -bb himan-bin.spec
 
 install:
 	mkdir -p $(DESTDIR)/$(INSTALL_TARGET)

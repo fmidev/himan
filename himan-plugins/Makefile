@@ -29,16 +29,7 @@ createlink:
         fi;
 
 rpm:    clean createlink
-	mkdir -p $(rpmsourcedir) ; \
-	if [ -a $(LIB).spec ]; \
-        then \
-          tar -C ../ --dereference --exclude-vcs \
-                   -zcf $(rpmsourcedir)/$(LIB).tar.gz $(LIB) ; \
-          rpmbuild -ta $(rpmsourcedir)/$(LIB).tar.gz ; \
-          rm -f $(rpmsourcedir)/$(LIB).tar.gz ; \
-        else \
-          echo $(rpmerr); \
-        fi;
+	rpmbuild --build-in-place -bb himan-plugins.spec
 
 install:
 	mkdir -p  $(DESTDIR)/usr/lib64/himan-plugins $(DESTDIR)/usr/include/himan/plugins
