@@ -595,6 +595,11 @@ class info
 		return itsDimensions[Index()]->data;
 	}
 
+	const matrix<T>& Data() const
+	{
+		return itsDimensions[Index()]->data;
+	}
+
 	std::shared_ptr<grid> Grid() const
 	{
 		ASSERT(itsDimensions.size());
