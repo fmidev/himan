@@ -200,17 +200,7 @@ void writer::WriteOptions(const write_options& theWriteOptions)
 
 void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 {
-	if (conf->WriteStorageType() == kS3ObjectStorageSystem)
-	{
-		std::lock_guard<std::mutex> lock(pendingMutex);
-		itsLogger.Info(fmt::format("Writing {} pending infos to file", pendingWrites.size()));
-
-		// The only case when we have pending writes is (currently) when
-		// writing to s3
-
-		// First get the infos from cache that match the names given
-		// to us by the caller
-
+	auto FetchPendingFromCache = [&]() -> std::vector<std::shared_ptr<himan::info<double>>> {
 		auto c = GET_PLUGIN(cache);
 
 		std::vector<std::shared_ptr<himan::info<double>>> infos;
@@ -226,6 +216,22 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 
 			infos.insert(infos.end(), ret.begin(), ret.end());
 		}
+		return infos;
+	};
+
+	if (conf->WriteStorageType() == kS3ObjectStorageSystem &&
+	    (conf->OutputFileType() == kGRIB || conf->OutputFileType() == kGRIB2))
+	{
+		std::lock_guard<std::mutex> lock(pendingMutex);
+		itsLogger.Info(fmt::format("Writing {} pending infos to file", pendingWrites.size()));
+
+		// The only case when we have pending writes is (currently) when
+		// writing to s3
+
+		// First get the infos from cache that match the names given
+		// to us by the caller
+
+		auto infos = FetchPendingFromCache();
 
 		// Next create a grib message of each info and store them sequentially
 		// in a buffer. All infos that have the same filename will end up in the
@@ -277,6 +283,36 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 		for (const auto& elem : finfos)
 		{
 			WriteToRadon(conf, elem.second, elem.first);
+		}
+	}
+	else if (conf->OutputFileType() == kGeoTIFF)
+	{
+		if (conf->WriteStorageType() == kS3ObjectStorageSystem)
+		{
+			itsLogger.Fatal("Writing geotiff to s3 not supported yet");
+			himan::Abort();
+		}
+
+		std::lock_guard<std::mutex> lock(pendingMutex);
+		itsLogger.Info(fmt::format("Writing {} pending infos to file", pendingWrites.size()));
+		auto infos = FetchPendingFromCache();
+
+		auto g = GET_PLUGIN(geotiff);
+		itsWriteOptions.configuration = conf;
+		g->WriteOptions(itsWriteOptions);
+
+		std::vector<info<double>> plain;
+		for (const auto& x : infos)
+		{
+			plain.push_back(*x);
+
+		}
+
+		auto finfos = g->ToFile<double>(plain);
+
+		for (size_t i = 0; i < finfos.size(); i++)
+		{
+			WriteToRadon(conf, finfos[i].second, infos[i]);
 		}
 	}
 	else if (pendingWrites.empty() == false)

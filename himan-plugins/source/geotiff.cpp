@@ -33,6 +33,29 @@
 using namespace himan;
 using namespace himan::plugin;
 
+struct GDALDatasetCloser
+{
+	void operator()(GDALDataset* ds) const
+	{
+		GDALClose(ds);
+	}
+};
+
+typedef std::unique_ptr<GDALDataset, GDALDatasetCloser> GDALDatasetPtr;
+
+void CheckGDALError(OGRErr errarg, const char* file, const int line);
+
+#define GDAL_CHECK(errarg) CheckGDALError(errarg, __FILE__, __LINE__)
+
+inline void CheckGDALError(OGRErr errarg, const char* file, const int line)
+{
+	if (errarg != OGRERR_NONE)
+	{
+		std::cerr << "Error at " << file << "(" << line << "): " << CPLGetLastErrorMsg() << std::endl;
+		himan::Abort();
+	}
+}
+
 template <typename T>
 GDALDataType TypeToGDALType();
 
@@ -73,7 +96,10 @@ static std::once_flag oflag;
 
 geotiff::geotiff()
 {
-	call_once(oflag, [&]() { GDALRegister_GTiff(); });
+	call_once(oflag, [&]() {
+		GDALRegister_GTiff();
+		// GDALRegister_COG(); // not working, maybe due to using an oldish gdal version
+	});
 
 	itsLogger = logger("geotiff");
 }
@@ -81,6 +107,85 @@ geotiff::geotiff()
 std::pair<HPWriteStatus, file_information> geotiff::ToFile(info<double>& anInfo)
 {
 	return ToFile<double>(anInfo);
+}
+
+void WriteAreaAndGrid(GDALDataset& ds, const himan::regular_grid& g, const producer& prod, const configuration& conf)
+{
+	const point fp = g.Projected(g.TopLeft());
+
+	double adfGeoTransform[6] = {fp.X(), g.Di(), 0, fp.Y(), 0, -1 * g.Dj()};
+
+	GDAL_CHECK(ds.SetGeoTransform(adfGeoTransform));
+
+	OGRSpatialReference sp;
+
+	GDAL_CHECK(sp.importFromProj4(g.Proj4String().c_str()));
+
+	// If earth shape is WGS84, set datum also to WGS84, since AFAIK
+	// no other datum uses it as ellipsoid.
+
+	if (g.EarthShape().Name() == "WGS84")
+	{
+		sp.SetWellKnownGeogCS("WGS84");
+	}
+
+	const std::string geom = conf.TargetGeomName().empty() ? prod.Name() : conf.TargetGeomName();
+	GDAL_CHECK(sp.SetProjCS(geom.c_str()));
+	GDAL_CHECK(ds.SetSpatialRef(&sp));
+}
+
+template <typename T>
+void WriteData(GDALDataset& ds, const info<T>& anInfo, int bandNo)
+{
+	const int ni = static_cast<int>(anInfo.Data().SizeX());
+	const int nj = static_cast<int>(anInfo.Data().SizeY());
+	const GDALDataType dtype = TypeToGDALType<T>();
+
+	GDALRasterBand* poBand = ds.GetRasterBand(bandNo);
+
+	if (bandNo == 1)
+	{
+		// Only for first band, because otherwise:
+		// band 2: Setting nodata to nan on band 2, but band 1 has nodata at nan. The TIFFTAG_GDAL_NODATA only support
+		// one value per dataset. This value of nan will be used for all bands on re-opening
+		GDAL_CHECK(poBand->SetNoDataValue(anInfo.Data().MissingValue()));
+	}
+
+	matrix<T> values = anInfo.Data();
+
+	if (dynamic_cast<regular_grid*>(anInfo.Grid().get())->ScanningMode() != kTopLeft)
+	{
+		util::Flip<T>(values);
+	}
+
+	if (poBand->RasterIO(GF_Write, 0, 0, ni, nj, values.ValuesAsPOD(), ni, nj, dtype, 0, 0) != OGRERR_NONE)
+	{
+		logger logr("geotiff");
+		logr.Error("File write failed");
+		himan::Abort();
+	}
+}
+
+void WriteBandMetadata(GDALRasterBand* b, const forecast_type& ftype, const forecast_time& ftime, const level& lvl,
+                       const param& par)
+{
+	GDAL_CHECK(b->SetMetadataItem("forecast_type", static_cast<std::string>(ftype).c_str(), nullptr));
+	GDAL_CHECK(
+	    b->SetMetadataItem("origin_time", ftime.OriginDateTime().String("%Y-%m-%dT%H:%M:%S+00:00").c_str(), nullptr));
+	GDAL_CHECK(
+	    b->SetMetadataItem("valid_time", ftime.ValidDateTime().String("%Y-%m-%dT%H:%M:%S+00:00").c_str(), nullptr));
+	GDAL_CHECK(b->SetMetadataItem("step", ftime.Step().String("%02h:%02M:%02S").c_str(), nullptr));
+	GDAL_CHECK(b->SetMetadataItem("level", static_cast<std::string>(lvl).c_str(), nullptr));
+	GDAL_CHECK(b->SetMetadataItem("param_name", par.Name().c_str(), nullptr));
+	if (par.Aggregation().Type() != kUnknownAggregationType)
+	{
+		GDAL_CHECK(b->SetMetadataItem("aggregation", static_cast<std::string>(par.Aggregation()).c_str(), nullptr));
+	}
+	if (par.ProcessingType().Type() != kUnknownProcessingType)
+	{
+		GDAL_CHECK(
+		    b->SetMetadataItem("processing_type", static_cast<std::string>(par.ProcessingType()).c_str(), nullptr));
+	}
 }
 
 template <typename T>
@@ -93,13 +198,13 @@ std::pair<HPWriteStatus, file_information> geotiff::ToFile(info<T>& anInfo)
 		throw kInvalidWriteOptions;
 	}
 
-	GDALDriver* driver = GetGDALDriverManager()->GetDriverByName("GTiff");
-
-	if (!driver)
+	if (itsWriteOptions.configuration->WriteStorageType() == kS3ObjectStorageSystem ||
+	    itsWriteOptions.configuration->WriteMode() != kSingleGridToAFile)
 	{
-		itsLogger.Fatal("Unable to load GTiff driver from GDAL");
-		himan::Abort();
+		return std::make_pair(HPWriteStatus::kPending, file_information());
 	}
+
+	GDALDriver* driver = GetGDALDriverManager()->GetDriverByName("GTiff");
 
 	file_information finfo;
 	finfo.file_location = util::MakeFileName(anInfo, *itsWriteOptions.configuration);
@@ -110,59 +215,19 @@ std::pair<HPWriteStatus, file_information> geotiff::ToFile(info<T>& anInfo)
 	// (CreateCopy() being the alternative)
 
 	const regular_grid* g = dynamic_cast<regular_grid*>(anInfo.Grid().get());
-	const point fp = g->Projected(g->TopLeft());
-	const GDALDataType dtype = TypeToGDALType<T>();
-	const int ni = static_cast<int>(g->Ni());
-	const int nj = static_cast<int>(g->Nj());
 
 	// Enable compression
 	char** opts = NULL;
 	opts = CSLSetNameValue(opts, "COMPRESS", "DEFLATE");
+	const GDALDataType dtype = TypeToGDALType<T>();
 
-	GDALDataset* ds = driver->Create(finfo.file_location.c_str(), ni, nj, 1, dtype, opts);
+	auto ds = GDALDatasetPtr(driver->Create(finfo.file_location.c_str(), static_cast<int>(anInfo.Data().SizeX()),
+	                                        static_cast<int>(anInfo.Data().SizeY()), 1, dtype, opts));
 
-	double adfGeoTransform[6] = {fp.X(), g->Di(), 0, fp.Y(), 0, -1 * g->Dj()};
-
-	matrix<T> values = anInfo.Data();
-
-	if (g->ScanningMode() != kTopLeft)
-	{
-		util::Flip<T>(values);
-	}
-
-	ds->SetGeoTransform(adfGeoTransform);
-
-	OGRSpatialReference sp;
-
-	sp.importFromProj4(g->Proj4String().c_str());
-
-	// If earth shape is WGS84, set datum also to WGS84, since AFAIK
-	// no other datum uses it as ellipsoid.
-
-	if (g->EarthShape().Name() == "WGS84")
-	{
-		sp.SetWellKnownGeogCS("WGS84");
-	}
-
-	const std::string geom = itsWriteOptions.configuration->TargetGeomName().empty()
-	                             ? anInfo.Producer().Name()
-	                             : itsWriteOptions.configuration->TargetGeomName();
-	sp.SetProjCS(geom.c_str());
-
-	// sp.dumpReadable();
-
-	ds->SetSpatialRef(&sp);
-
-	GDALRasterBand* poBand = ds->GetRasterBand(1);
-	poBand->SetNoDataValue(anInfo.Data().MissingValue());
-
-	if (poBand->RasterIO(GF_Write, 0, 0, ni, nj, values.ValuesAsPOD(), ni, nj, dtype, 0, 0) != OGRERR_NONE)
-	{
-		itsLogger.Error("File write failed");
-		himan::Abort();
-	}
-
-	GDALClose(ds);
+	WriteAreaAndGrid(*ds, *g, anInfo.Producer(), *itsWriteOptions.configuration);
+	GDAL_CHECK(ds->SetMetadataItem("producer_id", fmt::format("{}", anInfo.Producer().Id()).c_str(), nullptr));
+	WriteBandMetadata(ds->GetRasterBand(1), anInfo.ForecastType(), anInfo.Time(), anInfo.Level(), anInfo.Param());
+	WriteData(*ds, anInfo, 1);
 
 	itsLogger.Info(fmt::format("Wrote file '{}'", finfo.file_location));
 
@@ -173,6 +238,74 @@ template std::pair<HPWriteStatus, file_information> geotiff::ToFile<double>(info
 template std::pair<HPWriteStatus, file_information> geotiff::ToFile<float>(info<float>&);
 template std::pair<HPWriteStatus, file_information> geotiff::ToFile<short>(info<short>&);
 template std::pair<HPWriteStatus, file_information> geotiff::ToFile<unsigned char>(info<unsigned char>&);
+
+template <typename T>
+std::vector<std::pair<HPWriteStatus, file_information>> geotiff::ToFile(const std::vector<info<T>>& infos)
+{
+	// No "pending" checking here
+
+	GDALDriver* driver = GetGDALDriverManager()->GetDriverByName("GTiff");
+
+	std::map<std::string, std::vector<size_t>> list;
+
+	for (size_t i = 0; i < infos.size(); i++)
+	{
+		const auto& info = infos[i];
+		const auto fname = util::MakeFileName<T>(info, *itsWriteOptions.configuration);
+
+		auto& elem = list[fname];
+		elem.push_back(i);
+	}
+
+	std::vector<std::pair<HPWriteStatus, file_information>> ret(infos.size());
+
+	for (const auto& m : list)
+	{
+		const auto& first = infos[m.second[0]];
+
+		file_information finfo;
+		finfo.file_location = m.first;
+		finfo.file_type = kGeoTIFF;
+		finfo.storage_type = itsWriteOptions.configuration->WriteStorageType();
+
+		const regular_grid* g = dynamic_cast<regular_grid*>(first.Grid().get());
+
+		// Enable compression
+		char** opts = NULL;
+		opts = CSLSetNameValue(opts, "COMPRESS", "DEFLATE");
+		const GDALDataType dtype = TypeToGDALType<T>();
+
+		auto ds = GDALDatasetPtr(driver->Create(finfo.file_location.c_str(), static_cast<int>(first.Data().SizeX()),
+		                                        static_cast<int>(first.Data().SizeY()),
+		                                        static_cast<int>(m.second.size()), dtype, opts));
+
+		GDAL_CHECK(ds->SetMetadataItem("producer_id", fmt::format("{}", first.Producer().Id()).c_str(), nullptr));
+		WriteAreaAndGrid(*ds, *g, first.Producer(), *itsWriteOptions.configuration);
+
+		int j = 1;
+		for (const size_t i : m.second)
+		{
+			WriteBandMetadata(ds->GetRasterBand(j), infos[i].ForecastType(), infos[i].Time(), infos[i].Level(),
+			                  infos[i].Param());
+			WriteData(*ds, infos[i], j);
+			finfo.message_no = j++;
+			ret[i] = std::make_pair(HPWriteStatus::kFinished, finfo);
+		}
+
+		itsLogger.Info(fmt::format("Wrote file '{}'", finfo.file_location));
+	}
+
+	return ret;
+}
+
+template std::vector<std::pair<HPWriteStatus, file_information>> geotiff::ToFile<double>(
+    const std::vector<info<double>>&);
+template std::vector<std::pair<HPWriteStatus, file_information>> geotiff::ToFile<float>(
+    const std::vector<info<float>>&);
+template std::vector<std::pair<HPWriteStatus, file_information>> geotiff::ToFile<short>(
+    const std::vector<info<short>>&);
+template std::vector<std::pair<HPWriteStatus, file_information>> geotiff::ToFile<unsigned char>(
+    const std::vector<info<unsigned char>>&);
 
 std::unique_ptr<grid> ReadAreaAndGrid(GDALDataset* poDataset)
 {
@@ -222,7 +355,7 @@ std::unique_ptr<grid> ReadAreaAndGrid(GDALDataset* poDataset)
 			    sm, fp, ni, nj, di, dj, std::unique_ptr<OGRSpatialReference>(spRef.Clone()), true));
 		}
 
-		log.Error("Unsupported projection: " + projection);
+		log.Error(fmt::format("Unsupported projection: {}", projection));
 	}
 	else if (spRef.IsGeographic())
 	{
@@ -489,11 +622,8 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 {
 	std::vector<std::shared_ptr<himan::info<T>>> infos;
 
-	// GDALRegister_COG(); // not working, maybe due to using an oldish gdal version
-
-	std::unique_ptr<GDALDataset, std::function<void(GDALDataset*)>> poDataset(
-	    reinterpret_cast<GDALDataset*>(GDALOpen(theInputFile.file_location.c_str(), GA_ReadOnly)),
-	    [](GDALDataset* dset) { GDALClose(dset); });
+	auto poDataset =
+	    GDALDatasetPtr(reinterpret_cast<GDALDataset*>(GDALOpen(theInputFile.file_location.c_str(), GA_ReadOnly)));
 
 	if (poDataset == nullptr)
 	{
