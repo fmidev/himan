@@ -389,8 +389,7 @@ void s3::WriteObject(const std::string& objectName, const buffer& buff)
 			t.Stop();
 			const double time = static_cast<double>(t.GetTime());
 			const double size = util::round(static_cast<double>(buff.length) / 1024. / 1024., 1);
-			logr.Info("Wrote " + std::to_string(size) + "MB in " + std::to_string(time) + " ms (" +
-			          std::to_string(size / time) + " MB/s)");
+			logr.Info(fmt::format("Wrote {} MB in {} ms ({:.1f} MBps)", size, time, size/time));
 		}
 		break;
 		default:
