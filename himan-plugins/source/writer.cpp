@@ -287,12 +287,6 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 	}
 	else if (conf->OutputFileType() == kGeoTIFF)
 	{
-		if (conf->WriteStorageType() == kS3ObjectStorageSystem)
-		{
-			itsLogger.Fatal("Writing geotiff to s3 not supported yet");
-			himan::Abort();
-		}
-
 		std::lock_guard<std::mutex> lock(pendingMutex);
 		itsLogger.Info(fmt::format("Writing {} pending infos to file", pendingWrites.size()));
 		auto infos = FetchPendingFromCache();
@@ -305,7 +299,6 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 		for (const auto& x : infos)
 		{
 			plain.push_back(*x);
-
 		}
 
 		auto finfos = g->ToFile<double>(plain);

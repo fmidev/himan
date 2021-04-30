@@ -251,13 +251,18 @@ std::vector<std::pair<HPWriteStatus, file_information>> geotiff::ToFile(const st
 	for (size_t i = 0; i < infos.size(); i++)
 	{
 		const auto& info = infos[i];
-		const auto fname = util::MakeFileName<T>(info, *itsWriteOptions.configuration);
-
+		const std::string fname = util::MakeFileName<T>(info, *itsWriteOptions.configuration);
 		auto& elem = list[fname];
 		elem.push_back(i);
 	}
 
 	std::vector<std::pair<HPWriteStatus, file_information>> ret(infos.size());
+
+	// If writing to s3, first write all data to a memory location
+	// where it can be picked up. Use gdal's /vsimem feature for this.
+
+	const std::string vrt =
+	    (itsWriteOptions.configuration->WriteStorageType() == kS3ObjectStorageSystem) ? "/vsimem/" : "";
 
 	for (const auto& m : list)
 	{
@@ -275,9 +280,13 @@ std::vector<std::pair<HPWriteStatus, file_information>> geotiff::ToFile(const st
 		opts = CSLSetNameValue(opts, "COMPRESS", "DEFLATE");
 		const GDALDataType dtype = TypeToGDALType<T>();
 
-		auto ds = GDALDatasetPtr(driver->Create(finfo.file_location.c_str(), static_cast<int>(first.Data().SizeX()),
-		                                        static_cast<int>(first.Data().SizeY()),
-		                                        static_cast<int>(m.second.size()), dtype, opts));
+		auto ds = GDALDatasetPtr(driver->Create(
+		    fmt::format("{}{}", vrt, finfo.file_location).c_str(), static_cast<int>(first.Data().SizeX()),
+		    static_cast<int>(first.Data().SizeY()), static_cast<int>(m.second.size()), dtype, opts));
+		if (!ds)
+		{
+			himan::Abort();
+		}
 
 		GDAL_CHECK(ds->SetMetadataItem("producer_id", fmt::format("{}", first.Producer().Id()).c_str(), nullptr));
 		WriteAreaAndGrid(*ds, *g, first.Producer(), *itsWriteOptions.configuration);
@@ -292,7 +301,36 @@ std::vector<std::pair<HPWriteStatus, file_information>> geotiff::ToFile(const st
 			ret[i] = std::make_pair(HPWriteStatus::kFinished, finfo);
 		}
 
-		itsLogger.Info(fmt::format("Wrote file '{}'", finfo.file_location));
+		if (itsWriteOptions.configuration->WriteStorageType() == kS3ObjectStorageSystem)
+		{
+			ds->FlushCache();
+
+			// Earlier data was written to memory, now get a pointer to that memory block
+			// and pass it to himan::s3
+
+			VSILFILE* inmem = VSIFOpenL(fmt::format("{}/{}", vrt, finfo.file_location).c_str(), "rb");
+
+			himan::buffer buff;
+
+			// Get file size
+			VSIFSeekL(inmem, 0, SEEK_END);
+			buff.length = VSIFTellL(inmem);
+			VSIFSeekL(inmem, 0, SEEK_SET);
+
+			itsLogger.Trace(fmt::format("In-mem file size is {} bytes", buff.length));
+
+			buff.data = static_cast<unsigned char*>(malloc(buff.length));
+
+			// Read contents
+			VSIFReadL(buff.data, buff.length, 1, inmem);
+
+			s3::WriteObject(finfo.file_location, buff);
+			itsLogger.Info(fmt::format("Wrote file to s3://'{}'", finfo.file_location));
+		}
+		else
+		{
+			itsLogger.Info(fmt::format("Wrote file '{}'", finfo.file_location));
+		}
 	}
 
 	return ret;
