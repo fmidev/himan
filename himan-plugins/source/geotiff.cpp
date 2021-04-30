@@ -98,7 +98,33 @@ geotiff::geotiff()
 {
 	call_once(oflag, [&]() {
 		GDALRegister_GTiff();
-		// GDALRegister_COG(); // not working, maybe due to using an oldish gdal version
+		GDALRegister_COG();
+
+		// Check environment for AWS variables
+		// GDAL requires           Himan uses
+		// * AWS_S3_ENDPOINT       S3_HOSTNAME
+		// * AWS_ACCESS_KEY_ID     S3_ACCESS_KEY_ID
+		// * AWS_SECRET_ACCESS_KEY S3_SECRET_ACCESS_KEY
+		// * AWS_SESSION_TOKEN     S3_SESSION_TOKEN
+		//
+		// if latter is found, copy it to former
+
+		const std::vector<std::pair<std::string, std::string>> keys{{"S3_HOSTNAME", "AWS_S3_ENDPOINT"},
+		                                                            {"S3_ACCESS_KEY_ID", "AWS_ACCESS_KEY_ID"},
+		                                                            {"S3_SECRET_ACCESS_KEY", "AWS_SECRET_ACCESS_KEY"},
+		                                                            {"S3_SESSION_TOKEN", "AWS_SESSION_TOKEN"}};
+
+		for (const auto& key : keys)
+		{
+			try
+			{
+				const std::string val = util::GetEnv(key.first);
+				setenv(key.second.c_str(), val.c_str(), 0);
+			}
+			catch (...)
+			{
+			}
+		}
 	});
 
 	itsLogger = logger("geotiff");
@@ -325,7 +351,7 @@ std::vector<std::pair<HPWriteStatus, file_information>> geotiff::ToFile(const st
 			VSIFReadL(buff.data, buff.length, 1, inmem);
 
 			s3::WriteObject(finfo.file_location, buff);
-			itsLogger.Info(fmt::format("Wrote file to s3://'{}'", finfo.file_location));
+			itsLogger.Info(fmt::format("Wrote file 's3://{}'", finfo.file_location));
 		}
 		else
 		{
@@ -345,12 +371,12 @@ template std::vector<std::pair<HPWriteStatus, file_information>> geotiff::ToFile
 template std::vector<std::pair<HPWriteStatus, file_information>> geotiff::ToFile<unsigned char>(
     const std::vector<info<unsigned char>>&);
 
-std::unique_ptr<grid> ReadAreaAndGrid(GDALDataset* poDataset)
+std::unique_ptr<grid> ReadAreaAndGrid(GDALDataset* ds)
 {
 	logger log("geotiff");
-	const int ni = poDataset->GetRasterXSize(), nj = poDataset->GetRasterYSize();
+	const int ni = ds->GetRasterXSize(), nj = ds->GetRasterYSize();
 	double adfGeoTransform[6];
-	if (poDataset->GetGeoTransform(adfGeoTransform) != CE_None)
+	if (ds->GetGeoTransform(adfGeoTransform) != CE_None)
 	{
 		log.Error("File does not contain geo transformation coefficients");
 		throw kFileMetaDataNotFound;
@@ -362,7 +388,7 @@ std::unique_ptr<grid> ReadAreaAndGrid(GDALDataset* poDataset)
 	const HPScanningMode sm = (adfGeoTransform[5] < 0) ? kTopLeft : kBottomLeft;
 	ASSERT(di > 0);
 
-	std::string proj = poDataset->GetProjectionRef();
+	std::string proj = ds->GetProjectionRef();
 
 	if (proj.empty())
 	{
@@ -660,16 +686,33 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 {
 	std::vector<std::shared_ptr<himan::info<T>>> infos;
 
-	auto poDataset =
-	    GDALDatasetPtr(reinterpret_cast<GDALDataset*>(GDALOpen(theInputFile.file_location.c_str(), GA_ReadOnly)));
+	auto ParseFileName = [](const file_information& finfo) {
+		std::string ret = finfo.file_location;
 
-	if (poDataset == nullptr)
+		if (finfo.storage_type == kS3ObjectStorageSystem)
+		{
+			const auto pos = ret.find("s3://");
+
+			if (pos != std::string::npos)
+			{
+				ret = ret.erase(pos, 5);
+			}
+
+			ret = fmt::format("/vsis3_streaming/{}", ret);
+		}
+		return ret;
+	};
+
+	auto ds =
+	    GDALDatasetPtr(reinterpret_cast<GDALDataset*>(GDALOpen(ParseFileName(theInputFile).c_str(), GA_ReadOnly)));
+
+	if (ds == nullptr)
 	{
 		itsLogger.Error("Failed to open dataset from " + theInputFile.file_location);
 		return infos;
 	}
 
-	auto meta = ParseMetadata(poDataset->GetMetadata(), options.prod);  // Get full dataset metadata
+	auto meta = ParseMetadata(ds->GetMetadata(), options.prod);  // Get full dataset metadata
 
 	if (meta.size() == 0)
 	{
@@ -677,7 +720,7 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 		    fmt::format("No elements recognized from global metadata from '{}'", theInputFile.file_location));
 	}
 
-	auto area = ReadAreaAndGrid(poDataset.get());
+	auto area = ReadAreaAndGrid(ds.get());
 
 	if (area == nullptr)
 	{
@@ -746,10 +789,10 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 
 	if (theInputFile.message_no == boost::none)
 	{
-		for (int bandNo = 1; bandNo <= poDataset->GetRasterCount(); bandNo++)
+		for (int bandNo = 1; bandNo <= ds->GetRasterCount(); bandNo++)
 		{
 			itsLogger.Info("Read from file '" + theInputFile.file_location + "' band# " + std::to_string(bandNo));
-			GDALRasterBand* poBand = poDataset->GetRasterBand(bandNo);
+			GDALRasterBand* poBand = ds->GetRasterBand(bandNo);
 			try
 			{
 				infos.push_back(MakeInfoFromGeoTIFFBand(poBand));
@@ -763,7 +806,7 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 	{
 		itsLogger.Info("Read from file '" + theInputFile.file_location + "' band# " +
 		               std::to_string(theInputFile.message_no.get()));
-		GDALRasterBand* poBand = poDataset->GetRasterBand(static_cast<int>(theInputFile.message_no.get()));
+		GDALRasterBand* poBand = ds->GetRasterBand(static_cast<int>(theInputFile.message_no.get()));
 		try
 		{
 			infos.push_back(MakeInfoFromGeoTIFFBand(poBand));
