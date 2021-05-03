@@ -38,6 +38,9 @@ class geotiff : public io_plugin
 	std::pair<HPWriteStatus, file_information> ToFile(info<T>& anInfo);
 	std::pair<HPWriteStatus, file_information> ToFile(info<double>& anInfo);
 
+	template <typename T>
+	std::vector<std::pair<HPWriteStatus, file_information>> ToFile(const std::vector<info<T>>& anInfo);
+
    private:
 };
 

@@ -701,7 +701,8 @@ pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAuxili
 			f.offset = boost::none;
 			f.length = boost::none;
 			f.message_no = boost::none;
-			f.storage_type = HPFileStorageType::kLocalFileSystem;
+			f.storage_type = (file.find("s3://") != string::npos) ? HPFileStorageType::kS3ObjectStorageSystem
+			                                                      : HPFileStorageType::kLocalFileSystem;
 
 			files.push_back(f);
 		}
