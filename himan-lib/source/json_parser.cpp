@@ -290,6 +290,10 @@ void FileType(const boost::property_tree::ptree& pt, std::shared_ptr<configurati
 		{
 			conf->OutputFileType(kCSV);
 		}
+		else if (ft == "GEOTIFF")
+		{
+			conf->OutputFileType(kGeoTIFF);
+		}
 		else
 		{
 			throw runtime_error("Invalid option for 'file_type': " + ft);
