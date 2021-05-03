@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 21.4.21
-Release: 2%{dist}.fmi
+Version: 21.5.3
+Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -145,6 +145,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Mon May  3 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.3-1.fmi
+- Read and write geotiff to s3
 * Wed Apr 21 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.21-2.fmi
 - Tweak for geotiff reading
 * Wed Apr 21 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.21-1.fmi
