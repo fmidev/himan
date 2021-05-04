@@ -3,7 +3,7 @@
 %define LIBNAME himan-scripts
 Summary: himan-scripts collection
 Name: %{LIBNAME}
-Version: 21.5.3
+Version: 21.5.4
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -39,6 +39,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/himan-scripts/*.lua
 
 %changelog
+* Tue May  4 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.4-1.fmi
+- Workaround for a removed lua language feature
 * Mon May  3 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.3-1.fmi
 - Add nwcsaf-clouds.lua
 * Thu Apr  8 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.8-1.fmi
