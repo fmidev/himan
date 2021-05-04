@@ -61,7 +61,7 @@ function CloudLayers()
     local v = ct[i]
     local nv = Missing
     -- local m = ctml[i]
-    local q = ctqc[i]
+    -- local q = ctqc[i]
 
     if (v <= 4) then
       nv = 0

@@ -563,7 +563,8 @@ bool radon::SavePrevi(const info<T>& resultInfo)
 
 	if (row.empty())
 	{
-		itsLogger.Warning("Data set definition not found from radon");
+		itsLogger.Warning(fmt::format("Dataset definition not found from radon for producer {}, analysis time '{}'",
+		                              resultInfo.Producer().Id(), analysisTime));
 		return false;
 	}
 
