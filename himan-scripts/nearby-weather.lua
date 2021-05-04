@@ -1,6 +1,7 @@
 function max (...)
   maxindex = 0
   maxvalue = 0
+  local arg = {...}
   for i,v in ipairs(arg) do
     if (v > maxvalue) then
       maxindex = i

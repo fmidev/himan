@@ -39,6 +39,7 @@ local HessaaTable = {}
 
 function Fetch(...)
   local first = true
+  local arg = {...}
   for i,param in ipairs(arg) do
     if #arg > 1 and i == #arg then
       return nil
