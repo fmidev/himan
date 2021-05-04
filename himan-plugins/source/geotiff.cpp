@@ -94,6 +94,17 @@ T ConvertTo(const std::string& str)
 
 static std::once_flag oflag;
 
+void CreateDirectory(const std::string& filename)
+{
+	namespace fs = boost::filesystem;
+	fs::path pathname(filename);
+
+	if (!pathname.parent_path().empty() && !fs::is_directory(pathname.parent_path()))
+	{
+		fs::create_directories(pathname.parent_path());
+	}
+}
+
 geotiff::geotiff()
 {
 	call_once(oflag, [&]() {
@@ -247,6 +258,7 @@ std::pair<HPWriteStatus, file_information> geotiff::ToFile(info<T>& anInfo)
 	opts = CSLSetNameValue(opts, "COMPRESS", "DEFLATE");
 	const GDALDataType dtype = TypeToGDALType<T>();
 
+	CreateDirectory(finfo.file_location);
 	auto ds = GDALDatasetPtr(driver->Create(finfo.file_location.c_str(), static_cast<int>(anInfo.Data().SizeX()),
 	                                        static_cast<int>(anInfo.Data().SizeY()), 1, dtype, opts));
 
@@ -305,6 +317,11 @@ std::vector<std::pair<HPWriteStatus, file_information>> geotiff::ToFile(const st
 		char** opts = NULL;
 		opts = CSLSetNameValue(opts, "COMPRESS", "DEFLATE");
 		const GDALDataType dtype = TypeToGDALType<T>();
+
+		if (itsWriteOptions.configuration->WriteStorageType() != kS3ObjectStorageSystem)
+		{
+			CreateDirectory(finfo.file_location);
+		}
 
 		auto ds = GDALDatasetPtr(driver->Create(
 		    fmt::format("{}{}", vrt, finfo.file_location).c_str(), static_cast<int>(first.Data().SizeX()),
