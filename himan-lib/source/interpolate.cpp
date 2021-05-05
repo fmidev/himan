@@ -286,6 +286,17 @@ bool IsVectorComponent(const std::string& paramName)
 	return false;
 }
 
+bool IsNumericCodeTable(const std::string& paramName)
+{
+	if (paramName.find("NWCSAF_CLDTYPE") != std::string::npos ||
+	    paramName.find("NWCSAF_CLDMASK") != std::string::npos || paramName == "NWCSAF_CTTH_QC-N" ||
+	    paramName == "CLDTYPE-N")
+	{
+		return true;
+	}
+	return false;
+}
+
 HPInterpolationMethod InterpolationMethod(const std::string& paramName, HPInterpolationMethod interpolationMethod)
 {
 	// Later we'll add this information to radon directly
@@ -302,7 +313,9 @@ HPInterpolationMethod InterpolationMethod(const std::string& paramName, HPInterp
 	        // symbols
 	        paramName == "CLDSYM-N" || paramName == "PRECFORM-N" || paramName == "PRECFORM2-N" ||
 	        paramName == "FOGSYM-N" || paramName == "ICING-N" || paramName == "POTPRECT-N" ||
-	        paramName == "POTPRECF-N" || paramName == "FOGINT-N" || paramName == "PRECTYPE-N"))
+	        paramName == "POTPRECF-N" || paramName == "FOGINT-N" || paramName == "PRECTYPE-N" ||
+	        // code tables
+	        IsNumericCodeTable(paramName)))
 	{
 #ifdef DEBUG
 		std::cout << "Debug::interpolation Switching interpolation method from bilinear to nearest point" << std::endl;
