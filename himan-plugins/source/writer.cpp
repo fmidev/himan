@@ -332,7 +332,9 @@ bool writer::WriteToRadon(std::shared_ptr<const plugin_configuration> conf, cons
 			// Try to save file information to radon
 			try
 			{
-				if (!r->Save<T>(*theInfo, finfo, conf->TargetGeomName()))
+				auto ret = r->Save<T>(*theInfo, finfo, conf->TargetGeomName());
+
+				if (!ret.first)
 				{
 					itsLogger.Error("Writing to radon failed");
 					return false;

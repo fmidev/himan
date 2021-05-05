@@ -33,6 +33,26 @@ namespace himan
 {
 namespace plugin
 {
+struct radon_record
+{
+	std::string schema_name;
+	std::string table_name;
+	std::string partition_name;
+	std::string geometry_name;
+	int geometry_id;
+
+	radon_record() = default;
+	radon_record(const std::string& schema_name_, const std::string& table_name_, const std::string& partition_name_,
+	             const std::string& geometry_name_, int geometry_id_)
+	    : schema_name(schema_name_),
+	      table_name(table_name_),
+	      partition_name(partition_name_),
+	      geometry_name(geometry_name_),
+	      geometry_id(geometry_id_)
+	{
+	}
+};
+
 class radon : public auxiliary_plugin
 {
    public:
@@ -76,9 +96,11 @@ class radon : public auxiliary_plugin
 	 */
 
 	template <typename T>
-	bool Save(const info<T>& resultInfo, const file_information& finfo, const std::string& targetGeomName);
+	std::pair<bool, radon_record> Save(const info<T>& resultInfo, const file_information& finfo,
+	                                   const std::string& targetGeomName);
 
-	bool Save(const info<double>& resultInfo, const file_information& finfo, const std::string& targetGeomName);
+	std::pair<bool, radon_record> Save(const info<double>& resultInfo, const file_information& finfo,
+	                                   const std::string& targetGeomName);
 
 	/**
 	 * @brief Function to expose the NFmiRadonDB interface
@@ -102,10 +124,11 @@ class radon : public auxiliary_plugin
 
 	void Init();
 	template <typename T>
-	bool SaveGrid(const info<T>& resultInfo, const file_information& theFileName, const std::string& targetGeomName);
+	std::pair<bool, radon_record> SaveGrid(const info<T>& resultInfo, const file_information& theFileName,
+	                                       const std::string& targetGeomName);
 
 	template <typename T>
-	bool SavePrevi(const info<T>& resultInfo);
+	std::pair<bool, radon_record> SavePrevi(const info<T>& resultInfo);
 
 	bool itsInit;                             //!< Holds the initialization status of the database connection
 	std::unique_ptr<NFmiRadonDB> itsRadonDB;  //<! The actual database class instance
