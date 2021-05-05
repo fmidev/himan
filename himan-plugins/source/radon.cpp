@@ -519,13 +519,15 @@ vector<himan::file_information> radon::Files(search_options& options)
 	return {finfo};
 }
 
-bool radon::Save(const info<double>& resultInfo, const file_information& finfo, const string& targetGeomName)
+pair<bool, radon_record> radon::Save(const info<double>& resultInfo, const file_information& finfo,
+                                     const string& targetGeomName)
 {
 	return Save<double>(resultInfo, finfo, targetGeomName);
 }
 
 template <typename T>
-bool radon::Save(const info<T>& resultInfo, const file_information& finfo, const string& targetGeomName)
+pair<bool, radon_record> radon::Save(const info<T>& resultInfo, const file_information& finfo,
+                                     const string& targetGeomName)
 {
 	Init();
 
@@ -538,24 +540,25 @@ bool radon::Save(const info<T>& resultInfo, const file_information& finfo, const
 		return SavePrevi(resultInfo);
 	}
 
-	return false;
+	himan::Abort();
 }
 
-template bool radon::Save<double>(const info<double>&, const file_information&, const string&);
-template bool radon::Save<float>(const info<float>&, const file_information&, const string&);
-template bool radon::Save<short>(const info<short>&, const file_information&, const string&);
-template bool radon::Save<unsigned char>(const info<unsigned char>&, const file_information&, const string&);
+template pair<bool, radon_record> radon::Save<double>(const info<double>&, const file_information&, const string&);
+template pair<bool, radon_record> radon::Save<float>(const info<float>&, const file_information&, const string&);
+template pair<bool, radon_record> radon::Save<short>(const info<short>&, const file_information&, const string&);
+template pair<bool, radon_record> radon::Save<unsigned char>(const info<unsigned char>&, const file_information&,
+                                                             const string&);
 
 template <typename T>
-bool radon::SavePrevi(const info<T>& resultInfo)
+pair<bool, radon_record> radon::SavePrevi(const info<T>& resultInfo)
 {
 	stringstream query;
 
 	auto analysisTime = resultInfo.Time().OriginDateTime().String("%Y-%m-%d %H:%M:%S+00");
 
-	query << "SELECT id,table_name FROM as_previ WHERE producer_id = " << resultInfo.Producer().Id()
-	      << " AND (min_analysis_time, max_analysis_time) OVERLAPS ('" << analysisTime << "', '" << analysisTime
-	      << "')";
+	query << "SELECT id,schema_name,table_name,partition_name FROM as_previ WHERE producer_id = "
+	      << resultInfo.Producer().Id() << " AND (min_analysis_time, max_analysis_time) OVERLAPS ('" << analysisTime
+	      << "', '" << analysisTime << "')";
 
 	itsRadonDB->Query(query.str());
 
@@ -565,10 +568,12 @@ bool radon::SavePrevi(const info<T>& resultInfo)
 	{
 		itsLogger.Warning(fmt::format("Dataset definition not found from radon for producer {}, analysis time '{}'",
 		                              resultInfo.Producer().Id(), analysisTime));
-		return false;
+		return make_pair(false, radon_record());
 	}
 
-	string table_name = row[1];
+	const string& schema_name = row[1];
+	const string& table_name = row[2];
+	const string& partition_name = row[3];
 
 	auto levelinfo = itsRadonDB->GetLevelFromDatabaseName(HPLevelTypeToString.at(resultInfo.Level().Type()));
 
@@ -577,7 +582,7 @@ bool radon::SavePrevi(const info<T>& resultInfo)
 		itsLogger.Error("Level information not found from radon for level " +
 		                HPLevelTypeToString.at(resultInfo.Level().Type()) + ", producer " +
 		                to_string(resultInfo.Producer().Id()));
-		return false;
+		return make_pair(false, radon_record());
 	}
 
 	auto paraminfo = itsRadonDB->GetParameterFromDatabaseName(resultInfo.Producer().Id(), resultInfo.Param().Name(),
@@ -587,7 +592,7 @@ bool radon::SavePrevi(const info<T>& resultInfo)
 	{
 		itsLogger.Error("Parameter information not found from radon for parameter " + resultInfo.Param().Name() +
 		                ", producer " + to_string(resultInfo.Producer().Id()));
-		return false;
+		return make_pair(false, radon_record());
 	}
 
 	int forecastTypeValue = -1;  // default, deterministic/analysis
@@ -645,23 +650,24 @@ bool radon::SavePrevi(const info<T>& resultInfo)
 		}
 	}
 
-	return true;
+	return make_pair(true, radon_record(schema_name, table_name, partition_name, "", -1));
 }
 
-template bool radon::SavePrevi<double>(const info<double>&);
-template bool radon::SavePrevi<float>(const info<float>&);
-template bool radon::SavePrevi<short>(const info<short>&);
-template bool radon::SavePrevi<unsigned char>(const info<unsigned char>&);
+template pair<bool, radon_record> radon::SavePrevi<double>(const info<double>&);
+template pair<bool, radon_record> radon::SavePrevi<float>(const info<float>&);
+template pair<bool, radon_record> radon::SavePrevi<short>(const info<short>&);
+template pair<bool, radon_record> radon::SavePrevi<unsigned char>(const info<unsigned char>&);
 
 template <typename T>
-bool radon::SaveGrid(const info<T>& resultInfo, const file_information& finfo, const string& targetGeomName)
+pair<bool, radon_record> radon::SaveGrid(const info<T>& resultInfo, const file_information& finfo,
+                                         const string& targetGeomName)
 {
 	stringstream query;
 
 	if (resultInfo.Grid()->Class() != kRegularGrid)
 	{
 		itsLogger.Error("Only regular grid data can be stored to radon for now");
-		return false;
+		return make_pair(false, radon_record());
 	}
 
 	// Start by trying to search with the geometry name. If there are duplicates, the 'wrong' geometry maybe returned if
@@ -693,8 +699,8 @@ bool radon::SaveGrid(const info<T>& resultInfo, const file_information& finfo, c
 
 	if (geominfo.empty())
 	{
-		itsLogger.Warning("Grid geometry not found from radon");
-		return false;
+		itsLogger.Error("Grid geometry not found from radon");
+		return make_pair(false, radon_record());
 	}
 
 	const string geom_id = geominfo["id"];
@@ -705,12 +711,14 @@ bool radon::SaveGrid(const info<T>& resultInfo, const file_information& finfo, c
 
 	if (tableinfo.empty())
 	{
-		itsLogger.Warning("Data set definition not found from radon");
-		return false;
+		itsLogger.Error(fmt::format("Dataset definition not found from radon for producer {}, analysis time '{}'",
+		                            resultInfo.Producer().Id(), analysisTime));
+		return make_pair(false, radon_record());
 	}
 
 	const string schema_name = tableinfo["schema_name"];
 	const string table_name = tableinfo["partition_name"];
+	const string partition_name = tableinfo["partition_name"];
 	const string record_count = tableinfo["record_count"];
 
 	query.str("");
@@ -749,14 +757,15 @@ bool radon::SaveGrid(const info<T>& resultInfo, const file_information& finfo, c
 		itsLogger.Error("Level information not found from radon for level " +
 		                HPLevelTypeToString.at(resultInfo.Level().Type()) + ", producer " +
 		                to_string(resultInfo.Producer().Id()));
-		return false;
+		return make_pair(false, radon_record());
+		;
 	}
 
 	if (resultInfo.Param().Id() == kHPMissingInt)
 	{
 		itsLogger.Error("Parameter information not found from radon for parameter " + resultInfo.Param().Name() +
 		                ", producer " + to_string(resultInfo.Producer().Id()));
-		return false;
+		return make_pair(false, radon_record());
 	}
 
 	/*
@@ -772,7 +781,7 @@ bool radon::SaveGrid(const info<T>& resultInfo, const file_information& finfo, c
 	}
 
 	double levelValue2 = IsKHPMissingValue(resultInfo.Level().Value2()) ? -1 : resultInfo.Level().Value2();
-	const string fullTableName = schema_name + "." + table_name;
+	const string fullTableName = fmt::format("{}.{}", schema_name, partition_name);
 
 	auto FormatToSQL = [](const boost::optional<unsigned long>& opt) -> string {
 		if (opt)
@@ -831,7 +840,7 @@ bool radon::SaveGrid(const info<T>& resultInfo, const file_information& finfo, c
 
 			query.str("");
 			query << "UPDATE as_grid SET record_count = 1 WHERE schema_name = '" << schema_name
-			      << "' AND partition_name = '" << table_name << "' AND analysis_time = '" << analysisTime << "'";
+			      << "' AND partition_name = '" << partition_name << "' AND analysis_time = '" << analysisTime << "'";
 
 			itsRadonDB->Execute(query.str());
 		}
@@ -875,13 +884,14 @@ bool radon::SaveGrid(const info<T>& resultInfo, const file_information& finfo, c
 
 	itsLogger.Trace(query.str());
 
-	return true;
+	return make_pair(true, radon_record(schema_name, table_name, partition_name, geom_name, stoi(geom_id)));
 }
 
-template bool radon::SaveGrid<double>(const info<double>&, const file_information&, const string&);
-template bool radon::SaveGrid<float>(const info<float>&, const file_information&, const string&);
-template bool radon::SaveGrid<short>(const info<short>&, const file_information&, const string&);
-template bool radon::SaveGrid<unsigned char>(const info<unsigned char>&, const file_information&, const string&);
+template pair<bool, radon_record> radon::SaveGrid<double>(const info<double>&, const file_information&, const string&);
+template pair<bool, radon_record> radon::SaveGrid<float>(const info<float>&, const file_information&, const string&);
+template pair<bool, radon_record> radon::SaveGrid<short>(const info<short>&, const file_information&, const string&);
+template pair<bool, radon_record> radon::SaveGrid<unsigned char>(const info<unsigned char>&, const file_information&,
+                                                                 const string&);
 
 std::string radon::GetVersion() const
 {
