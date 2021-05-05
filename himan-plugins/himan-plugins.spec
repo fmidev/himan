@@ -4,7 +4,7 @@
 Summary: himan-plugins library
 Name: %{LIBNAME}
 Version: 21.5.5
-Release: 1%{dist}.fmi
+Release: 2%{dist}.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -145,6 +145,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Wed May  5 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.5-2.fmi
+- radon: return metadata from loaded fields
 * Wed May  5 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.5-1.fmi
 - geotiff: create directory tree if needed
 * Mon May  3 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.3-1.fmi

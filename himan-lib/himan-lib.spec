@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 21.4.12
+Version: 21.5.5
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -87,6 +87,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/*
 
 %changelog
+* Wed May  5 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.5-1.fmi
+- Interpolation method change for some parameters
 * Mon Apr 12 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.12-1.fmi
 - wgs84 support for data structures
 * Tue Apr  6 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.6-1.fmi
