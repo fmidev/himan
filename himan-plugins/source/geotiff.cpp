@@ -502,13 +502,51 @@ param ReadParam(const std::map<std::string, std::string>& meta, const producer& 
 
 level ReadLevel(const std::map<std::string, std::string>& meta, const level& lvl)
 {
-	// Don't know how to deal with this yet
+	HPLevelType type = HPLevelType::kUnknownLevel;
+	double value = kHPMissingValue, value2 = kHPMissingValue;
+	for (const auto& m : meta)
+	{
+		if (m.first == "level")
+		{
+			const auto tokens = util::Split(m.second, "/");
+			type = static_cast<HPLevelType>(stoi(tokens[0]));
+			value = stod(tokens[1]);
+			if (tokens.size() == 3)
+			{
+				value2 = stod(tokens[2]);
+			}
+			break;
+		}
+	}
+
+	if (type != kUnknownLevel)
+	{
+		return level(type, value, value2);
+	}
+
 	return lvl;
 }
 
 forecast_type ReadForecastType(const std::map<std::string, std::string>& meta, const forecast_type& ftype)
 {
-	// Don't know how to deal with this yet
+	HPForecastType type = HPForecastType::kUnknownType;
+	double value = kHPMissingValue;
+	for (const auto& m : meta)
+	{
+		if (m.first == "forecast_type")
+		{
+			const auto tokens = util::Split(m.second, "/");
+			type = static_cast<HPForecastType>(stoi(tokens[1]));
+			value = stod(tokens[1]);
+			break;
+		}
+	}
+
+	if (type != kUnknownType)
+	{
+		return forecast_type(type, value);
+	}
+
 	return ftype;
 }
 
@@ -569,6 +607,18 @@ std::map<std::string, std::string> ParseMetadata(char** mdata, const producer& p
 	if (mdata == nullptr)
 	{
 		return ret;
+	}
+
+	// First check keys with Himan-known 'standard' names
+	const std::vector<std::string> standardNames{"forecast_type", "level"};
+
+	for (const auto& keyName : standardNames)
+	{
+		const char* m = CSLFetchNameValue(mdata, keyName.c_str());
+		if (m != nullptr)
+		{
+			ret[keyName] = std::string(m);
+		}
 	}
 
 	std::string query =
