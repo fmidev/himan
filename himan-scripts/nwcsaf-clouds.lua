@@ -89,9 +89,36 @@ function CloudLayers()
   result:SetValues(values)
   result:SetParam(param("CLDTYPE-N"))
   luatool:WriteToFile(result)
-  luatool:WriteToFile(result)
+
+end
+
+function EffectiveCloudinessMissingToZero()
+  local ec = luatool:FetchWithType(current_time, level(HPLevelType.kHeight, 0), param("NWCSAF_EFFCLD-0TO1"), current_forecast_type)
+  local ecqc = luatool:FetchWithType(current_time, level(HPLevelType.kHeight, 0), param("NWCSAF_CTTH_QC-N"), current_forecast_type)
+
+  if not ec or not ecqc then
+    return
+  end
+
+  local values = {}
+
+  for i = 1, #ec do
+
+    local v = ec[i]
+    local q = ecqc[i]
+    local nv = v
+
+    if v ~= v and q ~= q then
+      nv = 0
+    end
+    values[i] = nv
+  end
+
+  result:SetValues(values)
+  result:SetParam(param("NWCSAF_EFFCLD-0TO1"))
   luatool:WriteToFile(result)
 
 end
 
 CloudLayers()
+EffectiveCloudinessMissingToZero()
