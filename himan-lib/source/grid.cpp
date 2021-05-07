@@ -142,7 +142,7 @@ bool regular_grid::EqualsTo(const regular_grid& other) const
 		return false;
 	}
 
-	if ((other.itsDj != itsDj) > kEpsilon)
+	if (fabs(other.itsDj - itsDj) > kEpsilon)
 	{
 		itsLogger.Trace("Dj does not match: " + to_string(itsDj) + " vs " + to_string(other.itsDj));
 		return false;
