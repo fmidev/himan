@@ -58,7 +58,7 @@ earth_shape<double> DetermineEarthShapeForProducer(const producer& prod, const e
 		case 261:  // MEPS_PREOPMTA
 		case 265:  // CMEPS_PREOPMTA
 		case 270:  // MNWCMTA
-			return earth_shape<double>(6367470.);
+			return ELLIPS_WGS84;
 		default:
 			return defaultShape;
 	}
