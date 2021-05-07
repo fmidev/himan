@@ -20,15 +20,15 @@ bool grid::EqualsTo(const grid& other) const
 {
 	if (other.itsGridType != itsGridType)
 	{
-		itsLogger.Trace("Grid type does not match: " + HPGridTypeToString.at(itsGridType) + " vs " +
-		                HPGridTypeToString.at(other.Type()));
+		itsLogger.Trace(fmt::format("Grid type does not match: {} vs {}", HPGridTypeToString.at(itsGridType),
+		                            HPGridTypeToString.at(other.Type())));
 		return false;
 	}
 
 	if (other.itsGridClass != itsGridClass)
 	{
-		itsLogger.Trace("Grid class does not match: " + HPGridClassToString.at(itsGridClass) + " vs " +
-		                HPGridClassToString.at(other.itsGridClass));
+		itsLogger.Trace(fmt::format("Grid class does not match: {} vs {}", HPGridClassToString.at(itsGridClass),
+		                           HPGridClassToString.at(other.itsGridClass)));
 		return false;
 	}
 
@@ -138,25 +138,25 @@ bool regular_grid::EqualsTo(const regular_grid& other) const
 
 	if (fabs(other.itsDi - itsDi) > kEpsilon)
 	{
-		itsLogger.Trace("Di does not match: " + to_string(itsDi) + " vs " + to_string(other.itsDi));
+		itsLogger.Trace(fmt::format("Di does not match: {} vs {} (diff: {})", itsDi, other.itsDi, itsDi - other.itsDi));
 		return false;
 	}
 
 	if (fabs(other.itsDj - itsDj) > kEpsilon)
 	{
-		itsLogger.Trace("Dj does not match: " + to_string(itsDj) + " vs " + to_string(other.itsDj));
+		itsLogger.Trace(fmt::format("Dj does not match: {} vs {} (diff: {})", itsDj, other.itsDj, itsDj - other.itsDj));
 		return false;
 	}
 
 	if (other.itsNi != itsNi)
 	{
-		itsLogger.Trace("Ni does not match: " + to_string(itsNi) + " vs " + to_string(other.itsNi));
+		itsLogger.Trace(fmt::format("Ni does not match: {} vs {}", itsNi, other.itsNi));
 		return false;
 	}
 
 	if (other.itsNj != itsNj)
 	{
-		itsLogger.Trace("Nj does not match: " + to_string(itsNj) + " vs " + to_string(other.itsNj));
+		itsLogger.Trace(fmt::format("Nj does not match: {} vs {}", itsNj, other.itsNj));
 		return false;
 	}
 
@@ -164,29 +164,30 @@ bool regular_grid::EqualsTo(const regular_grid& other) const
 
 	if (!point::LatLonCompare(other.BottomLeft(), BottomLeft()))
 	{
-		itsLogger.Trace("BottomLeft does not match: " + static_cast<std::string>(other.BottomLeft()) + " vs " +
-		                static_cast<std::string>(BottomLeft()));
+		itsLogger.Trace(fmt::format("BottomLeft does not match: {} vs {}", static_cast<std::string>(other.BottomLeft()),
+		                            static_cast<std::string>(BottomLeft())));
 		return false;
 	}
 
 	if (!point::LatLonCompare(other.TopLeft(), TopLeft()))
 	{
-		itsLogger.Trace("TopLeft does not match: " + static_cast<std::string>(other.TopLeft()) + " vs " +
-		                static_cast<std::string>(TopLeft()));
+		itsLogger.Trace(fmt::format("TopLeft does not match: {} vs {}", static_cast<std::string>(other.TopLeft()),
+		                            static_cast<std::string>(TopLeft())));
 		return false;
 	}
 
 	if (!point::LatLonCompare(other.BottomRight(), BottomRight()))
 	{
-		itsLogger.Trace("BottomRight does not match: " + static_cast<std::string>(other.BottomRight()) + " vs " +
-		                static_cast<std::string>(BottomRight()));
+		itsLogger.Trace(fmt::format("BottomRight does not match: {} vs {}",
+		                            static_cast<std::string>(other.BottomRight()),
+		                            static_cast<std::string>(BottomRight())));
 		return false;
 	}
 
 	if (!point::LatLonCompare(other.TopRight(), TopRight()))
 	{
-		itsLogger.Trace("TopRight does not match: " + static_cast<std::string>(other.TopRight()) + " vs " +
-		                static_cast<std::string>(TopRight()));
+		itsLogger.Trace(fmt::format("TopRight does not match: {} vs {}", static_cast<std::string>(other.TopRight()),
+		                            static_cast<std::string>(TopRight())));
 		return false;
 	}
 
@@ -228,8 +229,7 @@ point regular_grid::Projected(const point& latlon) const
 
 	if (!itsLatLonToXYTransformer->Transform(1, &projX, &projY))
 	{
-		itsLogger.Error("Error determining xy value for latlon point " + std::to_string(latlon.X()) + "," +
-		                std::to_string(latlon.Y()));
+		itsLogger.Error(fmt::format("Error determining xy value for latlon point {},{}", latlon.X(), latlon.Y()));
 		return point();
 	}
 
@@ -264,8 +264,7 @@ point regular_grid::LatLon(const point& projected) const
 	ASSERT(itsXYToLatLonTransformer);
 	if (!itsXYToLatLonTransformer->Transform(1, &x, &y))
 	{
-		itsLogger.Error("Error determining latitude longitude value for xy point " + std::to_string(x) + "," +
-		                std::to_string(y));
+		itsLogger.Error(fmt::format("Error determining latitude longitude value for xy point {},{}", x, y));
 		return point();
 	}
 
