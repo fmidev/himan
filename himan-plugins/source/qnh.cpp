@@ -151,7 +151,7 @@ void qnh::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 		double msl = altitude - topo;
 
 		double result = p0 * pow(1 - L * msl * inv_T0, qnh_exponent);
-
+		result = std::isnan(result) ? himan::MissingDouble() : result;
 		myTargetInfo->Value(result);
 	}
 
