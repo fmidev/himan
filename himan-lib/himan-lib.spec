@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 21.5.5
+Version: 21.5.10
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -87,6 +87,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/*
 
 %changelog
+* Mon May 10 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.10-1.fmi
+- Bugfix for grid comparison method
 * Wed May  5 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.5-1.fmi
 - Interpolation method change for some parameters
 * Mon Apr 12 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.12-1.fmi
