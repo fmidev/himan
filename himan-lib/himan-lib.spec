@@ -19,7 +19,6 @@ Requires: fmt >= 7.1.0
 
 %if %{defined el7}
 BuildRequires: scons
-Buildrequires: gdal-devel
 
 %else if %{defined el8}
 BuildRequires: python3-scons
