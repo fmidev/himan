@@ -89,8 +89,8 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 
 	if (myTargetInfo->Level().Type() != kPressure)
 	{
-		auto PInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("P-HPA"),
-		                                 myTargetInfo->ForecastType());
+		auto PInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(),
+		                                 params{param("P-HPA"), param("P-PA")}, myTargetInfo->ForecastType());
 
 		if (!PInfo)
 		{
