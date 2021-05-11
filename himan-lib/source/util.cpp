@@ -1262,7 +1262,8 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    stol(geominfo["row_cnt"]),
 		    stod(geominfo["pas_longitude"]),
 		    stod(geominfo["pas_latitude"]),
-		    earth
+		    earth,
+		    geominfo["name"]
 		));
 			// clang-format on
 
@@ -1276,8 +1277,10 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    stod(geominfo["pas_longitude"]),
 		    stod(geominfo["pas_latitude"]),
 		    earth,
-		    point(stod(geominfo["geom_parm_2"]), stod(geominfo["geom_parm_1"])), true)
-		);
+		    point(stod(geominfo["geom_parm_2"]), stod(geominfo["geom_parm_1"])),
+		    true,
+		    geominfo["name"]
+		));
 			// clang-format on
 
 		case 2:
@@ -1291,7 +1294,8 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    stod(geominfo["pas_latitude"]),
 		    stod(geominfo["geom_parm_1"]),
 		    earth,
-		    false
+		    false,
+		    geominfo["name"]
 		));
 			// clang-format on
 
@@ -1330,7 +1334,8 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    stod(geominfo["latin1"]),
 		    (geominfo["latin2"].empty() ? stod(geominfo["latin1"]) : stod(geominfo["latin2"])),
 		    earth,
-		    false
+		    false,
+		    geominfo["name"]
 		));
 			// clang-format on
 
@@ -1346,7 +1351,8 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    stod(geominfo["orientation"]),
 		    stod(geominfo["latin"]),
 		    earth,
-		    false
+		    false,
+		    geominfo["name"]
 		));
 			// clang-format on
 
@@ -1365,7 +1371,8 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    0, // TODO: false easting, this value might not be correct
 		    0, // TODO: false northing, this value might not be correct
 		    earth,
-		    false
+		    false,
+		    geominfo["name"]
 		));
 			// clang-format on
 

@@ -20,11 +20,11 @@ class transverse_mercator_grid : public regular_grid
 	transverse_mercator_grid(HPScanningMode theScanningMode, const point& theFirstPoint, size_t ni, size_t nj,
 	                         double di, double dj, double orientation, double theStandardParallel, double theScale,
 	                         double falseEasting, double falseNorthing, const earth_shape<double>& earthShape,
-	                         bool firstPointIsProjected = false);
+	                         bool firstPointIsProjected = false, const std::string& theName = "");
 
 	transverse_mercator_grid(HPScanningMode theScanningMode, const point& theFirstPoint, size_t ni, size_t nj,
 	                         double di, double dj, std::unique_ptr<OGRSpatialReference> spRef,
-	                         bool firstPointIsProjected = false);
+	                         bool firstPointIsProjected = false, const std::string& theName = "");
 
 	virtual ~transverse_mercator_grid() = default;
 	transverse_mercator_grid(const transverse_mercator_grid& other);

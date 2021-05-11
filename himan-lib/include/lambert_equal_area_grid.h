@@ -19,9 +19,11 @@ class lambert_equal_area_grid : public regular_grid
    public:
 	lambert_equal_area_grid(HPScanningMode theScanningMode, const point& theFirstPoint, size_t ni, size_t nj, double di,
 	                        double dj, double theOrientation, double theStandardParallel,
-	                        const earth_shape<double>& earthShape, bool firstPointIsProjected = false);
+	                        const earth_shape<double>& earthShape, bool firstPointIsProjected = false,
+	                        const std::string& theName = "");
 	lambert_equal_area_grid(HPScanningMode theScanningMode, const point& theFirstPoint, size_t ni, size_t nj, double di,
-	                        double dj, std::unique_ptr<OGRSpatialReference> spRef, bool firstPointIsProjected = false);
+	                        double dj, std::unique_ptr<OGRSpatialReference> spRef, bool firstPointIsProjected = false,
+	                        const std::string& theName = "");
 
 	virtual ~lambert_equal_area_grid() = default;
 	lambert_equal_area_grid(const lambert_equal_area_grid& other);

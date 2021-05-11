@@ -9,8 +9,9 @@ using namespace std;
 lambert_conformal_grid::lambert_conformal_grid(HPScanningMode theScanningMode, const point& theFirstPoint, size_t ni,
                                                size_t nj, double di, double dj, double orientation,
                                                double standardParallel1, double standardParallel2,
-                                               const earth_shape<double>& earthShape, bool firstPointIsProjected)
-    : regular_grid(kLambertConformalConic, theScanningMode, di, dj, ni, nj)
+                                               const earth_shape<double>& earthShape, bool firstPointIsProjected,
+                                               const std::string& theName)
+    : regular_grid(kLambertConformalConic, theScanningMode, di, dj, ni, nj, false, theName)
 {
 	itsLogger = logger("lambert_conformal_grid");
 
@@ -37,8 +38,9 @@ lambert_conformal_grid::lambert_conformal_grid(HPScanningMode theScanningMode, c
 
 lambert_conformal_grid::lambert_conformal_grid(HPScanningMode theScanningMode, const point& theFirstPoint, size_t ni,
                                                size_t nj, double di, double dj,
-                                               std::unique_ptr<OGRSpatialReference> spRef, bool firstPointIsProjected)
-    : regular_grid(kLambertConformalConic, theScanningMode, di, dj, ni, nj)
+                                               std::unique_ptr<OGRSpatialReference> spRef, bool firstPointIsProjected,
+                                               const std::string& theName)
+    : regular_grid(kLambertConformalConic, theScanningMode, di, dj, ni, nj, false, theName)
 {
 	itsLogger = logger("lambert_conformal_grid");
 	itsSpatialReference = std::move(spRef);

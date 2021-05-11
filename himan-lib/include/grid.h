@@ -163,8 +163,10 @@ class grid
 
 	virtual std::vector<point> GridPointsInProjectionSpace() const;
 
+	std::string Name() const;
+
    protected:
-	grid(HPGridClass gridClass, HPGridType gridType, bool itsUVRelativeToGrid);
+	grid(HPGridClass gridClass, HPGridType gridType, bool itsUVRelativeToGrid, const std::string& theName = "");
 
 	bool EqualsTo(const grid& other) const;
 
@@ -181,6 +183,7 @@ class grid
 	 */
 
 	bool itsUVRelativeToGrid;
+	std::string itsName;
 
 #ifdef SERIALIZATION
 
@@ -260,7 +263,7 @@ class regular_grid : public grid
 
    protected:
 	regular_grid(HPGridType gridType, HPScanningMode scMode, double di, double dj, size_t ni, size_t nj,
-	             bool uvRelativeToGrid = false);
+	             bool uvRelativeToGrid, const std::string& theName = "");
 
 	bool EqualsTo(const regular_grid& other) const;
 
