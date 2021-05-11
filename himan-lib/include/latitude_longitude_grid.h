@@ -20,9 +20,10 @@ class latitude_longitude_grid : public regular_grid
 {
    public:
 	latitude_longitude_grid(HPScanningMode theScanningMode, const point& theFirstPoint, const point& theLastPoint,
-	                        size_t ni, size_t nj, const earth_shape<double>& earthShape);
+	                        size_t ni, size_t nj, const earth_shape<double>& earthShape,
+	                        const std::string& theName = "");
 	latitude_longitude_grid(HPScanningMode theScanningMode, const point& theFirstPoint, size_t ni, size_t nj, double di,
-	                        double dj, const earth_shape<double>& earthShape);
+	                        double dj, const earth_shape<double>& earthShape, const std::string& theName = "");
 
 	virtual ~latitude_longitude_grid() = default;
 	/**
@@ -106,11 +107,12 @@ class rotated_latitude_longitude_grid : public latitude_longitude_grid
    public:
 	rotated_latitude_longitude_grid(HPScanningMode theScanningMode, const point& theFirstPoint, size_t ni, size_t nj,
 	                                double di, double dj, const earth_shape<double>& earthShape,
-	                                const point& theSouthPole, bool initiallyRotated = true);
+	                                const point& theSouthPole, bool initiallyRotated = true,
+	                                const std::string& theName = "");
 	rotated_latitude_longitude_grid(HPScanningMode theScanningMode, const point& theFirstPoint,
 	                                const point& theLastPoint, size_t ni, size_t nj,
 	                                const earth_shape<double>& earthShape, const point& theSouthPole,
-	                                bool initiallyRotated = true);
+	                                bool initiallyRotated = true, const std::string& theName = "");
 
 	virtual ~rotated_latitude_longitude_grid() = default;
 	rotated_latitude_longitude_grid(const rotated_latitude_longitude_grid& other);

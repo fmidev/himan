@@ -11,13 +11,18 @@
 using namespace himan;
 using namespace std;
 
-grid::grid(HPGridClass gridClass, HPGridType gridType, bool uvRelativeToGrid)
-    : itsGridClass(gridClass), itsGridType(gridType), itsUVRelativeToGrid(uvRelativeToGrid)
+grid::grid(HPGridClass gridClass, HPGridType gridType, bool uvRelativeToGrid, const std::string& theName)
+    : itsGridClass(gridClass), itsGridType(gridType), itsUVRelativeToGrid(uvRelativeToGrid), itsName(theName)
 {
 }
 
 bool grid::EqualsTo(const grid& other) const
 {
+	if (itsName.empty() == false && itsName == other.itsName)
+	{
+		return true;
+	}
+
 	if (other.itsGridType != itsGridType)
 	{
 		itsLogger.Trace(fmt::format("Grid type does not match: {} vs {}", HPGridTypeToString.at(itsGridType),
@@ -28,7 +33,7 @@ bool grid::EqualsTo(const grid& other) const
 	if (other.itsGridClass != itsGridClass)
 	{
 		itsLogger.Trace(fmt::format("Grid class does not match: {} vs {}", HPGridClassToString.at(itsGridClass),
-		                           HPGridClassToString.at(other.itsGridClass)));
+		                            HPGridClassToString.at(other.itsGridClass)));
 		return false;
 	}
 
@@ -45,6 +50,11 @@ HPGridClass grid::Class() const
 	return itsGridClass;
 }
 
+std::string grid::Name() const
+{
+	return itsName;
+}
+
 ostream& grid::Write(std::ostream& file) const
 {
 	file << "<" << ClassName() << ">" << std::endl;
@@ -52,6 +62,7 @@ ostream& grid::Write(std::ostream& file) const
 	file << "__itsUVRelativeToGrid__ " << itsUVRelativeToGrid << std::endl;
 
 	file << EarthShape();
+	file << "__itsName__ " << itsName << std::endl;
 
 	return file;
 }
@@ -88,8 +99,8 @@ std::vector<point> grid::GridPointsInProjectionSpace() const
 //--------------- regular grid
 
 regular_grid::regular_grid(HPGridType gridType, HPScanningMode scMode, double di, double dj, size_t ni, size_t nj,
-                           bool uvRelativeToGrid)
-    : grid(kRegularGrid, gridType, uvRelativeToGrid),
+                           bool uvRelativeToGrid, const std::string& theName)
+    : grid(kRegularGrid, gridType, uvRelativeToGrid, theName),
       itsScanningMode(scMode),
       itsDi(di),
       itsDj(dj),
@@ -134,6 +145,7 @@ bool regular_grid::EqualsTo(const regular_grid& other) const
 		return false;
 	}
 #endif
+
 	const double kEpsilon = 0.0001;
 
 	if (fabs(other.itsDi - itsDi) > kEpsilon)

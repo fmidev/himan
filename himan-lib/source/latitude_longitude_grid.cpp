@@ -7,8 +7,9 @@ using namespace himan;
 using namespace std;
 
 latitude_longitude_grid::latitude_longitude_grid(HPScanningMode theScanningMode, const point& theFirstPoint, size_t ni,
-                                                 size_t nj, double di, double dj, const earth_shape<double>& earthShape)
-    : regular_grid(kLatitudeLongitude, theScanningMode, di, dj, ni, nj), itsFirstPoint(theFirstPoint)
+                                                 size_t nj, double di, double dj, const earth_shape<double>& earthShape,
+                                                 const std::string& theName)
+    : regular_grid(kLatitudeLongitude, theScanningMode, di, dj, ni, nj, false, theName), itsFirstPoint(theFirstPoint)
 {
 	itsLogger = logger("latitude_longitude_grid");
 	itsEarthShape = earthShape;
@@ -16,8 +17,8 @@ latitude_longitude_grid::latitude_longitude_grid(HPScanningMode theScanningMode,
 
 latitude_longitude_grid::latitude_longitude_grid(HPScanningMode theScanningMode, const point& theFirstPoint,
                                                  const point& theLastPoint, size_t ni, size_t nj,
-                                                 const earth_shape<double>& earthShape)
-    : regular_grid(kLatitudeLongitude, theScanningMode, MissingDouble(), MissingDouble(), ni, nj),
+                                                 const earth_shape<double>& earthShape, const std::string& theName)
+    : regular_grid(kLatitudeLongitude, theScanningMode, MissingDouble(), MissingDouble(), ni, nj, false, theName),
       itsFirstPoint(theFirstPoint)
 {
 	double fx = theFirstPoint.X();
@@ -278,12 +279,11 @@ ostream& latitude_longitude_grid::Write(std::ostream& file) const
 	return file;
 }
 
-rotated_latitude_longitude_grid::rotated_latitude_longitude_grid(HPScanningMode theScanningMode,
-                                                                 const point& theFirstPoint, size_t ni, size_t nj,
-                                                                 double di, double dj,
-                                                                 const earth_shape<double>& earthShape,
-                                                                 const point& theSouthPole, bool initiallyRotated)
-    : latitude_longitude_grid(theScanningMode, theFirstPoint, ni, nj, di, dj, earthShape), itsSouthPole(theSouthPole)
+rotated_latitude_longitude_grid::rotated_latitude_longitude_grid(
+    HPScanningMode theScanningMode, const point& theFirstPoint, size_t ni, size_t nj, double di, double dj,
+    const earth_shape<double>& earthShape, const point& theSouthPole, bool initiallyRotated, const std::string& theName)
+    : latitude_longitude_grid(theScanningMode, theFirstPoint, ni, nj, di, dj, earthShape, theName),
+      itsSouthPole(theSouthPole)
 {
 	if (!initiallyRotated)
 	{
@@ -300,12 +300,10 @@ rotated_latitude_longitude_grid::rotated_latitude_longitude_grid(HPScanningMode 
 	itsLogger.Trace(Proj4String());
 }
 
-rotated_latitude_longitude_grid::rotated_latitude_longitude_grid(HPScanningMode theScanningMode,
-                                                                 const point& theFirstPoint, const point& theLastPoint,
-                                                                 size_t ni, size_t nj,
-                                                                 const earth_shape<double>& earthShape,
-                                                                 const point& theSouthPole, bool initiallyRotated)
-    : latitude_longitude_grid(theScanningMode, theFirstPoint, theLastPoint, ni, nj, earthShape),
+rotated_latitude_longitude_grid::rotated_latitude_longitude_grid(
+    HPScanningMode theScanningMode, const point& theFirstPoint, const point& theLastPoint, size_t ni, size_t nj,
+    const earth_shape<double>& earthShape, const point& theSouthPole, bool initiallyRotated, const std::string& theName)
+    : latitude_longitude_grid(theScanningMode, theFirstPoint, theLastPoint, ni, nj, earthShape, theName),
       itsSouthPole(theSouthPole)
 {
 	if (!initiallyRotated)

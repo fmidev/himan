@@ -9,8 +9,8 @@ using namespace himan::plugin;
 transverse_mercator_grid::transverse_mercator_grid(HPScanningMode theScanningMode, const point& theFirstPoint,
                                                    size_t ni, size_t nj, double di, double dj,
                                                    std::unique_ptr<OGRSpatialReference> spRef,
-                                                   bool firstPointIsProjected)
-    : regular_grid(kTransverseMercator, theScanningMode, di, dj, ni, nj)
+                                                   bool firstPointIsProjected, const std::string& theName)
+    : regular_grid(kTransverseMercator, theScanningMode, di, dj, ni, nj, false, theName)
 {
 	itsLogger = logger("transverse_mercator_grid");
 	itsSpatialReference = std::move(spRef);
@@ -28,8 +28,8 @@ transverse_mercator_grid::transverse_mercator_grid(HPScanningMode scanningMode, 
                                                    size_t nj, double di, double dj, double orientation,
                                                    double standardParallel, double scale, double falseEasting,
                                                    double falseNorthing, const earth_shape<double>& earthShape,
-                                                   bool firstPointIsProjected)
-    : regular_grid(kTransverseMercator, scanningMode, di, dj, ni, nj)
+                                                   bool firstPointIsProjected, const std::string& theName)
+    : regular_grid(kTransverseMercator, scanningMode, di, dj, ni, nj, false, theName)
 {
 	itsLogger = logger("transverse_mercator_grid");
 

@@ -8,8 +8,9 @@ using namespace himan::plugin;
 
 lambert_equal_area_grid::lambert_equal_area_grid(HPScanningMode theScanningMode, const point& theFirstPoint, size_t ni,
                                                  size_t nj, double di, double dj,
-                                                 std::unique_ptr<OGRSpatialReference> spRef, bool firstPointIsProjected)
-    : regular_grid(kLambertEqualArea, theScanningMode, di, dj, ni, nj)
+                                                 std::unique_ptr<OGRSpatialReference> spRef, bool firstPointIsProjected,
+                                                 const std::string& theName)
+    : regular_grid(kLambertEqualArea, theScanningMode, di, dj, ni, nj, false, theName)
 {
 	itsLogger = logger("lambert_equal_area_grid");
 	itsSpatialReference = std::move(spRef);
@@ -25,8 +26,8 @@ lambert_equal_area_grid::lambert_equal_area_grid(HPScanningMode theScanningMode,
 lambert_equal_area_grid::lambert_equal_area_grid(HPScanningMode theScanningMode, const point& theFirstPoint, size_t ni,
                                                  size_t nj, double di, double dj, double theOrientation,
                                                  double theStandardParallel, const earth_shape<double>& earthShape,
-                                                 bool firstPointIsProjected)
-    : regular_grid(kLambertEqualArea, theScanningMode, di, dj, ni, nj)
+                                                 bool firstPointIsProjected, const std::string& theName)
+    : regular_grid(kLambertEqualArea, theScanningMode, di, dj, ni, nj, false, theName)
 {
 	itsLogger = logger("lambert_equal_area_grid");
 

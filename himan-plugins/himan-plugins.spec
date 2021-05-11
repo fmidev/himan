@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 21.5.10
+Version: 21.5.11
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 21.4.12
+Requires: himan-lib >= 21.5.11
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 20.12.2
@@ -145,6 +145,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Tue May 11 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.11-1.fmi
+- Fine tuning of grib write
 * Mon May 10 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.10-1.fmi
 - Force MEPS and derivatives to WGS84 datum
 * Wed May  5 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.5-2.fmi

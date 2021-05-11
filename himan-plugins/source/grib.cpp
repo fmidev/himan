@@ -637,8 +637,19 @@ void WriteAreaAndGrid(NFmiGribMessage& message, const shared_ptr<himan::grid>& g
 		// when reading gribs it is 6371220 m. This is to maintain
 		// backwards compatibility; with time we hope to have the
 		// correct values in place in code and database.
+		//
+		// When writing gribs we do not force the earth shape value per
+		// producer as we do when reading gribs: at this stage we
+		// can have more fine-grained control over the shape value.
+		// Assuming of course that the values in database are set.
 
-		const auto earth = DetermineEarthShapeForProducer(prod, earth_shape<double>(6367470));
+		earth_shape<double> earth = grid->EarthShape();
+
+		if (IsMissing(earth.A()) || (earth.A() == 6371220. && grid->Name().find("SMARTMET") == string::npos))
+		{
+			earth = earth_shape<double>(6367470);
+		}
+
 		const string name = earth.Name();
 
 		if (name.empty())

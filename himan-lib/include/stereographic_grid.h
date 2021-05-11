@@ -22,9 +22,10 @@ class stereographic_grid : public regular_grid
    public:
 	stereographic_grid(HPScanningMode theScanningMode, const point& theFirstPoint, size_t ni, size_t nj, double di,
 	                   double dj, double theOrientation, const earth_shape<double>& earthShape,
-	                   bool firstPointIsProjected = false);
+	                   bool firstPointIsProjected = false, const std::string& theName = "");
 	stereographic_grid(HPScanningMode theScanningMode, const point& theFirstPoint, size_t ni, size_t nj, double di,
-	                   double dj, std::unique_ptr<OGRSpatialReference> spRef, bool firstPointIsProjected = false);
+	                   double dj, std::unique_ptr<OGRSpatialReference> spRef, bool firstPointIsProjected = false,
+	                   const std::string& theName = "");
 
 	virtual ~stereographic_grid() = default;
 	/**
