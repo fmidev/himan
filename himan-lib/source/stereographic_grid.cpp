@@ -7,8 +7,9 @@ using namespace std;
 
 stereographic_grid::stereographic_grid(HPScanningMode theScanningMode, const point& theFirstPoint, size_t ni, size_t nj,
                                        double di, double dj, double theOrientation,
-                                       const earth_shape<double>& earthShape, bool firstPointIsProjected)
-    : regular_grid(kStereographic, theScanningMode, di, dj, ni, nj)
+                                       const earth_shape<double>& earthShape, bool firstPointIsProjected,
+                                       const std::string& theName)
+    : regular_grid(kStereographic, theScanningMode, di, dj, ni, nj, false, theName)
 {
 	itsLogger = logger("stereographic_grid");
 
@@ -34,8 +35,8 @@ stereographic_grid::stereographic_grid(HPScanningMode theScanningMode, const poi
 
 stereographic_grid::stereographic_grid(HPScanningMode theScanningMode, const point& theFirstPoint, size_t ni, size_t nj,
                                        double di, double dj, std::unique_ptr<OGRSpatialReference> spRef,
-                                       bool firstPointIsProjected)
-    : regular_grid(kStereographic, theScanningMode, di, dj, ni, nj)
+                                       bool firstPointIsProjected, const std::string& theName)
+    : regular_grid(kStereographic, theScanningMode, di, dj, ni, nj, false, theName)
 {
 	itsLogger = logger("stereographic_grid");
 	itsSpatialReference = std::move(spRef);
