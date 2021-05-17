@@ -717,7 +717,7 @@ pair<bool, radon_record> radon::SaveGrid(const info<T>& resultInfo, const file_i
 	}
 
 	const string schema_name = tableinfo["schema_name"];
-	const string table_name = tableinfo["partition_name"];
+	const string table_name = tableinfo["table_name"];
 	const string partition_name = tableinfo["partition_name"];
 	const string record_count = tableinfo["record_count"];
 
