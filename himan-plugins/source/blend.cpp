@@ -18,8 +18,6 @@ namespace plugin
 {
 using namespace std;
 
-const string kClassName = "himan::plugin::blend";
-
 // 'decaying factor' for bias and mae
 const double alpha = 0.05;
 
@@ -27,32 +25,19 @@ const producer kBlendWeightProd(182, 86, 182, "BLENDW");
 const producer kBlendRawProd(183, 86, 183, "BLENDR");
 const producer kBlendBiasProd(184, 86, 184, "BLENDB");
 
-// When adjusting origin times, we need to check that the resulting time is compatible with the model's
-// (used) forecast length.
-const int kMosForecastLength = 240;
-const int kEcmwfForecastLength = 240;
-const int kHirlamForecastLength = 54;
-const int kMepsForecastLength = 66;
-const int kGfsForecastLength = 240;
-
 const producer kObsProd(281, 86, 202, "SMARTMETNWC");
 string kObsGeom = "MEPS2500D";
 
 // Each blend producer is composed of these original producers. We use forecast_types to distinguish them
 // from each other, and this way we don't have to create bunch of extra producers.
 const blend_producer OBS(forecast_type(kAnalysis), 0, 1);
-const blend_producer MOS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kMos)), kMosForecastLength,
-                         12);
-const blend_producer ECMWF(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kEcmwf)),
-                           kEcmwfForecastLength, 12);
-const blend_producer HIRLAM(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kHirlam)),
-                            kHirlamForecastLength, 12);
-const blend_producer MEPS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kMeps)),
-                          kMepsForecastLength, 12);
-const blend_producer GFS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kGfs)), kGfsForecastLength,
-                         12);
+const blend_producer MOS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kMos)), 240, 12);
+const blend_producer ECMWF(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kEcmwf)), 240, 12);
+const blend_producer HIRLAM(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kHirlam)), 54, 12);
+const blend_producer MEPS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kMeps)), 66, 12);
+const blend_producer GFS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kGfs)), 240, 12);
 
-blend::blend() : itsCalculationMode(kCalculateNone), itsNumHours(0), itsAnalysisTime(), itsBlendProducer()
+blend::blend() : itsCalculationMode(kCalculateNone), itsAnalysisTime(), itsBlendProducer()
 {
 	itsLogger = logger("blend");
 }
@@ -128,18 +113,6 @@ bool blend::ParseConfigurationOptions(const shared_ptr<const plugin_configuratio
 	{
 		itsLogger.Fatal(fmt::format("Invalid blender 'mode' specified: '{}'", mode));
 		himan::Abort();
-	}
-
-	const string hours = conf->GetValue("producer_hours");
-
-	if ((itsCalculationMode == kCalculateBias || itsCalculationMode == kCalculateMAE) && hours.empty())
-	{
-		itsLogger.Fatal("Number of previous hours ('producer_hours') for calculation not specified");
-		himan::Abort();
-	}
-	if (itsCalculationMode == kCalculateBias || itsCalculationMode == kCalculateMAE)
-	{
-		itsNumHours = stoi(hours);
 	}
 
 	// Producer for bias and mae calculation (itsProdFtype is only used with these modes)
@@ -591,8 +564,8 @@ std::vector<shared_ptr<info<double>>> blend::FetchRawGrids(shared_ptr<info<doubl
 
 	for (size_t i = 0; i < ret.size(); i++)
 	{
-		log.Info(
-		    fmt::format("{} RAW missing {}", IdToName(i + 1), (ret[i]) ? to_string(ret[i]->Data().MissingCount()) : "completely"));
+		log.Info(fmt::format("{} RAW missing {}", IdToName(i + 1),
+		                     (ret[i]) ? to_string(ret[i]->Data().MissingCount()) : "completely"));
 	}
 
 	return ret;
@@ -857,7 +830,7 @@ void blend::SetupOutputForecastTimes(shared_ptr<info<double>> Info, const raw_ti
 
 	forecast_time ftime(latestOrigin, current.ValidDateTime());
 
-	auto numHours = itsNumHours;
+	int numHours = itsBlendProducer.forecastLength;
 
 	// analysis hour must always be 0 or 12
 	while (numHours % 12 != 0)
