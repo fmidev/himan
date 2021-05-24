@@ -3,9 +3,9 @@
 #include "plugin_factory.h"
 #include "radon.h"
 #include "writer.h"
-#include <numeric>
 #include <algorithm>
 #include <mutex>
+#include <numeric>
 #include <thread>
 
 //
@@ -18,8 +18,6 @@ namespace plugin
 {
 using namespace std;
 
-const string kClassName = "himan::plugin::blend";
-
 // 'decaying factor' for bias and mae
 const double alpha = 0.05;
 
@@ -27,37 +25,25 @@ const producer kBlendWeightProd(182, 86, 182, "BLENDW");
 const producer kBlendRawProd(183, 86, 183, "BLENDR");
 const producer kBlendBiasProd(184, 86, 184, "BLENDB");
 
-// When adjusting origin times, we need to check that the resulting time is compatible with the model's
-// (used) forecast length.
-const int kMosForecastLength = 240;
-const int kEcmwfForecastLength = 240;
-const int kHirlamForecastLength = 54;
-const int kMepsForecastLength = 66;
-const int kGfsForecastLength = 240;
-
-const producer kLapsProd(109, 86, 109, "LAPSSCAN");
-string kLapsGeom = "LAPSSCANLARGE";
+const producer kObsProd(281, 86, 202, "SMARTMETNWC");
+// Default
+string kObsGeom = "SMARTMET2500";
 
 // Each blend producer is composed of these original producers. We use forecast_types to distinguish them
 // from each other, and this way we don't have to create bunch of extra producers.
-const blend_producer LAPS(forecast_type(kAnalysis), 0, 1);
-const blend_producer MOS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kMos)), kMosForecastLength,
-                         12);
-const blend_producer ECMWF(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kEcmwf)),
-                           kEcmwfForecastLength, 12);
-const blend_producer HIRLAM(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kHirlam)),
-                            kHirlamForecastLength, 12);
-const blend_producer MEPS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kMeps)),
-                          kMepsForecastLength, 12);
-const blend_producer GFS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kGfs)), kGfsForecastLength,
-                         12);
+const blend_producer OBS(forecast_type(kDeterministic), 0, 1);
+const blend_producer MOS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kMos)), 240, 12);
+const blend_producer ECMWF(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kEcmwf)), 240, 12);
+const blend_producer HIRLAM(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kHirlam)), 54, 12);
+const blend_producer MEPS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kMeps)), 66, 12);
+const blend_producer GFS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kGfs)), 240, 12);
 
-blend::blend() : itsCalculationMode(kCalculateNone), itsNumHours(0), itsAnalysisTime(), itsBlendProducer()
+blend::blend() : itsCalculationMode(kCalculateNone), itsAnalysisTime(), itsBlendProducer()
 {
 	itsLogger = logger("blend");
 }
 
-// Create observation analysis time (ie. LAPS analysis time) from analysis hour that's
+// Create observation analysis time (ie. OBS analysis time) from analysis hour that's
 // given in conf file
 forecast_time MakeAnalysisTime(const forecast_time& currentTime, int analysisHour)
 {
@@ -99,9 +85,15 @@ std::string IdToName(size_t id)
 // - analysis time (obs)
 bool blend::ParseConfigurationOptions(const shared_ptr<const plugin_configuration>& conf)
 {
+	// backwards compatibility
 	if (conf->GetValue("laps_geometry").empty() == false)
 	{
-		kLapsGeom = conf->GetValue("laps_geometry");
+		kObsGeom = conf->GetValue("laps_geometry");
+	}
+
+	if (conf->GetValue("obs_geometry").empty() == false)
+	{
+		kObsGeom = conf->GetValue("obs_geometry");
 	}
 
 	const string mode = conf->GetValue("mode");
@@ -120,27 +112,16 @@ bool blend::ParseConfigurationOptions(const shared_ptr<const plugin_configuratio
 	}
 	else
 	{
-		itsLogger.Fatal("Invalid blender 'mode' specified: '" + mode + "'");
-		return false;
-	}
-
-	const string hours = conf->GetValue("producer_hours");
-
-	if ((itsCalculationMode == kCalculateBias || itsCalculationMode == kCalculateMAE) && hours.empty())
-	{
-		throw std::runtime_error(ClassName() +
-		                         ": number of previous hours ('producer_hours') for calculation not specified");
-	}
-	if (itsCalculationMode == kCalculateBias || itsCalculationMode == kCalculateMAE)
-	{
-		itsNumHours = stoi(hours);
+		itsLogger.Fatal(fmt::format("Invalid blender 'mode' specified: '{}'", mode));
+		himan::Abort();
 	}
 
 	// Producer for bias and mae calculation (itsProdFtype is only used with these modes)
 	const string prod = conf->Exists("producer") ? conf->GetValue("producer") : "";
 	if ((itsCalculationMode == kCalculateBias || itsCalculationMode == kCalculateMAE) && prod.empty())
 	{
-		throw std::runtime_error(ClassName() + ": bias calculation data producer ('producer') not defined");
+		itsLogger.Fatal("Bias calculation data producer ('producer') not defined");
+		himan::Abort();
 	}
 
 	if (itsCalculationMode == kCalculateBias || itsCalculationMode == kCalculateMAE)
@@ -238,7 +219,7 @@ blend::FetchMAEAndBiasSource(shared_ptr<info<double>>& targetInfo, const forecas
 	const level& currentLevel = targetInfo->Level();
 
 	shared_ptr<info<double>> analysis =
-	    Fetch(itsAnalysisTime, currentLevel, currentParam, LAPS.type, {kLapsGeom}, kLapsProd);
+	    Fetch(itsAnalysisTime, currentLevel, currentParam, OBS.type, {kObsGeom}, kObsProd);
 
 	if (!analysis)
 	{
@@ -489,9 +470,8 @@ void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short 
 			break;
 		}
 
-		log.Info("Calculating for member " + std::to_string(static_cast<int>(Info->ForecastType().Value())) +
-		         " analysis hour " + ftime.OriginDateTime().String("%H") + " step " +
-		         static_cast<string>(ftime.Step()));
+		log.Info(fmt::format("Calculating for member {} analysis_hour {} step {}", Info->ForecastType().Value(),
+		                     ftime.OriginDateTime().String("%H"), static_cast<string>(ftime.Step())));
 
 		if (ftime.OriginDateTime() > current.OriginDateTime() || ftime.OriginDateTime() > originDateTime)
 		{
@@ -585,8 +565,8 @@ std::vector<shared_ptr<info<double>>> blend::FetchRawGrids(shared_ptr<info<doubl
 
 	for (size_t i = 0; i < ret.size(); i++)
 	{
-		log.Info(IdToName(i + 1) + " RAW missing " +
-		         ((ret[i]) ? to_string(ret[i]->Data().MissingCount()) : "completely"));
+		log.Info(fmt::format("{} RAW missing {}", IdToName(i + 1),
+		                     (ret[i]) ? to_string(ret[i]->Data().MissingCount()) : "completely"));
 	}
 
 	return ret;
@@ -600,7 +580,7 @@ std::vector<shared_ptr<info<double>>> blend::FetchMAEAndBiasGrids(shared_ptr<inf
 	const producer prod = (type == kCalculateMAE) ? kBlendWeightProd : kBlendBiasProd;
 	const std::string typestr = (type == kCalculateMAE) ? "MAE" : "BIAS";
 
-	logger log("calculateBlend_Fetch" + typestr + "Grids#" + to_string(threadIdx));
+	logger log(fmt::format("calculateBlend_Fetch{}Grids#{}", typestr, threadIdx));
 
 	std::vector<forecast_type> types = {MOS.type, ECMWF.type, HIRLAM.type, MEPS.type, GFS.type};
 	std::vector<shared_ptr<info<double>>> ret(5);
@@ -630,8 +610,8 @@ std::vector<shared_ptr<info<double>>> blend::FetchMAEAndBiasGrids(shared_ptr<inf
 
 	for (size_t i = 0; i < ret.size(); i++)
 	{
-		log.Info(IdToName(i + 1) + " " + typestr + " missing" +
-		         ((ret[i]) ? ": " + to_string(ret[i]->Data().MissingCount()) : " completely"));
+		log.Info(fmt::format("{} {} missing {}", IdToName(i + 1), typestr,
+		                     (ret[i]) ? to_string(ret[i]->Data().MissingCount()) : "completely"));
 	}
 
 	return ret;
@@ -640,7 +620,6 @@ std::vector<shared_ptr<info<double>>> blend::FetchMAEAndBiasGrids(shared_ptr<inf
 void blend::CalculateBlend(shared_ptr<info<double>> targetInfo, unsigned short threadIdx)
 {
 	auto log = logger("calculateBlend#" + to_string(threadIdx));
-	const string deviceType = "CPU";
 
 	const param currentParam = targetInfo->Param();
 
@@ -812,8 +791,7 @@ void blend::CalculateBlend(shared_ptr<info<double>> targetInfo, unsigned short t
 	log.Warning("Failed to advance bias iterator position " + to_string(biasWarnings) + " times");
 	log.Warning("Failed to advance weight iterator position " + to_string(weightWarnings) + " times");
 
-	log.Info("[" + deviceType + "] Missing values: " + to_string(targetInfo->Data().MissingCount()) + "/" +
-	         to_string(targetInfo->Data().Size()));
+	log.Info(fmt::format("[CPU] Missing values: {}/{}", targetInfo->Data().MissingCount(), targetInfo->Data().Size()));
 }
 
 void blend::WriteToFile(const shared_ptr<info<double>> targetInfo, write_options writeOptions)
@@ -853,7 +831,7 @@ void blend::SetupOutputForecastTimes(shared_ptr<info<double>> Info, const raw_ti
 
 	forecast_time ftime(latestOrigin, current.ValidDateTime());
 
-	auto numHours = itsNumHours;
+	int numHours = itsBlendProducer.forecastLength;
 
 	// analysis hour must always be 0 or 12
 	while (numHours % 12 != 0)

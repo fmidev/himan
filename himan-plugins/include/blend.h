@@ -93,7 +93,6 @@ class blend : public compiled_plugin, private compiled_plugin_base
 	                      blend_mode type) const;
 
 	blend_mode itsCalculationMode;
-	int itsNumHours;
 	forecast_time itsAnalysisTime;  // store observation analysis time
 	blend_producer itsBlendProducer;
 };
