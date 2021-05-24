@@ -26,11 +26,12 @@ const producer kBlendRawProd(183, 86, 183, "BLENDR");
 const producer kBlendBiasProd(184, 86, 184, "BLENDB");
 
 const producer kObsProd(281, 86, 202, "SMARTMETNWC");
-string kObsGeom = "MEPS2500D";
+// Default
+string kObsGeom = "SMARTMET2500";
 
 // Each blend producer is composed of these original producers. We use forecast_types to distinguish them
 // from each other, and this way we don't have to create bunch of extra producers.
-const blend_producer OBS(forecast_type(kAnalysis), 0, 1);
+const blend_producer OBS(forecast_type(kDeterministic), 0, 1);
 const blend_producer MOS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kMos)), 240, 12);
 const blend_producer ECMWF(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kEcmwf)), 240, 12);
 const blend_producer HIRLAM(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kHirlam)), 54, 12);
