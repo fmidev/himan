@@ -3,9 +3,9 @@
 #include "plugin_factory.h"
 #include "radon.h"
 #include "writer.h"
-#include <numeric>
 #include <algorithm>
 #include <mutex>
+#include <numeric>
 #include <thread>
 
 //
@@ -126,16 +126,16 @@ bool blend::ParseConfigurationOptions(const shared_ptr<const plugin_configuratio
 	}
 	else
 	{
-		itsLogger.Fatal("Invalid blender 'mode' specified: '" + mode + "'");
-		return false;
+		itsLogger.Fatal(fmt::format("Invalid blender 'mode' specified: '{}'", mode));
+		himan::Abort();
 	}
 
 	const string hours = conf->GetValue("producer_hours");
 
 	if ((itsCalculationMode == kCalculateBias || itsCalculationMode == kCalculateMAE) && hours.empty())
 	{
-		throw std::runtime_error(ClassName() +
-		                         ": number of previous hours ('producer_hours') for calculation not specified");
+		itsLogger.Fatal("Number of previous hours ('producer_hours') for calculation not specified");
+		himan::Abort();
 	}
 	if (itsCalculationMode == kCalculateBias || itsCalculationMode == kCalculateMAE)
 	{
@@ -146,7 +146,8 @@ bool blend::ParseConfigurationOptions(const shared_ptr<const plugin_configuratio
 	const string prod = conf->Exists("producer") ? conf->GetValue("producer") : "";
 	if ((itsCalculationMode == kCalculateBias || itsCalculationMode == kCalculateMAE) && prod.empty())
 	{
-		throw std::runtime_error(ClassName() + ": bias calculation data producer ('producer') not defined");
+		itsLogger.Fatal("Bias calculation data producer ('producer') not defined");
+		himan::Abort();
 	}
 
 	if (itsCalculationMode == kCalculateBias || itsCalculationMode == kCalculateMAE)
@@ -495,9 +496,8 @@ void blend::CalculateMember(shared_ptr<info<double>> targetInfo, unsigned short 
 			break;
 		}
 
-		log.Info("Calculating for member " + std::to_string(static_cast<int>(Info->ForecastType().Value())) +
-		         " analysis hour " + ftime.OriginDateTime().String("%H") + " step " +
-		         static_cast<string>(ftime.Step()));
+		log.Info(fmt::format("Calculating for member {} analysis_hour {} step {}", Info->ForecastType().Value(),
+		                     ftime.OriginDateTime().String("%H"), static_cast<string>(ftime.Step())));
 
 		if (ftime.OriginDateTime() > current.OriginDateTime() || ftime.OriginDateTime() > originDateTime)
 		{
@@ -591,8 +591,8 @@ std::vector<shared_ptr<info<double>>> blend::FetchRawGrids(shared_ptr<info<doubl
 
 	for (size_t i = 0; i < ret.size(); i++)
 	{
-		log.Info(IdToName(i + 1) + " RAW missing " +
-		         ((ret[i]) ? to_string(ret[i]->Data().MissingCount()) : "completely"));
+		log.Info(
+		    fmt::format("{} RAW missing {}", IdToName(i + 1), (ret[i]) ? to_string(ret[i]->Data().MissingCount()) : "completely"));
 	}
 
 	return ret;
@@ -606,7 +606,7 @@ std::vector<shared_ptr<info<double>>> blend::FetchMAEAndBiasGrids(shared_ptr<inf
 	const producer prod = (type == kCalculateMAE) ? kBlendWeightProd : kBlendBiasProd;
 	const std::string typestr = (type == kCalculateMAE) ? "MAE" : "BIAS";
 
-	logger log("calculateBlend_Fetch" + typestr + "Grids#" + to_string(threadIdx));
+	logger log(fmt::format("calculateBlend_Fetch{}Grids#{}", typestr, threadIdx));
 
 	std::vector<forecast_type> types = {MOS.type, ECMWF.type, HIRLAM.type, MEPS.type, GFS.type};
 	std::vector<shared_ptr<info<double>>> ret(5);
@@ -636,8 +636,8 @@ std::vector<shared_ptr<info<double>>> blend::FetchMAEAndBiasGrids(shared_ptr<inf
 
 	for (size_t i = 0; i < ret.size(); i++)
 	{
-		log.Info(IdToName(i + 1) + " " + typestr + " missing" +
-		         ((ret[i]) ? ": " + to_string(ret[i]->Data().MissingCount()) : " completely"));
+		log.Info(fmt::format("{} {} missing {}", IdToName(i + 1), typestr,
+		                     (ret[i]) ? to_string(ret[i]->Data().MissingCount()) : "completely"));
 	}
 
 	return ret;
@@ -646,7 +646,6 @@ std::vector<shared_ptr<info<double>>> blend::FetchMAEAndBiasGrids(shared_ptr<inf
 void blend::CalculateBlend(shared_ptr<info<double>> targetInfo, unsigned short threadIdx)
 {
 	auto log = logger("calculateBlend#" + to_string(threadIdx));
-	const string deviceType = "CPU";
 
 	const param currentParam = targetInfo->Param();
 
@@ -818,8 +817,7 @@ void blend::CalculateBlend(shared_ptr<info<double>> targetInfo, unsigned short t
 	log.Warning("Failed to advance bias iterator position " + to_string(biasWarnings) + " times");
 	log.Warning("Failed to advance weight iterator position " + to_string(weightWarnings) + " times");
 
-	log.Info("[" + deviceType + "] Missing values: " + to_string(targetInfo->Data().MissingCount()) + "/" +
-	         to_string(targetInfo->Data().Size()));
+	log.Info(fmt::format("[CPU] Missing values: {}/{}", targetInfo->Data().MissingCount(), targetInfo->Data().Size()));
 }
 
 void blend::WriteToFile(const shared_ptr<info<double>> targetInfo, write_options writeOptions)
