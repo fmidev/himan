@@ -3,7 +3,7 @@
 %define LIBNAME himan-scripts
 Summary: himan-scripts collection
 Name: %{LIBNAME}
-Version: 21.5.6
+Version: 21.5.24
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: lua >= 5.1.4
 Requires: himan-plugins >= 20.10.26
-Requires: himan-lib >= 20.10.26
+Requires: himan-lib >= 21.5.24-2
 
 %define debug_package %{nil}
 
@@ -39,6 +39,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/himan-scripts/*.lua
 
 %changelog
+* Mon May 24 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.24-1.fmi
+- snwc radiation tuning
 * Wed May  6 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.6-1.fmi
 - More features for nwcsaf-clouds.lua
 * Tue May  4 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.4-2.fmi
