@@ -1,4 +1,5 @@
 #include "stereographic_grid.h"
+#include "util.h"
 #include <functional>
 #include <ogr_spatialref.h>
 
@@ -78,6 +79,9 @@ void stereographic_grid::CreateCoordinateTransformations(const point& firstPoint
 			himan::Abort();
 		}
 	}
+
+	lon = util::round(lon, 4);
+	lat = util::round(lat, 4);
 
 	if (fabs(lon) < 1e-4 and fabs(lat) < 1e-4)
 	{
