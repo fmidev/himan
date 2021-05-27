@@ -120,6 +120,10 @@ local min_t = MinT(-2,2,current_time,param("T-K"))
 local snow_sum = SumT(-6,6,current_time,param("SNR-KGM2"))
 local max_ws = MaxT(-2,2,current_time,param("FF-MS"),level(HPLevelType.kHeight,10))
 
+if #min_t == 0 or #snow_sum == 0 or #max_ws == 0 then  
+    return
+end
+
 local res = {}
 
 for i=1, #min_t do
