@@ -1,23 +1,22 @@
 --
 -- SmartMet NWC parameters
 --
--- Create radiation parameters to SNWC using data from "edited data"
--- and fixing the raditation if total cloudiness has changed.
+-- Create radiation parameters to SNWC using data from ECMWF
+-- and fixing the radiation if total cloudiness has changed.
 -- 
 
 local MISS = missing
-local editor_prod = producer(181, "SMARTMET")
+local cc_prod = producer(131, "ECG")
+local rad_prod = producer(240, "ECGMTA")
+local ftype = forecast_type(HPForecastType.kDeterministic)
 
-editor_prod:SetCentre(86)
-editor_prod:SetProcess(181)
+local latest_origintime = raw_time(radon:GetLatestTime(rad_prod, "", 0))
+local latest_time = forecast_time(latest_origintime, current_time:GetValidDateTime())
 
-local editor_origintime = raw_time(radon:GetLatestTime(editor_prod, "", 0))
-local editor_time = forecast_time(editor_origintime, current_time:GetValidDateTime())
-
-local SW = luatool:FetchWithProducer(editor_time, level(HPLevelType.kHeight, 0), param("RADGLO-WM2"), current_forecast_type, editor_prod, "")
-local LW = luatool:FetchWithProducer(editor_time, level(HPLevelType.kHeight, 0), param("RADLW-WM2"), current_forecast_type, editor_prod, "")
+local SW = luatool:FetchWithProducer(latest_time, level(HPLevelType.kHeight, 0), param("RADGLO-WM2"), ftype, rad_prod, "")
+local LW = luatool:FetchWithProducer(latest_time, level(HPLevelType.kHeight, 0), param("RADLW-WM2"), ftype, rad_prod, "")
 local CC = luatool:FetchWithType(current_time, level(HPLevelType.kHeight, 0), param("N-0TO1"), current_forecast_type)
-local CC_ORIG = luatool:FetchWithProducer(editor_time, level(HPLevelType.kHeight, 0), param("N-PRCNT"), current_forecast_type, editor_prod, "")
+local CC_ORIG = luatool:FetchWithProducer(latest_time, level(HPLevelType.kHeight, 0), param("N-0TO1"), ftype, cc_prod, "")
 
 if not SW or not LW or not CC or not CC_ORIG then
   return

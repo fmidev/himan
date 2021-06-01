@@ -1,5 +1,6 @@
 #include "lambert_conformal_grid.h"
 #include "info.h"
+#include "util.h"
 #include <functional>
 #include <ogr_spatialref.h>
 
@@ -82,6 +83,11 @@ void lambert_conformal_grid::CreateCoordinateTransformations(const point& firstP
 			return;
 		}
 	}
+
+	// HIMAN-336: limit false easting/northing accuracy to four decimal places (millimeters)
+
+	lon = util::round(lon, 4);
+	lat = util::round(lat, 4);
 
 	if (fabs(lon) < 1e-4 and fabs(lat) < 1e-4)
 	{
