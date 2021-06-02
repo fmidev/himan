@@ -3,8 +3,8 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 21.5.24
-Release: 2%{dist}.fmi
+Version: 21.5.31
+Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -145,8 +145,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Mon May 31 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.31-1.fmi
+- writer: minor changes
 * Mon May 24 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.24-2.fmi
-- grib. fine tuning
+- grib: fine tuning
 * Mon May 24 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.24-1.fmi
 - blend: change obs producer
 * Mon May 17 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.17-1.fmi

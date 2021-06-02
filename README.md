@@ -126,6 +126,14 @@ Himan stands for HIlojen MANipulaatio, "grid manipulation" in Finnish.
 
 # Getting started
 
+A docker repository at quay.io for Himan:
+
+https://quay.io/repository/fmi/himan
+
+```
+docker pull quay.io/fmi/himan
+```
+
 [Getting started](https://github.com/fmidev/himan/tree/master/doc/getting-started.md)
 
 # Contributing
