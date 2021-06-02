@@ -265,6 +265,11 @@ bool Interpolate(const grid* baseGrid, const std::vector<std::shared_ptr<info<T>
 		{
 			return false;
 		}
+		else if (needInterpolation == false && needPointReordering == false)
+		{
+			logger logr("interpolate");
+			logr.Trace("Areas are equal, no need to interpolate");
+		}
 	}
 
 	return true;
