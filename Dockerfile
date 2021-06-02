@@ -12,9 +12,11 @@ RUN dnf -y install dnf-plugins-core && \
     dnf config-manager --setopt="epel.exclude=eccodes*" --save
 
 # Install Himan and dependencies
-RUN dnf -y install \
+RUN dnf -y update && \
+    dnf -y install \
 	himan-bin \
 	himan-lib \
 	himan-plugins \
         himan-scripts \
-	wget jq
+	wget jq && \
+    dnf clean all
