@@ -249,6 +249,7 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 
 		for (const auto& info : infos)
 		{
+			itsLogger.Trace(fmt::format("Creating grib message from '{}'", util::UniqueName(*info)));
 			auto ret = g->CreateGribMessage(*info);
 			file_information& finfo = ret.first;
 			NFmiGribMessage& msg = ret.second;
