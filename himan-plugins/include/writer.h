@@ -10,6 +10,7 @@
 #include "file_information.h"
 #include "info.h"
 #include "plugin_configuration.h"
+#include "radon_record.h"
 #include "write_options.h"
 
 namespace himan
@@ -49,8 +50,8 @@ class writer : public auxiliary_plugin
 	                                                      std::shared_ptr<const plugin_configuration> conf);
 
 	template <typename T>
-	bool WriteToRadon(std::shared_ptr<const plugin_configuration> conf, const file_information& finfo,
-	                  std::shared_ptr<himan::info<T>> info);
+	std::pair<bool, radon_record> WriteToRadon(std::shared_ptr<const plugin_configuration> conf,
+	                                           const file_information& finfo, std::shared_ptr<himan::info<T>> info);
 
 	write_options itsWriteOptions;
 };

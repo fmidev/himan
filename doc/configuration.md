@@ -679,6 +679,73 @@ When writing to S3 storage, specify hostname (for example s3.eu-west-1.amazonaws
 
 Not really a Himan environment variable, but very useful still. Setting any value will print all sql queries to stdout.
 
+The following environment variables control options that can also be specified as command line options.
+If both and environment variable and a command line option is specified, the latter will take precedence.
+
+* HIMAN_OUTPUT_FILE_TYPE
+
+Possible values: grib, grib2, querydata, csv, geotiff
+
+* HIMAN_COMPRESSION
+
+Possible values: gz, bzip2
+
+* HIMAN_CONFIGURATION_FILE
+
+Possible values: filename or '-' for stdin
+
+* HIMAN_THREADS
+
+Number of threads to use
+
+* HIMAN_DEBUG_LEVEL
+
+Possible values: 0-5
+
+* HIMAN_STATISTICS
+
+Enable statistics by giving any string as label
+
+* HIMAN_CUDA_DEVICE_ID
+
+Explicitly set device id
+
+* HIMAN_NO_CUDA
+
+Disable all cuda usage
+
+* HIMAN_NO_CUDA_UNPACKING
+
+Disable cuda unpacking of grib data
+
+* HIMAN_NO_CUDA_PACKING
+
+Disable cuda packing of grib data
+
+* HIMAN_NO_DATABASE
+
+Disable use of radon database
+
+* HIMAN_PARAM_FILE
+
+Specify location of parameter metadata file (to be used with no-database mode)
+
+* HIMAN_NO_AUXILIARY_FILE_FULL_CACHE_READ
+
+Disable reading of all auxiliary files at first call
+
+* HIMAN_NO_SS_STATE_UPDATE
+
+Disable updating of ss_state table in radon
+
+* HIMAN_NO_STATISTICS_UPLOAD
+
+Disable statistics upload to radon
+
+* HIMAN_AUXILIARY_FILES
+
+Specify list of auxiliary files to read (whitespace-separated)
+
 <a name="Full_examples"/>
 
 # Full examples
