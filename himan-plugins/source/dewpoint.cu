@@ -13,7 +13,7 @@ __global__ void DewpointKernel(const T* __restrict__ d_t, const T* __restrict__ 
 	{
 		ASSERT(d_t[idx] > 80. || IsMissing(d_t[idx]));
 
-		d_td[idx] = metutil::DewPointFromRH_<double>(d_t[idx], d_rh[idx] * RH_scale);
+		d_td[idx] = metutil::DewPointFromRH_<double>(d_t[idx], min(d_rh[idx] * RH_scale, 100.f));
 	}
 }
 

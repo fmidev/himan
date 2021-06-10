@@ -118,7 +118,7 @@ void dewpoint::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short t
 			const double T = tup.get<1>();
 			const double RH = tup.get<2>();
 
-			result = metutil::DewPointFromRH_<double>(T + TBase, RH * RHScale);
+			result = metutil::DewPointFromRH_<double>(T + TBase, min(RH * RHScale, 100.));
 		}
 	}
 
