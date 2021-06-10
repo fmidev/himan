@@ -249,6 +249,7 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 
 		for (const auto& info : infos)
 		{
+			itsLogger.Trace(fmt::format("Creating grib message from '{}'", util::UniqueName(*info)));
 			auto ret = g->CreateGribMessage(*info);
 			file_information& finfo = ret.first;
 			NFmiGribMessage& msg = ret.second;
@@ -318,8 +319,8 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 }
 
 template <typename T>
-bool writer::WriteToRadon(std::shared_ptr<const plugin_configuration> conf, const file_information& finfo,
-                          std::shared_ptr<info<T>> theInfo)
+std::pair<bool, radon_record> writer::WriteToRadon(std::shared_ptr<const plugin_configuration> conf,
+                                                   const file_information& finfo, std::shared_ptr<info<T>> theInfo)
 {
 	if (conf->WriteToDatabase() == true)
 	{
@@ -337,24 +338,21 @@ bool writer::WriteToRadon(std::shared_ptr<const plugin_configuration> conf, cons
 				if (!ret.first)
 				{
 					itsLogger.Error("Writing to radon failed");
-					return false;
+					return ret;
 				}
+
+				return ret;
 			}
 			catch (const std::exception& e)
 			{
 				itsLogger.Error(fmt::format("Writing to radon failed: {}", e.what()));
-				return false;
-			}
-			catch (...)
-			{
-				itsLogger.Error("Writing to radon failed: general exception");
-				return false;
+				return std::make_pair(false, radon_record());
 			}
 		}
 	}
 
-	return true;
+	return std::make_pair(true, radon_record());
 }
 
-template bool writer::WriteToRadon(std::shared_ptr<const plugin_configuration>, const file_information&,
-                                   std::shared_ptr<info<double>>);
+template std::pair<bool, radon_record> writer::WriteToRadon(std::shared_ptr<const plugin_configuration>,
+                                                            const file_information&, std::shared_ptr<info<double>>);

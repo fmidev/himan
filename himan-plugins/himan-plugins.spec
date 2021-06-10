@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 21.6.2
+Version: 21.6.10
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -145,6 +145,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Thu Jun 10 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.6.10-1.fmi
+- API change in writer/radon
 * Wed Jun  2 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.6.2-1.fmi
 - split_sum: add clear sky radiation
 - fetcher: fix minor bug
