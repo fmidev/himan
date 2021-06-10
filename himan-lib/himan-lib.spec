@@ -13,7 +13,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: libfmidb >= 21.3.31
+Requires: libfmidb >= 21.6.10
 Requires: libfmigrib >= 20.6.16
 Requires: fmt >= 7.1.0
 
