@@ -27,7 +27,8 @@ using namespace himan;
 using namespace std;
 
 void banner();
-shared_ptr<configuration> ParseCommandLine(int argc, char** argv);
+void ParseCommandLine(shared_ptr<configuration>& conf, int argc, char** argv);
+shared_ptr<configuration> ReadEnvironment();
 
 struct plugin_timing
 {
@@ -273,7 +274,8 @@ int main(int argc, char** argv)
 
 	try
 	{
-		conf = ParseCommandLine(argc, argv);
+		conf = ReadEnvironment();
+		ParseCommandLine(conf, argc, argv);
 		conf->ProgramName(kHiman);
 	}
 	catch (const std::exception& e)
@@ -499,10 +501,201 @@ void CudaCapabilities()
 	std::cout << "#----------------------------------------------#" << std::endl;
 }
 #endif
-shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
+
+void SetConfigurationFile(shared_ptr<configuration>& conf, const string& confFile)
 {
+	conf->ConfigurationFileName(confFile);
+	if (confFile == "-")
+	{
+		stringstream ss;
+		for (string line; getline(cin, line);)
+		{
+			ss << line;
+		}
+		conf->ConfigurationFileContent(ss.str());
+	}
+	else
+	{
+		ifstream ifs(confFile);
+		string content = string((istreambuf_iterator<char>(ifs)), (istreambuf_iterator<char>()));
+		conf->ConfigurationFileContent(content);
+	}
+}
+
+void SetOutputFileType(shared_ptr<configuration>& conf, const string& outfileType)
+{
+	if (outfileType == "grib")
+	{
+		conf->OutputFileType(kGRIB1);
+	}
+	else if (outfileType == "grib2")
+	{
+		conf->OutputFileType(kGRIB2);
+	}
+	else if (outfileType == "netcdf")
+	{
+		conf->OutputFileType(kNetCDF);
+	}
+	else if (outfileType == "querydata")
+	{
+		conf->OutputFileType(kQueryData);
+	}
+	else if (outfileType == "csv")
+	{
+		conf->OutputFileType(kCSV);
+	}
+	else if (outfileType == "geotiff")
+	{
+		conf->OutputFileType(kGeoTIFF);
+	}
+	else
+	{
+		cerr << "Invalid file type: " << outfileType << endl;
+		himan::Abort();
+	}
+}
+
+void SetCompression(shared_ptr<configuration>& conf, const string& outfileCompression)
+{
+	if (outfileCompression == "gz")
+	{
+		conf->FileCompression(kGZIP);
+	}
+	else if (outfileCompression == "bzip2")
+	{
+		conf->FileCompression(kBZIP2);
+	}
+	else
+	{
+		cerr << "Invalid file compression type: " << outfileCompression << endl;
+		himan::Abort();
+	}
+}
+
+void SetLogLevel(shared_ptr<configuration>& conf, int logLevel)
+{
+	himan::HPDebugState debugState = himan::kDebugMsg;
+
+	switch (logLevel)
+	{
+		default:
+			cerr << "Invalid debug level: " << logLevel << endl;
+			exit(1);
+		case 0:
+			debugState = kFatalMsg;
+			break;
+		case 1:
+			debugState = kErrorMsg;
+			break;
+		case 2:
+			debugState = kWarningMsg;
+			break;
+		case 3:
+			debugState = kInfoMsg;
+			break;
+		case 4:
+			debugState = kDebugMsg;
+			break;
+		case 5:
+			debugState = kTraceMsg;
+			break;
+	}
+
+	logger::MainDebugState = debugState;
+}
+
+void SetCudaDeviceId(shared_ptr<configuration>& conf, int cudaDeviceId)
+{
+#ifdef HAVE_CUDA
+
+	if (cudaDeviceId >= conf->CudaDeviceCount() || cudaDeviceId < 0)
+	{
+		cerr << "cuda device id " << cudaDeviceId << " requested, allowed maximum cuda device id is "
+		     << conf->CudaDeviceCount() - 1 << endl;
+		cerr << "cuda mode is disabled" << endl;
+		conf->UseCuda(false);
+		conf->UseCudaForPacking(false);
+	}
+
+	conf->CudaDeviceId(cudaDeviceId);
+#endif
+}
+
+shared_ptr<configuration> ReadEnvironment()
+{
+	const vector<string> keys{"HIMAN_OUTPUT_FILE_TYPE",
+	                          "HIMAN_COMPRESSION",
+	                          "HIMAN_CONFIGURATION_FILE",
+	                          "HIMAN_THREADS",
+	                          "HIMAN_DEBUG_LEVEL",
+	                          "HIMAN_STATISTICS",
+	                          "HIMAN_CUDA_DEVICE_ID",
+	                          "HIMAN_NO_CUDA",
+	                          "HIMAN_NO_CUDA_UNPACKING",
+	                          "HIMAN_NO_CUDA_PACKING",
+	                          "HIMAN_NO_DATABASE",
+	                          "HIMAN_PARAM_FILE",
+	                          "HIMAN_NO_AUXILIARY_FILE_FULL_CACHE_READ",
+	                          "HIMAN_NO_SS_STATE_UPDATE",
+	                          "HIMAN_NO_STATISTICS_UPLOAD",
+	                          "HIMAN_AUXILIARY_FILES"};
+
 	shared_ptr<configuration> conf = make_shared<configuration>();
 
+	for (const string& key : keys)
+	{
+		try
+		{
+			const string val = util::GetEnv(key);
+
+			if (key == "HIMAN_OUTPUT_FILE_TYPE")
+				SetOutputFileType(conf, val);
+			else if (key == "HIMAN_COMPRESSION")
+				SetCompression(conf, val);
+			else if (key == "HIMAN_CONFIGURATION_FILE")
+				SetConfigurationFile(conf, val);
+			else if (key == "HIMAN_THREADS")
+				conf->ThreadCount(static_cast<short>(stoi(val)));
+			else if (key == "HIMAN_DEBUG_LEVEL")
+				SetLogLevel(conf, stoi(val));
+			else if (key == "HIMAN_STATISTICS")
+				conf->StatisticsLabel(val);
+			else if (key == "HIMAN_NO_CUDA")
+			{
+				conf->UseCuda(false);
+				conf->UseCudaForUnpacking(false);
+				conf->UseCudaForPacking(false);
+			}
+			else if (key == "HIMAN_NO_CUDA_UNPACKING")
+				conf->UseCudaForUnpacking(false);
+			else if (key == "HIMAN_NO_CUDA_PACKING")
+				conf->UseCudaForPacking(false);
+			else if (key == "HIMAN_NO_DATABASE")
+				conf->DatabaseType(kNoDatabase);
+			else if (key == "HIMAN_PARAM_FILE")
+				conf->ParamFile(val);
+			else if (key == "HIMAN_NO_AUXILIARY_FILE_FULL_CACHE_READ")
+				conf->ReadAllAuxiliaryFilesToCache(false);
+			else if (key == "HIMAN_NO_SS_STATE_UPDATE")
+				conf->UpdateSSStateTable(false);
+			else if (key == "HIMAN_NO_STATISTIC_UPLOAD")
+				conf->UploadStatistics(false);
+			else if (key == "HIMAN_AUXILIARY_FILES")
+			{
+				auto files = util::Split(val, " ");
+				conf->AuxiliaryFiles(files);
+			}
+		}
+		catch (const invalid_argument& e)
+		{
+		}
+	}
+
+	return conf;
+}
+
+void ParseCommandLine(shared_ptr<configuration>& conf, int argc, char** argv)
+{
 	namespace po = boost::program_options;
 
 	po::options_description desc("Allowed options", 100);
@@ -517,8 +710,6 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 #ifdef HAVE_CUDA
 	short int cudaDeviceId = 0;
 #endif
-
-	himan::HPDebugState debugState = himan::kDebugMsg;
 
 	int logLevel = 0;
 	short int threadCount = -1;
@@ -572,33 +763,8 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 
 	if (logLevel)
 	{
-		switch (logLevel)
-		{
-			default:
-				cerr << "Invalid debug level: " << logLevel << endl;
-				exit(1);
-			case 0:
-				debugState = kFatalMsg;
-				break;
-			case 1:
-				debugState = kErrorMsg;
-				break;
-			case 2:
-				debugState = kWarningMsg;
-				break;
-			case 3:
-				debugState = kInfoMsg;
-				break;
-			case 4:
-				debugState = kDebugMsg;
-				break;
-			case 5:
-				debugState = kTraceMsg;
-				break;
-		}
+		SetLogLevel(conf, logLevel);
 	}
-
-	logger::MainDebugState = debugState;
 
 	if (opt.count("version"))
 	{
@@ -635,16 +801,6 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 		conf->UseCudaForUnpacking(false);
 	}
 
-	if (opt.count("no-ss_state-update"))
-	{
-		conf->UpdateSSStateTable(false);
-	}
-
-	if (opt.count("no-statistics-upload"))
-	{
-		conf->UploadStatistics(false);
-	}
-
 	// get cuda device count for this server
 
 	int devCount;
@@ -666,66 +822,28 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 
 	if (opt.count("cuda-device-id"))
 	{
-		if (cudaDeviceId >= conf->CudaDeviceCount() || cudaDeviceId < 0)
-		{
-			cerr << "cuda device id " << cudaDeviceId << " requested, allowed maximum cuda device id is "
-			     << conf->CudaDeviceCount() - 1 << endl;
-			cerr << "cuda mode is disabled" << endl;
-			conf->UseCuda(false);
-			conf->UseCudaForPacking(false);
-		}
-
-		conf->CudaDeviceId(cudaDeviceId);
+		SetCudaDeviceId(conf, cudaDeviceId);
 	}
 #endif
 
+	if (opt.count("no-ss_state-update"))
+	{
+		conf->UpdateSSStateTable(false);
+	}
+
+	if (opt.count("no-statistics-upload"))
+	{
+		conf->UploadStatistics(false);
+	}
+
 	if (!outfileType.empty())
 	{
-		if (outfileType == "grib")
-		{
-			conf->OutputFileType(kGRIB1);
-		}
-		else if (outfileType == "grib2")
-		{
-			conf->OutputFileType(kGRIB2);
-		}
-		else if (outfileType == "netcdf")
-		{
-			conf->OutputFileType(kNetCDF);
-		}
-		else if (outfileType == "querydata")
-		{
-			conf->OutputFileType(kQueryData);
-		}
-		else if (outfileType == "csv")
-		{
-			conf->OutputFileType(kCSV);
-		}
-		else if (outfileType == "geotiff")
-		{
-			conf->OutputFileType(kGeoTIFF);
-		}
-		else
-		{
-			cerr << "Invalid file type: " << outfileType << endl;
-			exit(1);
-		}
+		SetOutputFileType(conf, outfileType);
 	}
 
 	if (!outfileCompression.empty())
 	{
-		if (outfileCompression == "gz")
-		{
-			conf->FileCompression(kGZIP);
-		}
-		else if (outfileCompression == "bzip2")
-		{
-			conf->FileCompression(kBZIP2);
-		}
-		else
-		{
-			cerr << "Invalid file compression type: " << outfileCompression << endl;
-		}
+		SetCompression(conf, outfileCompression);
 	}
 
 	if (opt.count("help"))
@@ -772,41 +890,28 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	if (opt.count("no-database"))
 	{
 		conf->DatabaseType(kNoDatabase);
-		if (opt.count("param-file") == 0)
-		{
-			cerr << "param-file options missing" << endl;
-			exit(1);
-		}
-	}
-
-	if (!confFile.empty())
-	{
-		conf->ConfigurationFileName(confFile);
-		if (confFile == "-")
-		{
-			stringstream ss;
-			for (string line; getline(cin, line);)
-			{
-				ss << line;
-			}
-			conf->ConfigurationFileContent(ss.str());
-		}
-		else
-		{
-			ifstream ifs(confFile);
-			string content = string((istreambuf_iterator<char>(ifs)), (istreambuf_iterator<char>()));
-			conf->ConfigurationFileContent(content);
-		}
-	}
-	else
-	{
-		cerr << "himan: Configuration file not defined" << endl << desc;
-		exit(1);
 	}
 
 	if (!paramFile.empty())
 	{
 		conf->ParamFile(paramFile);
+	}
+
+	if (conf->DatabaseType() == kNoDatabase && conf->ParamFile().empty())
+	{
+		cerr << "param-file options missing" << endl;
+		exit(1);
+	}
+
+	if (!confFile.empty())
+	{
+		SetConfigurationFile(conf, confFile);
+	}
+
+	if (conf->ConfigurationFileName().empty())
+	{
+		cerr << "himan: Configuration file not defined" << endl << desc;
+		exit(1);
 	}
 
 	if (!statisticsLabel.empty())
@@ -818,5 +923,4 @@ shared_ptr<configuration> ParseCommandLine(int argc, char** argv)
 	{
 		conf->ReadAllAuxiliaryFilesToCache(false);
 	}
-	return conf;
 }

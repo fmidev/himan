@@ -2817,13 +2817,6 @@ vector<shared_ptr<himan::info<T>>> grib::FromFile(const file_information& theInp
 {
 	vector<shared_ptr<himan::info<T>>> infos;
 
-	if (options.prod.Centre() == kHPMissingInt && options.configuration->DatabaseType() != kNoDatabase)
-	{
-		itsLogger.Error("Process and centre information for producer " + to_string(options.prod.Id()) +
-		                " are undefined");
-		return infos;
-	}
-
 	timer aTimer(true);
 	NFmiGrib reader;
 
