@@ -125,7 +125,7 @@ void ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const f
 		}
 		catch (HPExceptionType& e)
 		{
-			if (e != kFileDataNotFound)
+			if (e != kFileDataNotFound && e != kFileMetaDataNotFound)
 			{
 				itsLogger.Fatal("Unable to proceed");
 				himan::Abort();
