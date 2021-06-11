@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 21.6.10
+Version: 21.6.11
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -145,6 +145,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Fri Jun 11 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.6.11-1.fmi
+- dewpoint: cap input humidity values to max 100%
 * Thu Jun 10 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.6.10-1.fmi
 - API change in writer/radon
 * Wed Jun  2 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.6.2-1.fmi
