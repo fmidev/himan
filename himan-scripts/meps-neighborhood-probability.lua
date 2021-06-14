@@ -56,7 +56,8 @@ function produceProbabilities(sourceparam, targetparam, op, limit)
   local prob = {}
 
   for i=1,#datas[1] do
-    prob[i] = MISS
+    -- use double missing here as that's what luatool writes
+    prob[i] = missing
 
     local tmp = 0
     local cnt = 0
@@ -69,7 +70,10 @@ function produceProbabilities(sourceparam, targetparam, op, limit)
       end
     end
 
-    prob[i] = tmp / cnt
+    if cnt > 0 then
+      prob[i] = tmp / cnt
+    end
+
   end
 
   proctype = nil
