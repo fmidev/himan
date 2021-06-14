@@ -77,7 +77,7 @@ function produceProbabilities(sourceparam, targetparam, op, limit)
   if op == ">" then
     proctype = processing_type(HPProcessingType.kProbabilityGreaterThan, limit, kHPMissingValue)
   elseif op == "==" then
-    proctype = processing_type(HPProcessingType.kProbabilityEq, limit, kHPMissingValue)
+    proctype = processing_type(HPProcessingType.kProbabilityEquals, limit, kHPMissingValue)
   end
 
   targetparam:SetProcessingType(proctype)
