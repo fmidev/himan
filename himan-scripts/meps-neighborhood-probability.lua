@@ -19,7 +19,10 @@ function produceProbabilities(sourceparam, targetparam, op, limit)
 
   local curtime = forecast_time(current_time:GetOriginDateTime(), current_time:GetValidDateTime())
 
-  for j=0,3 do -- Look for the past 3 hours
+  -- Fetch full MEPS ensemble (30 members) for the past 3 hours (and the current hour)
+  -- This total to 30 * 4 = 120 members with the current MEPS configuration
+
+  for j=0,3 do
 
     ens:Fetch(configuration, curtime, current_level)
 
