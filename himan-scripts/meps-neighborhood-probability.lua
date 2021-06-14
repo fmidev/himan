@@ -17,36 +17,29 @@ function produceProbabilities(sourceparam, targetparam, op, limit)
   local ens = lagged_ensemble(sourceparam, "MEPS_LAGGED_ENSEMBLE")
   ens:SetMaximumMissingForecasts(ensemble_size)
 
-  local curtime = forecast_time(current_time:GetOriginDateTime(), current_time:GetValidDateTime())
+  ens:Fetch(configuration, current_time, current_level)
 
-  for j=0,3 do -- Look for the past 3 hours
+  local actual_size = ens:Size()
+  for i=0,actual_size-1 do
+    local data = ens:GetForecast(i)
 
-    ens:Fetch(configuration, curtime, current_level)
-
-    local actual_size = ens:Size()
-    for i=0,actual_size-1 do
-      local data = ens:GetForecast(i)
-
-      if data then
-        local reduced = nil
-        if op == ">" then
-          reduced = ProbLimitGt2D(data:GetData(), mask, limit):GetValues()
-        elseif op == "==" then
-          reduced = ProbLimitEq2D(data:GetData(), mask, limit):GetValues()
-        end
-        mvals = 0
-        for k,v in pairs(reduced) do
-          if v == v then
-            reduced[k] = math.ceil(v)
-          end
-        end
-        datas[#datas+1] = reduced
+    if data then
+      local reduced = nil
+      if op == ">" then
+        reduced = ProbLimitGt2D(data:GetData(), mask, limit):GetValues()
+      elseif op == "==" then
+        reduced = ProbLimitEq2D(data:GetData(), mask, limit):GetValues()
       end
+      mvals = 0
+      for k,v in pairs(reduced) do
+        if v == v then
+          reduced[k] = math.ceil(v)
+        end
+      end
+      datas[#datas+1] = reduced
     end
-
-    curtime:GetValidDateTime():Adjust(HPTimeResolution.kHourResolution, -1)
-
   end
+
   logger:Info(string.format("Read %d grids", #datas))
 
   if #datas == 0 then
