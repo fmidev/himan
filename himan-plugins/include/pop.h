@@ -39,11 +39,7 @@ class pop : public compiled_plugin, private compiled_plugin_base
 	virtual void Calculate(std::shared_ptr<info<double>> theTargetInfo, unsigned short theThreadIndex);
 
 	std::string itsECEPSGeom;
-	std::string itsECGeom;
-	std::string itsPEPSGeom;
-	std::string itsHirlamGeom;
 	std::string itsMEPSGeom;
-	std::string itsGFSGeom;
 };
 
 extern "C" std::shared_ptr<himan_plugin> create()
