@@ -3,7 +3,7 @@
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 21.6.14
+Version: 21.7.20
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -86,6 +86,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/*
 
 %changelog
+* Tue Jul 20 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.7.20-1.fmi
+- Minor changes to logging
 * Mon Jun 14 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.6.14-1.fmi
 - Logging changes
 * Wed Jun  2 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.6.2-1.fmi

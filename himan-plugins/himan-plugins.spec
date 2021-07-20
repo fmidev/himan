@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 21.6.11
+Version: 21.7.20
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -145,6 +145,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Tue Jul 20 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.7.20-1.fmi
+- Minor changes to grib/luatool
 * Fri Jun 11 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.6.11-1.fmi
 - dewpoint: cap input humidity values to max 100%
 * Thu Jun 10 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.6.10-1.fmi

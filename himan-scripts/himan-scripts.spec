@@ -3,7 +3,7 @@
 %define LIBNAME himan-scripts
 Summary: himan-scripts collection
 Name: %{LIBNAME}
-Version: 21.6.14
+Version: 21.7.20
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -39,6 +39,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/himan-scripts/*.lua
 
 %changelog
+* Tue Jul 20 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.7.20-1.fmi
+- snwc-radiation: re-try fetch if failed the first time
 * Mon Jun 14 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.6.14-1.fmi
 - Bugfix for neighborhood probabilities
 * Mon May 24 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.24-1.fmi
