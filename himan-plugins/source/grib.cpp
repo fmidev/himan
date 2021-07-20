@@ -2870,7 +2870,7 @@ vector<shared_ptr<himan::info<T>>> grib::FromFile(const file_information& theInp
 	stringstream ss;
 	ss.precision((speed < 1.) ? 1 : 0);
 
-	ss << "Read from file '" << theInputFile.file_location << "' ";
+	ss << "Read '" << options.param.Name() << "' from file '" << theInputFile.file_location << "' ";
 
 	if (theInputFile.offset)
 	{
