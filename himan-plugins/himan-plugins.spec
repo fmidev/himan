@@ -3,7 +3,7 @@
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 21.7.20
+Version: 21.7.21
 Release: 1%{dist}.fmi
 License: MIT
 Group: Development/Tools
@@ -18,10 +18,9 @@ Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 20.12.2
 Requires: libfmidb >= 21.3.31
-Requires: smartmet-library-newbase >= 21.2.20
+Requires: smartmet-library-newbase >= 21.6.16
 Requires: smartmet-library-gis
 Requires: smartmet-library-macgyver
-Requires: libpqxx
 Requires: boost169-iostreams
 Requires: boost169-thread
 Requires: libs3 >= 4.1
@@ -32,10 +31,13 @@ Requires: gdal32-libs
 %if %{defined el7}
 BuildRequires: scons
 BuildRequires: eigen >= 3.3.4
+Requires: libpqxx >= 5.0.1
 
 %else if %{defined el8}
 BuildRequires: python3-scons
 BuildRequires: eigen3-devel >= 3.3.4
+Requires: libpqxx >= 6
+Requires: libpqxx < 7
 
 %endif
 
@@ -145,6 +147,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Wed Jul 21 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.7.21-1.fmi
+- New newbase
 * Tue Jul 20 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.7.20-1.fmi
 - Minor changes to grib/luatool
 * Fri Jun 11 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.6.11-1.fmi
