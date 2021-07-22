@@ -38,7 +38,7 @@ BuildRequires: libfmigrib-devel >= 20.6.16
 BuildRequires: zlib-devel
 BuildRequires: boost169-devel
 BuildRequires: libs3-devel
-BuildRequires: libpqxx-devel
+BuildRequires: libpqxx-devel = 1:6.4.5-1.rhel8.1
 BuildRequires: fmt-devel >= 7.1.0
 BuildRequires: eccodes
 Requires: geos39
