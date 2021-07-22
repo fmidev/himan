@@ -36,8 +36,7 @@ Requires: libpqxx >= 5.0.1
 %else if %{defined el8}
 BuildRequires: python3-scons
 BuildRequires: eigen3-devel >= 3.3.4
-Requires: libpqxx >= 6
-Requires: libpqxx < 7
+Requires: libpqxx = 1:6.4.5-1.rhel8.1
 
 %endif
 
