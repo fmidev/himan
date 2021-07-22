@@ -29,7 +29,7 @@ BuildRequires: eigen3-devel
 
 BuildRequires: bzip2-devel
 BuildRequires: redhat-rpm-config
-BuildRequires: cuda-11-0
+BuildRequires: cuda-nvcc-11-0
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: geos39-devel
 BuildRequires: gdal32-devel
@@ -41,6 +41,7 @@ BuildRequires: libs3-devel
 BuildRequires: libpqxx-devel = 1:6.4.5-1.rhel8.1
 BuildRequires: fmt-devel >= 7.1.0
 BuildRequires: eccodes
+BuildRequires: make
 Requires: geos39
 Requires: gdal32-libs
 Requires: eccodes

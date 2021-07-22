@@ -44,9 +44,11 @@ Requires: libpqxx = 1:6.4.5-1.rhel8.1
 Requires: libjasper
 Requires: grib_api
 %else
+BuildRequires: make
 BuildRequires: gdal32-devel
 BuildRequires: gcc-c++ >= 4.8.2
-BuildRequires: cuda-11-0
+BuildRequires: cuda-nvcc-11-0
+BuildRequires: libcublas-devel-11-0
 BuildRequires: eccodes-devel
 BuildRequires: redhat-rpm-config
 BuildRequires: cuda-cusp-11-0 >= 0.5.1
