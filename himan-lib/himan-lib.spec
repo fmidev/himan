@@ -19,11 +19,15 @@ Requires: fmt >= 7.1.0
 
 %if %{defined el7}
 BuildRequires: scons
+BuildRequires: libpqxx-devel = 5.0.1
+Requires: libpqxx = 5.0.1
 
 %else if %{defined el8}
 BuildRequires: python3-scons
 BuildRequires: gcc-c++ >= 8.2.1
 BuildRequires: eigen3-devel
+BuildRequires: libpqxx-devel = 1:6.4.5-1.rhel8.1
+Requires: libpqxx = 1:6.4.5-1.rhel8.1
 
 %endif
 
@@ -38,7 +42,6 @@ BuildRequires: libfmigrib-devel >= 20.6.16
 BuildRequires: zlib-devel
 BuildRequires: boost169-devel
 BuildRequires: libs3-devel
-BuildRequires: libpqxx-devel = 1:6.4.5-1.rhel8.1
 BuildRequires: fmt-devel >= 7.1.0
 BuildRequires: eccodes
 BuildRequires: make

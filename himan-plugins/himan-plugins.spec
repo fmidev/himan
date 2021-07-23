@@ -31,11 +31,13 @@ Requires: gdal32-libs
 %if %{defined el7}
 BuildRequires: scons
 BuildRequires: eigen >= 3.3.4
+BuildRequires: libpqxx-devel >= 5.0.1
 Requires: libpqxx >= 5.0.1
 
 %else if %{defined el8}
 BuildRequires: python3-scons
 BuildRequires: eigen3-devel >= 3.3.4
+BuildRequires: libpqxx-devel = 1:6.4.5-1.rhel8.1
 Requires: libpqxx = 1:6.4.5-1.rhel8.1
 
 %endif
