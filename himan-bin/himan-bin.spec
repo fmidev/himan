@@ -1,10 +1,18 @@
+%if !0%{?version:1}
+%define version 21.6.10
+%endif
+
+%if !0%{?release:1}
+%define release 1
+%endif
+
 %define distnum %(/usr/lib/rpm/redhat/dist.sh --distnum)
 
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 21.6.10
-Release: 1%{dist}.fmi
+Version: %{version}
+Release: %{release}%{dist}.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi

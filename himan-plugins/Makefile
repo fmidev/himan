@@ -10,6 +10,9 @@ rpmsourcedir = /tmp/$(shell whoami)/rpmbuild
 
 .SILENT:createlink
 
+VERSION=$(shell date -u +%y).$(shell printf "%d" $(shell date -u +%m)).$(shell date -u +%d)
+RELEASE=$(shell date -u +%H%M).$(shell git rev-parse --short HEAD)
+
 # The rules
 
 all release: createlink
@@ -29,7 +32,7 @@ createlink:
         fi;
 
 rpm:    clean createlink
-	rpmbuild --build-in-place -bb himan-plugins.spec
+	rpmbuild --build-in-place --define="version $(VERSION)" --define="release $(RELEASE)" -bb himan-plugins.spec
 
 install:
 	mkdir -p  $(DESTDIR)/usr/lib64/himan-plugins $(DESTDIR)/usr/include/himan/plugins
