@@ -10,7 +10,7 @@ rpmsourcedir = /tmp/$(shell whoami)/rpmbuild
 
 .SILENT:createlink
 
-VERSION=$(shell date -u +%y).$(shell printf "%d" $(shell date -u +%m)).$(shell date -u +%d)
+VERSION=$(shell date -u +%y).$(shell date -u +%m | sed 's/^0*//').$(shell date -u +%d | sed 's/^0*//')
 RELEASE=$(shell date -u +%H%M).$(shell git rev-parse --short HEAD)
 
 # The rules
