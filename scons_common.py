@@ -168,7 +168,7 @@ cflags_difficult.append('-Wctor-dtor-privacy')
 cpp_standard = 'c++11'
 
 if env['OS_VERSION'] >= 8:
-    cpp_standard = 'c++14'
+    cpp_standard = 'c++17'
 
 env.Append(CCFLAGS = '-std=' + cpp_standard)
 env.Append(CCFLAGS = '-fPIC')
