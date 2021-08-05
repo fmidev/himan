@@ -1,8 +1,4 @@
--- Hirlam near-surface/boundary layer aircraft turbulence intensity.
--- Turbulent layer height may then be estimated by boundary layer height.
--- Requirements:
--- - TKE and wind on model levels (+model level heights) in the surface layer (0...500m)
--- - land/sea/lake differentiation
+-- Near-surface/boundary layer aircraft turbulence intensity.
 --
 -- The parameter gets (integer) values between 0-5:
 --   0 = nil turbulence/smooth
@@ -16,6 +12,7 @@
 -- https://wiki.fmi.fi/display/PROJEKTIT/Rajakerroksen+turbulenssi
 -- original smarttool script written by Simo Neiglick:
 -- junila 11/2015 new version 10/2016
+-- tack 06/2021 new version
 
 logger:Info("Calculating boundary layer turbulence")
 
@@ -37,26 +34,14 @@ end
 local wsms = luatool:FetchWithType(current_time, lev, ws, current_forecast_type)
 
 -- Wind gust
-local gustlevel = {}
+local gustlevel = level(HPLevelType.kHeight, 10) 
 local gust = param("FFG-MS")
-if currentProducerName == "ECGMTA" then
-  gustlevel = level(HPLevelType.kGround, 0)
-else
-  gustlevel = level(HPLevelType.kHeight, 10)
-end
 
 local gustms = luatool:FetchWithType(current_time, gustlevel, gust, current_forecast_type)
 
 -- land-sea-mask, proportion from 0 to 1 where 1=land, 0=sea
-local landseamask = {}
-local surface = {}
-if currentProducerName == "ECGMTA" then
-  surface = level(HPLevelType.kGround, 0)
-  landseamask = param("N-0TO1")
-else
-  surface = level(HPLevelType.kHeight, 0)
-  landseamask = param("LC-0TO1")
-end
+local landseamask = param("LC-0TO1")
+local surface = level(HPLevelType.kHeight, 0)
 
 local lcmask = luatool:FetchWithType(current_time, surface, landseamask, current_forecast_type)
 
@@ -72,8 +57,10 @@ logger:Info("Calculating wind shear")
 -- because only change in wind direction and speed is needed, not absolutely correct direction
 
 local dz = 304.8
--- 2) Use lowest model level wind for sfc shear in ***Hirlam:
+
+-- Use lowest model level wind for sfc shear in ***Hirlam/MEPS, 10m level at EC:
 -- Wind component differences between Hirlam lowest model level (L65 ~12m) and 1000ft (above it)
+
 local U_HIR = param("U-MS")
 local V_HIR = param("V-MS")
 local u_0 = luatool:FetchWithType(current_time, lev, U_HIR, current_forecast_type)
@@ -171,7 +158,7 @@ for i = 1, #v_0 do
       if wskt>20 and (wgust>18 or maxshear>25) then
         turb = 4
       end
-      if wskt>22 and (wgust>18 or maxshear>20) then
+      if wskt>22 and (wgust>16 or maxshear>20) then
         turb = 4
       end
 
