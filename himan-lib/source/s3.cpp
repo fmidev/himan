@@ -25,8 +25,10 @@ void CheckS3Error(S3Status errarg, const char* file, const int line);
 
 #define S3_CHECK(errarg) CheckS3Error(errarg, __FILE__, __LINE__)
 
-void HandleS3Error(himan::logger& logr)
+void HandleS3Error(himan::logger& logr, const std::string& host, const std::string& object, const std::string& op)
 {
+	logr.Error(fmt::format("{} operation to/from host={} object=s3://{} failed", op, host, object));
+
 	switch (statusG)
 	{
 		case S3StatusInternalError:
@@ -269,9 +271,6 @@ buffer s3::ReadFile(const file_information& fileInformation)
 		const unsigned long offset = fileInformation.offset.get();
 		const unsigned long length = fileInformation.length.get();
 
-		logr.Debug(fmt::format("Reading from host={} bucket={} key={} {}:{} ({})", fileInformation.file_server, bucket,
-		                       key, offset, length, S3_get_status_name(statusG)));
-
 #ifdef S3_DEFAULT_REGION
 		S3_get_object(&bucketContext, key.c_str(), NULL, offset, length, NULL, 0, &getObjectHandler, &ret);
 #else
@@ -285,7 +284,7 @@ buffer s3::ReadFile(const file_information& fileInformation)
 		case S3StatusOK:
 			break;
 		default:
-			HandleS3Error(logr);
+			HandleS3Error(logr, fileInformation.file_server, fmt::format("{}/{}", bucket, key), "Read");
 			break;
 	}
 
@@ -367,9 +366,6 @@ void s3::WriteObject(const std::string& objectName, const buffer& buff)
 			sleep(2 * count);
 		}
 
-		logr.Debug(
-		    fmt::format("Writing to host={} bucket={} key={} ({})", host, bucket, key, S3_get_status_name(statusG)));
-
 #ifdef S3_DEFAULT_REGION
 		S3_put_object(&bucketContext, key.c_str(), buff.length, NULL, NULL, 0, &putObjectHandler, &data);
 #else
@@ -389,11 +385,12 @@ void s3::WriteObject(const std::string& objectName, const buffer& buff)
 			t.Stop();
 			const double time = static_cast<double>(t.GetTime());
 			const double size = util::round(static_cast<double>(buff.length) / 1024. / 1024., 1);
-			logr.Info(fmt::format("Wrote {} MB in {} ms ({:.1f} MBps)", size, time, size/time));
+			logr.Info(fmt::format("Wrote {} MB in {} ms ({:.1f} MBps) to file s3://{}/{}", size, time,
+			                      size / (time * 0.001), bucket, key));
 		}
 		break;
 		default:
-			HandleS3Error(logr);
+			HandleS3Error(logr, host, fmt::format("{}/{}", bucket, key), "Write");
 			break;
 	}
 }

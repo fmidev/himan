@@ -1,10 +1,18 @@
+%if !0%{?version:1}
+%define version 21.7.20
+%endif
+
+%if !0%{?release:1}
+%define release 1
+%endif
+
 %define distnum %(/usr/lib/rpm/redhat/dist.sh --distnum)
 
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
-Version: 21.4.12
-Release: 1%{dist}.fmi
+Version: %{version}
+Release: %{release}%{dist}.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -13,24 +21,27 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: libfmidb >= 21.3.31
+Requires: libfmidb >= 21.6.10
 Requires: libfmigrib >= 20.6.16
 Requires: fmt >= 7.1.0
 
 %if %{defined el7}
 BuildRequires: scons
-Buildrequires: gdal-devel
+BuildRequires: libpqxx-devel = 5.0.1
+Requires: libpqxx = 5.0.1
 
 %else if %{defined el8}
 BuildRequires: python3-scons
 BuildRequires: gcc-c++ >= 8.2.1
 BuildRequires: eigen3-devel
+BuildRequires: libpqxx-devel >= 7.5.2
+Requires: libpqxx >= 7.5.2
 
 %endif
 
 BuildRequires: bzip2-devel
 BuildRequires: redhat-rpm-config
-BuildRequires: cuda-11-0
+BuildRequires: cuda-nvcc-11-0
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: geos39-devel
 BuildRequires: gdal32-devel
@@ -39,8 +50,9 @@ BuildRequires: libfmigrib-devel >= 20.6.16
 BuildRequires: zlib-devel
 BuildRequires: boost169-devel
 BuildRequires: libs3-devel
-BuildRequires: libpqxx-devel
 BuildRequires: fmt-devel >= 7.1.0
+BuildRequires: eccodes
+BuildRequires: make
 Requires: geos39
 Requires: gdal32-libs
 Requires: eccodes
@@ -86,6 +98,18 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/*
 
 %changelog
+* Tue Jul 20 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.7.20-1.fmi
+- Minor changes to logging
+* Mon Jun 14 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.6.14-1.fmi
+- Logging changes
+* Wed Jun  2 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.6.2-1.fmi
+- grid class changes
+* Tue May 11 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.11-1.fmi
+- grid class API change
+* Mon May 10 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.10-1.fmi
+- Bugfix for grid comparison method
+* Wed May  5 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.5-1.fmi
+- Interpolation method change for some parameters
 * Mon Apr 12 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.12-1.fmi
 - wgs84 support for data structures
 * Tue Apr  6 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.6-1.fmi

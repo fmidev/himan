@@ -1,10 +1,18 @@
+%if !0%{?version:1}
+%define version 21.7.21
+%endif
+
+%if !0%{?release:1}
+%define release 1
+%endif
+
 %define distnum %(/usr/lib/rpm/redhat/dist.sh --distnum)
 
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
-Version: 21.4.12
-Release: 1%{dist}.fmi
+Version: %{version}
+Release: %{release}%{dist}.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -13,15 +21,14 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 21.4.12
+Requires: himan-lib >= 21.5.11
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 20.12.2
 Requires: libfmidb >= 21.3.31
-Requires: smartmet-library-newbase >= 21.2.20
+Requires: smartmet-library-newbase >= 21.6.16
 Requires: smartmet-library-gis
 Requires: smartmet-library-macgyver
-Requires: libpqxx
 Requires: boost169-iostreams
 Requires: boost169-thread
 Requires: libs3 >= 4.1
@@ -32,10 +39,14 @@ Requires: gdal32-libs
 %if %{defined el7}
 BuildRequires: scons
 BuildRequires: eigen >= 3.3.4
+BuildRequires: libpqxx-devel >= 5.0.1
+Requires: libpqxx >= 5.0.1
 
 %else if %{defined el8}
 BuildRequires: python3-scons
 BuildRequires: eigen3-devel >= 3.3.4
+BuildRequires: libpqxx-devel >= 7.5.2
+Requires: libpqxx >= 7.5.2
 
 %endif
 
@@ -43,9 +54,11 @@ BuildRequires: eigen3-devel >= 3.3.4
 Requires: libjasper
 Requires: grib_api
 %else
+BuildRequires: make
 BuildRequires: gdal32-devel
 BuildRequires: gcc-c++ >= 4.8.2
-BuildRequires: cuda-11-0
+BuildRequires: cuda-nvcc-11-0
+BuildRequires: libcublas-devel-11-0
 BuildRequires: eccodes-devel
 BuildRequires: redhat-rpm-config
 BuildRequires: cuda-cusp-11-0 >= 0.5.1
@@ -57,6 +70,7 @@ BuildRequires: smartmet-library-gis-devel
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: boost169-devel
 BuildRequires: fmt-devel >= 7.1.0
+BuildRequires: lua-devel
 %endif
 
 AutoReqProv:	no
@@ -144,6 +158,40 @@ rm -rf $RPM_BUILD_ROOT
 %{_prefix}/include/himan/plugins/*
 
 %changelog
+* Wed Jul 21 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.7.21-1.fmi
+- New newbase
+* Tue Jul 20 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.7.20-1.fmi
+- Minor changes to grib/luatool
+* Fri Jun 11 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.6.11-1.fmi
+- dewpoint: cap input humidity values to max 100%
+* Thu Jun 10 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.6.10-1.fmi
+- API change in writer/radon
+* Wed Jun  2 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.6.2-1.fmi
+- split_sum: add clear sky radiation
+- fetcher: fix minor bug
+* Mon May 31 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.31-1.fmi
+- writer: minor changes
+* Mon May 24 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.24-2.fmi
+- grib: fine tuning
+* Mon May 24 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.24-1.fmi
+- blend: change obs producer
+* Mon May 17 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.17-1.fmi
+- Minor bugfix for radon
+* Tue May 11 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.11-1.fmi
+- Fine tuning of grib write
+* Mon May 10 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.10-1.fmi
+- Force MEPS and derivatives to WGS84 datum
+* Wed May  5 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.5-2.fmi
+- radon: return metadata from loaded fields
+* Wed May  5 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.5-1.fmi
+- geotiff: create directory tree if needed
+* Mon May  3 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.3-1.fmi
+- Read and write geotiff to s3
+* Wed Apr 21 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.21-2.fmi
+- Tweak for geotiff reading
+* Wed Apr 21 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.21-1.fmi
+- Bugfix for gcc8 related issue
+- Check radon version on startup
 * Mon Apr 12 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.12-1.fmi
 - wgs84 support for data structures
 * Thu Apr  8 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.8-1.fmi

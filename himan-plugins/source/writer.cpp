@@ -220,7 +220,7 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 	};
 
 	if (conf->WriteStorageType() == kS3ObjectStorageSystem &&
-	    (conf->OutputFileType() == kGRIB || conf->OutputFileType() == kGRIB2))
+	    (conf->OutputFileType() == kGRIB || conf->OutputFileType() == kGRIB1 || conf->OutputFileType() == kGRIB2))
 	{
 		std::lock_guard<std::mutex> lock(pendingMutex);
 		itsLogger.Info(fmt::format("Writing {} pending infos to file", pendingWrites.size()));

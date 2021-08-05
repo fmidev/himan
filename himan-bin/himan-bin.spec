@@ -1,10 +1,18 @@
+%if !0%{?version:1}
+%define version 21.6.10
+%endif
+
+%if !0%{?release:1}
+%define release 1
+%endif
+
 %define distnum %(/usr/lib/rpm/redhat/dist.sh --distnum)
 
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
-Version: 21.4.8
-Release: 1%{dist}.fmi
+Version: %{version}
+Release: %{release}%{dist}.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -33,7 +41,8 @@ Requires: jasper-libs
 
 BuildRequires: redhat-rpm-config
 BuildRequires: gcc-c++ >= 4.8.2
-BuildRequires: cuda-11-0
+BuildRequires: cuda-nvcc-11-0
+BuildRequires: make
 Requires: boost169-program-options
 Requires: boost169-system
 Requires: boost169-regex
@@ -68,6 +77,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/himan
 
 %changelog
+* Thu Jun 10 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.6.10-1.fmi
+- Pass command line options to Himan also with environment variables
 * Thu Apr  8 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.8-1.fmi
 - Initial support for writing geotiff
 * Tue Mar  2 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.3.2-1.fmi

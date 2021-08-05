@@ -7,6 +7,8 @@ SCONS_FLAGS=-j $(NPROC)
 rpmsourcedir=/tmp/$(shell whoami)/rpmbuild
 
 .SILENT:createlink
+VERSION=$(shell date -u +%y).$(shell date -u +%m | sed 's/^0*//').$(shell date -u +%d | sed 's/^0*//')
+RELEASE=$(shell date -u +%H%M).$(shell git rev-parse --short HEAD)
 
 # The rules
 
@@ -26,16 +28,7 @@ createlink:
 	  ln -fs ../scons_common.py; \
 	fi;
 rpm:    clean createlink
-	mkdir -p $(rpmsourcedir) ; \
-	if [ -a $(LIB)-lib.spec ]; \
-        then \
-          tar -C ../ --dereference --exclude-vcs \
-                   -zcf $(rpmsourcedir)/$(LIB)-lib.tar.gz $(LIB)-lib ; \
-          rpmbuild -ta $(rpmsourcedir)/$(LIB)-lib.tar.gz ; \
-        else \
-          echo $(rpmerr); \
-        fi;
-
+	rpmbuild --build-in-place --define="version $(VERSION)" --define="release $(RELEASE)" -bb himan-lib.spec
 install:
 	mkdir -p $(DESTDIR)/usr/lib64 $(DESTDIR)/usr/include/himan
 	@if [ -f "build/release/lib$(LIB).so" ]; then \

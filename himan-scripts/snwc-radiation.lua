@@ -11,15 +11,41 @@ local rad_prod = producer(240, "ECGMTA")
 local ftype = forecast_type(HPForecastType.kDeterministic)
 
 local latest_origintime = raw_time(radon:GetLatestTime(rad_prod, "", 0))
+
+logger:Info("Latest ECMWF analysis: " .. latest_origintime:String("%Y-%m-%d %H:%M:%S"))
+
 local latest_time = forecast_time(latest_origintime, current_time:GetValidDateTime())
 
-local SW = luatool:FetchWithProducer(latest_time, level(HPLevelType.kHeight, 0), param("RADGLO-WM2"), ftype, rad_prod, "")
-local LW = luatool:FetchWithProducer(latest_time, level(HPLevelType.kHeight, 0), param("RADLW-WM2"), ftype, rad_prod, "")
-local CC = luatool:FetchWithType(current_time, level(HPLevelType.kHeight, 0), param("N-0TO1"), current_forecast_type)
-local CC_ORIG = luatool:FetchWithProducer(latest_time, level(HPLevelType.kHeight, 0), param("N-0TO1"), ftype, cc_prod, "")
+local lvl0 = level(HPLevelType.kHeight, 0)
+local n = param("N-0TO1")
+local glob = param("RADGLO-WM2")
+local lw = param("RADLW-WM2")
 
-if not SW or not LW or not CC or not CC_ORIG then
+local SW = luatool:FetchWithProducer(latest_time, lvl0, glob, ftype, rad_prod, "")
+local LW = luatool:FetchWithProducer(latest_time, lvl0, lw, ftype, rad_prod, "")
+local CC = luatool:FetchWithType(current_time, lvl0, n, current_forecast_type)
+local CC_ORIG = luatool:FetchWithProducer(latest_time, lvl0, n, ftype, cc_prod, "")
+
+if not CC then
   return
+end
+
+if not SW or not LW or not CC_ORIG then
+  -- HIMAN-338
+  -- try earlier forecast
+  -- also accept ECMWF 06/18 runs
+  latest_origintime:Adjust(HPTimeResolution.kHourResolution, -6)
+  latest_time = forecast_time(latest_origintime, current_time:GetValidDateTime())
+
+  logger:Info("Latest forecast data missing, trying older forecast with analysis time: " .. latest_origintime:String("%Y-%m-%d %H:%M:%S"))
+
+  SW = luatool:FetchWithProducer(latest_time, lvl0, glob, ftype, rad_prod, "")
+  LW = luatool:FetchWithProducer(latest_time, lvl0, lw, ftype, rad_prod, "")
+  CC_ORIG = luatool:FetchWithProducer(latest_time, lvl0, n, ftype, cc_prod, "")
+
+  if not SW or not LW or not CC_ORIG then
+    return
+  end
 end
 
 local _SW = {}

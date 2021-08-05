@@ -1649,14 +1649,25 @@ luabind::object luatool::Fetch(const forecast_time& theTime, const level& theLev
 
 	cnf->SourceProducers({prod});
 
-	auto f = GET_PLUGIN(fetcher);
-	auto x = f->Fetch(cnf, theTime, theLevel, theParam, theType, false);
-
-	if (!x)
+	try
 	{
-		return object();
+		auto f = GET_PLUGIN(fetcher);
+		auto x = f->Fetch(cnf, theTime, theLevel, theParam, theType, false);
+
+		if (!x)
+		{
+			return object();
+		}
+		return VectorToTable<double>(x->Data().Values());
 	}
-	return VectorToTable<double>(x->Data().Values());
+	catch (const HPExceptionType& e)
+	{
+		if (e == kFileDataNotFound)
+		{
+			return object();
+		}
+		throw e;
+	}
 }
 
 template <typename T>
