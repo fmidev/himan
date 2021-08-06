@@ -814,15 +814,34 @@ void ParseCommandLine(shared_ptr<configuration>& conf, int argc, char** argv)
 
 	cudaError_t err = cudaGetDeviceCount(&devCount);
 
-	if (err == cudaErrorNoDevice || err == cudaErrorInsufficientDriver)
+	switch (err)
 	{
-		// No device or no driver present
+		case cudaSuccess:
+			break;
 
-		devCount = 0;
+		case cudaErrorNoDevice:
+			// No device
 
-		conf->UseCuda(false);
-		conf->UseCudaForPacking(false);
-		conf->UseCudaForUnpacking(false);
+			devCount = 0;
+
+			conf->UseCuda(false);
+			conf->UseCudaForPacking(false);
+			conf->UseCudaForUnpacking(false);
+
+			break;
+
+		default:
+			// No driver present or other problems
+			// with installation
+
+			devCount = 0;
+
+			conf->UseCuda(false);
+			conf->UseCudaForPacking(false);
+			conf->UseCudaForUnpacking(false);
+
+			cerr << fmt::format("Error from cuda library: {} ({})\n", cudaGetErrorName(err), err);
+			break;
 	}
 
 	conf->CudaDeviceCount(devCount);
