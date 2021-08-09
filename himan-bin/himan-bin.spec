@@ -41,7 +41,8 @@ Requires: jasper-libs
 
 BuildRequires: redhat-rpm-config
 BuildRequires: gcc-c++ >= 4.8.2
-BuildRequires: cuda-nvcc-11-0
+BuildRequires: cuda-nvcc-11-1
+BuildRequires: cuda-cudart-devel-11-1
 BuildRequires: make
 Requires: boost169-program-options
 Requires: boost169-system
