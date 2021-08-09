@@ -24,16 +24,14 @@ nocuda: createlink
 check: createlink
 	scons CPPCHECK
 	scons SCANBUILD
-clean:
+clean:  createlink
 	scons -c ; scons --debug-build -c ; rm -f *~ source/*~ include/*~ ; rm -f scons_common.py
 createlink:
 	if [ ! -e scons_common.py ]; then \
           ln -fs ../scons_common.py; \
         fi;
-
-rpm:    clean createlink
+rpm:    clean
 	rpmbuild --build-in-place --define="version $(VERSION)" --define="release $(RELEASE)" -bb himan-plugins.spec
-
 install:
 	mkdir -p  $(DESTDIR)/usr/lib64/himan-plugins $(DESTDIR)/usr/include/himan/plugins
 	@for plugin in build/release/*.so; do \
