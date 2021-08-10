@@ -127,10 +127,10 @@ himan::HPWriteStatus writer::ToFile(std::shared_ptr<info<T>> theInfo, std::share
 	{
 		if (theInfo->Data().MissingCount() == theInfo->Data().Size())
 		{
-			itsLogger.Info("Not writing empty grid for param " + theInfo->Param().Name() + " time " +
-			               theInfo->Time().OriginDateTime().String() + " step " +
-			               static_cast<std::string>(theInfo->Time().Step()) + " level " +
-			               static_cast<std::string>(theInfo->Level()));
+			itsLogger.Info(fmt::format("Not writing empty grid for param {} time {} step {} level {}",
+			                           theInfo->Param().Name(), theInfo->Time().OriginDateTime().String(),
+			                           static_cast<std::string>(theInfo->Time().Step()),
+			                           static_cast<std::string>(theInfo->Level())));
 			return himan::HPWriteStatus::kFailed;
 		}
 	}
