@@ -16,6 +16,8 @@ rpmsourcedir = /tmp/$(shell whoami)/rpmbuild
 INSTALL_TARGET = /usr/bin
 
 .SILENT:createlink
+VERSION=$(shell date -u +%y).$(shell date -u +%m | sed 's/^0*//').$(shell date -u +%d | sed 's/^0*//')
+RELEASE=$(shell date -u +%H%M).$(shell git rev-parse --short HEAD)
 
 # The rules
 
@@ -35,16 +37,8 @@ createlink:
 	  ln -fs ../scons_common.py; \
 	fi;
 rpm:    clean createlink
-	mkdir -p $(rpmsourcedir) ; \
-        if [ -a $(PROG)-bin.spec ]; \
-        then \
-          tar -C ../ --dereference --exclude-vcs \
-                   -zcf $(rpmsourcedir)/$(PROG)-bin.tar.gz $(PROG)-bin ; \
-          rpmbuild -ta $(rpmsourcedir)/$(PROG)-bin.tar.gz ; \
-          rm -f $(rpmsourcedir)/$(LIB).tar.gz ; \
-        else \
-          echo $(rpmerr); \
-        fi;
+	cd ../himan-lib && make
+	cd ../himan-bin && rpmbuild --build-in-place --define="version $(VERSION)" --define="release $(RELEASE)" -bb himan-bin.spec
 
 install:
 	mkdir -p $(DESTDIR)/$(INSTALL_TARGET)

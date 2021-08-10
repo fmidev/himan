@@ -7,7 +7,7 @@
 
 namespace himan
 {
-HPDebugState logger::MainDebugState = himan::kInfoMsg;
+HPDebugState logger::MainDebugState = himan::kDebugMsg;
 
 logger::logger() : itsDebugState(kInfoMsg), itsUserName("HimanDefaultLogger")
 {

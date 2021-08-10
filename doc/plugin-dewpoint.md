@@ -23,6 +23,8 @@ Unit of resulting parameter is Kelvin.
 
     td = T / (1 - T * ln(r * 0.01) * g / h)
 
+Relative humidity values are capped to maximum 100%.
+
 # Per-plugin configuration options
 
 None

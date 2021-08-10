@@ -1,10 +1,18 @@
+%if !0%{?version:1}
+%define version 21.7.20
+%endif
+
+%if !0%{?release:1}
+%define release 1
+%endif
+
 %define distnum %(/usr/lib/rpm/redhat/dist.sh --distnum)
 
 %define LIBNAME himan-scripts
 Summary: himan-scripts collection
 Name: %{LIBNAME}
-Version: 21.4.8
-Release: 1%{dist}.fmi
+Version: %{version}
+Release: %{release}%{dist}.fmi
 License: MIT
 Group: Development/Tools
 URL: http://www.fmi.fi
@@ -12,7 +20,7 @@ Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: lua >= 5.1.4
-Requires: himan-plugins >= 20.10.26
+Requires: himan-plugins >= 21.5.24-2
 Requires: himan-lib >= 20.10.26
 
 %define debug_package %{nil}
@@ -39,6 +47,20 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/himan-scripts/*.lua
 
 %changelog
+* Tue Jul 20 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.7.20-1.fmi
+- snwc-radiation: re-try fetch if failed the first time
+* Mon Jun 14 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.6.14-1.fmi
+- Bugfix for neighborhood probabilities
+* Mon May 24 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.24-1.fmi
+- snwc radiation tuning
+* Wed May  6 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.6-1.fmi
+- More features for nwcsaf-clouds.lua
+* Tue May  4 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.4-2.fmi
+- Bugfix for nwcsaf-clouds.lua
+* Tue May  4 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.4-1.fmi
+- Workaround for a removed lua language feature
+* Mon May  3 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.5.3-1.fmi
+- Add nwcsaf-clouds.lua
 * Thu Apr  8 2021 Mikko Partio <mikko.partio@fmi.fi> - 21.4.8-1.fmi
 - Update to CB-TCU-cloud.lua
 * Wed Dec  9 2020 Mikko Partio <mikko.partio@fmi.fi> - 20.12.9-1.fmi

@@ -97,10 +97,17 @@ void UploadRunStatisticsToDatabase(const shared_ptr<configuration>& conf, const 
 	{
 		r->RadonDB().Query(query.str());
 	}
+#if PQXX_VERSION_MAJOR < 7
 	catch (const pqxx::pqxx_exception& e)
 	{
 		log.Error(e.base().what());
 	}
+#else
+	catch (const pqxx::failure& e)
+	{
+		log.Error(e.what());
+	}
+#endif
 	catch (const exception& e)
 	{
 		log.Error(e.what());

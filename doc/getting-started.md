@@ -1,8 +1,8 @@
 # Getting started
 
-Himan can be either built from source, or installed using pre-built rpm packages (https://download.fmi.fi/himan). Latter is recommended for a quick start. See also [using Docker images](#Using_Docker_images).
+Recommended way of using Himan is via the provided docker images (quay.io/fmi/himan). See also [using Docker images](#Using_Docker_images).
 
-In operative environments Himan relies heavily on a database that is providing all data and metadata. This database schema will be open sourced later this year. In the meanwhile, Himan can be tested using a "no-database" mode.
+In operative environments Himan relies heavily on a database that is providing all data and metadata. This database schema is provided here: https://github.com/fmidev/radon.
 
 Example: running seaicing plugin for Hirlam data. Seaicing plugin calculates an index that describes the amount of ice that is built up on a ship's superstructure. Files for this example are located at example/seaicing.
 
@@ -79,7 +79,10 @@ The processqueue (list of plugins that are executed) consists only one plugin: s
 ## Run Himan
 
 ```
-$ himan -f seaicing.json --no-database --param-file param-file.txt seaicing.grib
+$ wget https://raw.githubusercontent.com/fmidev/himan/master/example/seaicing/seaicing.json \
+       https://github.com/fmidev/himan/raw/master/example/seaicing/seaicing.grib
+
+$ himan -f seaicing.json seaicing.grib
 
 ************************************************
 * By the Power of Grayskull, I Have the Power! *
@@ -114,12 +117,9 @@ Note that seaicing plugin does not separate land points from sea points: the ind
 
 # Using Docker images
 
-For a really quick start, the example case can be run using a Dockerfile. Note that as Himan is not an interactive program and not a daemon, docker is generally not very suitable for running Himan, but for quick testing it works ok.
-
 
 ```
-$ docker build -t himan_test .
-$ docker run -v /tmp:/tmp himan_test
+$ docker run -v /tmp:/tmp quay.io/fmi/himan himan -f seaicing.json seaicing.grib 
 $ grib_histogram /tmp/ICING-N_height_0_ll_150_150_0_003.grib
 min=0 max=3 size=22500
  0:0.3 0.3:0.6 0.6:0.9 0.9:1.2 1.2:1.5 1.5:1.8 1.8:2.1 2.1:2.4 2.4:2.7 2.7:3
