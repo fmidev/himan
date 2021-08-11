@@ -3,9 +3,12 @@
  */
 
 #include "statistics.h"
+#include <mutex>
 
 using namespace std;
 using namespace himan;
+
+mutex summary;
 
 statistics::statistics()
 {
@@ -77,4 +80,13 @@ void statistics::UsedThreadCount(short theUsedThreadCount)
 int64_t statistics::FetchingTime() const
 {
 	return itsFetchingTime;
+}
+void statistics::AddToSummaryRecords(const summary_record& rec)
+{
+	lock_guard<mutex> lock(summary);
+	itsSummaryRecords.push_back(rec);
+}
+vector<summary_record> statistics::SummaryRecords() const
+{
+	return itsSummaryRecords;
 }

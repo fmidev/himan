@@ -161,7 +161,14 @@ himan::HPWriteStatus writer::ToFile(std::shared_ptr<info<T>> theInfo, std::share
 
 		if (status == HPWriteStatus::kFinished)
 		{
-			WriteToRadon(conf, finfo, theInfo);
+			auto ret = WriteToRadon(conf, finfo, theInfo);
+
+			if (ret.first)
+			{
+				conf->Statistics()->AddToSummaryRecords(summary_record(finfo, ret.second, theInfo->Producer(),
+				                                                       theInfo->ForecastType(), theInfo->Time(),
+				                                                       theInfo->Level(), theInfo->Param()));
+			}
 		}
 	}
 
@@ -283,7 +290,17 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 
 		for (const auto& elem : finfos)
 		{
-			WriteToRadon(conf, elem.second, elem.first);
+			const auto& finfo = elem.second;
+			const auto& info = elem.first;
+
+			auto ret = WriteToRadon(conf, finfo, info);
+
+			if (ret.first)
+			{
+				conf->Statistics()->AddToSummaryRecords(summary_record(finfo, ret.second, info->Producer(),
+				                                                       info->ForecastType(), info->Time(),
+				                                                       info->Level(), info->Param()));
+			}
 		}
 	}
 	else if (conf->OutputFileType() == kGeoTIFF)
@@ -306,7 +323,20 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 
 		for (size_t i = 0; i < finfos.size(); i++)
 		{
-			WriteToRadon(conf, finfos[i].second, infos[i]);
+			const auto& finfo = finfos[i].second;
+			const auto& info = infos[i];
+
+			if (finfos[i].first == HPWriteStatus::kFinished)
+			{
+				auto ret = WriteToRadon(conf, finfo, info);
+
+				if (ret.first)
+				{
+					conf->Statistics()->AddToSummaryRecords(summary_record(finfo, ret.second, info->Producer(),
+					                                                       info->ForecastType(), info->Time(),
+					                                                       info->Level(), info->Param()));
+				}
+			}
 		}
 	}
 	else if (pendingWrites.empty() == false)
