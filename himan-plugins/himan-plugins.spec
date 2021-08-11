@@ -21,7 +21,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 21.5.11
+Requires: himan-lib >= 21.8.11
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 20.12.2
