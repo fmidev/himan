@@ -30,13 +30,13 @@ nocuda: createlink
 check: createlink
 	scons CPPCHECK
 	scons SCANBUILD
-clean:
+clean:  createlink
 	scons -c ; scons --debug-build -c ; rm -f *~ source/*~ include/*~ ; rm -f scons_common.py
 createlink:
 	if [ ! -e scons_common.py ]; then \
 	  ln -fs ../scons_common.py; \
 	fi;
-rpm:    clean createlink
+rpm:    clean
 	cd ../himan-lib && make
 	cd ../himan-bin && rpmbuild --build-in-place --define="version $(VERSION)" --define="release $(RELEASE)" -bb himan-bin.spec
 

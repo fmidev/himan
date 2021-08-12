@@ -842,7 +842,10 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vec
 			}
 
 #ifdef HAVE_CUDA
-			util::Unpack<double>({u, v}, false);
+			if (opts.configuration->UseCudaForPacking())
+			{
+				util::Unpack<double>({u, v}, false);
+			}
 #endif
 			interpolate::RotateVectorComponents(component->Grid().get(), baseGrid, *u, *v,
 			                                    opts.configuration->UseCuda());
