@@ -42,8 +42,9 @@ local gustms = luatool:FetchWithType(current_time, gustlevel, gust, current_fore
 -- land-sea-mask, proportion from 0 to 1 where 1=land, 0=sea
 local landseamask = param("LC-0TO1")
 local surface = level(HPLevelType.kHeight, 0)
+local mytime = forecast_time(current_time:GetOriginDateTime(),time_duration(HPTimeResolution.kHourResolution,0))
 
-local lcmask = luatool:FetchWithType(current_time, surface, landseamask, current_forecast_type)
+local lcmask = luatool:FetchWithType(mytime, surface, landseamask, current_forecast_type)
 
 if not (wsms and gustms and lcmask) then
   logger:Error("No data found")
