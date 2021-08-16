@@ -1344,6 +1344,7 @@ void BindLib(lua_State* L)
 	              .def("Empty", &raw_time::Empty),
 	          class_<forecast_time>("forecast_time")
 	              .def(constructor<const raw_time&, const raw_time&>())
+                      .def(constructor<const raw_time&, const time_duration&>())
 	              .def("ClassName", &forecast_time::ClassName)
 	              .def("GetOriginDateTime", LUA_MEMFN(raw_time&, forecast_time, OriginDateTime, void))
 	              .def("GetValidDateTime", LUA_MEMFN(raw_time&, forecast_time, ValidDateTime, void))
