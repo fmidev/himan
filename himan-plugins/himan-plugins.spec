@@ -72,6 +72,8 @@ BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: boost169-devel
 BuildRequires: fmt-devel >= 7.1.0
 BuildRequires: lua-devel
+BuildRequires: zlib-devel
+BuildRequires: bzip2-devel
 %endif
 
 AutoReqProv:	no
