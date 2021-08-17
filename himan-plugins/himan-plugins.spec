@@ -64,6 +64,7 @@ BuildRequires: eccodes-devel
 BuildRequires: redhat-rpm-config
 BuildRequires: cuda-cusp-11-1 >= 0.5.1
 BuildRequires: libs3-devel >= 4.1
+BuildRequires: libfmigrib >= 20.12.2
 BuildRequires: libfmigrib-devel >= 20.12.2
 BuildRequires: libfmidb-devel >= 20.7.8
 BuildRequires: smartmet-library-newbase-devel >= 21.2.20
