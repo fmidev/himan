@@ -133,93 +133,53 @@ void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
 {
 	auto r = GET_PLUGIN(radon);
 
-	const auto producerId = pc->TargetProducer().Id();
-	const auto analysisTime = pc->Times()[0].OriginDateTime().String();
-
+	const auto& summaryRecords = pc->Statistics()->SummaryRecords();
+	int inserts = 0, updates = 0;
 	logger log("himan");
 
-	auto geomInfo = r->RadonDB().GetGeometryDefinition(pc->TargetGeomName());
-
-	if (geomInfo.empty())
+	for (const auto& record : summaryRecords)
 	{
-		log.Error("ss_state update failed: geomery information not found");
-		return;
-	}
+		const auto& producerId = record.producer.Id();
+		const auto& geometryId = record.rrecord.geometry_id;
+		const auto& analysisTime = record.ftime.OriginDateTime().String();
+		const auto& period = util::MakeSQLInterval(record.ftime);
+		const auto& forecastTypeId = record.ftype.Type();
+		const auto& forecastTypeValue = (forecastTypeId >= 3 && forecastTypeId <= 4) ? record.ftype.Value() : -1;
+		const auto& tableName = pc->SSStateTableName().empty()
+		                            ? fmt::format("{}.{}", record.rrecord.schema_name, record.rrecord.table_name)
+		                            : pc->SSStateTableName();
 
-	const int geometryId = stoi(geomInfo["id"]);
-
-	string tableName;
-
-	if (pc->SSStateTableName().empty() == false)
-	{
-		tableName = pc->SSStateTableName();
-	}
-	else
-	{
-		auto tableInfo = r->RadonDB().GetTableName(producerId, analysisTime, pc->TargetGeomName());
-
-		if (tableInfo.empty())
+		try
 		{
-			log.Error("ss_state update failed: table not found from as_grid");
+			const string query = fmt::format(
+			    "INSERT INTO ss_state (producer_id, geometry_id, analysis_time, forecast_period, forecast_type_id, "
+			    "forecast_type_value, table_name) VALUES ({}, {}, '{}', '{}', {}, {}, '{}')",
+			    producerId, geometryId, analysisTime, period, forecastTypeId, forecastTypeValue, tableName);
+
+			r->RadonDB().Execute(query);
+			inserts++;
+		}
+		catch (const pqxx::unique_violation& e)
+		{
+			const string query = fmt::format(
+			    "UPDATE ss_state SET table_name = '{}', last_updated = now() WHERE producer_id = {} AND geometry_id = "
+			    "{} AND analysis_time = '{}' AND forecast_period = '{}' AND forecast_type_id = '{}' AND "
+			    "forecast_type_value = '{}'",
+			    tableName, producerId, geometryId, analysisTime, period, forecastTypeId, forecastTypeValue);
+
+			r->RadonDB().Execute(query);
+			updates++;
+		}
+		catch (const exception& e)
+		{
+			log.Error("Caught unexpected exception: " + string(e.what()));
 			return;
 		}
 
-		tableName = tableInfo["schema_name"] + "." + tableInfo["table_name"];
+		r->RadonDB().Commit();
 	}
 
-	int inserts = 0, updates = 0;
-
-	for (const auto& ftype : pc->ForecastTypes())
-	{
-		int forecastTypeValue = -1;  // default, deterministic/analysis/statistical processing
-
-		if (ftype.Type() >= 3 && ftype.Type() <= 4)
-		{
-			forecastTypeValue = static_cast<int>(ftype.Value());
-		}
-
-		stringstream ss;
-
-		for (const auto& ftime : pc->Times())
-		{
-			try
-			{
-				ss.str("");
-				ss << "INSERT INTO ss_state (producer_id, geometry_id, analysis_time, forecast_period, "
-				      "forecast_type_id, forecast_type_value, table_name) VALUES ("
-				   << producerId << ", " << geometryId << ", "
-				   << "'" << analysisTime << "', '" << util::MakeSQLInterval(ftime) << "', "
-				   << static_cast<int>(ftype.Type()) << ", " << forecastTypeValue << ", "
-				   << "'" << tableName << "')";
-
-				r->RadonDB().Execute(ss.str());
-				inserts++;
-			}
-			catch (const pqxx::unique_violation& e)
-			{
-				ss.str("");
-				ss << "UPDATE ss_state SET table_name = '" << tableName << "', last_updated = now() WHERE "
-				   << "producer_id = " << producerId << " AND "
-				   << "geometry_id = " << geometryId << " AND "
-				   << "analysis_time = '" << analysisTime << "' AND "
-				   << "forecast_period = '" << util::MakeSQLInterval(ftime) << "' AND "
-				   << "forecast_type_id = " << static_cast<int>(ftype.Type()) << " AND "
-				   << "forecast_type_value = " << forecastTypeValue;
-
-				r->RadonDB().Execute(ss.str());
-				updates++;
-			}
-			catch (const exception& e)
-			{
-				log.Error("Caught unexpected exception: " + string(e.what()));
-				return;
-			}
-
-			r->RadonDB().Commit();
-		}
-	}
-
-	log.Debug("Update of ss_state: " + to_string(inserts) + " inserts, " + to_string(updates) + " updates");
+	log.Debug(fmt::format("Update of ss_state: {} inserts, {} updates", inserts, updates));
 }
 
 void ExecutePlugin(const shared_ptr<plugin_configuration>& pc, vector<plugin_timing>& pluginTimes)
@@ -814,15 +774,34 @@ void ParseCommandLine(shared_ptr<configuration>& conf, int argc, char** argv)
 
 	cudaError_t err = cudaGetDeviceCount(&devCount);
 
-	if (err == cudaErrorNoDevice || err == cudaErrorInsufficientDriver)
+	switch (err)
 	{
-		// No device or no driver present
+		case cudaSuccess:
+			break;
 
-		devCount = 0;
+		case cudaErrorNoDevice:
+			// No device
 
-		conf->UseCuda(false);
-		conf->UseCudaForPacking(false);
-		conf->UseCudaForUnpacking(false);
+			devCount = 0;
+
+			conf->UseCuda(false);
+			conf->UseCudaForPacking(false);
+			conf->UseCudaForUnpacking(false);
+
+			break;
+
+		default:
+			// No driver present or other problems
+			// with installation
+
+			devCount = 0;
+
+			conf->UseCuda(false);
+			conf->UseCudaForPacking(false);
+			conf->UseCudaForUnpacking(false);
+
+			cerr << fmt::format("Error from cuda library: {} ({})\n", cudaGetErrorName(err), err);
+			break;
 	}
 
 	conf->CudaDeviceCount(devCount);

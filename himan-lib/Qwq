@@ -1,0 +1,49 @@
+/**
+ *  * @class rotation
+ *  *
+ *  * @brief Define a rotation object that contins coefficients of a quaternion.
+ *  * With rotate functions this rotation can be applied to a position object to perform coordinate rotation.
+ *  */
+
+#include "position.h"
+
+#ifndef ROTATION_H
+#define ROTATION_H
+
+namespace himan
+{
+template <typename T>
+class rotation
+{
+   public:
+        T* Data()
+        {
+                return itsValues;
+        }
+        const T* Data() const
+        {
+                return itsValues;
+        }
+
+   private:
+        T itsValues[4];
+};
+
+// rotate a position
+template <typename T>
+void rotate(position<T>&, rotation<T>&);
+
+// create a rotated copy of a position
+template <typename T>
+position<T> rotate(const position<T>&, const rotation<T>&);
+
+// create a rotation object that transforms coordinates from rotated LatLon to regular LatLon
+template <typename T>
+rotation<T> FromRotLatLon(const T& latOfSouthPole, const T& lonOfSouthPole, const T& angleOfRotation);
+
+// create a rotation object that transforms coordinates from regular LatLon to rotated LatLon
+template <typename T>
+rotation<T> ToRotLatLon(const T& latOfSouthPole, const T& lonOfSouthPole, const T& angleOfRotation);
+
+}  // end namespace himan
+#endif /* POSITION_H */

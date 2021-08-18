@@ -6,6 +6,7 @@
 #ifndef STATISTICS_H
 #define STATISTICS_H
 
+#include "summary_record.h"
 #include <atomic>
 #include <string>
 
@@ -48,6 +49,9 @@ class statistics
 
 	int64_t FetchingTime() const;
 
+	void AddToSummaryRecords(const summary_record& rec);
+	std::vector<summary_record> SummaryRecords() const;
+
    private:
 	bool StoreToDatabase();
 	bool StoreToFile();
@@ -63,6 +67,7 @@ class statistics
 	std::atomic<size_t> itsCacheHitCount;
 
 	short itsUsedThreadCount;
+	std::vector<summary_record> itsSummaryRecords;
 };
 
 }  // namespace himan

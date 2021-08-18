@@ -21,8 +21,8 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 21.3.2
-Requires: himan-plugins >= 21.4.8
+Requires: himan-lib >= 21.8.11
+Requires: himan-plugins >= 21.8.11
 Requires: zlib
 Requires: libfmidb
 Requires: xerces-c
@@ -41,7 +41,8 @@ Requires: jasper-libs
 
 BuildRequires: redhat-rpm-config
 BuildRequires: gcc-c++ >= 4.8.2
-BuildRequires: cuda-nvcc-11-0
+BuildRequires: cuda-nvcc-11-1
+BuildRequires: cuda-cudart-devel-11-1
 BuildRequires: make
 Requires: boost169-program-options
 Requires: boost169-system

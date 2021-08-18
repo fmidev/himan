@@ -41,7 +41,8 @@ Requires: libpqxx >= 7.5.2
 
 BuildRequires: bzip2-devel
 BuildRequires: redhat-rpm-config
-BuildRequires: cuda-nvcc-11-0
+BuildRequires: cuda-nvcc-11-1
+BuildRequires: cuda-cudart-devel-11-1
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: geos39-devel
 BuildRequires: gdal32-devel

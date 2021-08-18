@@ -1,0 +1,159 @@
+/**
+ * @file netcdf4.cpp
+ *
+ */
+
+#include "fminc4.h"
+#include "variable.h"
+#include "group.h"
+#include "dimension.h"
+#include "common.h"
+
+#include "grid.h"
+
+#include "producer.h"
+#include "latitude_longitude_grid.h"
+#include "logger.h"
+#include <fstream>
+
+#include "netcdf4.h"
+
+#include "plugin_factory.h"
+#include "radon.h"
+
+#ifdef __clang__
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wsign-conversion"
+#pragma clang diagnostic ignored "-Winvalid-source-encoding"
+#pragma clang diagnostic ignored "-Wshorten-64-to-32"
+
+#endif
+
+#ifdef __clang__
+
+#pragma clang diagnostic pop
+
+#endif
+
+using namespace std;
+using namespace himan;
+using namespace himan::plugin;
+using namespace fminc4;
+
+void WriteAreaAndGrid(const shared_ptr<himan::grid>& grid, const producer& prod, nc_group group)
+{
+        switch (grid->Type())
+        {
+                case kLatitudeLongitude:
+                {
+                        auto rg = dynamic_pointer_cast<latitude_longitude_grid>(grid);
+
+                        nc_dim lat;
+                        nc_dim lon;
+
+                        group.AddDim("latitude", rg->Nj());
+                        lat = group.GetDim("latitude");
+
+                        group.AddDim("longitude", rg->Ni());
+                        lon = group.GetDim("longitude");
+
+cout << lon.Size() << '\n';
+
+                        himan::point firstGridPoint = rg->FirstPoint();
+                        himan::point lastGridPoint = rg->LastPoint();
+
+                        firstGridPoint.X();
+                        lastGridPoint.X();
+                        firstGridPoint.Y();
+                        lastGridPoint.Y();
+
+                        switch (rg->ScanningMode())
+                        {
+                                case kTopLeft:
+                                {
+                                        function<float()> f = [&]()
+                                        {
+                                                static float i = 0;
+                                                float x = float(firstGridPoint.X()) + i * float(lastGridPoint.X() - firstGridPoint.X()) / float(rg->Ni());
+                                                ++i;
+                                                return x;
+                                        };
+
+                                        std::vector<float> v(rg->Ni());
+                                        std::generate(v.begin(), v.end(), f);
+
+                                        group.AddVar<float>("longitude",{lon});
+                                        nc_var<float> longvar = group.GetVar<float>("longitude");
+
+                                        //longvar.Write(v);
+
+                                        /*function<float()> g = [&]()
+                                        {
+                                                static float i = 0;
+                                                float y = float(firstGridPoint.Y()) + i * float(lastGridPoint.Y() - firstGridPoint.Y()) / float(rg->Nj());
+                                                ++i;
+                                                return y;
+                                        };
+
+                                        std::vector<float> w(rg->Nj());
+                                        std::generate(w.begin(), w.end(), g);
+
+                                        group.AddVar<float>("latitude",{lat});
+                                        nc_var<float> latvar = group.GetVar<float>("latitude");
+                                        latvar.Write(w);*/
+                                        break;
+                                }
+                                default:
+                                        himan::Abort();
+                        }
+
+                        break;
+                }
+                default:
+                        //itsLogger.Fatal("Invalid projection while writing grib: " + to_string(grid->Type()));
+                        himan::Abort();
+        }
+}
+
+netcdf4::netcdf4()
+{
+	itsLogger = logger("netcdf4");
+}
+
+/*netcdf4::~netcdf4()
+{
+      fminc4::Finalize(); // perhaps this finalize call needs to be moved elsewhere if multiple instances of netcdf plugin coexist.
+}*/
+
+bool netcdf4::ToFile(info<double>& anInfo, string& outputFile, bool appendToFile)
+{
+        return ToFile<double>(anInfo, outputFile, appendToFile);
+}
+
+template <typename T>
+bool netcdf4::ToFile(info<T>& anInfo, string& outputFile, bool appendToFile)
+{
+        // Write only that data which is currently set at descriptors
+        nc_group theFile;
+
+        if(appendToFile)
+        {
+                theFile = Open(outputFile);
+        }
+        else
+        {
+                theFile = Create(outputFile);
+        }
+
+	WriteAreaAndGrid(anInfo.Grid(), anInfo.Producer(), theFile);
+
+        string verb = (appendToFile ? "Appended to " : "Wrote ");
+        itsLogger.Info(verb + "file '" + outputFile);
+
+        return true;
+}
+
+template bool netcdf4::ToFile<double>(info<double>&, string&, bool);
+template bool netcdf4::ToFile<float>(info<float>&, string&, bool);
+

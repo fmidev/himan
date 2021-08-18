@@ -20,7 +20,7 @@ Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: lua >= 5.1.4
-Requires: himan-plugins >= 21.5.24-2
+Requires: himan-plugins >= 21.8.16
 Requires: himan-lib >= 20.10.26
 
 %define debug_package %{nil}

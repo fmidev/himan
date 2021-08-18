@@ -1,0 +1,4 @@
+NETCDF needs to be added in librarypaths in scons_common.py
+
+librarypaths.append('/home/tackandr/c++/fminc4/lib')
+
