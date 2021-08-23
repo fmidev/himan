@@ -13,24 +13,9 @@
 
 #pragma once
 
-#ifndef HAVE_CUDA
-// Define shells so that compilation succeeds
-namespace himan
-{
-struct packed_data
-{
-	bool HasData() const
-	{
-		return false;
-	}
-};
-
-#else
-
 #include "cuda_helper.h"
 #include "himan_common.h"
 #include <NFmiGribPacking.h>
-#include <stdexcept>
 
 namespace himan
 {
@@ -57,15 +42,9 @@ struct packed_data
 	void Clear();
 
 	CUDA_HOST
-	bool HasData() const
-	{
-		return (unpackedLength > 0);
-	}
+	bool HasData() const;
 
-	CUDA_HOST CUDA_DEVICE bool HasBitmap() const
-	{
-		return (bitmapLength > 0);
-	}
+	CUDA_HOST CUDA_DEVICE bool HasBitmap() const;
 
 	unsigned char* data = nullptr;
 	size_t packedLength = 0;
@@ -75,6 +54,35 @@ struct packed_data
 
 	HPPackingType packingType = kUnknownPackingType;
 };
+
+#ifndef HAVE_CUDA
+
+inline packed_data::packed_data(const packed_data& other)
+{
+}
+inline void packed_data::Clear()
+{
+}
+inline bool HasData() const
+{
+	return false;
+}
+inline bool HasBitmap() const
+{
+	return false;
+}
+
+#else
+
+inline CUDA_HOST bool packed_data::HasData() const
+{
+	return (unpackedLength > 0);
+}
+
+inline CUDA_HOST CUDA_DEVICE bool packed_data::HasBitmap() const
+{
+	return (bitmapLength > 0);
+}
 
 inline packed_data::packed_data(const packed_data& other)
     : packedLength(other.packedLength),
