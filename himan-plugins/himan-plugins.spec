@@ -21,7 +21,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 21.5.11
+Requires: himan-lib >= 21.8.11
 Requires: lua >= 5.1.4
 Requires: unixODBC
 Requires: libfmigrib >= 20.12.2
@@ -64,6 +64,7 @@ BuildRequires: eccodes-devel
 BuildRequires: redhat-rpm-config
 BuildRequires: cuda-cusp-11-1 >= 0.5.1
 BuildRequires: libs3-devel >= 4.1
+BuildRequires: libfmigrib >= 20.12.2
 BuildRequires: libfmigrib-devel >= 20.12.2
 BuildRequires: libfmidb-devel >= 20.7.8
 BuildRequires: smartmet-library-newbase-devel >= 21.2.20
@@ -72,6 +73,8 @@ BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: boost169-devel
 BuildRequires: fmt-devel >= 7.1.0
 BuildRequires: lua-devel
+BuildRequires: zlib-devel
+BuildRequires: bzip2-devel
 %endif
 
 AutoReqProv:	no
