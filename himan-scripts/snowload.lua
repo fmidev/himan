@@ -104,7 +104,7 @@ while result:NextTime() do
 		if T and rr and phi and v then
 			for i=1, #T do
 				-- fill Wetsnow with values 0 at initial timestep
-				if table.getn(Wetsnow) < #T  then
+				if #Wetsnow < #T  then
 						Wetsnow[i] = 0
 				end
 				T[i] = T[i] - kKelvin -- convert to celsius

@@ -63,11 +63,11 @@ inline packed_data::packed_data(const packed_data& other)
 inline void packed_data::Clear()
 {
 }
-inline bool HasData() const
+inline bool packed_data::HasData() const
 {
 	return false;
 }
-inline bool HasBitmap() const
+inline bool packed_data::HasBitmap() const
 {
 	return false;
 }
