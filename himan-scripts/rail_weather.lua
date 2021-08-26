@@ -7,7 +7,6 @@ function SumT(TMinus,TPlus,curTime,par)
   -- set initial time step
   local mytime = forecast_time(curTime:GetOriginDateTime(),time_duration(HPTimeResolution.kHourResolution,startStep))
 
-
   while true do
 
     if mytime:GetStep():Hours() < stopStep or mytime:GetStep():Hours() < 0 then
@@ -24,7 +23,7 @@ function SumT(TMinus,TPlus,curTime,par)
       end
 
       for i=1, #p do
-        psum[i] = psum[i] + p[i] 
+        psum[i] = psum[i] + p[i]
       end
     end
 
@@ -127,7 +126,7 @@ end
 local res = {}
 
 for i=1, #min_t do
-  res[i] = missing
+  res[i] = 0
 
   -- Calculate the index
   -- Determine forecast value Missing or 1; 
