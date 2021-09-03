@@ -13,16 +13,16 @@ RELEASE=$(shell date -u +%H%M).$(shell git rev-parse --short HEAD)
 # The rules
 
 all release: createlink
-	scons $(SCONS_FLAGS)
+	scons-3 $(SCONS_FLAGS)
 debug: createlink
-	scons $(SCONS_FLAGS) --debug-build
+	scons-3 $(SCONS_FLAGS) --debug-build
 nocuda: createlink
-	scons $(SCONS_FLAGS) --no-cuda-build
+	scons-3 $(SCONS_FLAGS) --no-cuda-build
 check: createlink
-	scons CPPCHECK
-	scons SCANBUILD
+	scons-3 CPPCHECK
+	scons-3 SCANBUILD
 clean:  createlink
-	scons -c ; scons --debug-build -c ; rm -f *~ source/*~ include/*~ ; rm -f scons_common.py
+	scons-3 -c ; scons-3 --debug-build -c ; rm -f *~ source/*~ include/*~ ; rm -f scons_common.py
 createlink:
 	if [ ! -e scons_common.py ]; then \
 	  ln -fs ../scons_common.py; \
