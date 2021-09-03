@@ -11,7 +11,7 @@ env = Environment(ENV = {'PATH' : os.environ['PATH']})
 
 env['OS_NAME'] = platform.linux_distribution()[0]
 env['OS_VERSION'] = float('.'.join(platform.linux_distribution()[1].split('.')[:2]))
-env['IS_RHEL'] = (env['OS_NAME'] == "Red Hat Enterprise Linux" or env['OS_NAME'] == "CentOS Linux")
+env['IS_RHEL'] = (env['OS_NAME'] == "Red Hat Enterprise Linux" or env['OS_NAME'] == "CentOS Linux" or env['OS_NAME'] == "Rocky Linux")
 env['IS_SLES'] = (env['OS_NAME'] == "SUSE Linux Enterprise Server")
 
 # Get color output from gcc / clang
