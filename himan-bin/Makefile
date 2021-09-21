@@ -16,8 +16,14 @@ rpmsourcedir = /tmp/$(shell whoami)/rpmbuild
 INSTALL_TARGET = /usr/bin
 
 .SILENT:createlink
-VERSION=$(shell date -u +%y).$(shell date -u +%m | sed 's/^0*//').$(shell date -u +%d | sed 's/^0*//')
-RELEASE=$(shell date -u +%H%M).$(shell git rev-parse --short HEAD)
+
+ifeq ($(VERSION),)
+  VERSION=$(shell date -u +%y).$(shell date -u +%m | sed 's/^0*//').$(shell date -u +%d | sed 's/^0*//')
+endif
+
+ifeq ($(RELEASE),)
+  RELEASE=$(shell date -u +%H%M).$(shell git rev-parse --short HEAD)
+endif
 
 # The rules
 
