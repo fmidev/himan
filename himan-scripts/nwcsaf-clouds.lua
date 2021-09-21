@@ -108,7 +108,8 @@ function EffectiveCloudinessMissingToZero()
     local q = ecqc[i]
     local nv = v
 
-    if v ~= v and q ~= q then
+    -- do not handle qc flag for now
+    if v ~= v then
       nv = 0
     end
     values[i] = nv
