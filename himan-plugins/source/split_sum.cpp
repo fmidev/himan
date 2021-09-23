@@ -309,7 +309,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	if (itsConfiguration->Exists("lwc") && itsConfiguration->GetValue("lwc") == "true")
 	{
-		param parm("RADLWC-WM2", 315, 0, 5, 196);
+		param parm("RADLWC-WM2", 319, 0, 5, 196);
 
 		params.push_back(parm);
 	}
