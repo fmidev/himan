@@ -61,6 +61,7 @@ BuildRequires: cuda-nvcc-11-1
 BuildRequires: cuda-cudart-devel-11-1
 BuildRequires: libcublas-devel-11-1
 BuildRequires: eccodes-devel
+BuildRequires: eccodes
 BuildRequires: redhat-rpm-config
 BuildRequires: cuda-cusp-11-1 >= 0.5.1
 BuildRequires: libs3-devel >= 4.1
