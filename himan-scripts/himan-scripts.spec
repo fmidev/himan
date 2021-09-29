@@ -22,6 +22,8 @@ Requires: glibc
 Requires: lua >= 5.1.4
 Requires: himan-plugins >= 21.8.16
 Requires: himan-lib >= 20.10.26
+BuildRequires: make
+BuildRequires: redhat-rpm-config
 
 %define debug_package %{nil}
 
