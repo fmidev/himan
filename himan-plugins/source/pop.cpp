@@ -23,7 +23,7 @@ himan::raw_time GetOriginTime(const himan::raw_time& start, int producerId)
 	himan::raw_time ret = start;
 
 	const int hour = stoi(start.String("%H"));
-	const int ostep = (producerId == 242) ? 12 : 3; // origin time "step"
+	const int ostep = (producerId == 242) ? 12 : 3;  // origin time "step"
 	const int adjust = (hour % ostep == 0) ? ostep : hour % ostep;
 	ret.Adjust(himan::kHourResolution, -adjust);
 
@@ -94,13 +94,14 @@ void pop::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 
 		forecast_time curTime = forecastTime;
 		const param p("PROB-RR-7");  // MEPS(1h) RR>=0.025mm
-
+		const producer MEPSprod(260, 86, 204, "MEPSMTA");
 		do
 		{
+			raw_time now;
 			curTime = forecast_time(GetOriginTime(curTime.OriginDateTime(), 260), curTime.ValidDateTime());
 
-			MEPS = Fetch(curTime, forecastLevel, p, forecast_type(kStatisticalProcessing), {itsMEPSGeom},
-			             producer(260, "MEPSMTA"), false);
+			MEPS =
+			    Fetch(curTime, forecastLevel, p, forecast_type(kStatisticalProcessing), {itsMEPSGeom}, MEPSprod, false);
 			tryNo++;
 		} while (tryNo < 3 && !MEPS);
 
@@ -119,6 +120,7 @@ void pop::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 		int tryNo = 0;
 
 		forecast_time curTime = forecastTime;
+		const producer ECprod(242, 86, 242, "ECGEPSMTA");
 
 		do
 		{
@@ -129,8 +131,7 @@ void pop::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 				p = param("PROB-RR-4");  // EC(6h) RR>0.4mm
 			}
 
-			EC = Fetch(curTime, forecastLevel, p, forecast_type(kStatisticalProcessing), {itsECEPSGeom},
-			           producer(242, "ECGEPSMTA"), false);
+			EC = Fetch(curTime, forecastLevel, p, forecast_type(kStatisticalProcessing), {itsECEPSGeom}, ECprod, false);
 			tryNo++;
 		} while (tryNo < 2 && !EC);
 
