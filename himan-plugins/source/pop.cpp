@@ -61,14 +61,14 @@ void pop::Process(std::shared_ptr<const plugin_configuration> conf)
 void pop::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	// 2021 POP
-	// versio 18.5.2021
-	// Käytetään pääasiallisesti parviennusteiden sateen todennäköisyyksiä:
-	// <= 45h ennusteet: Prob MEPS(1h) RR>=0.025mm
-	// 46h - 130h ennusteet: Prob EC(3h) RR>=0.075mm
-	// >131h ennusteet: Prob EC(6h) RR>=0.15mm
-	// lisäksi huomioidaan että jos editoitu sadetta, myös POP arvoja
-	// lisäksi kaukaisia sateita heikennetään
-	// lopuksi tehdään aluetasoitus
+	// version 6.9.2021
+	// Use ensemble forecasts precipitation probabilies as source data
+	// <= 45h forecasts: Prob MEPS(1h) RR>=0.025mm
+	// 46h - 130h forecasts: Prob EC(3h) RR>=0.2mm
+	// >131h forecasts: Prob EC(6h) RR>=0.4mm
+	// also: if smartemt data contains rain, POP should have values
+	// also: weaken probabilites of temporally distant rains
+	// finish with spatial smoothing
 
 	// Current time and level as given to this thread
 
@@ -93,7 +93,7 @@ void pop::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 		int tryNo = 0;
 
 		forecast_time curTime = forecastTime;
-		const param p("PROB-RR-1");  // MEPS(1h) RR>=0.025mm
+		const param p("PROB-RR-7");  // MEPS(1h) RR>=0.025mm
 
 		do
 		{
@@ -114,7 +114,7 @@ void pop::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 	{
 		myThreadedLogger.Info("Fetching ECMWF");
 
-		param p("PROB-RR3-1");  // EC(3h) RR>0.075mm
+		param p("PROB-RR3-6");  // EC(3h) RR>0.2mm
 
 		int tryNo = 0;
 
@@ -126,7 +126,7 @@ void pop::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 
 			if (curTime.Step().Hours() > 131)
 			{
-				p = param("PROB-RR-1");  // EC(6h) RR>0.15mm
+				p = param("PROB-RR-4");  // EC(6h) RR>0.4mm
 			}
 
 			EC = Fetch(curTime, forecastLevel, p, forecast_type(kStatisticalProcessing), {itsECEPSGeom},
@@ -160,8 +160,9 @@ void pop::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 	// maxprob and minprob are used to limit the allowed range
 	// of values
 
+	// shortest forecast has these:
 	double maxprob = 1.0;
-	double minprob = 0.4;
+	double minprob = 0.8;
 
 	if (step > 130)
 	{
@@ -176,6 +177,11 @@ void pop::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 	else if (step > 24)
 	{
 		maxprob = 0.9;
+		minprob = 0.4;
+	}
+	else if (step > 6)
+	{
+		minprob = 0.6;
 	}
 
 	for (auto&& tup : zip_range(resultdata, MEPSdata, ECdata, SmartMetdata))
@@ -207,11 +213,13 @@ void pop::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 	}
 
 	// Produce area average over the neighboring grid points
-	// x x x
-	// x o x
-	// x x x
+	// x x x x x
+	// x x x x x
+	// x x o x x
+	// x x x x x
+	// x x x x x
 
-	const himan::matrix<double> filter_kernel(3, 3, 1, MissingDouble(), 1 / 9.);
+	const himan::matrix<double> filter_kernel(5, 5, 1, MissingDouble(), 1 / 25.);
 
 	const auto smoothened =
 	    numerical_functions::Filter2D<double>(myTargetInfo->Data(), filter_kernel, itsConfiguration->UseCuda());
