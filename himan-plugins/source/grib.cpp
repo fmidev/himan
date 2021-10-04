@@ -226,8 +226,7 @@ long DetermineBitsPerValue(const vector<T>& values, int precision)
 	if (bitsPerValue < 0 || bitsPerValue > 24)
 	{
 		log.Error(fmt::format("Bits per value calculation failed for precision={}, defaulting to 24", precision));
-		log.Trace("D=" + to_string(static_cast<int>(D)) + " min=" + to_string(min) + " max=" + to_string(max) +
-		          " range=" + to_string(range));
+		log.Trace(fmt::format("D={} min={} max=p{} range={}", D, min, max, range));
 		bitsPerValue = 24;
 	}
 
@@ -948,8 +947,10 @@ void WriteParameter(NFmiGribMessage& message, const param& par, const producer& 
 		}
 		else if (prod.Id() != kHPMissingInt)  // no-database example has 999999 as producer
 		{
-			logr.Warning("Parameter " + par.Name() + " does not have mapping for producer " + to_string(prod.Id()) +
-			             " in radon, setting table2version to 203");
+			logr.Warning(
+			    fmt::format("Parameter {} does not have mapping for producer {}"
+			                " in radon, setting table2version to 203",
+			                par.Name(), prod.Id()));
 			message.ParameterNumber(0);
 			message.Table2Version(203);
 		}
@@ -958,8 +959,8 @@ void WriteParameter(NFmiGribMessage& message, const param& par, const producer& 
 	{
 		if (par.GribParameter() == kHPMissingInt)
 		{
-			logr.Warning("Parameter information not found from radon for producer " + to_string(prod.Id()) + ", name " +
-			             par.Name());
+			logr.Warning(fmt::format("Parameter information not found from radon for producer {} name {}", prod.Id(),
+			                         par.Name()));
 		}
 		else
 		{
@@ -1173,8 +1174,8 @@ template <typename T>
 void WriteDataValues(const vector<T>& values, NFmiGribMessage& msg, double missingValue)
 {
 	double* arr = new double[values.size()];
-	replace_copy_if(values.begin(), values.end(), arr, [](const T& val) { return himan::IsMissing(val); },
-	                missingValue);
+	replace_copy_if(
+	    values.begin(), values.end(), arr, [](const T& val) { return himan::IsMissing(val); }, missingValue);
 
 	msg.Values(arr, static_cast<long>(values.size()), missingValue);
 
@@ -1213,10 +1214,10 @@ int DetermineCorrectGribEdition(int edition, const himan::forecast_type& ftype, 
 	if (lvlCondition || ftypeCondition || parCondition || timeCondition)
 	{
 		himan::logger lgr("grib");
-		lgr.Trace("File type forced to GRIB2 (level value: " + to_string(lvl.Value()) +
-		          ", forecast type: " + HPForecastTypeToString.at(ftype.Type()) +
-		          ", processing type: " + HPProcessingTypeToString.at(par.ProcessingType().Type()) +
-		          " step: " + static_cast<string>(ftime.Step()) + ")");
+		lgr.Trace(
+		    fmt::format("File type forced to GRIB2 (level value: {}, forecast type: {}, processing type: {}, step: {})",
+		                lvl.Value(), HPForecastTypeToString.at(ftype.Type()),
+		                HPProcessingTypeToString.at(par.ProcessingType().Type()), static_cast<string>(ftime.Step())));
 		return 2;
 	}
 
@@ -1273,7 +1274,8 @@ void WriteData(NFmiGribMessage& message, info<T>& anInfo, bool useBitmap, int pr
 		bitsPerValue = DetermineBitsPerValue(values, myprecision);
 
 		// Change missing value 'nan' to a real fp value
-		replace_if(values.begin(), values.end(), [](const T& v) { return IsMissing(v); }, static_cast<T>(gribMissing));
+		replace_if(
+		    values.begin(), values.end(), [](const T& v) { return IsMissing(v); }, static_cast<T>(gribMissing));
 
 		message.BitsPerValue(bitsPerValue);
 		WriteDataValues<T>(values, message, gribMissing);
@@ -1293,8 +1295,9 @@ void WriteData(NFmiGribMessage& message, info<T>& anInfo, bool useBitmap, int pr
 	}
 
 	logger logr("grib");
-	logr.Trace("Using " + (myprecision == kHPMissingInt ? "maximum precision" : to_string(myprecision) + " decimals") +
-	           " (" + to_string(bitsPerValue) + " bits) to store " + paramName);
+	logr.Trace(fmt::format("Using {} decimals ({} bits) to store {}",
+	                       (myprecision == kHPMissingInt) ? "maximum precision" : to_string(myprecision), bitsPerValue,
+	                       paramName));
 
 	// Return missing value to nan if info is recycled (luatool)
 	anInfo.Data().MissingValue(MissingValue<T>());
@@ -1989,9 +1992,9 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 
 		if (parmName.empty())
 		{
-			logr.Warning("Parameter name not found from " + HPDatabaseTypeToString.at(dbtype) +
-			             " for producer: " + to_string(prod.Id()) + " no_vers: " + to_string(no_vers) +
-			             ", number: " + to_string(number) + ", timeRangeIndicator: " + to_string(timeRangeIndicator));
+			logr.Warning(fmt::format(
+			    "Parameter name not found from {} for producer: {} table version: {} number: {} timeRangeIndicator: {}",
+			    HPDatabaseTypeToString.at(dbtype), prod.Id(), no_vers, number, timeRangeIndicator));
 			throw kFileMetaDataNotFound;
 		}
 		else
@@ -2176,9 +2179,10 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 
 		if (parmName.empty())
 		{
-			logr.Warning("Parameter name not found from database for producer: " + to_string(prod.Id()) +
-			             " discipline: " + to_string(discipline) + ", category: " + to_string(category) +
-			             ", number: " + to_string(number) + ", statistical processing: " + to_string(tosp));
+			logr.Warning(
+			    fmt::format("Parameter name not found from database for producer: {} discipline: {}, category: {}, "
+			                "number: {}, statistical processing: {}",
+			                prod.Id(), discipline, category, number, tosp));
 			throw kFileMetaDataNotFound;
 		}
 		else
@@ -2531,8 +2535,9 @@ void ReadDataValues(vector<T>& values, const NFmiGribMessage& msg)
 	size_t len = msg.ValuesLength();
 	msg.GetValues(arr, &len, himan::MissingDouble());
 
-	replace_copy_if(arr, arr + values.size(), values.begin(), [](const double& val) { return himan::IsMissing(val); },
-	                himan::MissingValue<T>());
+	replace_copy_if(
+	    arr, arr + values.size(), values.begin(), [](const double& val) { return himan::IsMissing(val); },
+	    himan::MissingValue<T>());
 
 	delete[] arr;
 }
