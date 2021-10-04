@@ -39,7 +39,7 @@ void pop::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 
-	param theRequestedParam("POP-PRCNT", 259);
+	param theRequestedParam("POP-0TO1");
 
 	theRequestedParam.Unit(kPrcnt);
 
