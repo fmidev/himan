@@ -195,7 +195,7 @@ void fractile::SetParams()
 
 	for (float frac : itsFractiles)
 	{
-		auto name = "F" + boost::lexical_cast<std::string>(frac) + "-" + paramName;
+		auto name = fmt::format("F{}-{}", frac, paramName);
 		param p(name);
 		p.ProcessingType(processing_type(kFractile, frac, kHPMissingValue, kHPMissingInt));
 		calculatedParams.push_back(p);
@@ -339,5 +339,5 @@ void fractile::Calculate(std::shared_ptr<info<float>> myTargetInfo, uint16_t thr
 	                    "/" + std::to_string(myTargetInfo->Data().Size()));
 }
 
-}  // plugin
-}  // namespace
+}  // namespace plugin
+}  // namespace himan
