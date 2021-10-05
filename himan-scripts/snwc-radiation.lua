@@ -9,7 +9,14 @@ local MISS = missing
 local rad_prod = producer(240, "ECGMTA")
 local ftype = forecast_type(HPForecastType.kDeterministic)
 
-local latest_origintime = raw_time(radon:GetLatestTime(rad_prod, "", 0))
+local latest_origintime = ""
+
+if configuration:Exists("ecmwf_origintime") then
+  logger:Debug("Using hard-coded ecmwf origintime") -- for testing purposes
+  latest_origintime = raw_time(configuration:GetValue("ecmwf_origintime"))
+else
+  latest_origintime = raw_time(radon:GetLatestTime(rad_prod, "", 0))
+end
 
 logger:Info("Latest ECMWF analysis: " .. latest_origintime:String("%Y-%m-%d %H:%M:%S"))
 
