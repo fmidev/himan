@@ -231,6 +231,13 @@ void ExecutePlugin(const shared_ptr<plugin_configuration>& pc, vector<plugin_tim
 	// For 'cuda-memcheck --leak-check full'
 	CUDA_CHECK(cudaDeviceReset());
 #endif
+
+	if (pc->WriteToObjectStorageBetweenPluginCalls())
+	{
+		auto w = GET_PLUGIN(writer);
+		w->WritePendingInfos(pc);
+		plugin::writer::ClearPending();
+	}
 }
 
 int main(int argc, char** argv)
@@ -296,9 +303,9 @@ int main(int argc, char** argv)
 		if (pc->AsyncExecution())
 		{
 			aLogger.Info("Asynchronous launch for " + pc->Name());
-			asyncs.push_back(
-			    async(launch::async,
-			          [&pluginTimes](shared_ptr<plugin_configuration> _pc) { ExecutePlugin(_pc, pluginTimes); }, pc));
+			asyncs.push_back(async(
+			    launch::async,
+			    [&pluginTimes](shared_ptr<plugin_configuration> _pc) { ExecutePlugin(_pc, pluginTimes); }, pc));
 
 			continue;
 		}

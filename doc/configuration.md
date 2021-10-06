@@ -39,6 +39,7 @@ in global scope.
   * [Allowed missing values](#Allowed_missing_values)
   * [ss_state table name](#ss_state_table_name)
   * [grib decimal precision](#grib_decimal_precision)
+  * [Write between plugin calls](#write_between_plugin_calls)
 * [Environment variables](#Environment_variables)
 * [Full examples](#Full_examples)
 
@@ -625,6 +626,24 @@ Example:
     {
         "...",
         "plugins" : [ { "name" : "...", "write_options.precision" : 2 } ]
+    }
+
+<a name="write_between_plugin_calls"/>
+
+## Write between plugin calls
+
+When writing to s3, all data is hold in cache and is written only when all plugins have been executed, as appending to s3 is not possible.
+With configuration option 'write_to_object_storage_between_plugin_calls' writes can be done between plugin calls, for example to reduce
+the amount of data held in memory. By default this options has value 'false', and it is only applied when writing to s3. Option can
+only be set at top-level configuration.
+
+It is the users' responsibility to set 'filename_template' such that successive write calls do not override previous data.
+
+Example:
+
+
+    {
+        "write_to_object_storage_between_plugin_calls" : true,
     }
 
 

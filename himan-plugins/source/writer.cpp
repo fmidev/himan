@@ -31,6 +31,17 @@ void writer::AddToPending(const std::vector<std::string>& names)
 	pendingWrites.insert(pendingWrites.end(), names.begin(), names.end());
 }
 
+void writer::ClearPending()
+{
+	auto c = GET_PLUGIN(cache);
+	std::lock_guard<std::mutex> lock(pendingMutex);
+	for (const auto& uname : pendingWrites)
+	{
+		c->Remove(uname);
+	}
+	pendingWrites.clear();
+}
+
 void ReadConfigurationWriteOptions(write_options& writeOptions)
 {
 	// Other options in write_options struct could also be checked here,

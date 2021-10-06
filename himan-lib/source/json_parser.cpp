@@ -474,13 +474,27 @@ std::vector<raw_time> OriginTime(const boost::property_tree::ptree& pt, shared_p
 	return originDateTimes;
 }
 
+void WriteToObjectStorageBetweenPluginCalls(const boost::property_tree::ptree& pt, shared_ptr<configuration>& conf)
+{
+	if (auto writeBetweenCalls = ReadElement<bool>(pt, "write_to_object_storage_between_plugin_calls"))
+	{
+		conf->WriteToObjectStorageBetweenPluginCalls(writeBetweenCalls.get());
+	}
+}
+
 void CheckConsistency(shared_ptr<configuration>& conf)
 {
 	logger logr("json_parser");
-	if (conf->UseCacheForWrites() == false && conf->WriteStorageType() == kS3ObjectStorageSystem)
+	if (conf->WriteStorageType() != kS3ObjectStorageSystem && conf->WriteToObjectStorageBetweenPluginCalls())
 	{
-		logr.Warning("Unable to set 'use_cache_for_writes=false' when writing to S3");
-		conf->UseCacheForWrites(true);
+		logr.Warning("unable to set 'write_to_s3_between_plugin_calls=true' when not writing to s3");
+		conf->WriteToObjectStorageBetweenPluginCalls(false);
+	}
+	if (conf->UseCacheForWrites() == false && conf->WriteStorageType() == kS3ObjectStorageSystem &&
+	    conf->WriteToObjectStorageBetweenPluginCalls() == false)
+	{
+		logr.Warning(
+		    "Unable to set 'use_cache_for_writes=false' when writing to S3 and write_to_s3_between_plugin_calls=false");
 	}
 }
 
@@ -524,6 +538,8 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	}
 
 	vector<shared_ptr<plugin_configuration>> pluginContainer;
+
+	WriteToObjectStorageBetweenPluginCalls(pt, conf);
 
 	CheckCommonOptions(pt, conf);
 

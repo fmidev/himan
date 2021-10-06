@@ -258,6 +258,9 @@ class configuration
 	HPProgramName ProgramName() const;
 	void ProgramName(HPProgramName theName);
 
+	bool WriteToObjectStorageBetweenPluginCalls() const;
+	void WriteToObjectStorageBetweenPluginCalls(bool flag);
+
    protected:
 	std::vector<producer> itsSourceProducers;
 
@@ -298,6 +301,7 @@ class configuration
 	bool itsUploadStatistics;
 	bool itsWriteToDatabase;
 	bool itsLegacyWriteMode;
+	bool itsWriteToObjectStorageBetweenPluginCalls;
 
 	HPFileStorageType itsWriteStorageType;
 	std::string itsFilenameTemplate;
