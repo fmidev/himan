@@ -22,7 +22,7 @@ Requires: glibc
 Requires: libgcc
 Requires: libstdc++
 Requires: himan-lib >= 21.8.11
-Requires: lua >= 5.1.4
+Requires: lua >= 5.3.0
 Requires: unixODBC
 Requires: libfmigrib >= 20.12.2
 Requires: libfmidb >= 21.3.31
