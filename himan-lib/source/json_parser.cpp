@@ -474,6 +474,16 @@ std::vector<raw_time> OriginTime(const boost::property_tree::ptree& pt, shared_p
 	return originDateTimes;
 }
 
+void CheckConsistency(shared_ptr<configuration>& conf)
+{
+	logger logr("json_parser");
+	if (conf->UseCacheForWrites() == false && conf->WriteStorageType() == kS3ObjectStorageSystem)
+	{
+		logr.Warning("Unable to set 'use_cache_for_writes=false' when writing to S3");
+		conf->UseCacheForWrites(true);
+	}
+}
+
 void CheckCommonOptions(const boost::property_tree::ptree& pt, shared_ptr<configuration>& conf)
 {
 	Producers(pt, conf);
@@ -492,6 +502,8 @@ void CheckCommonOptions(const boost::property_tree::ptree& pt, shared_ptr<config
 	ForecastTypes(pt, conf);
 	WriteMode(conf, pt);
 	SSStateTableName(pt, conf);
+
+	CheckConsistency(conf);
 }
 
 vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(shared_ptr<configuration> conf)
