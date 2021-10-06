@@ -185,6 +185,9 @@ void pop::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 		minprob = 0.6;
 	}
 
+	// Minimum precipitation value to be accepted, mm/h
+	const double RRlimit = 0.01;
+
 	for (auto&& tup : zip_range(resultdata, MEPSdata, ECdata, SmartMetdata))
 	{
 		double& r = tup.get<0>();
@@ -205,7 +208,7 @@ void pop::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 			r = ec;
 		}
 
-		if (rr > 0.0)
+		if (rr > RRlimit)
 		{
 			r = max(r, minprob);
 		}
