@@ -235,7 +235,7 @@ void UseCacheForReads(const boost::property_tree::ptree& pt, std::shared_ptr<con
 {
 	if (auto useCacheForReads = ReadElement<bool>(pt, "use_cache_for_reads"))
 	{
-		conf->UseCacheForWrites(useCacheForReads.get());
+		conf->UseCacheForReads(useCacheForReads.get());
 	}
 }
 
