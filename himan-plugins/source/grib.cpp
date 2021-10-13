@@ -775,8 +775,13 @@ void WriteTime(NFmiGribMessage& message, const forecast_time& ftime, const produ
 		}
 
 		// These are used if parameter is aggregated
-		long p1 = ((ftime.Step() + par.Aggregation().TimeOffset()) / static_cast<int>(stepUnit.Hours())).Hours();
-		long p2 = p1 + par.Aggregation().TimeDuration().Hours() / static_cast<int>(stepUnit.Hours());
+		long p1 = 0, p2 = 0;
+
+		if (par.Aggregation().TimeDuration().Empty() == false)
+		{
+			p1 = ((ftime.Step() + par.Aggregation().TimeOffset()) / static_cast<int>(stepUnit.Hours())).Hours();
+			p2 = p1 + par.Aggregation().TimeDuration().Hours() / static_cast<int>(stepUnit.Hours());
+		}
 
 		switch (par.Aggregation().Type())
 		{
