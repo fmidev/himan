@@ -379,62 +379,7 @@ void ForecastTypes(const boost::property_tree::ptree& pt, std::shared_ptr<config
 {
 	if (auto ftypes = ReadElement<std::string>(pt, "forecast_type"))
 	{
-		vector<string> types = util::Split(ftypes.get(), ",");
-		vector<forecast_type> forecastTypes;
-
-		for (string& type : types)
-		{
-			boost::algorithm::to_lower(type);
-
-			if (type.find("pf") != string::npos)
-			{
-				string list = type.substr(2, string::npos);
-
-				vector<string> range = util::Split(list, "-");
-
-				if (range.size() == 1)
-				{
-					forecastTypes.push_back(forecast_type(kEpsPerturbation, stod(range[0])));
-				}
-				else
-				{
-					ASSERT(range.size() == 2);
-
-					int start = stoi(range[0]);
-					int stop = stoi(range[1]);
-
-					while (start <= stop)
-					{
-						forecastTypes.push_back(forecast_type(kEpsPerturbation, start));
-						start++;
-					}
-				}
-			}
-			else
-			{
-				if (type == "cf")
-				{
-					forecastTypes.push_back(forecast_type(kEpsControl, 0));
-				}
-				else if (type == "det" || type == "deterministic")
-				{
-					forecastTypes.push_back(forecast_type(kDeterministic));
-				}
-				else if (type == "an" || type == "analysis")
-				{
-					forecastTypes.push_back(forecast_type(kAnalysis));
-				}
-				else if (type == "sp" || type == "statistical")
-				{
-					forecastTypes.push_back(forecast_type(kStatisticalProcessing));
-				}
-				else
-				{
-					throw runtime_error("Invalid forecast_type: " + type);
-				}
-			}
-		}
-		conf->ForecastTypes(forecastTypes);
+		conf->ForecastTypes(util::ForecastTypesFromString(ftypes.get()));
 	}
 }
 

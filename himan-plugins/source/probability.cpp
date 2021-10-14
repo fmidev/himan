@@ -17,10 +17,7 @@ namespace himan
 {
 namespace plugin
 {
-static const std::string kClassName = "himan::plugin::probability";
-
 probability::probability()
-    : itsEnsembleSize(0), itsMaximumMissingForecasts(0), itsUseLaggedEnsemble(0), itsLag(), itsLagStep()
 {
 	itsCudaEnabledCalculation = false;
 	itsLogger = logger("probability");
@@ -230,108 +227,6 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 {
 	Init(conf);
 
-	//
-	// 1. Parse json configuration specific to this plugin
-	//
-
-	// Most of the plugin operates by the configuration in the json file.
-	// Here we collect all the parameters we want to calculate, and the parameters that are used for the calculation.
-	// If the configuration is invalid we will bail out asap!
-
-	// Get the number of forecasts this ensemble has from plugin configuration
-	if (itsConfiguration->Exists("ensemble_size"))
-	{
-		const int ensembleSize = std::stoi(itsConfiguration->GetValue("ensemble_size"));
-		if (ensembleSize <= 0)
-		{
-			throw std::runtime_error(ClassName() + " invalid ensemble_size in plugin configuration");
-		}
-		itsEnsembleSize = ensembleSize;
-	}
-	else
-	{
-		auto r = GET_PLUGIN(radon);
-		auto ensSize = r->RadonDB().GetProducerMetaData(conf->TargetProducer().Id(), "ensemble size");
-
-		if (ensSize.empty())
-		{
-			throw std::runtime_error(
-			    ClassName() + " ensemble_size not specified in plugin configuration and not found from database");
-		}
-
-		itsEnsembleSize = std::stoi(ensSize);
-	}
-
-	// Maximum number of missing forecasts for an ensemble
-	if (itsConfiguration->Exists("max_missing_forecasts"))
-	{
-		const int maxMissingForecasts = std::stoi(itsConfiguration->GetValue("max_missing_forecasts"));
-		if (maxMissingForecasts < 0)
-		{
-			throw std::runtime_error(ClassName() +
-			                         " invalid max_missing_forecasts value specified in plugin configuration");
-		}
-		itsMaximumMissingForecasts = maxMissingForecasts;
-	}
-
-	// Are we using lagged ensemble?
-	// NOTE 'lag' needs to be specified first
-	if (itsConfiguration->Exists("lag"))
-	{
-		int lag = std::stoi(itsConfiguration->GetValue("lag"));
-		if (lag == 0)
-		{
-			throw std::runtime_error(ClassName() + ": specify lag < 0");
-		}
-		else if (lag > 0)
-		{
-			itsLogger.Warning("negating lag value " + std::to_string(-lag));
-			lag = -lag;
-		}
-
-		itsLag = time_duration(kHourResolution, lag);
-
-		// How many lagged steps to include in the calculation
-
-		if (itsConfiguration->Exists("lagged_steps"))
-		{
-			const std::string lagsteps = itsConfiguration->GetValue("lagged_steps");
-
-			if (lagsteps.find(":") == std::string::npos)
-			{
-				const int steps = std::stoi(lagsteps);
-				if (steps <= 0)
-				{
-					throw std::runtime_error(ClassName() + ": invalid lagged_steps value. Allowed range >= 0");
-				}
-				itsLagStep = itsLag * -1;
-				itsLag *= steps;
-			}
-			else
-			{
-				itsLagStep = time_duration(lagsteps);
-			}
-		}
-		else
-		{
-			throw std::runtime_error(ClassName() + ": specify lagged_steps when using time lagging ('lag')");
-		}
-
-		itsUseLaggedEnsemble = true;
-	}
-
-	if (itsConfiguration->Exists("named_ensemble"))
-	{
-		itsUseLaggedEnsemble = true;
-		itsNamedEnsemble = itsConfiguration->GetValue("named_ensemble");
-	}
-
-	//
-	// 2. Setup input and output parameters from the json configuration.
-	//    `calculatedParams' will hold the output parameter, it's inputs,
-	//    and the 'threshold' value.
-	//
-
 	params calculatedParams;
 
 	const auto names = conf->GetParameterNames();
@@ -365,35 +260,46 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 	Start<float>();
 }
 
+std::unique_ptr<ensemble> Mogrify(const ensemble* baseEns, const himan::param& par)
+{
+	if (baseEns->ClassName() == "himan::ensemble")
+	{
+		return std::move(std::make_unique<ensemble>(par, baseEns->ExpectedSize()));
+	}
+	else if (baseEns->ClassName() == "himan::lagged_ensemble")
+	{
+		return std::move(
+		    std::make_unique<lagged_ensemble>(par, dynamic_cast<const lagged_ensemble*>(baseEns)->DesiredForecasts()));
+	}
+	else if (baseEns->ClassName() == "himan::time_ensemble")
+	{
+		const auto d = dynamic_cast<const time_ensemble*>(baseEns);
+		return std::move(std::make_unique<time_ensemble>(par, baseEns->ExpectedSize(), d->PrimaryTimeSpan(),
+		                                                 d->SecondaryTimeMaskLen(), d->SecondaryTimeMaskStep(),
+		                                                 d->SecondaryTimeSpan()));
+	}
+	return nullptr;
+}
+
 void probability::Calculate(std::shared_ptr<info<float>> myTargetInfo, unsigned short threadIndex)
 {
 	auto threadedLogger = logger("probabilityThread # " + std::to_string(threadIndex));
 
+	std::unique_ptr<ensemble> baseEns = util::CreateEnsembleFromConfiguration(itsConfiguration);
+
+	if (!baseEns)
+	{
+		return;
+	}
+
 	for (const auto& pc : itsParamConfigurations)
 	{
-		std::unique_ptr<ensemble> ens;
+		// combine ensemble configuration with the source parameter name for this loop
+		// iteration
 
-		if (itsUseLaggedEnsemble)
-		{
-			threadedLogger.Info("Using lagged ensemble");
-			if (itsNamedEnsemble.empty() == false)
-			{
-				ens = std::unique_ptr<ensemble>(new lagged_ensemble(pc.parameter, itsNamedEnsemble));
-			}
-			else
-			{
-				ens = std::unique_ptr<ensemble>(new lagged_ensemble(pc.parameter, itsEnsembleSize, itsLag, itsLagStep));
-			}
-		}
-		else
-		{
-			ens = std::unique_ptr<ensemble>(new ensemble(pc.parameter, itsEnsembleSize));
-		}
-
-		ens->MaximumMissingForecasts(itsMaximumMissingForecasts);
-
-		threadedLogger.Info("Calculating " + pc.output.Name() + " time " +
-		                    static_cast<std::string>(myTargetInfo->Time().ValidDateTime()));
+		std::unique_ptr<ensemble> ens = Mogrify(baseEns.get(), pc.parameter);
+		threadedLogger.Info(fmt::format("Calculating {} time {}", pc.output.Name(),
+		                                static_cast<std::string>(myTargetInfo->Time().ValidDateTime())));
 
 		try
 		{
@@ -458,10 +364,10 @@ void probability::Calculate(std::shared_ptr<info<float>> myTargetInfo, unsigned 
 		}
 	}
 
-	threadedLogger.Info("[CPU] Missing values: " + std::to_string(myTargetInfo->Data().MissingCount()) + "/" +
-	                    std::to_string(myTargetInfo->Data().Size()));
+	threadedLogger.Info(
+	    fmt::format("[CPU] Missing values: {}/{}", myTargetInfo->Data().MissingCount(), myTargetInfo->Data().Size()));
 }
 
-}  // plugin
+}  // namespace plugin
 
-}  // namespace
+}  // namespace himan

@@ -7,6 +7,7 @@
 #include "util.h"
 #include "cuda_helper.h"
 #include "forecast_time.h"
+#include "lagged_ensemble.h"
 #include "lambert_conformal_grid.h"
 #include "lambert_equal_area_grid.h"
 #include "latitude_longitude_grid.h"
@@ -17,6 +18,7 @@
 #include "point_list.h"
 #include "reduced_gaussian_grid.h"
 #include "stereographic_grid.h"
+#include "time_ensemble.h"
 #include "transverse_mercator_grid.h"
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem/path.hpp>
@@ -560,7 +562,7 @@ std::string TypeCast<std::string>(const std::string& val)
 {
 	return val;
 }
-}
+}  // namespace
 
 template <typename T>
 vector<T> util::Split(const string& s, const string& delims)
@@ -1557,4 +1559,247 @@ param util::GetParameterInfoFromDatabaseName(const producer& prod, const param& 
 	}
 
 	return p;
+}
+
+vector<forecast_type> util::ForecastTypesFromString(const string& types)
+{
+	vector<forecast_type> forecastTypes;
+	vector<string> typeList = util::Split(types, ",");
+
+	for (string& type : typeList)
+	{
+		boost::algorithm::to_lower(type);
+
+		if (type.find("pf") != string::npos)
+		{
+			string list = type.substr(2, string::npos);
+
+			vector<string> range = util::Split(list, "-");
+
+			if (range.size() == 1)
+			{
+				forecastTypes.push_back(forecast_type(kEpsPerturbation, stod(range[0])));
+			}
+			else
+			{
+				ASSERT(range.size() == 2);
+
+				int start = stoi(range[0]);
+				int stop = stoi(range[1]);
+
+				while (start <= stop)
+				{
+					forecastTypes.push_back(forecast_type(kEpsPerturbation, start));
+					start++;
+				}
+			}
+		}
+		else if (type.find("cf") != string::npos)
+		{
+			const string strnum = type.substr(2, string::npos);
+			int num = 0;
+
+			if (!strnum.empty())
+			{
+				try
+				{
+					num = stoi(strnum);
+				}
+				catch (const invalid_argument& e)
+				{
+					throw std::invalid_argument(fmt::format("Invalid forecast type specifier: {}", type));
+				}
+			}
+
+			forecastTypes.push_back(forecast_type(kEpsControl, num));
+		}
+		else if (type == "det" || type == "deterministic")
+		{
+			forecastTypes.push_back(forecast_type(kDeterministic));
+		}
+		else if (type == "an" || type == "analysis")
+		{
+			forecastTypes.push_back(forecast_type(kAnalysis));
+		}
+		else if (type == "sp" || type == "statistical")
+		{
+			forecastTypes.push_back(forecast_type(kStatisticalProcessing));
+		}
+	}
+
+	return forecastTypes;
+}
+
+std::unique_ptr<ensemble> util::CreateEnsembleFromConfiguration(const std::shared_ptr<const plugin_configuration>& conf)
+{
+	std::unique_ptr<ensemble> ens;
+
+	logger log("util");
+
+	std::string paramName = conf->GetValue("param");
+
+	if (paramName.empty())
+		paramName = "XX-X";
+
+	// ENSEMBLE TYPE
+
+	HPEnsembleType ensType = kPerturbedEnsemble;
+
+	if (conf->GetValue("ensemble_type").empty() == false)
+	{
+		ensType = HPStringToEnsembleType.at(conf->GetValue("ensemble_type"));
+	}
+	else if (conf->GetValue("lag").empty() == false || conf->GetValue("lagged_members").empty() == false)
+	{
+		ensType = kLaggedEnsemble;
+	}
+	else if (conf->GetValue("secondary_time_len").empty() == false)
+	{
+		ensType = kTimeEnsemble;
+	}
+
+	// ENSEMBLE SIZE
+
+	size_t ensSize = 0;
+
+	if (conf->Exists("ensemble_size"))
+	{
+		ensSize = std::stoi(conf->GetValue("ensemble_size"));
+	}
+	else if (ensType == kPerturbedEnsemble || ensType == kLaggedEnsemble)
+	{
+		// Regular ensemble size is static, get it from database if user
+		// hasn't specified any size
+
+		auto r = GET_PLUGIN(radon);
+
+		std::string ensembleSizeStr = r->RadonDB().GetProducerMetaData(conf->SourceProducer(0).Id(), "ensemble size");
+
+		if (ensembleSizeStr.empty())
+		{
+			log.Error("Unable to find ensemble size from database");
+			return nullptr;
+		}
+
+		ensSize = std::stoi(ensembleSizeStr);
+	}
+
+	switch (ensType)
+	{
+		case kPerturbedEnsemble:
+			ens = make_unique<ensemble>(param(paramName), ensSize);
+			break;
+
+		case kTimeEnsemble:
+		{
+			int secondaryLen = 0, secondaryStep = 1;
+			HPTimeResolution secondarySpan = kHourResolution;
+
+			if (conf->Exists(("secondary_time_len")))
+			{
+				secondaryLen = std::stoi(conf->GetValue("secondary_time_len"));
+			}
+			if (conf->Exists(("secondary_time_step")))
+			{
+				secondaryStep = std::stoi(conf->GetValue("secondary_time_step"));
+			}
+			if (conf->Exists(("secondary_time_span")))
+			{
+				secondarySpan = HPStringToTimeResolution.at(conf->GetValue("secondary_time_span"));
+			}
+
+			ens = make_unique<time_ensemble>(param(paramName), ensSize, kYearResolution, secondaryLen, secondaryStep,
+			                                 secondarySpan);
+		}
+		break;
+		case kLaggedEnsemble:
+		{
+			const auto name = conf->GetValue("named_ensemble");
+
+			if (name.empty() == false)
+			{
+				ens = make_unique<lagged_ensemble>(param(paramName), name);
+			}
+			else if (conf->GetValue("lagged_members").empty() == false)
+			{
+				const std::vector<forecast_type> members =
+				    util::ForecastTypesFromString(conf->GetValue("lagged_members"));
+				const std::vector<std::string> lags = util::Split(conf->GetValue("lags"), ",");
+
+				if (members.size() != lags.size())
+				{
+					log.Fatal(fmt::format("Size of members ({}) does not match size of lags ({}): {} and {}",
+					                      members.size(), lags.size(), conf->GetValue("lagged_members"),
+					                      conf->GetValue("lags")));
+					himan::Abort();
+				}
+
+				std::vector<std::pair<forecast_type, himan::time_duration>> forecasts;
+				forecasts.reserve(members.size());
+
+				for (size_t i = 0; i < members.size(); i++)
+				{
+					forecasts.emplace_back(members[i], himan::time_duration(lags[i]));
+				}
+
+				ens = std::make_unique<lagged_ensemble>(param(paramName), forecasts);
+			}
+			else
+			{
+				auto lagstr = conf->GetValue("lag");
+				if (lagstr.empty())
+				{
+					log.Fatal("specify lag value for lagged_ensemble");
+					himan::Abort();
+				}
+
+				int lag = std::stoi(conf->GetValue("lag"));
+
+				if (lag == 0)
+				{
+					log.Fatal("lag value needs to be negative integer");
+					himan::Abort();
+				}
+				else if (lag > 0)
+				{
+					log.Warning("negating lag value " + std::to_string(-lag));
+					lag = -lag;
+				}
+
+				auto stepsstr = conf->GetValue("lagged_steps");
+
+				if (stepsstr.empty())
+				{
+					log.Fatal("specify lagged_steps value for lagged_ensemble");
+					himan::Abort();
+				}
+
+				int steps = std::stoi(conf->GetValue("lagged_steps"));
+
+				if (steps <= 0)
+				{
+					log.Fatal("invalid lagged_steps value. Allowed range >= 0");
+					himan::Abort();
+				}
+
+				steps++;
+
+				ens =
+				    make_unique<lagged_ensemble>(param(paramName), ensSize, time_duration(kHourResolution, lag), steps);
+			}
+		}
+		break;
+		default:
+			log.Error("Unknown ensemble type: " + ensType);
+			return nullptr;
+	}
+
+	ASSERT(ens);
+
+	if (conf->Exists("max_missing_forecasts"))
+	{
+		ens->MaximumMissingForecasts(std::stoi(conf->GetValue("max_missing_forecasts")));
+	}
+
+	return std::move(ens);
 }

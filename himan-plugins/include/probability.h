@@ -34,21 +34,14 @@ class probability : public compiled_plugin, private compiled_plugin_base
 	virtual void Calculate(std::shared_ptr<info<float>> theTargetInfo, unsigned short theThreadIndex);
 
 	std::vector<PROB::partial_param_configuration> itsParamConfigurations;
-
-	int itsEnsembleSize;
-	int itsMaximumMissingForecasts;
-	bool itsUseLaggedEnsemble;
-	time_duration itsLag;
-	time_duration itsLagStep;
-	std::string itsNamedEnsemble;
 };
 
 extern "C" std::shared_ptr<himan_plugin> create()
 {
 	return std::make_shared<probability>();
 }
-}  // plugin
-}  // himan
+}  // namespace plugin
+}  // namespace himan
 
 // PROBABILITY_PLUGIN_H
 #endif
