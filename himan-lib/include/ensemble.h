@@ -90,7 +90,7 @@ class ensemble
 	/// @brief Returns the size of the currently fetched ensemble
 	size_t Size() const;
 
-	std::string ClassName() const;
+	virtual std::string ClassName() const;
 
 	/// @brief Returns the expected size of the ensemble. NOTE: this can
 	/// differ from the actual size of the ensemble!

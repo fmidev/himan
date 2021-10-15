@@ -74,7 +74,7 @@ std::vector<std::pair<forecast_type, time_duration>> CreateNamedEnsembleConfigur
 	throw std::runtime_error(fmt::format(
 	    "Unable to create named ensemble for {}, allowed values are: MEPS_SINGLE_ENSEMBLE,MEPS_LAGGED_ENSEMBLE", name));
 }
-}
+}  // namespace
 
 namespace himan
 {
@@ -136,6 +136,11 @@ lagged_ensemble::lagged_ensemble(const param& parameter, const std::string& name
 	itsParam = parameter;
 	itsDesiredForecasts = CreateNamedEnsembleConfiguration(namedEnsemble);
 	itsForecasts.reserve(itsDesiredForecasts.size());
+}
+
+std::vector<std::pair<forecast_type, time_duration>> lagged_ensemble::DesiredForecasts() const
+{
+	return itsDesiredForecasts;
 }
 
 void lagged_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const forecast_time& time,

@@ -22,11 +22,32 @@ class time_ensemble : public ensemble
 	void Fetch(std::shared_ptr<const plugin_configuration> config, const forecast_time& time,
 	           const level& forecastLevel) override;
 
+	HPTimeResolution PrimaryTimeSpan() const
+	{
+		return itsPrimaryTimeSpan;
+	}
+	int SecondaryTimeMaskLen() const
+	{
+		return itsSecondaryTimeMaskLen;
+	}
+	int SecondaryTimeMaskStep() const
+	{
+		return itsSecondaryTimeMaskStep;
+	}
+	HPTimeResolution SecondaryTimeSpan() const
+	{
+		return itsSecondaryTimeSpan;
+	}
+	virtual std::string ClassName() const final
+	{
+		return "himan::time_ensemble";
+	}
+
    private:
 	HPTimeResolution itsPrimaryTimeSpan;
 	int itsSecondaryTimeMaskLen = 0;
 	int itsSecondaryTimeMaskStep = 1;
 	HPTimeResolution itsSecondaryTimeSpan = kHourResolution;
 };
-}
+}  // namespace himan
 #endif /* TIME_ENSEMBLE_H */
