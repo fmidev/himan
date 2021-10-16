@@ -1684,10 +1684,17 @@ std::unique_ptr<ensemble> util::CreateEnsembleFromConfiguration(const std::share
 		ensSize = std::stoi(ensembleSizeStr);
 	}
 
+	int maximumMissing = 0;
+
+	if (conf->Exists("max_missing_forecasts"))
+	{
+		maximumMissing = std::stoi(conf->GetValue("max_missing_forecasts"));
+	}
+
 	switch (ensType)
 	{
 		case kPerturbedEnsemble:
-			ens = make_unique<ensemble>(param(paramName), ensSize);
+			ens = make_unique<ensemble>(param(paramName), ensSize, maximumMissing);
 			break;
 
 		case kTimeEnsemble:
@@ -1709,7 +1716,7 @@ std::unique_ptr<ensemble> util::CreateEnsembleFromConfiguration(const std::share
 			}
 
 			ens = make_unique<time_ensemble>(param(paramName), ensSize, kYearResolution, secondaryLen, secondaryStep,
-			                                 secondarySpan);
+			                                 secondarySpan, maximumMissing);
 		}
 		break;
 		case kLaggedEnsemble:
@@ -1742,7 +1749,7 @@ std::unique_ptr<ensemble> util::CreateEnsembleFromConfiguration(const std::share
 					forecasts.emplace_back(members[i], himan::time_duration(lags[i]));
 				}
 
-				ens = std::make_unique<lagged_ensemble>(param(paramName), forecasts);
+				ens = std::make_unique<lagged_ensemble>(param(paramName), forecasts, maximumMissing);
 			}
 			else
 			{
@@ -1784,8 +1791,8 @@ std::unique_ptr<ensemble> util::CreateEnsembleFromConfiguration(const std::share
 
 				steps++;
 
-				ens =
-				    make_unique<lagged_ensemble>(param(paramName), ensSize, time_duration(kHourResolution, lag), steps);
+				ens = make_unique<lagged_ensemble>(param(paramName), ensSize, time_duration(kHourResolution, lag),
+				                                   steps, maximumMissing);
 			}
 		}
 		break;
@@ -1796,10 +1803,7 @@ std::unique_ptr<ensemble> util::CreateEnsembleFromConfiguration(const std::share
 
 	ASSERT(ens);
 
-	if (conf->Exists("max_missing_forecasts"))
-	{
-		ens->MaximumMissingForecasts(std::stoi(conf->GetValue("max_missing_forecasts")));
-	}
+	log.Trace(fmt::format("Created ensemble of type: {}", HPEnsembleTypeToString.at(ens->EnsembleType())));
 
 	return std::move(ens);
 }

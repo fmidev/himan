@@ -12,11 +12,8 @@ if not ensSize then
   return
 end
 
-local ens1 = lagged_ensemble(param("VV2-M"), "MEPS_LAGGED_ENSEMBLE")
-local ens2 = lagged_ensemble(param("CEIL-2-M"), "MEPS_LAGGED_ENSEMBLE")
-
-ens1:SetMaximumMissingForecasts(ensSize)
-ens2:SetMaximumMissingForecasts(ensSize)
+local ens1 = lagged_ensemble(param("VV2-M"), "MEPS_LAGGED_ENSEMBLE", ensSize)
+local ens2 = lagged_ensemble(param("CEIL-2-M"), "MEPS_LAGGED_ENSEMBLE", ensSize)
 
 ens1:Fetch(configuration, current_time, current_level)
 ens2:Fetch(configuration, current_time, current_level)

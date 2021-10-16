@@ -79,13 +79,14 @@ std::vector<std::pair<forecast_type, time_duration>> CreateNamedEnsembleConfigur
 namespace himan
 {
 lagged_ensemble::lagged_ensemble(const param& parameter, size_t expectedEnsembleSize, const time_duration& theLag,
-                                 size_t numberOfSteps)
-    : lagged_ensemble(parameter, expectedEnsembleSize, theLag * static_cast<int>(numberOfSteps - 1), theLag * -1)
+                                 size_t numberOfSteps, int maximumMissingForecasts)
+    : lagged_ensemble(parameter, expectedEnsembleSize, theLag * static_cast<int>(numberOfSteps - 1), theLag * -1,
+                      maximumMissingForecasts)
 {
 }
 
 lagged_ensemble::lagged_ensemble(const param& parameter, size_t expectedEnsembleSize, const time_duration& theLag,
-                                 const time_duration& theStep)
+                                 const time_duration& theStep, int maximumMissingForecasts)
 {
 	itsLogger = logger("lagged_ensemble");
 
@@ -121,21 +122,25 @@ lagged_ensemble::lagged_ensemble(const param& parameter, size_t expectedEnsemble
 	}
 
 	itsForecasts.reserve(expectedEnsembleSize);
+	itsMaximumMissingForecasts = maximumMissingForecasts;
 }
 
 lagged_ensemble::lagged_ensemble(const param& parameter,
-                                 const std::vector<std::pair<forecast_type, time_duration>>& theConfiguration)
+                                 const std::vector<std::pair<forecast_type, time_duration>>& theConfiguration,
+                                 int maximumMissingForecasts)
     : itsDesiredForecasts(theConfiguration)
 {
 	itsParam = parameter;
 	itsForecasts.reserve(theConfiguration.size());
+	itsMaximumMissingForecasts = maximumMissingForecasts;
 }
 
-lagged_ensemble::lagged_ensemble(const param& parameter, const std::string& namedEnsemble)
+lagged_ensemble::lagged_ensemble(const param& parameter, const std::string& namedEnsemble, int maximumMissingForecasts)
 {
 	itsParam = parameter;
 	itsDesiredForecasts = CreateNamedEnsembleConfiguration(namedEnsemble);
 	itsForecasts.reserve(itsDesiredForecasts.size());
+	itsMaximumMissingForecasts = maximumMissingForecasts;
 }
 
 std::vector<std::pair<forecast_type, time_duration>> lagged_ensemble::DesiredForecasts() const

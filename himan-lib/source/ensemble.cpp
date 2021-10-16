@@ -26,17 +26,17 @@ std::vector<float> RemoveMissingValues(const std::vector<float>& vec)
 	}
 	return ret;
 }
-}
+}  // namespace
 
 namespace himan
 {
-ensemble::ensemble(const param& parameter, size_t expectedEnsembleSize)
+ensemble::ensemble(const param& parameter, size_t expectedEnsembleSize, int maximumMissingForecasts)
     : itsParam(parameter),
       itsExpectedEnsembleSize(expectedEnsembleSize),
       itsForecasts(),
       itsEnsembleType(kPerturbedEnsemble),
       itsLogger(logger("ensemble")),
-      itsMaximumMissingForecasts(0)
+      itsMaximumMissingForecasts(maximumMissingForecasts)
 {
 	itsDesiredForecasts.reserve(expectedEnsembleSize);
 	itsDesiredForecasts.push_back(forecast_type(kEpsControl, 0));
@@ -48,13 +48,13 @@ ensemble::ensemble(const param& parameter, size_t expectedEnsembleSize)
 }
 
 ensemble::ensemble(const param& parameter, size_t expectedEnsembleSize,
-                   const std::vector<forecast_type>& controlForecasts)
+                   const std::vector<forecast_type>& controlForecasts, int maximumMissingForecasts)
     : itsParam(parameter),
       itsExpectedEnsembleSize(expectedEnsembleSize),
       itsForecasts(),
       itsEnsembleType(kPerturbedEnsemble),
       itsLogger(logger("ensemble")),
-      itsMaximumMissingForecasts(0)
+      itsMaximumMissingForecasts(maximumMissingForecasts)
 {
 	ASSERT(controlForecasts.size() < expectedEnsembleSize);
 
@@ -69,14 +69,6 @@ ensemble::ensemble(const param& parameter, size_t expectedEnsembleSize,
 	{
 		itsDesiredForecasts.push_back(forecast_type(kEpsPerturbation, static_cast<float>(i)));
 	}
-}
-
-ensemble::ensemble()
-    : itsExpectedEnsembleSize(0),
-      itsEnsembleType(kPerturbedEnsemble),
-      itsLogger(logger("ensemble")),
-      itsMaximumMissingForecasts(0)
-{
 }
 
 ensemble::ensemble(const ensemble& other)

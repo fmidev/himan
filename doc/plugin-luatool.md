@@ -387,6 +387,8 @@ ensemble is a representation of an ensemble forecast as a unit. This enables pro
 forecast.
 
 	local e = ensemble(param("T-K"), ensemble_size)
+	local e = ensemble(param("T-K"), ensemble_size, maximum_missing_forecasts)
+
 
 | Return value | Name | Arguments | Description |
 |---|---|---|---|
@@ -403,7 +405,6 @@ forecast.
 | number | CentralMoment | integer | Returns the Nth central moment of the ensemble member values at the current location |
 | number | Size | | Returns the size of the currently fetched ensemble |
 | number | ExpectedSize | | Returns the expected size of the ensemble, which can be different from the current size of the ensemble |
-| | SetMaximumMissingForecasts | integer | Set the number of allowed missing forecasts in the ensemble |
 | number | GetMaximumMissingForecasts | | Get the number of allowed missing forecasts in the ensemble |
 | info | GetForecast | number | Get the data of an ensemble member with given order number |
 
@@ -412,6 +413,12 @@ forecast.
 lagged_ensemble is an ensemble that is composed of ensembles from different analysis times.
 
 	local e = lagged_ensemble(param("T-K"), ensemble_size, HPTimeResolution.kHourResolution, lag, steps)
+	local e = lagged_ensemble(param("T-K"), ensemble_size, HPTimeResolution.kHourResolution, lag, steps, maximum_missing_forecasts)
+	local e = lagged_ensemble(param("T-K"), "named_ensemble_name")
+	local e = lagged_ensemble(param("T-K"), "named_ensemble_name", maximum_missing_foracsts
+        local e = lagged_ensemble(param("T-K"), "cf0,pf1-2", "00:00:00,-01:00:00,-02:00:00", 0)
+
+named_ensemble_name can be either 'MEPS_SINGLE_ENSEMBLE' or 'MEPS_LAGGED_ENSEMBLE'.
 
 lagged_ensemble is derived from ensemble.
 

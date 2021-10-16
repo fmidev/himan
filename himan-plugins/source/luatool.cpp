@@ -19,7 +19,8 @@
 
 #ifndef __clang_analyzer__
 
-extern "C" {
+extern "C"
+{
 #include <lualib.h>
 }
 
@@ -51,7 +52,7 @@ namespace
 {
 thread_local lua_State* myL;
 bool myUseCuda;
-}
+}  // namespace
 
 luatool::luatool() : itsWriteOptions()
 {
@@ -1054,7 +1055,7 @@ object SortedValues(const ensemble& ens)
 {
 	return VectorToTable<float>(ens.SortedValues());
 }
-}  // ensemble_wrapper
+}  // namespace ensemble_wrapper
 
 namespace lagged_ensemble_wrapper
 {
@@ -1066,7 +1067,7 @@ object SortedValues(const lagged_ensemble& ens)
 {
 	return VectorToTable<float>(ens.SortedValues());
 }
-}  // lagged_ensemble_wrapper
+}  // namespace lagged_ensemble_wrapper
 
 namespace matrix_wrapper
 {
@@ -1085,7 +1086,7 @@ void Fill(matrix<T>& mat, T value)
 {
 	mat.Fill(value);
 }
-}  // matrix_wrapper
+}  // namespace matrix_wrapper
 
 namespace luabind_workaround
 {
@@ -1148,7 +1149,7 @@ matrix<T> ProbLimitEq2D(const matrix<T>& A, const matrix<T>& B, T limit)
 #endif
 	return numerical_functions::Prob2D<T>(A, B, [=](const T& val) { return val == limit; });
 }
-}
+}  // namespace luabind_workaround
 
 // clang-format off
 
@@ -1446,6 +1447,7 @@ void BindLib(lua_State* L)
 	              .def_readwrite("use_bitmap", &write_options::use_bitmap),
 		  class_<himan::ensemble, std::shared_ptr<himan::ensemble>>("ensemble")
 		      .def(constructor<param, int>())
+		      .def(constructor<param, int, int>())
 		      .def("ClassName", &ensemble::ClassName)
 		      .def("Fetch", &ensemble::Fetch)
 		      .def("Values", &ensemble_wrapper::Values)
@@ -1459,12 +1461,13 @@ void BindLib(lua_State* L)
 		      .def("CentralMoment", LUA_CMEMFN(float,ensemble,CentralMoment, int))
 		      .def("Size", &ensemble::Size)
 		      .def("ExpectedSize", &ensemble::ExpectedSize)
-		      .def("SetMaximumMissingForecasts", LUA_MEMFN(void, ensemble, MaximumMissingForecasts, int))
 		      .def("GetMaximumMissingForecasts", LUA_CMEMFN(int, ensemble, MaximumMissingForecasts, void))
 		      .def("GetForecast", &ensemble::Forecast),
 		  class_<himan::lagged_ensemble, ensemble, std::shared_ptr<himan::lagged_ensemble>>("lagged_ensemble")
 		      .def(constructor<param, size_t, const time_duration&, size_t>())
+		      .def(constructor<param, size_t, const time_duration&, size_t, int>())
 		      .def(constructor<param, const std::string&>())
+		      .def(constructor<param, const std::string&, int>())
 		      .def("ClassName", &lagged_ensemble::ClassName)
 		      .def("Fetch", &lagged_ensemble::Fetch)
 		      .def("Value", &lagged_ensemble::Value)
@@ -1476,7 +1479,6 @@ void BindLib(lua_State* L)
 		      .def("Size", &lagged_ensemble::Size)
 		      .def("ExpectedSize", &lagged_ensemble::ExpectedSize)
 		      .def("VerifyValidForecastCount", &lagged_ensemble::VerifyValidForecastCount)
-		      .def("SetMaximumMissingForecasts", LUA_MEMFN(void, lagged_ensemble, MaximumMissingForecasts, int))
 		      .def("GetMaximumMissingForecasts", LUA_CMEMFN(int, lagged_ensemble, MaximumMissingForecasts, void)),
 		  class_<modifier>("modifier")
 		      .def("Result", &modifier_wrapper::Result)

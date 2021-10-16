@@ -490,7 +490,7 @@ With key `forecast_type` the source forecast type is set. Using this, Himan can 
 
     "forecast_type" : "deterministic" | "cf" | "pf1-2"
 
-With value `cf` the control forecast of an ensemble is chosen, and with value `pfVALUE-VALUE` a range of ensemble members (permutations) are chosen. For example the value `pf1-10` means that permutation 1,2,3,4,5,6,7,8,9,10 are read. Values can be combined with a comma.
+With value `cf` the control forecast of an ensemble is chosen, and with value `pfVALUE-VALUE` a range of ensemble members (permutations) are chosen. For example the value `pf1-10` means that permutation 1,2,3,4,5,6,7,8,9,10 are read. Values can be combined with a comma. Control member has value 0 by default, but it can be changed by postfixing an integer value to "cf", ie "cf1" would define control forecast with value 1.
 
 Key can be set in the global or processqueue scope.
 

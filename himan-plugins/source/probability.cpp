@@ -264,19 +264,20 @@ std::unique_ptr<ensemble> Mogrify(const ensemble* baseEns, const himan::param& p
 {
 	if (baseEns->ClassName() == "himan::ensemble")
 	{
-		return std::move(std::make_unique<ensemble>(par, baseEns->ExpectedSize()));
+		return std::move(std::make_unique<ensemble>(par, baseEns->ExpectedSize(), baseEns->MaximumMissingForecasts()));
 	}
 	else if (baseEns->ClassName() == "himan::lagged_ensemble")
 	{
 		return std::move(
-		    std::make_unique<lagged_ensemble>(par, dynamic_cast<const lagged_ensemble*>(baseEns)->DesiredForecasts()));
+		    std::make_unique<lagged_ensemble>(par, dynamic_cast<const lagged_ensemble*>(baseEns)->DesiredForecasts(),
+		                                      baseEns->MaximumMissingForecasts()));
 	}
 	else if (baseEns->ClassName() == "himan::time_ensemble")
 	{
 		const auto d = dynamic_cast<const time_ensemble*>(baseEns);
 		return std::move(std::make_unique<time_ensemble>(par, baseEns->ExpectedSize(), d->PrimaryTimeSpan(),
 		                                                 d->SecondaryTimeMaskLen(), d->SecondaryTimeMaskStep(),
-		                                                 d->SecondaryTimeSpan()));
+		                                                 d->SecondaryTimeSpan(), baseEns->MaximumMissingForecasts()));
 	}
 	return nullptr;
 }
