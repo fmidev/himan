@@ -169,6 +169,61 @@ void info<T>::Regrid(const std::vector<U>& newDim)
 }
 
 template <typename T>
+void info<T>::Create(std::unique_ptr<grid> baseGrid, bool createDataBackend)
+{
+	ASSERT(baseGrid);
+
+	itsDimensions.resize(itsForecastTypeIterator.Size() * itsTimeIterator.Size() * itsLevelIterator.Size() *
+	                     itsParamIterator.Size());
+
+	Reset<forecast_type>();
+
+	while (Next<forecast_type>())
+	{
+		Reset<forecast_time>();
+
+		while (Next<forecast_time>())
+		{
+			Reset<level>();
+
+			while (Next<level>())
+			{
+				Reset<param>();
+
+				while (Next<param>())
+				// Create empty placeholders
+				{
+					auto g = std::shared_ptr<grid>(baseGrid->Clone());
+					auto b = std::make_shared<base<T>>(g, matrix<T>());
+
+					Base(b);
+
+					if (baseGrid->Class() == kRegularGrid)
+					{
+						if (createDataBackend)
+						{
+							const regular_grid* regGrid(dynamic_cast<const regular_grid*>(baseGrid.get()));
+							Data().Resize(regGrid->Ni(), regGrid->Nj());
+						}
+					}
+					else if (baseGrid->Class() == kIrregularGrid)
+					{
+						Data().Resize(Grid()->Size(), 1, 1);
+					}
+					else
+					{
+						itsLogger.Fatal("Invalid grid type");
+						Abort();
+					}
+				}
+			}
+		}
+	}
+
+	First();
+}
+
+template <typename T>
 void info<T>::Create(std::shared_ptr<base<T>> baseGrid, bool createDataBackend)
 {
 	ASSERT(baseGrid);
