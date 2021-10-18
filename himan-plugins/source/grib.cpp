@@ -2778,10 +2778,16 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 
 	ASSERT(newGrid);
 
-	auto b = make_shared<base<T>>();
-	b->grid = shared_ptr<grid>(newGrid->Clone());
-
-	newInfo->Create(b, readData);
+	if (readData)
+	{
+		auto b = make_shared<base<T>>();
+		b->grid = shared_ptr<grid>(newGrid->Clone());
+		newInfo->Create(b, readData);
+	}
+	else
+	{
+		newInfo->Create(move(newGrid), readData);
+	}
 
 	// Set descriptors
 
