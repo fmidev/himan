@@ -130,14 +130,18 @@ lagged_ensemble::lagged_ensemble(const param& parameter,
                                  int maximumMissingForecasts)
     : itsDesiredForecasts(theConfiguration)
 {
+	itsLogger = logger("lagged_ensemble");
 	itsParam = parameter;
+	itsEnsembleType = kLaggedEnsemble;
 	itsForecasts.reserve(theConfiguration.size());
 	itsMaximumMissingForecasts = maximumMissingForecasts;
 }
 
 lagged_ensemble::lagged_ensemble(const param& parameter, const std::string& namedEnsemble, int maximumMissingForecasts)
 {
+	itsLogger = logger("lagged_ensemble");
 	itsParam = parameter;
+	itsEnsembleType = kLaggedEnsemble;
 	itsDesiredForecasts = CreateNamedEnsembleConfiguration(namedEnsemble);
 	itsForecasts.reserve(itsDesiredForecasts.size());
 	itsMaximumMissingForecasts = maximumMissingForecasts;
