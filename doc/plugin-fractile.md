@@ -57,7 +57,41 @@ ensemble_type: define the type of ensemble. Currently supported are:
 
 Default value is the traditional ensemble.
 
-    "ensemble_type" : "ensemble" | "time_ensemble" | "lagged_ensemble"
+    "ensemble_type" : "perturbed ensemble" | "time ensemble" | "lagged ensemble"
+
+
+## Defining a lagged ensemble
+
+Three different ways of defining a lagged ensemble.
+
+### Method A
+
+lag: Define is plugins should use time-lagging for how many instances (default: 0)
+
+    "lag" : "1"
+
+lagged_steps: Define how many hours is one lagged forecast (the temporal distance between two consecutive forecast runs)
+
+    "lagged_steps" : "12"
+
+### Method B
+
+named_ensemble: Some more complicated ensemble setups have been defined in code, and can be referred to with name.
+
+    "named_ensemble" : "MEPS_SINGLE_ENSEMBLE | MEPS_LAGGED_ENSEMBLE"
+
+### Method C
+
+lagged_members: list of members and their numbers
+
+    "lagged_members" : "cf0,pf1-2"
+
+lags: list of lags, each member listed with `lagged_members` must have a lag defined
+
+    "lags" : "00:00:00,-01:00:00,-02:00:00"
+
+
+## Defining a time ensemble
 
 secondary_time_span: for time ensemble, specify secondary time mask type
 
