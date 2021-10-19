@@ -1651,7 +1651,8 @@ std::unique_ptr<ensemble> util::CreateEnsembleFromConfiguration(const std::share
 	{
 		ensType = HPStringToEnsembleType.at(conf->GetValue("ensemble_type"));
 	}
-	else if (conf->GetValue("lag").empty() == false || conf->GetValue("lagged_members").empty() == false)
+	else if (conf->GetValue("lag").empty() == false || conf->GetValue("lagged_members").empty() == false ||
+	         conf->GetValue("named_ensemble").empty() == false)
 	{
 		ensType = kLaggedEnsemble;
 	}
