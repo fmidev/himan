@@ -1639,7 +1639,9 @@ std::unique_ptr<ensemble> util::CreateEnsembleFromConfiguration(const std::share
 	std::string paramName = conf->GetValue("param");
 
 	if (paramName.empty())
+	{
 		paramName = "XX-X";
+	}
 
 	// ENSEMBLE TYPE
 
@@ -1797,8 +1799,8 @@ std::unique_ptr<ensemble> util::CreateEnsembleFromConfiguration(const std::share
 		}
 		break;
 		default:
-			log.Error("Unknown ensemble type: " + ensType);
-			return nullptr;
+			log.Fatal(fmt::format("Unknown ensemble type: {}", ensType));
+			himan::Abort();
 	}
 
 	ASSERT(ens);
