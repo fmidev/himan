@@ -1728,7 +1728,7 @@ std::unique_ptr<ensemble> util::CreateEnsembleFromConfiguration(const std::share
 
 			if (name.empty() == false)
 			{
-				ens = make_unique<lagged_ensemble>(param(paramName), name);
+				ens = make_unique<lagged_ensemble>(param(paramName), name, maximumMissing);
 			}
 			else if (conf->GetValue("lagged_members").empty() == false)
 			{
