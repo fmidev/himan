@@ -32,7 +32,7 @@ using namespace himan::plugin;
 std::string GetParamNameFromGribShortName(const std::string& paramFileName, const std::string& shortName);
 void UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restrict__ unpacked, size_t len, size_t unpackedLen);
 
-static mutex singleGribMessageCounterMutex;
+static mutex singleGribMessageCounterMutex, mapModificationMutex;
 static map<string, std::mutex> singleGribMessageCounterMap;
 
 earth_shape<double> DetermineEarthShapeForProducer(const producer& prod, const earth_shape<double>& defaultShape)
@@ -1477,7 +1477,7 @@ void DetermineMessageNumber(NFmiGribMessage& message, file_information& finfo, H
 	// that is being appended to. therefore here we are tracking the message count
 	// per file
 
-	static std::map<std::string, unsigned long> offsets, messages;
+	static map<string, unsigned long> offsets, messages;
 
 	try
 	{
@@ -1487,6 +1487,10 @@ void DetermineMessageNumber(NFmiGribMessage& message, file_information& finfo, H
 	{
 		if (boost::filesystem::exists(finfo.file_location) == false)
 		{
+			// Need to modify the map, not just the elements -- need to
+			// protect from simultaneous access from other threads
+			lock_guard<mutex> lock(mapModificationMutex);
+
 			// file does not exist yet --> start counting from msg 0
 			offsets[finfo.file_location] = 0;
 			messages[finfo.file_location] = 0;
