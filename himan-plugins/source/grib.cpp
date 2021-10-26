@@ -1655,17 +1655,19 @@ std::pair<himan::HPWriteStatus, himan::file_information> grib::ToFile(info<T>& a
 	{
 		pair<map<string, std::mutex>::iterator, bool> muret;
 
-		// Acquire mutex to (possibly) modify map containing "file name":"mutex" pairs
-		unique_lock<mutex> sflock(singleGribMessageCounterMutex);
+		{
+			// Acquire mutex to (possibly) modify map containing "file name":"mutex" pairs
+			lock_guard<mutex> lock(singleGribMessageCounterMutex);
 
-		// create or refer to a mutex for this specific file name
-		muret = singleGribMessageCounterMap.emplace(piecewise_construct, forward_as_tuple(finfo.file_location),
-		                                            forward_as_tuple());
-		// allow other threads to modify the map so as not to block threads writing
-		// to other files
-		sflock.unlock();
+			// create or refer to a mutex for this specific file name
+			muret = singleGribMessageCounterMap.emplace(piecewise_construct, forward_as_tuple(finfo.file_location),
+			                                            forward_as_tuple());
+			// allow other threads to modify the map so as not to block threads writing
+			// to other files
+		}
+
 		// lock the mutex for this file name
-		lock_guard<mutex> uniqueLock(muret.first->second);
+		lock_guard<mutex> lock(muret.first->second);
 
 		DetermineMessageNumber(msg, finfo, itsWriteOptions.configuration->WriteMode());
 		status = WriteMessageToFile(msg, finfo, itsWriteOptions);
