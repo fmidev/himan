@@ -60,14 +60,15 @@ inline std::unique_ptr<grid> grid_cache::Get(const std::string& name) const
 		return nullptr;
 	}
 
-	return std::move(it->second->Clone());
+	return std::unique_ptr<grid>(it->second->Clone());
 }
 
-std::string ToString(const himan::earth_shape<double>& es)
+inline std::string ToString(const himan::earth_shape<double>& es)
 {
 	return es.Proj4String();
 }
-std::string ToString(const himan::point& p)
+
+inline std::string ToString(const himan::point& p)
 {
 	return static_cast<std::string>(p);
 }
