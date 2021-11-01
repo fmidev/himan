@@ -13,27 +13,32 @@ namespace himan
 class grid_cache
 {
    public:
-	static grid_cache* Instance();
-	void Insert(const std::string& name, std::unique_ptr<grid> grid);
+	static grid_cache& Instance();
 	template <typename T, typename... Args>
 	std::unique_ptr<grid> Get(Args... args) const;
 
+	grid_cache(const grid_cache&) = delete;
+	grid_cache(grid_cache&&) = delete;
+	grid_cache& operator=(const grid_cache&) = delete;
+	grid_cache& operator=(grid_cache&&) = delete;
+
+   protected:
+	grid_cache() = default;
+	~grid_cache() = default;
+
    private:
 	std::unique_ptr<grid> Get(const std::string& name) const;
+        void Insert(const std::string& name, std::unique_ptr<grid> grid);
 
-	static std::unique_ptr<grid_cache> itsInstance;
 	std::map<std::string, std::unique_ptr<grid>> itsGridCache;
 	mutable std::mutex itsAccessMutex;
 };
 
-inline grid_cache* grid_cache::Instance()
+inline grid_cache& grid_cache::Instance()
 {
-	if (!itsInstance)
-	{
-		itsInstance = std::make_unique<grid_cache>();
-	}
+	static grid_cache itsInstance;
 
-	return itsInstance.get();
+	return itsInstance;
 }
 
 inline void grid_cache::Insert(const std::string& name, std::unique_ptr<grid> grid)

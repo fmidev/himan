@@ -1867,14 +1867,14 @@ unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message, const pr
 	{
 		case 0:
 		{
-			newGrid = grid_cache::Instance()->Get<latitude_longitude_grid>(
+			newGrid = grid_cache::Instance().Get<latitude_longitude_grid>(
 			    m, firstPoint, static_cast<size_t>(message.SizeX()), static_cast<size_t>(message.SizeY()),
 			    message.iDirectionIncrement(), message.jDirectionIncrement(), earth);
 			break;
 		}
 		case 3:
 		{
-			newGrid = grid_cache::Instance()->Get<lambert_conformal_grid>(
+			newGrid = grid_cache::Instance().Get<lambert_conformal_grid>(
 			    m, firstPoint, message.SizeX(), message.SizeY(), message.XLengthInMeters(), message.YLengthInMeters(),
 			    message.GridOrientation(), static_cast<double>(message.GetDoubleKey("Latin1InDegrees")),
 			    static_cast<double>(message.GetDoubleKey("Latin2InDegrees")), earth, false);
@@ -1899,7 +1899,7 @@ unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message, const pr
 
 		case 5:
 		{
-			newGrid = grid_cache::Instance()->Get<stereographic_grid>(
+			newGrid = grid_cache::Instance().Get<stereographic_grid>(
 			    m, firstPoint, message.SizeX(), message.SizeY(), message.XLengthInMeters(), message.YLengthInMeters(),
 			    message.GridOrientation(), earth, false);
 			break;
@@ -1907,7 +1907,7 @@ unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message, const pr
 
 		case 10:
 		{
-			newGrid = grid_cache::Instance()->Get<rotated_latitude_longitude_grid>(
+			newGrid = grid_cache::Instance().Get<rotated_latitude_longitude_grid>(
 			    m, firstPoint, static_cast<size_t>(message.SizeX()), static_cast<size_t>(message.SizeY()),
 			    message.iDirectionIncrement(), message.jDirectionIncrement(), earth,
 			    point(message.SouthPoleX(), message.SouthPoleY()));
