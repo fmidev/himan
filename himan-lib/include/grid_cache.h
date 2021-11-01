@@ -6,7 +6,7 @@
 #include "latitude_longitude_grid.h"
 #include "stereographic_grid.h"
 #include "transverse_mercator_grid.h"
-#include <mutex>
+#include <shared_mutex>
 
 namespace himan
 {
@@ -28,10 +28,10 @@ class grid_cache
 
    private:
 	std::unique_ptr<grid> Get(const std::string& name) const;
-        void Insert(const std::string& name, std::unique_ptr<grid> grid);
+	void Insert(const std::string& name, std::unique_ptr<grid> grid);
 
 	std::map<std::string, std::unique_ptr<grid>> itsGridCache;
-	mutable std::mutex itsAccessMutex;
+	static std::shared_mutex itsAccessMutex;
 };
 
 inline grid_cache& grid_cache::Instance()
@@ -43,7 +43,6 @@ inline grid_cache& grid_cache::Instance()
 
 inline void grid_cache::Insert(const std::string& name, std::unique_ptr<grid> grid)
 {
-	std::lock_guard<std::mutex> lock(itsAccessMutex);
 	if (itsGridCache.find(name) == itsGridCache.end())
 	{
 		itsGridCache.insert(std::make_pair(name, std::move(grid)));
@@ -52,7 +51,6 @@ inline void grid_cache::Insert(const std::string& name, std::unique_ptr<grid> gr
 
 inline std::unique_ptr<grid> grid_cache::Get(const std::string& name) const
 {
-	std::lock_guard<std::mutex> lock(itsAccessMutex);
 	const auto it = itsGridCache.find(name);
 
 	if (it == itsGridCache.end())
@@ -152,6 +150,23 @@ template <typename T, typename... Args>
 std::unique_ptr<grid> grid_cache::Get(Args... args) const
 {
 	const std::string name = ToString(args...);
+
+	{
+		std::shared_lock<std::shared_mutex> lock(itsAccessMutex);
+
+		// Take a read lock, and check if grid is already in cache
+
+		std::unique_ptr<grid> ret = Get(name);
+
+		if (ret != nullptr)
+		{
+			return ret;
+		}
+	}
+
+	// Take a write lock, but before creating a new grid, check
+	// cache once more
+	std::lock_guard<std::shared_mutex> rlock(itsAccessMutex);
 
 	std::unique_ptr<grid> ret = Get(name);
 
