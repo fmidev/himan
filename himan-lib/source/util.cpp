@@ -474,6 +474,7 @@ himan::HPFileType util::FileType(const string& theFile)
 	}
 
 	string ext = p.extension().string();
+	boost::to_lower(ext);
 
 	if (ext == ".csv")
 	{
@@ -499,7 +500,7 @@ himan::HPFileType util::FileType(const string& theFile)
 	{
 		return kNetCDF;
 	}
-	else if (ext == ".tif" || ext == ".TIFF")
+	else if (ext == ".tif" || ext == ".tiff")
 	{
 		return kGeoTIFF;
 	}
