@@ -47,6 +47,10 @@ target_param_aggregation: define target parameter (time) aggregation type
 
     "target_param_aggregation" : "average"
 
+target_param_aggregation_period: define target parameter aggregation period
+
+    "target_param_aggregation_period" : "06:00"
+
 target_param_processing_type: define target parameter processing type
 
     "target_param_processing_type" : "standard deviation"

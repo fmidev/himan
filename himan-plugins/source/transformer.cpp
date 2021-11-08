@@ -160,8 +160,16 @@ void transformer::SetAdditionalParameters()
 
 	if (!itsConfiguration->GetValue("target_param_aggregation").empty())
 	{
-		itsTargetParam[0].Aggregation(
-		    {HPStringToAggregationType.at(itsConfiguration->GetValue("target_param_aggregation"))});
+		if(!itsConfiguration->GetValue("target_param_aggregation_period").empty())
+		{
+			itsTargetParam[0].Aggregation(
+					{HPStringToAggregationType.at(itsConfiguration->GetValue("target_param_aggregation")), time_duration(itsConfiguration->GetValue("target_param_aggregation_period"))});
+		}
+		else
+		{
+			itsTargetParam[0].Aggregation(
+		    		{HPStringToAggregationType.at(itsConfiguration->GetValue("target_param_aggregation"))});
+		}
 	}
 
 	if (!itsConfiguration->GetValue("target_param_processing_type").empty())

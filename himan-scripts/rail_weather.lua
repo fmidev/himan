@@ -21,18 +21,27 @@ local max_ws = luatool:FetchWithType(current_time, level(HPLevelType.kHeight,10)
 local snow_next = luatool:FetchWithType(next_time, current_level, param('SNACC-KGM2'), current_forecast_type) 
 local snow_prev = luatool:FetchWithType(prev_time, current_level, param('SNACC-KGM2'), current_forecast_type)
 
-if #min_t == 0 or #snow_next == 0 or #snow_prev == 0 or #max_ws == 0 then  
+if min_t == nil or snow_next == nil or (snow_prev == nil and current_time:GetStep():Hours() ~= 6) or max_ws == nil then  
     return
 end
 
 local res = {}
+local snow = {}
 
 for i=1, #min_t do
   res[i] = 0
 
   -- Calculate the index
-  -- Determine forecast value Missing or 1; 
-  if ( min_t[i] <= (-4.9 + kKelvin) and snow_next[i] - snow_prev[i] >= 0.0049 and max_ws[i] >= 4.8) then
+  -- Determine forecast value Missing or 1;
+
+  -- for first time step no snow accumulation is available
+  if current_time:GetStep():Hours() == 6 then
+    snow[i] = snow_next[i]
+  else
+    snow[i] = snow_next[i] - snow_prev[i]
+  end
+
+  if ( min_t[i] <= (-4.9 + kKelvin) and snow[i] >= 0.0049 and max_ws[i] >= 4.8) then
     res[i] = 1
   end
 end
