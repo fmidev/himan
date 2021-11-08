@@ -555,8 +555,9 @@ void SQLTimeMaskToCTimeMask(std::string& sqlTimeMask)
 	boost::replace_all(sqlTimeMask, "YYYY", "%Y");
 	boost::replace_all(sqlTimeMask, "MM", "%m");
 	boost::replace_all(sqlTimeMask, "DD", "%d");
-	boost::replace_all(sqlTimeMask, "hh", "%H");
-	boost::replace_all(sqlTimeMask, "mm", "%M");
+	boost::replace_all(sqlTimeMask, "HH24", "%H");
+	boost::replace_all(sqlTimeMask, "MI", "%M");
+	boost::replace_all(sqlTimeMask, "SS", "%S");
 }
 
 forecast_time ReadTime(const std::map<std::string, std::string>& meta, const forecast_time& ftime)
@@ -582,7 +583,11 @@ forecast_time ReadTime(const std::map<std::string, std::string>& meta, const for
 		}
 	}
 
-	if (mask.find("YYYY") != std::string::npos)
+	if (boost::to_lower_copy(mask) == "yyyymmddhhmm")
+	{
+		mask = "%Y%m%d%H%M";
+	}
+	else if (mask.find("YYYY") != std::string::npos)
 	{
 		SQLTimeMaskToCTimeMask(mask);
 	}
