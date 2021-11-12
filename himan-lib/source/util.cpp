@@ -1523,7 +1523,7 @@ param util::GetParameterInfoFromDatabaseName(const producer& prod, const param& 
 		return par;
 	}
 
-	auto paraminfo = r->RadonDB().GetParameterFromDatabaseName(prod.Id(), par.Name(), lvl.Type(), lvl.Value());
+	auto paraminfo = r->RadonDB().GetParameterFromDatabaseName(prod.Id(), par.Name(), stoi(levelInfo["id"]), lvl.Value());
 
 	if (paraminfo.empty())
 	{
