@@ -1077,8 +1077,14 @@ void WriteLevel(NFmiGribMessage& message, const level& lev)
 			message.LevelType(103);
 			message.SetLongKey("typeOfSecondFixedSurface", 103);
 		}
+		else if (lev.Type() == kGroundDepth)
+		{
+			message.LevelType(106);
+			message.SetLongKey("typeOfSecondFixedSurface", 106);
+		}
 		else
 		{
+			// TODO: get rid of 'LevelTypeToAnotherEdition()' function
 			message.LevelType(message.LevelTypeToAnotherEdition(lev.Type(), 2));
 		}
 	}
@@ -1087,8 +1093,16 @@ void WriteLevel(NFmiGribMessage& message, const level& lev)
 	{
 		case kHeightLayer:
 		{
+			// TODO: fix these invalid scale factors
 			message.LevelValue(static_cast<long>(0.01 * lev.Value()), 100);    // top
 			message.LevelValue2(static_cast<long>(0.01 * lev.Value2()), 100);  // bottom
+			break;
+		}
+		case kGroundDepth:
+		{
+			// Convert values from cm -> m with scale factor 2 (value = scaledValue * 10^-scaleFactor)
+			message.LevelValue(static_cast<long>(lev.Value()), 2); // top (closer to ground surface)
+			message.LevelValue2(static_cast<long>(lev.Value2()), 2); // bottom
 			break;
 		}
 		case kPressure:
