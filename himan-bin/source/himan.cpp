@@ -226,6 +226,10 @@ void ExecutePlugin(const shared_ptr<plugin_configuration>& pc, vector<plugin_tim
 	{
 		UpdateSSState(pc);
 	}
+	else
+	{
+		aLogger.Trace("ss_state table update disabled");
+	}
 
 #if defined DEBUG and defined HAVE_CUDA
 	// For 'cuda-memcheck --leak-check full'
