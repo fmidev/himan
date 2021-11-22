@@ -190,6 +190,69 @@ void UpdateSSState(const shared_ptr<const plugin_configuration>& pc)
 	log.Debug(fmt::format("Update of ss_state: {} inserts, {} updates", inserts, updates));
 }
 
+void PrintPluginSummaryTable(const vector<plugin_timing>& pluginTimes_)
+{
+	auto pluginTimes = pluginTimes_;
+
+	// bubble sort
+
+	bool passed;
+
+	do
+	{
+		passed = true;
+
+		for (size_t i = 1; i < pluginTimes.size(); i++)
+		{
+			plugin_timing prev = pluginTimes[i - 1];
+			plugin_timing cur = pluginTimes[i];
+
+			if (prev.time_elapsed < cur.time_elapsed)
+			{
+				pluginTimes[i - 1] = cur;
+				pluginTimes[i] = prev;
+				passed = false;
+			}
+		}
+	} while (!passed);
+
+	int64_t totalTime = 0;
+
+	for (const auto& time : pluginTimes)
+	{
+		totalTime += time.time_elapsed;
+	}
+
+	cout << endl << "*** TOTAL timings for himan ***" << endl;
+
+	for (size_t i = 0; i < pluginTimes.size(); i++)
+	{
+		plugin_timing t = pluginTimes[i];
+
+		// c++ string formatting really is unnecessarily hard
+		stringstream ss;
+
+		ss << t.plugin_name;
+
+		if (t.order_number > 1)
+		{
+			ss << " #" << t.order_number;
+		}
+
+		cout << setw(25) << left << ss.str();
+
+		ss.str("");
+
+		ss << "(" << static_cast<int>(((static_cast<double>(t.time_elapsed) / static_cast<double>(totalTime)) * 100))
+		   << "%)";
+
+		cout << setw(8) << right << t.time_elapsed << " ms " << setw(5) << right << ss.str() << endl;
+	}
+
+	cout << "-------------------------------------------" << endl;
+	cout << setw(25) << left << "Total duration:" << setw(8) << right << totalTime << " ms" << endl;
+}
+
 void ExecutePlugin(const shared_ptr<plugin_configuration>& pc, vector<plugin_timing>& pluginTimes)
 {
 	timer aTimer(true);
@@ -336,65 +399,7 @@ int main(int argc, char** argv)
 
 	if (!conf->StatisticsLabel().empty())
 	{
-		// bubble sort
-
-		bool passed;
-
-		do
-		{
-			passed = true;
-
-			for (size_t i = 1; i < pluginTimes.size(); i++)
-			{
-				plugin_timing prev = pluginTimes[i - 1];
-				plugin_timing cur = pluginTimes[i];
-
-				if (prev.time_elapsed < cur.time_elapsed)
-				{
-					pluginTimes[i - 1] = cur;
-					pluginTimes[i] = prev;
-					passed = false;
-				}
-			}
-		} while (!passed);
-
-		int64_t totalTime = 0;
-
-		for (const auto& time : pluginTimes)
-		{
-			totalTime += time.time_elapsed;
-		}
-
-		cout << endl << "*** TOTAL timings for himan ***" << endl;
-
-		for (size_t i = 0; i < pluginTimes.size(); i++)
-		{
-			plugin_timing t = pluginTimes[i];
-
-			// c++ string formatting really is unnecessarily hard
-			stringstream ss;
-
-			ss << t.plugin_name;
-
-			if (t.order_number > 1)
-			{
-				ss << " #" << t.order_number;
-			}
-
-			cout << setw(25) << left << ss.str();
-
-			ss.str("");
-
-			ss << "("
-			   << static_cast<int>(((static_cast<double>(t.time_elapsed) / static_cast<double>(totalTime)) * 100))
-			   << "%)";
-
-			cout << setw(8) << right << t.time_elapsed << " ms " << setw(5) << right << ss.str() << endl;
-		}
-
-		cout << "-------------------------------------------" << endl;
-		cout << setw(25) << left << "Total duration:" << setw(8) << right << totalTime << " ms" << endl;
-
+		PrintPluginSummaryTable(pluginTimes);
 		if (conf->DatabaseType() == kRadon && conf->WriteToDatabase())
 		{
 			UploadRunStatisticsToDatabase(conf, pluginTimes);
