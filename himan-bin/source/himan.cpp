@@ -129,13 +129,21 @@ int HighestOrderNumber(const vector<plugin_timing>& timingList, const std::strin
 	return highest;
 }
 
-void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
+void UpdateSSState(const shared_ptr<const plugin_configuration>& pc)
 {
-	auto r = GET_PLUGIN(radon);
+	logger log("himan");
+
+	if (pc->DatabaseType() != kRadon || pc->WriteToDatabase() == false || pc->UpdateSSStateTable() == false)
+	{
+		log.Trace("ss_state table update disabled");
+		return;
+	}
 
 	const auto& summaryRecords = pc->Statistics()->SummaryRecords();
+
+	auto r = GET_PLUGIN(radon);
+
 	int inserts = 0, updates = 0;
-	logger log("himan");
 
 	for (const auto& record : summaryRecords)
 	{
@@ -222,15 +230,6 @@ void ExecutePlugin(const shared_ptr<plugin_configuration>& pc, vector<plugin_tim
 		pluginTimes.push_back(t);
 	}
 
-	if (pc->DatabaseType() == kRadon && pc->WriteToDatabase() && pc->UpdateSSStateTable())
-	{
-		UpdateSSState(pc);
-	}
-	else
-	{
-		aLogger.Trace("ss_state table update disabled");
-	}
-
 #if defined DEBUG and defined HAVE_CUDA
 	// For 'cuda-memcheck --leak-check full'
 	CUDA_CHECK(cudaDeviceReset());
@@ -241,6 +240,11 @@ void ExecutePlugin(const shared_ptr<plugin_configuration>& pc, vector<plugin_tim
 		auto w = GET_PLUGIN(writer);
 		w->WritePendingInfos(pc);
 		plugin::writer::ClearPending();
+		UpdateSSState(pc);
+	}
+	else if (pc->WriteStorageType() != kS3ObjectStorageSystem)
+	{
+		UpdateSSState(pc);
 	}
 }
 
@@ -322,8 +326,13 @@ int main(int argc, char** argv)
 		fut.wait();
 	}
 
-	auto w = GET_PLUGIN(writer);
-	w->WritePendingInfos(lastConf);
+	if (lastConf->WriteStorageType() == kS3ObjectStorageSystem &&
+	    lastConf->WriteToObjectStorageBetweenPluginCalls() == false)
+	{
+		auto w = GET_PLUGIN(writer);
+		w->WritePendingInfos(lastConf);
+		UpdateSSState(lastConf);
+	}
 
 	if (!conf->StatisticsLabel().empty())
 	{
