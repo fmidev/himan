@@ -133,7 +133,8 @@ void UpdateSSState(const shared_ptr<const plugin_configuration>& pc)
 {
 	logger log("himan");
 
-	if (pc->DatabaseType() != kRadon || pc->WriteToDatabase() == false || pc->UpdateSSStateTable() == false)
+	if (pc->DatabaseType() != kRadon || pc->WriteToDatabase() == false || pc->UpdateSSStateTable() == false ||
+	    pc->OutputFileType() == kGeoTIFF)
 	{
 		log.Trace("ss_state table update disabled");
 		return;
@@ -389,11 +390,12 @@ int main(int argc, char** argv)
 		fut.wait();
 	}
 
+	auto w = GET_PLUGIN(writer);
+	w->WritePendingInfos(lastConf);
+
 	if (lastConf->WriteStorageType() == kS3ObjectStorageSystem &&
 	    lastConf->WriteToObjectStorageBetweenPluginCalls() == false)
 	{
-		auto w = GET_PLUGIN(writer);
-		w->WritePendingInfos(lastConf);
 		UpdateSSState(lastConf);
 	}
 
