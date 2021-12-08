@@ -615,7 +615,7 @@ std::map<std::string, std::string> ParseMetadata(char** mdata, const producer& p
 	}
 
 	// First check keys with Himan-known 'standard' names
-	const std::vector<std::string> standardNames{"forecast_type", "level"};
+	const std::vector<std::string> standardNames{"forecast_type", "level", "param_name", "origin_time", "valid_time"};
 
 	for (const auto& keyName : standardNames)
 	{
@@ -807,7 +807,6 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 	auto ftime = ReadTime(meta, options.time);
 
 	auto MakeInfoFromGeoTIFFBand = [&](GDALRasterBand* poBand) -> std::shared_ptr<info<T>> {
-
 		// Read possible metadata from band
 		auto bmeta = ParseMetadata(poBand->GetMetadata(), options.prod);
 
