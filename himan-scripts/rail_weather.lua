@@ -28,6 +28,12 @@ end
 local res = {}
 local snow = {}
 
+scale_unit = 1
+
+if currentProducerName == "MEPSMTA" then
+    scale_unit = 1000
+end
+
 for i=1, #min_t do
   res[i] = 0
 
