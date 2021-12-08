@@ -34,8 +34,8 @@ Requires: libpqxx = 5.0.1
 BuildRequires: python3-scons
 BuildRequires: gcc-c++ >= 8.2.1
 BuildRequires: eigen3-devel
-BuildRequires: libpqxx-devel >= 7.5.2
-Requires: libpqxx >= 7.5.2
+BuildRequires: libpqxx-devel = 1:7.5.2
+Requires: libpqxx = 1:7.5.2
 
 %endif
 
