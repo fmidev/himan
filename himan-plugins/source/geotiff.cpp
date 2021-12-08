@@ -509,7 +509,7 @@ level ReadLevel(const std::map<std::string, std::string>& meta, const level& lvl
 		if (m.first == "level")
 		{
 			const auto tokens = util::Split(m.second, "/");
-			type = static_cast<HPLevelType>(stoi(tokens[0]));
+			type = HPStringToLevelType.at(tokens[0]);
 			value = stod(tokens[1]);
 			if (tokens.size() == 3)
 			{
