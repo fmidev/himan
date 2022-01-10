@@ -8,7 +8,6 @@
 #include "level.h"
 #include "logger.h"
 #include "plugin_factory.h"
-#include "stereographic_grid.h"
 #include "util.h"
 #include <iostream>
 #include <math.h>
@@ -131,20 +130,21 @@ void DoCalculation(vector<float>& A, vector<float>& B, const vector<shared_ptr<h
                    bool reverse, float offset)
 {
 	std::function<void(const float& U, const float& V, float& speed, float& direction)> SpeedAndDirection =
-	    [&offset](const float& U, const float& V, float& speed, float& direction) {
-		    speed = sqrtf(U * U + V * V);
-		    direction = static_cast<float>(himan::constants::kRad) * atan2(U, V) + offset;
-		    direction = round(fmodf((direction + 360.f), 360.f));
-
-	    };
+	    [&offset](const float& U, const float& V, float& speed, float& direction)
+	{
+		speed = sqrtf(U * U + V * V);
+		direction = static_cast<float>(himan::constants::kRad) * atan2(U, V) + offset;
+		direction = round(fmodf((direction + 360.f), 360.f));
+	};
 
 	std::function<void(const float& speed, const float& direction, float& U, float& V)> UV =
-	    [&offset](const float& speed, const float& direction, float& U, float& V) {
-		    float sinv, cosv;
-		    sincosf(fmodf(direction + offset, 360.f) * static_cast<float>(himan::constants::kDeg), &sinv, &cosv);
-		    U = speed * sinv;
-		    V = speed * cosv;
-	    };
+	    [&offset](const float& speed, const float& direction, float& U, float& V)
+	{
+		float sinv, cosv;
+		sincosf(fmodf(direction + offset, 360.f) * static_cast<float>(himan::constants::kDeg), &sinv, &cosv);
+		U = speed * sinv;
+		V = speed * cosv;
+	};
 
 	std::function<void(const float& a, const float& b, float& c, float& d)> call = (reverse) ? UV : SpeedAndDirection;
 
