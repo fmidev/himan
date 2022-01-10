@@ -367,6 +367,21 @@ raw_time represents a timestamp and is a thin wrapper over boost::posix_time::pt
 | | Adjust | HPTimeResolution, number | Adjust time as needed |
 | bool | Empty | | Checks if time is valid |
 
+## stereographic_grid
+
+stereographic_grid represents an area & grid in (polar) stereographic projection.
+
+| Return value  | Name | Arguments | Description |
+|---|---|---|---|
+| string | ClassName | | Returns class name |
+| point | GetBottomLeft | | Return latlon coordinates of bottom left corner |
+| point | GetTopRight | | Return latlon coordinates of top right corner |
+| point | GetFirstPoint | | Return latlon coordinates of first point |
+| point | GetLastPoint | | Return latlon coordinates of last point |
+| number | GetOrientation | | Return longitude of projection center |
+| number | GetLatitudeOfCenter | | Return latitude of projection center |
+| number | GetLatitudeOfOrigin | | Return latitude where scale is not distorted (only applicable for polar stereographic) |
+
 ## time_duration
 
 time_duration represents a time interval or duration, and it's a thin wrapper over boost::posix_time::time_duration.

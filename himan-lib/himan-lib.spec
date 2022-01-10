@@ -21,7 +21,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: libfmidb >= 21.6.10
+Requires: libfmidb >= 22.1.10
 Requires: libfmigrib >= 20.6.16
 Requires: fmt >= 7.1.0
 
@@ -46,7 +46,7 @@ BuildRequires: cuda-cudart-devel-11-1
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: geos39-devel
 BuildRequires: gdal32-devel
-BuildRequires: libfmidb-devel >= 20.7.8
+BuildRequires: libfmidb-devel >= 22.1.10
 BuildRequires: libfmigrib-devel >= 20.6.16
 BuildRequires: zlib-devel
 BuildRequires: boost169-devel

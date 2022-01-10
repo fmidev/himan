@@ -505,7 +505,7 @@ void WriteAreaAndGrid(NFmiGribMessage& message, const shared_ptr<himan::grid>& g
 
 			if (edition == 2)
 			{
-				message.SetLongKey("LaDInDegrees", 60);
+				message.SetDoubleKey("LaDInDegrees", rg->LatitudeOfOrigin());
 			}
 
 			break;
@@ -1101,8 +1101,8 @@ void WriteLevel(NFmiGribMessage& message, const level& lev)
 		case kGroundDepth:
 		{
 			// Convert values from cm -> m with scale factor 2 (value = scaledValue * 10^-scaleFactor)
-			message.LevelValue(static_cast<long>(lev.Value()), 2); // top (closer to ground surface)
-			message.LevelValue2(static_cast<long>(lev.Value2()), 2); // bottom
+			message.LevelValue(static_cast<long>(lev.Value()), 2);    // top (closer to ground surface)
+			message.LevelValue2(static_cast<long>(lev.Value2()), 2);  // bottom
 			break;
 		}
 		case kPressure:
@@ -1913,9 +1913,11 @@ unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message, const pr
 
 		case 5:
 		{
+			const double lad = (message.Edition() == 2) ? message.GetDoubleKey("LaDInDegrees") : 60.;
+
 			newGrid = grid_cache::Instance().Get<stereographic_grid>(
 			    m, firstPoint, message.SizeX(), message.SizeY(), message.XLengthInMeters(), message.YLengthInMeters(),
-			    message.GridOrientation(), earth, false);
+			    message.GridOrientation(), 90., lad, earth, false);
 			break;
 		}
 

@@ -21,6 +21,10 @@ class stereographic_grid : public regular_grid
 {
    public:
 	stereographic_grid(HPScanningMode theScanningMode, const point& theFirstPoint, size_t ni, size_t nj, double di,
+	                   double dj, double theOrientation, double latin, double lat_ts,
+	                   const earth_shape<double>& earthShape, bool firstPointIsProjected = false,
+	                   const std::string& theName = "");
+	stereographic_grid(HPScanningMode theScanningMode, const point& theFirstPoint, size_t ni, size_t nj, double di,
 	                   double dj, double theOrientation, const earth_shape<double>& earthShape,
 	                   bool firstPointIsProjected = false, const std::string& theName = "");
 	stereographic_grid(HPScanningMode theScanningMode, const point& theFirstPoint, size_t ni, size_t nj, double di,
@@ -47,6 +51,8 @@ class stereographic_grid : public regular_grid
 	std::ostream& Write(std::ostream& file) const override;
 
 	double Orientation() const;
+	double LatitudeOfCenter() const;
+	double LatitudeOfOrigin() const;
 
 	bool operator==(const grid& other) const;
 	bool operator!=(const grid& other) const;

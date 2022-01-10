@@ -25,7 +25,7 @@ Requires: himan-lib >= 21.8.11
 Requires: lua >= 5.3.0
 Requires: unixODBC
 Requires: libfmigrib >= 20.12.2
-Requires: libfmidb >= 21.3.31
+Requires: libfmidb >= 22.1.10
 Requires: smartmet-library-newbase >= 21.6.16
 Requires: smartmet-library-gis
 Requires: smartmet-library-macgyver
@@ -67,7 +67,7 @@ BuildRequires: cuda-cusp-11-1 >= 0.5.1
 BuildRequires: libs3-devel >= 4.1
 BuildRequires: libfmigrib >= 20.12.2
 BuildRequires: libfmigrib-devel >= 20.12.2
-BuildRequires: libfmidb-devel >= 20.7.8
+BuildRequires: libfmidb-devel >= 22.1.10
 BuildRequires: smartmet-library-newbase-devel >= 21.2.20
 BuildRequires: smartmet-library-gis-devel
 BuildRequires: libluabind >= 0.9.3-3

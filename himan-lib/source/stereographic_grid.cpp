@@ -10,6 +10,15 @@ stereographic_grid::stereographic_grid(HPScanningMode theScanningMode, const poi
                                        double di, double dj, double theOrientation,
                                        const earth_shape<double>& earthShape, bool firstPointIsProjected,
                                        const std::string& theName)
+    : stereographic_grid(theScanningMode, theFirstPoint, ni, nj, di, dj, theOrientation, 90., 60., earthShape,
+                         firstPointIsProjected, theName)
+{
+}
+
+stereographic_grid::stereographic_grid(HPScanningMode theScanningMode, const point& theFirstPoint, size_t ni, size_t nj,
+                                       double di, double dj, double theOrientation, double latin, double lat_ts,
+                                       const earth_shape<double>& earthShape, bool firstPointIsProjected,
+                                       const std::string& theName)
     : regular_grid(kStereographic, theScanningMode, di, dj, ni, nj, false, theName)
 {
 	itsLogger = logger("stereographic_grid");
@@ -20,9 +29,8 @@ stereographic_grid::stereographic_grid(HPScanningMode theScanningMode, const poi
 		himan::Abort();
 	}
 
-	const std::string ref = fmt::format("+proj=stere +lat_0=90 +lat_ts=60 +lon_0={} +k=1 +units=m {} +wktext +no_defs",
-	                                    theOrientation, earthShape.Proj4String());
-
+	const std::string ref = fmt::format("+proj=stere +lat_0={} +lat_ts={} +lon_0={} +k=1 +units=m {} +wktext +no_defs",
+	                                    latin, lat_ts, theOrientation, earthShape.Proj4String());
 	itsSpatialReference = std::unique_ptr<OGRSpatialReference>(new OGRSpatialReference());
 	itsSpatialReference->importFromProj4(ref.c_str());
 
@@ -89,6 +97,7 @@ void stereographic_grid::CreateCoordinateTransformations(const point& firstPoint
 	}
 
 	const double orientation = Orientation();
+	const double latin = LatitudeOfCenter();
 	const double fe = itsSpatialReference->GetProjParm(SRS_PP_FALSE_EASTING, 0.0) - lon;
 	const double fn = itsSpatialReference->GetProjParm(SRS_PP_FALSE_NORTHING, 0.0) - lat;
 	const auto es = EarthShape();
@@ -96,13 +105,24 @@ void stereographic_grid::CreateCoordinateTransformations(const point& firstPoint
 	// SetStereographic() has no argument for lat_0
 	// Have to build proj4 string
 
-	std::stringstream ss;
+	std::string ref =
+	    fmt::format("+proj=stere +lat_0={} +lon_0={} +k=1 +units=m +a={} +b={} +wktext +no_defs +x_0={} +y_0={}", latin,
+	                orientation, es.A(), es.B(), fe, fn);
 
-	ss << "+proj=stere +lat_0=90 +lat_ts=60 +lon_0=" << orientation << " +k=1 +units=m"
-	   << " +a=" << fixed << es.A() << " +b=" << es.B() << " +wktext +no_defs"
-	   << " +x_0=" << fe << " +y_0=" << fn;
+	if (latin == 90. || latin == -90.)
+	{
+		// only taken into account for Polar Stereographic formulations (+lat_0 = +/- 90 ), and then defaults to the
+		// +lat_0 value
+		double lat_ts = LatitudeOfOrigin();
+		if (IsMissing(lat_ts))
+		{
+			lat_ts = latin;
+		}
 
-	itsSpatialReference->importFromProj4(ss.str().c_str());
+		ref = fmt::format("{} +lat_ts={}", ref, lat_ts);
+	}
+
+	itsSpatialReference->importFromProj4(ref.c_str());
 
 	itsLatLonToXYTransformer = std::unique_ptr<OGRCoordinateTransformation>(
 	    OGRCreateCoordinateTransformation(geogCS.get(), itsSpatialReference.get()));
@@ -113,6 +133,33 @@ void stereographic_grid::CreateCoordinateTransformations(const point& firstPoint
 double stereographic_grid::Orientation() const
 {
 	return itsSpatialReference->GetProjParm(SRS_PP_CENTRAL_MERIDIAN, MissingDouble());
+}
+
+double stereographic_grid::LatitudeOfCenter() const
+{
+	// kludge-ish: gdal seems to not store 'lat_0' anywhere, although it should be in
+	// SRS_PP_LATITUDE_OF_CENTER
+	//
+	// check if this is POLAR stereographic and assing value 90/-90
+
+	double latitudeOfCenter = itsSpatialReference->GetProjParm(SRS_PP_LATITUDE_OF_CENTER, MissingDouble());
+
+	if (IsMissing(latitudeOfCenter))
+	{
+		const std::string proj = std::string(itsSpatialReference->GetAttrValue("PROJECTION"));
+
+		if (proj == SRS_PT_POLAR_STEREOGRAPHIC)
+		{
+			latitudeOfCenter = (LatitudeOfOrigin() > 0) ? 90 : -90;
+		}
+	}
+
+	return latitudeOfCenter;
+}
+
+double stereographic_grid::LatitudeOfOrigin() const
+{
+	return itsSpatialReference->GetProjParm(SRS_PP_LATITUDE_OF_ORIGIN, MissingDouble());
 }
 
 size_t stereographic_grid::Hash() const
@@ -126,6 +173,8 @@ size_t stereographic_grid::Hash() const
 	hashes.push_back(hash<double>{}(Dj()));
 	hashes.push_back(ScanningMode());
 	hashes.push_back(hash<double>{}(Orientation()));
+	hashes.push_back(hash<double>{}(LatitudeOfCenter()));
+	hashes.push_back(hash<double>{}(LatitudeOfOrigin()));
 	return boost::hash_range(hashes.begin(), hashes.end());
 }
 
@@ -138,6 +187,8 @@ ostream& stereographic_grid::Write(std::ostream& file) const
 {
 	regular_grid::Write(file);
 	file << "__itsOrientation__ " << Orientation() << endl;
+	file << "__itsLatitudeOfCenter__ " << LatitudeOfCenter() << endl;
+	file << "__itsLatitudeOfOrigin__ " << LatitudeOfOrigin() << endl;
 
 	return file;
 }

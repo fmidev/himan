@@ -98,7 +98,8 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 		kFileType
 	};
 
-	auto ForecastTypeToShortString = [](HPForecastType type) -> string {
+	auto ForecastTypeToShortString = [](HPForecastType type) -> string
+	{
 		switch (type)
 		{
 			case kDeterministic:
@@ -116,7 +117,8 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 		}
 	};
 
-	auto FileTypeToShortString = [](HPFileType type) -> string {
+	auto FileTypeToShortString = [](HPFileType type) -> string
+	{
 		switch (type)
 		{
 			case kGRIB:
@@ -137,7 +139,8 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 		}
 	};
 
-	auto DefaultFormat = [](Component k) -> string {
+	auto DefaultFormat = [](Component k) -> string
+	{
 		switch (k)
 		{
 			case Component::kAnalysisTime:
@@ -161,7 +164,8 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 		}
 	};
 
-	auto GetMasalaBase = [](HPProgramName name) -> string {
+	auto GetMasalaBase = [](HPProgramName name) -> string
+	{
 		switch (name)
 		{
 			case kHiman:
@@ -188,7 +192,8 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 		}
 	};
 
-	auto ReplaceTemplateValue = [&](const boost::regex& re, string& filename, Component k) {
+	auto ReplaceTemplateValue = [&](const boost::regex& re, string& filename, Component k)
+	{
 		boost::smatch what;
 
 		while (boost::regex_search(filename, what, re))
@@ -1296,6 +1301,8 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    stod(geominfo["pas_longitude"]),
 		    stod(geominfo["pas_latitude"]),
 		    stod(geominfo["geom_parm_1"]),
+		    stod(geominfo["latin"]),
+		    stod(geominfo["lat_ts"]),
 		    earth,
 		    false,
 		    geominfo["name"]
@@ -1523,7 +1530,8 @@ param util::GetParameterInfoFromDatabaseName(const producer& prod, const param& 
 		return par;
 	}
 
-	auto paraminfo = r->RadonDB().GetParameterFromDatabaseName(prod.Id(), par.Name(), stoi(levelInfo["id"]), lvl.Value());
+	auto paraminfo =
+	    r->RadonDB().GetParameterFromDatabaseName(prod.Id(), par.Name(), stoi(levelInfo["id"]), lvl.Value());
 
 	if (paraminfo.empty())
 	{

@@ -1285,7 +1285,9 @@ void BindLib(lua_State* L)
 	              .def("GetTopRight", LUA_CMEMFN(point, stereographic_grid, TopRight, void))
 	              .def("GetFirstPoint", LUA_CMEMFN(point, stereographic_grid, FirstPoint, void))
 	              .def("GetLastPoint", LUA_CMEMFN(point, stereographic_grid, LastPoint, void))
-	              .def("GetOrientation", LUA_CMEMFN(double, stereographic_grid, Orientation, void)),
+	              .def("GetOrientation", LUA_CMEMFN(double, stereographic_grid, Orientation, void))
+	              .def("GetLatitudeOfCenter", LUA_CMEMFN(double, stereographic_grid, LatitudeOfCenter, void))
+	              .def("GetLatitudeOfOrigin", LUA_CMEMFN(double, stereographic_grid, LatitudeOfOrigin, void)),
 #if 0
 	          class_<reduced_gaussian_grid, grid, std::shared_ptr<reduced_gaussian_grid>>("reduced_gaussian_grid")
 	              .def(constructor<>())
