@@ -34,7 +34,7 @@ Requires: boost169-thread
 Requires: libs3 >= 4.1
 Requires: jasper-libs
 Requires: eccodes
-Requires: gdal32-libs
+Requires: gdal33-libs
 
 %if %{defined el7}
 BuildRequires: scons
@@ -55,7 +55,7 @@ Requires: libjasper
 Requires: grib_api
 %else
 BuildRequires: make
-BuildRequires: gdal32-devel
+BuildRequires: gdal33-devel
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-nvcc-11-1
 BuildRequires: cuda-cudart-devel-11-1

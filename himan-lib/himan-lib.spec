@@ -45,7 +45,7 @@ BuildRequires: cuda-nvcc-11-1
 BuildRequires: cuda-cudart-devel-11-1
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: geos39-devel
-BuildRequires: gdal32-devel
+BuildRequires: gdal33-devel
 BuildRequires: libfmidb-devel >= 22.1.10
 BuildRequires: libfmigrib-devel >= 20.6.16
 BuildRequires: zlib-devel
@@ -55,7 +55,7 @@ BuildRequires: fmt-devel >= 7.1.0
 BuildRequires: eccodes
 BuildRequires: make
 Requires: geos39
-Requires: gdal32-libs
+Requires: gdal33-libs
 Requires: eccodes
 Requires: boost169-iostreams
 Requires: boost169-filesystem
