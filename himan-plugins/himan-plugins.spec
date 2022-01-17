@@ -26,7 +26,7 @@ Requires: lua >= 5.3.0
 Requires: unixODBC
 Requires: libfmigrib >= 20.12.2
 Requires: libfmidb >= 22.1.10
-Requires: smartmet-library-newbase >= 21.6.16
+Requires: smartmet-library-newbase >= 21.12.7
 Requires: smartmet-library-gis
 Requires: smartmet-library-macgyver
 Requires: boost169-iostreams
@@ -35,20 +35,10 @@ Requires: libs3 >= 4.1
 Requires: jasper-libs
 Requires: eccodes
 Requires: gdal33-libs
-
-%if %{defined el7}
-BuildRequires: scons
-BuildRequires: eigen >= 3.3.4
-BuildRequires: libpqxx-devel >= 5.0.1
-Requires: libpqxx >= 5.0.1
-
-%else if %{defined el8}
 BuildRequires: python3-scons
 BuildRequires: eigen3-devel >= 3.3.4
-BuildRequires: libpqxx-devel = 1:7.5.2
-Requires: libpqxx = 1:7.5.2
-
-%endif
+BuildRequires: libpqxx-devel = 7.6.0
+Requires: libpqxx >= 7.6.0
 
 %if %{defined suse_version}
 Requires: libjasper
@@ -68,7 +58,7 @@ BuildRequires: libs3-devel >= 4.1
 BuildRequires: libfmigrib >= 20.12.2
 BuildRequires: libfmigrib-devel >= 20.12.2
 BuildRequires: libfmidb-devel >= 22.1.10
-BuildRequires: smartmet-library-newbase-devel >= 21.2.20
+BuildRequires: smartmet-library-newbase-devel >= 21.12.7
 BuildRequires: smartmet-library-gis-devel
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: boost169-devel
