@@ -37,7 +37,7 @@ Requires: eccodes
 Requires: gdal33-libs
 BuildRequires: python3-scons
 BuildRequires: eigen3-devel >= 3.3.4
-BuildRequires: libpqxx-devel = 7.6.0
+BuildRequires: libpqxx-devel >= 7.6.0
 Requires: libpqxx >= 7.6.0
 
 %if %{defined suse_version}
