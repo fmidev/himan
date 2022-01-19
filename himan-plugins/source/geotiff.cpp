@@ -107,36 +107,39 @@ void CreateDirectory(const std::string& filename)
 
 geotiff::geotiff()
 {
-	call_once(oflag, [&]() {
-		GDALRegister_GTiff();
-		GDALRegister_COG();
+	call_once(oflag,
+	          [&]()
+	          {
+		          GDALRegister_GTiff();
+		          GDALRegister_COG();
 
-		// Check environment for AWS variables
-		// GDAL requires           Himan uses
-		// * AWS_S3_ENDPOINT       S3_HOSTNAME
-		// * AWS_ACCESS_KEY_ID     S3_ACCESS_KEY_ID
-		// * AWS_SECRET_ACCESS_KEY S3_SECRET_ACCESS_KEY
-		// * AWS_SESSION_TOKEN     S3_SESSION_TOKEN
-		//
-		// if latter is found, copy it to former
+		          // Check environment for AWS variables
+		          // GDAL requires           Himan uses
+		          // * AWS_S3_ENDPOINT       S3_HOSTNAME
+		          // * AWS_ACCESS_KEY_ID     S3_ACCESS_KEY_ID
+		          // * AWS_SECRET_ACCESS_KEY S3_SECRET_ACCESS_KEY
+		          // * AWS_SESSION_TOKEN     S3_SESSION_TOKEN
+		          //
+		          // if latter is found, copy it to former
 
-		const std::vector<std::pair<std::string, std::string>> keys{{"S3_HOSTNAME", "AWS_S3_ENDPOINT"},
-		                                                            {"S3_ACCESS_KEY_ID", "AWS_ACCESS_KEY_ID"},
-		                                                            {"S3_SECRET_ACCESS_KEY", "AWS_SECRET_ACCESS_KEY"},
-		                                                            {"S3_SESSION_TOKEN", "AWS_SESSION_TOKEN"}};
+		          const std::vector<std::pair<std::string, std::string>> keys{
+		              {"S3_HOSTNAME", "AWS_S3_ENDPOINT"},
+		              {"S3_ACCESS_KEY_ID", "AWS_ACCESS_KEY_ID"},
+		              {"S3_SECRET_ACCESS_KEY", "AWS_SECRET_ACCESS_KEY"},
+		              {"S3_SESSION_TOKEN", "AWS_SESSION_TOKEN"}};
 
-		for (const auto& key : keys)
-		{
-			try
-			{
-				const std::string val = util::GetEnv(key.first);
-				setenv(key.second.c_str(), val.c_str(), 0);
-			}
-			catch (...)
-			{
-			}
-		}
-	});
+		          for (const auto& key : keys)
+		          {
+			          try
+			          {
+				          const std::string val = util::GetEnv(key.first);
+				          setenv(key.second.c_str(), val.c_str(), 0);
+			          }
+			          catch (...)
+			          {
+			          }
+		          }
+	          });
 
 	itsLogger = logger("geotiff");
 }
@@ -536,8 +539,12 @@ forecast_type ReadForecastType(const std::map<std::string, std::string>& meta, c
 		if (m.first == "forecast_type")
 		{
 			const auto tokens = util::Split(m.second, "/");
-			type = static_cast<HPForecastType>(stoi(tokens[1]));
-			value = stod(tokens[1]);
+			type = HPStringToForecastType.at(tokens[0]);
+
+			if (tokens.size() == 2)
+			{
+				value = stod(tokens[1]);
+			}
 			break;
 		}
 	}
@@ -758,7 +765,8 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 {
 	std::vector<std::shared_ptr<himan::info<T>>> infos;
 
-	auto ParseFileName = [](const file_information& finfo) {
+	auto ParseFileName = [](const file_information& finfo)
+	{
 		std::string ret = finfo.file_location;
 
 		if (finfo.storage_type == kS3ObjectStorageSystem)
@@ -806,7 +814,8 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 	auto ftype = ReadForecastType(meta, options.ftype);
 	auto ftime = ReadTime(meta, options.time);
 
-	auto MakeInfoFromGeoTIFFBand = [&](GDALRasterBand* poBand) -> std::shared_ptr<info<T>> {
+	auto MakeInfoFromGeoTIFFBand = [&](GDALRasterBand* poBand) -> std::shared_ptr<info<T>>
+	{
 		// Read possible metadata from band
 		auto bmeta = ParseMetadata(poBand->GetMetadata(), options.prod);
 
