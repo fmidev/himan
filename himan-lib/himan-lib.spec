@@ -34,8 +34,8 @@ BuildRequires: redhat-rpm-config
 BuildRequires: cuda-nvcc-11-1
 BuildRequires: cuda-cudart-devel-11-1
 BuildRequires: gcc-c++ >= 4.8.2
-BuildRequires: geos39-devel
-BuildRequires: gdal33-devel
+BuildRequires: geos310-devel
+BuildRequires: gdal34-devel
 BuildRequires: libfmidb-devel >= 22.1.10
 BuildRequires: libfmigrib-devel >= 20.6.16
 BuildRequires: zlib-devel
@@ -44,8 +44,8 @@ BuildRequires: libs3-devel
 BuildRequires: fmt-devel >= 7.1.0
 BuildRequires: eccodes
 BuildRequires: make
-Requires: geos39
-Requires: gdal33-libs
+Requires: geos310
+Requires: gdal34-libs
 Requires: eccodes
 Requires: boost169-iostreams
 Requires: boost169-filesystem

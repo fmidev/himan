@@ -34,7 +34,7 @@ Requires: boost169-thread
 Requires: libs3 >= 4.1
 Requires: jasper-libs
 Requires: eccodes
-Requires: gdal33-libs
+Requires: gdal34-libs
 BuildRequires: python3-scons
 BuildRequires: eigen3-devel >= 3.3.4
 BuildRequires: libpqxx-devel >= 7.6.0
@@ -45,7 +45,7 @@ Requires: libjasper
 Requires: grib_api
 %else
 BuildRequires: make
-BuildRequires: gdal33-devel
+BuildRequires: gdal34-devel
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-nvcc-11-1
 BuildRequires: cuda-cudart-devel-11-1
