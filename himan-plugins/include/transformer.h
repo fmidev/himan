@@ -20,9 +20,7 @@ class transformer : public compiled_plugin, private compiled_plugin_base
    public:
 	transformer();
 
-	inline virtual ~transformer()
-	{
-	}
+	inline virtual ~transformer() = default;
 	transformer(const transformer& other) = delete;
 	transformer& operator=(const transformer& other) = delete;
 
@@ -50,6 +48,8 @@ class transformer : public compiled_plugin, private compiled_plugin_base
 	void Rotate(std::shared_ptr<info<double>> myTargetInfo);
 	std::shared_ptr<info<double>> InterpolateTime(const forecast_time& ftime, const level& lev, const param& par,
 	                                              const forecast_type& ftype) const;
+	std::shared_ptr<info<double>> InterpolateLevel(const forecast_time& ftime, const level& lev, const param& par,
+	                                               const forecast_type& ftype) const;
 
 	double itsBase;
 	double itsScale;
@@ -63,6 +63,7 @@ class transformer : public compiled_plugin, private compiled_plugin_base
 	forecast_type itsSourceForecastType;
 	bool itsRotateVectorComponents;
 	bool itsDoTimeInterpolation;
+	bool itsDoLevelInterpolation;
 	double itsChangeMissingTo;
 	bool itsWriteEmptyGrid;
 	int itsDecimalPrecision;

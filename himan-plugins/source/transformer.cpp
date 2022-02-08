@@ -12,6 +12,7 @@
 #include "util.h"
 
 #include "fetcher.h"
+#include "hitool.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -36,6 +37,7 @@ transformer::transformer()
       itsSourceForecastType(kUnknownType),
       itsRotateVectorComponents(false),
       itsDoTimeInterpolation(false),
+      itsDoLevelInterpolation(false),
       itsChangeMissingTo(himan::MissingDouble()),
       itsWriteEmptyGrid(true),
       itsDecimalPrecision(kHPMissingInt)
@@ -114,6 +116,43 @@ shared_ptr<himan::info<double>> transformer::InterpolateTime(const forecast_time
 
 	return interpolated;
 }
+
+shared_ptr<himan::info<double>> transformer::InterpolateLevel(const forecast_time& ftime, const level& lev,
+                                                              const param& par, const forecast_type& ftype) const
+{
+	// Vertical interpolation only supported if model levels are found for producer
+
+	itsLogger.Debug("Starting vertical interpolation");
+
+	auto h = GET_PLUGIN(hitool);
+	h->Configuration(itsConfiguration);
+	h->Time(ftime);
+	h->ForecastType(ftype);
+
+	if (lev.Type() == kPressure)
+	{
+		h->HeightUnit(kHPa);
+	}
+	else if (lev.Type() != kHeight)
+	{
+		itsLogger.Error("Level interpolation allowed only to level types 'height (m)' and 'pressure (hPa)'");
+		return nullptr;
+	}
+
+	auto data = h->VerticalValue<double>(par, lev.Value());
+
+	auto interpolated = make_shared<info<double>>(ftype, ftime, lev, par);
+	interpolated->Producer(itsConfiguration->TargetProducer());
+
+	auto b = make_shared<base<double>>();
+	b->grid = shared_ptr<grid>(itsConfiguration->BaseGrid()->Clone());
+	interpolated->Create(b, false);
+
+	interpolated->Data().Set(data);
+
+	return interpolated;
+}
+
 void transformer::SetAdditionalParameters()
 {
 	string itsSourceLevelType;
@@ -160,15 +199,16 @@ void transformer::SetAdditionalParameters()
 
 	if (!itsConfiguration->GetValue("target_param_aggregation").empty())
 	{
-		if(!itsConfiguration->GetValue("target_param_aggregation_period").empty())
+		if (!itsConfiguration->GetValue("target_param_aggregation_period").empty())
 		{
 			itsTargetParam[0].Aggregation(
-					{HPStringToAggregationType.at(itsConfiguration->GetValue("target_param_aggregation")), time_duration(itsConfiguration->GetValue("target_param_aggregation_period"))});
+			    {HPStringToAggregationType.at(itsConfiguration->GetValue("target_param_aggregation")),
+			     time_duration(itsConfiguration->GetValue("target_param_aggregation_period"))});
 		}
 		else
 		{
 			itsTargetParam[0].Aggregation(
-		    		{HPStringToAggregationType.at(itsConfiguration->GetValue("target_param_aggregation"))});
+			    {HPStringToAggregationType.at(itsConfiguration->GetValue("target_param_aggregation"))});
 		}
 	}
 
@@ -305,6 +345,17 @@ void transformer::SetAdditionalParameters()
 	if (itsConfiguration->Exists("time_interpolation"))
 	{
 		itsDoTimeInterpolation = util::ParseBoolean(itsConfiguration->GetValue("time_interpolation"));
+	}
+
+	if (itsConfiguration->Exists("vertical_interpolation"))
+	{
+		itsDoLevelInterpolation = util::ParseBoolean(itsConfiguration->GetValue("vertical_interpolation"));
+	}
+
+	if (itsDoTimeInterpolation && itsDoLevelInterpolation)
+	{
+		itsLogger.Fatal("Cannot have both 'time_interpolation' and 'vertical_interpolation' defined");
+		himan::Abort();
 	}
 
 	if (itsConfiguration->Exists("change_missing_value_to"))
@@ -446,12 +497,19 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 	}
 	catch (HPExceptionType& e)
 	{
-		if (e == kFileDataNotFound && itsDoTimeInterpolation)
+		if (e == kFileDataNotFound)
 		{
-			sourceInfo = InterpolateTime(forecastTime, itsSourceLevels[myTargetInfo->Index<level>()], itsSourceParam[0],
-			                             forecastType);
+			if (itsDoTimeInterpolation)
+			{
+				sourceInfo = InterpolateTime(forecastTime, itsSourceLevels[myTargetInfo->Index<level>()],
+				                             itsSourceParam[0], forecastType);
+			}
+			else if (itsDoLevelInterpolation)
+			{
+				sourceInfo = InterpolateLevel(forecastTime, itsSourceLevels[myTargetInfo->Index<level>()],
+				                              itsSourceParam[0], forecastType);
+			}
 		}
-
 		if (!sourceInfo)
 		{
 			myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
@@ -504,7 +562,8 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 	if (!IsMissing(itsChangeMissingTo))
 	{
 		auto& vec = VEC(myTargetInfo);
-		replace_if(vec.begin(), vec.end(), [=](double d) { return IsMissing(d); }, itsChangeMissingTo);
+		replace_if(
+		    vec.begin(), vec.end(), [=](double d) { return IsMissing(d); }, itsChangeMissingTo);
 	}
 
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
