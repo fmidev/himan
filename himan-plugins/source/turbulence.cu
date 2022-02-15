@@ -242,6 +242,7 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 		{
 			dx = std::vector<float>(Nj, MissingFloat());
 			dy = std::vector<float>(Ni, MissingFloat());
+			float jPositiveFloat = jPositive ? 1.0f : -1.0f;
 
 			for (size_t i = 0; i < Ni; ++i)
 			{
@@ -250,8 +251,9 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 
 			for (size_t j = 0; j < Nj; ++j)
 			{
-				dx[j] =
-				    util::LatitudeLength(static_cast<float>(firstPoint.Y()) + static_cast<float>(j) * Dj * static_cast<float>(jPositive)) * Di / 360.0f;
+				dx[j] = util::LatitudeLength(static_cast<float>(firstPoint.Y()) +
+				                             static_cast<float>(j) * Dj * jPositiveFloat) *
+				        Di / 360.0f;
 			}
 			break;
 		}
@@ -326,4 +328,4 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 	CUDA_CHECK(cudaFree(d_TI2));
 	CUDA_CHECK(cudaStreamDestroy(stream));
 }
-}
+}  // namespace turbulence_cuda
