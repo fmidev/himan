@@ -251,7 +251,7 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 			for (size_t j = 0; j < Nj; ++j)
 			{
 				dx[j] =
-				    util::LatitudeLength(static_cast<float>(firstPoint.Y()) + static_cast<float>(j) * Dj) * Di / 360.0f;
+				    util::LatitudeLength(static_cast<float>(firstPoint.Y()) + static_cast<float>(j) * Dj * static_cast<float>(jPositive)) * Di / 360.0f;
 			}
 			break;
 		}

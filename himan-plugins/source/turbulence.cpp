@@ -147,6 +147,21 @@ void turbulence::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short 
 
 		vector<float> dx, dy;
 
+                bool jPositive;
+                if (gr->ScanningMode() == kTopLeft)
+                {
+                        jPositive = false;
+                }
+                else if (gr->ScanningMode() == kBottomLeft)
+                {
+                        jPositive = true;
+                }
+                else
+                {
+                        myThreadedLogger.Error("Grid not supported for CAT calculation.");
+                        himan::Abort();
+                }
+
 		switch (UInfo->Grid()->Type())
 		{
 			case kLambertConformalConic:
@@ -172,7 +187,8 @@ void turbulence::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short 
 
 				for (size_t j = 0; j < Nj; ++j)
 				{
-					dx[j] = util::LatitudeLength(static_cast<float>(firstPoint.Y()) + float(j) * Dj) * Di / 360.0f;
+
+					dx[j] = util::LatitudeLength(static_cast<float>(firstPoint.Y()) + float(j) * Dj * jPositive) * Di / 360.0f;
 				}
 				break;
 			}
@@ -181,21 +197,6 @@ void turbulence::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short 
 				myThreadedLogger.Error("Grid not supported for CAT calculation.");
 				himan::Abort();
 			}
-		}
-
-		bool jPositive;
-		if (gr->ScanningMode() == kTopLeft)
-		{
-			jPositive = false;
-		}
-		else if (gr->ScanningMode() == kBottomLeft)
-		{
-			jPositive = true;
-		}
-		else
-		{
-			myThreadedLogger.Error("Grid not supported for CAT calculation.");
-			himan::Abort();
 		}
 
 		pair<matrix<float>, matrix<float>> gradU = util::CentralDifference(UInfo->Data(), dx, dy, jPositive);
