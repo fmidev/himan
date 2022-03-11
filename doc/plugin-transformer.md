@@ -115,3 +115,7 @@ write_empty_grid: define if an empty grid (all values missing) should be written
 precision: define the precision used writing output files, decimal places. default: use what is in database
 
     "precision" : 2
+
+landscape_interpolation: use topography and land-sea mask to downscale gridded data
+
+    "landscape_interpolation" : true

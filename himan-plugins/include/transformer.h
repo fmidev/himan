@@ -50,6 +50,9 @@ class transformer : public compiled_plugin, private compiled_plugin_base
 	                                              const forecast_type& ftype) const;
 	std::shared_ptr<info<double>> InterpolateLevel(const forecast_time& ftime, const level& lev, const param& par,
 	                                               const forecast_type& ftype) const;
+	template <typename T>
+	std::shared_ptr<info<T>> LandscapeInterpolation(const forecast_time& ftime, const level& lvl, const param& par,
+	                                                const forecast_type& ftype);
 
 	double itsBase;
 	double itsScale;
@@ -67,6 +70,7 @@ class transformer : public compiled_plugin, private compiled_plugin_base
 	double itsChangeMissingTo;
 	bool itsWriteEmptyGrid;
 	int itsDecimalPrecision;
+	bool itsDoLandscapeInterpolation;
 };
 
 // the class factory
