@@ -491,7 +491,7 @@ param ReadParam(const std::map<std::string, std::string>& meta, const producer& 
 
 	if (parameter.empty() || parameter["name"].empty())
 	{
-		logr.Trace(
+		logr.Warning(
 		    fmt::format("Parameter information matching '{}' not found from table 'param_geotiff'", param_value));
 		return par;
 	}
