@@ -782,7 +782,8 @@ void util::DumpVector(const vector<float>& vec, const string& name)
 template <typename T>
 void util::DumpVector(const vector<T>& vec, const string& name)
 {
-	T min = numeric_limits<T>::max(), max = numeric_limits<T>::lowest(), sum = 0;
+	T min = numeric_limits<T>::max(), max = numeric_limits<T>::lowest();
+	double sum = 0;
 	size_t count = 0, missing = 0, nan = 0;
 
 	for (const T& val : vec)
@@ -802,23 +803,22 @@ void util::DumpVector(const vector<T>& vec, const string& name)
 		min = (val < min) ? val : min;
 		max = (val > max) ? val : max;
 		count++;
-		sum = static_cast<T>(sum + val);
+		sum += static_cast<double>(val);
 	}
 
-	T mean = numeric_limits<T>::quiet_NaN();
+	double mean = numeric_limits<double>::quiet_NaN();
 
 	if (count > 0)
 	{
-		mean = static_cast<T>(sum / static_cast<T>(count));
+		mean = static_cast<double>(sum / static_cast<double>(count));
 	}
 
 	if (!name.empty())
 	{
-		cout << name << "\t";
+		fmt::print("{}\t", name);
 	}
 
-	cout << "min " << min << " max " << max << " mean " << mean << " count " << count << " nan " << nan << " missing "
-	     << missing << endl;
+	fmt::print("min: {} max: {} mean: {:.3f} count: {} nan: {} missing: {}\n", min, max, mean, count, nan, missing);
 
 	if (min != max && count > 0)
 	{
@@ -829,7 +829,7 @@ void util::DumpVector(const vector<T>& vec, const string& name)
 		T binmin = min;
 		T binmax = static_cast<T>(binmin + binw);
 
-		cout << "distribution (bins=" << binn << "):" << endl;
+		fmt::print("distribution (bins={}):\n", binn);
 
 		for (int i = 1; i <= binn; i++)
 		{
@@ -852,7 +852,7 @@ void util::DumpVector(const vector<T>& vec, const string& name)
 			// if (i == binn)
 			//	binmax -= 0.001f;
 
-			cout << binmin << ":" << binmax << " " << count << std::endl;
+			fmt::print("{}:{} {}\n", binmin, binmax, count);
 
 			binmin = static_cast<T>(binmin + binw);
 			binmax = static_cast<T>(binmax + binw);
