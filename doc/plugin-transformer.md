@@ -119,3 +119,19 @@ precision: define the precision used writing output files, decimal places. defau
 landscape_interpolation: use topography and land-sea mask to downscale gridded data
 
     "landscape_interpolation" : true
+
+grib1_X: override grib1 parameter information that is normally fetched from database. Note: both keys need to exist.
+
+    "grib1_table_number" : 0
+    "grib1_parameter_number" : 0
+
+grib2_X: override grib2 parameter information that is normally fetched from database. Note: all three keys need to exist.
+
+    "grib2_discipline" : 0
+    "grib2_parameter_category" : 0
+    "grib2_parameter_number" : 0
+
+univ_id: override querydata parameter number that is normally fetched from database
+
+    "univ_id" : 4
+

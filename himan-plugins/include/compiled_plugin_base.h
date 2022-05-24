@@ -22,19 +22,19 @@ auto zip_range(Conts&... conts)
 	        boost::make_zip_iterator(boost::make_tuple(conts.end()...))};
 }
 
-	/*
-	 * Really nice pre-processor macros here
-	 * What all this does is it'll change this
-	 *
-	 * LOCKSTEP(info1,info2,...)
-	 *
-	 * to this
-	 *
-	 * assert(info1); assert(info2);
-	 * for (info1->ResetLocation(), info2->ResetLocation(); info->NextLocation() && info2->NextLocation();)
-	 *
-	 * The current maximum number of infos is 14 (thanks preform_pressure).
-	 */
+/*
+ * Really nice pre-processor macros here
+ * What all this does is it'll change this
+ *
+ * LOCKSTEP(info1,info2,...)
+ *
+ * to this
+ *
+ * assert(info1); assert(info2);
+ * for (info1->ResetLocation(), info2->ResetLocation(); info->NextLocation() && info2->NextLocation();)
+ *
+ * The current maximum number of infos is 14 (thanks preform_pressure).
+ */
 
 #define VA_NARGS_IMPL(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, N, ...) N
 #define VA_NARGS(...) VA_NARGS_IMPL(__VA_ARGS__, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1)
@@ -193,14 +193,14 @@ class compiled_plugin_base
 	/**
 	 * @brief Set target params
 	 *
-	 * Function will fetch grib1 definitions from neons if necessary, and will
-	 * create the data backend for the resulting info.
+	 * Function will fetch parameter definitions from database if argument 'paramInformationExists'
+	 * is false, and will create the data backend for the resulting info.
 	 *
 	 * @param params vector of target parameters
 	 */
 
-	void SetParams(std::vector<param>& params);
-	void SetParams(std::vector<param>& params, const std::vector<level>& levels);
+	void SetParams(std::vector<param>& params, bool paramInformationExists = false);
+	void SetParams(std::vector<param>& params, const std::vector<level>& levels, bool paramInformationExists = false);
 
 	/**
 	 * @brief Set target params
@@ -210,8 +210,9 @@ class compiled_plugin_base
 	 * @param list of params
 	 */
 
-	void SetParams(std::initializer_list<param> params);
-	void SetParams(std::initializer_list<param> params, std::initializer_list<level> levels);
+	void SetParams(std::initializer_list<param> params, bool paramInformationExists = false);
+	void SetParams(std::initializer_list<param> params, std::initializer_list<level> levels,
+	               bool paramInformationExists = false);
 
 	/**
 	 * @brief Record timing info and write info contents to disk

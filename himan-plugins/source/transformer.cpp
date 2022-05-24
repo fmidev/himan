@@ -45,7 +45,8 @@ transformer::transformer()
       itsChangeMissingTo(himan::MissingDouble()),
       itsWriteEmptyGrid(true),
       itsDecimalPrecision(kHPMissingInt),
-      itsDoLandscapeInterpolation(false)
+      itsDoLandscapeInterpolation(false),
+      itsParamDefinitionFromConfig(false)
 {
 	itsCudaEnabledCalculation = true;
 
@@ -574,6 +575,51 @@ void transformer::SetAdditionalParameters()
 	{
 		itsDoLandscapeInterpolation = util::ParseBoolean(itsConfiguration->GetValue("landscape_interpolation"));
 	}
+
+	const auto grib1_tbl = itsConfiguration->GetValue("grib1_table_number");
+	const auto grib1_num = itsConfiguration->GetValue("grib1_parameter_number");
+
+	if (!grib1_tbl.empty() && !grib1_num.empty())
+	{
+		itsTargetParam[0].GribTableVersion(stoi(grib1_tbl));
+		itsTargetParam[0].GribIndicatorOfParameter(stoi(grib1_num));
+
+		itsParamDefinitionFromConfig = true;
+
+		if (itsConfiguration->OutputFileType() != kGRIB1)
+		{
+			itsLogger.Warning("grib1 metadata set but output file type is not grib1");
+		}
+	}
+
+	const auto grib2_dis = itsConfiguration->GetValue("grib2_discipline");
+	const auto grib2_cat = itsConfiguration->GetValue("grib2_parameter_category");
+	const auto grib2_num = itsConfiguration->GetValue("grib2_parameter_number");
+
+	if (!grib2_dis.empty() && !grib2_cat.empty() && !grib2_num.empty())
+	{
+		itsTargetParam[0].GribCategory(stoi(grib2_cat));
+		itsTargetParam[0].GribParameter(stoi(grib2_num));
+		itsTargetParam[0].GribDiscipline(stoi(grib2_dis));
+
+		itsParamDefinitionFromConfig = true;
+
+		if (itsConfiguration->OutputFileType() != kGRIB2)
+		{
+			itsLogger.Warning("grib2 metadata set but output file type is not grib2");
+		}
+	}
+
+	if (itsConfiguration->Exists("univ_id"))
+	{
+		itsTargetParam[0].UnivId(stoi(itsConfiguration->GetValue("univ_id")));
+		itsParamDefinitionFromConfig = true;
+
+		if (itsConfiguration->OutputFileType() != kQueryData)
+		{
+			itsLogger.Warning("querydata metadata set but output file type is not querydata");
+		}
+	}
 }
 
 void transformer::Process(shared_ptr<const plugin_configuration> conf)
@@ -605,7 +651,7 @@ void transformer::Process(shared_ptr<const plugin_configuration> conf)
 		}
 	}
 
-	SetParams(itsTargetParam);
+	SetParams(itsTargetParam, itsParamDefinitionFromConfig);
 
 	Start();
 }

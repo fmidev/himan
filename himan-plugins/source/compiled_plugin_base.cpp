@@ -154,7 +154,8 @@ void compiled_plugin_base::WriteToFile(const shared_ptr<info<T>> targetInfo, wri
 
 	auto tempInfo = make_shared<info<T>>(*targetInfo);
 
-	auto WriteParam = [&]() {
+	auto WriteParam = [&]()
+	{
 		tempInfo->template Reset<param>();
 
 		while (tempInfo->template Next<param>())
@@ -523,7 +524,7 @@ void compiled_plugin_base::Calculate(shared_ptr<info<float>> myTargetInfo, unsig
 	exit(1);
 }
 
-void compiled_plugin_base::SetParams(initializer_list<param> params)
+void compiled_plugin_base::SetParams(initializer_list<param> params, bool paramInformationExists)
 {
 	vector<param> paramVec;
 
@@ -532,18 +533,20 @@ void compiled_plugin_base::SetParams(initializer_list<param> params)
 		paramVec.push_back(*it);
 	}
 
-	SetParams(paramVec);
+	SetParams(paramVec, paramInformationExists);
 }
 
-void compiled_plugin_base::SetParams(initializer_list<param> params, initializer_list<level> levels)
+void compiled_plugin_base::SetParams(initializer_list<param> params, initializer_list<level> levels,
+                                     bool paramInformationExists)
 {
 	vector<param> paramVec(params);
 	vector<level> levelVec(levels);
 
-	SetParams(paramVec, levelVec);
+	SetParams(paramVec, levelVec, paramInformationExists);
 }
 
-void compiled_plugin_base::SetParams(std::vector<param>& params, const vector<level>& levels)
+void compiled_plugin_base::SetParams(std::vector<param>& params, const vector<level>& levels,
+                                     bool paramInformationExists)
 {
 	if (params.empty())
 	{
@@ -557,7 +560,7 @@ void compiled_plugin_base::SetParams(std::vector<param>& params, const vector<le
 		himan::Abort();
 	}
 
-	if (itsConfiguration->DatabaseType() == kRadon)
+	if (itsConfiguration->DatabaseType() == kRadon && paramInformationExists == false)
 	{
 		auto r = GET_PLUGIN(radon);
 
@@ -636,7 +639,7 @@ void compiled_plugin_base::SetParams(std::vector<param>& params, const vector<le
 	}
 }
 
-void compiled_plugin_base::SetParams(std::vector<param>& params)
+void compiled_plugin_base::SetParams(std::vector<param>& params, bool paramInformationExists)
 {
 	vector<level> levels;
 
@@ -645,7 +648,7 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 		levels.push_back(itsLevelIterator.At(i));
 	}
 
-	SetParams(params, levels);
+	SetParams(params, levels, paramInformationExists);
 }
 
 bool compiled_plugin_base::IsMissingValue(initializer_list<double> values) const

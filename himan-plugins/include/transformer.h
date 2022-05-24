@@ -71,6 +71,7 @@ class transformer : public compiled_plugin, private compiled_plugin_base
 	bool itsWriteEmptyGrid;
 	int itsDecimalPrecision;
 	bool itsDoLandscapeInterpolation;
+	bool itsParamDefinitionFromConfig;
 };
 
 // the class factory
