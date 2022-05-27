@@ -37,7 +37,7 @@ end
 
 result:SetParam(param("N-0TO1"))
 result:SetValues(_CC)
+luatool:WriteToFile(result)
 result:SetParam(param("RRR-KGM2"))
 result:SetValues(_RR)
-
 luatool:WriteToFile(result)
