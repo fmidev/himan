@@ -38,6 +38,9 @@ end
 result:SetParam(param("N-0TO1"))
 result:SetValues(_CC)
 luatool:WriteToFile(result)
-result:SetParam(param("RRR-KGM2"))
+
+rrparam = param("RRR-KGM2")
+rrparam:SetAggregation(aggregation(HPAggregationType.kAccumulation, time_duration("01:00")))
+result:SetParam(rrparam)
 result:SetValues(_RR)
 luatool:WriteToFile(result)
