@@ -765,6 +765,10 @@ Disable statistics upload to radon
 
 Specify list of auxiliary files to read (whitespace-separated)
 
+* HIMAN_NUM_THREADS
+
+Specify at most how many threads should be used for data processing
+
 <a name="Full_examples"/>
 
 # Full examples

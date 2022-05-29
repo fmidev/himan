@@ -632,7 +632,8 @@ shared_ptr<configuration> ReadEnvironment()
 	                          "HIMAN_NO_AUXILIARY_FILE_FULL_CACHE_READ",
 	                          "HIMAN_NO_SS_STATE_UPDATE",
 	                          "HIMAN_NO_STATISTICS_UPLOAD",
-	                          "HIMAN_AUXILIARY_FILES"};
+	                          "HIMAN_AUXILIARY_FILES",
+	                          "HIMAN_NUM_THREADS"};
 
 	shared_ptr<configuration> conf = make_shared<configuration>();
 
@@ -678,6 +679,10 @@ shared_ptr<configuration> ReadEnvironment()
 			{
 				auto files = util::Split(val, " ");
 				conf->AuxiliaryFiles(files);
+			}
+			else if (key == "HIMAN_NUM_THREADS")
+			{
+				conf->ThreadCount(static_cast<short>(stoi(val)));
 			}
 		}
 		catch (const invalid_argument& e)
