@@ -750,7 +750,7 @@ void ParseCommandLine(shared_ptr<configuration>& conf, int argc, char** argv)
 
 	po::notify(opt);
 
-	if (threadCount)
+	if (threadCount > 0)
 	{
 		conf->ThreadCount(threadCount);
 	}
