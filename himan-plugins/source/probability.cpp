@@ -1,9 +1,9 @@
 #include "probability.h"
-#include "plugin_factory.h"
-#include "probability_impl.h"
-
 #include "ensemble.h"
 #include "lagged_ensemble.h"
+#include "plugin_factory.h"
+#include "probability_impl.h"
+#include <thread>
 
 #include <algorithm>
 #include <exception>
@@ -12,6 +12,7 @@
 #include "radon.h"
 
 using namespace PROB;
+static std::mutex getMutex;
 
 namespace himan
 {
@@ -282,24 +283,50 @@ std::unique_ptr<ensemble> Mogrify(const ensemble* baseEns, const himan::param& p
 	return nullptr;
 }
 
-void probability::Calculate(std::shared_ptr<info<float>> myTargetInfo, unsigned short threadIndex)
+PROB::partial_param_configuration probability::GetTarget()
+{
+	static size_t i = 0;
+
+	std::lock_guard<std::mutex> lock(getMutex);
+
+	auto pc = itsParamConfigurations.at(i);
+	i++;
+
+	return pc;
+}
+
+void probability::Worker(std::shared_ptr<info<float>> myTargetInfo, short threadIndex)
 {
 	auto threadedLogger = logger("probabilityThread # " + std::to_string(threadIndex));
+	auto baseEns = util::CreateEnsembleFromConfiguration(itsConfiguration);
 
-	std::unique_ptr<ensemble> baseEns = util::CreateEnsembleFromConfiguration(itsConfiguration);
+	threadedLogger.Info("Starting");
 
-	if (!baseEns)
+	while (true)
 	{
-		return;
-	}
+		std::unique_ptr<ensemble> ens = nullptr;
+		PROB::partial_param_configuration pc;
+		try
+		{
+			pc = GetTarget();
+		}
+		catch (...)
+		{
+			threadedLogger.Info("Stopping");
+			return;
+		}
 
-	for (const auto& pc : itsParamConfigurations)
-	{
+		ens = Mogrify(baseEns.get(), pc.parameter);
+
+		if (ens == nullptr)
+		{
+			return;
+		}
+
 		// combine ensemble configuration with the source parameter name for this loop
 		// iteration
 
-		std::unique_ptr<ensemble> ens = Mogrify(baseEns.get(), pc.parameter);
-		threadedLogger.Info(fmt::format("Calculating {} time {}", pc.output.Name(),
+		threadedLogger.Info(fmt::format("Calculating {} time {}", ens->Param().Name(),
 		                                static_cast<std::string>(myTargetInfo->Time().ValidDateTime())));
 
 		try
@@ -364,8 +391,37 @@ void probability::Calculate(std::shared_ptr<info<float>> myTargetInfo, unsigned 
 			}
 		}
 	}
+}
 
-	threadedLogger.Info(
+void probability::Calculate(std::shared_ptr<info<float>> myTargetInfo, unsigned short threadIndex)
+{
+	std::vector<std::thread> threads;
+
+	short realThreadCount = itsThreadCount;
+
+	// If multithreading doesn't happen on level/time basis (=only processing a single level and time),
+	// we can do it per probability parameter basis (=process all probability parameters for this level
+	// and time in parallel)
+
+	if (realThreadCount == 1)
+	{
+		const auto cnfCount = itsConfiguration->ThreadCount();
+		realThreadCount = (cnfCount == -1)
+		                      ? static_cast<short>(std::min(12, static_cast<int>(itsParamConfigurations.size())))
+		                      : cnfCount;
+	}
+
+	for (short i = 0; i < realThreadCount; i++)
+	{
+		threads.emplace_back(&probability::Worker, this, std::make_shared<info<float>>(*myTargetInfo), i + 1);
+	}
+
+	for (auto& t : threads)
+	{
+		t.join();
+	}
+
+	itsLogger.Info(
 	    fmt::format("[CPU] Missing values: {}/{}", myTargetInfo->Data().MissingCount(), myTargetInfo->Data().Size()));
 }
 

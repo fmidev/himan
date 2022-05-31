@@ -32,6 +32,8 @@ class probability : public compiled_plugin, private compiled_plugin_base
 
    private:
 	virtual void Calculate(std::shared_ptr<info<float>> theTargetInfo, unsigned short theThreadIndex);
+	void Worker(std::shared_ptr<info<float>> myTargetInfo, short threadIndex);
+	PROB::partial_param_configuration GetTarget();
 
 	std::vector<PROB::partial_param_configuration> itsParamConfigurations;
 };
