@@ -13,6 +13,7 @@
 
 using namespace PROB;
 static std::mutex getMutex;
+static int getIndex;
 
 namespace himan
 {
@@ -53,7 +54,8 @@ static void GetConfigurationParameter(const std::string& name, const std::shared
 
 	if (!conf->ParameterExists(name))
 	{
-		log.Fatal("configuration error: requested parameter doesn't exist in the configuration file '" + name + "'");
+		log.Fatal(
+		    fmt::format("configuration error: requested parameter doesn't exist in the configuration file '{}'", name));
 		himan::Abort();
 	}
 
@@ -114,7 +116,7 @@ static void GetConfigurationParameter(const std::string& name, const std::shared
 			}
 			else
 			{
-				log.Fatal("configuration error: invalid comparison operator '" + p.second + "'");
+				log.Fatal(fmt::format("configuration error: invalid comparison operator '{}'", p.second));
 				himan::Abort();
 			}
 		}
@@ -139,7 +141,7 @@ static void GetConfigurationParameter(const std::string& name, const std::shared
 
 	if (iname == "XX-X")
 	{
-		log.Fatal("configuration error:: input parameter not specified for '" + name + "'");
+		log.Fatal(fmt::format("configuration error:: input parameter not specified for '{}'", name));
 		himan::Abort();
 	}
 
@@ -193,20 +195,20 @@ static void FetchRemainingLimitsForStations(const grid* targetGrid,
 
 					if (IsMissing(limit))
 					{
-						log.Fatal("Threshold not found for param " + pc.output.Name() + ", station " +
-						          std::to_string(st.Id()));
+						log.Fatal(
+						    fmt::format("Threshold not found for param {}, station {}", pc.output.Name(), st.Id()));
 						himan::Abort();
 					}
 
-					log.Trace("Threshold for param " + pc.output.Name() + ", station " + std::to_string(st.Id()) +
-					          " is " + std::to_string(limit));
+					log.Trace(
+					    fmt::format("Threshold for param {}, station {} is {}", pc.output.Name(), st.Id(), limit));
 
 					pc.thresholds[i] = std::to_string(limit);
 				}
 				else
 				{
-					log.Trace("Threshold for param " + pc.output.Name() + ", station " + std::to_string(st.Id()) +
-					          " is " + it->second);
+					log.Trace(
+					    fmt::format("Threshold for param {}, station {} is {}", pc.output.Name(), st.Id(), it->second));
 
 					pc.thresholds[i] = it->second;
 				}
@@ -285,14 +287,90 @@ std::unique_ptr<ensemble> Mogrify(const ensemble* baseEns, const himan::param& p
 
 PROB::partial_param_configuration probability::GetTarget()
 {
-	static size_t i = 0;
-
 	std::lock_guard<std::mutex> lock(getMutex);
 
-	auto pc = itsParamConfigurations.at(i);
-	i++;
+	auto pc = itsParamConfigurations.at(getIndex);
+	getIndex++;
 
 	return pc;
+}
+
+void ProcessParameter(std::shared_ptr<const plugin_configuration>& conf, std::shared_ptr<info<float>>& myTargetInfo,
+                      const PROB::partial_param_configuration& pc, const ensemble* baseEns, const logger& logr)
+{
+	auto ens = Mogrify(baseEns, pc.parameter);
+
+	if (ens == nullptr)
+	{
+		return;
+	}
+
+	// combine ensemble configuration with the source parameter name for this loop
+	// iteration
+
+	logr.Info(fmt::format("Calculating {} time {}", pc.output.Name(),
+	                      static_cast<std::string>(myTargetInfo->Time().ValidDateTime())));
+
+	try
+	{
+		ens->Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level());
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e == kFileDataNotFound)
+		{
+			return;
+		}
+		else
+		{
+			logr.Fatal("Received error code " + std::to_string(e));
+			himan::Abort();
+		}
+	}
+
+	ASSERT(myTargetInfo->Data().Size() > 0);
+
+	if (pc.useGaussianSpread)
+	{
+		logr.Debug("Gaussian spread is enabled");
+		ProbabilityWithGaussianSpread<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens);
+	}
+	else
+	{
+		logr.Trace("Gaussian spread is disabled");
+		switch (pc.output.ProcessingType().Type())
+		{
+			case kProbabilityLessThan:
+				Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::less<float>());
+				break;
+			case kProbabilityLessThanOrEqual:
+				Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::less_equal<float>());
+				break;
+			case kProbabilityGreaterThan:
+				Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::greater<float>());
+				break;
+			case kProbabilityGreaterThanOrEqual:
+				Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::greater_equal<float>());
+				break;
+			case kProbabilityEquals:
+				Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::equal_to<float>());
+				break;
+			case kProbabilityNotEquals:
+				Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::not_equal_to<float>());
+				break;
+			case kProbabilityEqualsIn:
+				Probability<std::vector<float>>(myTargetInfo, ToParamConfiguration<std::vector<float>>(pc), ens,
+				                                EQINCompare());
+				break;
+			case kProbabilityBetween:
+				Probability<std::vector<float>>(myTargetInfo, ToParamConfiguration<std::vector<float>>(pc), ens,
+				                                BTWNCompare());
+				break;
+			default:
+				logr.Error(fmt::format("Unsupported comparison operator: {}", pc.output.ProcessingType().Type()));
+				break;
+		}
+	}
 }
 
 void probability::Worker(std::shared_ptr<info<float>> myTargetInfo, short threadIndex)
@@ -304,91 +382,15 @@ void probability::Worker(std::shared_ptr<info<float>> myTargetInfo, short thread
 
 	while (true)
 	{
-		std::unique_ptr<ensemble> ens = nullptr;
-		PROB::partial_param_configuration pc;
 		try
 		{
-			pc = GetTarget();
+			auto pc = GetTarget();
+			ProcessParameter(itsConfiguration, myTargetInfo, pc, baseEns.get(), threadedLogger);
 		}
 		catch (...)
 		{
 			threadedLogger.Info("Stopping");
 			return;
-		}
-
-		ens = Mogrify(baseEns.get(), pc.parameter);
-
-		if (ens == nullptr)
-		{
-			return;
-		}
-
-		// combine ensemble configuration with the source parameter name for this loop
-		// iteration
-
-		threadedLogger.Info(fmt::format("Calculating {} time {}", ens->Param().Name(),
-		                                static_cast<std::string>(myTargetInfo->Time().ValidDateTime())));
-
-		try
-		{
-			ens->Fetch(itsConfiguration, myTargetInfo->Time(), myTargetInfo->Level());
-		}
-		catch (const HPExceptionType& e)
-		{
-			if (e == kFileDataNotFound)
-			{
-				continue;
-			}
-			else
-			{
-				itsLogger.Fatal("Received error code " + std::to_string(e));
-				himan::Abort();
-			}
-		}
-
-		ASSERT(myTargetInfo->Data().Size() > 0);
-
-		if (pc.useGaussianSpread)
-		{
-			threadedLogger.Debug("Gaussian spread is enabled");
-			ProbabilityWithGaussianSpread<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens);
-		}
-		else
-		{
-			threadedLogger.Trace("Gaussian spread is disabled");
-			switch (pc.output.ProcessingType().Type())
-			{
-				case kProbabilityLessThan:
-					Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::less<float>());
-					break;
-				case kProbabilityLessThanOrEqual:
-					Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::less_equal<float>());
-					break;
-				case kProbabilityGreaterThan:
-					Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::greater<float>());
-					break;
-				case kProbabilityGreaterThanOrEqual:
-					Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::greater_equal<float>());
-					break;
-				case kProbabilityEquals:
-					Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::equal_to<float>());
-					break;
-				case kProbabilityNotEquals:
-					Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::not_equal_to<float>());
-					break;
-				case kProbabilityEqualsIn:
-					Probability<std::vector<float>>(myTargetInfo, ToParamConfiguration<std::vector<float>>(pc), ens,
-					                                EQINCompare());
-					break;
-				case kProbabilityBetween:
-					Probability<std::vector<float>>(myTargetInfo, ToParamConfiguration<std::vector<float>>(pc), ens,
-					                                BTWNCompare());
-					break;
-				default:
-					threadedLogger.Error("Unsupported comparison operator: " +
-					                     std::to_string(pc.output.ProcessingType().Type()));
-					break;
-			}
 		}
 	}
 }
@@ -409,18 +411,30 @@ void probability::Calculate(std::shared_ptr<info<float>> myTargetInfo, unsigned 
 		realThreadCount = (cnfCount == -1)
 		                      ? static_cast<short>(std::min(12, static_cast<int>(itsParamConfigurations.size())))
 		                      : cnfCount;
-	}
 
-	for (short i = 0; i < realThreadCount; i++)
+		{
+			std::lock_guard<std::mutex> lock(getMutex);
+			getIndex = 0;
+		}
+		for (short i = 0; i < realThreadCount; i++)
+		{
+			threads.emplace_back(&probability::Worker, this, myTargetInfo, i + 1);
+		}
+
+		for (auto& t : threads)
+		{
+			t.join();
+		}
+	}
+	else
 	{
-		threads.emplace_back(&probability::Worker, this, std::make_shared<info<float>>(*myTargetInfo), i + 1);
-	}
+		auto baseEns = util::CreateEnsembleFromConfiguration(itsConfiguration);
 
-	for (auto& t : threads)
-	{
-		t.join();
+		for (const auto& pc : itsParamConfigurations)
+		{
+			ProcessParameter(itsConfiguration, myTargetInfo, pc, baseEns.get(), itsLogger);
+		}
 	}
-
 	itsLogger.Info(
 	    fmt::format("[CPU] Missing values: {}/{}", myTargetInfo->Data().MissingCount(), myTargetInfo->Data().Size()));
 }
