@@ -85,6 +85,9 @@ class raw_time
 	std::string ToTime() const;
 	std::string ToSQLTime() const;
 
+	static raw_time Now();
+	static raw_time UtcNow();
+
    private:
 	std::string FormatTime(const std::string& theTimeMask) const;
 
