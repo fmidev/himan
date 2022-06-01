@@ -71,6 +71,7 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 	// {forecast_type_value:FORMAT_SPECIFIER}  - possible forecast type value
 	// {producer_id}                           - radon producer id
 	// {file_type}                             - file type extension, like grib, grib2, fqd, ...
+	// {wall_time:FORMAT_SPECIFIER}	           - current wall clock time
 
 	enum class Component
 	{
@@ -95,7 +96,8 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 		kForecastTypeName,
 		kForecastTypeValue,
 		kProducerId,
-		kFileType
+		kFileType,
+	        kWallTime
 	};
 
 	auto ForecastTypeToShortString = [](HPForecastType type) -> string
@@ -159,6 +161,8 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 			case Component::kGridNi:
 			case Component::kGridNj:
 				return "%d";
+			case Component::kWallTime:
+				return "%Y%m%d%H%M%S";
 			default:
 				return "";
 		}
@@ -288,6 +292,9 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 				case Component::kFileType:
 					replacement = FileTypeToShortString(conf.OutputFileType());
 					break;
+				case Component::kWallTime:
+					replacement = raw_time::Now().String(fmt);
+					break;
 				default:
 					break;
 			}
@@ -320,7 +327,8 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 	    make_pair(Component::kForecastTypeName, R"(\{(forecast_type_name)\})"),
 	    make_pair(Component::kForecastTypeValue, R"(\{(forecast_type_value)(:[\.%0-9a-zA-Z_/]*)*\})"),
 	    make_pair(Component::kProducerId, R"(\{(producer_id)(:[\.%0-9a-zA-Z_/]*)*\})"),
-	    make_pair(Component::kFileType, R"(\{(file_type)\})")};
+	    make_pair(Component::kFileType, R"(\{(file_type)\})"),
+	    make_pair(Component::kWallTime, R"(\{(wall_time)(:[%a-zA-Z_/-]*)*\})")};
 
 	for (const auto& p : regexs)
 	{

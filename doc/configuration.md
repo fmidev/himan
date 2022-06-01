@@ -438,6 +438,7 @@ Allowed template values are:
 * {forecast_type_value:NUMBER_FORMAT_SPECIFIER}    - possible forecast type value
 * {producer_id:NUMBER_FORMAT_SPECIFIER}            - radon producer id
 * {file_type}                                      - file type extension, like grib, grib2, fqd, ...
+* {wall_time:DATE_FORMAT_SPECIFIER}                - wall clock time
 
 Format specifiers:
 * DATE_FORMAT_SPECIFIER: usual c-style strftime formatting (%Y%m%d...)
