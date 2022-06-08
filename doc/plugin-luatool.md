@@ -191,6 +191,7 @@ info-class combines all different pieces of metadata into one. This class instan
 | forecast_time | GetTime | | Returns current time |
 | forecast_type | GetForecastType | | Returns current forecast type |
 | | SetParam | param | Sets (replaces) current parameter |
+| | SetParam | param, bool | Sets (replaces) current parameter. Second argument controls if parameter information is already imbedded in param object (true=yes, false=no) |
 | | SetLevel | level | Sets (replaces) current level |
 | | SetTime | forecast_time | Sets (replaces) current time |
 | | SetForecastType | forecast_type | Sets (replaces) current forecast type |

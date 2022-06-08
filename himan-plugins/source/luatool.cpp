@@ -504,31 +504,41 @@ matrix<T> GetData(std::shared_ptr<info<T>>& anInfo)
 	return anInfo->Data();
 }
 template <typename T>
-void SetParam(std::shared_ptr<info<T>>& anInfo, const param& par)
+void SetParam(std::shared_ptr<info<T>>& anInfo, const param& par, bool paramInformationExists)
 {
-	auto r = GET_PLUGIN(radon);
-
 	param newpar(par);
 
-	const auto lvl = anInfo->template Peek<level>(0);
-	auto paramInfo =
-	    r->RadonDB().GetParameterFromDatabaseName(anInfo->Producer().Id(), par.Name(), lvl.Type(), lvl.Value());
-
-	if (!paramInfo.empty())
+	if (!paramInformationExists)
 	{
-		newpar = param(paramInfo);
+		auto r = GET_PLUGIN(radon);
 
-		if (par.Aggregation().Type() != kUnknownAggregationType)
+		const auto lvl = anInfo->template Peek<level>(0);
+
+		auto paramInfo =
+		    r->RadonDB().GetParameterFromDatabaseName(anInfo->Producer().Id(), par.Name(), lvl.Type(), lvl.Value());
+
+		if (!paramInfo.empty())
 		{
-			newpar.Aggregation(par.Aggregation());
-		}
-		if (par.ProcessingType().Type() != kUnknownProcessingType)
-		{
-			newpar.ProcessingType(par.ProcessingType());
+			newpar = param(paramInfo);
+
+			if (par.Aggregation().Type() != kUnknownAggregationType)
+			{
+				newpar.Aggregation(par.Aggregation());
+			}
+			if (par.ProcessingType().Type() != kUnknownProcessingType)
+			{
+				newpar.ProcessingType(par.ProcessingType());
+			}
 		}
 	}
 
 	anInfo->template Set<param>(newpar);
+}
+
+template <typename T>
+void SetParam(std::shared_ptr<info<T>>& anInfo, const param& par)
+{
+	SetParam<T>(anInfo, par, false);
 }
 }  // namespace info_wrapper
 
@@ -1186,9 +1196,9 @@ void BindLib(lua_State* L)
 	              .def("SetTime", LUA_MEMFN(void, info<double>, Set<forecast_time>, const forecast_time&))
 	              .def("SetLevel", LUA_MEMFN(void, info<double>, Set<level>, const level&))
 	              .def("SetForecastType", LUA_MEMFN(void, info<double>, Set<forecast_type>, const forecast_type&))
-	              //.def("SetParam", LUA_MEMFN(void, info, SetParam, const param&))
 	              // These are local functions to luatool
-	              .def("SetParam", &info_wrapper::SetParam<double>)
+	              .def("SetParam", (void(*)(std::shared_ptr<info<double>>&, const param&)) &info_wrapper::SetParam<double>)
+	              .def("SetParam", (void(*)(std::shared_ptr<info<double>>&, const param&, bool)) &info_wrapper::SetParam<double>)
 	              .def("SetIndexValue", &info_wrapper::SetValue<double>)
 	              .def("GetIndexValue", &info_wrapper::GetValue<double>)
 	              .def("GetTimeIndex", &info_wrapper::GetTimeIndex<double>)
@@ -1233,7 +1243,8 @@ void BindLib(lua_State* L)
 	              .def("GetGrid", LUA_CMEMFN(std::shared_ptr<grid>, info<float>, Grid, void))
 	              .def("SetTime", LUA_MEMFN(void, info<float>, Set<forecast_time>, const forecast_time&))
 	              .def("SetLevel", LUA_MEMFN(void, info<float>, Set<level>, const level&))
-	              .def("SetParam", &info_wrapper::SetParam<float>)
+	              .def("SetParam", (void(*)(std::shared_ptr<info<float>>&, const param&)) &info_wrapper::SetParam<float>)
+	              .def("SetParam", (void(*)(std::shared_ptr<info<float>>&, const param&, bool)) &info_wrapper::SetParam<float>)
 	              .def("SetForecastType", LUA_MEMFN(void, info<float>, Set<forecast_type>, const forecast_type&))
 	              .def("SetIndexValue", &info_wrapper::SetValue<float>)
 	              .def("GetIndexValue", &info_wrapper::GetValue<float>)
