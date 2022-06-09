@@ -1298,7 +1298,11 @@ void BindLib(lua_State* L)
 	              .def("GetLastPoint", LUA_CMEMFN(point, stereographic_grid, LastPoint, void))
 	              .def("GetOrientation", LUA_CMEMFN(double, stereographic_grid, Orientation, void))
 	              .def("GetLatitudeOfCenter", LUA_CMEMFN(double, stereographic_grid, LatitudeOfCenter, void))
-	              .def("GetLatitudeOfOrigin", LUA_CMEMFN(double, stereographic_grid, LatitudeOfOrigin, void)),
+	              .def("GetLatitudeOfOrigin", LUA_CMEMFN(double, stereographic_grid, LatitudeOfOrigin, void))
+	              .def("GetNi", LUA_CMEMFN(size_t, stereographic_grid, Ni, void))
+	              .def("GetNj", LUA_CMEMFN(size_t, stereographic_grid, Nj, void))
+	              .def("GetDi", LUA_CMEMFN(double, stereographic_grid, Di, void))
+	              .def("GetDj", LUA_CMEMFN(double, stereographic_grid, Dj, void)),
 	          class_<lambert_conformal_grid, grid, std::shared_ptr<lambert_conformal_grid>>("lambert_conformal_grid")
 	              .def("ClassName", &lambert_conformal_grid::ClassName)
 	              .def("GetBottomLeft", LUA_CMEMFN(point, lambert_conformal_grid, BottomLeft, void))
