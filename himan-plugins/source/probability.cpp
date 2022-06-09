@@ -418,7 +418,7 @@ void probability::Calculate(std::shared_ptr<info<float>> myTargetInfo, unsigned 
 		}
 		for (short i = 0; i < realThreadCount; i++)
 		{
-			threads.emplace_back(&probability::Worker, this, myTargetInfo, i + 1);
+			threads.emplace_back(&probability::Worker, this, std::make_shared<info<float>>(*myTargetInfo), i + 1);
 		}
 
 		for (auto& t : threads)
