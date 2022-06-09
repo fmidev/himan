@@ -122,4 +122,5 @@ function EffectiveCloudinessMissingToZero()
 end
 
 CloudLayers()
-EffectiveCloudinessMissingToZero()
+-- Done with transformer
+-- EffectiveCloudinessMissingToZero()
