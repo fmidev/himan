@@ -1607,7 +1607,9 @@ void BindPlugins(lua_State* L)
 	              .def("FetchWithType", LUA_CMEMFN(object, luatool, Fetch, const forecast_time&, const level&,
 	                                               const param&, const forecast_type&))
 	              .def("FetchWithProducer", LUA_CMEMFN(object, luatool, Fetch, const forecast_time&, const level&,
-	                                               const param&, const forecast_type&, const producer& prod, const std::string& geomName)),
+	                                               const param&, const forecast_type&, const producer& prod, const std::string& geomName))
+	              .def("FetchInfoWithArgs", LUA_CMEMFN(std::shared_ptr<himan::info<double>>, luatool, FetchInfoWithArgs, const luabind::object&))
+	              .def("FetchWithArgs", LUA_CMEMFN(object, luatool, FetchWithArgs, const luabind::object&)),
 	          class_<hitool, std::shared_ptr<hitool>>("hitool")
 	              .def(constructor<>())
 	              .def("ClassName", &hitool::ClassName)
@@ -1642,6 +1644,96 @@ void BindPlugins(lua_State* L)
 
 // clang-format on
 
+template <typename T>
+T GetOptional(const luabind::object& o, const std::string& key, const T& def)
+{
+	try
+	{
+		return object_cast<T>(o[key]);
+	}
+	catch (cast_failed& e)
+	{
+		return def;
+	}
+}
+
+std::shared_ptr<info<double>> luatool::FetchInfoWithArgs(const luabind::object& o) const
+{
+	try
+	{
+		// mandatory arguments
+		const auto ftime = object_cast<forecast_time>(o["forecast_time"]);
+		const auto lvl = object_cast<level>(o["level"]);
+		const auto par = object_cast<param>(o["param"]);
+
+		// optional arguments
+		const auto ftype = GetOptional(o, "forecast_type", forecast_type(kDeterministic));
+		const auto rpacked = GetOptional(o, "return_packed_data", false);
+		const auto rprev = GetOptional(o, "read_previous_forecast_if_not_found", false);
+		const auto gn = GetOptional<std::string>(o, "geom_name", "");
+		const auto prod = GetOptional(o, "producer", producer());
+		const auto lsm_thr = GetOptional(o, "lsm_threshold", MissingDouble());
+		const auto do_interp = GetOptional(o, "do_interpolation", true);
+		const auto do_levelx = GetOptional(o, "do_level_transform", true);
+		const auto use_cache = GetOptional(o, "use_cache", true);
+		const auto do_rot = GetOptional(o, "do_vector_rotation", true);
+
+		auto cnf = std::make_shared<plugin_configuration>(*itsConfiguration);
+
+		if (prod.Id() != kHPMissingInt)
+		{
+			cnf->SourceProducers({prod});
+		}
+
+		if (gn.empty() == false)
+		{
+			cnf->SourceGeomNames({gn});
+		}
+
+		const bool sl = false;  // suppress logging
+
+		auto f = GET_PLUGIN(fetcher);
+
+		f->DoInterpolation(do_interp);
+		f->DoLevelTransform(do_levelx);
+		f->DoVectorComponentRotation(do_rot);
+		f->UseCache(use_cache);
+		if (IsValid(lsm_thr))
+		{
+			f->ApplyLandSeaMask(true);
+			f->LandSeaMaskThreshold(lsm_thr);
+		}
+
+		return f->Fetch<double>(cnf, ftime, lvl, par, ftype, rpacked, sl, rprev);
+	}
+	catch (cast_failed& e)
+	{
+		itsLogger.Error(e.what());
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e == kFileDataNotFound)
+		{
+			return nullptr;
+		}
+		throw e;
+	}
+
+	return nullptr;
+}
+
+luabind::object luatool::FetchWithArgs(const luabind::object& o) const
+{
+	const auto ret = FetchInfoWithArgs(o);
+
+	if (!ret)
+	{
+		return object();
+	}
+
+	return VectorToTable<double>(ret->Data().Values());
+}
+
 std::shared_ptr<info<double>> luatool::FetchInfo(const forecast_time& theTime, const level& theLevel,
                                                  const param& theParam) const
 {
@@ -1662,45 +1754,29 @@ luabind::object luatool::Fetch(const forecast_time& theTime, const level& theLev
 luabind::object luatool::Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam,
                                const forecast_type& theType) const
 {
-	auto x = compiled_plugin_base::Fetch(theTime, theLevel, theParam, theType, false);
+	luabind::object o = newtable(myL);
 
-	if (!x)
-	{
-		return object();
-	}
-	return VectorToTable<double>(x->Data().Values());
+	o["forecast_time"] = theTime;
+	o["level"] = theLevel;
+	o["param"] = theParam;
+	o["forecast_type"] = theType;
+
+	return FetchWithArgs(o);
 }
 
 luabind::object luatool::Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam,
                                const forecast_type& theType, const producer& prod, const std::string& geomName) const
 {
-	auto cnf = std::make_shared<plugin_configuration>(*itsConfiguration);
-	if (geomName.empty() == false)
-	{
-		cnf->SourceGeomNames({geomName});
-	}
+	luabind::object o = newtable(myL);
 
-	cnf->SourceProducers({prod});
+	o["forecast_time"] = theTime;
+	o["level"] = theLevel;
+	o["param"] = theParam;
+	o["forecast_type"] = theType;
+	o["producer"] = prod;
+	o["geom_name"] = geomName;
 
-	try
-	{
-		auto f = GET_PLUGIN(fetcher);
-		auto x = f->Fetch(cnf, theTime, theLevel, theParam, theType, false);
-
-		if (!x)
-		{
-			return object();
-		}
-		return VectorToTable<double>(x->Data().Values());
-	}
-	catch (const HPExceptionType& e)
-	{
-		if (e == kFileDataNotFound)
-		{
-			return object();
-		}
-		throw e;
-	}
+	return FetchWithArgs(o);
 }
 
 template <typename T>

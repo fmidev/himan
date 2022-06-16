@@ -505,8 +505,32 @@ Note! The argument for WriteToFile MUST be 'result'!
 | table | Fetch | forecast_time, level, param | Fetch data with given search arguments |
 | table | FetchWithType | forecast_time, level, param, forecast_type | Fetch data with given search arguments including forecast_type |
 | info | FetchInfo | forecast_time, level, param | Fetch data with given search arguments, return info |
-| info | FetchInfoWithTypw | forecast_time, level, param, forecast_type | Fetch data with given search arguments including forecast_type, return info |
-| | WriteToFile | table | Writes gived data to file |
+| info | FetchInfoWithType | forecast_time, level, param, forecast_type | Fetch data with given search arguments including forecast_type, return info |
+| table | FetchWithArgs | table | Fetch data with given search arguments |
+| info | FetchInfoWithArgs | table | Fetch data with given search arguments, return info |
+| | WriteToFile | table | Writes given data to file |
+
+With FetchWithArgs and FetchInfoWithArgs, the function argument is table that should have the 
+following keys:
+
+Mandatory fields are:
+
+* forecast_time
+* level
+* param
+    
+Optional fields are:
+
+* forecast_type, default: deterministic
+* return_packed_data, false
+* read_previous_forecast_if_not_found, false
+* geom_name, use configuration value
+* producer, use configuration value
+* lsm_threshold, false
+* do_interpolation, true
+* do_level_transform, true
+* do_vector_rotation, true
+* use_cache, true
 
 ## Missing
 

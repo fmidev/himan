@@ -125,7 +125,8 @@ fetcher::fetcher()
 
 shared_ptr<info<double>> fetcher::Fetch(shared_ptr<const plugin_configuration> config, forecast_time requestedTime,
                                         level requestedLevel, const params& requestedParams,
-                                        forecast_type requestedType, bool readPackedData)
+                                        forecast_type requestedType, bool readPackedData,
+                                        bool readFromPreviousForecastIfNotFound)
 {
 	return Fetch<double>(config, requestedTime, requestedLevel, requestedParams, requestedType, readPackedData);
 }
@@ -133,7 +134,7 @@ shared_ptr<info<double>> fetcher::Fetch(shared_ptr<const plugin_configuration> c
 template <typename T>
 shared_ptr<info<T>> fetcher::Fetch(shared_ptr<const plugin_configuration> config, forecast_time requestedTime,
                                    level requestedLevel, const params& requestedParams, forecast_type requestedType,
-                                   bool readPackedData)
+                                   bool readPackedData, bool readFromPreviousForecastIfNotFound)
 {
 	shared_ptr<info<T>> ret;
 
@@ -142,7 +143,7 @@ shared_ptr<info<T>> fetcher::Fetch(shared_ptr<const plugin_configuration> config
 		try
 		{
 			return Fetch<T>(config, requestedTime, requestedLevel, requestedParams[i], requestedType, readPackedData,
-			                true);
+			                true, false);
 		}
 		catch (const HPExceptionType& e)
 		{
@@ -153,6 +154,22 @@ shared_ptr<info<T>> fetcher::Fetch(shared_ptr<const plugin_configuration> config
 		}
 	}
 
+	if (readFromPreviousForecastIfNotFound)
+	{
+		auto r = GET_PLUGIN(radon);
+		const auto prev = r->RadonDB().GetLatestTime(static_cast<int>(config->SourceProducers()[0].Id()), "", 1);
+		if (prev.empty() == false)
+		{
+			itsLogger.Info(fmt::format("Trying to read from previous forecast with analysis time {}", prev));
+
+			raw_time prevatime(prev);
+			time_duration diff = requestedTime.OriginDateTime() - prevatime;
+			raw_time validtime = requestedTime.ValidDateTime() + diff;
+			return Fetch<T>(config, forecast_time(prevatime, validtime), requestedLevel, requestedParams, requestedType,
+			                readPackedData, false);
+		}
+	}
+
 	itsLogger.Warning(
 	    CreateNotFoundString(config->SourceProducers(), requestedType, requestedTime, requestedLevel, requestedParams));
 
@@ -160,27 +177,28 @@ shared_ptr<info<T>> fetcher::Fetch(shared_ptr<const plugin_configuration> config
 }
 
 template shared_ptr<info<double>> fetcher::Fetch<double>(shared_ptr<const plugin_configuration>, forecast_time, level,
-                                                         const params&, forecast_type, bool);
+                                                         const params&, forecast_type, bool, bool);
 template shared_ptr<info<float>> fetcher::Fetch<float>(shared_ptr<const plugin_configuration>, forecast_time, level,
-                                                       const params&, forecast_type, bool);
+                                                       const params&, forecast_type, bool, bool);
 template shared_ptr<info<short>> fetcher::Fetch<short>(shared_ptr<const plugin_configuration>, forecast_time, level,
-                                                       const params&, forecast_type, bool);
+                                                       const params&, forecast_type, bool, bool);
 template shared_ptr<info<unsigned char>> fetcher::Fetch<unsigned char>(shared_ptr<const plugin_configuration>,
                                                                        forecast_time, level, const params&,
-                                                                       forecast_type, bool);
+                                                                       forecast_type, bool, bool);
 
 shared_ptr<info<double>> fetcher::Fetch(shared_ptr<const plugin_configuration> config, forecast_time requestedTime,
                                         level requestedLevel, param requestedParam, forecast_type requestedType,
-                                        bool readPackedData, bool suppressLogging)
+                                        bool readPackedData, bool suppressLogging,
+                                        bool readFromPreviousForecastIfNotFound)
 {
 	return Fetch<double>(config, requestedTime, requestedLevel, requestedParam, requestedType, readPackedData,
-	                     suppressLogging);
+	                     suppressLogging, readFromPreviousForecastIfNotFound);
 }
 
 template <typename T>
 shared_ptr<info<T>> fetcher::Fetch(shared_ptr<const plugin_configuration> config, forecast_time requestedTime,
                                    level requestedLevel, param requestedParam, forecast_type requestedType,
-                                   bool readPackedData, bool suppressLogging)
+                                   bool readPackedData, bool suppressLogging, bool readFromPreviousForecastIfNotFound)
 {
 	timer t(true);
 
@@ -253,6 +271,27 @@ shared_ptr<info<T>> fetcher::Fetch(shared_ptr<const plugin_configuration> config
 
 	if (!ret)
 	{
+		if (readFromPreviousForecastIfNotFound)
+		{
+			auto r = GET_PLUGIN(radon);
+			const auto prev = r->RadonDB().GetLatestTime(static_cast<int>(config->SourceProducers()[0].Id()), "", 1);
+			if (prev.empty() == false)
+			{
+				itsLogger.Info(
+				    fmt::format("Data not found, trying to read from previous forecast with analysis time {}", prev));
+
+				raw_time prevatime(prev);
+				time_duration diff = requestedTime.OriginDateTime() - prevatime;
+				raw_time validtime = requestedTime.ValidDateTime() + diff;
+				return Fetch<T>(config, forecast_time(prevatime, validtime), requestedLevel, requestedParam,
+				                requestedType, readPackedData, suppressLogging, false);
+			}
+			else
+			{
+				itsLogger.Warning("Previous forecast not found");
+			}
+		}
+
 		if (!suppressLogging)
 		{
 			itsLogger.Warning(CreateNotFoundString(config->SourceProducers(), requestedType, requestedTime,
@@ -266,14 +305,14 @@ shared_ptr<info<T>> fetcher::Fetch(shared_ptr<const plugin_configuration> config
 }
 
 template shared_ptr<info<double>> fetcher::Fetch<double>(shared_ptr<const plugin_configuration>, forecast_time, level,
-                                                         param, forecast_type, bool, bool);
+                                                         param, forecast_type, bool, bool, bool);
 template shared_ptr<info<float>> fetcher::Fetch<float>(shared_ptr<const plugin_configuration>, forecast_time, level,
-                                                       param, forecast_type, bool, bool);
+                                                       param, forecast_type, bool, bool, bool);
 template shared_ptr<info<short>> fetcher::Fetch<short>(shared_ptr<const plugin_configuration>, forecast_time, level,
-                                                       param, forecast_type, bool, bool);
+                                                       param, forecast_type, bool, bool, bool);
 template shared_ptr<info<unsigned char>> fetcher::Fetch<unsigned char>(shared_ptr<const plugin_configuration>,
                                                                        forecast_time, level, param, forecast_type, bool,
-                                                                       bool);
+                                                                       bool, bool);
 
 template <typename T>
 shared_ptr<info<T>> fetcher::FetchFromProducerSingle(search_options& opts, bool readPackedData, bool suppressLogging)

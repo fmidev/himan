@@ -21,9 +21,22 @@ mnwc_prod:SetProcess(7)
 local mnwc_origintime = raw_time(radon:GetLatestTime(mnwc_prod, "", 0))
 local mnwc_time = forecast_time(mnwc_origintime, current_time:GetValidDateTime())
 
-local nh = luatool:FetchWithProducer(mnwc_time, current_level, param("NH-0TO1"), current_forecast_type, mnwc_prod, "")
-local nm = luatool:FetchWithProducer(mnwc_time, current_level, param("NM-0TO1"), current_forecast_type, mnwc_prod, "")
-local nl = luatool:FetchWithProducer(mnwc_time, current_level, param("NL-0TO1"), current_forecast_type, mnwc_prod, "")
+local o = {forecast_time = mnwc_time,
+           level = current_level,
+           param = param("NH-0TO1"),
+           forecast_type = current_forecast_type,
+           producer = mnwc_prod,
+           geom_name = "",
+           read_previous_forecast_if_not_found = true
+}
+
+local nh = luatool:FetchWithArgs(o)
+
+o["param"] = param("NM-0TO1")
+local nm = luatool:FetchWithArgs(o)
+
+o["param"] = param("NL-0TO1")
+local nl = luatool:FetchWithArgs(o)
 
 local ecg_prod = producer(240, "ECGMTA")
 ecg_prod:SetCentre(86)
@@ -36,8 +49,19 @@ ecg_validtime:Adjust(HPTimeResolution.kMinuteResolution,-minutes)
 
 local ecg_time = forecast_time(ecg_origintime, ecg_validtime)
 
-local swr = luatool:FetchWithProducer(ecg_time, current_level, param("RADGLO-WM2"), current_forecast_type, ecg_prod, "")
-local swrc = luatool:FetchWithProducer(ecg_time, current_level, param("RADGLOC-WM2"), current_forecast_type, ecg_prod, "")
+o = {forecast_time = ecg_time,
+     level = current_level,
+     param = param("RADGLO-WM2"),
+     forecast_type = current_forecast_type,
+     producer = ecg_prod,
+     geom_name = "",
+     read_previous_forecast_if_not_found = true
+}
+
+local swr = luatool:FetchWithArgs(o)
+
+o["param"] = param("RADGLOC-WM2")
+local swrc = luatool:FetchWithArgs(o)
 
 if not effc or not top or not nh or not nm or not nl or not swr or not swrc then
   logger:Error("Some data not found")
