@@ -2,8 +2,6 @@
 // Effective cloudinessin fiksausta
 // Leila&Anniina versio 09/06/22
 // Korjaa NWCSAF effective cloudiness pilvisyyttä huomioiden erityisesti:
-// 1: Talvikaudelle ala/keskipilven raja-alueille muodostuvat virheelliset selkeät alueet
-// --> hyödynnetään Cloudtop brightness temperature-arvoa "pilvimaskina"
 // 2: pienet selkeät alueet ns. "kohinaa" tms.
 // --> tutkitaan onko ympäröivät hilapisteet pilvisiä ja lisätään pilveä jos näin on
 // 3:  konvektion aiheuttamat pilvet on 100% vaikka pitäisi olla vähemmän
@@ -12,7 +10,6 @@
 ]]
 
 local effc = luatool:FetchWithType(current_time, current_level, param("NWCSAF_EFFCLD-0TO1"), current_forecast_type)
-local top = luatool:FetchWithType(current_time, current_level, param("CTBT-K"), current_forecast_type)
 
 local mnwc_prod = producer(7, "MNWC")
 mnwc_prod:SetCentre(251)
@@ -63,23 +60,23 @@ local swr = luatool:FetchWithArgs(o)
 o["param"] = param("RADGLOC-WM2")
 local swrc = luatool:FetchWithArgs(o)
 
-if not effc or not top or not nh or not nm or not nl or not swr or not swrc then
+if not effc or not or not nm or not nl or not swr or not swrc then
   logger:Error("Some data not found")
   return
 end
 
 local filter = matrix(3, 3, 1, missing)
-filter:Fill(1/9)
+filter:Fill(1/9.)
 local Nmat = matrix(result:GetGrid():GetNi(), result:GetGrid():GetNj(), 1, 0)
 Nmat:SetValues(effc)
 
 local effc_p1 = Filter2D(Nmat, filter, configuration:GetUseCuda()):GetValues()
-local filter = matrix(5, 5, 1, missing)
-filter:Fill(1/25)
+local filter = matrix(7, 7, 1, missing)
+filter:Fill(1/49.)
 local effc_p2 = Filter2D(Nmat, filter, configuration:GetUseCuda()):GetValues()
 
-local morning = 6 -- utc
-local evening = 18 -- utc
+local morning = 7 -- utc, cumulus process is starting
+local evening = 17 -- utc, cumulus process is ending
 local hour = tonumber(current_time:GetValidDateTime():String("%H"))
 
 local is_day = false
@@ -92,7 +89,6 @@ local res = {}
 
 for i=1,#effc do
   local effc_ = effc[i]
-  local top_ = top[i]
   local nl_ = nl[i]
   local nm_ = nm[i]
   local nh_ = nh[i]
@@ -101,17 +97,20 @@ for i=1,#effc do
   local effc_p1_ = effc_p1[i]
   local effc_p2_ = effc_p2[i]
 
-  -- Luodaan alkuun näennäinen cloudmask cloudtop brightness temperaturen (CBT) avulla.
-  -- Jos CBT:llä on arvo -> on pilvi 80%
-  if not IsMissing(top_) and effc_ < 0.8 then
+  -- Vähennetään pilveä jos pääosin yläpilveä
+  if effc_ > 0.5 and nh_ > 0.5 and nl_ < 0.2 and nm_ < 0.2 then
+    effc_ = 0.5
+  end
+
+   -- Keskiarvoistetaan mahdolliset pienet väärät aukot pois
+  if effc_ <= 0.8 and effc_p2_ > 0.6 then
     effc_ = 0.8
   end
- 
-  -- Vähennetään pilveä jos pääosin yläpilveä
-  if effc_ > 0.4 and nh_ > 0.4 and nl_ < 0.2 and nm_ < 0.2 then
-    effc_ = 0.4
+
+  if effc_ <= 0.7 and effc_p1_ > 0.5 then
+    effc_ = 0.7
   end
- 
+
   -- N=100% kumpupilvitilanteiden pilvisyyden vähennys-testaus
   -- Lasketaan pilvettömän taivaan max lyhytaaltosäteilyn ja EC:n lyhytaaltosäteilynsuhde
   local swr_rela = swr_ / swrc_
@@ -124,15 +123,6 @@ for i=1,#effc do
     if swr_rela >= 0.75 and effc_ > 0.5 then
       effc_ = 0.5
     end
-  end
-
-  -- Keskiarvoistetaan mahdolliset pienet väärät aukot pois
-  if effc_ <= 0.8 and effc_ > 0.5 and effc_p2_ > 0.5 then
-    effc_ = 0.8
-  end
-
-  if effc_ <= 0.7 and effc_ > 0.4 and effc_p1_ > 0.4 then
-    effc_ = 0.7
   end
 
   res[i] = effc_
