@@ -1534,7 +1534,7 @@ param util::GetParameterInfoFromDatabaseName(const producer& prod, const param& 
 
 	if (levelInfo.empty())
 	{
-		logr.Warning("Level type '" + HPLevelTypeToString.at(lvl.Type()) + "' not found from radon");
+		logr.Warning(fmt::format("Level type '{}' not found from radon", HPLevelTypeToString.at(lvl.Type())));
 		return par;
 	}
 
@@ -1543,7 +1543,7 @@ param util::GetParameterInfoFromDatabaseName(const producer& prod, const param& 
 
 	if (paraminfo.empty())
 	{
-		logr.Warning("Parameter '" + par.Name() + "' definition not found from Radon");
+		logr.Warning(fmt::format("Parameter '{}' not found from radon", par.Name()));
 		return par;
 	}
 
