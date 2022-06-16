@@ -55,7 +55,7 @@ void AmendParamWithAggregationAndProcessingType(param& p, const forecast_time& f
 		p.Aggregation(util::GetAggregationFromParamName(p.Name(), ftime));
 	}
 }
-}
+}  // namespace
 static vector<string> stickyParamCache;
 static mutex stickyMutex;
 
@@ -565,7 +565,6 @@ pair<HPDataFoundFrom, vector<shared_ptr<info<T>>>> fetcher::FetchFromAllSources(
 
 	if (!auxiliaryFilesRead)
 	{
-		// second ret, different from first
 		auto fromAux = FetchFromAuxiliaryFiles(opts, readPackedData);
 
 		if (!fromAux.second.empty())
@@ -593,7 +592,6 @@ vector<shared_ptr<info<T>>> fetcher::FetchFromCache(search_options& opts)
 
 	if (itsUseCache && opts.configuration->UseCacheForReads())
 	{
-		// 1. Fetch data from cache
 		ret = FromCache<T>(opts);
 
 		if (ret.size())
@@ -718,38 +716,39 @@ pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAuxili
 
 			auto c = GET_PLUGIN(cache);
 
-			call_once(oflag, [&]() {
+			call_once(oflag,
+			          [&]()
+			          {
+				          itsLogger.Debug("Start full auxiliary files read");
 
-				itsLogger.Debug("Start full auxiliary files read");
+				          timer t(true);
 
-				timer t(true);
+				          ret = FromFile<double>(files, opts, readPackedData, true);
 
-				ret = FromFile<double>(files, opts, readPackedData, true);
-
-				AuxiliaryFilesRotateAndInterpolate(opts, ret);
+				          AuxiliaryFilesRotateAndInterpolate(opts, ret);
 
 #ifdef HAVE_CUDA
-				if (readPackedData && opts.configuration->UseCudaForUnpacking())
-				{
-					util::Unpack<double>(ret, false);
-				}
+				          if (readPackedData && opts.configuration->UseCudaForUnpacking())
+				          {
+					          util::Unpack<double>(ret, false);
+				          }
 #endif
 
-				for (const auto& info : ret)
-				{
-					info->First();
-					info->Reset<param>();
+				          for (const auto& info : ret)
+				          {
+					          info->First();
+					          info->Reset<param>();
 
-					while (info->Next())
-					{
-						c->Insert(info);
-					}
-				}
+					          while (info->Next())
+					          {
+						          c->Insert(info);
+					          }
+				          }
 
-				t.Stop();
-				itsLogger.Debug(
-				    fmt::format("Auxiliary files read finished in {} ms, cache size: {}", t.GetTime(), c->Size()));
-			});
+				          t.Stop();
+				          itsLogger.Debug(fmt::format("Auxiliary files read finished in {} ms, cache size: {}",
+				                                      t.GetTime(), c->Size()));
+			          });
 
 			auxiliaryFilesRead = true;
 			source = HPDataFoundFrom::kCache;
@@ -787,7 +786,8 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vec
 
 	const grid* baseGrid = opts.configuration->BaseGrid();
 
-	auto eq = [](const shared_ptr<info<double>>& a, const shared_ptr<info<double>>& b) {
+	auto eq = [](const shared_ptr<info<double>>& a, const shared_ptr<info<double>>& b)
+	{
 		return a->Param() == b->Param() && a->Level() == b->Level() && a->Time() == b->Time() &&
 		       a->ForecastType() == b->ForecastType();
 	};

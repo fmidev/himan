@@ -179,8 +179,9 @@ void compiled_plugin_base::WriteToFile(const shared_ptr<info<T>> targetInfo, wri
 			// check missing values
 			if (itsConfiguration->AllowedMissingValues() < tempInfo->Data().MissingCount())
 			{
-				itsBaseLogger.Fatal("Data contains more missing values (" + to_string(tempInfo->Data().MissingCount()) +
-				                    ") than allowed (" + to_string(itsConfiguration->AllowedMissingValues()) + ")");
+				itsBaseLogger.Fatal(fmt::format("Data contains more missing values ({}) than allowed ({})",
+				                                tempInfo->Data().MissingCount(),
+				                                itsConfiguration->AllowedMissingValues()));
 				exit(1);
 			}
 		}
@@ -504,7 +505,7 @@ void compiled_plugin_base::Finish()
 	    [](const pair<string, HPWriteStatus>& element) { return element.second == HPWriteStatus::kPending; },
 	    [](const pair<string, HPWriteStatus>& element) { return element.first; });
 
-	itsBaseLogger.Trace("Pending write status for " + to_string(pending.size()) + " infos");
+	itsBaseLogger.Trace(fmt::format("Pending write status for {} infos", pending.size()));
 
 	if (pending.empty() == false)
 	{
