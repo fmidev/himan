@@ -26,21 +26,19 @@ end
 
 function FetchAndWrite(par)
   logger:Info("Processing param " .. par:GetName())
-  local data = luatool:FetchWithProducer(editor_time, current_level, par, current_forecast_type, editor_prod, "")
+
+  local data = luatool:FetchWithArgs{
+    forecast_time=editor_time,
+    level=current_level,
+    param=par,
+    forecast_type=current_forecast_type,
+    producer=editor_prod,
+    geom_name="",
+    read_previous_forecast_if_not_found=true
+  }
 
   if not data then
-    logger:Error("Data not found, is smartmet data just being loaded to database? Trying previous forecast")
-
-    editor_origintime = raw_time(radon:GetLatestTime(editor_prod, "", 1))
-    editor_time = forecast_time(editor_origintime, current_time:GetValidDateTime())
-
-    logger:Info(string.format("New Smartmet data origin time is: %s", editor_origintime:String("%Y-%m-%d %H:%M:%S")))
-
-    data = luatool:FetchWithProducer(editor_time, current_level, par, current_forecast_type, editor_prod, "")
-
-    if not data then
       return
-    end
   end
 
   result:SetParam(par)
