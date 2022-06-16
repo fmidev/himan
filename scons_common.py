@@ -190,7 +190,7 @@ env.Append(LINKFLAGS = ['-rdynamic','-Wl,--as-needed'])
 
 # Defines
 
-env.Append(CPPDEFINES=['UNIX','BOOST_NO_CXX11_HDR_ARRAY'])
+env.Append(CPPDEFINES=['UNIX'])
 
 if env['HAVE_CUDA']:
         env.Append(CPPDEFINES=['HAVE_CUDA'])
