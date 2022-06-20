@@ -21,12 +21,12 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 21.8.11
+Requires: himan-lib >= 22.6.16
 Requires: lua >= 5.3.0
 Requires: unixODBC
 Requires: libfmigrib >= 20.12.2
 Requires: libfmidb >= 22.1.10
-Requires: smartmet-library-newbase >= 21.12.7
+Requires: smartmet-library-newbase >= 22.3.22
 Requires: smartmet-library-gis
 Requires: smartmet-library-macgyver
 Requires: boost169-iostreams

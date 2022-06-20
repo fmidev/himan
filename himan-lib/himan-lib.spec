@@ -50,6 +50,7 @@ Requires: eccodes
 Requires: boost169-iostreams
 Requires: boost169-filesystem
 Requires: libs3 >= 4.1-0.6.20190408git287e4be.1.el7.fmi
+Requires: himan-plugins >= 22.6.16
 
 Provides: libhiman.so
 

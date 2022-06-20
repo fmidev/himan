@@ -21,8 +21,8 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 22.1.14
-Requires: himan-plugins >= 22.1.14
+Requires: himan-lib >= 22.6.16
+Requires: himan-plugins >= 22.6.16
 Requires: zlib
 Requires: libfmidb
 Requires: xerces-c
