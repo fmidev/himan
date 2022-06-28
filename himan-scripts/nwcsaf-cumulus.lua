@@ -60,7 +60,7 @@ local swr = luatool:FetchWithArgs(o)
 o["param"] = param("RADGLOC-WM2")
 local swrc = luatool:FetchWithArgs(o)
 
-if not effc or not or not nm or not nl or not swr or not swrc then
+if not effc or not nm or not nl or not swr or not swrc then
   logger:Error("Some data not found")
   return
 end
