@@ -50,9 +50,6 @@ CINlimTCU = -1  --CIN limit for TCu
 --Max height [FL] to check for top
 TopLim = 650
 
---Denominator to calculate overshooting top based on CAPE, +1000ft/350J/kg (tweak this!)
-overshoot = 35
-
 local i = 0
 local res = {}
 local Missing = missing
@@ -67,7 +64,7 @@ for i=1, #EL500 do
     --Limit top value
     if (res[i] <= TopLim) then
       --Add for overshooting top based on CAPE, +1000ft/350J/kg (tweak this!)
-      res[i] = -(res[i] + CAPE500[i]/overshoot)
+      res[i] = -(res[i] + CAPE500[i]  / (math.log(CAPE500[i]) * 10))
     else
       --Add for overshooting top based on CAPE, +1000ft/350J/kg (tweak this!)
       res[i] = Missing
@@ -80,7 +77,7 @@ for i=1, #EL500 do
     --Limit top value
     if (res[i] <= TopLim) then
       --Add for overshooting top based on CAPE, +1000ft/350J/kg (tweak this!)
-      res[i] = res[i] + CAPE500[i]/overshoot
+      res[i] = res[i] + CAPE500[i] / (math.log(CAPE500[i] * 10))
     else
       res[i] = Missing
     end
@@ -94,7 +91,7 @@ for i=1, #EL500 do
       --Limit top value
       if (res[i] <= TopLim) then
         --Add for overshooting top based on CAPE, +1000ft/350J/kg (tweak this!)
-        res[i] = -(res[i] + CAPEmu[i]/overshoot)
+        res[i] = -(res[i] + CAPEmu[i] / (math.log(CAPEmu[i]) * 10))
       else
         res[i] = Missing
       end
@@ -105,7 +102,7 @@ for i=1, #EL500 do
       --Limit top value
       if (res[i] <= TopLim) then
         --Add for overshooting top based on CAPE, +1000ft/350J/kg (tweak this!)
-        res[i] = res[i] + CAPEmu[i]/overshoot
+        res[i] = res[i] + CAPEmu[i] / (math.log(CAPEmu[i]) * 10)
       else
         res[i] = Missing
       end
