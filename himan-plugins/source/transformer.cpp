@@ -338,7 +338,7 @@ shared_ptr<himan::info<double>> transformer::InterpolateLevel(const forecast_tim
 
 void transformer::SetAdditionalParameters()
 {
-	string itsSourceLevelType;
+	string SourceLevelType;
 	string SourceLevels;
 	string targetForecastType;
 
@@ -431,7 +431,7 @@ void transformer::SetAdditionalParameters()
 
 	if (!itsConfiguration->GetValue("source_level_type").empty())
 	{
-		itsSourceLevelType = itsConfiguration->GetValue("source_level_type");
+		SourceLevelType = itsConfiguration->GetValue("source_level_type");
 	}
 	else
 	{
@@ -474,11 +474,16 @@ void transformer::SetAdditionalParameters()
 		itsInterpolationMethod = HPStringToInterpolationMethod.at(itsConfiguration->GetValue("interpolation"));
 	}
 
+	if ((SourceLevels.empty() && !SourceLevelType.empty()) || (!SourceLevels.empty() && SourceLevelType.empty()))
+	{
+		itsLogger.Warning("'source_levels' and 'source_level_type' are usually both defined or neither is defined");
+	}
+
 	if (!SourceLevels.empty())
 	{
 		// looks useful to use this function to create source_levels
 
-		itsSourceLevels = LevelsFromString(itsSourceLevelType, SourceLevels);
+		itsSourceLevels = LevelsFromString(SourceLevelType, SourceLevels);
 	}
 	else
 	{
