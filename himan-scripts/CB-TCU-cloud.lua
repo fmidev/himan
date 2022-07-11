@@ -59,7 +59,7 @@ for i=1, #EL500 do
   res[i] = Missing
 
   --TCU
-  if ((Tbase[i]-Ttop[i]>TCUlimit) and (NL[i]>0) and (CIN500[i]>CINlimTCU)) then
+  if ((Tbase[i]-Ttop[i]>TCUlimit) and (NL[i]>0) and (CIN500[i]>CINlimTCU) and (CAPE500[i]>0)) then
     res[i] = FlightLevel_(EL500[i]*100)
     --Limit top value
     if (res[i] <= TopLim) then
@@ -72,7 +72,7 @@ for i=1, #EL500 do
   end
 
   --CB
-  if ((Ttop[i]<CBtopLim) and (Tbase[i]-Ttop[i]>CBlimit) and (RR[i]>0)) then
+  if ((Ttop[i]<CBtopLim) and (Tbase[i]-Ttop[i]>CBlimit) and (RR[i]>0) and (CAPE500[i]>0)) then
     res[i] = FlightLevel_(EL500[i]*100)
     --Limit top value
     if (res[i] <= TopLim) then
@@ -84,7 +84,7 @@ for i=1, #EL500 do
   end
 
   --If no TOP from above, check also with MU values, for elev. conv. only from blw 3,5km
-  if ( IsMissing(res[i]) and (TbaseMU[i]<Tbase[i]) and (LFCmu[i]>650)) then
+  if ( IsMissing(res[i]) and (TbaseMU[i]<Tbase[i]) and (LFCmu[i]>650) and (CAPEmu[i]>0)) then
     -- TCU
     if ((TbaseMU[i]-TtopMU[i]>TCUlimit) and ((NL[i]>0) or (NM[i]>0)) and (CINmu[i]>CINlimTCU)) then
       res[i] =  FlightLevel_(ELmu[i]*100)
