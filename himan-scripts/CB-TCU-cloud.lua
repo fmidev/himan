@@ -77,7 +77,7 @@ for i=1, #EL500 do
     --Limit top value
     if (res[i] <= TopLim) then
       --Add for overshooting top based on CAPE, +1000ft/350J/kg (tweak this!)
-      res[i] = res[i] + CAPE500[i] / (math.log(CAPE500[i] * 10))
+      res[i] = res[i] + CAPE500[i] / (math.log(CAPE500[i]) * 10)
     else
       res[i] = Missing
     end
