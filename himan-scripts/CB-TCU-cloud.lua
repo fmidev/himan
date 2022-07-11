@@ -62,8 +62,12 @@ for i=1, #EL500 do
   if ((Tbase[i]-Ttop[i]>TCUlimit) and (NL[i]>0) and (CIN500[i]>CINlimTCU)) then
     res[i] = FlightLevel_(EL500[i]*100)
     --Limit top value
-    if (res[i] <= TopLim) then
+    if (res[i] <= TopLim and CAPE500[i] > 0) then
       --Add for overshooting top based on CAPE, +1000ft/350J/kg (tweak this!)
+      if CAPE500[i] == 1.0 then
+        CAPE500[i] = 1.00001
+      end
+
       res[i] = -(res[i] + CAPE500[i]  / (math.log(CAPE500[i]) * 10))
     else
       --Add for overshooting top based on CAPE, +1000ft/350J/kg (tweak this!)
@@ -75,7 +79,10 @@ for i=1, #EL500 do
   if ((Ttop[i]<CBtopLim) and (Tbase[i]-Ttop[i]>CBlimit) and (RR[i]>0)) then
     res[i] = FlightLevel_(EL500[i]*100)
     --Limit top value
-    if (res[i] <= TopLim) then
+    if (res[i] <= TopLim and CAPE500[i] > 0) then
+      if CAPE500[i] == 1.0 then
+        CAPE500[i] = 1.00001
+      end
       --Add for overshooting top based on CAPE, +1000ft/350J/kg (tweak this!)
       res[i] = res[i] + CAPE500[i] / (math.log(CAPE500[i] * 10))
     else
@@ -89,8 +96,12 @@ for i=1, #EL500 do
     if ((TbaseMU[i]-TtopMU[i]>TCUlimit) and ((NL[i]>0) or (NM[i]>0)) and (CINmu[i]>CINlimTCU)) then
       res[i] =  FlightLevel_(ELmu[i]*100)
       --Limit top value
-      if (res[i] <= TopLim) then
+      if (res[i] <= TopLim and CAPEmu[i] > 0) then
         --Add for overshooting top based on CAPE, +1000ft/350J/kg (tweak this!)
+        if CAPEmu[i] == 1.0 then
+          CAPEmu[i] = 1.00001
+        end
+
         res[i] = -(res[i] + CAPEmu[i] / (math.log(CAPEmu[i]) * 10))
       else
         res[i] = Missing
@@ -100,8 +111,12 @@ for i=1, #EL500 do
     if ((TtopMU[i]<CBtopLim) and (TbaseMU[i]-TtopMU[i]>CBlimit) and (RR[i]>0)) then
       res[i] =  FlightLevel_(ELmu[i]*100)
       --Limit top value
-      if (res[i] <= TopLim) then
+      if (res[i] <= TopLim and CAPEmu[i] > 0) then
         --Add for overshooting top based on CAPE, +1000ft/350J/kg (tweak this!)
+        if CAPEmu[i] == 1.0 then
+          CAPEmu[i] = 1.00001
+        end
+
         res[i] = res[i] + CAPEmu[i] / (math.log(CAPEmu[i]) * 10)
       else
         res[i] = Missing
@@ -109,7 +124,7 @@ for i=1, #EL500 do
     end
   end
 
-  res[i] = round(res[i]/10)*10;
+  res[i] = round(res[i]/10)*10
 end
 
 p = param("CBTCU-FL")
