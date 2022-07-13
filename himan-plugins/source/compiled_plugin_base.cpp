@@ -422,7 +422,7 @@ void compiled_plugin_base::Start()
 	SetThreadCount();
 	SetInitialIteratorPositions();
 
-	itsBaseLogger.Info("Plugin is using data type: " + TypeToName<T>());
+	itsBaseLogger.Trace("Plugin is using data type: " + TypeToName<T>());
 
 	vector<thread> threads;
 
