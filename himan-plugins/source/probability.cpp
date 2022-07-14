@@ -1,9 +1,9 @@
 #include "probability.h"
-#include "plugin_factory.h"
-#include "probability_impl.h"
-
 #include "ensemble.h"
 #include "lagged_ensemble.h"
+#include "plugin_factory.h"
+#include "probability_impl.h"
+#include <thread>
 
 #include <algorithm>
 #include <exception>
@@ -12,15 +12,14 @@
 #include "radon.h"
 
 using namespace PROB;
+static std::mutex getMutex;
+static int getIndex;
 
 namespace himan
 {
 namespace plugin
 {
-static const std::string kClassName = "himan::plugin::probability";
-
 probability::probability()
-    : itsEnsembleSize(0), itsMaximumMissingForecasts(0), itsUseLaggedEnsemble(0), itsLag(), itsLagStep()
 {
 	itsCudaEnabledCalculation = false;
 	itsLogger = logger("probability");
@@ -55,7 +54,8 @@ static void GetConfigurationParameter(const std::string& name, const std::shared
 
 	if (!conf->ParameterExists(name))
 	{
-		log.Fatal("configuration error: requested parameter doesn't exist in the configuration file '" + name + "'");
+		log.Fatal(
+		    fmt::format("configuration error: requested parameter doesn't exist in the configuration file '{}'", name));
 		himan::Abort();
 	}
 
@@ -116,7 +116,7 @@ static void GetConfigurationParameter(const std::string& name, const std::shared
 			}
 			else
 			{
-				log.Fatal("configuration error: invalid comparison operator '" + p.second + "'");
+				log.Fatal(fmt::format("configuration error: invalid comparison operator '{}'", p.second));
 				himan::Abort();
 			}
 		}
@@ -141,7 +141,7 @@ static void GetConfigurationParameter(const std::string& name, const std::shared
 
 	if (iname == "XX-X")
 	{
-		log.Fatal("configuration error:: input parameter not specified for '" + name + "'");
+		log.Fatal(fmt::format("configuration error:: input parameter not specified for '{}'", name));
 		himan::Abort();
 	}
 
@@ -195,20 +195,20 @@ static void FetchRemainingLimitsForStations(const grid* targetGrid,
 
 					if (IsMissing(limit))
 					{
-						log.Fatal("Threshold not found for param " + pc.output.Name() + ", station " +
-						          std::to_string(st.Id()));
+						log.Fatal(
+						    fmt::format("Threshold not found for param {}, station {}", pc.output.Name(), st.Id()));
 						himan::Abort();
 					}
 
-					log.Trace("Threshold for param " + pc.output.Name() + ", station " + std::to_string(st.Id()) +
-					          " is " + std::to_string(limit));
+					log.Trace(
+					    fmt::format("Threshold for param {}, station {} is {}", pc.output.Name(), st.Id(), limit));
 
 					pc.thresholds[i] = std::to_string(limit);
 				}
 				else
 				{
-					log.Trace("Threshold for param " + pc.output.Name() + ", station " + std::to_string(st.Id()) +
-					          " is " + it->second);
+					log.Trace(
+					    fmt::format("Threshold for param {}, station {} is {}", pc.output.Name(), st.Id(), it->second));
 
 					pc.thresholds[i] = it->second;
 				}
@@ -229,108 +229,6 @@ static void FetchRemainingLimitsForStations(const grid* targetGrid,
 void probability::Process(const std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
-
-	//
-	// 1. Parse json configuration specific to this plugin
-	//
-
-	// Most of the plugin operates by the configuration in the json file.
-	// Here we collect all the parameters we want to calculate, and the parameters that are used for the calculation.
-	// If the configuration is invalid we will bail out asap!
-
-	// Get the number of forecasts this ensemble has from plugin configuration
-	if (itsConfiguration->Exists("ensemble_size"))
-	{
-		const int ensembleSize = std::stoi(itsConfiguration->GetValue("ensemble_size"));
-		if (ensembleSize <= 0)
-		{
-			throw std::runtime_error(ClassName() + " invalid ensemble_size in plugin configuration");
-		}
-		itsEnsembleSize = ensembleSize;
-	}
-	else
-	{
-		auto r = GET_PLUGIN(radon);
-		auto ensSize = r->RadonDB().GetProducerMetaData(conf->TargetProducer().Id(), "ensemble size");
-
-		if (ensSize.empty())
-		{
-			throw std::runtime_error(
-			    ClassName() + " ensemble_size not specified in plugin configuration and not found from database");
-		}
-
-		itsEnsembleSize = std::stoi(ensSize);
-	}
-
-	// Maximum number of missing forecasts for an ensemble
-	if (itsConfiguration->Exists("max_missing_forecasts"))
-	{
-		const int maxMissingForecasts = std::stoi(itsConfiguration->GetValue("max_missing_forecasts"));
-		if (maxMissingForecasts < 0)
-		{
-			throw std::runtime_error(ClassName() +
-			                         " invalid max_missing_forecasts value specified in plugin configuration");
-		}
-		itsMaximumMissingForecasts = maxMissingForecasts;
-	}
-
-	// Are we using lagged ensemble?
-	// NOTE 'lag' needs to be specified first
-	if (itsConfiguration->Exists("lag"))
-	{
-		int lag = std::stoi(itsConfiguration->GetValue("lag"));
-		if (lag == 0)
-		{
-			throw std::runtime_error(ClassName() + ": specify lag < 0");
-		}
-		else if (lag > 0)
-		{
-			itsLogger.Warning("negating lag value " + std::to_string(-lag));
-			lag = -lag;
-		}
-
-		itsLag = time_duration(kHourResolution, lag);
-
-		// How many lagged steps to include in the calculation
-
-		if (itsConfiguration->Exists("lagged_steps"))
-		{
-			const std::string lagsteps = itsConfiguration->GetValue("lagged_steps");
-
-			if (lagsteps.find(":") == std::string::npos)
-			{
-				const int steps = std::stoi(lagsteps);
-				if (steps <= 0)
-				{
-					throw std::runtime_error(ClassName() + ": invalid lagged_steps value. Allowed range >= 0");
-				}
-				itsLagStep = itsLag * -1;
-				itsLag *= steps;
-			}
-			else
-			{
-				itsLagStep = time_duration(lagsteps);
-			}
-		}
-		else
-		{
-			throw std::runtime_error(ClassName() + ": specify lagged_steps when using time lagging ('lag')");
-		}
-
-		itsUseLaggedEnsemble = true;
-	}
-
-	if (itsConfiguration->Exists("named_ensemble"))
-	{
-		itsUseLaggedEnsemble = true;
-		itsNamedEnsemble = itsConfiguration->GetValue("named_ensemble");
-	}
-
-	//
-	// 2. Setup input and output parameters from the json configuration.
-	//    `calculatedParams' will hold the output parameter, it's inputs,
-	//    and the 'threshold' value.
-	//
 
 	params calculatedParams;
 
@@ -365,103 +263,182 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 	Start<float>();
 }
 
-void probability::Calculate(std::shared_ptr<info<float>> myTargetInfo, unsigned short threadIndex)
+std::unique_ptr<ensemble> Mogrify(const ensemble* baseEns, const himan::param& par)
 {
-	auto threadedLogger = logger("probabilityThread # " + std::to_string(threadIndex));
-
-	for (const auto& pc : itsParamConfigurations)
+	if (baseEns->ClassName() == "himan::ensemble")
 	{
-		std::unique_ptr<ensemble> ens;
+		return std::move(std::make_unique<ensemble>(par, baseEns->ExpectedSize(), baseEns->MaximumMissingForecasts()));
+	}
+	else if (baseEns->ClassName() == "himan::lagged_ensemble")
+	{
+		return std::move(
+		    std::make_unique<lagged_ensemble>(par, dynamic_cast<const lagged_ensemble*>(baseEns)->DesiredForecasts(),
+		                                      baseEns->MaximumMissingForecasts()));
+	}
+	else if (baseEns->ClassName() == "himan::time_ensemble")
+	{
+		const auto d = dynamic_cast<const time_ensemble*>(baseEns);
+		return std::move(std::make_unique<time_ensemble>(par, baseEns->ExpectedSize(), d->PrimaryTimeSpan(),
+		                                                 d->SecondaryTimeMaskLen(), d->SecondaryTimeMaskStep(),
+		                                                 d->SecondaryTimeSpan(), baseEns->MaximumMissingForecasts()));
+	}
+	return nullptr;
+}
 
-		if (itsUseLaggedEnsemble)
+PROB::partial_param_configuration probability::GetTarget()
+{
+	std::lock_guard<std::mutex> lock(getMutex);
+
+	auto pc = itsParamConfigurations.at(getIndex);
+	getIndex++;
+
+	return pc;
+}
+
+void ProcessParameter(std::shared_ptr<const plugin_configuration>& conf, std::shared_ptr<info<float>>& myTargetInfo,
+                      const PROB::partial_param_configuration& pc, const ensemble* baseEns, const logger& logr)
+{
+	auto ens = Mogrify(baseEns, pc.parameter);
+
+	if (ens == nullptr)
+	{
+		return;
+	}
+
+	// combine ensemble configuration with the source parameter name for this loop
+	// iteration
+
+	logr.Info(fmt::format("Calculating {} time {}", pc.output.Name(),
+	                      static_cast<std::string>(myTargetInfo->Time().ValidDateTime())));
+
+	try
+	{
+		ens->Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level());
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e == kFileDataNotFound)
 		{
-			threadedLogger.Info("Using lagged ensemble");
-			if (itsNamedEnsemble.empty() == false)
-			{
-				ens = std::unique_ptr<ensemble>(new lagged_ensemble(pc.parameter, itsNamedEnsemble));
-			}
-			else
-			{
-				ens = std::unique_ptr<ensemble>(new lagged_ensemble(pc.parameter, itsEnsembleSize, itsLag, itsLagStep));
-			}
+			return;
 		}
 		else
 		{
-			ens = std::unique_ptr<ensemble>(new ensemble(pc.parameter, itsEnsembleSize));
-		}
-
-		ens->MaximumMissingForecasts(itsMaximumMissingForecasts);
-
-		threadedLogger.Info("Calculating " + pc.output.Name() + " time " +
-		                    static_cast<std::string>(myTargetInfo->Time().ValidDateTime()));
-
-		try
-		{
-			ens->Fetch(itsConfiguration, myTargetInfo->Time(), myTargetInfo->Level());
-		}
-		catch (const HPExceptionType& e)
-		{
-			if (e == kFileDataNotFound)
-			{
-				continue;
-			}
-			else
-			{
-				itsLogger.Fatal("Received error code " + std::to_string(e));
-				himan::Abort();
-			}
-		}
-
-		ASSERT(myTargetInfo->Data().Size() > 0);
-
-		if (pc.useGaussianSpread)
-		{
-			threadedLogger.Debug("Gaussian spread is enabled");
-			ProbabilityWithGaussianSpread<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens);
-		}
-		else
-		{
-			threadedLogger.Trace("Gaussian spread is disabled");
-			switch (pc.output.ProcessingType().Type())
-			{
-				case kProbabilityLessThan:
-					Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::less<float>());
-					break;
-				case kProbabilityLessThanOrEqual:
-					Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::less_equal<float>());
-					break;
-				case kProbabilityGreaterThan:
-					Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::greater<float>());
-					break;
-				case kProbabilityGreaterThanOrEqual:
-					Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::greater_equal<float>());
-					break;
-				case kProbabilityEquals:
-					Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::equal_to<float>());
-					break;
-				case kProbabilityNotEquals:
-					Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::not_equal_to<float>());
-					break;
-				case kProbabilityEqualsIn:
-					Probability<std::vector<float>>(myTargetInfo, ToParamConfiguration<std::vector<float>>(pc), ens,
-					                                EQINCompare());
-					break;
-				case kProbabilityBetween:
-					Probability<std::vector<float>>(myTargetInfo, ToParamConfiguration<std::vector<float>>(pc), ens,
-					                                BTWNCompare());
-					break;
-				default:
-					threadedLogger.Error("Unsupported comparison operator: " +
-					                     std::to_string(pc.output.ProcessingType().Type()));
-					break;
-			}
+			logr.Fatal("Received error code " + std::to_string(e));
+			himan::Abort();
 		}
 	}
 
-	threadedLogger.Info("[CPU] Missing values: " + std::to_string(myTargetInfo->Data().MissingCount()) + "/" +
-	                    std::to_string(myTargetInfo->Data().Size()));
+	ASSERT(myTargetInfo->Data().Size() > 0);
+
+	if (pc.useGaussianSpread)
+	{
+		logr.Debug("Gaussian spread is enabled");
+		ProbabilityWithGaussianSpread<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens);
+	}
+	else
+	{
+		logr.Trace("Gaussian spread is disabled");
+		switch (pc.output.ProcessingType().Type())
+		{
+			case kProbabilityLessThan:
+				Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::less<float>());
+				break;
+			case kProbabilityLessThanOrEqual:
+				Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::less_equal<float>());
+				break;
+			case kProbabilityGreaterThan:
+				Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::greater<float>());
+				break;
+			case kProbabilityGreaterThanOrEqual:
+				Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::greater_equal<float>());
+				break;
+			case kProbabilityEquals:
+				Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::equal_to<float>());
+				break;
+			case kProbabilityNotEquals:
+				Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::not_equal_to<float>());
+				break;
+			case kProbabilityEqualsIn:
+				Probability<std::vector<float>>(myTargetInfo, ToParamConfiguration<std::vector<float>>(pc), ens,
+				                                EQINCompare());
+				break;
+			case kProbabilityBetween:
+				Probability<std::vector<float>>(myTargetInfo, ToParamConfiguration<std::vector<float>>(pc), ens,
+				                                BTWNCompare());
+				break;
+			default:
+				logr.Error(fmt::format("Unsupported comparison operator: {}", pc.output.ProcessingType().Type()));
+				break;
+		}
+	}
 }
 
-}  // plugin
+void probability::Worker(std::shared_ptr<info<float>> myTargetInfo, short threadIndex)
+{
+	auto threadedLogger = logger("probabilityThread # " + std::to_string(threadIndex));
+	auto baseEns = util::CreateEnsembleFromConfiguration(itsConfiguration);
 
-}  // namespace
+	threadedLogger.Info("Starting");
+
+	while (true)
+	{
+		try
+		{
+			auto pc = GetTarget();
+			ProcessParameter(itsConfiguration, myTargetInfo, pc, baseEns.get(), threadedLogger);
+		}
+		catch (...)
+		{
+			threadedLogger.Info("Stopping");
+			return;
+		}
+	}
+}
+
+void probability::Calculate(std::shared_ptr<info<float>> myTargetInfo, unsigned short threadIndex)
+{
+	std::vector<std::thread> threads;
+
+	short realThreadCount = itsThreadCount;
+
+	// If multithreading doesn't happen on level/time basis (=only processing a single level and time),
+	// we can do it per probability parameter basis (=process all probability parameters for this level
+	// and time in parallel)
+
+	if (realThreadCount == 1)
+	{
+		const auto cnfCount = itsConfiguration->ThreadCount();
+		realThreadCount = (cnfCount == -1)
+		                      ? static_cast<short>(std::min(12, static_cast<int>(itsParamConfigurations.size())))
+		                      : cnfCount;
+
+		{
+			std::lock_guard<std::mutex> lock(getMutex);
+			getIndex = 0;
+		}
+		for (short i = 0; i < realThreadCount; i++)
+		{
+			threads.emplace_back(&probability::Worker, this, std::make_shared<info<float>>(*myTargetInfo), i + 1);
+		}
+
+		for (auto& t : threads)
+		{
+			t.join();
+		}
+	}
+	else
+	{
+		auto baseEns = util::CreateEnsembleFromConfiguration(itsConfiguration);
+
+		for (const auto& pc : itsParamConfigurations)
+		{
+			ProcessParameter(itsConfiguration, myTargetInfo, pc, baseEns.get(), itsLogger);
+		}
+	}
+	itsLogger.Info(
+	    fmt::format("[CPU] Missing values: {}/{}", myTargetInfo->Data().MissingCount(), myTargetInfo->Data().Size()));
+}
+
+}  // namespace plugin
+
+}  // namespace himan

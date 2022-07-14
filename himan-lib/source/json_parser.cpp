@@ -235,7 +235,7 @@ void UseCacheForReads(const boost::property_tree::ptree& pt, std::shared_ptr<con
 {
 	if (auto useCacheForReads = ReadElement<bool>(pt, "use_cache_for_reads"))
 	{
-		conf->UseCacheForWrites(useCacheForReads.get());
+		conf->UseCacheForReads(useCacheForReads.get());
 	}
 }
 
@@ -379,62 +379,7 @@ void ForecastTypes(const boost::property_tree::ptree& pt, std::shared_ptr<config
 {
 	if (auto ftypes = ReadElement<std::string>(pt, "forecast_type"))
 	{
-		vector<string> types = util::Split(ftypes.get(), ",");
-		vector<forecast_type> forecastTypes;
-
-		for (string& type : types)
-		{
-			boost::algorithm::to_lower(type);
-
-			if (type.find("pf") != string::npos)
-			{
-				string list = type.substr(2, string::npos);
-
-				vector<string> range = util::Split(list, "-");
-
-				if (range.size() == 1)
-				{
-					forecastTypes.push_back(forecast_type(kEpsPerturbation, stod(range[0])));
-				}
-				else
-				{
-					ASSERT(range.size() == 2);
-
-					int start = stoi(range[0]);
-					int stop = stoi(range[1]);
-
-					while (start <= stop)
-					{
-						forecastTypes.push_back(forecast_type(kEpsPerturbation, start));
-						start++;
-					}
-				}
-			}
-			else
-			{
-				if (type == "cf")
-				{
-					forecastTypes.push_back(forecast_type(kEpsControl, 0));
-				}
-				else if (type == "det" || type == "deterministic")
-				{
-					forecastTypes.push_back(forecast_type(kDeterministic));
-				}
-				else if (type == "an" || type == "analysis")
-				{
-					forecastTypes.push_back(forecast_type(kAnalysis));
-				}
-				else if (type == "sp" || type == "statistical")
-				{
-					forecastTypes.push_back(forecast_type(kStatisticalProcessing));
-				}
-				else
-				{
-					throw runtime_error("Invalid forecast_type: " + type);
-				}
-			}
-		}
-		conf->ForecastTypes(forecastTypes);
+		conf->ForecastTypes(util::ForecastTypesFromString(ftypes.get()));
 	}
 }
 
@@ -474,6 +419,30 @@ std::vector<raw_time> OriginTime(const boost::property_tree::ptree& pt, shared_p
 	return originDateTimes;
 }
 
+void WriteToObjectStorageBetweenPluginCalls(const boost::property_tree::ptree& pt, shared_ptr<configuration>& conf)
+{
+	if (auto writeBetweenCalls = ReadElement<bool>(pt, "write_to_object_storage_between_plugin_calls"))
+	{
+		conf->WriteToObjectStorageBetweenPluginCalls(writeBetweenCalls.get());
+	}
+}
+
+void CheckConsistency(shared_ptr<configuration>& conf)
+{
+	logger logr("json_parser");
+	if (conf->WriteStorageType() != kS3ObjectStorageSystem && conf->WriteToObjectStorageBetweenPluginCalls())
+	{
+		logr.Warning("unable to set 'write_to_s3_between_plugin_calls=true' when not writing to s3");
+		conf->WriteToObjectStorageBetweenPluginCalls(false);
+	}
+	if (conf->UseCacheForWrites() == false && conf->WriteStorageType() == kS3ObjectStorageSystem &&
+	    conf->WriteToObjectStorageBetweenPluginCalls() == false)
+	{
+		logr.Warning(
+		    "Unable to set 'use_cache_for_writes=false' when writing to S3 and write_to_s3_between_plugin_calls=false");
+	}
+}
+
 void CheckCommonOptions(const boost::property_tree::ptree& pt, shared_ptr<configuration>& conf)
 {
 	Producers(pt, conf);
@@ -492,6 +461,8 @@ void CheckCommonOptions(const boost::property_tree::ptree& pt, shared_ptr<config
 	ForecastTypes(pt, conf);
 	WriteMode(conf, pt);
 	SSStateTableName(pt, conf);
+
+	CheckConsistency(conf);
 }
 
 vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(shared_ptr<configuration> conf)
@@ -512,6 +483,8 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	}
 
 	vector<shared_ptr<plugin_configuration>> pluginContainer;
+
+	WriteToObjectStorageBetweenPluginCalls(pt, conf);
 
 	CheckCommonOptions(pt, conf);
 

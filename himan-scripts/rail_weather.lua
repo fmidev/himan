@@ -1,113 +1,7 @@
-function SumT(TMinus,TPlus,curTime,par)
-  local psum = {}
-
-  local stopStep = math.max(curTime:GetStep():Hours() + TMinus , 0)
-  local startStep = math.min(curTime:GetStep():Hours() + TPlus , 240)
-
-  -- set initial time step
-  local mytime = forecast_time(curTime:GetOriginDateTime(),time_duration(HPTimeResolution.kHourResolution,startStep))
-
-  while true do
-
-    if mytime:GetStep():Hours() < stopStep or mytime:GetStep():Hours() < 0 then
-      break
-    end
-
-    local p = luatool:FetchWithType(current_time, current_level, par, current_forecast_type)
-
-    if p then
-      if #psum == 0 then
-        for i=1, #p do
-         psum[i] = 0
-        end
-      end
-
-      for i=1, #p do
-        psum[i] = psum[i] + p[i]
-      end
-    end
-
-    -- adjust time
-    mytime:GetValidDateTime():Adjust(HPTimeResolution.kHourResolution, -1)
-
-  end
-
-  return psum
-end
-
-function MinT(TMinus,TPlus,curTime,par)
-  local pmin = {}
-
-  local stopStep = math.max(curTime:GetStep():Hours() + TMinus , 0)
-  local startStep = math.min(curTime:GetStep():Hours() + TPlus , 240)
-
-  -- set initial time step
-  local mytime = forecast_time(curTime:GetOriginDateTime(),time_duration(HPTimeResolution.kHourResolution,startStep))
-
-  while true do
-
-    if mytime:GetStep():Hours() < stopStep or mytime:GetStep():Hours() < 0 then
-      break
-    end
-
-    local p = luatool:FetchWithType(mytime, current_level, par, current_forecast_type)
-
-    if p then
-      if #pmin == 0 then
-        for i=1, #p do
-         pmin[i] = 1e38
-        end
-      end
-
-      for i=1, #p do
-        pmin[i] = math.min(pmin[i],p[i])
-      end
-    end
-
-    -- adjust time
-    mytime:GetValidDateTime():Adjust(HPTimeResolution.kHourResolution, -1)
-
-  end
-
-  return pmin
-end
-
-function MaxT(TMinus,TPlus,curTime,par,curLevel)
-  local pmax = {}
-
-  local stopStep = math.max(curTime:GetStep():Hours() + TMinus , 0)
-  local startStep = math.min(curTime:GetStep():Hours() + TPlus , 240)
-
-  -- set initial time step
-  local mytime = forecast_time(curTime:GetOriginDateTime(),time_duration(HPTimeResolution.kHourResolution,startStep))
-
-  while true do
-
-    if mytime:GetStep():Hours() < stopStep or mytime:GetStep():Hours() < 0 then
-      break
-    end
-
-    local p = luatool:FetchWithType(mytime, curLevel, par, current_forecast_type)
-
-    if p then
-      if #pmax == 0 then
-        for i=1, #p do
-         pmax[i] = -1e38
-        end
-      end 
-
-      for i=1, #p do
-        pmax[i] = math.max(pmax[i],p[i])
-      end
-    end
-
-    -- adjust time
-    mytime:GetValidDateTime():Adjust(HPTimeResolution.kHourResolution, -1)
-
-  end
-
-  return pmax
-end
+local next_time = forecast_time(current_time:GetOriginDateTime(),current_time:GetValidDateTime())
+next_time:GetValidDateTime():Adjust(HPTimeResolution.kHourResolution, 6)
+local prev_time = forecast_time(current_time:GetOriginDateTime(),current_time:GetValidDateTime())
+prev_time:GetValidDateTime():Adjust(HPTimeResolution.kHourResolution, -6)
 
 -- Implementation of the Regulation 5 conditions for railroad operation
 -- Conditions in particular: 
@@ -115,22 +9,45 @@ end
 -- 2. Snowfallrate 5cm/12h; Calculate +/-6h
 -- 3. Wind Speed 5 m/s or above
 
-local min_t = MinT(-2,2,current_time,param("T-K"))
-local snow_sum = SumT(-6,6,current_time,param("SNR-KGM2"))
-local max_ws = MaxT(-2,2,current_time,param("FF-MS"),level(HPLevelType.kHeight,10))
+local min_t = luatool:FetchWithType(current_time, level(HPLevelType.kHeight,2), param("TMIN6H-K"), current_forecast_type)
 
-if #min_t == 0 or #snow_sum == 0 or #max_ws == 0 then  
+if not min_t then
+	min_t = luatool:FetchWithType(current_time,
+	level(HPLevelType.kHeight,2), param("TMIN3H-K"), current_forecast_type)
+end
+
+local max_ws = luatool:FetchWithType(current_time, level(HPLevelType.kHeight,10), param("FFG-MS"), current_forecast_type)
+
+local snow_next = luatool:FetchWithType(next_time, current_level, param('SNACC-KGM2'), current_forecast_type) 
+local snow_prev = luatool:FetchWithType(prev_time, current_level, param('SNACC-KGM2'), current_forecast_type)
+
+if min_t == nil or snow_next == nil or (snow_prev == nil and current_time:GetStep():Hours() ~= 6) or max_ws == nil then  
     return
 end
 
 local res = {}
+local snow = {}
+
+scale_unit = 1
+
+if currentProducerName == "MEPSMTA" then
+    scale_unit = 1000
+end
 
 for i=1, #min_t do
   res[i] = 0
 
   -- Calculate the index
-  -- Determine forecast value Missing or 1; 
-  if ( min_t[i] <= (-4.9 + kKelvin) and snow_sum[i] >= 4.9 and max_ws[i] >= 4.8) then
+  -- Determine forecast value Missing or 1;
+
+  -- for first time step no snow accumulation is available
+  if current_time:GetStep():Hours() == 6 then
+    snow[i] = snow_next[i]
+  else
+    snow[i] = snow_next[i] - snow_prev[i]
+  end
+
+  if ( min_t[i] <= (-4.9 + kKelvin) and snow[i] >= 0.0049 and max_ws[i] >= 4.8) then
     res[i] = 1
   end
 end

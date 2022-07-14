@@ -38,13 +38,12 @@ class ensemble
 {
    public:
 	/// @brief Constructs an ensemble with one control forecast and expectedEnsembleSize - 1 perturbations
-	ensemble(const param& parameter, size_t expectedEnsembleSize);
+	ensemble(const param& parameter, size_t expectedEnsembleSize, int maximumMissingForecasts = 0);
 
 	/// @brief Constructs an ensemble with control forecasts taken from `controlForecasts` and
 	/// expectedEnsembleSize - controlForecasts.size() perturbations
-	ensemble(const param& parameter, size_t expectedEnsembleSize, const std::vector<forecast_type>& controlForecasts);
-
-	ensemble();
+	ensemble(const param& parameter, size_t expectedEnsembleSize, const std::vector<forecast_type>& controlForecasts,
+	         int maximumMissingForecasts = 0);
 
 	virtual ~ensemble() = default;
 
@@ -90,7 +89,7 @@ class ensemble
 	/// @brief Returns the size of the currently fetched ensemble
 	size_t Size() const;
 
-	std::string ClassName() const;
+	virtual std::string ClassName() const;
 
 	/// @brief Returns the expected size of the ensemble. NOTE: this can
 	/// differ from the actual size of the ensemble!
@@ -102,12 +101,12 @@ class ensemble
 
 	int MaximumMissingForecasts() const;
 
-	void MaximumMissingForecasts(int maximumMissing);
-
 	/// @brief Return all data for given ensemble member
 	std::shared_ptr<info<float>> Forecast(size_t i);
 
    protected:
+	ensemble() = default;
+
 	/// @brief Verifies that we have the required number of valid forecasts, else abort execution.
 	/// Outputs diagnostics.
 	virtual void VerifyValidForecastCount(int numMissingForecasts);
@@ -146,10 +145,6 @@ inline param ensemble::Param() const
 inline int ensemble::MaximumMissingForecasts() const
 {
 	return itsMaximumMissingForecasts;
-}
-inline void ensemble::MaximumMissingForecasts(int maximumMissing)
-{
-	itsMaximumMissingForecasts = maximumMissing;
 }
 }  // namespace himan
 

@@ -285,3 +285,13 @@ void raw_time::FromSQLTime(const std::string& SQLTime)
 		himan::Abort();
 	}
 }
+
+raw_time raw_time::Now()
+{
+	return raw_time(boost::posix_time::second_clock::local_time());
+}
+
+raw_time raw_time::UtcNow()
+{
+	return raw_time(boost::posix_time::second_clock::universal_time());
+}

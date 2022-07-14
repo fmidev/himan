@@ -42,6 +42,8 @@ class writer : public auxiliary_plugin
 	void WriteOptions(const write_options& theWriteOptions);
 
 	static void AddToPending(const std::vector<std::string>& names);
+	static void ClearPending();
+
 	void WritePendingInfos(std::shared_ptr<const plugin_configuration> conf);
 
    private:

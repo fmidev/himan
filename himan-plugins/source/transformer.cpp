@@ -7,11 +7,16 @@
 #include "interpolate.h"
 #include "level.h"
 #include "logger.h"
+#include "newbase/NFmiDataMatrix.h"
+#include "newbase/NFmiFastQueryInfo.h"
 #include "numerical_functions.h"
 #include "plugin_factory.h"
 #include "util.h"
+#include <gis/CoordinateMatrix.h>
 
 #include "fetcher.h"
+#include "hitool.h"
+#include "querydata.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -36,9 +41,12 @@ transformer::transformer()
       itsSourceForecastType(kUnknownType),
       itsRotateVectorComponents(false),
       itsDoTimeInterpolation(false),
+      itsDoLevelInterpolation(false),
       itsChangeMissingTo(himan::MissingDouble()),
       itsWriteEmptyGrid(true),
-      itsDecimalPrecision(kHPMissingInt)
+      itsDecimalPrecision(kHPMissingInt),
+      itsDoLandscapeInterpolation(false),
+      itsParamDefinitionFromConfig(false)
 {
 	itsCudaEnabledCalculation = true;
 
@@ -58,6 +66,183 @@ vector<himan::level> transformer::LevelsFromString(const string& levelType, cons
 	               [&](int levelValue) { return level(theLevelType, static_cast<float>(levelValue), levelType); });
 
 	return levels;
+}
+
+namespace
+{
+template <typename T>
+T NewbaseMissingValue();
+
+template <>
+float NewbaseMissingValue()
+{
+	return kFloatMissing;
+}
+
+template <typename T, typename U>
+NFmiDataMatrix<U> InfoToDataMatrix(const std::shared_ptr<himan::info<T>>& in)
+{
+	NFmiDataMatrix<U> ret(in->Data().SizeX(), in->Data().SizeY(), NewbaseMissingValue<U>());
+
+	himan::matrix<T> origdata;
+
+	if (dynamic_cast<himan::regular_grid*>(in->Grid().get())->ScanningMode() == himan::kTopLeft)
+	{
+		origdata = in->Data();
+		himan::util::Flip<T>(origdata);
+	}
+
+	const std::vector<T>& data = (origdata.Size() == 0) ? VEC(in) : origdata.Values();
+
+	for (size_t i = 0; i < data.size(); i++)
+	{
+		ret.SetValue(static_cast<int>(i), static_cast<U>(data[i]));
+	}
+	return ret;
+}
+
+template <typename T>
+NFmiDataMatrix<bool> LSMToWaterMask(const NFmiDataMatrix<float>& in)
+{
+	NFmiDataMatrix<bool> ret(in.NX(), in.NY(), false);
+
+	for (size_t i = 0; i < in.NX() * in.NY(); i++)
+	{
+		const int v = static_cast<int>(in.GetValue(static_cast<int>(i), 0.f));
+
+		switch (v)
+		{
+			case 210:
+				ret.SetValue(static_cast<int>(i), true);
+				break;
+			default:
+				break;
+		}
+	}
+
+	return ret;
+}
+
+Fmi::CoordinateMatrix CreateCoordinateMatrix(const himan::regular_grid* from, const himan::regular_grid* to)
+{
+	std::vector<himan::point> xy = from->XY(*to);
+
+	const size_t ni = to->Ni();
+	const size_t nj = to->Nj();
+
+	Fmi::CoordinateMatrix cm(ni, nj);
+
+	for (size_t j = 0; j < nj; j++)
+	{
+		for (size_t i = 0; i < ni; i++)
+		{
+			cm.set<himan::point>(i, j, xy[i + j * ni]);
+		}
+	}
+	return cm;
+}
+}  // namespace
+
+template <typename T>
+shared_ptr<himan::info<T>> transformer::LandscapeInterpolation(const forecast_time& ftime, const level& lvl,
+                                                               const param& par, const forecast_type& ftype)
+{
+	itsLogger.Trace("Executing landscape interpolation");
+
+	// Fetch source data without interpolation (obviously)
+
+	auto f = GET_PLUGIN(fetcher);
+	f->DoInterpolation(false);
+
+	auto cnf = make_shared<plugin_configuration>(*itsConfiguration);
+	const level zeroH(kHeight, 0);
+
+	// Specify nearest interpolation for these, especially
+	// required for LC-N which is not a fraction between 0...1
+	// (as name suggests) but a code table.
+
+	const param lc("LC-N", -1, 1, 0, himan::kNearestPoint);
+	const param z("Z-M2S2", -1, 1, 0, himan::kNearestPoint);
+
+	auto source = f->Fetch<T>(cnf, ftime, lvl, par, ftype, false);
+	auto hgt = f->Fetch<float>(cnf, ftime, zeroH, z, ftype, false);
+	auto lr = f->Fetch<float>(cnf, ftime, zeroH, param("LR-KM"), ftype, false);
+	auto mask = f->Fetch<float>(cnf, ftime, zeroH, param("LC-0TO1"), ftype, false);  // Model has land cover 0..1
+
+	if (source->Data().MissingCount() > 0 || hgt->Data().MissingCount() > 0 || lr->Data().MissingCount() > 0 ||
+	    mask->Data().MissingCount() > 0)
+	{
+		itsLogger.Debug("Source data has missing values");
+	}
+
+	// Interpolate DEM and LSM to our wanted (target) grid
+
+	f->DoInterpolation(true);
+
+	cnf->SourceGeomNames({""});
+	cnf->SourceProducers({producer(521, 0, 0, "GLOBCOVER")});
+
+	const raw_time lsmTime("2010-12-21", "%Y-%m-%d");
+	auto lsm =
+	    f->Fetch<unsigned char>(cnf, forecast_time(lsmTime, lsmTime), zeroH, lc, forecast_type(kAnalysis), false);
+
+	cnf->SourceProducers({producer(520, 0, 0, "VIEWFINDER")});
+
+	const raw_time demTime("2008-09-11", "%Y-%m-%d");
+	auto dem = f->Fetch<short>(cnf, forecast_time(demTime, demTime), zeroH, z, forecast_type(kAnalysis), false);
+
+	const size_t lsmMissing = lsm->Data().MissingCount();
+	const size_t demMissing = dem->Data().MissingCount();
+
+	if (lsmMissing > 0 || demMissing > 0)
+	{
+		itsLogger.Warning(fmt::format("Missing values in environment data: DEM {}, LSM {}", demMissing, lsmMissing));
+	}
+
+	const Fmi::CoordinateMatrix gp = CreateCoordinateMatrix(dynamic_cast<regular_grid*>(source->Grid().get()),
+	                                                        dynamic_cast<regular_grid*>(dem->Grid().get()));
+
+	auto q = GET_PLUGIN(querydata);
+	std::shared_ptr<NFmiQueryData> qd = q->CreateQueryData(*source, true);
+	NFmiFastQueryInfo qi(qd.get());
+
+	const auto demM = InfoToDataMatrix<short, float>(dem);
+	const auto lsmM = LSMToWaterMask<float>(InfoToDataMatrix<unsigned char, float>(lsm));
+	const auto dataM = qi.Values();
+	const auto hgtM = InfoToDataMatrix<float, float>(hgt);
+	const auto lrM = InfoToDataMatrix<float, float>(lr);
+	const auto mM = InfoToDataMatrix<float, float>(mask);
+
+	// these should be equal
+	itsLogger.Trace(fmt::format("gp        {},{}", gp.width(), gp.height()));
+	itsLogger.Trace(fmt::format("dem       {},{}", demM.NX(), demM.NY()));
+	itsLogger.Trace(fmt::format("lsm       {},{}", lsmM.NX(), lsmM.NY()));
+	itsLogger.Trace(fmt::format("source    {},{}", source->Data().SizeX(), source->Data().SizeY()));
+
+	// these should be equal
+	itsLogger.Trace(fmt::format("data      {},{}", dataM.NX(), dataM.NY()));
+	itsLogger.Trace(fmt::format("hgtmat    {},{}", hgtM.NX(), hgtM.NY()));
+	itsLogger.Trace(fmt::format("lapsemat  {},{}", lrM.NX(), lrM.NY()));
+	itsLogger.Trace(fmt::format("maskmat   {},{}", mM.NX(), mM.NY()));
+
+	NFmiDataMatrix<float> lsValues = qi.LandscapeInterpolatedValues(dataM, gp, demM, lsmM, hgtM, lrM, mM);
+
+	auto target = make_shared<info<T>>(ftype, ftime, lvl, par);
+	auto b = make_shared<base<T>>();
+	b->grid = shared_ptr<grid>(itsConfiguration->BaseGrid()->Clone());
+
+	target->Create(b, true);
+
+	auto& data = VEC(target);
+
+	for (size_t i = 0; i < target->Grid()->Size(); i++)
+	{
+		const float val = lsValues.GetValue(static_cast<int>(i), kFloatMissing);
+
+		data[i] = (val == kFloatMissing) ? MissingValue<T>() : val;
+	}
+
+	return target;
 }
 
 shared_ptr<himan::info<double>> transformer::InterpolateTime(const forecast_time& ftime, const level& lev,
@@ -114,9 +299,46 @@ shared_ptr<himan::info<double>> transformer::InterpolateTime(const forecast_time
 
 	return interpolated;
 }
+
+shared_ptr<himan::info<double>> transformer::InterpolateLevel(const forecast_time& ftime, const level& lev,
+                                                              const param& par, const forecast_type& ftype) const
+{
+	// Vertical interpolation only supported if model levels are found for producer
+
+	itsLogger.Debug("Starting vertical interpolation");
+
+	auto h = GET_PLUGIN(hitool);
+	h->Configuration(itsConfiguration);
+	h->Time(ftime);
+	h->ForecastType(ftype);
+
+	if (lev.Type() == kPressure)
+	{
+		h->HeightUnit(kHPa);
+	}
+	else if (lev.Type() != kHeight)
+	{
+		itsLogger.Error("Level interpolation allowed only to level types 'height (m)' and 'pressure (hPa)'");
+		return nullptr;
+	}
+
+	auto data = h->VerticalValue<double>(par, lev.Value());
+
+	auto interpolated = make_shared<info<double>>(ftype, ftime, lev, par);
+	interpolated->Producer(itsConfiguration->TargetProducer());
+
+	auto b = make_shared<base<double>>();
+	b->grid = shared_ptr<grid>(itsConfiguration->BaseGrid()->Clone());
+	interpolated->Create(b, false);
+
+	interpolated->Data().Set(data);
+
+	return interpolated;
+}
+
 void transformer::SetAdditionalParameters()
 {
-	string itsSourceLevelType;
+	string SourceLevelType;
 	string SourceLevels;
 	string targetForecastType;
 
@@ -160,8 +382,17 @@ void transformer::SetAdditionalParameters()
 
 	if (!itsConfiguration->GetValue("target_param_aggregation").empty())
 	{
-		itsTargetParam[0].Aggregation(
-		    {HPStringToAggregationType.at(itsConfiguration->GetValue("target_param_aggregation"))});
+		if (!itsConfiguration->GetValue("target_param_aggregation_period").empty())
+		{
+			itsTargetParam[0].Aggregation(
+			    {HPStringToAggregationType.at(itsConfiguration->GetValue("target_param_aggregation")),
+			     time_duration(itsConfiguration->GetValue("target_param_aggregation_period"))});
+		}
+		else
+		{
+			itsTargetParam[0].Aggregation(
+			    {HPStringToAggregationType.at(itsConfiguration->GetValue("target_param_aggregation"))});
+		}
 	}
 
 	if (!itsConfiguration->GetValue("target_param_processing_type").empty())
@@ -200,7 +431,7 @@ void transformer::SetAdditionalParameters()
 
 	if (!itsConfiguration->GetValue("source_level_type").empty())
 	{
-		itsSourceLevelType = itsConfiguration->GetValue("source_level_type");
+		SourceLevelType = itsConfiguration->GetValue("source_level_type");
 	}
 	else
 	{
@@ -243,11 +474,16 @@ void transformer::SetAdditionalParameters()
 		itsInterpolationMethod = HPStringToInterpolationMethod.at(itsConfiguration->GetValue("interpolation"));
 	}
 
+	if ((SourceLevels.empty() && !SourceLevelType.empty()) || (!SourceLevels.empty() && SourceLevelType.empty()))
+	{
+		itsLogger.Warning("'source_levels' and 'source_level_type' are usually both defined or neither is defined");
+	}
+
 	if (!SourceLevels.empty())
 	{
 		// looks useful to use this function to create source_levels
 
-		itsSourceLevels = LevelsFromString(itsSourceLevelType, SourceLevels);
+		itsSourceLevels = LevelsFromString(SourceLevelType, SourceLevels);
 	}
 	else
 	{
@@ -299,6 +535,17 @@ void transformer::SetAdditionalParameters()
 		itsDoTimeInterpolation = util::ParseBoolean(itsConfiguration->GetValue("time_interpolation"));
 	}
 
+	if (itsConfiguration->Exists("vertical_interpolation"))
+	{
+		itsDoLevelInterpolation = util::ParseBoolean(itsConfiguration->GetValue("vertical_interpolation"));
+	}
+
+	if (itsDoTimeInterpolation && itsDoLevelInterpolation)
+	{
+		itsLogger.Fatal("Cannot have both 'time_interpolation' and 'vertical_interpolation' defined");
+		himan::Abort();
+	}
+
 	if (itsConfiguration->Exists("change_missing_value_to"))
 	{
 		try
@@ -326,6 +573,56 @@ void transformer::SetAdditionalParameters()
 		catch (const invalid_argument& e)
 		{
 			throw runtime_error("Unable to convert " + itsConfiguration->GetValue("decimal_precision") + " to int");
+		}
+	}
+
+	if (itsConfiguration->Exists("landscape_interpolation"))
+	{
+		itsDoLandscapeInterpolation = util::ParseBoolean(itsConfiguration->GetValue("landscape_interpolation"));
+	}
+
+	const auto grib1_tbl = itsConfiguration->GetValue("grib1_table_number");
+	const auto grib1_num = itsConfiguration->GetValue("grib1_parameter_number");
+
+	if (!grib1_tbl.empty() && !grib1_num.empty())
+	{
+		itsTargetParam[0].GribTableVersion(stoi(grib1_tbl));
+		itsTargetParam[0].GribIndicatorOfParameter(stoi(grib1_num));
+
+		itsParamDefinitionFromConfig = true;
+
+		if (itsConfiguration->OutputFileType() != kGRIB1)
+		{
+			itsLogger.Warning("grib1 metadata set but output file type is not grib1");
+		}
+	}
+
+	const auto grib2_dis = itsConfiguration->GetValue("grib2_discipline");
+	const auto grib2_cat = itsConfiguration->GetValue("grib2_parameter_category");
+	const auto grib2_num = itsConfiguration->GetValue("grib2_parameter_number");
+
+	if (!grib2_dis.empty() && !grib2_cat.empty() && !grib2_num.empty())
+	{
+		itsTargetParam[0].GribCategory(stoi(grib2_cat));
+		itsTargetParam[0].GribParameter(stoi(grib2_num));
+		itsTargetParam[0].GribDiscipline(stoi(grib2_dis));
+
+		itsParamDefinitionFromConfig = true;
+
+		if (itsConfiguration->OutputFileType() != kGRIB2)
+		{
+			itsLogger.Warning("grib2 metadata set but output file type is not grib2");
+		}
+	}
+
+	if (itsConfiguration->Exists("univ_id"))
+	{
+		itsTargetParam[0].UnivId(stoi(itsConfiguration->GetValue("univ_id")));
+		itsParamDefinitionFromConfig = true;
+
+		if (itsConfiguration->OutputFileType() != kQueryData)
+		{
+			itsLogger.Warning("querydata metadata set but output file type is not querydata");
 		}
 	}
 }
@@ -359,7 +656,7 @@ void transformer::Process(shared_ptr<const plugin_configuration> conf)
 		}
 	}
 
-	SetParams(itsTargetParam);
+	SetParams(itsTargetParam, itsParamDefinitionFromConfig);
 
 	Start();
 }
@@ -433,17 +730,32 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 
 	try
 	{
-		sourceInfo = f->Fetch(itsConfiguration, forecastTime, itsSourceLevels[myTargetInfo->Index<level>()],
-		                      itsSourceParam[0], forecastType, itsConfiguration->UseCudaForPacking());
+		if (itsDoLandscapeInterpolation)
+		{
+			sourceInfo = LandscapeInterpolation<double>(forecastTime, itsSourceLevels[myTargetInfo->Index<level>()],
+			                                            itsSourceParam[0], forecastType);
+		}
+		else
+		{
+			sourceInfo = f->Fetch(itsConfiguration, forecastTime, itsSourceLevels[myTargetInfo->Index<level>()],
+			                      itsSourceParam[0], forecastType, itsConfiguration->UseCudaForPacking());
+		}
 	}
 	catch (HPExceptionType& e)
 	{
-		if (e == kFileDataNotFound && itsDoTimeInterpolation)
+		if (e == kFileDataNotFound)
 		{
-			sourceInfo = InterpolateTime(forecastTime, itsSourceLevels[myTargetInfo->Index<level>()], itsSourceParam[0],
-			                             forecastType);
+			if (itsDoTimeInterpolation)
+			{
+				sourceInfo = InterpolateTime(forecastTime, itsSourceLevels[myTargetInfo->Index<level>()],
+				                             itsSourceParam[0], forecastType);
+			}
+			else if (itsDoLevelInterpolation)
+			{
+				sourceInfo = InterpolateLevel(forecastTime, itsSourceLevels[myTargetInfo->Index<level>()],
+				                              itsSourceParam[0], forecastType);
+			}
 		}
-
 		if (!sourceInfo)
 		{
 			myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
@@ -496,7 +808,8 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 	if (!IsMissing(itsChangeMissingTo))
 	{
 		auto& vec = VEC(myTargetInfo);
-		replace_if(vec.begin(), vec.end(), [=](double d) { return IsMissing(d); }, itsChangeMissingTo);
+		replace_if(
+		    vec.begin(), vec.end(), [=](double d) { return IsMissing(d); }, itsChangeMissingTo);
 	}
 
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +

@@ -77,6 +77,8 @@ class cache : public auxiliary_plugin
 
 	void Replace(std::shared_ptr<info<double>> anInfo, bool pin = false);
 
+	void Remove(const std::string& uniqueName);
+
    private:
 };
 
@@ -136,6 +138,8 @@ class cache_pool : public auxiliary_plugin
 
 	template <typename T>
 	void Replace(const std::string& uniqueName, std::shared_ptr<info<T>> info, bool pin);
+
+	void Remove(const std::string& uniqueName);
 
    private:
 	cache_pool();

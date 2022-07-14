@@ -40,6 +40,7 @@ configuration::configuration()
       itsUploadStatistics(true),
       itsWriteToDatabase(false),
       itsLegacyWriteMode(false),
+      itsWriteToObjectStorageBetweenPluginCalls(false),
       itsWriteStorageType(kLocalFileSystem),
       itsFilenameTemplate(),
       itsPackingType(kSimplePacking),
@@ -83,6 +84,8 @@ configuration::configuration(const configuration& o)
       itsUploadStatistics(o.itsUploadStatistics),
       itsWriteToDatabase(o.itsWriteToDatabase),
       itsLegacyWriteMode(o.itsLegacyWriteMode),
+      itsWriteToObjectStorageBetweenPluginCalls(o.itsWriteToObjectStorageBetweenPluginCalls),
+
       itsWriteStorageType(o.itsWriteStorageType),
       itsFilenameTemplate(o.itsFilenameTemplate),
       itsPackingType(o.itsPackingType),
@@ -143,13 +146,14 @@ std::ostream& configuration::Write(std::ostream& file) const
 	file << "__itsUpdateSSStateTable__" << itsUpdateSSStateTable << std::endl;
 	file << "__itsUploadStatistics__" << itsUploadStatistics << std::endl;
 	file << "__itsWriteToDatabase__" << itsWriteToDatabase << std::endl;
+	file << "__itsWriteToObjectStorageBetweenPluginCalls__ " << itsWriteToObjectStorageBetweenPluginCalls << std::endl;
 	file << "__itsLegacyWriteMode__" << itsLegacyWriteMode << std::endl;
 	file << "__itsWriteStorageType__" << HPFileStorageTypeToString.at(itsWriteStorageType) << std::endl;
 	file << "__itsFilenameTemplate__" << itsFilenameTemplate << std::endl;
 	file << "__itsPackingType__" << HPPackingTypeToString.at(itsPackingType) << std::endl;
 	file << "__itsAllowedMissingValues__" << itsAllowedMissingValues << std::endl;
 	file << "__itsSSStateTableName__ " << itsSSStateTableName << std::endl;
-	file << "__itsProgramName__ " << static_cast<int> (itsProgramName) << std::endl;
+	file << "__itsProgramName__ " << static_cast<int>(itsProgramName) << std::endl;
 
 	for (size_t i = 0; i < itsForecastTypes.size(); i++)
 	{
@@ -538,4 +542,14 @@ HPProgramName configuration::ProgramName() const
 void configuration::ProgramName(HPProgramName theName)
 {
 	itsProgramName = theName;
+}
+
+bool configuration::WriteToObjectStorageBetweenPluginCalls() const
+{
+	return itsWriteToObjectStorageBetweenPluginCalls;
+}
+
+void configuration::WriteToObjectStorageBetweenPluginCalls(bool flag)
+{
+	itsWriteToObjectStorageBetweenPluginCalls = flag;
 }

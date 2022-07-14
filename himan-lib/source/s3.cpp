@@ -29,21 +29,27 @@ void HandleS3Error(himan::logger& logr, const std::string& host, const std::stri
 {
 	logr.Error(fmt::format("{} operation to/from host={} object=s3://{} failed", op, host, object));
 
+	const std::string errorstr = S3_get_status_name(statusG);
 	switch (statusG)
 	{
 		case S3StatusInternalError:
-			logr.Error(fmt::format("{}: is there a proxy blocking the connection?", S3_get_status_name(statusG)));
+			logr.Error(fmt::format("{}: is there a proxy blocking the connection?", errorstr));
 			throw himan::kFileDataNotFound;
 		case S3StatusFailedToConnect:
-			logr.Error(fmt::format("{}: is proxy required but not set?", S3_get_status_name(statusG)));
+			logr.Error(fmt::format("{}: is proxy required but not set?", errorstr));
 			throw himan::kFileDataNotFound;
 		case S3StatusErrorInvalidAccessKeyId:
 			logr.Error(fmt::format(
 			    "{}: are Temporary Security Credentials used without security token (env: S3_SESSION_TOKEN)?",
-			    S3_get_status_name(statusG)));
+			    errorstr));
+			throw himan::kFileDataNotFound;
+		case S3StatusErrorAccessDenied:
+			logr.Error(fmt::format(
+			    "{}: invalid credentials or access protocol (http vs https, hint: set env variable S3_PROTOCOL)?",
+			    errorstr));
 			throw himan::kFileDataNotFound;
 		default:
-			logr.Error(S3_get_status_name(statusG));
+			logr.Error(fmt::format("S3 error: {}", errorstr));
 			throw himan::kFileDataNotFound;
 	}
 }
@@ -122,45 +128,48 @@ static S3Status getObjectDataCallback(int bufferSize, const char* buffer, void* 
 
 void Initialize()
 {
-	call_once(oflag, [&]() {
-		access_key = getenv("S3_ACCESS_KEY_ID");
-		secret_key = getenv("S3_SECRET_ACCESS_KEY");
-		security_token = getenv("S3_SESSION_TOKEN");
+	call_once(
+	    oflag,
+	    [&]()
+	    {
+		    access_key = getenv("S3_ACCESS_KEY_ID");
+		    secret_key = getenv("S3_SECRET_ACCESS_KEY");
+		    security_token = getenv("S3_SESSION_TOKEN");
 
-		logger logr("s3");
+		    logger logr("s3");
 
-		if (!access_key)
-		{
-			logr.Info("Environment variable S3_ACCESS_KEY_ID not defined");
-		}
+		    if (!access_key)
+		    {
+			    logr.Info("Environment variable S3_ACCESS_KEY_ID not defined");
+		    }
 
-		if (!secret_key)
-		{
-			logr.Info("Environment variable S3_SECRET_ACCESS_KEY not defined");
-		}
+		    if (!secret_key)
+		    {
+			    logr.Info("Environment variable S3_SECRET_ACCESS_KEY not defined");
+		    }
 
-		try
-		{
-			const auto envproto = himan::util::GetEnv("S3_PROTOCOL");
-			if (envproto == "https")
-			{
-				protocol = S3ProtocolHTTPS;
-			}
-			else if (envproto == "http")
-			{
-				protocol = S3ProtocolHTTP;
-			}
-			else
-			{
-				logr.Warning(fmt::format("Unrecognized value found from env variable S3_PROTOCOL: '{}'", envproto));
-			}
-		}
-		catch (const std::invalid_argument& e)
-		{
-		}
+		    try
+		    {
+			    const auto envproto = himan::util::GetEnv("S3_PROTOCOL");
+			    if (envproto == "https")
+			    {
+				    protocol = S3ProtocolHTTPS;
+			    }
+			    else if (envproto == "http")
+			    {
+				    protocol = S3ProtocolHTTP;
+			    }
+			    else
+			    {
+				    logr.Warning(fmt::format("Unrecognized value found from env variable S3_PROTOCOL: '{}'", envproto));
+			    }
+		    }
+		    catch (const std::invalid_argument& e)
+		    {
+		    }
 
-		S3_CHECK(S3_initialize("s3", S3_INIT_ALL, NULL));
-	});
+		    S3_CHECK(S3_initialize("s3", S3_INIT_ALL, NULL));
+	    });
 }
 
 std::string ReadAWSRegionFromHostname(const std::string& hostname)

@@ -384,6 +384,8 @@ double regular_grid::Dj() const
 }
 earth_shape<double> regular_grid::EarthShape() const
 {
+	// reverse mapping from OGRSpatialReference to himan::earth_shape
+
 	OGRErr err;
 	const double A = itsSpatialReference->GetSemiMajor(&err);
 

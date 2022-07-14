@@ -23,7 +23,7 @@ extern void DumpVector(const std::vector<double>& vec, const std::string& name);
 extern void DumpVector(const std::vector<float>& vec, const std::string& name);
 extern void DumpVector(const std::vector<short>& vec, const std::string& name);
 extern void DumpVector(const std::vector<unsigned char>& vec, const std::string& name);
-}
+}  // namespace util
 
 /**
  * @brief Compare float/double bitwise, i.e. nan comparison is possible
@@ -56,7 +56,7 @@ template <class T>
 class matrix
 {
    public:
-	matrix() : itsData(0), itsWidth(0), itsHeight(0), itsDepth(0)
+	matrix() : itsData(0), itsWidth(0), itsHeight(0), itsDepth(0), itsMissingValue(himan::MissingValue<T>())
 	{
 	}
 	matrix(size_t theWidth, size_t theHeight, size_t theDepth, T theMissingValue)
@@ -110,8 +110,9 @@ class matrix
 	                                                             : static_cast<T>(other.MissingValue()))
 	{
 		itsData.resize(other.Size());
-		std::replace_copy_if(other.Values().begin(), other.Values().end(), itsData.begin(),
-		                     [=](const U& val) { return Compare(val, other.MissingValue()); }, itsMissingValue);
+		std::replace_copy_if(
+		    other.Values().begin(), other.Values().end(), itsData.begin(),
+		    [=](const U& val) { return Compare(val, other.MissingValue()); }, itsMissingValue);
 	}
 
 	matrix(matrix&&) = default;

@@ -2,6 +2,7 @@
 #include "NFmiGrib.h"
 #include "file_accessor.h"
 #include "grid.h"
+#include "grid_cache.h"
 #include "lambert_conformal_grid.h"
 #include "latitude_longitude_grid.h"
 #include "logger.h"
@@ -32,7 +33,7 @@ using namespace himan::plugin;
 std::string GetParamNameFromGribShortName(const std::string& paramFileName, const std::string& shortName);
 void UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restrict__ unpacked, size_t len, size_t unpackedLen);
 
-static mutex singleGribMessageCounterMutex;
+static mutex singleGribMessageCounterMutex, mapModificationMutex;
 static map<string, std::mutex> singleGribMessageCounterMap;
 
 earth_shape<double> DetermineEarthShapeForProducer(const producer& prod, const earth_shape<double>& defaultShape)
@@ -504,7 +505,7 @@ void WriteAreaAndGrid(NFmiGribMessage& message, const shared_ptr<himan::grid>& g
 
 			if (edition == 2)
 			{
-				message.SetLongKey("LaDInDegrees", 60);
+				message.SetDoubleKey("LaDInDegrees", rg->LatitudeOfOrigin());
 			}
 
 			break;
@@ -775,8 +776,13 @@ void WriteTime(NFmiGribMessage& message, const forecast_time& ftime, const produ
 		}
 
 		// These are used if parameter is aggregated
-		long p1 = ((ftime.Step() + par.Aggregation().TimeOffset()) / static_cast<int>(stepUnit.Hours())).Hours();
-		long p2 = p1 + par.Aggregation().TimeDuration().Hours() / static_cast<int>(stepUnit.Hours());
+		long p1 = 0, p2 = 0;
+
+		if (par.Aggregation().TimeDuration().Empty() == false)
+		{
+			p1 = ((ftime.Step() + par.Aggregation().TimeOffset()) / static_cast<int>(stepUnit.Hours())).Hours();
+			p2 = p1 + par.Aggregation().TimeDuration().Hours() / static_cast<int>(stepUnit.Hours());
+		}
 
 		switch (par.Aggregation().Type())
 		{
@@ -1071,8 +1077,14 @@ void WriteLevel(NFmiGribMessage& message, const level& lev)
 			message.LevelType(103);
 			message.SetLongKey("typeOfSecondFixedSurface", 103);
 		}
+		else if (lev.Type() == kGroundDepth)
+		{
+			message.LevelType(106);
+			message.SetLongKey("typeOfSecondFixedSurface", 106);
+		}
 		else
 		{
+			// TODO: get rid of 'LevelTypeToAnotherEdition()' function
 			message.LevelType(message.LevelTypeToAnotherEdition(lev.Type(), 2));
 		}
 	}
@@ -1081,8 +1093,16 @@ void WriteLevel(NFmiGribMessage& message, const level& lev)
 	{
 		case kHeightLayer:
 		{
+			// TODO: fix these invalid scale factors
 			message.LevelValue(static_cast<long>(0.01 * lev.Value()), 100);    // top
 			message.LevelValue2(static_cast<long>(0.01 * lev.Value2()), 100);  // bottom
+			break;
+		}
+		case kGroundDepth:
+		{
+			// Convert values from cm -> m with scale factor 2 (value = scaledValue * 10^-scaleFactor)
+			message.LevelValue(static_cast<long>(lev.Value()), 2);    // top (closer to ground surface)
+			message.LevelValue2(static_cast<long>(lev.Value2()), 2);  // bottom
 			break;
 		}
 		case kPressure:
@@ -1472,7 +1492,7 @@ void DetermineMessageNumber(NFmiGribMessage& message, file_information& finfo, H
 	// that is being appended to. therefore here we are tracking the message count
 	// per file
 
-	static std::map<std::string, unsigned long> offsets, messages;
+	static map<string, unsigned long> offsets, messages;
 
 	try
 	{
@@ -1482,6 +1502,10 @@ void DetermineMessageNumber(NFmiGribMessage& message, file_information& finfo, H
 	{
 		if (boost::filesystem::exists(finfo.file_location) == false)
 		{
+			// Need to modify the map, not just the elements -- need to
+			// protect from simultaneous access from other threads
+			lock_guard<mutex> lock(mapModificationMutex);
+
 			// file does not exist yet --> start counting from msg 0
 			offsets[finfo.file_location] = 0;
 			messages[finfo.file_location] = 0;
@@ -1646,17 +1670,19 @@ std::pair<himan::HPWriteStatus, himan::file_information> grib::ToFile(info<T>& a
 	{
 		pair<map<string, std::mutex>::iterator, bool> muret;
 
-		// Acquire mutex to (possibly) modify map containing "file name":"mutex" pairs
-		unique_lock<mutex> sflock(singleGribMessageCounterMutex);
+		{
+			// Acquire mutex to (possibly) modify map containing "file name":"mutex" pairs
+			lock_guard<mutex> lock(singleGribMessageCounterMutex);
 
-		// create or refer to a mutex for this specific file name
-		muret = singleGribMessageCounterMap.emplace(piecewise_construct, forward_as_tuple(finfo.file_location),
-		                                            forward_as_tuple());
-		// allow other threads to modify the map so as not to block threads writing
-		// to other files
-		sflock.unlock();
+			// create or refer to a mutex for this specific file name
+			muret = singleGribMessageCounterMap.emplace(piecewise_construct, forward_as_tuple(finfo.file_location),
+			                                            forward_as_tuple());
+			// allow other threads to modify the map so as not to block threads writing
+			// to other files
+		}
+
 		// lock the mutex for this file name
-		lock_guard<mutex> uniqueLock(muret.first->second);
+		lock_guard<mutex> lock(muret.first->second);
 
 		DetermineMessageNumber(msg, finfo, itsWriteOptions.configuration->WriteMode());
 		status = WriteMessageToFile(msg, finfo, itsWriteOptions);
@@ -1855,36 +1881,17 @@ unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message, const pr
 	{
 		case 0:
 		{
-			// clang-format off
-			newGrid = unique_ptr<latitude_longitude_grid>(new latitude_longitude_grid(
-			    m,
-			    firstPoint,
-			    static_cast<size_t>(message.SizeX()),
-			    static_cast<size_t>(message.SizeY()),
-			    message.iDirectionIncrement(),
-			    message.jDirectionIncrement(),
-			    earth
-			));
-			// clang-format on
+			newGrid = grid_cache::Instance().Get<latitude_longitude_grid>(
+			    m, firstPoint, static_cast<size_t>(message.SizeX()), static_cast<size_t>(message.SizeY()),
+			    message.iDirectionIncrement(), message.jDirectionIncrement(), earth);
 			break;
 		}
 		case 3:
 		{
-			// clang-format off
-			newGrid = unique_ptr<lambert_conformal_grid>(new lambert_conformal_grid(
-			    m,
-			    firstPoint,
-			    message.SizeX(),
-			    message.SizeY(),
-			    message.XLengthInMeters(),
-			    message.YLengthInMeters(),
-			    message.GridOrientation(),
-			    static_cast<double>(message.GetDoubleKey("Latin1InDegrees")),
-			    static_cast<double>(message.GetDoubleKey("Latin2InDegrees")),
-			    earth,
-			    false
-			));
-			// clang-format off
+			newGrid = grid_cache::Instance().Get<lambert_conformal_grid>(
+			    m, firstPoint, message.SizeX(), message.SizeY(), message.XLengthInMeters(), message.YLengthInMeters(),
+			    message.GridOrientation(), static_cast<double>(message.GetDoubleKey("Latin1InDegrees")),
+			    static_cast<double>(message.GetDoubleKey("Latin2InDegrees")), earth, false);
 			break;
 		}
 
@@ -1906,36 +1913,20 @@ unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message, const pr
 
 		case 5:
 		{
-			// clang-format off
-			newGrid = unique_ptr<stereographic_grid>(new stereographic_grid(
-			    m,
-			    firstPoint,
-			    message.SizeX(),
-			    message.SizeY(),
-			    message.XLengthInMeters(),
-			    message.YLengthInMeters(),
-			    message.GridOrientation(),
-			    earth,
-			    false
-			));
-			// clang-format off
+			const double lad = (message.Edition() == 2) ? message.GetDoubleKey("LaDInDegrees") : 60.;
+
+			newGrid = grid_cache::Instance().Get<stereographic_grid>(
+			    m, firstPoint, message.SizeX(), message.SizeY(), message.XLengthInMeters(), message.YLengthInMeters(),
+			    message.GridOrientation(), 90., lad, earth, false);
 			break;
 		}
 
 		case 10:
 		{
-			// clang-format off
-			newGrid = unique_ptr<rotated_latitude_longitude_grid>(new rotated_latitude_longitude_grid(
-			    m,
-			    firstPoint,
-			    static_cast<size_t>(message.SizeX()),
-			    static_cast<size_t>(message.SizeY()),
-			    message.iDirectionIncrement(),
-			    message.jDirectionIncrement(),
-			    earth,
-			    point(message.SouthPoleX(), message.SouthPoleY())
-			));
-			// clang-format on
+			newGrid = grid_cache::Instance().Get<rotated_latitude_longitude_grid>(
+			    m, firstPoint, static_cast<size_t>(message.SizeX()), static_cast<size_t>(message.SizeY()),
+			    message.iDirectionIncrement(), message.jDirectionIncrement(), earth,
+			    point(message.SouthPoleX(), message.SouthPoleY()));
 			break;
 		}
 		default:
@@ -2483,7 +2474,7 @@ himan::producer ReadProducer(const search_options& options, const NFmiGribMessag
 				return prod;
 			}
 
-			if (process <= 151 && process >= 142)
+			if (process <= 152 && process >= 142)
 			{
 				if (message.ForecastType() <= 2)
 				{
@@ -2773,10 +2764,16 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 
 	ASSERT(newGrid);
 
-	auto b = make_shared<base<T>>();
-	b->grid = shared_ptr<grid>(newGrid->Clone());
-
-	newInfo->Create(b, readData);
+	if (readData)
+	{
+		auto b = make_shared<base<T>>();
+		b->grid = shared_ptr<grid>(newGrid->Clone());
+		newInfo->Create(b, readData);
+	}
+	else
+	{
+		newInfo->Create(move(newGrid), readData);
+	}
 
 	// Set descriptors
 

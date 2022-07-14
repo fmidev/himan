@@ -39,6 +39,7 @@ in global scope.
   * [Allowed missing values](#Allowed_missing_values)
   * [ss_state table name](#ss_state_table_name)
   * [grib decimal precision](#grib_decimal_precision)
+  * [Write between plugin calls](#write_between_plugin_calls)
 * [Environment variables](#Environment_variables)
 * [Full examples](#Full_examples)
 
@@ -437,6 +438,7 @@ Allowed template values are:
 * {forecast_type_value:NUMBER_FORMAT_SPECIFIER}    - possible forecast type value
 * {producer_id:NUMBER_FORMAT_SPECIFIER}            - radon producer id
 * {file_type}                                      - file type extension, like grib, grib2, fqd, ...
+* {wall_time:DATE_FORMAT_SPECIFIER}                - wall clock time
 
 Format specifiers:
 * DATE_FORMAT_SPECIFIER: usual c-style strftime formatting (%Y%m%d...)
@@ -489,7 +491,7 @@ With key `forecast_type` the source forecast type is set. Using this, Himan can 
 
     "forecast_type" : "deterministic" | "cf" | "pf1-2"
 
-With value `cf` the control forecast of an ensemble is chosen, and with value `pfVALUE-VALUE` a range of ensemble members (permutations) are chosen. For example the value `pf1-10` means that permutation 1,2,3,4,5,6,7,8,9,10 are read. Values can be combined with a comma.
+With value `cf` the control forecast of an ensemble is chosen, and with value `pfVALUE-VALUE` a range of ensemble members (permutations) are chosen. For example the value `pf1-10` means that permutation 1,2,3,4,5,6,7,8,9,10 are read. Values can be combined with a comma. Control member has value 0 by default, but it can be changed by postfixing an integer value to "cf", ie "cf1" would define control forecast with value 1.
 
 Key can be set in the global or processqueue scope.
 
@@ -627,6 +629,24 @@ Example:
         "plugins" : [ { "name" : "...", "write_options.precision" : 2 } ]
     }
 
+<a name="write_between_plugin_calls"/>
+
+## Write between plugin calls
+
+When writing to s3, all data is hold in cache and is written only when all plugins have been executed, as appending to s3 is not possible.
+With configuration option 'write_to_object_storage_between_plugin_calls' writes can be done between plugin calls, for example to reduce
+the amount of data held in memory. By default this options has value 'false', and it is only applied when writing to s3. Option can
+only be set at top-level configuration.
+
+It is the users' responsibility to set 'filename_template' such that successive write calls do not override previous data.
+
+Example:
+
+
+    {
+        "write_to_object_storage_between_plugin_calls" : true,
+    }
+
 
 <a name="Environment_variables"/>
 
@@ -745,6 +765,10 @@ Disable statistics upload to radon
 * HIMAN_AUXILIARY_FILES
 
 Specify list of auxiliary files to read (whitespace-separated)
+
+* HIMAN_NUM_THREADS
+
+Specify at most how many threads should be used for data processing
 
 <a name="Full_examples"/>
 

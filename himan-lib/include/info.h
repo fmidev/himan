@@ -473,6 +473,7 @@ class info
 	 */
 
 	void Create(std::shared_ptr<base<T>> baseGrid, bool createDataBackend = false);
+	void Create(std::unique_ptr<grid> baseGrid, bool createDataBackend = false);
 
 	/**
 	 * @brief Re-order infos in the dimension vector if dimension sizes are changed

@@ -93,17 +93,19 @@ std::vector<forecast_time> CreateTimeList(const forecast_time& origtime, size_t 
 	return ret;
 }
 
-time_ensemble::time_ensemble(const param& parameter) : itsPrimaryTimeSpan(kYearResolution)
+time_ensemble::time_ensemble(const param& parameter, int maximumMissingForecasts) : itsPrimaryTimeSpan(kYearResolution)
 {
 	itsParam = parameter;
 	itsExpectedEnsembleSize = 0;
 	itsEnsembleType = kTimeEnsemble;
+	itsMaximumMissingForecasts = maximumMissingForecasts;
 
 	itsLogger = logger("time_ensemble");
 }
 
 time_ensemble::time_ensemble(const param& parameter, size_t primaryTimeMaskLen, HPTimeResolution primaryTimeSpan,
-                             int secondaryTimeMaskLen, int secondaryTimeMaskStep, HPTimeResolution secondaryTimeSpan)
+                             int secondaryTimeMaskLen, int secondaryTimeMaskStep, HPTimeResolution secondaryTimeSpan,
+                             int maximumMissingForecasts)
     : itsPrimaryTimeSpan(primaryTimeSpan),
       itsSecondaryTimeMaskLen(secondaryTimeMaskLen),
       itsSecondaryTimeMaskStep(secondaryTimeMaskStep),
@@ -119,6 +121,7 @@ time_ensemble::time_ensemble(const param& parameter, size_t primaryTimeMaskLen, 
 	                           (2 * (itsSecondaryTimeMaskLen / itsSecondaryTimeMaskStep) + 1));
 
 	itsLogger = logger("time_ensemble");
+	itsMaximumMissingForecasts = maximumMissingForecasts;
 }
 
 void time_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const forecast_time& time,

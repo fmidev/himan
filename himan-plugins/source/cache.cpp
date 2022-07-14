@@ -151,6 +151,11 @@ template void cache::Replace<float>(shared_ptr<info<float>>, bool);
 template void cache::Replace<short>(shared_ptr<info<short>>, bool);
 template void cache::Replace<unsigned char>(shared_ptr<info<unsigned char>>, bool);
 
+void cache::Remove(const std::string& uniqueName)
+{
+	cache_pool::Instance()->Remove(uniqueName);
+}
+
 cache_pool* cache_pool::itsInstance = NULL;
 
 cache_pool::cache_pool() : itsCacheLimit(-1)
@@ -235,6 +240,17 @@ template void cache_pool::Replace<double>(const string&, shared_ptr<himan::info<
 template void cache_pool::Replace<float>(const string&, shared_ptr<himan::info<float>>, bool);
 template void cache_pool::Replace<short>(const string&, shared_ptr<himan::info<short>>, bool);
 template void cache_pool::Replace<unsigned char>(const string&, shared_ptr<himan::info<unsigned char>>, bool);
+
+void cache_pool::Remove(const string& uniqueName)
+{
+	{
+		Lock lock(itsAccessMutex);
+
+		const auto it = itsCache.find(uniqueName);
+		itsCache.erase(it);
+	}
+	itsLogger.Trace("Data with name " + uniqueName + " removed");
+}
 
 void cache_pool::UpdateTime(const std::string& uniqueName)
 {

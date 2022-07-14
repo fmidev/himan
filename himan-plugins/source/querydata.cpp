@@ -221,9 +221,10 @@ NFmiHPlaceDescriptor CreateGrid(himan::info<T>& info)
 		{
 			auto g = std::dynamic_pointer_cast<himan::stereographic_grid>(info.Grid());
 
-			theArea = new NFmiStereographicArea(NFmiPoint(g->BottomLeft().X(), g->BottomLeft().Y()),
-			                                    g->Di() * static_cast<double>((g->Ni() - 1)),
-			                                    g->Dj() * static_cast<double>((g->Nj() - 1)), g->Orientation());
+			theArea = new NFmiStereographicArea(
+			    NFmiPoint(g->BottomLeft().X(), g->BottomLeft().Y()), g->Di() * static_cast<double>((g->Ni() - 1)),
+			    g->Dj() * static_cast<double>((g->Nj() - 1)), g->Orientation(), NFmiPoint(0.f, 0.f),
+			    NFmiPoint(1.f, 1.f), g->LatitudeOfCenter(), g->LatitudeOfOrigin());
 			break;
 		}
 

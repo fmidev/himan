@@ -107,36 +107,39 @@ void CreateDirectory(const std::string& filename)
 
 geotiff::geotiff()
 {
-	call_once(oflag, [&]() {
-		GDALRegister_GTiff();
-		GDALRegister_COG();
+	call_once(oflag,
+	          [&]()
+	          {
+		          GDALRegister_GTiff();
+		          GDALRegister_COG();
 
-		// Check environment for AWS variables
-		// GDAL requires           Himan uses
-		// * AWS_S3_ENDPOINT       S3_HOSTNAME
-		// * AWS_ACCESS_KEY_ID     S3_ACCESS_KEY_ID
-		// * AWS_SECRET_ACCESS_KEY S3_SECRET_ACCESS_KEY
-		// * AWS_SESSION_TOKEN     S3_SESSION_TOKEN
-		//
-		// if latter is found, copy it to former
+		          // Check environment for AWS variables
+		          // GDAL requires           Himan uses
+		          // * AWS_S3_ENDPOINT       S3_HOSTNAME
+		          // * AWS_ACCESS_KEY_ID     S3_ACCESS_KEY_ID
+		          // * AWS_SECRET_ACCESS_KEY S3_SECRET_ACCESS_KEY
+		          // * AWS_SESSION_TOKEN     S3_SESSION_TOKEN
+		          //
+		          // if latter is found, copy it to former
 
-		const std::vector<std::pair<std::string, std::string>> keys{{"S3_HOSTNAME", "AWS_S3_ENDPOINT"},
-		                                                            {"S3_ACCESS_KEY_ID", "AWS_ACCESS_KEY_ID"},
-		                                                            {"S3_SECRET_ACCESS_KEY", "AWS_SECRET_ACCESS_KEY"},
-		                                                            {"S3_SESSION_TOKEN", "AWS_SESSION_TOKEN"}};
+		          const std::vector<std::pair<std::string, std::string>> keys{
+		              {"S3_HOSTNAME", "AWS_S3_ENDPOINT"},
+		              {"S3_ACCESS_KEY_ID", "AWS_ACCESS_KEY_ID"},
+		              {"S3_SECRET_ACCESS_KEY", "AWS_SECRET_ACCESS_KEY"},
+		              {"S3_SESSION_TOKEN", "AWS_SESSION_TOKEN"}};
 
-		for (const auto& key : keys)
-		{
-			try
-			{
-				const std::string val = util::GetEnv(key.first);
-				setenv(key.second.c_str(), val.c_str(), 0);
-			}
-			catch (...)
-			{
-			}
-		}
-	});
+		          for (const auto& key : keys)
+		          {
+			          try
+			          {
+				          const std::string val = util::GetEnv(key.first);
+				          setenv(key.second.c_str(), val.c_str(), 0);
+			          }
+			          catch (...)
+			          {
+			          }
+		          }
+	          });
 
 	itsLogger = logger("geotiff");
 }
@@ -488,7 +491,7 @@ param ReadParam(const std::map<std::string, std::string>& meta, const producer& 
 
 	if (parameter.empty() || parameter["name"].empty())
 	{
-		logr.Trace(
+		logr.Warning(
 		    fmt::format("Parameter information matching '{}' not found from table 'param_geotiff'", param_value));
 		return par;
 	}
@@ -509,7 +512,7 @@ level ReadLevel(const std::map<std::string, std::string>& meta, const level& lvl
 		if (m.first == "level")
 		{
 			const auto tokens = util::Split(m.second, "/");
-			type = static_cast<HPLevelType>(stoi(tokens[0]));
+			type = HPStringToLevelType.at(tokens[0]);
 			value = stod(tokens[1]);
 			if (tokens.size() == 3)
 			{
@@ -536,8 +539,12 @@ forecast_type ReadForecastType(const std::map<std::string, std::string>& meta, c
 		if (m.first == "forecast_type")
 		{
 			const auto tokens = util::Split(m.second, "/");
-			type = static_cast<HPForecastType>(stoi(tokens[1]));
-			value = stod(tokens[1]);
+			type = HPStringToForecastType.at(tokens[0]);
+
+			if (tokens.size() == 2)
+			{
+				value = stod(tokens[1]);
+			}
 			break;
 		}
 	}
@@ -555,8 +562,9 @@ void SQLTimeMaskToCTimeMask(std::string& sqlTimeMask)
 	boost::replace_all(sqlTimeMask, "YYYY", "%Y");
 	boost::replace_all(sqlTimeMask, "MM", "%m");
 	boost::replace_all(sqlTimeMask, "DD", "%d");
-	boost::replace_all(sqlTimeMask, "hh", "%H");
-	boost::replace_all(sqlTimeMask, "mm", "%M");
+	boost::replace_all(sqlTimeMask, "HH24", "%H");
+	boost::replace_all(sqlTimeMask, "MI", "%M");
+	boost::replace_all(sqlTimeMask, "SS", "%S");
 }
 
 forecast_time ReadTime(const std::map<std::string, std::string>& meta, const forecast_time& ftime)
@@ -582,7 +590,11 @@ forecast_time ReadTime(const std::map<std::string, std::string>& meta, const for
 		}
 	}
 
-	if (mask.find("YYYY") != std::string::npos)
+	if (boost::to_lower_copy(mask) == "yyyymmddhhmm")
+	{
+		mask = "%Y%m%d%H%M";
+	}
+	else if (mask.find("YYYY") != std::string::npos)
 	{
 		SQLTimeMaskToCTimeMask(mask);
 	}
@@ -610,7 +622,7 @@ std::map<std::string, std::string> ParseMetadata(char** mdata, const producer& p
 	}
 
 	// First check keys with Himan-known 'standard' names
-	const std::vector<std::string> standardNames{"forecast_type", "level"};
+	const std::vector<std::string> standardNames{"forecast_type", "level", "param_name", "origin_time", "valid_time"};
 
 	for (const auto& keyName : standardNames)
 	{
@@ -710,7 +722,13 @@ void ReadData(GDALRasterBand* poBand, matrix<T>& mat, const std::map<std::string
 	}
 	else
 	{
-		mat.MissingValue(static_cast<T>(poBand->GetNoDataValue(nullptr)));
+		int ret = 0;
+		const T miss = static_cast<T> (poBand->GetNoDataValue(&ret));
+
+		if (ret == 1)
+		{
+			mat.MissingValue(miss);
+		}
 	}
 
 	ASSERT(poBand->GetXSize() == static_cast<int>(mat.SizeX()));
@@ -753,7 +771,8 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 {
 	std::vector<std::shared_ptr<himan::info<T>>> infos;
 
-	auto ParseFileName = [](const file_information& finfo) {
+	auto ParseFileName = [](const file_information& finfo)
+	{
 		std::string ret = finfo.file_location;
 
 		if (finfo.storage_type == kS3ObjectStorageSystem)
@@ -801,8 +820,8 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 	auto ftype = ReadForecastType(meta, options.ftype);
 	auto ftime = ReadTime(meta, options.time);
 
-	auto MakeInfoFromGeoTIFFBand = [&](GDALRasterBand* poBand) -> std::shared_ptr<info<T>> {
-
+	auto MakeInfoFromGeoTIFFBand = [&](GDALRasterBand* poBand) -> std::shared_ptr<info<T>>
+	{
 		// Read possible metadata from band
 		auto bmeta = ParseMetadata(poBand->GetMetadata(), options.prod);
 

@@ -191,6 +191,7 @@ info-class combines all different pieces of metadata into one. This class instan
 | forecast_time | GetTime | | Returns current time |
 | forecast_type | GetForecastType | | Returns current forecast type |
 | | SetParam | param | Sets (replaces) current parameter |
+| | SetParam | param, bool | Sets (replaces) current parameter. Second argument controls if parameter information is already imbedded in param object (true=yes, false=no) |
 | | SetLevel | level | Sets (replaces) current level |
 | | SetTime | forecast_time | Sets (replaces) current time |
 | | SetForecastType | forecast_type | Sets (replaces) current forecast type |
@@ -367,6 +368,21 @@ raw_time represents a timestamp and is a thin wrapper over boost::posix_time::pt
 | | Adjust | HPTimeResolution, number | Adjust time as needed |
 | bool | Empty | | Checks if time is valid |
 
+## stereographic_grid
+
+stereographic_grid represents an area & grid in (polar) stereographic projection.
+
+| Return value  | Name | Arguments | Description |
+|---|---|---|---|
+| string | ClassName | | Returns class name |
+| point | GetBottomLeft | | Return latlon coordinates of bottom left corner |
+| point | GetTopRight | | Return latlon coordinates of top right corner |
+| point | GetFirstPoint | | Return latlon coordinates of first point |
+| point | GetLastPoint | | Return latlon coordinates of last point |
+| number | GetOrientation | | Return longitude of projection center |
+| number | GetLatitudeOfCenter | | Return latitude of projection center |
+| number | GetLatitudeOfOrigin | | Return latitude where scale is not distorted (only applicable for polar stereographic) |
+
 ## time_duration
 
 time_duration represents a time interval or duration, and it's a thin wrapper over boost::posix_time::time_duration.
@@ -387,6 +403,8 @@ ensemble is a representation of an ensemble forecast as a unit. This enables pro
 forecast.
 
 	local e = ensemble(param("T-K"), ensemble_size)
+	local e = ensemble(param("T-K"), ensemble_size, maximum_missing_forecasts)
+
 
 | Return value | Name | Arguments | Description |
 |---|---|---|---|
@@ -403,7 +421,6 @@ forecast.
 | number | CentralMoment | integer | Returns the Nth central moment of the ensemble member values at the current location |
 | number | Size | | Returns the size of the currently fetched ensemble |
 | number | ExpectedSize | | Returns the expected size of the ensemble, which can be different from the current size of the ensemble |
-| | SetMaximumMissingForecasts | integer | Set the number of allowed missing forecasts in the ensemble |
 | number | GetMaximumMissingForecasts | | Get the number of allowed missing forecasts in the ensemble |
 | info | GetForecast | number | Get the data of an ensemble member with given order number |
 
@@ -412,6 +429,12 @@ forecast.
 lagged_ensemble is an ensemble that is composed of ensembles from different analysis times.
 
 	local e = lagged_ensemble(param("T-K"), ensemble_size, HPTimeResolution.kHourResolution, lag, steps)
+	local e = lagged_ensemble(param("T-K"), ensemble_size, HPTimeResolution.kHourResolution, lag, steps, maximum_missing_forecasts)
+	local e = lagged_ensemble(param("T-K"), "named_ensemble_name")
+	local e = lagged_ensemble(param("T-K"), "named_ensemble_name", maximum_missing_foracsts
+        local e = lagged_ensemble(param("T-K"), "cf0,pf1-2", "00:00:00,-01:00:00,-02:00:00", 0)
+
+named_ensemble_name can be either 'MEPS_SINGLE_ENSEMBLE' or 'MEPS_LAGGED_ENSEMBLE'.
 
 lagged_ensemble is derived from ensemble.
 
@@ -482,8 +505,32 @@ Note! The argument for WriteToFile MUST be 'result'!
 | table | Fetch | forecast_time, level, param | Fetch data with given search arguments |
 | table | FetchWithType | forecast_time, level, param, forecast_type | Fetch data with given search arguments including forecast_type |
 | info | FetchInfo | forecast_time, level, param | Fetch data with given search arguments, return info |
-| info | FetchInfoWithTypw | forecast_time, level, param, forecast_type | Fetch data with given search arguments including forecast_type, return info |
-| | WriteToFile | table | Writes gived data to file |
+| info | FetchInfoWithType | forecast_time, level, param, forecast_type | Fetch data with given search arguments including forecast_type, return info |
+| table | FetchWithArgs | table | Fetch data with given search arguments |
+| info | FetchInfoWithArgs | table | Fetch data with given search arguments, return info |
+| | WriteToFile | table | Writes given data to file |
+
+With FetchWithArgs and FetchInfoWithArgs, the function argument is table that should have the 
+following keys:
+
+Mandatory fields are:
+
+* forecast_time
+* level
+* param
+    
+Optional fields are:
+
+* forecast_type, default: deterministic
+* return_packed_data, false
+* read_previous_forecast_if_not_found, false
+* geom_name, use configuration value
+* producer, use configuration value
+* lsm_threshold, false
+* do_interpolation, true
+* do_level_transform, true
+* do_vector_rotation, true
+* use_cache, true
 
 ## Missing
 

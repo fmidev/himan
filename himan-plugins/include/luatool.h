@@ -11,7 +11,8 @@
 #include "compiled_plugin_base.h"
 #include "himan_common.h"
 
-extern "C" {
+extern "C"
+{
 #include <lua.h>
 }
 
@@ -26,9 +27,9 @@ T* get_pointer(std::shared_ptr<T> const& p)
 {
 	return p.get();
 }
-}
-}
-}
+}  // namespace has_get_pointer_
+}  // namespace detail
+}  // namespace luabind
 
 #include <luabind/object.hpp>
 
@@ -57,12 +58,14 @@ class luatool : public compiled_plugin, public compiled_plugin_base
 	                                        const param& theParam) const;
 	std::shared_ptr<info<double>> FetchInfo(const forecast_time& theTime, const level& theLevel, const param& theParam,
 	                                        const forecast_type& theType) const;
+	std::shared_ptr<info<double>> FetchInfoWithArgs(const luabind::object& o) const;
 
 	luabind::object Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam) const;
 	luabind::object Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam,
-	                      const forecast_type& theType) const;
+	                      const forecast_type& theType = forecast_type(kDeterministic)) const;
 	luabind::object Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam,
 	                      const forecast_type& theType, const producer& prod, const std::string& geomName) const;
+	luabind::object FetchWithArgs(const luabind::object& o) const;
 
 	void WriteToFile(const std::shared_ptr<info<double>> targetInfo, write_options opts = write_options()) override;
 	void WriteToFile(const std::shared_ptr<info<double>> targetInfo);

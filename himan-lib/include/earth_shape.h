@@ -9,6 +9,12 @@
 
 namespace himan
 {
+namespace
+{
+template <typename T>
+std::string NameFromShape(T A, T B);
+}
+
 template <typename T>
 class earth_shape
 {
@@ -86,6 +92,10 @@ earth_shape<T>::earth_shape(T theA, T theB) : itsA(theA), itsB(theB), itsName()
 template <typename T>
 earth_shape<T>::earth_shape(T theA, T theB, const std::string& theName) : itsA(theA), itsB(theB), itsName(theName)
 {
+	if (itsName.empty())
+	{
+		itsName = NameFromShape(itsA, itsB);
+	}
 }
 
 template <typename T>
@@ -184,9 +194,30 @@ std::ostream& operator<<(std::ostream& file, const earth_shape<T>& ob)
 	return ob.Write(file);
 }
 
+// https://desktop.arcgis.com/en/arcmap/10.3/guide-books/map-projections/about-the-geoid-ellipsoid-spheroid-and-datum-and-h.htm
+
 const earth_shape<double> ELLIPS_NEWBASE(6371220, 6371220, "newbase");
-const earth_shape<double> ELLIPS_WGS84(6378137, 6356752.31424783, "WGS84");
-const earth_shape<double> ELLIPS_GRS80(6378137, 6356752.31414028, "GRS80");
+const earth_shape<double> ELLIPS_WGS84(6378137, 6356752.31424518, "WGS84");
+const earth_shape<double> ELLIPS_GRS80(6378137, 6356752.31414, "GRS80");
+
+namespace
+{
+template <typename T>
+std::string NameFromShape(T A, T B)
+{
+	std::vector<earth_shape<double>> ellps{ELLIPS_NEWBASE, ELLIPS_WGS84, ELLIPS_GRS80};
+
+	for (const auto& e : ellps)
+	{
+		if (fabs(A - e.A()) < 0.000001 && fabs(B - e.B()) < 0.000001)
+		{
+			return e.Name();
+		}
+	}
+
+	return "";
+}
+}  // namespace
 
 }  // namespace himan
 

@@ -21,12 +21,12 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 21.8.11
-Requires: lua >= 5.1.4
+Requires: himan-lib >= 22.6.16
+Requires: lua >= 5.3.0
 Requires: unixODBC
 Requires: libfmigrib >= 20.12.2
-Requires: libfmidb >= 21.3.31
-Requires: smartmet-library-newbase >= 21.6.16
+Requires: libfmidb >= 22.1.10
+Requires: smartmet-library-newbase >= 22.3.22
 Requires: smartmet-library-gis
 Requires: smartmet-library-macgyver
 Requires: boost169-iostreams
@@ -34,28 +34,18 @@ Requires: boost169-thread
 Requires: libs3 >= 4.1
 Requires: jasper-libs
 Requires: eccodes
-Requires: gdal32-libs
-
-%if %{defined el7}
-BuildRequires: scons
-BuildRequires: eigen >= 3.3.4
-BuildRequires: libpqxx-devel >= 5.0.1
-Requires: libpqxx >= 5.0.1
-
-%else if %{defined el8}
+Requires: gdal34-libs
 BuildRequires: python3-scons
 BuildRequires: eigen3-devel >= 3.3.4
-BuildRequires: libpqxx-devel >= 7.5.2
-Requires: libpqxx >= 7.5.2
-
-%endif
+BuildRequires: libpqxx-devel >= 7.6.0
+Requires: libpqxx >= 7.6.0
 
 %if %{defined suse_version}
 Requires: libjasper
 Requires: grib_api
 %else
 BuildRequires: make
-BuildRequires: gdal32-devel
+BuildRequires: gdal34-devel
 BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: cuda-nvcc-11-1
 BuildRequires: cuda-cudart-devel-11-1
@@ -67,8 +57,8 @@ BuildRequires: cuda-cusp-11-1 >= 0.5.1
 BuildRequires: libs3-devel >= 4.1
 BuildRequires: libfmigrib >= 20.12.2
 BuildRequires: libfmigrib-devel >= 20.12.2
-BuildRequires: libfmidb-devel >= 20.7.8
-BuildRequires: smartmet-library-newbase-devel >= 21.2.20
+BuildRequires: libfmidb-devel >= 22.1.10
+BuildRequires: smartmet-library-newbase-devel >= 21.12.7
 BuildRequires: smartmet-library-gis-devel
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: boost169-devel

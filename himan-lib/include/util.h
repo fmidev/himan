@@ -9,6 +9,7 @@
 #define UTIL_H_
 
 #include "configuration.h"
+#include "ensemble.h"
 #include "grid.h"
 #include "himan_common.h"
 #include "info.h"
@@ -297,7 +298,8 @@ template <>
 inline std::vector<double> Convert(const std::vector<float>& v)
 {
 	std::vector<double> ret(v.size());
-	replace_copy_if(v.begin(), v.end(), ret.begin(), [](const float& val) { return IsMissing(val); }, MissingDouble());
+	replace_copy_if(
+	    v.begin(), v.end(), ret.begin(), [](const float& val) { return IsMissing(val); }, MissingDouble());
 	return ret;
 }
 
@@ -305,9 +307,26 @@ template <>
 inline std::vector<float> Convert(const std::vector<double>& v)
 {
 	std::vector<float> ret(v.size());
-	replace_copy_if(v.begin(), v.end(), ret.begin(), [](const double& val) { return IsMissing(val); }, MissingFloat());
+	replace_copy_if(
+	    v.begin(), v.end(), ret.begin(), [](const double& val) { return IsMissing(val); }, MissingFloat());
 	return ret;
 }
+
+/**
+ * @brief Create a list (vector) of forecast types based on string specifier
+ *
+ * For example pf1-10 will create a list of 10 forecast_types with numbers 1...10
+ *
+ */
+
+std::vector<forecast_type> ForecastTypesFromString(const std::string& type);
+
+/**
+ * @brief Create an ensemble from options found in configuration file
+ *
+ */
+
+std::unique_ptr<ensemble> CreateEnsembleFromConfiguration(const std::shared_ptr<const plugin_configuration>& conf);
 
 template <class... Conts>
 inline auto zip_range(Conts&... conts)

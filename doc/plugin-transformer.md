@@ -10,6 +10,7 @@ Possible transformations are:
 * level change
 * forecast type change
 * time interpolation
+* level interpolation
 
 Plugin is optimized for GPU use.
 
@@ -46,6 +47,10 @@ target_param: define target parameter name
 target_param_aggregation: define target parameter (time) aggregation type
 
     "target_param_aggregation" : "average"
+
+target_param_aggregation_period: define target parameter aggregation period
+
+    "target_param_aggregation_period" : "06:00"
 
 target_param_processing_type: define target parameter processing type
 
@@ -95,6 +100,10 @@ time_interpolation: define if Himan should do time interpolation if data is not 
 
     "time_interpolation" : true
 
+level_interpolation: define if Himan should do vertical interpolation, if data is not found for some level (default: false). Only supported for level types 'height' (unit=meters) and 'pressure' (unit=hectopascal). Both time_interpolation and level_interpolation cannot be defined at the same time.
+
+    "level_interpolation" : true
+
 change_missing_value_to: define if missing value should be changed to some normal floating point value (note: this is not the same as defining a different missing value: the resulting grib will have no missing values defined!)
 
     "change_missing_value_to" : 0
@@ -106,3 +115,23 @@ write_empty_grid: define if an empty grid (all values missing) should be written
 precision: define the precision used writing output files, decimal places. default: use what is in database
 
     "precision" : 2
+
+landscape_interpolation: use topography and land-sea mask to downscale gridded data
+
+    "landscape_interpolation" : true
+
+grib1_X: override grib1 parameter information that is normally fetched from database. Note: both keys need to exist.
+
+    "grib1_table_number" : 0
+    "grib1_parameter_number" : 0
+
+grib2_X: override grib2 parameter information that is normally fetched from database. Note: all three keys need to exist.
+
+    "grib2_discipline" : 0
+    "grib2_parameter_category" : 0
+    "grib2_parameter_number" : 0
+
+univ_id: override querydata parameter number that is normally fetched from database
+
+    "univ_id" : 4
+

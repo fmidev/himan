@@ -72,12 +72,12 @@ class fetcher : public auxiliary_plugin
 	std::shared_ptr<info<T>> Fetch(std::shared_ptr<const plugin_configuration> config, forecast_time requestedValidTime,
 	                               level requestedLevel, const params& requestedParams,
 	                               forecast_type requestedType = forecast_type(kDeterministic),
-	                               bool readPackedData = false);
+	                               bool readPackedData = false, bool readFromPreviousForecastIfNotFound = false);
 	std::shared_ptr<info<double>> Fetch(std::shared_ptr<const plugin_configuration> config,
 	                                    forecast_time requestedValidTime, level requestedLevel,
 	                                    const params& requestedParams,
 	                                    forecast_type requestedType = forecast_type(kDeterministic),
-	                                    bool readPackedData = false);
+	                                    bool readPackedData = false, bool readFromPreviousForecastIfNotFound = false);
 
 	/**
 	 * @brief Fetch data based on given arguments.
@@ -99,11 +99,13 @@ class fetcher : public auxiliary_plugin
 	std::shared_ptr<info<T>> Fetch(std::shared_ptr<const plugin_configuration> config, forecast_time requestedValidTime,
 	                               level requestedLevel, param requestedParam,
 	                               forecast_type requestedType = forecast_type(kDeterministic),
-	                               bool readPackedData = false, bool suppressLogging = false);
+	                               bool readPackedData = false, bool suppressLogging = false,
+	                               bool readFromPreviousForecastIfNotFound = false);
 	std::shared_ptr<info<double>> Fetch(std::shared_ptr<const plugin_configuration> config,
 	                                    forecast_time requestedValidTime, level requestedLevel, param requestedParam,
 	                                    forecast_type requestedType = forecast_type(kDeterministic),
-	                                    bool readPackedData = false, bool suppressLogging = false);
+	                                    bool readPackedData = false, bool suppressLogging = false,
+	                                    bool readFromPreviousForecastIfNotFound = false);
 
 	/**
 	 * @brief Set flag for level transform

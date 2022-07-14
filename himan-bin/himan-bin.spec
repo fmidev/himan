@@ -21,36 +21,28 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 21.8.11
-Requires: himan-plugins >= 21.8.11
+Requires: himan-lib >= 22.6.16
+Requires: himan-plugins >= 22.6.16
 Requires: zlib
 Requires: libfmidb
 Requires: xerces-c
-BuildRequires: boost169-devel
-BuildRequires: fmt-devel >= 7.1.0
-
-%if %{defined el7}
-BuildRequires: scons
-Requires: jasper
-
-%else if %{defined el8}
-BuildRequires: python3-scons
+Requires: libpqxx >= 7.6.0
+Requires: gdal34-libs
 Requires: jasper-libs
-
-%endif
-
-BuildRequires: redhat-rpm-config
-BuildRequires: gcc-c++ >= 4.8.2
-BuildRequires: cuda-nvcc-11-1
-BuildRequires: cuda-cudart-devel-11-1
-BuildRequires: make
 Requires: boost169-program-options
 Requires: boost169-system
 Requires: boost169-regex
 Requires: boost169-iostreams
 Requires: boost169-thread
 Requires: bzip2-libs
-
+BuildRequires: boost169-devel
+BuildRequires: fmt-devel >= 7.1.0
+BuildRequires: python3-scons
+BuildRequires: redhat-rpm-config
+BuildRequires: gcc-c++ >= 4.8.2
+BuildRequires: cuda-nvcc-11-1
+BuildRequires: cuda-cudart-devel-11-1
+BuildRequires: make
 Provides: himan
 
 AutoReqProv:	no

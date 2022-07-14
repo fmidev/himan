@@ -19,7 +19,8 @@
 
 #ifndef __clang_analyzer__
 
-extern "C" {
+extern "C"
+{
 #include <lualib.h>
 }
 
@@ -51,7 +52,7 @@ namespace
 {
 thread_local lua_State* myL;
 bool myUseCuda;
-}
+}  // namespace
 
 luatool::luatool() : itsWriteOptions()
 {
@@ -503,31 +504,41 @@ matrix<T> GetData(std::shared_ptr<info<T>>& anInfo)
 	return anInfo->Data();
 }
 template <typename T>
-void SetParam(std::shared_ptr<info<T>>& anInfo, const param& par)
+void SetParam(std::shared_ptr<info<T>>& anInfo, const param& par, bool paramInformationExists)
 {
-	auto r = GET_PLUGIN(radon);
-
 	param newpar(par);
 
-	const auto lvl = anInfo->template Peek<level>(0);
-	auto paramInfo =
-	    r->RadonDB().GetParameterFromDatabaseName(anInfo->Producer().Id(), par.Name(), lvl.Type(), lvl.Value());
-
-	if (!paramInfo.empty())
+	if (!paramInformationExists)
 	{
-		newpar = param(paramInfo);
+		auto r = GET_PLUGIN(radon);
 
-		if (par.Aggregation().Type() != kUnknownAggregationType)
+		const auto lvl = anInfo->template Peek<level>(0);
+
+		auto paramInfo =
+		    r->RadonDB().GetParameterFromDatabaseName(anInfo->Producer().Id(), par.Name(), lvl.Type(), lvl.Value());
+
+		if (!paramInfo.empty())
 		{
-			newpar.Aggregation(par.Aggregation());
-		}
-		if (par.ProcessingType().Type() != kUnknownProcessingType)
-		{
-			newpar.ProcessingType(par.ProcessingType());
+			newpar = param(paramInfo);
+
+			if (par.Aggregation().Type() != kUnknownAggregationType)
+			{
+				newpar.Aggregation(par.Aggregation());
+			}
+			if (par.ProcessingType().Type() != kUnknownProcessingType)
+			{
+				newpar.ProcessingType(par.ProcessingType());
+			}
 		}
 	}
 
 	anInfo->template Set<param>(newpar);
+}
+
+template <typename T>
+void SetParam(std::shared_ptr<info<T>>& anInfo, const param& par)
+{
+	SetParam<T>(anInfo, par, false);
 }
 }  // namespace info_wrapper
 
@@ -1054,7 +1065,7 @@ object SortedValues(const ensemble& ens)
 {
 	return VectorToTable<float>(ens.SortedValues());
 }
-}  // ensemble_wrapper
+}  // namespace ensemble_wrapper
 
 namespace lagged_ensemble_wrapper
 {
@@ -1066,7 +1077,7 @@ object SortedValues(const lagged_ensemble& ens)
 {
 	return VectorToTable<float>(ens.SortedValues());
 }
-}  // lagged_ensemble_wrapper
+}  // namespace lagged_ensemble_wrapper
 
 namespace matrix_wrapper
 {
@@ -1085,7 +1096,7 @@ void Fill(matrix<T>& mat, T value)
 {
 	mat.Fill(value);
 }
-}  // matrix_wrapper
+}  // namespace matrix_wrapper
 
 namespace luabind_workaround
 {
@@ -1148,7 +1159,7 @@ matrix<T> ProbLimitEq2D(const matrix<T>& A, const matrix<T>& B, T limit)
 #endif
 	return numerical_functions::Prob2D<T>(A, B, [=](const T& val) { return val == limit; });
 }
-}
+}  // namespace luabind_workaround
 
 // clang-format off
 
@@ -1185,9 +1196,9 @@ void BindLib(lua_State* L)
 	              .def("SetTime", LUA_MEMFN(void, info<double>, Set<forecast_time>, const forecast_time&))
 	              .def("SetLevel", LUA_MEMFN(void, info<double>, Set<level>, const level&))
 	              .def("SetForecastType", LUA_MEMFN(void, info<double>, Set<forecast_type>, const forecast_type&))
-	              //.def("SetParam", LUA_MEMFN(void, info, SetParam, const param&))
 	              // These are local functions to luatool
-	              .def("SetParam", &info_wrapper::SetParam<double>)
+	              .def("SetParam", (void(*)(std::shared_ptr<info<double>>&, const param&)) &info_wrapper::SetParam<double>)
+	              .def("SetParam", (void(*)(std::shared_ptr<info<double>>&, const param&, bool)) &info_wrapper::SetParam<double>)
 	              .def("SetIndexValue", &info_wrapper::SetValue<double>)
 	              .def("GetIndexValue", &info_wrapper::GetValue<double>)
 	              .def("GetTimeIndex", &info_wrapper::GetTimeIndex<double>)
@@ -1232,7 +1243,8 @@ void BindLib(lua_State* L)
 	              .def("GetGrid", LUA_CMEMFN(std::shared_ptr<grid>, info<float>, Grid, void))
 	              .def("SetTime", LUA_MEMFN(void, info<float>, Set<forecast_time>, const forecast_time&))
 	              .def("SetLevel", LUA_MEMFN(void, info<float>, Set<level>, const level&))
-	              .def("SetParam", &info_wrapper::SetParam<float>)
+	              .def("SetParam", (void(*)(std::shared_ptr<info<float>>&, const param&)) &info_wrapper::SetParam<float>)
+	              .def("SetParam", (void(*)(std::shared_ptr<info<float>>&, const param&, bool)) &info_wrapper::SetParam<float>)
 	              .def("SetForecastType", LUA_MEMFN(void, info<float>, Set<forecast_type>, const forecast_type&))
 	              .def("SetIndexValue", &info_wrapper::SetValue<float>)
 	              .def("GetIndexValue", &info_wrapper::GetValue<float>)
@@ -1284,7 +1296,26 @@ void BindLib(lua_State* L)
 	              .def("GetTopRight", LUA_CMEMFN(point, stereographic_grid, TopRight, void))
 	              .def("GetFirstPoint", LUA_CMEMFN(point, stereographic_grid, FirstPoint, void))
 	              .def("GetLastPoint", LUA_CMEMFN(point, stereographic_grid, LastPoint, void))
-	              .def("GetOrientation", LUA_CMEMFN(double, stereographic_grid, Orientation, void)),
+	              .def("GetOrientation", LUA_CMEMFN(double, stereographic_grid, Orientation, void))
+	              .def("GetLatitudeOfCenter", LUA_CMEMFN(double, stereographic_grid, LatitudeOfCenter, void))
+	              .def("GetLatitudeOfOrigin", LUA_CMEMFN(double, stereographic_grid, LatitudeOfOrigin, void))
+	              .def("GetNi", LUA_CMEMFN(size_t, stereographic_grid, Ni, void))
+	              .def("GetNj", LUA_CMEMFN(size_t, stereographic_grid, Nj, void))
+	              .def("GetDi", LUA_CMEMFN(double, stereographic_grid, Di, void))
+	              .def("GetDj", LUA_CMEMFN(double, stereographic_grid, Dj, void)),
+	          class_<lambert_conformal_grid, grid, std::shared_ptr<lambert_conformal_grid>>("lambert_conformal_grid")
+	              .def("ClassName", &lambert_conformal_grid::ClassName)
+	              .def("GetBottomLeft", LUA_CMEMFN(point, lambert_conformal_grid, BottomLeft, void))
+	              .def("GetTopRight", LUA_CMEMFN(point, lambert_conformal_grid, TopRight, void))
+	              .def("GetFirstPoint", LUA_CMEMFN(point, lambert_conformal_grid, FirstPoint, void))
+	              .def("GetLastPoint", LUA_CMEMFN(point, lambert_conformal_grid, LastPoint, void))
+	              .def("GetOrientation", LUA_CMEMFN(double, lambert_conformal_grid, Orientation, void))
+	              .def("GetStandradParallel1", LUA_CMEMFN(double, lambert_conformal_grid, StandardParallel1, void))
+	              .def("GetStandardParallel2", LUA_CMEMFN(double, lambert_conformal_grid, StandardParallel2, void))
+	              .def("GetNi", LUA_CMEMFN(size_t, lambert_conformal_grid, Ni, void))
+	              .def("GetNj", LUA_CMEMFN(size_t, lambert_conformal_grid, Nj, void))
+	              .def("GetDi", LUA_CMEMFN(double, lambert_conformal_grid, Di, void))
+	              .def("GetDj", LUA_CMEMFN(double, lambert_conformal_grid, Dj, void)),
 #if 0
 	          class_<reduced_gaussian_grid, grid, std::shared_ptr<reduced_gaussian_grid>>("reduced_gaussian_grid")
 	              .def(constructor<>())
@@ -1446,6 +1477,7 @@ void BindLib(lua_State* L)
 	              .def_readwrite("use_bitmap", &write_options::use_bitmap),
 		  class_<himan::ensemble, std::shared_ptr<himan::ensemble>>("ensemble")
 		      .def(constructor<param, int>())
+		      .def(constructor<param, int, int>())
 		      .def("ClassName", &ensemble::ClassName)
 		      .def("Fetch", &ensemble::Fetch)
 		      .def("Values", &ensemble_wrapper::Values)
@@ -1459,12 +1491,13 @@ void BindLib(lua_State* L)
 		      .def("CentralMoment", LUA_CMEMFN(float,ensemble,CentralMoment, int))
 		      .def("Size", &ensemble::Size)
 		      .def("ExpectedSize", &ensemble::ExpectedSize)
-		      .def("SetMaximumMissingForecasts", LUA_MEMFN(void, ensemble, MaximumMissingForecasts, int))
 		      .def("GetMaximumMissingForecasts", LUA_CMEMFN(int, ensemble, MaximumMissingForecasts, void))
 		      .def("GetForecast", &ensemble::Forecast),
 		  class_<himan::lagged_ensemble, ensemble, std::shared_ptr<himan::lagged_ensemble>>("lagged_ensemble")
 		      .def(constructor<param, size_t, const time_duration&, size_t>())
+		      .def(constructor<param, size_t, const time_duration&, size_t, int>())
 		      .def(constructor<param, const std::string&>())
+		      .def(constructor<param, const std::string&, int>())
 		      .def("ClassName", &lagged_ensemble::ClassName)
 		      .def("Fetch", &lagged_ensemble::Fetch)
 		      .def("Value", &lagged_ensemble::Value)
@@ -1476,7 +1509,6 @@ void BindLib(lua_State* L)
 		      .def("Size", &lagged_ensemble::Size)
 		      .def("ExpectedSize", &lagged_ensemble::ExpectedSize)
 		      .def("VerifyValidForecastCount", &lagged_ensemble::VerifyValidForecastCount)
-		      .def("SetMaximumMissingForecasts", LUA_MEMFN(void, lagged_ensemble, MaximumMissingForecasts, int))
 		      .def("GetMaximumMissingForecasts", LUA_CMEMFN(int, lagged_ensemble, MaximumMissingForecasts, void)),
 		  class_<modifier>("modifier")
 		      .def("Result", &modifier_wrapper::Result)
@@ -1575,7 +1607,9 @@ void BindPlugins(lua_State* L)
 	              .def("FetchWithType", LUA_CMEMFN(object, luatool, Fetch, const forecast_time&, const level&,
 	                                               const param&, const forecast_type&))
 	              .def("FetchWithProducer", LUA_CMEMFN(object, luatool, Fetch, const forecast_time&, const level&,
-	                                               const param&, const forecast_type&, const producer& prod, const std::string& geomName)),
+	                                               const param&, const forecast_type&, const producer& prod, const std::string& geomName))
+	              .def("FetchInfoWithArgs", LUA_CMEMFN(std::shared_ptr<himan::info<double>>, luatool, FetchInfoWithArgs, const luabind::object&))
+	              .def("FetchWithArgs", LUA_CMEMFN(object, luatool, FetchWithArgs, const luabind::object&)),
 	          class_<hitool, std::shared_ptr<hitool>>("hitool")
 	              .def(constructor<>())
 	              .def("ClassName", &hitool::ClassName)
@@ -1610,6 +1644,96 @@ void BindPlugins(lua_State* L)
 
 // clang-format on
 
+template <typename T>
+T GetOptional(const luabind::object& o, const std::string& key, const T& def)
+{
+	try
+	{
+		return object_cast<T>(o[key]);
+	}
+	catch (cast_failed& e)
+	{
+		return def;
+	}
+}
+
+std::shared_ptr<info<double>> luatool::FetchInfoWithArgs(const luabind::object& o) const
+{
+	try
+	{
+		// mandatory arguments
+		const auto ftime = object_cast<forecast_time>(o["forecast_time"]);
+		const auto lvl = object_cast<level>(o["level"]);
+		const auto par = object_cast<param>(o["param"]);
+
+		// optional arguments
+		const auto ftype = GetOptional(o, "forecast_type", forecast_type(kDeterministic));
+		const auto rpacked = GetOptional(o, "return_packed_data", false);
+		const auto rprev = GetOptional(o, "read_previous_forecast_if_not_found", false);
+		const auto gn = GetOptional<std::string>(o, "geom_name", "");
+		const auto prod = GetOptional(o, "producer", producer());
+		const auto lsm_thr = GetOptional(o, "lsm_threshold", MissingDouble());
+		const auto do_interp = GetOptional(o, "do_interpolation", true);
+		const auto do_levelx = GetOptional(o, "do_level_transform", true);
+		const auto use_cache = GetOptional(o, "use_cache", true);
+		const auto do_rot = GetOptional(o, "do_vector_rotation", true);
+
+		auto cnf = std::make_shared<plugin_configuration>(*itsConfiguration);
+
+		if (prod.Id() != kHPMissingInt)
+		{
+			cnf->SourceProducers({prod});
+		}
+
+		if (gn.empty() == false)
+		{
+			cnf->SourceGeomNames({gn});
+		}
+
+		const bool sl = false;  // suppress logging
+
+		auto f = GET_PLUGIN(fetcher);
+
+		f->DoInterpolation(do_interp);
+		f->DoLevelTransform(do_levelx);
+		f->DoVectorComponentRotation(do_rot);
+		f->UseCache(use_cache);
+		if (IsValid(lsm_thr))
+		{
+			f->ApplyLandSeaMask(true);
+			f->LandSeaMaskThreshold(lsm_thr);
+		}
+
+		return f->Fetch<double>(cnf, ftime, lvl, par, ftype, rpacked, sl, rprev);
+	}
+	catch (cast_failed& e)
+	{
+		itsLogger.Error(e.what());
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e == kFileDataNotFound)
+		{
+			return nullptr;
+		}
+		throw e;
+	}
+
+	return nullptr;
+}
+
+luabind::object luatool::FetchWithArgs(const luabind::object& o) const
+{
+	const auto ret = FetchInfoWithArgs(o);
+
+	if (!ret)
+	{
+		return object();
+	}
+
+	return VectorToTable<double>(ret->Data().Values());
+}
+
 std::shared_ptr<info<double>> luatool::FetchInfo(const forecast_time& theTime, const level& theLevel,
                                                  const param& theParam) const
 {
@@ -1630,45 +1754,29 @@ luabind::object luatool::Fetch(const forecast_time& theTime, const level& theLev
 luabind::object luatool::Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam,
                                const forecast_type& theType) const
 {
-	auto x = compiled_plugin_base::Fetch(theTime, theLevel, theParam, theType, false);
+	luabind::object o = newtable(myL);
 
-	if (!x)
-	{
-		return object();
-	}
-	return VectorToTable<double>(x->Data().Values());
+	o["forecast_time"] = theTime;
+	o["level"] = theLevel;
+	o["param"] = theParam;
+	o["forecast_type"] = theType;
+
+	return FetchWithArgs(o);
 }
 
 luabind::object luatool::Fetch(const forecast_time& theTime, const level& theLevel, const param& theParam,
                                const forecast_type& theType, const producer& prod, const std::string& geomName) const
 {
-	auto cnf = std::make_shared<plugin_configuration>(*itsConfiguration);
-	if (geomName.empty() == false)
-	{
-		cnf->SourceGeomNames({geomName});
-	}
+	luabind::object o = newtable(myL);
 
-	cnf->SourceProducers({prod});
+	o["forecast_time"] = theTime;
+	o["level"] = theLevel;
+	o["param"] = theParam;
+	o["forecast_type"] = theType;
+	o["producer"] = prod;
+	o["geom_name"] = geomName;
 
-	try
-	{
-		auto f = GET_PLUGIN(fetcher);
-		auto x = f->Fetch(cnf, theTime, theLevel, theParam, theType, false);
-
-		if (!x)
-		{
-			return object();
-		}
-		return VectorToTable<double>(x->Data().Values());
-	}
-	catch (const HPExceptionType& e)
-	{
-		if (e == kFileDataNotFound)
-		{
-			return object();
-		}
-		throw e;
-	}
+	return FetchWithArgs(o);
 }
 
 template <typename T>

@@ -129,13 +129,22 @@ int HighestOrderNumber(const vector<plugin_timing>& timingList, const std::strin
 	return highest;
 }
 
-void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
+void UpdateSSState(const shared_ptr<const plugin_configuration>& pc)
 {
-	auto r = GET_PLUGIN(radon);
+	logger log("himan");
+
+	if (pc->DatabaseType() != kRadon || pc->WriteToDatabase() == false || pc->UpdateSSStateTable() == false ||
+	    pc->OutputFileType() == kGeoTIFF)
+	{
+		log.Trace("ss_state table update disabled");
+		return;
+	}
 
 	const auto& summaryRecords = pc->Statistics()->SummaryRecords();
+
+	auto r = GET_PLUGIN(radon);
+
 	int inserts = 0, updates = 0;
-	logger log("himan");
 
 	for (const auto& record : summaryRecords)
 	{
@@ -182,6 +191,69 @@ void UpdateSSState(const shared_ptr<plugin_configuration>& pc)
 	log.Debug(fmt::format("Update of ss_state: {} inserts, {} updates", inserts, updates));
 }
 
+void PrintPluginSummaryTable(const vector<plugin_timing>& pluginTimes_)
+{
+	auto pluginTimes = pluginTimes_;
+
+	// bubble sort
+
+	bool passed;
+
+	do
+	{
+		passed = true;
+
+		for (size_t i = 1; i < pluginTimes.size(); i++)
+		{
+			plugin_timing prev = pluginTimes[i - 1];
+			plugin_timing cur = pluginTimes[i];
+
+			if (prev.time_elapsed < cur.time_elapsed)
+			{
+				pluginTimes[i - 1] = cur;
+				pluginTimes[i] = prev;
+				passed = false;
+			}
+		}
+	} while (!passed);
+
+	int64_t totalTime = 0;
+
+	for (const auto& time : pluginTimes)
+	{
+		totalTime += time.time_elapsed;
+	}
+
+	cout << endl << "*** TOTAL timings for himan ***" << endl;
+
+	for (size_t i = 0; i < pluginTimes.size(); i++)
+	{
+		plugin_timing t = pluginTimes[i];
+
+		// c++ string formatting really is unnecessarily hard
+		stringstream ss;
+
+		ss << t.plugin_name;
+
+		if (t.order_number > 1)
+		{
+			ss << " #" << t.order_number;
+		}
+
+		cout << setw(25) << left << ss.str();
+
+		ss.str("");
+
+		ss << "(" << static_cast<int>(((static_cast<double>(t.time_elapsed) / static_cast<double>(totalTime)) * 100))
+		   << "%)";
+
+		cout << setw(8) << right << t.time_elapsed << " ms " << setw(5) << right << ss.str() << endl;
+	}
+
+	cout << "-------------------------------------------" << endl;
+	cout << setw(25) << left << "Total duration:" << setw(8) << right << totalTime << " ms" << endl;
+}
+
 void ExecutePlugin(const shared_ptr<plugin_configuration>& pc, vector<plugin_timing>& pluginTimes)
 {
 	timer aTimer(true);
@@ -222,15 +294,22 @@ void ExecutePlugin(const shared_ptr<plugin_configuration>& pc, vector<plugin_tim
 		pluginTimes.push_back(t);
 	}
 
-	if (pc->DatabaseType() == kRadon && pc->WriteToDatabase() && pc->UpdateSSStateTable())
-	{
-		UpdateSSState(pc);
-	}
-
 #if defined DEBUG and defined HAVE_CUDA
 	// For 'cuda-memcheck --leak-check full'
 	CUDA_CHECK(cudaDeviceReset());
 #endif
+
+	if (pc->WriteToObjectStorageBetweenPluginCalls())
+	{
+		auto w = GET_PLUGIN(writer);
+		w->WritePendingInfos(pc);
+		plugin::writer::ClearPending();
+		UpdateSSState(pc);
+	}
+	else if (pc->WriteStorageType() != kS3ObjectStorageSystem)
+	{
+		UpdateSSState(pc);
+	}
 }
 
 int main(int argc, char** argv)
@@ -296,9 +375,9 @@ int main(int argc, char** argv)
 		if (pc->AsyncExecution())
 		{
 			aLogger.Info("Asynchronous launch for " + pc->Name());
-			asyncs.push_back(
-			    async(launch::async,
-			          [&pluginTimes](shared_ptr<plugin_configuration> _pc) { ExecutePlugin(_pc, pluginTimes); }, pc));
+			asyncs.push_back(async(
+			    launch::async,
+			    [&pluginTimes](shared_ptr<plugin_configuration> _pc) { ExecutePlugin(_pc, pluginTimes); }, pc));
 
 			continue;
 		}
@@ -314,67 +393,15 @@ int main(int argc, char** argv)
 	auto w = GET_PLUGIN(writer);
 	w->WritePendingInfos(lastConf);
 
+	if (lastConf->WriteStorageType() == kS3ObjectStorageSystem &&
+	    lastConf->WriteToObjectStorageBetweenPluginCalls() == false)
+	{
+		UpdateSSState(lastConf);
+	}
+
 	if (!conf->StatisticsLabel().empty())
 	{
-		// bubble sort
-
-		bool passed;
-
-		do
-		{
-			passed = true;
-
-			for (size_t i = 1; i < pluginTimes.size(); i++)
-			{
-				plugin_timing prev = pluginTimes[i - 1];
-				plugin_timing cur = pluginTimes[i];
-
-				if (prev.time_elapsed < cur.time_elapsed)
-				{
-					pluginTimes[i - 1] = cur;
-					pluginTimes[i] = prev;
-					passed = false;
-				}
-			}
-		} while (!passed);
-
-		int64_t totalTime = 0;
-
-		for (const auto& time : pluginTimes)
-		{
-			totalTime += time.time_elapsed;
-		}
-
-		cout << endl << "*** TOTAL timings for himan ***" << endl;
-
-		for (size_t i = 0; i < pluginTimes.size(); i++)
-		{
-			plugin_timing t = pluginTimes[i];
-
-			// c++ string formatting really is unnecessarily hard
-			stringstream ss;
-
-			ss << t.plugin_name;
-
-			if (t.order_number > 1)
-			{
-				ss << " #" << t.order_number;
-			}
-
-			cout << setw(25) << left << ss.str();
-
-			ss.str("");
-
-			ss << "("
-			   << static_cast<int>(((static_cast<double>(t.time_elapsed) / static_cast<double>(totalTime)) * 100))
-			   << "%)";
-
-			cout << setw(8) << right << t.time_elapsed << " ms " << setw(5) << right << ss.str() << endl;
-		}
-
-		cout << "-------------------------------------------" << endl;
-		cout << setw(25) << left << "Total duration:" << setw(8) << right << totalTime << " ms" << endl;
-
+		PrintPluginSummaryTable(pluginTimes);
 		if (conf->DatabaseType() == kRadon && conf->WriteToDatabase())
 		{
 			UploadRunStatisticsToDatabase(conf, pluginTimes);
@@ -605,7 +632,8 @@ shared_ptr<configuration> ReadEnvironment()
 	                          "HIMAN_NO_AUXILIARY_FILE_FULL_CACHE_READ",
 	                          "HIMAN_NO_SS_STATE_UPDATE",
 	                          "HIMAN_NO_STATISTICS_UPLOAD",
-	                          "HIMAN_AUXILIARY_FILES"};
+	                          "HIMAN_AUXILIARY_FILES",
+	                          "HIMAN_NUM_THREADS"};
 
 	shared_ptr<configuration> conf = make_shared<configuration>();
 
@@ -651,6 +679,10 @@ shared_ptr<configuration> ReadEnvironment()
 			{
 				auto files = util::Split(val, " ");
 				conf->AuxiliaryFiles(files);
+			}
+			else if (key == "HIMAN_NUM_THREADS")
+			{
+				conf->ThreadCount(static_cast<short>(stoi(val)));
 			}
 		}
 		catch (const invalid_argument& e)
@@ -718,7 +750,7 @@ void ParseCommandLine(shared_ptr<configuration>& conf, int argc, char** argv)
 
 	po::notify(opt);
 
-	if (threadCount)
+	if (threadCount > 0)
 	{
 		conf->ThreadCount(threadCount);
 	}

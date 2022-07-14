@@ -161,15 +161,18 @@ local hail = ProbLimitEq2D(tmp, rain_radius, 6):GetValues()
 local snowgrain = ProbLimitEq2D(tmp, rain_radius, 7):GetValues()
 local icegrain = ProbLimitEq2D(tmp, rain_radius, 8):GetValues()
 
+local p = luatool:FetchInfo(current_time, level(HPLevelType.kHeight,0), param("POTPRECT-N"))
+local potprect = p:GetValues()
+
 -- this can be done by simply picking the one from above with highest probability 
-for i=1, #drizzle do
+for i=1, #potprect do
   hail[i] = hail[i] + snowgrain[i] + freezingrain[i]
   freezingrain[i] = freezingrain[i] + freezingdrizzle[i]
 
   if(prec_intensity[i] > 0) then
     prevalent_form[i],prevalent_cover[i] = max(drizzle[i],water[i],sleet[i],snow[i],freezingdrizzle[i],freezingrain[i],hail[i],snowgrain[i],icegrain[i])
   else
-    prevalent_form[i] = Missing
+    prevalent_form[i] = potprect[i]
     prevalent_cover[i] = Missing
   end
 
@@ -277,7 +280,7 @@ for i=1, #NEIGHBOUR do
 
     if (prevalent_type[i] == 1 or prevalent_form[i] == 0 or prevalent_form[i] == 5) then
          NEIGHBOUR[i] = NEIGHBOUR[i] + prevalent_form[i]*100+10
-    elseif (IsValid(prevalent_form[i])) then
+    else
          NEIGHBOUR[i] = NEIGHBOUR[i] + prevalent_form[i]*100+20
     end
 -- Yhditelmäsateita OSA 1. Laitetaan kaikki aluksi jatkuvan sateen teksteille

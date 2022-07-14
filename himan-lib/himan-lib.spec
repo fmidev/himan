@@ -21,32 +21,22 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: libfmidb >= 21.6.10
+Requires: libfmidb >= 22.1.10
 Requires: libfmigrib >= 20.6.16
 Requires: fmt >= 7.1.0
-
-%if %{defined el7}
-BuildRequires: scons
-BuildRequires: libpqxx-devel = 5.0.1
-Requires: libpqxx = 5.0.1
-
-%else if %{defined el8}
+Requires: libpqxx >= 7.6.0
 BuildRequires: python3-scons
 BuildRequires: gcc-c++ >= 8.2.1
 BuildRequires: eigen3-devel
-BuildRequires: libpqxx-devel >= 7.5.2
-Requires: libpqxx >= 7.5.2
-
-%endif
-
+BuildRequires: libpqxx-devel >= 7.6.0
 BuildRequires: bzip2-devel
 BuildRequires: redhat-rpm-config
 BuildRequires: cuda-nvcc-11-1
 BuildRequires: cuda-cudart-devel-11-1
 BuildRequires: gcc-c++ >= 4.8.2
-BuildRequires: geos39-devel
-BuildRequires: gdal32-devel
-BuildRequires: libfmidb-devel >= 20.7.8
+BuildRequires: geos310-devel
+BuildRequires: gdal34-devel
+BuildRequires: libfmidb-devel >= 22.1.10
 BuildRequires: libfmigrib-devel >= 20.6.16
 BuildRequires: zlib-devel
 BuildRequires: boost169-devel
@@ -54,12 +44,13 @@ BuildRequires: libs3-devel
 BuildRequires: fmt-devel >= 7.1.0
 BuildRequires: eccodes
 BuildRequires: make
-Requires: geos39
-Requires: gdal32-libs
+Requires: geos310
+Requires: gdal34-libs
 Requires: eccodes
 Requires: boost169-iostreams
 Requires: boost169-filesystem
 Requires: libs3 >= 4.1-0.6.20190408git287e4be.1.el7.fmi
+Requires: himan-plugins >= 22.6.16
 
 Provides: libhiman.so
 

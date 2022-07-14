@@ -41,9 +41,15 @@ max_missing_forecasts: define how many forecasts are allowed to be missing from 
 
     "max_missing_forecasts" : "<number>"
 
-ensemble_type: define the type of ensemble. Currently supported is the traditional ensemble with multiple perturbed forecasts, and a time_ensemble where multiple different times produce an ensemble. Default value is the traditional ensemble.
+ensemble_type: define the type of ensemble. Currently supported are:
 
-    "ensemble_type" : "ensemble | time_ensemble"
+* the traditional ensemble with multiple perturbed forecasts
+* a lagged version of the traditional ensemble, where n previous forecast runs are included
+* time ensemble where multiple different times produce an ensemble.
+
+    "ensemble_type" : "perturebd ensemble | lagged ensemble | time_ensemble"
+
+fractile plugin documentation has more information on how to define the three different types of ensembles.
 
 input_param: name of first input parameter
 
@@ -67,11 +73,3 @@ Possible values for comparison operator are
     "[)": value belongs to a range bounded by [lower value, upper value), lower endpoint included. The set of values are defined with key "threshold" separated by commas, exactly two values must be given.
 
 Note that all comparison are made with floating point values.
-
-lag: Define is plugins should use time-lagging for how many instances (default: 0)
-
-    "lag" : "1"
-
-lagged_steps: Define how many hours is one lagged forecast (the temporal distance between two consecutive forecast runs)
-
-    "lagged_steps" : "12"

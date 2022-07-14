@@ -25,140 +25,6 @@ fractile::fractile() : itsFractiles({0., 10., 25., 50., 75., 90., 100.})
 	itsLogger = logger("fractile");
 }
 
-std::unique_ptr<ensemble> CreateEnsemble(const std::shared_ptr<const plugin_configuration> conf)
-{
-	logger log("fractile");
-
-	std::string paramName = conf->GetValue("param");
-
-	auto ensTypestr = conf->GetValue("ensemble_type");
-	HPEnsembleType ensType = kPerturbedEnsemble;
-
-	if (!ensTypestr.empty())
-	{
-		ensType = HPStringToEnsembleType.at(ensTypestr);
-	}
-
-	size_t ensSize = 0;
-
-	if (conf->Exists("ensemble_size"))
-	{
-		ensSize = std::stoi(conf->GetValue("ensemble_size"));
-	}
-	else if (ensType == kPerturbedEnsemble || ensType == kLaggedEnsemble)
-	{
-		// Regular ensemble size is static, get it from database if user
-		// hasn't specified any size
-
-		auto r = GET_PLUGIN(radon);
-
-		std::string ensembleSizeStr = r->RadonDB().GetProducerMetaData(conf->SourceProducer(0).Id(), "ensemble size");
-
-		if (ensembleSizeStr.empty())
-		{
-			log.Error("Unable to find ensemble size from database");
-			himan::Abort();
-		}
-
-		ensSize = std::stoi(ensembleSizeStr);
-	}
-
-	std::unique_ptr<ensemble> ens = nullptr;
-
-	switch (ensType)
-	{
-		case kPerturbedEnsemble:
-			ens = std::unique_ptr<ensemble>(new ensemble(param(paramName), ensSize));
-			break;
-		case kTimeEnsemble:
-		{
-			int secondaryLen = 0, secondaryStep = 1;
-			HPTimeResolution secondarySpan = kHourResolution;
-
-			if (conf->Exists(("secondary_time_len")))
-			{
-				secondaryLen = std::stoi(conf->GetValue("secondary_time_len"));
-			}
-			if (conf->Exists(("secondary_time_step")))
-			{
-				secondaryStep = std::stoi(conf->GetValue("secondary_time_step"));
-			}
-			if (conf->Exists(("secondary_time_span")))
-			{
-				secondarySpan = HPStringToTimeResolution.at(conf->GetValue("secondary_time_span"));
-			}
-
-			ens = std::unique_ptr<time_ensemble>(new time_ensemble(param(paramName), ensSize, kYearResolution,
-			                                                       secondaryLen, secondaryStep, secondarySpan));
-		}
-		break;
-		case kLaggedEnsemble:
-		{
-			auto name = conf->GetValue("named_ensemble");
-
-			if (name.empty() == false)
-			{
-				ens = std::unique_ptr<lagged_ensemble>(new lagged_ensemble(param(paramName), name));
-			}
-
-			else
-			{
-				auto lagstr = conf->GetValue("lag");
-				if (lagstr.empty())
-				{
-					log.Fatal("specify lag value for lagged_ensemble");
-					himan::Abort();
-				}
-
-				int lag = std::stoi(conf->GetValue("lag"));
-
-				if (lag == 0)
-				{
-					log.Fatal("lag value needs to be negative integer");
-					himan::Abort();
-				}
-				else if (lag > 0)
-				{
-					log.Warning("negating lag value " + std::to_string(-lag));
-					lag = -lag;
-				}
-
-				auto stepsstr = conf->GetValue("lagged_steps");
-
-				if (stepsstr.empty())
-				{
-					log.Fatal("specify lagged_steps value for lagged_ensemble");
-					himan::Abort();
-				}
-
-				int steps = std::stoi(conf->GetValue("lagged_steps"));
-
-				if (steps <= 0)
-				{
-					log.Fatal("invalid lagged_steps value. Allowed range >= 0");
-					himan::Abort();
-				}
-
-				steps++;
-
-				ens = std::unique_ptr<lagged_ensemble>(
-				    new lagged_ensemble(param(paramName), ensSize, time_duration(kHourResolution, lag), steps));
-			}
-		}
-		break;
-		default:
-			log.Fatal("Unknown ensemble type: " + ensType);
-			himan::Abort();
-	}
-
-	if (conf->Exists("max_missing_forecasts"))
-	{
-		ens->MaximumMissingForecasts(std::stoi(conf->GetValue("max_missing_forecasts")));
-	}
-
-	return std::move(ens);
-}
-
 void fractile::SetParams()
 {
 	auto fractiles = itsConfiguration->GetValue("fractiles");
@@ -240,7 +106,12 @@ void fractile::Process(const std::shared_ptr<const plugin_configuration> conf)
 void fractile::Calculate(std::shared_ptr<info<float>> myTargetInfo, uint16_t threadIndex)
 {
 	const std::string deviceType = "CPU";
-	auto ens = CreateEnsemble(itsConfiguration);
+	auto ens = util::CreateEnsembleFromConfiguration(itsConfiguration);
+
+	if (!ens)
+	{
+		return;
+	}
 
 	auto threadedLogger = logger("fractileThread # " + std::to_string(threadIndex));
 

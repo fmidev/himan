@@ -154,7 +154,8 @@ void compiled_plugin_base::WriteToFile(const shared_ptr<info<T>> targetInfo, wri
 
 	auto tempInfo = make_shared<info<T>>(*targetInfo);
 
-	auto WriteParam = [&]() {
+	auto WriteParam = [&]()
+	{
 		tempInfo->template Reset<param>();
 
 		while (tempInfo->template Next<param>())
@@ -178,8 +179,9 @@ void compiled_plugin_base::WriteToFile(const shared_ptr<info<T>> targetInfo, wri
 			// check missing values
 			if (itsConfiguration->AllowedMissingValues() < tempInfo->Data().MissingCount())
 			{
-				itsBaseLogger.Fatal("Data contains more missing values (" + to_string(tempInfo->Data().MissingCount()) +
-				                    ") than allowed (" + to_string(itsConfiguration->AllowedMissingValues()) + ")");
+				itsBaseLogger.Fatal(fmt::format("Data contains more missing values ({}) than allowed ({})",
+				                                tempInfo->Data().MissingCount(),
+				                                itsConfiguration->AllowedMissingValues()));
 				exit(1);
 			}
 		}
@@ -420,7 +422,7 @@ void compiled_plugin_base::Start()
 	SetThreadCount();
 	SetInitialIteratorPositions();
 
-	itsBaseLogger.Info("Plugin is using data type: " + TypeToName<T>());
+	itsBaseLogger.Trace("Plugin is using data type: " + TypeToName<T>());
 
 	vector<thread> threads;
 
@@ -503,7 +505,7 @@ void compiled_plugin_base::Finish()
 	    [](const pair<string, HPWriteStatus>& element) { return element.second == HPWriteStatus::kPending; },
 	    [](const pair<string, HPWriteStatus>& element) { return element.first; });
 
-	itsBaseLogger.Trace("Pending write status for " + to_string(pending.size()) + " infos");
+	itsBaseLogger.Trace(fmt::format("Pending write status for {} infos", pending.size()));
 
 	if (pending.empty() == false)
 	{
@@ -523,7 +525,7 @@ void compiled_plugin_base::Calculate(shared_ptr<info<float>> myTargetInfo, unsig
 	exit(1);
 }
 
-void compiled_plugin_base::SetParams(initializer_list<param> params)
+void compiled_plugin_base::SetParams(initializer_list<param> params, bool paramInformationExists)
 {
 	vector<param> paramVec;
 
@@ -532,18 +534,20 @@ void compiled_plugin_base::SetParams(initializer_list<param> params)
 		paramVec.push_back(*it);
 	}
 
-	SetParams(paramVec);
+	SetParams(paramVec, paramInformationExists);
 }
 
-void compiled_plugin_base::SetParams(initializer_list<param> params, initializer_list<level> levels)
+void compiled_plugin_base::SetParams(initializer_list<param> params, initializer_list<level> levels,
+                                     bool paramInformationExists)
 {
 	vector<param> paramVec(params);
 	vector<level> levelVec(levels);
 
-	SetParams(paramVec, levelVec);
+	SetParams(paramVec, levelVec, paramInformationExists);
 }
 
-void compiled_plugin_base::SetParams(std::vector<param>& params, const vector<level>& levels)
+void compiled_plugin_base::SetParams(std::vector<param>& params, const vector<level>& levels,
+                                     bool paramInformationExists)
 {
 	if (params.empty())
 	{
@@ -557,7 +561,7 @@ void compiled_plugin_base::SetParams(std::vector<param>& params, const vector<le
 		himan::Abort();
 	}
 
-	if (itsConfiguration->DatabaseType() == kRadon)
+	if (itsConfiguration->DatabaseType() == kRadon && paramInformationExists == false)
 	{
 		auto r = GET_PLUGIN(radon);
 
@@ -636,7 +640,7 @@ void compiled_plugin_base::SetParams(std::vector<param>& params, const vector<le
 	}
 }
 
-void compiled_plugin_base::SetParams(std::vector<param>& params)
+void compiled_plugin_base::SetParams(std::vector<param>& params, bool paramInformationExists)
 {
 	vector<level> levels;
 
@@ -645,7 +649,7 @@ void compiled_plugin_base::SetParams(std::vector<param>& params)
 		levels.push_back(itsLevelIterator.At(i));
 	}
 
-	SetParams(params, levels);
+	SetParams(params, levels, paramInformationExists);
 }
 
 bool compiled_plugin_base::IsMissingValue(initializer_list<double> values) const

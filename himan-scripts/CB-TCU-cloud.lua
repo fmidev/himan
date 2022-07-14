@@ -50,9 +50,6 @@ CINlimTCU = -1  --CIN limit for TCu
 --Max height [FL] to check for top
 TopLim = 650
 
---Denominator to calculate overshooting top based on CAPE, +1000ft/350J/kg (tweak this!)
-overshoot = 35
-
 local i = 0
 local res = {}
 local Missing = missing
@@ -65,12 +62,11 @@ for i=1, #EL500 do
   if ((Tbase[i]-Ttop[i]>TCUlimit) and (NL[i]>0) and (CIN500[i]>CINlimTCU)) then
     res[i] = FlightLevel_(EL500[i]*100)
     --Limit top value
-    if (res[i] <= TopLim) then
-      --Add for overshooting top based on CAPE, +1000ft/350J/kg (tweak this!)
-      res[i] = -(res[i] + CAPE500[i]/overshoot)
+    if (CAPE500[i]>math.exp(1)) then
+      --Add for overshooting top based on CAPE 
+      res[i] = -(res[i] + CAPE500[i]  / (math.log(CAPE500[i]) * 10))
     else
-      --Add for overshooting top based on CAPE, +1000ft/350J/kg (tweak this!)
-      res[i] = Missing
+      res[i] = -res[i]
     end
   end
 
@@ -78,11 +74,9 @@ for i=1, #EL500 do
   if ((Ttop[i]<CBtopLim) and (Tbase[i]-Ttop[i]>CBlimit) and (RR[i]>0)) then
     res[i] = FlightLevel_(EL500[i]*100)
     --Limit top value
-    if (res[i] <= TopLim) then
-      --Add for overshooting top based on CAPE, +1000ft/350J/kg (tweak this!)
-      res[i] = res[i] + CAPE500[i]/overshoot
-    else
-      res[i] = Missing
+    if (CAPE500[i]>math.exp(1)) then
+      --Add for overshooting top based on CAPE
+      res[i] = res[i] + CAPE500[i] / (math.log(CAPE500[i]) * 10)
     end
   end
 
@@ -92,27 +86,25 @@ for i=1, #EL500 do
     if ((TbaseMU[i]-TtopMU[i]>TCUlimit) and ((NL[i]>0) or (NM[i]>0)) and (CINmu[i]>CINlimTCU)) then
       res[i] =  FlightLevel_(ELmu[i]*100)
       --Limit top value
-      if (res[i] <= TopLim) then
+      if (CAPEmu[i]>math.exp(1)) then
         --Add for overshooting top based on CAPE, +1000ft/350J/kg (tweak this!)
-        res[i] = -(res[i] + CAPEmu[i]/overshoot)
+        res[i] = -(res[i] + CAPEmu[i] / (math.log(CAPEmu[i]) * 10))
       else
-        res[i] = Missing
+        res[i] = -res[i]
       end
     end
     --CB
     if ((TtopMU[i]<CBtopLim) and (TbaseMU[i]-TtopMU[i]>CBlimit) and (RR[i]>0)) then
       res[i] =  FlightLevel_(ELmu[i]*100)
       --Limit top value
-      if (res[i] <= TopLim) then
+      if (CAPEmu[i]>math.exp(1)) then
         --Add for overshooting top based on CAPE, +1000ft/350J/kg (tweak this!)
-        res[i] = res[i] + CAPEmu[i]/overshoot
-      else
-        res[i] = Missing
+        res[i] = res[i] + CAPEmu[i] / (math.log(CAPEmu[i]) * 10)
       end
     end
   end
 
-  res[i] = round(res[i]/10)*10;
+  res[i] = round(res[i]/10)*10
 end
 
 p = param("CBTCU-FL")

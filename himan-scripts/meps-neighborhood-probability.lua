@@ -14,8 +14,7 @@ function produceProbabilities(sourceparam, targetparam, op, limit)
 
   logger:Info("Producing area probabilities for " .. sourceparam:GetName())
 
-  local ens = lagged_ensemble(sourceparam, "MEPS_LAGGED_ENSEMBLE")
-  ens:SetMaximumMissingForecasts(ensemble_size)
+  local ens = lagged_ensemble(sourceparam, "MEPS_LAGGED_ENSEMBLE", ensemble_size)
 
   local curtime = forecast_time(current_time:GetOriginDateTime(), current_time:GetValidDateTime())
 

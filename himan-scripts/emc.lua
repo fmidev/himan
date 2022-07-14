@@ -21,12 +21,11 @@ for key, value in pairs(params) do
   ens = nil
   -- For MEPS we use lagged ensemble
   if currentProducerName == "MEPS" then
-    ens = lagged_ensemble(param(key), "MEPS_LAGGED_ENSEMBLE")
+    ens = lagged_ensemble(param(key), "MEPS_LAGGED_ENSEMBLE", 250)
   else
-    ens = ensemble(param(key), ensemble_size)
+    ens = ensemble(param(key), ensemble_size, 250)
   end
 
-  ens:SetMaximumMissingForecasts(250)
   ens:Fetch(configuration, current_time, value[1])
   local sz = ens:Size()
   local missing_members = ensemble_size - sz
