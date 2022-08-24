@@ -24,11 +24,11 @@ Requires: libstdc++
 Requires: libfmidb >= 22.1.10
 Requires: libfmigrib >= 20.6.16
 Requires: fmt >= 7.1.0
-Requires: libpqxx >= 7.6.0
+Requires: libpqxx >= 7.7.0
 BuildRequires: python3-scons
 BuildRequires: gcc-c++ >= 8.2.1
 BuildRequires: eigen3-devel
-BuildRequires: libpqxx-devel >= 7.6.0
+BuildRequires: libpqxx-devel >= 7.7.0
 BuildRequires: bzip2-devel
 BuildRequires: redhat-rpm-config
 BuildRequires: cuda-nvcc-11-1

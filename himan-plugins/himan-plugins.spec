@@ -37,8 +37,8 @@ Requires: eccodes
 Requires: gdal34-libs
 BuildRequires: python3-scons
 BuildRequires: eigen3-devel >= 3.3.4
-BuildRequires: libpqxx-devel >= 7.6.0
-Requires: libpqxx >= 7.6.0
+BuildRequires: libpqxx-devel >= 7.7.0
+Requires: libpqxx >= 7.7.0
 
 %if %{defined suse_version}
 Requires: libjasper
