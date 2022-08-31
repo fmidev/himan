@@ -42,6 +42,7 @@ function LowAndHighCloudGapFix()
 
   if not effc or not ctt or not nh or not nm or not nl then
     logger:Error("Some data not found")
+    Write(effc)
     return
   end
 
@@ -91,7 +92,7 @@ function LowAndHighCloudGapFix()
     end
 
     -- Vähennetään pilveä, jos vain ylä
-    if effc_ > 0.4 and nh > 0.5 and nl < 0.2 and nm < 0.2 then
+    if effc_ > 0.4 and nh_ > 0.5 and nl_ < 0.2 and nm_ < 0.2 then
       effc_ = 0.4
     end
 

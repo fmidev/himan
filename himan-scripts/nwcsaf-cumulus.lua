@@ -70,6 +70,7 @@ function CumulusFix()
 
   if not effc or not nh or not nm or not nl or not swr or not swrc then
     logger:Error("Some data not found")
+    Write(effc)
     return
   end
 
