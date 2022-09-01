@@ -56,16 +56,6 @@ function LowAndHighCloudGapFix()
   filter:Fill(1/49.)
   local effc_p2 = Filter2D(Nmat, filter, configuration:GetUseCuda()):GetValues()
 
-  local morning = 7 -- utc, cumulus process is starting
-  local evening = 17 -- utc, cumulus process is ending
-  local hour = tonumber(current_time:GetValidDateTime():String("%H"))
-
-  local is_day = false
-
-  if hour >= morning and hour < evening then
-    is_day = true
-  end
-
   local res = {}
 
   for i=1,#effc do
