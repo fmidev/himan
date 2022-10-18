@@ -54,13 +54,6 @@ void icing::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short theTh
 	auto PrecInfo = Fetch<float>(forecastTime, surface, PrecParam, forecastType, false);
 	auto HeightInfo = Fetch<float>(forecastTime, forecastLevel, HeightParam, forecastType, false);
 
-	auto ZeroLevelInfo = Fetch<float>(forecastTime, surface, ZeroLevelParam, forecastType, false);
-
-	if (!ZeroLevelInfo)
-	{
-		ZeroLevelInfo = Fetch<float>(forecastTime, level(kIsothermal, 27315), param("HL-M"), forecastType, false);
-	}
-
 	level newLevel = forecastLevel;
 	newLevel.Value(newLevel.Value() + 2);
 
@@ -79,7 +72,7 @@ void icing::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short theTh
 			HeightInfo2down = HeightInfo;
 		}
 	}
-	if (!TInfo || !VvInfo || !ClInfo || !PrecFormInfo || !PrecInfo || !ZeroLevelInfo || !HeightInfo)
+	if (!TInfo || !VvInfo || !ClInfo || !PrecFormInfo || !PrecInfo || !HeightInfo)
 	{
 		myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
 		                         static_cast<string>(forecastLevel));
@@ -105,12 +98,15 @@ void icing::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short theTh
 	// Stratus cloud base [m] (0-300m=0-985ft, N>50%
 	auto base = h->VerticalHeightGreaterThan<float>(NParam, 0, 305, 0.5);
 
+	// find level where temperature crosses from negative to positive
+	auto zl = h->VerticalHeightGreaterThan<float>(TParam, 50, 5000, 273.15f, 1);
+
 	string deviceType = "CPU";
 
 	auto& target = VEC(myTargetInfo);
 
 	for (auto&& tup : zip_range(target, VEC(TInfo), VEC(VvInfo), VEC(ClInfo), VEC(PrecFormInfo), VEC(PrecInfo),
-	                            VEC(ZeroLevelInfo), VEC(HeightInfo), base, VEC(HeightInfo2down)))
+	                            zl, VEC(HeightInfo), base, VEC(HeightInfo2down)))
 	{
 		auto& result = tup.get<0>();
 		auto T = tup.get<1>();
