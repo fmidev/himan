@@ -55,9 +55,9 @@ for i=1, #Weather do
 end
 
 -- todo set a mask matrix to match 50/100km radius in smartmet edited data
-local rain_radius = matrix(13, 13, 1, Missing)
+local rain_radius = matrix(7, 7, 1, Missing)
 rain_radius:Fill(1)
-local wind_radius = matrix(27, 27, 1, Missing)
+local wind_radius = matrix(13, 13, 1, Missing)
 wind_radius:Fill(1)
 
 -------------
@@ -95,7 +95,7 @@ tmp:SetValues(prec_intensity)
 
 local dry = ProbLimitEq2D(tmp, rain_radius, 0):GetValues()
 
-dry_limit = 0.02
+dry_limit = 0.2
 for i=1, #dry do
   rain[i] = 1 - dry[i]
 
@@ -123,7 +123,7 @@ for i=1, #weak do
   weak[i] = weak[i] + weak2[i]
 end
 
-local strong_water = ProbLimitGt2D(tmp, rain_radius, 5):GetValues()
+local strong_water = ProbLimitGe2D(tmp, rain_radius, 5):GetValues()
 local strong_snow = ProbLimitGe2D(tmp, rain_radius, 3):GetValues()
 
 ------------------------
