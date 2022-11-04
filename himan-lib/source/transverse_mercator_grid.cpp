@@ -53,8 +53,8 @@ transverse_mercator_grid::transverse_mercator_grid(const transverse_mercator_gri
 {
 	itsLogger = logger("transverse_mercator_grid");
 	itsSpatialReference = std::unique_ptr<OGRSpatialReference>(other.itsSpatialReference->Clone());
-
-	CreateCoordinateTransformations(other.FirstPoint(), false);
+	itsLatLonToXYTransformer = std::unique_ptr<OGRCoordinateTransformation>(other.itsLatLonToXYTransformer->Clone());
+	itsXYToLatLonTransformer = std::unique_ptr<OGRCoordinateTransformation>(other.itsXYToLatLonTransformer->Clone());
 }
 
 void transverse_mercator_grid::CreateCoordinateTransformations(const point& firstPoint, bool firstPointIsProjected)

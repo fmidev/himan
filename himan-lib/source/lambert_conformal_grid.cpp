@@ -58,7 +58,8 @@ lambert_conformal_grid::lambert_conformal_grid(const lambert_conformal_grid& oth
 {
 	itsLogger = logger("lambert_conformal_grid");
 	itsSpatialReference = std::unique_ptr<OGRSpatialReference>(other.itsSpatialReference->Clone());
-	CreateCoordinateTransformations(other.FirstPoint(), false);
+	itsLatLonToXYTransformer = std::unique_ptr<OGRCoordinateTransformation>(other.itsLatLonToXYTransformer->Clone());
+	itsXYToLatLonTransformer = std::unique_ptr<OGRCoordinateTransformation>(other.itsXYToLatLonTransformer->Clone());
 }
 
 void lambert_conformal_grid::CreateCoordinateTransformations(const point& firstPoint, bool firstPointIsProjected)
