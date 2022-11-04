@@ -241,14 +241,16 @@ void MoistLift(const float* Piter, const float* Titer, const float* Penv, float*
 	for (size_t num = 0; num < workers; num++)
 	{
 		const size_t start = num * splitSize;
-		futures.push_back(async(launch::async,
-		                        [&](size_t _start) {
-			                        for (size_t i = _start; i < _start + splitSize; i++)
-			                        {
-				                        Tparcel[i] = himan::metutil::MoistLiftA_<float>(Piter[i], Titer[i], Penv[i]);
-			                        }
-		                        },
-		                        start));
+		futures.push_back(async(
+		    launch::async,
+		    [&](size_t _start)
+		    {
+			    for (size_t i = _start; i < _start + splitSize; i++)
+			    {
+				    Tparcel[i] = himan::metutil::MoistLiftA_<float>(Piter[i], Titer[i], Penv[i]);
+			    }
+		    },
+		    start));
 	}
 
 	for (auto& future : futures)
@@ -274,8 +276,17 @@ void cape::Process(shared_ptr<const plugin_configuration> conf)
 
 	itsLogger.Info("Virtual temperature correction is " + string(itsUseVirtualTemperature ? "enabled" : "disabled"));
 
-	itsBottomLevel = level(kHybrid, stoi(r->RadonDB().GetProducerMetaData(itsConfiguration->TargetProducer().Id(),
-	                                                                      "last hybrid level number")));
+	try
+	{
+		itsBottomLevel = level(kHybrid, stoi(r->RadonDB().GetProducerMetaData(itsConfiguration->TargetProducer().Id(),
+		                                                                      "last hybrid level number")));
+	}
+	catch (const std::exception& e)
+	{
+		itsLogger.Fatal(fmt::format("Unable to fetch hybrid level information from producer_meta for producer {}",
+		                            itsConfiguration->TargetProducer().Id()));
+		return;
+	}
 
 #ifdef HAVE_CUDA
 	cape_cuda::itsUseVirtualTemperature = itsUseVirtualTemperature;
@@ -407,7 +418,8 @@ void cape::MostUnstableCAPE(shared_ptr<info<float>> myTargetInfo, short threadIn
 
 		futures.push_back(async(
 		    launch::async,
-		    [&myTargetInfo, this](const cape_source& sourceValues, short threadId, size_t taskId) {
+		    [&myTargetInfo, this](const cape_source& sourceValues, short threadId, size_t taskId)
+		    {
 			    logger tasklog("muCAPEThread#" + to_string(threadId) + "asyncTask#" + to_string(taskId));
 
 			    timer tasktmr(true);
@@ -435,7 +447,6 @@ void cape::MostUnstableCAPE(shared_ptr<info<float>> myTargetInfo, short threadIn
 			    tasklog.Debug("CAPE in " + to_string(tasktmr.GetTime()) + "ms");
 
 			    return tuple_cat(LCL, LFC[0], LFC[1], CAPE);
-
 		    },
 		    make_tuple(Ts[taskIndex], TDs[taskIndex], Ps[taskIndex]), threadIndex, taskIndex));
 	}
@@ -764,8 +775,8 @@ void SmoothData(shared_ptr<himan::info<float>> myTargetInfo)
 	// Do smoothening for CAPE & CIN parameters
 	himan::matrix<float> filter_kernel(3, 3, 1, himan::MissingFloat(), 1.0f / 9.0f);
 
-	auto filter = [&](const himan::param& par) {
-
+	auto filter = [&](const himan::param& par)
+	{
 		myTargetInfo->Find<himan::param>(par);
 		himan::matrix<float> filtered =
 		    himan::numerical_functions::Filter2D<double>(myTargetInfo->Data(), filter_kernel);
@@ -1765,14 +1776,14 @@ cape_source cape::GetSurfaceValues(shared_ptr<info<float>> myTargetInfo)
 
 cape_source cape::Get500mMixingRatioValues(shared_ptr<info<float>> myTargetInfo)
 {
-/*
- * 1. Calculate potential temperature and mixing ratio for vertical profile
- *    0...500m for every 2 hPa
- * 2. Take an average from all values
- * 3. Calculate temperature from potential temperature, and dewpoint temperature
- *    from temperature and mixing ratio
- * 4. Return the two calculated values
- */
+	/*
+	 * 1. Calculate potential temperature and mixing ratio for vertical profile
+	 *    0...500m for every 2 hPa
+	 * 2. Take an average from all values
+	 * 3. Calculate temperature from potential temperature, and dewpoint temperature
+	 *    from temperature and mixing ratio
+	 * 4. Return the two calculated values
+	 */
 
 #ifdef HAVE_CUDA
 	if (itsConfiguration->UseCuda())
@@ -2013,9 +2024,9 @@ vector<pair<size_t, float>> MaximaLocation(const vector<float>& vals, const vect
 
 	// remove duplicates (sometimes two consecutive levels have the same theta e
 	// value which also happens to be a maxima
-	auto newEnd = unique(ml.begin(), ml.end(), [](const pair<size_t, float>& a, const pair<size_t, float>& b) {
-		return a.second == b.second;
-	});
+	auto newEnd =
+	    unique(ml.begin(), ml.end(),
+	           [](const pair<size_t, float>& a, const pair<size_t, float>& b) { return a.second == b.second; });
 
 	ml.erase(newEnd, ml.end());
 
