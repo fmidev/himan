@@ -75,10 +75,10 @@ function LowAndHighCloudGapFix()
 
     -- Keskiarvostetaan pienimpiä aukkoja ja reunoja.
     if effc_ <= 0.9 and effc_p1_ > 0.65 then
-      effc_ = 0.8
+      effc_ = 0.9
     end
     if effc_ <= 0.9 and effc_p2_ > 0.55 then
-      effc_ = 0.8
+      effc_ = 0.9
     end
 
     -- Vähennetään pilveä, jos vain ylä
@@ -96,6 +96,6 @@ end
 local mon = tonumber(current_time:GetValidDateTime():String("%m"))
 
 -- Fix is valid for winter months September ... March
-if mon >= 9 or mon <= 3 then
+if mon >= 10 or mon <= 3 then
   LowAndHighCloudGapFix()
 end
