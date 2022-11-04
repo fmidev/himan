@@ -572,9 +572,9 @@ void split_sum::DoParam(shared_ptr<info<double>> myTargetInfo, std::string myPar
 
 		result = fmax(lowLimit, ((currentSum - previousSum) * invstep * scaleFactor));
 
-		// STU-13786: remove precipitations smaller than 0.01mm/h for MEPS/MEPS_preop/MNWC
-		if (isPrecipitationCalculation && (producerId == 260 || producerId == 261 || producerId == 270) &&
-		    result < 0.01)
+		// STU-13786: remove precipitations smaller than 0.01mm/h for MEPS/MEPS_preop/MNWC/MNWC_preop
+		if (isPrecipitationCalculation &&
+		    (producerId == 260 || producerId == 261 || producerId == 270 || producerId == 271) && result < 0.01)
 		{
 			result = 0.0;
 		}

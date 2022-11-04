@@ -2558,7 +2558,7 @@ void ReadData(shared_ptr<info<T>> newInfo, bool readPackedData, const NFmiGribMe
 
 	if (message.Edition() == 2 && (paramName == "PRECFORM-N" || paramName == "PRECFORM2-N") &&
 	    (producerId == 230 || producerId == 240 || producerId == 243 || producerId == 250 || producerId == 260 ||
-	     producerId == 265 || producerId == 270))
+	     producerId == 265 || producerId == 270 || producerId == 271))
 	{
 		decodePrecipitationForm = true;
 	}

@@ -127,6 +127,11 @@ pair<level, level> hitool::LevelForHeight(const producer& prod, double height) c
 			producerId = 270;
 			break;
 
+		case 8:
+		case 271:
+			producerId = 271;
+			break;
+
 		case 10:
 		case 261:
 			producerId = 10;
@@ -286,15 +291,15 @@ vector<T> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelType wan
 		case kFindHeightGreaterThanModifier:
 		case kFindHeightLessThanModifier:
 		{
-			auto iter = std::max_element(upperHeight.begin(), upperHeight.end(), [](const T& val1, const T& val2) {
-				return (val1 < val2) ? true : IsMissing(val1);
-			});
+			auto iter =
+			    std::max_element(upperHeight.begin(), upperHeight.end(),
+			                     [](const T& val1, const T& val2) { return (val1 < val2) ? true : IsMissing(val1); });
 
 			const T max_value = *iter;
 
-			iter = std::min_element(lowerHeight.begin(), lowerHeight.end(), [](const T& val1, const T& val2) {
-				return (val1 < val2) ? true : IsMissing(val2);
-			});
+			iter =
+			    std::min_element(lowerHeight.begin(), lowerHeight.end(),
+			                     [](const T& val1, const T& val2) { return (val1 < val2) ? true : IsMissing(val2); });
 
 			const T min_value = *iter;
 
