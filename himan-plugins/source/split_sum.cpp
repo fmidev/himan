@@ -574,7 +574,7 @@ void split_sum::DoParam(shared_ptr<info<double>> myTargetInfo, std::string myPar
 
 		// STU-13786: remove precipitations smaller than 0.01mm/h for MEPS/MEPS_preop/MNWC/MNWC_preop
 		if (isPrecipitationCalculation &&
-		    (producerId == 260 || producerId == 261 || producerId == 270 || producerId == 271) && result < 0.01)
+		    (producerId == 260 || producerId == 261 || (producerId >= 270 && producer_id <= 272)) && result < 0.01)
 		{
 			result = 0.0;
 		}
