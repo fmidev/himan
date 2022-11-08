@@ -90,12 +90,63 @@ function LowAndHighCloudGapFix()
 
   end
 
-  Write(res)
+  return res
+end
+
+function MissingCloudFixWithRH(effc)
+
+  local snwc_prod = producer(281, "SMARTMETNWC")
+  snwc_prod:SetCentre(86)
+  snwc_prod:SetProcess(207)
+
+  local latest_origintime = raw_time(radon:GetLatestTime(snwc_prod, "", 0))
+  local ftime = forecast_time(latest_origintime, current_time:GetValidDateTime())
+  logger:Info(string.format("SmartMet NWC origintime: %s validtime: %s", ftime:GetOriginDateTime():String("%Y-%m-%d %H:%M:%S"), ftime:GetValidDateTime():String("%Y-%m-%d %H:%M:%S")))
+
+  o = {forecast_time = ftime,
+       level = level(HPLevelType.kHeight, 2),
+       param = param("RH-PRCNT"),
+       forecast_type = current_forecast_type,
+       producer = snwc_prod,
+       geom_name = "",
+       read_previous_forecast_if_not_found = false,
+       time_interpolation = true,
+       time_interpolation_search_step = time_duration("00:15:00")
+  }
+
+  local snwc_rh = luatool:FetchWithArgs(o)
+
+  if not snwc_rh then
+    logger:Warning("Unable to perform RH based fix")
+    return effc
+  end
+
+  local num_changed = 0
+  local changesum = 0
+
+  for i=1,#snwc_rh do
+    local old_effc = effc[i]
+    if effc[i] < 0.1 and snwc_rh[i] >= 89 then
+      effc[i] = 0.6
+    end
+    if effc[i] <= 0.6 and snwc_rh[i] >= 98 then
+      effc[i] = 0.8
+    end
+
+    if effc[i] ~= old_effc then
+      num_changed = num_changed + 1
+      changesum = changesum + (effc[i] - old_effc)
+    end
+  end
+  logger:Info(string.format("Changed %d values (%.1f%% of grid values), average change was %.3f", num_changed, 100*num_changed/#snwc_rh, changesum / num_changed))
+  return effc
 end
 
 local mon = tonumber(current_time:GetValidDateTime():String("%m"))
 
 -- Fix is valid for winter months September ... March
 if mon >= 10 or mon <= 3 then
-  LowAndHighCloudGapFix()
+  effc = LowAndHighCloudGapFix()
+  effc = MissingCloudFixWithRH(effc)
+  Write(effc)
 end
