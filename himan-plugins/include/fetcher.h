@@ -72,12 +72,14 @@ class fetcher : public auxiliary_plugin
 	std::shared_ptr<info<T>> Fetch(std::shared_ptr<const plugin_configuration> config, forecast_time requestedValidTime,
 	                               level requestedLevel, const params& requestedParams,
 	                               forecast_type requestedType = forecast_type(kDeterministic),
-	                               bool readPackedData = false, bool readFromPreviousForecastIfNotFound = false);
+	                               bool readPackedData = false, bool readFromPreviousForecastIfNotFound = false,
+	                               bool doTimeInterpolation = false);
 	std::shared_ptr<info<double>> Fetch(std::shared_ptr<const plugin_configuration> config,
 	                                    forecast_time requestedValidTime, level requestedLevel,
 	                                    const params& requestedParams,
 	                                    forecast_type requestedType = forecast_type(kDeterministic),
-	                                    bool readPackedData = false, bool readFromPreviousForecastIfNotFound = false);
+	                                    bool readPackedData = false, bool readFromPreviousForecastIfNotFound = false,
+	                                    bool doTimeInterpolation = false);
 
 	/**
 	 * @brief Fetch data based on given arguments.
@@ -100,12 +102,13 @@ class fetcher : public auxiliary_plugin
 	                               level requestedLevel, param requestedParam,
 	                               forecast_type requestedType = forecast_type(kDeterministic),
 	                               bool readPackedData = false, bool suppressLogging = false,
-	                               bool readFromPreviousForecastIfNotFound = false);
+	                               bool readFromPreviousForecastIfNotFound = false, bool doTimeInterpolation = false);
 	std::shared_ptr<info<double>> Fetch(std::shared_ptr<const plugin_configuration> config,
 	                                    forecast_time requestedValidTime, level requestedLevel, param requestedParam,
 	                                    forecast_type requestedType = forecast_type(kDeterministic),
 	                                    bool readPackedData = false, bool suppressLogging = false,
-	                                    bool readFromPreviousForecastIfNotFound = false);
+	                                    bool readFromPreviousForecastIfNotFound = false,
+	                                    bool doTimeInterpolation = false);
 
 	/**
 	 * @brief Set flag for level transform
@@ -129,6 +132,9 @@ class fetcher : public auxiliary_plugin
 
 	void DoVectorComponentRotation(bool theDoVectorComponentRotation);
 	bool DoVectorComponentRotation() const;
+
+	time_duration TimeInterpolationSearchStep() const;
+	void TimeInterpolationSearchStep(const time_duration& step);
 
    private:
 	template <typename T>
@@ -228,6 +234,11 @@ class fetcher : public auxiliary_plugin
 	std::shared_ptr<himan::info<T>> FetchFromProducerSingle(search_options& opts, bool readPackedData,
 	                                                        bool suppressLogging);
 
+	template <typename T>
+	std::shared_ptr<himan::info<T>> InterpolateTime(const std::shared_ptr<const plugin_configuration>& conf,
+	                                                const forecast_time& ftime, const level& lev, const params& pars,
+	                                                const forecast_type& ftype);
+
 	HPFileType FileType(const std::string& theInputFile);
 	bool itsDoLevelTransform;           //<! Default true
 	bool itsDoInterpolation;            //<! Default true
@@ -235,6 +246,8 @@ class fetcher : public auxiliary_plugin
 	bool itsUseCache;
 	bool itsApplyLandSeaMask;
 	double itsLandSeaMaskThreshold;
+	bool itsDoTimeInterpolation;
+	time_duration itsTimeInterpolationSearchStep;
 };
 
 #ifndef HIMAN_AUXILIARY_INCLUDE

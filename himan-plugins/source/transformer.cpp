@@ -248,56 +248,8 @@ shared_ptr<himan::info<T>> transformer::LandscapeInterpolation(const forecast_ti
 shared_ptr<himan::info<double>> transformer::InterpolateTime(const forecast_time& ftime, const level& lev,
                                                              const param& par, const forecast_type& ftype) const
 {
-	// Time interpolation only supported for hour resolution
-
-	itsLogger.Debug("Starting time interpolation");
-
-	// fetch previous data, max 6 hours to past
-
-	forecast_time curtime = ftime;
-
-	shared_ptr<info<double>> prev = nullptr, next = nullptr;
-
-	do
-	{
-		curtime.ValidDateTime().Adjust(kHourResolution, -1);
-		prev = Fetch(curtime, lev, par, ftype, false);
-	} while (curtime.Step().Hours() >= max(0l, ftime.Step().Hours() - 6l) && prev == nullptr);
-
-	// fetch next data, max 6 hours to future
-
-	curtime = ftime;
-
-	do
-	{
-		curtime.ValidDateTime().Adjust(kHourResolution, 1);
-		next = Fetch(curtime, lev, par, ftype, false);
-	} while (curtime.Step().Hours() <= ftime.Step().Hours() + 6 && next == nullptr);
-
-	if (!prev || !next)
-	{
-		itsLogger.Error("Time interpolation failed: unable to find previous or next data");
-		return nullptr;
-	}
-
-	auto interpolated = make_shared<info<double>>(ftype, ftime, lev, par);
-	interpolated->Producer(prev->Producer());
-	interpolated->Create(prev->Base(), true);
-
-	const auto& prevdata = VEC(prev);
-	const auto& nextdata = VEC(next);
-	auto& interp = VEC(interpolated);
-
-	const double X = static_cast<double>(ftime.Step().Hours());
-	const double X1 = static_cast<double>(prev->Time().Step().Hours());
-	const double X2 = static_cast<double>(next->Time().Step().Hours());
-
-	for (size_t i = 0; i < prevdata.size(); i++)
-	{
-		interp[i] = numerical_functions::interpolation::Linear<double>(X, X1, X2, prevdata[i], nextdata[i]);
-	}
-
-	return interpolated;
+	auto f = GET_PLUGIN(fetcher);
+	return f->Fetch(itsConfiguration, ftime, lev, par, ftype, false, false, false, true);
 }
 
 shared_ptr<himan::info<double>> transformer::InterpolateLevel(const forecast_time& ftime, const level& lev,

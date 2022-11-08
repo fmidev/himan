@@ -1,6 +1,7 @@
 #include "fetcher.h"
 #include "interpolate.h"
 #include "logger.h"
+#include "numerical_functions.h"
 #include "plugin_factory.h"
 #include "statistics.h"
 #include "util.h"
@@ -118,7 +119,9 @@ fetcher::fetcher()
       itsDoVectorComponentRotation(false),
       itsUseCache(true),
       itsApplyLandSeaMask(false),
-      itsLandSeaMaskThreshold(0.5)
+      itsLandSeaMaskThreshold(0.5),
+      itsDoTimeInterpolation(false),
+      itsTimeInterpolationSearchStep(ONE_HOUR)
 {
 	itsLogger = logger("fetcher");
 }
@@ -126,16 +129,28 @@ fetcher::fetcher()
 shared_ptr<info<double>> fetcher::Fetch(shared_ptr<const plugin_configuration> config, forecast_time requestedTime,
                                         level requestedLevel, const params& requestedParams,
                                         forecast_type requestedType, bool readPackedData,
-                                        bool readFromPreviousForecastIfNotFound)
+                                        bool readFromPreviousForecastIfNotFound, bool doTimeInterpolation)
 {
-	return Fetch<double>(config, requestedTime, requestedLevel, requestedParams, requestedType, readPackedData);
+	return Fetch<double>(config, requestedTime, requestedLevel, requestedParams, requestedType, readPackedData,
+	                     doTimeInterpolation);
 }
 
 template <typename T>
 shared_ptr<info<T>> fetcher::Fetch(shared_ptr<const plugin_configuration> config, forecast_time requestedTime,
                                    level requestedLevel, const params& requestedParams, forecast_type requestedType,
-                                   bool readPackedData, bool readFromPreviousForecastIfNotFound)
+                                   bool readPackedData, bool readFromPreviousForecastIfNotFound,
+                                   bool doTimeInterpolation)
 {
+	if (doTimeInterpolation)
+	{
+		if (readFromPreviousForecastIfNotFound)
+		{
+			itsLogger.Warning("Not reading from previous forecast as time interpolation is enabled");
+		}
+
+		return InterpolateTime<T>(config, requestedTime, requestedLevel, requestedParams, requestedType);
+	}
+
 	shared_ptr<info<T>> ret;
 
 	for (size_t i = 0; i < requestedParams.size(); i++)
@@ -177,32 +192,43 @@ shared_ptr<info<T>> fetcher::Fetch(shared_ptr<const plugin_configuration> config
 }
 
 template shared_ptr<info<double>> fetcher::Fetch<double>(shared_ptr<const plugin_configuration>, forecast_time, level,
-                                                         const params&, forecast_type, bool, bool);
+                                                         const params&, forecast_type, bool, bool, bool);
 template shared_ptr<info<float>> fetcher::Fetch<float>(shared_ptr<const plugin_configuration>, forecast_time, level,
-                                                       const params&, forecast_type, bool, bool);
+                                                       const params&, forecast_type, bool, bool, bool);
 template shared_ptr<info<short>> fetcher::Fetch<short>(shared_ptr<const plugin_configuration>, forecast_time, level,
-                                                       const params&, forecast_type, bool, bool);
+                                                       const params&, forecast_type, bool, bool, bool);
 template shared_ptr<info<unsigned char>> fetcher::Fetch<unsigned char>(shared_ptr<const plugin_configuration>,
                                                                        forecast_time, level, const params&,
-                                                                       forecast_type, bool, bool);
+                                                                       forecast_type, bool, bool, bool);
 
 shared_ptr<info<double>> fetcher::Fetch(shared_ptr<const plugin_configuration> config, forecast_time requestedTime,
                                         level requestedLevel, param requestedParam, forecast_type requestedType,
                                         bool readPackedData, bool suppressLogging,
-                                        bool readFromPreviousForecastIfNotFound)
+                                        bool readFromPreviousForecastIfNotFound, bool doTimeInterpolation)
 {
 	return Fetch<double>(config, requestedTime, requestedLevel, requestedParam, requestedType, readPackedData,
-	                     suppressLogging, readFromPreviousForecastIfNotFound);
+	                     suppressLogging, readFromPreviousForecastIfNotFound, doTimeInterpolation);
 }
 
 template <typename T>
 shared_ptr<info<T>> fetcher::Fetch(shared_ptr<const plugin_configuration> config, forecast_time requestedTime,
                                    level requestedLevel, param requestedParam, forecast_type requestedType,
-                                   bool readPackedData, bool suppressLogging, bool readFromPreviousForecastIfNotFound)
+                                   bool readPackedData, bool suppressLogging, bool readFromPreviousForecastIfNotFound,
+                                   bool doTimeInterpolation)
 {
 	timer t(true);
 
 	AmendParamWithAggregationAndProcessingType(requestedParam, requestedTime);
+
+	if (doTimeInterpolation)
+	{
+		if (readFromPreviousForecastIfNotFound)
+		{
+			itsLogger.Warning("Not reading from previous forecast as time interpolation is enabled");
+		}
+
+		return InterpolateTime<T>(config, requestedTime, requestedLevel, {requestedParam}, requestedType);
+	}
 
 	// Check sticky param cache first
 
@@ -305,14 +331,14 @@ shared_ptr<info<T>> fetcher::Fetch(shared_ptr<const plugin_configuration> config
 }
 
 template shared_ptr<info<double>> fetcher::Fetch<double>(shared_ptr<const plugin_configuration>, forecast_time, level,
-                                                         param, forecast_type, bool, bool, bool);
+                                                         param, forecast_type, bool, bool, bool, bool);
 template shared_ptr<info<float>> fetcher::Fetch<float>(shared_ptr<const plugin_configuration>, forecast_time, level,
-                                                       param, forecast_type, bool, bool, bool);
+                                                       param, forecast_type, bool, bool, bool, bool);
 template shared_ptr<info<short>> fetcher::Fetch<short>(shared_ptr<const plugin_configuration>, forecast_time, level,
-                                                       param, forecast_type, bool, bool, bool);
+                                                       param, forecast_type, bool, bool, bool, bool);
 template shared_ptr<info<unsigned char>> fetcher::Fetch<unsigned char>(shared_ptr<const plugin_configuration>,
                                                                        forecast_time, level, param, forecast_type, bool,
-                                                                       bool, bool);
+                                                                       bool, bool, bool);
 
 template <typename T>
 shared_ptr<info<T>> fetcher::FetchFromProducerSingle(search_options& opts, bool readPackedData, bool suppressLogging)
@@ -589,6 +615,14 @@ void fetcher::UseCache(bool theUseCache)
 bool fetcher::UseCache() const
 {
 	return itsUseCache;
+}
+time_duration fetcher::TimeInterpolationSearchStep() const
+{
+	return itsTimeInterpolationSearchStep;
+}
+void fetcher::TimeInterpolationSearchStep(const time_duration& step)
+{
+	itsTimeInterpolationSearchStep = step;
 }
 
 template <typename T>
@@ -1118,3 +1152,105 @@ template void fetcher::RotateVectorComponents<short>(vector<shared_ptr<info<shor
                                                      shared_ptr<const plugin_configuration>, const producer&);
 template void fetcher::RotateVectorComponents<unsigned char>(vector<shared_ptr<info<unsigned char>>>&, const grid*,
                                                              shared_ptr<const plugin_configuration>, const producer&);
+
+template <typename T>
+shared_ptr<himan::info<T>> fetcher::InterpolateTime(const shared_ptr<const plugin_configuration>& config,
+                                                    const forecast_time& ftime, const level& lev, const params& pars,
+                                                    const forecast_type& ftype)
+{
+
+	itsLogger.Trace("Starting time interpolation");
+
+	for (const auto& par : pars)
+	{
+		// fetch previous data, max 6 hours to past
+
+		forecast_time curtime = ftime;
+
+		shared_ptr<info<T>> prev = nullptr, next = nullptr;
+
+		int count = 0, max = 5;
+		do
+		{
+			try
+			{
+				prev = Fetch<T>(config, curtime, lev, par, ftype, false, false, false, false);
+				break;
+			}
+			catch (const HPExceptionType& e)
+			{
+				if (e != kFileDataNotFound)
+				{
+					count = max;
+				}
+			}
+			curtime.ValidDateTime(curtime.ValidDateTime() - itsTimeInterpolationSearchStep);
+
+		} while (++count < max && curtime.OriginDateTime() <= curtime.ValidDateTime());
+
+		if (curtime == ftime)
+		{
+			itsLogger.Info("No time interpolation needed");
+			return prev;
+		}
+
+		// fetch next data, max 6 hours to future
+
+		curtime = ftime;
+		count = 0;
+
+		do
+		{
+			curtime.ValidDateTime(curtime.ValidDateTime() + itsTimeInterpolationSearchStep);
+
+			try
+			{
+				next = Fetch<T>(config, curtime, lev, par, ftype, false, false, false, false);
+				break;
+			}
+			catch (const HPExceptionType& e)
+			{
+				if (e != kFileDataNotFound)
+				{
+					count = max;
+				}
+			}
+
+		} while (++count < max);
+
+		if (!prev || !next)
+		{
+			itsLogger.Error(
+			    fmt::format("Time interpolation failed for {}: unable to find previous or next data", par.Name()));
+			continue;
+		}
+
+		auto interpolated = make_shared<info<T>>(ftype, ftime, lev, par);
+		interpolated->Producer(prev->Producer());
+		interpolated->Create(prev->Base(), true);
+
+		const auto& prevdata = VEC(prev);
+		const auto& nextdata = VEC(next);
+		auto& interp = VEC(interpolated);
+
+		const T X = static_cast<T>(ftime.Step().Hours());
+		const T X1 = static_cast<T>(prev->Time().Step().Hours());
+		const T X2 = static_cast<T>(next->Time().Step().Hours());
+
+		for (size_t i = 0; i < prevdata.size(); i++)
+		{
+			interp[i] = numerical_functions::interpolation::Linear<T>(X, X1, X2, prevdata[i], nextdata[i]);
+		}
+
+		return interpolated;
+	}
+
+	return nullptr;
+}
+
+template shared_ptr<himan::info<double>> fetcher::InterpolateTime<double>(const shared_ptr<const plugin_configuration>&,
+                                                                          const forecast_time&, const level&,
+                                                                          const params&, const forecast_type&);
+template shared_ptr<himan::info<float>> fetcher::InterpolateTime<float>(const shared_ptr<const plugin_configuration>&,
+                                                                        const forecast_time&, const level&,
+                                                                        const params&, const forecast_type&);

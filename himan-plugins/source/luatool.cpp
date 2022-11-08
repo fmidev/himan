@@ -1680,6 +1680,8 @@ std::shared_ptr<info<double>> luatool::FetchInfoWithArgs(const luabind::object& 
 		const auto do_levelx = GetOptional(o, "do_level_transform", true);
 		const auto use_cache = GetOptional(o, "use_cache", true);
 		const auto do_rot = GetOptional(o, "do_vector_rotation", true);
+		const auto tintrp = GetOptional(o, "time_interpolation", false);
+		const auto tintrpstep = GetOptional(o, "time_interpolation_search_step", time_duration("01:00:00"));
 
 		auto cnf = std::make_shared<plugin_configuration>(*itsConfiguration);
 
@@ -1706,8 +1708,9 @@ std::shared_ptr<info<double>> luatool::FetchInfoWithArgs(const luabind::object& 
 			f->ApplyLandSeaMask(true);
 			f->LandSeaMaskThreshold(lsm_thr);
 		}
+		f->TimeInterpolationSearchStep(tintrpstep);
 
-		return f->Fetch<double>(cnf, ftime, lvl, par, ftype, rpacked, sl, rprev);
+		return f->Fetch<double>(cnf, ftime, lvl, par, ftype, rpacked, sl, rprev, tintrp);
 	}
 	catch (cast_failed& e)
 	{
