@@ -281,7 +281,7 @@ namespace interpolation
 template <typename Type>
 CUDA_HOST CUDA_DEVICE inline Type Linear(Type factor, Type Y1, Type Y2)
 {
-	return std::fma(factor, Y2, std::fma(-factor, Y1, Y1));
+	return static_cast<Type> (std::fma(factor, Y2, std::fma(-factor, Y1, Y1)));
 }
 
 template <typename Type>
@@ -292,7 +292,7 @@ CUDA_HOST CUDA_DEVICE inline Type Linear(Type X, Type X1, Type X2, Type Y1, Type
 		return Y1;
 	}
 
-	const Type factor = (X - X1) / (X2 - X1);
+	const Type factor = static_cast<Type> ((X - X1) / (X2 - X1));
 	return Linear<Type>(factor, Y1, Y2);
 }
 
