@@ -8,6 +8,7 @@ using namespace himan;
 #include <iostream>
 #include <libs3.h>
 #include <mutex>
+#include <regex>
 #include <string.h>  // memcpy
 
 namespace
@@ -17,8 +18,7 @@ static std::once_flag oflag;
 const char* access_key = 0;
 const char* secret_key = 0;
 const char* security_token = 0;
-S3Protocol protocol = S3ProtocolHTTPS;
-
+S3Protocol default_protocol = S3ProtocolHTTPS;
 thread_local S3Status statusG = S3StatusOK;
 
 void CheckS3Error(S3Status errarg, const char* file, const int line);
@@ -54,19 +54,18 @@ void HandleS3Error(himan::logger& logr, const std::string& host, const std::stri
 	}
 }
 
+std::string StripProtocol(const std::string& str)
+{
+	const static std::regex r("^(https)|(http)|(s3)*://");
+
+	return regex_replace(str, r, "");
+}
+
 std::vector<std::string> GetBucketAndFileName(const std::string& fullFileName)
 {
 	std::vector<std::string> ret;
 
-	auto fileName = fullFileName;
-
-	// strip protocol from string if it's there
-	const auto pos = fullFileName.find("s3://");
-
-	if (pos != std::string::npos)
-	{
-		fileName = fileName.erase(pos, 5);
-	}
+	auto fileName = StripProtocol(fullFileName);
 
 	// erase forward slash if exists (s3 buckets can't start with /)
 	if (fileName[0] == '/')
@@ -153,11 +152,11 @@ void Initialize()
 			    const auto envproto = himan::util::GetEnv("S3_PROTOCOL");
 			    if (envproto == "https")
 			    {
-				    protocol = S3ProtocolHTTPS;
+				    default_protocol = S3ProtocolHTTPS;
 			    }
 			    else if (envproto == "http")
 			    {
-				    protocol = S3ProtocolHTTP;
+				    default_protocol = S3ProtocolHTTP;
 			    }
 			    else
 			    {
@@ -220,6 +219,18 @@ static int putObjectDataCallback(int bufferSize, char* buffer, void* callbackDat
 	return bytesWritten;
 }
 
+S3Protocol GetProtocol(const std::string& endpoint)
+{
+	S3Protocol protocol = default_protocol;
+
+	if (endpoint.find("http://") != std::string::npos)
+	{
+		protocol = S3ProtocolHTTP;
+	}
+
+	return protocol;
+}
+
 }  // namespace
 
 buffer s3::ReadFile(const file_information& fileInformation)
@@ -234,7 +245,7 @@ buffer s3::ReadFile(const file_information& fileInformation)
 	const auto key = bucketAndFileName[1];
 
 	buffer ret;
-
+	auto hostname = StripProtocol(fileInformation.file_server);
 #ifdef S3_DEFAULT_REGION
 
 	std::string region = ReadAWSRegionFromHostname(fileInformation.file_server);
@@ -243,9 +254,9 @@ buffer s3::ReadFile(const file_information& fileInformation)
 
         S3BucketContext bucketContext =
         {
-                fileInformation.file_server.c_str(),
+                hostname.c_str(),
                 bucket.c_str(),
-                protocol,
+                GetProtocol(fileInformation.file_server),
                 S3UriStylePath,
                 access_key,
                 secret_key,
@@ -258,9 +269,9 @@ buffer s3::ReadFile(const file_information& fileInformation)
 
 	S3BucketContext bucketContext = 
 	{
-		fileInformation.file_server.c_str(),
+		hostname.c_str(),
 		bucket.c_str(),
-		protocol,
+		GetProtocol(fileInformation.file_server),
 		S3UriStylePath,
 		access_key,
 		secret_key,
@@ -333,7 +344,7 @@ void s3::WriteObject(const std::string& objectName, const buffer& buff)
         {
                 host,
                 bucket.c_str(),
-                protocol,
+                GetProtocol(std::string(host)),
                 S3UriStylePath,
                 access_key,
                 secret_key,
@@ -348,7 +359,7 @@ void s3::WriteObject(const std::string& objectName, const buffer& buff)
 	{
 		host,
 		bucket.c_str(),
-		protocol,
+		GetProtocol(std::string(host)),
 		S3UriStylePath,
 		access_key,
 		secret_key,
