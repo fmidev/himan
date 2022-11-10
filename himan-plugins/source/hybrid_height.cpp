@@ -37,7 +37,7 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 	}
 
 	if ((itsConfiguration->TargetProducer().Id() == 240 || itsConfiguration->TargetProducer().Id() == 243) ||
-	    itsConfiguration->TargetProducer().Id() == 270)
+	    (itsConfiguration->TargetProducer().Id() >= 270 && itsConfiguration->TargetProducer().Id() <= 272))
 	{
 		// Workaround for MNWC which doesn't have geopotential for sub-hour data (as of 2019-06-12)
 		itsUseGeopotential = false;
@@ -258,31 +258,33 @@ bool hybrid_height::WithHypsometricEquation(shared_ptr<himan::info<float>>& myTa
 		// We have to give shared_ptr's as arguments to make sure they don't go
 		// out of scope and memory free'd while processing is still in progress
 
-		pool.push_back(async(launch::async,
-		                     [&](shared_ptr<himan::info<float>> _myTargetInfo, shared_ptr<himan::info<float>> _PInfo,
-		                         shared_ptr<himan::info<float>> _prevPInfo, shared_ptr<himan::info<float>> _TInfo,
-		                         shared_ptr<himan::info<float>> _prevTInfo) {
-			                     auto& target = VEC(_myTargetInfo);
-			                     const auto& PVec = VEC(_PInfo);
-			                     const auto& prevPVec = VEC(_prevPInfo);
-			                     const auto& TVec = VEC(_TInfo);
-			                     const auto& prevTVec = VEC(_prevTInfo);
+		pool.push_back(async(
+		    launch::async,
+		    [&](shared_ptr<himan::info<float>> _myTargetInfo, shared_ptr<himan::info<float>> _PInfo,
+		        shared_ptr<himan::info<float>> _prevPInfo, shared_ptr<himan::info<float>> _TInfo,
+		        shared_ptr<himan::info<float>> _prevTInfo)
+		    {
+			    auto& target = VEC(_myTargetInfo);
+			    const auto& PVec = VEC(_PInfo);
+			    const auto& prevPVec = VEC(_prevPInfo);
+			    const auto& TVec = VEC(_TInfo);
+			    const auto& prevTVec = VEC(_prevTInfo);
 
-			                     for (auto&& tup : zip_range(target, PVec, prevPVec, TVec, prevTVec))
-			                     {
-				                     float& result = tup.get<0>();
+			    for (auto&& tup : zip_range(target, PVec, prevPVec, TVec, prevTVec))
+			    {
+				    float& result = tup.get<0>();
 
-				                     const float P = tup.get<1>();
-				                     const float prevP = tup.get<2>();
-				                     const float T = tup.get<3>();
-				                     const float prevT = tup.get<4>();
+				    const float P = tup.get<1>();
+				    const float prevP = tup.get<2>();
+				    const float T = tup.get<3>();
+				    const float prevT = tup.get<4>();
 
-				                     result = 14.628f * (prevT + T) * log(prevP / P);
+				    result = 14.628f * (prevT + T) * log(prevP / P);
 
-				                     ASSERT(isfinite(result));
-			                     }
-		                     },
-		                     make_shared<info<float>>(*myTargetInfo), PInfo, prevPInfo, TInfo, prevTInfo));
+				    ASSERT(isfinite(result));
+			    }
+		    },
+		    make_shared<info<float>>(*myTargetInfo), PInfo, prevPInfo, TInfo, prevTInfo));
 
 		if (pool.size() == 10)
 		{
@@ -368,9 +370,9 @@ bool hybrid_height::WithHypsometricEquation(shared_ptr<himan::info<float>>& myTa
 
 		if (itsConfiguration->WriteMode() == kSingleGridToAFile)
 		{
-			writers.push_back(async(launch::async,
-			                        [this](shared_ptr<info<float>> tempInfo) { WriteSingleGridToFile(tempInfo); },
-			                        make_shared<info<float>>(*myTargetInfo)));
+			writers.push_back(async(
+			    launch::async, [this](shared_ptr<info<float>> tempInfo) { WriteSingleGridToFile(tempInfo); },
+			    make_shared<info<float>>(*myTargetInfo)));
 		}
 		else
 		{

@@ -17,7 +17,7 @@ static std::once_flag oflag;
 const char* access_key = 0;
 const char* secret_key = 0;
 const char* security_token = 0;
-S3Protocol protocol = S3ProtocolHTTP;
+S3Protocol protocol = S3ProtocolHTTPS;
 
 thread_local S3Status statusG = S3StatusOK;
 

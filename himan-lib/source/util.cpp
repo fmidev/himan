@@ -97,7 +97,7 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 		kForecastTypeValue,
 		kProducerId,
 		kFileType,
-	        kWallTime
+		kWallTime
 	};
 
 	auto ForecastTypeToShortString = [](HPForecastType type) -> string

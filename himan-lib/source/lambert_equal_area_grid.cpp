@@ -50,8 +50,8 @@ lambert_equal_area_grid::lambert_equal_area_grid(const lambert_equal_area_grid& 
 {
 	itsLogger = logger("lambert_equal_area_grid");
 	itsSpatialReference = std::unique_ptr<OGRSpatialReference>(other.itsSpatialReference->Clone());
-
-	CreateCoordinateTransformations(other.FirstPoint(), false);
+	itsLatLonToXYTransformer = std::unique_ptr<OGRCoordinateTransformation>(other.itsLatLonToXYTransformer->Clone());
+	itsXYToLatLonTransformer = std::unique_ptr<OGRCoordinateTransformation>(other.itsXYToLatLonTransformer->Clone());
 }
 
 void lambert_equal_area_grid::CreateCoordinateTransformations(const point& firstPoint, bool firstPointIsProjected)

@@ -53,12 +53,15 @@ earth_shape<double> DetermineEarthShapeForProducer(const producer& prod, const e
 	{
 		case 4:    // MEPS
 		case 7:    // MNWC
+		case 8:    // MNWC_PREOP
 		case 10:   // MEPS_PREOP
 		case 11:   // CMEPS_PREOP
 		case 260:  // MEPSMTA
 		case 261:  // MEPS_PREOPMTA
 		case 265:  // CMEPS_PREOPMTA
 		case 270:  // MNWCMTA
+		case 271:  // MNWCMTA_DEV
+		case 272:  // MNWC_PREOPMTA
 			return ELLIPS_WGS84;
 		default:
 			return defaultShape;
@@ -2556,7 +2559,7 @@ void ReadData(shared_ptr<info<T>> newInfo, bool readPackedData, const NFmiGribMe
 
 	if (message.Edition() == 2 && (paramName == "PRECFORM-N" || paramName == "PRECFORM2-N") &&
 	    (producerId == 230 || producerId == 240 || producerId == 243 || producerId == 250 || producerId == 260 ||
-	     producerId == 265 || producerId == 270))
+	     producerId == 265 || producerId == 270 || producerId == 271))
 	{
 		decodePrecipitationForm = true;
 	}
