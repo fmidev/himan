@@ -641,7 +641,8 @@ void transformer::Rotate(shared_ptr<info<double>> myTargetInfo)
 	secondInfo->Data().Set(VEC(b));
 	secondInfo->Grid()->UVRelativeToGrid(b->Grid()->UVRelativeToGrid());
 
-	interpolate::RotateVectorComponents(a->Grid().get(), myTargetInfo->Grid().get(), *myTargetInfo, *secondInfo, false);
+	interpolate::RotateVectorComponents(a->Grid().get(), myTargetInfo->Grid().get(), *myTargetInfo, *secondInfo,
+	                                    itsConfiguration->UseCuda());
 }
 
 void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
@@ -667,6 +668,8 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 	if (itsRotateVectorComponents)
 	{
 		Rotate(myTargetInfo);
+		myThreadedLogger.Info(fmt::format("[{}] Missing values: {}/{}", itsConfiguration->UseCuda() ? "GPU" : "CPU",
+		                                  myTargetInfo->Data().MissingCount(), myTargetInfo->Data().Size()));
 		return;
 	}
 
