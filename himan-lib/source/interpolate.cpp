@@ -458,7 +458,7 @@ void RotateVectorComponentsCPU(const grid* from, const grid* to, himan::matrix<T
 		log.Trace("Result grid has UVRelativeToGrid=false, no need for further rotation");
 		return;
 	}
-
+#if 0
 	switch (to->Type())
 	{
 		case kLatitudeLongitude:
@@ -518,55 +518,11 @@ void RotateVectorComponentsCPU(const grid* from, const grid* to, himan::matrix<T
 		}
 		break;
 
-		case kLambertConformalConic:
-		{
-			auto lcc = dynamic_cast<const lambert_conformal_grid*>(to);
-			const double cone = lcc->Cone();
-			const double orientation = lcc->Orientation();
-
-			for (size_t i = 0; i < U.Size(); i++)
-			{
-				T u = U[i];
-				T v = V[i];
-
-				// http://www.mcs.anl.gov/~emconsta/wind_conversion.txt
-
-				const double angle = to->LatLon(i).X() - orientation;
-				ASSERT(angle >= -180 && angle <= 180);
-
-				const double anglex = cone * angle * constants::kDeg;
-				double sinx, cosx;
-				sincos(anglex, &sinx, &cosx);
-
-				U[i] = static_cast<T>(cosx * u - sinx * v);
-				V[i] = static_cast<T>(sinx * u + cosx * v);
-			}
-		}
-		break;
-		case kStereographic:
-		{
-			const double orientation = dynamic_cast<const stereographic_grid*>(to)->Orientation();
-
-			for (size_t i = 0; i < U.Size(); i++)
-			{
-				T u = U[i];
-				T v = V[i];
-
-				const double angle = (to->LatLon(i).X() - orientation) * constants::kDeg;
-				double sinx, cosx;
-
-				sincos(angle, &sinx, &cosx);
-
-				U[i] = static_cast<T>(cosx * u - sinx * v);
-				V[i] = static_cast<T>(sinx * u + cosx * v);
-			}
-		}
-		break;
-
 		default:
 			throw std::runtime_error("Unable to rotate from " + HPGridTypeToString.at(from->Type()) + " to " +
 			                         HPGridTypeToString.at(to->Type()));
 	}
+#endif
 }
 
 template void RotateVectorComponentsCPU<double>(const grid*, const grid*, himan::matrix<double>&,

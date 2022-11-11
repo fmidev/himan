@@ -95,6 +95,9 @@ bool IsVectorComponent(const std::string& paramName);
 
 HPInterpolationMethod InterpolationMethod(const std::string& paramName, HPInterpolationMethod interpolationMethod);
 
+/* Rotate vector components from grid-relative to earth-relative form.
+ * Rotation to other direction is not supported */
+
 template <typename T>
 void RotateVectorComponents(const grid* from, const grid* to, himan::info<T>& U, himan::info<T>& V, bool useCuda);
 
