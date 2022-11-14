@@ -350,8 +350,6 @@ void himan::interpolate::RotateVectorComponentsGPU(const grid* from, const grid*
                                                    himan::matrix<T>& V, cudaStream_t& stream, T* d_u, T* d_v,
                                                    double* d_lon)
 {
-	logger log("interpolate_gpu");
-
 	const size_t N = U.Size();
 	const size_t memsize = N * sizeof(T);
 
@@ -372,8 +370,9 @@ void himan::interpolate::RotateVectorComponentsGPU(const grid* from, const grid*
 		CUDA_CHECK(cudaMemcpyAsync(d_v, V.ValuesAsPOD(), memsize, cudaMemcpyHostToDevice, stream));
 	}
 
-	auto CreateLongitudeList = [&]()
-	{
+	logger log("interpolate_gpu");
+
+	auto CreateLongitudeList = [&]() {
 		release_lon = true;
 		CUDA_CHECK(cudaMalloc((void**)&d_lon, N * sizeof(double)));
 		CUDA_CHECK(cudaMallocHost((void**)&lon, N * sizeof(double)));
@@ -388,6 +387,8 @@ void himan::interpolate::RotateVectorComponentsGPU(const grid* from, const grid*
 
 	if (from->UVRelativeToGrid() && from->Type() != kLatitudeLongitude)
 	{
+		log.Trace("Rotating from " + HPGridTypeToString.at(from->Type()) + " to earth relative");
+
 		switch (from->Type())
 		{
 			case himan::kRotatedLatitudeLongitude:
@@ -440,6 +441,11 @@ void himan::interpolate::RotateVectorComponentsGPU(const grid* from, const grid*
 	CUDA_CHECK(cudaMemcpy(V.ValuesAsPOD(), d_v, memsize, cudaMemcpyDeviceToHost));
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
+
+	if (to->Type() != kLatitudeLongitude)
+	{
+		log.Error("Unable to rotate to projected areas with gpu");
+	}
 
 	if (release)
 	{
