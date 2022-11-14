@@ -103,7 +103,7 @@ function MissingCloudFixWithRH(effc)
   local ftime = forecast_time(latest_origintime, current_time:GetValidDateTime())
   logger:Info(string.format("SmartMet NWC origintime: %s validtime: %s", ftime:GetOriginDateTime():String("%Y-%m-%d %H:%M:%S"), ftime:GetValidDateTime():String("%Y-%m-%d %H:%M:%S")))
 
-  o = {forecast_time = ftime,
+  local o = {forecast_time = ftime,
        level = level(HPLevelType.kHeight, 2),
        param = param("RH-PRCNT"),
        forecast_type = current_forecast_type,
@@ -116,7 +116,27 @@ function MissingCloudFixWithRH(effc)
 
   local snwc_rh = luatool:FetchWithArgs(o)
 
-  if not snwc_rh then
+  local mnwc_prod = producer(7, "MNWC")
+  mnwc_prod:SetCentre(251)
+  mnwc_prod:SetProcess(7)
+
+  local mnwc_origintime = raw_time(radon:GetLatestTime(mnwc_prod, "", 0))
+  ftime = forecast_time(mnwc_origintime, current_time:GetValidDateTime())
+  logger:Info(string.format("MNWC origintime: %s validtime: %s", ftime:GetOriginDateTime():String("%Y-%m-%d %H:%M:%S"), ftime:GetValidDateTime():String("%Y-%m-%d %H:%M:%S")))
+
+
+  o = {forecast_time = ftime,
+       level = current_level,
+       param = param("NL-0TO1"),
+       forecast_type = current_forecast_type,
+       producer = mnwc_prod,
+       geom_name = "",
+       read_previous_forecast_if_not_found = true
+  }
+
+  local mnwc_cl = luatool:FetchWithArgs(o)
+
+  if not snwc_rh or not mnwc_cl then
     logger:Warning("Unable to perform RH based fix")
     return effc
   end
@@ -126,10 +146,11 @@ function MissingCloudFixWithRH(effc)
 
   for i=1,#snwc_rh do
     local old_effc = effc[i]
-    if effc[i] < 0.1 and snwc_rh[i] >= 89 then
+
+    if effc[i] < 0.1 and snwc_rh[i] >= 89 and mnwc_cl[i] > 0.9 then
       effc[i] = 0.6
     end
-    if effc[i] <= 0.6 and snwc_rh[i] >= 98 then
+    if effc[i] <= 0.6 and snwc_rh[i] >= 98 and mnwc_cl[i] > 0.9 then
       effc[i] = 0.8
     end
 
