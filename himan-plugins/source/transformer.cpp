@@ -641,7 +641,10 @@ void transformer::Rotate(shared_ptr<info<double>> myTargetInfo)
 	secondInfo->Data().Set(VEC(b));
 	secondInfo->Grid()->UVRelativeToGrid(b->Grid()->UVRelativeToGrid());
 
-	interpolate::RotateVectorComponents(a->Grid().get(), myTargetInfo->Grid().get(), *myTargetInfo, *secondInfo,
+	auto target = std::unique_ptr<grid>(myTargetInfo->Grid()->Clone());
+	target->UVRelativeToGrid(false);
+
+	interpolate::RotateVectorComponents(a->Grid().get(), target.get(), *myTargetInfo, *secondInfo,
 	                                    itsConfiguration->UseCuda());
 }
 
