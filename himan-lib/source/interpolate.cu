@@ -372,7 +372,8 @@ void himan::interpolate::RotateVectorComponentsGPU(const grid* from, const grid*
 
 	logger log("interpolate_gpu");
 
-	auto CreateLongitudeList = [&]() {
+	auto CreateLongitudeList = [&]()
+	{
 		release_lon = true;
 		CUDA_CHECK(cudaMalloc((void**)&d_lon, N * sizeof(double)));
 		CUDA_CHECK(cudaMallocHost((void**)&lon, N * sizeof(double)));
@@ -442,7 +443,7 @@ void himan::interpolate::RotateVectorComponentsGPU(const grid* from, const grid*
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
-	if (to->Type() != kLatitudeLongitude)
+	if (to->UVRelativeToGrid() == true)
 	{
 		log.Error("Unable to rotate to projected areas with gpu");
 	}
