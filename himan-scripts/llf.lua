@@ -38,6 +38,14 @@ function GetTop(lowlimitdata, highlimitdata, thresholddata, zFL125data)
   return topdata
 end
 
+function AddScalar(arr, scalar)
+  local ret = {}
+  for i=1,#arr do
+    ret[i] = arr[i] + scalar
+  end
+  return ret
+end
+
 function Top()
 
   -- Cloud amount threshold to consider a cloud (base and) top [0..1]
@@ -81,16 +89,16 @@ function Top()
   end
 
   local base1data = GetBase(zerodata, maxHdata, thresholddata, zFL125data)
-  local top1data = GetTop(base1data, maxHdata, thresholddata, zFL125data)
+  local top1data = GetTop(AddScalar(base1data, 1), maxHdata, thresholddata, zFL125data)
 
-  local base2data = GetBase(top1data, maxHdata, thresholddata, zFL125data)
-  local top2data = GetTop(base2data, maxHdata, thresholddata, zFL125data)
+  local base2data = GetBase(AddScalar(top1data, 1), maxHdata, thresholddata, zFL125data)
+  local top2data = GetTop(AddScalar(base2data, 1), maxHdata, thresholddata, zFL125data)
 
-  local base3data = GetBase(top2data, maxHdata, thresholddata, zFL125data)
-  local top3data = GetTop(base3data, maxHdata, thresholddata, zFL125data)
+  local base3data = GetBase(AddScalar(top2data, 1), maxHdata, thresholddata, zFL125data)
+  local top3data = GetTop(AddScalar(base3data, 1), maxHdata, thresholddata, zFL125data)
 
-  local base4data = GetBase(top3data, maxHdata, thresholddata, zFL125data)
-  local top4data = GetTop(base4data, maxHdata, thresholddata, zFL125data)
+  local base4data = GetBase(AddScalar(top3data, 1), maxHdata, thresholddata, zFL125data)
+  local top4data = GetTop(AddScalar(base4data, 1), maxHdata, thresholddata, zFL125data)
 
   local ret = {}
 
