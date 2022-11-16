@@ -147,10 +147,10 @@ function MissingCloudFixWithRH(effc)
   for i=1,#snwc_rh do
     local old_effc = effc[i]
 
-    if effc[i] < 0.1 and snwc_rh[i] >= 89 and mnwc_cl[i] > 0.9 then
+    if effc[i] < 0.1 and snwc_rh[i] >= 86 and mnwc_cl[i] > 0.9 then
       effc[i] = 0.6
     end
-    if effc[i] <= 0.6 and snwc_rh[i] >= 98 and mnwc_cl[i] > 0.9 then
+    if effc[i] <= 0.6 and snwc_rh[i] >= 94 and mnwc_cl[i] > 0.9 then
       effc[i] = 0.8
     end
 
