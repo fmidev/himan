@@ -324,15 +324,17 @@ void s3::WriteObject(const std::string& objectName, const buffer& buff)
 	const auto bucket = bucketAndFileName[0];
 	const auto key = bucketAndFileName[1];
 
-	const char* host = getenv("S3_HOSTNAME");
+	const char* chost = getenv("S3_HOSTNAME");
 
 	logger logr("s3");
 
-	if (!host)
+	if (!chost)
 	{
 		logr.Fatal("Environment variable S3_HOSTNAME not defined");
 		himan::Abort();
 	}
+
+	const std::string host = StripProtocol(std::string(chost));
 
 #ifdef S3_DEFAULT_REGION
 
@@ -342,9 +344,9 @@ void s3::WriteObject(const std::string& objectName, const buffer& buff)
 
         S3BucketContext bucketContext =
         {
-                host,
+                host.c_str(),
                 bucket.c_str(),
-                GetProtocol(std::string(host)),
+                GetProtocol(std::string(chost)),
                 S3UriStylePath,
                 access_key,
                 secret_key,
@@ -357,9 +359,9 @@ void s3::WriteObject(const std::string& objectName, const buffer& buff)
 
 	S3BucketContext bucketContext =
 	{
-		host,
+		host.c_str(),
 		bucket.c_str(),
-		GetProtocol(std::string(host)),
+		GetProtocol(std::string(chost)),
 		S3UriStylePath,
 		access_key,
 		secret_key,
