@@ -28,92 +28,93 @@ void radon::Init()
 	{
 		try
 		{
-			call_once(oflag, [&]() {
+			call_once(
+			    oflag,
+			    [&]()
+			    {
+				    string radonHost = "vorlon";
 
-				string radonHost = "vorlon";
+				    try
+				    {
+					    radonHost = util::GetEnv("RADON_HOSTNAME");
+				    }
+				    catch (...)
+				    {
+				    }
 
-				try
-				{
-					radonHost = util::GetEnv("RADON_HOSTNAME");
-				}
-				catch (...)
-				{
-				}
+				    string radonName = "radon";
 
-				string radonName = "radon";
+				    try
+				    {
+					    radonName = util::GetEnv("RADON_DATABASENAME");
+				    }
+				    catch (...)
+				    {
+				    }
 
-				try
-				{
-					radonName = util::GetEnv("RADON_DATABASENAME");
-				}
-				catch (...)
-				{
-				}
+				    int radonPort = 5432;
 
-				int radonPort = 5432;
+				    try
+				    {
+					    radonPort = stoi(util::GetEnv("RADON_PORT"));
+				    }
+				    catch (...)
+				    {
+				    }
 
-				try
-				{
-					radonPort = stoi(util::GetEnv("RADON_PORT"));
-				}
-				catch (...)
-				{
-				}
+				    NFmiRadonDBPool::Instance()->Username("wetodb");
+				    NFmiRadonDBPool::Instance()->Password(util::GetEnv("RADON_WETODB_PASSWORD"));
+				    NFmiRadonDBPool::Instance()->Database(radonName);
+				    NFmiRadonDBPool::Instance()->Hostname(radonHost);
+				    NFmiRadonDBPool::Instance()->Port(radonPort);
 
-				NFmiRadonDBPool::Instance()->Username("wetodb");
-				NFmiRadonDBPool::Instance()->Password(util::GetEnv("RADON_WETODB_PASSWORD"));
-				NFmiRadonDBPool::Instance()->Database(radonName);
-				NFmiRadonDBPool::Instance()->Hostname(radonHost);
-				NFmiRadonDBPool::Instance()->Port(radonPort);
+				    if (NFmiRadonDBPool::Instance()->MaxWorkers() < MAX_WORKERS)
+				    {
+					    NFmiRadonDBPool::Instance()->MaxWorkers(MAX_WORKERS);
+				    }
 
-				if (NFmiRadonDBPool::Instance()->MaxWorkers() < MAX_WORKERS)
-				{
-					NFmiRadonDBPool::Instance()->MaxWorkers(MAX_WORKERS);
-				}
+				    itsLogger.Info("Connected to radon (db=" + radonName + ", host=" + radonHost + ":" +
+				                   std::to_string(radonPort) + ")");
 
-				itsLogger.Info("Connected to radon (db=" + radonName + ", host=" + radonHost + ":" +
-				               std::to_string(radonPort) + ")");
+				    try
+				    {
+					    itsRadonDB = std::unique_ptr<NFmiRadonDB>(NFmiRadonDBPool::Instance()->GetConnection());
+					    const std::string radonVersion = GetVersion();
 
-				try
-				{
-					itsRadonDB = std::unique_ptr<NFmiRadonDB>(NFmiRadonDBPool::Instance()->GetConnection());
-					const std::string radonVersion = GetVersion();
+					    const int v = std::stoi(radonVersion);
 
-					const int v = std::stoi(radonVersion);
-
-					if (v < RADON_MIN_REQUIRED_VERSION)
-					{
-						itsLogger.Fatal(fmt::format("Radon version '{}' is too old, at least '{}' is required", v,
-						                            RADON_MIN_REQUIRED_VERSION));
-						himan::Abort();
-					}
-					else if (v < RADON_MIN_RECOMMENDED_VERSION)
-					{
-						itsLogger.Warning(fmt::format("Radon version '{}' found, at least '{}' is recommended", v,
-						                              RADON_MIN_RECOMMENDED_VERSION));
-					}
-					else
-					{
-						itsLogger.Debug(fmt::format("Radon version '{}' found", v));
-					}
-				}
-				catch (const std::invalid_argument& e)
-				{
-					itsLogger.Debug(fmt::format("Unable to determine radon version: {}", e.what()));
-				}
-				catch (const pqxx::failure& e)
-				{
-					itsLogger.Trace(fmt::format("pqxx error fetching radon version"));
-				}
-				catch (const std::exception& e)
-				{
-					itsLogger.Trace(fmt::format("Unknown error fetching radon version: {}", e.what()));
-				}
-				catch (...)
-				{
-				}
-
-			});
+					    if (v < RADON_MIN_REQUIRED_VERSION)
+					    {
+						    itsLogger.Fatal(fmt::format("Radon version '{}' is too old, at least '{}' is required", v,
+						                                RADON_MIN_REQUIRED_VERSION));
+						    himan::Abort();
+					    }
+					    else if (v < RADON_MIN_RECOMMENDED_VERSION)
+					    {
+						    itsLogger.Warning(fmt::format("Radon version '{}' found, at least '{}' is recommended", v,
+						                                  RADON_MIN_RECOMMENDED_VERSION));
+					    }
+					    else
+					    {
+						    itsLogger.Debug(fmt::format("Radon version '{}' found", v));
+					    }
+				    }
+				    catch (const std::invalid_argument& e)
+				    {
+					    itsLogger.Debug(fmt::format("Unable to determine radon version: {}", e.what()));
+				    }
+				    catch (const pqxx::failure& e)
+				    {
+					    itsLogger.Trace(fmt::format("pqxx error fetching radon version"));
+				    }
+				    catch (const std::exception& e)
+				    {
+					    itsLogger.Trace(fmt::format("Unknown error fetching radon version: {}", e.what()));
+				    }
+				    catch (...)
+				    {
+				    }
+			    });
 
 			if (!itsRadonDB)
 			{
@@ -737,8 +738,15 @@ pair<bool, radon_record> radon::SaveGrid(const info<T>& resultInfo, const file_i
 		case kS3ObjectStorageSystem:
 		{
 			const char* host_ = getenv("S3_HOSTNAME");
+
+			if (host_ == nullptr)
+			{
+				itsLogger.Error("Env variable S3_HOSTNAME missing");
+				return make_pair(false, radon_record());
+			}
 			host = string(host_);
-			if (host.find("http") == string::npos) {
+			if (host.find("http") == string::npos)
+			{
 				itsLogger.Warning("S3_HOSTNAME missing protocol -- adding 'https://'");
 				host = "https://" + host;
 			}
@@ -787,7 +795,8 @@ pair<bool, radon_record> radon::SaveGrid(const info<T>& resultInfo, const file_i
 	double levelValue2 = IsKHPMissingValue(resultInfo.Level().Value2()) ? -1 : resultInfo.Level().Value2();
 	const string fullTableName = fmt::format("{}.{}", schema_name, partition_name);
 
-	auto FormatToSQL = [](const boost::optional<unsigned long>& opt) -> string {
+	auto FormatToSQL = [](const boost::optional<unsigned long>& opt) -> string
+	{
 		if (opt)
 		{
 			return to_string(opt.get());
