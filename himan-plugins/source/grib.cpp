@@ -665,16 +665,16 @@ void WriteAreaAndGrid(NFmiGribMessage& message, const shared_ptr<himan::grid>& g
 				}
 				else
 				{
-					message.SetLongKey("scaleFactorOfRadiusOfSphericalEarth", 1);
+					message.SetLongKey("scaleFactorOfRadiusOfSphericalEarth", 0);
 					message.SetLongKey("scaledValueOfRadiusOfSphericalEarth", static_cast<long>(earth.A()));
 				}
 			}
 			else
 			{
 				message.SetLongKey("shapeOfTheEarth", 7);
-				message.SetLongKey("scaleFactorOfEarthMajorAxis", 1);
+				message.SetLongKey("scaleFactorOfEarthMajorAxis", 0);
 				message.SetLongKey("scaledValueOfEarthMajorAxis", static_cast<long>(earth.A()));
-				message.SetLongKey("scaleFactorOfEarthMinorAxis", 1);
+				message.SetLongKey("scaleFactorOfEarthMinorAxis", 0);
 				message.SetLongKey("scaledValueOfEarthMinorAxis", static_cast<long>(earth.B()));
 			}
 		}
@@ -683,7 +683,7 @@ void WriteAreaAndGrid(NFmiGribMessage& message, const shared_ptr<himan::grid>& g
 			if (name == "newbase")
 			{
 				message.SetLongKey("shapeOfTheEarth", 1);
-				message.SetLongKey("scaleFactorOfRadiusOfSphericalEarth", 1);
+				message.SetLongKey("scaleFactorOfRadiusOfSphericalEarth", 0);
 				message.SetLongKey("scaledValueOfRadiusOfSphericalEarth", static_cast<long>(earth.A()));
 			}
 			else if (name == "WGS84")
@@ -1747,9 +1747,9 @@ himan::earth_shape<double> ReadEarthShape(const NFmiGribMessage& msg)
 			case 1:
 			{
 				// Earth assumed spherical with radius specified (in m) by data producer
-				const long scale = msg.GetLongKey("scaleFactorOfRadiusOfSphericalEarth");
-				const long r = msg.GetLongKey("scaledValueOfRadiusOfSphericalEarth");
-				a = b = static_cast<double>(scale * r);
+				const double scale = static_cast<double>(msg.GetLongKey("scaleFactorOfRadiusOfSphericalEarth"));
+				const double r = static_cast<double>(msg.GetLongKey("scaledValueOfRadiusOfSphericalEarth"));
+				a = b = pow(10., scale) * r;
 				break;
 			}
 			case 2:
@@ -1761,13 +1761,13 @@ himan::earth_shape<double> ReadEarthShape(const NFmiGribMessage& msg)
 			case 3:
 			{
 				// Earth assumed oblate spheroid with major and minor axes specified (in km) by data producer
-				long scale = msg.GetLongKey("scaleFactorOfEarthMajorAxis");
-				long val = msg.GetLongKey("scaledValueOfEarthMajorAxis");
-				a = static_cast<double>(1000 * scale * val);
+				double scale = static_cast<double>(msg.GetLongKey("scaleFactorOfEarthMajorAxis"));
+				double val = static_cast<double>(msg.GetLongKey("scaledValueOfEarthMajorAxis"));
+				a = 1000. * pow(10., scale) * val;
 
-				scale = msg.GetLongKey("scaleFactorOfEarthMinorAxis");
-				val = msg.GetLongKey("scaledValueOfEarthMinorAxis");
-				b = static_cast<double>(1000 * scale * val);
+				scale = static_cast<double>(msg.GetLongKey("scaleFactorOfEarthMinorAxis"));
+				val = static_cast<double>(msg.GetLongKey("scaledValueOfEarthMinorAxis"));
+				b = 1000. * pow(10., scale) * val;
 				break;
 			}
 			case 4:
@@ -1788,13 +1788,13 @@ himan::earth_shape<double> ReadEarthShape(const NFmiGribMessage& msg)
 			case 7:
 			{
 				// Earth assumed oblate spheroid with major and minor axes specified (in m) by data producer
-				long scale = msg.GetLongKey("scaleFactorOfEarthMajorAxis");
-				long val = msg.GetLongKey("scaledValueOfEarthMajorAxis");
-				a = static_cast<double>(scale * val);
+				double scale = static_cast<double>(msg.GetLongKey("scaleFactorOfEarthMajorAxis"));
+				double val = static_cast<double>(msg.GetLongKey("scaledValueOfEarthMajorAxis"));
+				a = pow(10., scale) * val;
 
-				scale = msg.GetLongKey("scaleFactorOfEarthMinorAxis");
-				val = msg.GetLongKey("scaledValueOfEarthMinorAxis");
-				b = static_cast<double>(scale * val);
+				scale = static_cast<double>(msg.GetLongKey("scaleFactorOfEarthMinorAxis"));
+				val = static_cast<double>(msg.GetLongKey("scaledValueOfEarthMinorAxis"));
+				b = pow(10., scale) * val;
 				break;
 			}
 			case 8:
@@ -1817,18 +1817,15 @@ himan::earth_shape<double> ReadEarthShape(const NFmiGribMessage& msg)
 		}
 	}
 
-	// Same hard coding here as in json_parser: first replace newbase area classes with gdal *and*
-	// maintaing backwards compatibility, ie use the same values for earth radius as before.
-	// The next phase is then to use the correct values and decide what to do with differing interpolation
-	// results (newbase vs himan native).
+	// Fixing invalid grib metadata....
 
-	if (msg.NormalizedGridType() == 3)
-	{
-		a = b = 6367470.;
-	}
-	else
+	if (a == 63712200. || b == 63712200. || a == 637120. || b == 637120.)
 	{
 		a = b = 6371220.;
+	}
+	else if (a == 63674700. || b == 63674700.)
+	{
+		a = b = 6367470.;
 	}
 
 	return himan::earth_shape<double>(a, b);
