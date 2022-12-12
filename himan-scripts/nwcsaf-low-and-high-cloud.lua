@@ -81,9 +81,9 @@ function LowAndHighCloudGapFix()
       effc_ = 0.9
     end
 
-    -- Vähennetään pilveä, jos vain ylä
-    if effc_ > 0.4 and nh_ > 0.5 and nl_ < 0.2 and nm_ < 0.2 then
-      effc_ = 0.4
+    -- Vähennetään pilveä, jos vain yläpilveä
+    if effc_ > 0.8 and nh_ > 0.5 and nl_ < 0.2 and nm_ < 0.2 then
+      effc_ = 0.8
     end
 
     res[i] = effc_
@@ -94,6 +94,8 @@ function LowAndHighCloudGapFix()
 end
 
 function MissingCloudFixWithRH(effc)
+
+  local cmqc = luatool:FetchWithType(current_time, current_level, param("NWCSAF_CLDMASK_QC-N"), current_forecast_type)
 
   local snwc_prod = producer(281, "SMARTMETNWC")
   snwc_prod:SetCentre(86)
@@ -136,7 +138,7 @@ function MissingCloudFixWithRH(effc)
 
   local mnwc_cl = luatool:FetchWithArgs(o)
 
-  if not snwc_rh or not mnwc_cl then
+  if not cmqc or not snwc_rh or not mnwc_cl then
     logger:Warning("Unable to perform RH based fix")
     return effc
   end
@@ -147,10 +149,10 @@ function MissingCloudFixWithRH(effc)
   for i=1,#snwc_rh do
     local old_effc = effc[i]
 
-    if effc[i] < 0.1 and snwc_rh[i] >= 86 and mnwc_cl[i] > 0.9 then
+    if effc[i] < 0.1 and snwc_rh[i] >= 86 and (mnwc_cl[i] > 0.8 or cmqc[i] == 24) then
       effc[i] = 0.6
     end
-    if effc[i] <= 0.6 and snwc_rh[i] >= 94 and mnwc_cl[i] > 0.9 then
+    if effc[i] <= 0.6 and snwc_rh[i] >= 98 and (mnwc_cl[i] > 0.2 or cmqc[i] == 24) then
       effc[i] = 0.8
     end
 
