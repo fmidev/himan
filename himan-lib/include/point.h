@@ -29,7 +29,7 @@ class point
 
 	CUDA_HOST CUDA_DEVICE bool operator==(const point& thePoint) const;
 	CUDA_HOST CUDA_DEVICE bool operator!=(const point& thePoint) const;
-	CUDA_HOST CUDA_DEVICE operator std::string() const;
+	CUDA_HOST operator std::string() const;
 
 	std::string ClassName() const
 	{
@@ -130,15 +130,9 @@ inline std::ostream& operator<<(std::ostream& file, const point& ob)
 {
 	return ob.Write(file);
 }
-CUDA_HOST CUDA_DEVICE inline point::operator std::string() const
+CUDA_HOST inline point::operator std::string() const
 {
-#ifdef __CUDACC__
-	char buf[64];
-	snprintf(buf, sizeof buf, "%f,%f", itsX, itsY);
-	return std::string(buf);
-#else
 	return std::to_string(itsX) + "," + std::to_string(itsY);
-#endif
 }
 
 }  // namespace himan
