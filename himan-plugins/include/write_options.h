@@ -22,15 +22,16 @@ namespace plugin
 struct write_options
 {
 	std::shared_ptr<const plugin_configuration> configuration;
-	bool use_bitmap;        // use bitmap for grib if missing data exists
-	bool write_empty_grid;  // write file even if all data is missing
-	int precision;          // precision (decimal points)
+	bool use_bitmap;                                    // use bitmap for grib if missing data exists
+	bool write_empty_grid;                              // write file even if all data is missing
+	int precision;                                      // precision (decimal points)
+	std::map<std::string, std::string> extra_metadata;  // additional metadata to be written to file
 
-	write_options() : use_bitmap(true), write_empty_grid(true), precision(kHPMissingInt)
+	write_options() : use_bitmap(true), write_empty_grid(true), precision(kHPMissingInt), extra_metadata()
 	{
 	}
 };
-}
-}
+}  // namespace plugin
+}  // namespace himan
 
 #endif /* WRITE_OPTIONS_H */

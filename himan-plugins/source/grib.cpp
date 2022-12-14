@@ -941,6 +941,54 @@ void WriteTime(NFmiGribMessage& message, const forecast_time& ftime, const produ
 	}
 }
 
+void WriteExtraMetadata(NFmiGribMessage& message, const map<string, string>& extra_metadata)
+{
+	logger logr("grib");
+
+	for (const auto& kv : extra_metadata)
+	{
+		std::string v = kv.second;
+
+		char type = 'i';
+
+		if (v[v.size() - 2] == ':')
+		{
+			type = v[v.size() - 1];
+			v = v.substr(0, v.size() - 2);
+		}
+
+		switch (type)
+		{
+			case 'i':
+				try
+				{
+					message.SetLongKey(kv.first, stol(v));
+				}
+				catch (const std::exception& e)
+				{
+					logr.Error(fmt::format("Error casting {} to long: {}", v, e.what()));
+				}
+				break;
+			case 'd':
+				try
+				{
+					message.SetDoubleKey(kv.first, stod(v));
+				}
+				catch (const std::exception& e)
+				{
+					logr.Error(fmt::format("Error casting {} to double: {}", v, e.what()));
+				}
+				break;
+			case 's':
+				logr.Error("fmigrib doesn't support setting string keys");
+				break;
+			default:
+				logr.Error(fmt::format("Invalid type specifier: {}", type));
+				break;
+		}
+	}
+}
+
 void WriteParameter(NFmiGribMessage& message, const param& par, const producer& prod, const forecast_type& ftype)
 {
 	logger logr("grib");
@@ -1393,6 +1441,10 @@ pair<himan::file_information, NFmiGribMessage> grib::CreateGribMessage(info<T>& 
 	// Level
 
 	WriteLevel(message, anInfo.Level());
+
+	// Extra grib metadata
+
+	WriteExtraMetadata(message, itsWriteOptions.extra_metadata);
 
 	// Set data to grib with correct precision and missing value
 

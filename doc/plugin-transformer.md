@@ -135,3 +135,7 @@ univ_id: override querydata parameter number that is normally fetched from datab
 
     "univ_id" : 4
 
+extra_file_metadata: write any metadata to resulting files, overriding any existing metadata. Implementation and support depends on the filetype. Currently only grib is supported. Arguments are given in key-value pairs, comma separated. Data type of value can be string (:s), integer (:d) or float (:d). Default is integer.
+
+    "extra_file_metadata" : "shapeOfTheEarth=6,latitudeOfFirstGridPointInDegrees=10.01:d"
+
