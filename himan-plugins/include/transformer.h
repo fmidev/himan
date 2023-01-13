@@ -72,7 +72,7 @@ class transformer : public compiled_plugin, private compiled_plugin_base
 	int itsDecimalPrecision;
 	bool itsDoLandscapeInterpolation;
 	bool itsParamDefinitionFromConfig;
-	std::map<std::string, std::string> itsExtraFileMetadata;
+	std::vector<std::pair<std::string, std::string>> itsExtraFileMetadata;
 };
 
 // the class factory

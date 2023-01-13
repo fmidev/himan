@@ -941,7 +941,7 @@ void WriteTime(NFmiGribMessage& message, const forecast_time& ftime, const produ
 	}
 }
 
-void WriteExtraMetadata(NFmiGribMessage& message, const map<string, string>& extra_metadata)
+void WriteExtraMetadata(NFmiGribMessage& message, const vector<pair<string, string>>& extra_metadata)
 {
 	logger logr("grib");
 
@@ -964,6 +964,8 @@ void WriteExtraMetadata(NFmiGribMessage& message, const map<string, string>& ext
 			type = k[colon_pos + 1];
 			k = k.substr(0, colon_pos);
 		}
+
+		logr.Trace(fmt::format("Setting extra file metadata: {} -> {}", k, v));
 
 		try
 		{
@@ -1319,7 +1321,7 @@ himan::forecast_type DetermineCorrectForecastType(const himan::forecast_type& ft
 
 template <typename T>
 void WriteData(NFmiGribMessage& message, info<T>& anInfo, bool useBitmap, int precision,
-               const map<string, string>& extra_metadata)
+               const vector<pair<string, string>>& extra_metadata)
 {
 	// set to missing value to a large value to prevent it from mixing up with valid
 	// values in the data. eccodes does not support nan as missing value.

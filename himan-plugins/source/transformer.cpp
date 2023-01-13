@@ -581,7 +581,7 @@ void transformer::SetAdditionalParameters()
 				continue;
 			}
 
-			itsExtraFileMetadata.emplace(kv[0], kv[1]);
+			itsExtraFileMetadata.emplace_back(kv[0], kv[1]);
 		}
 	}
 
