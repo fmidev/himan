@@ -1419,7 +1419,8 @@ pair<himan::file_information, NFmiGribMessage> grib::CreateGribMessage(info<T>& 
 		// backwards compatibility: previously grib version number was
 		// not appended to filename when 'file_write' : 'single'
 		if ((itsWriteOptions.configuration->LegacyWriteMode() == false ||
-		     itsWriteOptions.configuration->WriteMode() != kAllGridsToAFile))
+		     itsWriteOptions.configuration->WriteMode() != kAllGridsToAFile) &&
+		    itsWriteOptions.configuration->FilenameTemplate().empty())
 		{
 			finfo.file_location += "2";
 		}
