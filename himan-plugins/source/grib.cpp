@@ -947,44 +947,49 @@ void WriteExtraMetadata(NFmiGribMessage& message, const map<string, string>& ext
 
 	for (const auto& kv : extra_metadata)
 	{
-		std::string v = kv.second;
+		std::string k = kv.first;
+		const std::string v = kv.second;
 
+		// key might contain information about the data type, for example
+		// LaD:f=60.3
+		// extract the (possible) type information
+
+		// default to integer/long
 		char type = 'i';
 
-		if (v[v.size() - 2] == ':')
+		const int colon_pos = max(static_cast<int>(k.size() - 2), 0);
+
+		if (k[colon_pos] == ':')
 		{
-			type = v[v.size() - 1];
-			v = v.substr(0, v.size() - 2);
+			type = k[colon_pos + 1];
+			k = k.substr(0, colon_pos);
 		}
 
-		switch (type)
+		try
 		{
-			case 'i':
-				try
-				{
-					message.SetLongKey(kv.first, stol(v));
-				}
-				catch (const std::exception& e)
-				{
-					logr.Error(fmt::format("Error casting {} to long: {}", v, e.what()));
-				}
-				break;
-			case 'd':
-				try
-				{
-					message.SetDoubleKey(kv.first, stod(v));
-				}
-				catch (const std::exception& e)
-				{
-					logr.Error(fmt::format("Error casting {} to double: {}", v, e.what()));
-				}
-				break;
-			case 's':
-				logr.Error("fmigrib doesn't support setting string keys");
-				break;
-			default:
-				logr.Error(fmt::format("Invalid type specifier: {}", type));
-				break;
+			switch (type)
+			{
+				case 'i':
+					message.SetLongKey(k, stol(v));
+					break;
+				case 'd':
+					message.SetDoubleKey(k, stod(v));
+					break;
+				case 's':
+					logr.Error("fmigrib doesn't support setting string keys");
+					break;
+				default:
+					logr.Error(fmt::format("Invalid type specifier: {}", type));
+					break;
+			}
+		}
+		catch (const std::invalid_argument& e)
+		{
+			logr.Error(fmt::format("Error casting {} to '{}': {}", v, type, e.what()));
+		}
+		catch (const int& e)
+		{
+			logr.Error(fmt::format("eccodes reported error '{}' when setting {}={}", grib_get_error_message(e), k, v));
 		}
 	}
 }
@@ -1313,7 +1318,8 @@ himan::forecast_type DetermineCorrectForecastType(const himan::forecast_type& ft
 }
 
 template <typename T>
-void WriteData(NFmiGribMessage& message, info<T>& anInfo, bool useBitmap, int precision)
+void WriteData(NFmiGribMessage& message, info<T>& anInfo, bool useBitmap, int precision,
+               const map<string, string>& extra_metadata)
 {
 	// set to missing value to a large value to prevent it from mixing up with valid
 	// values in the data. eccodes does not support nan as missing value.
@@ -1327,14 +1333,33 @@ void WriteData(NFmiGribMessage& message, info<T>& anInfo, bool useBitmap, int pr
 	}
 
 	/*
+	 * If extra metadata (given by user in the configuration file) contains
+	 * keys related to precision (ie. bitsPerValue or setDecimalPrecision),
+	 * those keys/values override anything in the database.
+	 */
+
+	long bitsPerValue = kHPMissingInt;
+	int myprecision = (precision == kHPMissingInt) ? anInfo.Param().Precision() : precision;
+
+	for (const auto& kv : extra_metadata)
+	{
+		// loop and find, because key can be 'bitsPerValue' or 'bitsPerValue:i'
+		if (kv.first.find("bitsPerValue") != string::npos)
+		{
+			bitsPerValue = stol(kv.second);
+		}
+		else if (kv.first.find("setDecimalPrecision") != string::npos)
+		{
+			myprecision = stoi(kv.second);
+		}
+	}
+
+	/*
 	 * Possible precipitation form value encoding must be done before determining
 	 * bits per value, as the range of values is changed.
 	 */
 
 	const auto paramName = anInfo.Param().Name();
-	const int myprecision = (precision == kHPMissingInt) ? anInfo.Param().Precision() : precision;
-
-	long bitsPerValue;
 
 	if (message.Edition() == 2 && (paramName == "PRECFORM-N" || paramName == "PRECFORM2-N"))
 	{
@@ -1342,7 +1367,8 @@ void WriteData(NFmiGribMessage& message, info<T>& anInfo, bool useBitmap, int pr
 		auto values = anInfo.Data().Values();
 
 		EncodePrecipitationFormToGrib2(values);
-		bitsPerValue = DetermineBitsPerValue(values, myprecision);
+		// bitsPerValue = DetermineBitsPerValue(values, myprecision);
+		bitsPerValue = (bitsPerValue == kHPMissingInt) ? DetermineBitsPerValue(values, myprecision) : bitsPerValue;
 
 		// Change missing value 'nan' to a real fp value
 		replace_if(
@@ -1355,7 +1381,7 @@ void WriteData(NFmiGribMessage& message, info<T>& anInfo, bool useBitmap, int pr
 	{
 		// In this branch no copy is made
 		const auto& values = anInfo.Data().Values();
-		bitsPerValue = DetermineBitsPerValue(values, myprecision);
+		bitsPerValue = (bitsPerValue == kHPMissingInt) ? DetermineBitsPerValue(values, myprecision) : bitsPerValue;
 
 		// Change missing value 'nan' to a real fp value
 		anInfo.Data().MissingValue(static_cast<T>(gribMissing));
@@ -1448,7 +1474,8 @@ pair<himan::file_information, NFmiGribMessage> grib::CreateGribMessage(info<T>& 
 
 	// Set data to grib with correct precision and missing value
 
-	WriteData<T>(message, anInfo, itsWriteOptions.use_bitmap, itsWriteOptions.precision);
+	WriteData<T>(message, anInfo, itsWriteOptions.use_bitmap, itsWriteOptions.precision,
+	             itsWriteOptions.extra_metadata);
 
 	if (edition == 2)
 	{
