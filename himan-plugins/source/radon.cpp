@@ -712,8 +712,9 @@ pair<bool, radon_record> radon::SaveGrid(const info<T>& resultInfo, const file_i
 
 	if (tableinfo.empty())
 	{
-		itsLogger.Error(fmt::format("Dataset definition not found from radon for producer {}, analysis time '{}'",
-		                            resultInfo.Producer().Id(), analysisTime));
+		itsLogger.Error(
+		    fmt::format("Dataset definition not found from radon for producer {}, analysis time '{}', geometry '{}'",
+		                resultInfo.Producer().Id(), analysisTime, geom_name));
 		return make_pair(false, radon_record());
 	}
 
