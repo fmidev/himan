@@ -854,7 +854,8 @@ pair<bool, radon_record> radon::SaveGrid(const info<T>& resultInfo, const file_i
 
 			query.str("");
 			query << "UPDATE as_grid SET record_count = 1 WHERE schema_name = '" << schema_name
-			      << "' AND partition_name = '" << partition_name << "' AND analysis_time = '" << analysisTime << "'";
+			      << "' AND partition_name = '" << partition_name << "' AND analysis_time = '" << analysisTime << "'"
+			      << " AND producer_id = " << resultInfo.Producer().Id() << " AND geometry_id = " << geom_id;
 
 			itsRadonDB->Execute(query.str());
 		}
