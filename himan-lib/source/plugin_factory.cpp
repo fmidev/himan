@@ -8,10 +8,7 @@
 #include "util.h"
 #include <cstdlib>
 #include <dlfcn.h>
-
-#define BOOST_FILESYSTEM_NO_DEPRECATED
-
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 using namespace himan;
 using namespace himan::plugin;
@@ -91,33 +88,32 @@ std::shared_ptr<himan_plugin> plugin_factory::Plugin(const std::string& theClass
 
 void plugin_factory::ReadPlugins(const std::string& pluginName)
 {
-	using namespace boost::filesystem;
+	namespace fs = std::filesystem;
 
-	directory_iterator end_iter;
-
-	for (size_t i = 0; i < itsPluginSearchPath.size(); i++)
+	for (const auto& pluginPath : itsPluginSearchPath)
 	{
-		path p(itsPluginSearchPath[i]);
+		fs::path p(pluginPath);
 
 		try
 		{
-			if (exists(p) && is_directory(p))
+			if (fs::exists(p) && fs::is_directory(p))
 			{
-				for (directory_iterator dir_iter(p); dir_iter != end_iter; ++dir_iter)
+				for (const auto& entry : fs::directory_iterator(p))
 				{
-					if (dir_iter->path().filename().extension().string() == ".so" &&
-					    ((dir_iter->path().stem().string() == "lib" + pluginName) || pluginName.empty()))
+					if (entry.path().extension().string() == ".so" &&
+					    (entry.path().stem().string() == "lib" + pluginName || pluginName.empty()))
 					{
-						Load(dir_iter->path().string());
+						Load(entry.path().string());
 
 						if (!pluginName.empty())
+						{
 							return;
+						}
 					}
 				}
 			}
 		}
-
-		catch (const filesystem_error& ex)
+		catch (const fs::filesystem_error& ex)
 		{
 			itsLogger.Error(ex.what());
 		}
@@ -136,12 +132,11 @@ bool plugin_factory::Load(const std::string& thePluginFileName)
 	 * ClassName: himan::plugin::NAME
 	 */
 
-	const std::string stem = boost::filesystem::path(thePluginFileName).stem().string().substr(3, std::string::npos);
+	const std::string stem = std::filesystem::path(thePluginFileName).stem().string().substr(3, std::string::npos);
 
 	if (std::find_if(itsPluginFactory.begin(), itsPluginFactory.end(),
-	                 [&stem](std::shared_ptr<plugin_container>& cont) {
-		                 return cont->Plugin()->ClassName() == "himan::plugin::" + stem;
-	                 }) != itsPluginFactory.end())
+	                 [&stem](std::shared_ptr<plugin_container>& cont)
+	                 { return cont->Plugin()->ClassName() == "himan::plugin::" + stem; }) != itsPluginFactory.end())
 	{
 		itsLogger.Debug("Plugin '" + stem + "' found more than once, skipping one found from '" + thePluginFileName +
 		                "'");

@@ -8,7 +8,6 @@
 #include "plugin_factory.h"
 #include "point_list.h"
 #include "util.h"
-#include <boost/filesystem.hpp>
 #include <sstream>
 #include <thread>
 

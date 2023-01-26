@@ -13,7 +13,7 @@
 #include "radon.h"
 #include "statistics.h"
 #include "stereographic_grid.h"
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <ogr_spatialref.h>
 #include <thread>
 
@@ -190,7 +190,7 @@ void luatool::ResetVariables(std::shared_ptr<info<double>> myTargetInfo)
 
 bool luatool::ReadFile(const std::string& luaFile)
 {
-	if (!boost::filesystem::exists(luaFile))
+	if (!std::filesystem::exists(luaFile))
 	{
 		std::cerr << "Error: script " << luaFile << " does not exist\n";
 		return false;

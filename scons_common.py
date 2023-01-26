@@ -117,7 +117,7 @@ env.Append(LIBPATH = librarypaths)
 
 # Libraries
 
-env.Append(LIBS = ['z', 'bz2'])
+env.Append(LIBS = ['z', 'bz2', 'stdc++fs'])
 
 if env['HAVE_CUDA']:
         env.Append(LIBS=env.File(cuda_toolkit_path + '/lib64/libcudart_static.a'))
@@ -205,11 +205,6 @@ env.Append(NVCCFLAGS = ['-gencode=arch=compute_60,code=sm_60'])
 env.Append(NVCCFLAGS = ['-gencode=arch=compute_70,code=sm_70'])
 env.Append(NVCCFLAGS = ['-gencode=arch=compute_80,code=sm_80'])
 
-#if IS_CLANG:
-#	env.Append(NVCCFLAGS = ['-ccbin=clang++'])
-#	env.Append(NVCCFLAGS = ['-std=c++14'])
-
-#else:
 env.AppendUnique(NVCCFLAGS = ['-std=' + cpp_standard])
 env.AppendUnique(NVCCFLAGS = ('-isystem', '/usr/include/boost169'))
 env.AppendUnique(NVCCFLAGS = ('-isystem', '/usr/gdal34/include'))
@@ -259,7 +254,7 @@ def PhonyTargets(env = None, **kw):
         for target,action in kw.items():
                 env.AlwaysBuild(env.Alias(target, [], action))
 
-PhonyTargets(CPPCHECK = 'cppcheck --std=c++14 --enable=all -I ./include -I ../himan-lib/include ./')
+PhonyTargets(CPPCHECK = 'cppcheck --std=c++17 --enable=all -I ./include -I ../himan-lib/include ./')
 PhonyTargets(SCANBUILD = 'scan-build make debug')
 
 Export('env build_dir')

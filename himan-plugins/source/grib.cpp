@@ -15,7 +15,7 @@
 #include "transverse_mercator_grid.h"
 #include "util.h"
 #include <algorithm>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <ogr_spatialref.h>
 
 using namespace std;
@@ -1585,7 +1585,7 @@ void DetermineMessageNumber(NFmiGribMessage& message, file_information& finfo, H
 	}
 	catch (const out_of_range& e)
 	{
-		if (boost::filesystem::exists(finfo.file_location) == false)
+		if (filesystem::exists(finfo.file_location) == false)
 		{
 			// Need to modify the map, not just the elements -- need to
 			// protect from simultaneous access from other threads
@@ -1668,7 +1668,7 @@ void DetermineMessageNumber(NFmiGribMessage& message, file_information& finfo, H
 				}
 
 				len -= 4;
-				boost::filesystem::resize_file(finfo.file_location, len);
+				filesystem::resize_file(finfo.file_location, len);
 
 				logr.Debug(fmt::format("Truncated file '{}' from {} to {} bytes", finfo.file_location, origlen, len));
 
@@ -1677,7 +1677,7 @@ void DetermineMessageNumber(NFmiGribMessage& message, file_information& finfo, H
 			else
 			{
 				messages[finfo.file_location] = msgCount;
-				offsets[finfo.file_location] = boost::filesystem::file_size(finfo.file_location);
+				offsets[finfo.file_location] = std::filesystem::file_size(finfo.file_location);
 			}
 		}
 	}
@@ -1703,7 +1703,7 @@ HPWriteStatus WriteMessageToFile(NFmiGribMessage& message, const file_informatio
 		appendToFile = false;
 	}
 
-	namespace fs = boost::filesystem;
+	namespace fs = filesystem;
 	fs::path pathname(finfo.file_location);
 
 	if (!pathname.parent_path().empty() && !fs::is_directory(pathname.parent_path()))
@@ -2948,7 +2948,7 @@ vector<shared_ptr<himan::info<T>>> grib::FromFile(const file_information& theInp
 
 	const long duration = aTimer.GetTime();
 	const auto bytes =
-	    (theInputFile.length) ? theInputFile.length.get() : boost::filesystem::file_size(theInputFile.file_location);
+	    (theInputFile.length) ? theInputFile.length.get() : filesystem::file_size(theInputFile.file_location);
 	const float speed = (static_cast<float>(bytes) / 1024.f / 1024.f) / (static_cast<float>(duration) / 1000.f);
 
 	stringstream ss;

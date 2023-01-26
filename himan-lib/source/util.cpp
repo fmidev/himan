@@ -21,10 +21,10 @@
 #include "time_ensemble.h"
 #include "transverse_mercator_grid.h"
 #include <boost/algorithm/string.hpp>
-#include <boost/filesystem/path.hpp>
 #include <boost/format.hpp>
 #include <boost/math/constants/constants.hpp>
 #include <boost/regex.hpp>
+#include <filesystem>
 #include <iomanip>
 #include <ogr_spatialref.h>
 #include <sstream>
@@ -479,7 +479,7 @@ himan::HPFileType util::FileType(const string& theFile)
 
 	// First check by extension since its cheap
 
-	boost::filesystem::path p(theFile);
+	std::filesystem::path p(theFile);
 
 	if (p.extension().string() == ".gz" || p.extension().string() == ".bz2")
 	{

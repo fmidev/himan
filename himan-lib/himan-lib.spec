@@ -22,7 +22,7 @@ Requires: glibc
 Requires: libgcc
 Requires: libstdc++
 Requires: libfmidb >= 22.1.10
-Requires: libfmigrib >= 20.6.16
+Requires: libfmigrib >= 23.1.26
 Requires: fmt >= 7.1.0
 Requires: libpqxx >= 7.7.0
 BuildRequires: python3-scons
@@ -37,7 +37,7 @@ BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: geos310-devel
 BuildRequires: gdal34-devel
 BuildRequires: libfmidb-devel >= 22.1.10
-BuildRequires: libfmigrib-devel >= 20.6.16
+BuildRequires: libfmigrib-devel >= 23.1.26
 BuildRequires: zlib-devel
 BuildRequires: boost169-devel
 BuildRequires: libs3-devel

@@ -4,7 +4,7 @@
 #include "timer.h"
 #include "util.h"
 #include <algorithm>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <fstream>
 
 using namespace std;
@@ -37,7 +37,7 @@ pair<himan::HPWriteStatus, himan::file_information> csv::ToFile(info<T>& theInfo
 	finfo.file_type = kCSV;
 	finfo.storage_type = itsWriteOptions.configuration->WriteStorageType();
 
-	namespace bf = boost::filesystem;
+	namespace bf = std::filesystem;
 
 	bf::path pathname(finfo.file_location);
 
@@ -101,7 +101,7 @@ pair<himan::HPWriteStatus, himan::file_information> csv::ToFile(info<T>& theInfo
 	aTimer.Stop();
 
 	double duration = static_cast<double>(aTimer.GetTime());
-	double bytes = static_cast<double>(boost::filesystem::file_size(finfo.file_location));
+	double bytes = static_cast<double>(filesystem::file_size(finfo.file_location));
 
 	double speed = floor((bytes / 1024. / 1024.) / (duration / 1000.));
 	itsLogger.Info(fmt::format("Wrote file '{}' ({} MB/s)", finfo.file_location, speed));

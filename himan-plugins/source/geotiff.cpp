@@ -16,8 +16,8 @@
 #include "transverse_mercator_grid.h"
 #include "util.h"
 #include <algorithm>
-#include <boost/filesystem.hpp>
 #include <boost/regex.hpp>
+#include <filesystem>
 #include <ogr_spatialref.h>
 #include <thread>
 
@@ -96,7 +96,7 @@ static std::once_flag oflag;
 
 void CreateDirectory(const std::string& filename)
 {
-	namespace fs = boost::filesystem;
+	namespace fs = std::filesystem;
 	fs::path pathname(filename);
 
 	if (!pathname.parent_path().empty() && !fs::is_directory(pathname.parent_path()))
@@ -723,7 +723,7 @@ void ReadData(GDALRasterBand* poBand, matrix<T>& mat, const std::map<std::string
 	else
 	{
 		int ret = 0;
-		const T miss = static_cast<T> (poBand->GetNoDataValue(&ret));
+		const T miss = static_cast<T>(poBand->GetNoDataValue(&ret));
 
 		if (ret == 1)
 		{

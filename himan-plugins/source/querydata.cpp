@@ -11,7 +11,7 @@
 #include "point_list.h"
 #include "stereographic_grid.h"
 #include "util.h"
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <fstream>
 
 #include "plugin_factory.h"
@@ -420,11 +420,11 @@ pair<himan::HPWriteStatus, himan::file_information> querydata::ToFile(info<T>& t
 	finfo.file_type = kQueryData;
 	finfo.storage_type = itsWriteOptions.configuration->WriteStorageType();
 
-	boost::filesystem::path pathname(finfo.file_location);
+	filesystem::path pathname(finfo.file_location);
 
-	if (!pathname.parent_path().empty() && !boost::filesystem::is_directory(pathname.parent_path()))
+	if (!pathname.parent_path().empty() && !filesystem::is_directory(pathname.parent_path()))
 	{
-		boost::filesystem::create_directories(pathname.parent_path());
+		filesystem::create_directories(pathname.parent_path());
 	}
 
 	ofstream out(finfo.file_location.c_str());

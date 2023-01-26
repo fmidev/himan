@@ -5,8 +5,8 @@
 #include "plugin_factory.h"
 #include "statistics.h"
 #include "util.h"
-#include <boost/filesystem/operations.hpp>
 #include <boost/thread/shared_mutex.hpp>
+#include <filesystem>
 #include <fstream>
 #include <future>
 
@@ -473,7 +473,7 @@ vector<shared_ptr<info<T>>> fetcher::FromFile(const vector<file_information>& fi
 	for (const auto& inputFile : files)
 	{
 		if (inputFile.storage_type == HPFileStorageType::kLocalFileSystem &&
-		    !boost::filesystem::exists(inputFile.file_location))
+		    !filesystem::exists(inputFile.file_location))
 		{
 			itsLogger.Error("Input file '" + inputFile.file_location + "' does not exist");
 			continue;
@@ -1158,7 +1158,6 @@ shared_ptr<himan::info<T>> fetcher::InterpolateTime(const shared_ptr<const plugi
                                                     const forecast_time& ftime, const level& lev, const params& pars,
                                                     const forecast_type& ftype)
 {
-
 	itsLogger.Trace("Starting time interpolation");
 
 	for (const auto& par : pars)
