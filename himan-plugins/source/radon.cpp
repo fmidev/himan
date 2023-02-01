@@ -503,8 +503,8 @@ vector<himan::file_information> radon::Files(search_options& options)
 	}
 	catch (const invalid_argument& e)
 	{
-		finfo.offset = boost::none;
-		finfo.length = boost::none;
+		finfo.offset = std::nullopt;
+		finfo.length = std::nullopt;
 	}
 
 	try
@@ -513,7 +513,7 @@ vector<himan::file_information> radon::Files(search_options& options)
 	}
 	catch (const invalid_argument& e)
 	{
-		finfo.message_no = boost::none;
+		finfo.message_no = std::nullopt;
 	}
 
 	return {finfo};
@@ -795,11 +795,11 @@ pair<bool, radon_record> radon::SaveGrid(const info<T>& resultInfo, const file_i
 	double levelValue2 = IsKHPMissingValue(resultInfo.Level().Value2()) ? -1 : resultInfo.Level().Value2();
 	const string fullTableName = fmt::format("{}.{}", schema_name, partition_name);
 
-	auto FormatToSQL = [](const boost::optional<unsigned long>& opt) -> string
+	auto FormatToSQL = [](const std::optional<unsigned long>& opt) -> string
 	{
 		if (opt)
 		{
-			return to_string(opt.get());
+			return to_string(opt.value());
 		}
 
 		return "NULL";
@@ -893,7 +893,7 @@ pair<bool, radon_record> radon::SaveGrid(const info<T>& resultInfo, const file_i
 
 	if (finfo.message_no)
 	{
-		query << " message no " << finfo.message_no.get();
+		query << " message no " << finfo.message_no.value();
 	}
 
 	itsLogger.Trace(query.str());

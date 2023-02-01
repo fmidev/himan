@@ -1685,7 +1685,7 @@ void DetermineMessageNumber(NFmiGribMessage& message, file_information& finfo, H
 	finfo.offset = offsets.at(finfo.file_location);
 	finfo.message_no = messages.at(finfo.file_location);
 
-	offsets.at(finfo.file_location) = offsets.at(finfo.file_location) + finfo.length.get();
+	offsets.at(finfo.file_location) = offsets.at(finfo.file_location) + finfo.length.value();
 }
 
 HPWriteStatus WriteMessageToFile(NFmiGribMessage& message, const file_information& finfo, const write_options& wopts)
@@ -1716,7 +1716,7 @@ HPWriteStatus WriteMessageToFile(NFmiGribMessage& message, const file_informatio
 	aTimer.Stop();
 
 	const float duration = static_cast<float>(aTimer.GetTime());
-	const float bytes = static_cast<float>(finfo.length.get());  // TODO: does not work correctly if file is packed
+	const float bytes = static_cast<float>(finfo.length.value());  // TODO: does not work correctly if file is packed
 	const float speed = (bytes / 1024.f / 1024.f) / (duration / 1000.f);
 
 	stringstream ss;
@@ -2948,7 +2948,7 @@ vector<shared_ptr<himan::info<T>>> grib::FromFile(const file_information& theInp
 
 	const long duration = aTimer.GetTime();
 	const auto bytes =
-	    (theInputFile.length) ? theInputFile.length.get() : filesystem::file_size(theInputFile.file_location);
+	    (theInputFile.length) ? theInputFile.length.value() : filesystem::file_size(theInputFile.file_location);
 	const float speed = (static_cast<float>(bytes) / 1024.f / 1024.f) / (static_cast<float>(duration) / 1000.f);
 
 	stringstream ss;
@@ -2958,7 +2958,7 @@ vector<shared_ptr<himan::info<T>>> grib::FromFile(const file_information& theInp
 
 	if (theInputFile.offset)
 	{
-		ss << "position " << theInputFile.offset.get() << ":" << bytes << " msg# " << theInputFile.message_no.get();
+		ss << "position " << theInputFile.offset.value() << ":" << bytes << " msg# " << theInputFile.message_no.value();
 	}
 
 	ss << " (" << fixed << speed << " MB/s)";

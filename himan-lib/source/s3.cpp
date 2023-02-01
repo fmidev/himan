@@ -288,8 +288,8 @@ buffer s3::ReadFile(const file_information& fileInformation)
 		{
 			sleep(2 * count);
 		}
-		const unsigned long offset = fileInformation.offset.get();
-		const unsigned long length = fileInformation.length.get();
+		const unsigned long offset = fileInformation.offset.value();
+		const unsigned long length = fileInformation.length.value();
 
 #ifdef S3_DEFAULT_REGION
 		S3_get_object(&bucketContext, key.c_str(), NULL, offset, length, NULL, 0, &getObjectHandler, &ret);

@@ -873,7 +873,7 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 		return anInfo;
 	};
 
-	if (theInputFile.message_no == boost::none)
+	if (theInputFile.message_no == std::nullopt)
 	{
 		for (int bandNo = 1; bandNo <= ds->GetRasterCount(); bandNo++)
 		{
@@ -891,8 +891,8 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 	else
 	{
 		itsLogger.Info("Read from file '" + theInputFile.file_location + "' band# " +
-		               std::to_string(theInputFile.message_no.get()));
-		GDALRasterBand* poBand = ds->GetRasterBand(static_cast<int>(theInputFile.message_no.get()));
+		               std::to_string(theInputFile.message_no.value()));
+		GDALRasterBand* poBand = ds->GetRasterBand(static_cast<int>(theInputFile.message_no.value()));
 		try
 		{
 			infos.push_back(MakeInfoFromGeoTIFFBand(poBand));
