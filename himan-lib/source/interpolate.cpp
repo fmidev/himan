@@ -1049,7 +1049,7 @@ bool interpolator<T>::Interpolate(base<T>& source, base<T>& target, HPInterpolat
 			it->second.Interpolate(source, target);
 			return true;
 		}
-		catch (const boost::bad_get& e)
+		catch (const std::exception& e)
 		{
 			std::cout << e.what() << std::endl;
 			return false;

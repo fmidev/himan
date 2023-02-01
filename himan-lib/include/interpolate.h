@@ -10,7 +10,6 @@
 #include "latitude_longitude_grid.h"
 #include "plugin_configuration.h"
 #include "reduced_gaussian_grid.h"
-#include <boost/variant.hpp>
 
 #ifndef __NVCC__
 #include <Eigen/SparseCore>

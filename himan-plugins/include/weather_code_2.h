@@ -8,7 +8,6 @@
 
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
-#include <boost/bimap.hpp>
 
 namespace himan
 {
