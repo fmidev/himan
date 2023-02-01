@@ -9,8 +9,8 @@
 #include "auxiliary_plugin.h"
 #include "info.h"
 #include "search_options.h"
-#include <boost/variant.hpp>
 #include <mutex>
+#include <variant>
 
 namespace himan
 {
@@ -18,8 +18,8 @@ namespace plugin
 {
 struct cache_item
 {
-	boost::variant<std::shared_ptr<himan::info<double>>, std::shared_ptr<himan::info<float>>,
-	               std::shared_ptr<himan::info<short>>, std::shared_ptr<himan::info<unsigned char>>>
+	std::variant<std::shared_ptr<himan::info<double>>, std::shared_ptr<himan::info<float>>,
+	             std::shared_ptr<himan::info<short>>, std::shared_ptr<himan::info<unsigned char>>>
 
 	    info;
 	time_t access_time;

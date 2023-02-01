@@ -292,7 +292,7 @@ void cache_pool::Clean()
 namespace
 {
 template <typename T>
-struct cache_visitor : public boost::static_visitor<std::shared_ptr<himan::info<T>>>
+struct cache_visitor
 {
    public:
 	shared_ptr<himan::info<T>> operator()(shared_ptr<himan::info<double>>& fnd) const
@@ -333,9 +333,9 @@ shared_ptr<himan::info<T>> cache_pool::GetInfo(const string& uniqueName, bool st
 	{
 		// if data is directly found from cache with correct data type,
 		// return that
-		return make_shared<info<T>>(*boost::get<std::shared_ptr<info<T>>>(it->second.info));
+		return make_shared<info<T>>(*std::get<std::shared_ptr<info<T>>>(it->second.info));
 	}
-	catch (boost::bad_get& e)
+	catch (const std::bad_variant_access& e)
 	{
 		if (strict)
 		{
@@ -343,7 +343,7 @@ shared_ptr<himan::info<T>> cache_pool::GetInfo(const string& uniqueName, bool st
 		}
 
 		// convert to wanted data type
-		return boost::apply_visitor(cache_visitor<T>(), it->second.info);
+		return std::visit(cache_visitor<T>(), it->second.info);
 	}
 	catch (exception& e)
 	{
