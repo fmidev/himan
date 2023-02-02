@@ -393,9 +393,8 @@ NFmiVPlaceDescriptor CreateVPlaceDescriptor(himan::info<T>& info, bool theActive
 
 		while (info.template Next<himan::level>())
 		{
-			lbag.AddLevel(NFmiLevel(info.template Level().Type(),
-			                        himan::HPLevelTypeToString.at(info.template Level().Type()),
-			                        static_cast<float>(info.template Level().Value())));
+			lbag.AddLevel(NFmiLevel(info.Level().Type(), himan::HPLevelTypeToString.at(info.Level().Type()),
+			                        static_cast<float>(info.Level().Value())));
 		}
 	}
 
