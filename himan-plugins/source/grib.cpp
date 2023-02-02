@@ -36,6 +36,17 @@ void UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restrict__ un
 static mutex singleGribMessageCounterMutex, mapModificationMutex;
 static map<string, std::mutex> singleGribMessageCounterMap;
 
+double ApplyScaling(long val, long exp)
+{
+	double dval = static_cast<double>(val);
+	if (exp == 0)
+	{
+		return dval;
+	}
+
+	return dval * std::pow(10., static_cast<double>(exp));
+}
+
 earth_shape<double> DetermineEarthShapeForProducer(const producer& prod, const earth_shape<double>& defaultShape)
 {
 	// The curated list below is confirmed to be correct and different from for
@@ -1035,6 +1046,7 @@ void WriteParameter(NFmiGribMessage& message, const param& par, const producer& 
 
 		const auto aggType = par.Aggregation().Type();
 		const auto procType = par.ProcessingType().Type();
+
 		const long templateNumber = DetermineProductDefinitionTemplateNumber(aggType, procType, ftype.Type());
 
 		message.ProductDefinitionTemplateNumber(templateNumber);
@@ -2202,6 +2214,44 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 			case 199:  // Extreme Forecast Index
 				pt.Type(kEFI);
 				break;
+		}
+
+		// ... and of course "productDefinitionTemplateNumber" for probability products
+		const long pdtn = message.GetLongKey("productDefinitionTemplateNumber");
+
+		if (pdtn == 5 || pdtn == 9)
+		{
+			// 5: Probability forecasts at a horizontal level or in a horizontal layer at a point in time
+			// 9: Probability forecasts at a horizontal level or in a horizontal layer in a continuous or non-continuous
+			// time interval
+			const long probType = message.GetLongKey("probabilityType");
+			const long scaleFactorLower = message.GetLongKey("scaleFactorOfLowerLimit");
+			const long scaledValueLower = message.GetLongKey("scaledValueOfLowerLimit");
+			const long scaleFactorUpper = message.GetLongKey("scaleFactorOfUpperLimit");
+			const long scaledValueUpper = message.GetLongKey("scaledValueOfUpperLimit");
+
+			switch (probType)
+			{
+				case 0:  // Probability of event below lower limit
+					pt.Type(kProbabilityLessThan);
+					pt.Value(ApplyScaling(scaledValueLower, scaleFactorLower));
+					break;
+				case 1:  // Probability of event above upper limit
+					pt.Type(kProbabilityGreaterThan);
+					pt.Value(ApplyScaling(scaledValueUpper, scaleFactorUpper));
+					break;
+				default:
+					break;
+			}
+		}
+		else if (pdtn == 6 || pdtn == 10)
+		{
+			// 6: Percentile forecasts at a horizontal level or in a horizontal layer at a point in time
+			// 10: Percentile forecasts at a horizontal level or in a horizontal layer in a continuous or non-continuous
+			// time interval
+
+			pt.Type(kFractile);
+			pt.Value(static_cast<double>(message.GetLongKey("percentileValue")));
 		}
 
 		string parmName = "";
