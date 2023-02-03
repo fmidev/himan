@@ -120,6 +120,10 @@ static void GetConfigurationParameter(const std::string& name, const std::shared
 				himan::Abort();
 			}
 		}
+		else if (p.first == "aggregation")
+		{
+			output.Aggregation(aggregation(p.second));
+		}
 		else
 		{
 			// station-wise threshold

@@ -59,12 +59,13 @@ void fractile::SetParams()
 		himan::Abort();
 	}
 
+	const aggregation agg(itsConfiguration->GetValue("aggregation"));
+
 	for (float frac : itsFractiles)
 	{
-		auto name = fmt::format("F{}-{}", frac, paramName);
-		param p(name);
-		p.ProcessingType(processing_type(kFractile, frac, kHPMissingValue, kHPMissingInt));
-		calculatedParams.push_back(p);
+		const auto name = fmt::format("F{}-{}", frac, paramName);
+		const auto pt = processing_type(kFractile, frac, kHPMissingValue, kHPMissingInt);
+		calculatedParams.emplace_back(name, agg, pt);
 	}
 
 	auto name = util::Split(paramName, "-");
