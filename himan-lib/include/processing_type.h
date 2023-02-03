@@ -53,6 +53,7 @@ class processing_type
 	processing_type(HPProcessingType theType);
 	processing_type(HPProcessingType theType, double theValue, double theValue2);
 	processing_type(HPProcessingType theType, double theValue, double theValue2, int theNumberOfEnsembleMembers);
+	processing_type(const std::string& procstr);
 	~processing_type() = default;
 
 	processing_type(const processing_type& other) = default;

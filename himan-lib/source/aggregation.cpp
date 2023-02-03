@@ -4,6 +4,7 @@
  */
 
 #include "aggregation.h"
+#include "util.h"
 
 using namespace himan;
 
@@ -25,6 +26,28 @@ aggregation::aggregation(HPAggregationType theAggregationType, const time_durati
                          const time_duration& theTimeOffset)
     : itsType(theAggregationType), itsTimeDuration(theTimeDuration), itsTimeOffset(theTimeOffset)
 {
+}
+
+aggregation::aggregation(const std::string& aggstr) : aggregation()
+{
+	if (aggstr.empty())
+	{
+		return;
+	}
+
+	const auto tokens = util::Split(aggstr, ",");
+
+	itsType = HPStringToAggregationType.at(tokens[0]);
+
+	if (tokens.size() > 1)
+	{
+		itsTimeDuration = time_duration(tokens[1]);
+		itsTimeOffset = itsTimeDuration * -1;
+	}
+	if (tokens.size() == 3)
+	{
+		itsTimeOffset = time_duration(tokens[2]);
+	}
 }
 
 bool aggregation::operator==(const aggregation& other) const

@@ -39,6 +39,7 @@ class aggregation
 	aggregation(HPAggregationType theAggregationType, const time_duration& theTimeInteval);
 	aggregation(HPAggregationType theAggregationType, const time_duration& theTimeInteval,
 	            const time_duration& theTimeOffset);
+	aggregation(const std::string& aggstr);
 
 	~aggregation() = default;
 	aggregation(const aggregation&) = default;

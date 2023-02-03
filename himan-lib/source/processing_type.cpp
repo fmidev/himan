@@ -1,4 +1,5 @@
 #include "processing_type.h"
+#include "util.h"
 
 using namespace himan;
 
@@ -15,6 +16,27 @@ processing_type::processing_type(HPProcessingType theType, double theValue, doub
                                  int theNumberOfEnsembleMembers)
     : itsType(theType), itsValue(theValue), itsValue2(theValue2), itsNumberOfEnsembleMembers(theNumberOfEnsembleMembers)
 {
+}
+
+processing_type::processing_type(const std::string& procstr) : processing_type()
+{
+	if (procstr.empty())
+	{
+		return;
+	}
+
+	const auto tokens = util::Split(procstr, ",");
+
+	itsType = HPStringToProcessingType.at(tokens[0]);
+
+	if (tokens.size() > 1)
+	{
+		itsValue = std::stod(tokens[1]);
+	}
+	if (tokens.size() == 3)
+	{
+		itsValue2 = std::stod(tokens[2]);
+	}
 }
 
 bool processing_type::operator==(const processing_type& other) const
