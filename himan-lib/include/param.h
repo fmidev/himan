@@ -54,6 +54,7 @@ class param
 	param(const std::string& theName, unsigned long theUnivId, double theScale, double theBase,
 	      HPInterpolationMethod theInterpolationMethod = kBiLinear);
 	param(const std::map<std::string, std::string>& databaseInfo);
+	param(const std::string& theName, const aggregation& agg, const processing_type& proc);
 
 	~param() = default;
 

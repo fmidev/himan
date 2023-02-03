@@ -189,6 +189,10 @@ param::param(const map<string, string>& databaseInfo) : param()
 	}
 }
 
+param::param(const std::string& name, const aggregation& agg, const processing_type& proc)
+    : itsName(name), itsAggregation(agg), itsProcessingType(proc)
+{
+}
 bool param::operator==(const param& other) const
 {
 	if (this == &other)
