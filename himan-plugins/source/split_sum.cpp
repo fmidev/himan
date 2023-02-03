@@ -269,7 +269,10 @@ void split_sum::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short 
 
 		infos.push_back(newInfo);  // extend lifetime over this loop
 
-		threads.push_back(new thread(&split_sum::DoParam, this, newInfo, myTargetInfo->Param().Name(),
+		// Pass param by reference to sub-thread: aggregation duration is only available there
+		// when data is actually fetched, and we need that information when writing data to disk
+
+		threads.push_back(new thread(&split_sum::DoParam, this, newInfo, std::ref(myTargetInfo->Param()),
 		                             fmt::format("{}_{}", threadIndex, subThreadIndex)));
 
 		if (subThreadIndex % SUB_THREAD_COUNT == 0)
@@ -291,10 +294,12 @@ void split_sum::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short 
 	}
 }
 
-void split_sum::DoParam(shared_ptr<info<double>> myTargetInfo, std::string myParamName, string subThreadIndex) const
+void split_sum::DoParam(shared_ptr<info<double>> myTargetInfo, param& par, string subThreadIndex) const
 {
 	ASSERT(myTargetInfo);
 	ASSERT(myTargetInfo->Param().Name() == myParamName);
+
+	const std::string myParamName = myTargetInfo->Param().Name();
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
@@ -331,8 +336,8 @@ void split_sum::DoParam(shared_ptr<info<double>> myTargetInfo, std::string myPar
 	{
 		// This is the first time step, calculation can not be done
 
-		myThreadedLogger.Info("This is the first time step -- not calculating " + myParamName + " for step " +
-		                      static_cast<string>(forecastTime.Step()));
+		myThreadedLogger.Info(fmt::format("This is the first time step -- not calculating {} for step {}", myParamName,
+		                                  static_cast<string>(forecastTime.Step())));
 		return;
 	}
 
@@ -359,6 +364,16 @@ void split_sum::DoParam(shared_ptr<info<double>> myTargetInfo, std::string myPar
 
 		prevSumInfo = infos.first;
 		curSumInfo = infos.second;
+
+		// Set aggregation period, now that we know what it is
+		// (for radiation that is)
+		auto& agg = par.Aggregation();
+
+		if (prevSumInfo && curSumInfo && agg.TimeDuration().Empty() && agg.Type() != kUnknownAggregationType)
+		{
+			const auto td = curSumInfo->Time().ValidDateTime() - prevSumInfo->Time().ValidDateTime();
+			agg.TimeDuration(td);
+		}
 	}
 	else
 	{
@@ -367,8 +382,8 @@ void split_sum::DoParam(shared_ptr<info<double>> myTargetInfo, std::string myPar
 
 		if (paramStep.Empty())
 		{
-			myThreadedLogger.Error("Parameter " + myTargetInfo->Param().Name() +
-			                       " has no aggregation duration set, unable to continue");
+			myThreadedLogger.Error(
+			    fmt::format("Parameter {} has no aggregation duration set, unable to continue", myParamName));
 			return;
 		}
 		// Skip early steps if necessary
@@ -395,8 +410,8 @@ void split_sum::DoParam(shared_ptr<info<double>> myTargetInfo, std::string myPar
 	{
 		// Data was not found
 
-		myThreadedLogger.Warning("Data not found: not calculating " + myTargetInfo->Param().Name() + " for step " +
-		                         static_cast<string>(myTargetInfo->Time().Step()));
+		myThreadedLogger.Warning(fmt::format("Data not found: not calculating {} for step {}", myParamName,
+		                                     static_cast<string>(myTargetInfo->Time().Step())));
 		return;
 	}
 

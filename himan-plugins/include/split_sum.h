@@ -45,7 +45,7 @@ class split_sum : public compiled_plugin, private compiled_plugin_base
 
    private:
 	void Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex);
-	void DoParam(std::shared_ptr<info<double>> myTargetInfo, std::string myParamName, std::string threadIndex) const;
+	void DoParam(std::shared_ptr<info<double>> myTargetInfo, param& par, std::string threadIndex) const;
 
 	/**
 	 * @brief Fetch source data for a rate calculation.
