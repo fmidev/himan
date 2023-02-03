@@ -81,206 +81,108 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	if (itsConfiguration->Exists("rr1h") && itsConfiguration->GetValue("rr1h") == "true")
 	{
-		param parm("RR-1-MM", 353, 0, 1, 8);
-		parm.Unit(kMm);
-
-		parm.Aggregation(aggregation(kAccumulation, ONE_HOUR));
-
-		params.push_back(parm);
+		params.emplace_back("RR-1-MM", aggregation(kAccumulation, ONE_HOUR), processing_type());
 	}
 
 	if (itsConfiguration->Exists("rr3h") && itsConfiguration->GetValue("rr3h") == "true")
 	{
-		param parm("RR-3-MM", 354, 0, 1, 8);
-		parm.Unit(kMm);
-
-		parm.Aggregation(aggregation(kAccumulation, THREE_HOURS));
-		params.push_back(parm);
+		params.emplace_back("RR-3-MM", aggregation(kAccumulation, THREE_HOURS), processing_type());
 	}
 
 	if (itsConfiguration->Exists("rr6h") && itsConfiguration->GetValue("rr6h") == "true")
 	{
-		param parm("RR-6-MM", 355, 0, 1, 8);
-		parm.Unit(kMm);
-
-		parm.Aggregation(aggregation(kAccumulation, SIX_HOURS));
-
-		params.push_back(parm);
+		params.emplace_back("RR-6-MM", aggregation(kAccumulation, SIX_HOURS), processing_type());
 	}
 
 	if (itsConfiguration->Exists("rr12h") && itsConfiguration->GetValue("rr12h") == "true")
 	{
-		param parm("RR-12-MM", 356, 0, 1, 8);
-		parm.Unit(kMm);
-
-		parm.Aggregation(aggregation(kAccumulation, TWELVE_HOURS));
-
-		params.push_back(parm);
+		params.emplace_back("RR-12-MM", aggregation(kAccumulation, TWELVE_HOURS), processing_type());
 	}
 
 	if (itsConfiguration->Exists("rr24h") && itsConfiguration->GetValue("rr24h") == "true")
 	{
-		param parm("RR-24-MM", 53, 0, 1, 8);
-		parm.Unit(kMm);
-
-		parm.Aggregation(aggregation(kAccumulation, time_duration("24:00")));
-
-		params.push_back(parm);
+		params.emplace_back("RR-24-MM", aggregation(kAccumulation, time_duration("24:00")), processing_type());
 	}
 
 	if (itsConfiguration->Exists("sn3h") && itsConfiguration->GetValue("sn3h") == "true")
 	{
-		param parm("SN-3-MM");
-		parm.Unit(kMm);
-
-		parm.Aggregation(aggregation(kAccumulation, THREE_HOURS));
-
-		params.push_back(parm);
+		params.emplace_back("SN-3-MM", aggregation(kAccumulation, THREE_HOURS), processing_type());
 	}
 
 	if (itsConfiguration->Exists("sn6h") && itsConfiguration->GetValue("sn6h") == "true")
 	{
-		param parm("SN-6-MM");
-		parm.Unit(kMm);
-
-		parm.Aggregation(aggregation(kAccumulation, SIX_HOURS));
-
-		params.push_back(parm);
+		params.emplace_back("SN-6-MM", aggregation(kAccumulation, SIX_HOURS), processing_type());
 	}
 
 	if (itsConfiguration->Exists("sn24h") && itsConfiguration->GetValue("sn24h") == "true")
 	{
-		param parm("SN-24-MM", 766, 0, 1, 8);
-		parm.Unit(kMm);
-
-		parm.Aggregation(aggregation(kAccumulation, time_duration("24:00")));
-
-		params.push_back(parm);
+		params.emplace_back("SN-24-MM", aggregation(kAccumulation, time_duration("24:00")), processing_type());
 	}
 
 	if (itsConfiguration->Exists("sn120h") && itsConfiguration->GetValue("sn120h") == "true")
 	{
-		param parm("SN-120-MM");
-		parm.Unit(kMm);
-
-		parm.Aggregation(aggregation(kAccumulation, time_duration("120:00")));
-
-		params.push_back(parm);
+		params.emplace_back("SN-120-MM", aggregation(kAccumulation, time_duration("120:00")), processing_type());
 	}
 
 	if (itsConfiguration->Exists("rrc3h") && itsConfiguration->GetValue("rrc3h") == "true")
 	{
-		param parm("RRC-3-MM", 1025, 0, 1, 8);
-		parm.Unit(kMm);
-
-		parm.Aggregation(aggregation(kAccumulation, THREE_HOURS));
-		params.push_back(parm);
+		params.emplace_back("RRC-3-MM", aggregation(kAccumulation, THREE_HOURS), processing_type());
 	}
 
 	if (itsConfiguration->Exists("rrr") && itsConfiguration->GetValue("rrr") == "true")
 	{
-		param parm("RRR-KGM2", 49, 0, 1, 52);
-		parm.Unit(kKgm2);
-
-		parm.Aggregation(aggregation(kAccumulation, ONE_HOUR));
-
-		params.push_back(parm);
+		params.emplace_back("RRR-KGM2", aggregation(kAccumulation, ONE_HOUR), processing_type());
 	}
 
 	if (itsConfiguration->Exists("rrrc") && itsConfiguration->GetValue("rrrc") == "true")
 	{
-		param parm("RRRC-KGM2", 201, 0, 1, 196);
-		parm.Unit(kKgm2);
-
-		parm.Aggregation(aggregation(kAccumulation, ONE_HOUR));
-
-		params.push_back(parm);
+		params.emplace_back("RRRC-KGM2", aggregation(kAccumulation, ONE_HOUR), processing_type());
 	}
 
 	if (itsConfiguration->Exists("rrrl") && itsConfiguration->GetValue("rrrl") == "true")
 	{
-		param parm("RRRL-KGM2", 200, 0, 1, 54);
-		parm.Unit(kKgm2);
-
-		parm.Aggregation(aggregation(kAccumulation, ONE_HOUR));
-
-		params.push_back(parm);
+		params.emplace_back("RRRL-KGM2", aggregation(kAccumulation, ONE_HOUR), processing_type());
 	}
 
 	// Graupel
 
 	if (itsConfiguration->Exists("grr") && itsConfiguration->GetValue("grr") == "true")
 	{
-		param parm("GRR-MMH", 1168);
-		parm.Unit(kKgm2);
-
-		parm.Aggregation(aggregation(kAccumulation, ONE_HOUR));
-
-		params.push_back(parm);
+		params.emplace_back("GRR-MMH", aggregation(kAccumulation, ONE_HOUR), processing_type());
 	}
 
 	// Solid
 
 	if (itsConfiguration->Exists("rrrs") && itsConfiguration->GetValue("rrrs") == "true")
 	{
-		param parm("RRRS-KGM2", 1170);
-		parm.Unit(kKgm2);
-
-		parm.Aggregation(aggregation(kAccumulation, ONE_HOUR));
-
-		params.push_back(parm);
+		params.emplace_back("RRRS-KGM2", aggregation(kAccumulation, ONE_HOUR), processing_type());
 	}
 
 	if (itsConfiguration->Exists("rrs3h") && itsConfiguration->GetValue("rrs3h") == "true")
 	{
-		param parm("RRS-3-MM");
-		parm.Unit(kKgm2);
-
-		parm.Aggregation(aggregation(kAccumulation, THREE_HOURS));
-
-		params.push_back(parm);
+		params.emplace_back("RRS-3-MM", aggregation(kAccumulation, THREE_HOURS), processing_type());
 	}
 
 	if (itsConfiguration->Exists("rrs24h") && itsConfiguration->GetValue("rrs24h") == "true")
 	{
-		param parm("RRS-24-MM");
-		parm.Unit(kKgm2);
-
-		parm.Aggregation(aggregation(kAccumulation, time_duration("24:00")));
-
-		params.push_back(parm);
+		params.emplace_back("RRS-24-MM", aggregation(kAccumulation, time_duration("24:00")), processing_type());
 	}
 
 	// Snow
 
 	if (itsConfiguration->Exists("snr") && itsConfiguration->GetValue("snr") == "true")
 	{
-		param parm("SNR-KGM2", 264, 0, 1, 53);
-		parm.Unit(kKgm2);
-
-		parm.Aggregation(aggregation(kAccumulation, ONE_HOUR));
-
-		params.push_back(parm);
+		params.emplace_back("SNR-KGM2", aggregation(kAccumulation, ONE_HOUR), processing_type());
 	}
 
 	if (itsConfiguration->Exists("snrc") && itsConfiguration->GetValue("snrc") == "true")
 	{
-		param parm("SNRC-KGM2", 269, 0, 1, 55);
-		parm.Unit(kKgm2);
-
-		parm.Aggregation(aggregation(kAccumulation, ONE_HOUR));
-
-		params.push_back(parm);
+		params.emplace_back("SNRC-KGM2", aggregation(kAccumulation, ONE_HOUR), processing_type());
 	}
 
 	if (itsConfiguration->Exists("snrl") && itsConfiguration->GetValue("snrl") == "true")
 	{
-		param parm("SNRL-KGM2", 268, 0, 1, 56);
-		parm.Unit(kKgm2);
-
-		parm.Aggregation(aggregation(kAccumulation, ONE_HOUR));
-
-		params.push_back(parm);
+		params.emplace_back("SNRL-KGM2", aggregation(kAccumulation, ONE_HOUR), processing_type());
 	}
 
 	// Radiation
@@ -288,61 +190,44 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	if (itsConfiguration->Exists("glob") && itsConfiguration->GetValue("glob") == "true")
 	{
-		param parm("RADGLO-WM2", 317, 0, 4, 3);
-
-		params.push_back(parm);
+		params.emplace_back("RADGLO-WM2", aggregation(kAverage), processing_type());
 	}
 
 	if (itsConfiguration->Exists("globc") && itsConfiguration->GetValue("globc") == "true")
 	{
-		param parm("RADGLOC-WM2", 12888, 0, 4, 196);
-
-		params.push_back(parm);
+		params.emplace_back("RADGLOC-WM2", aggregation(kAverage), processing_type());
 	}
 
 	if (itsConfiguration->Exists("lw") && itsConfiguration->GetValue("lw") == "true")
 	{
-		param parm("RADLW-WM2", 315, 0, 5, 192);
-
-		params.push_back(parm);
+		params.emplace_back("RADLW-WM2", aggregation(kAverage), processing_type());
 	}
 
 	if (itsConfiguration->Exists("lwc") && itsConfiguration->GetValue("lwc") == "true")
 	{
-		param parm("RADLWC-WM2", 319, 0, 5, 196);
-
-		params.push_back(parm);
+		params.emplace_back("RADLWC-WM2", aggregation(kAverage), processing_type());
 	}
 
 	if (itsConfiguration->Exists("toplw") && itsConfiguration->GetValue("toplw") == "true")
 	{
 		// Same grib2 parameter definition as with RADLW-WM2, this is just on
 		// another surface
-
-		param parm("RTOPLW-WM2", 314, 0, 5, 192);
-
-		params.push_back(parm);
+		params.emplace_back("RTOPLW-WM2", aggregation(kAverage), processing_type());
 	}
 
 	if (itsConfiguration->Exists("netlw") && itsConfiguration->GetValue("netlw") == "true")
 	{
-		param parm("RNETLW-WM2", 312, 0, 5, 5);
-
-		params.push_back(parm);
+		params.emplace_back("RNETLW-WM2", aggregation(kAverage), processing_type());
 	}
 
 	if (itsConfiguration->Exists("sw") && itsConfiguration->GetValue("sw") == "true")
 	{
-		param parm("RADSW-WM2", 316, 0, 4, 192);
-
-		params.push_back(parm);
+		params.emplace_back("RADSW-WM2", aggregation(kAverage), processing_type());
 	}
 
 	if (itsConfiguration->Exists("netsw") && itsConfiguration->GetValue("netsw") == "true")
 	{
-		param parm("RNETSW-WM2", 311, 0, 4, 9);
-
-		params.push_back(parm);
+		params.emplace_back("RNETSW-WM2", aggregation(kAverage), processing_type());
 	}
 
 	if (params.empty())

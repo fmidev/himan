@@ -365,14 +365,12 @@ void transformer::SetAdditionalParameters()
 
 	if (!itsConfiguration->GetValue("source_param_aggregation").empty())
 	{
-		itsSourceParam[0].Aggregation(
-		    {HPStringToAggregationType.at(itsConfiguration->GetValue("source_param_aggregation"))});
+		itsSourceParam[0].Aggregation(aggregation(itsConfiguration->GetValue("source_param_aggregation")));
 	}
 
 	if (!itsConfiguration->GetValue("source_param_processing_type").empty())
 	{
-		itsSourceParam[0].ProcessingType(
-		    {HPStringToProcessingType.at(itsConfiguration->GetValue("source_param_processing_type"))});
+		itsSourceParam[0].ProcessingType(processing_type(itsConfiguration->GetValue("source_param_processing_type")));
 	}
 
 	if (itsSourceParam.size() != itsTargetParam.size())
