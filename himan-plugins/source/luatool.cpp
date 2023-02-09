@@ -162,6 +162,7 @@ void luatool::ResetVariables(std::shared_ptr<info<double>> myTargetInfo)
 
 	const auto L = myL;
 
+	// Need boost::ref here!
 	globals(L)["luatool"] = boost::ref(*this);
 	globals(L)["result"] = myTargetInfo;
 	globals(L)["configuration"] = itsConfiguration;

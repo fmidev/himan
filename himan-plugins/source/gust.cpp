@@ -190,8 +190,8 @@ void gust::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threa
 	deltaT dT;
 	vector<double> lowAndMiddleClouds(gridSize, himan::MissingDouble());
 
-	thread t(&DeltaT, itsConfiguration, T_LowestLevelInfo, forecastTime, forecastType, gridSize, boost::ref(dT));
-	thread t2(&LowAndMiddleClouds, boost::ref(lowAndMiddleClouds), LCloudInfo, MCloudInfo, HCloudInfo, TCloudInfo);
+	thread t(&DeltaT, itsConfiguration, T_LowestLevelInfo, forecastTime, forecastType, gridSize, std::ref(dT));
+	thread t2(&LowAndMiddleClouds, std::ref(lowAndMiddleClouds), LCloudInfo, MCloudInfo, HCloudInfo, TCloudInfo);
 
 	// calc boundary layer height
 	vector<double> z_boundaryl(gridSize, himan::MissingDouble());
