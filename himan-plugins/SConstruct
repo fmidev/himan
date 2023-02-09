@@ -33,7 +33,6 @@ libraries.append('pqxx')
 libraries.append('eccodes')
 libraries.append('smartmet-newbase')
 libraries.append('boost_iostreams')
-libraries.append('boost_thread')
 
 env.Append(LIBS = libraries)
 env.Append(CCFLAGS = ['-Wno-sign-promo'])

@@ -5,10 +5,10 @@
 #include "plugin_factory.h"
 #include "statistics.h"
 #include "util.h"
-#include <boost/thread/shared_mutex.hpp>
 #include <filesystem>
 #include <fstream>
 #include <future>
+#include <shared_mutex>
 
 #include "cache.h"
 #include "csv.h"
@@ -66,7 +66,7 @@ static mutex stickyMutex;
 // cache while the other threads will wait for the completion of that task.
 
 static mutex singleFetcherMutex;
-map<string, boost::shared_mutex> singleFetcherMap;
+map<string, std::shared_mutex> singleFetcherMap;
 
 string CreateNotFoundString(const vector<producer>& prods, const forecast_type& ftype, const forecast_time& time,
                             const level& lev, const vector<param>& params)
@@ -433,7 +433,7 @@ shared_ptr<info<T>> fetcher::FetchFromProducer(search_options& opts, bool readPa
 	}
 
 	const auto uname = util::UniqueName(opts);
-	pair<map<string, boost::shared_mutex>::iterator, bool> muret;
+	pair<map<string, std::shared_mutex>::iterator, bool> muret;
 
 	// First acquire mutex to (possibly) modify map
 	unique_lock<mutex> sflock(singleFetcherMutex);
@@ -444,7 +444,7 @@ shared_ptr<info<T>> fetcher::FetchFromProducer(search_options& opts, bool readPa
 	{
 		// first time this data is being fetched: take exclusive lock to prevent
 		// other threads from fetching the same data at the same time
-		boost::unique_lock<boost::shared_mutex> uniqueLock(muret.first->second);
+		std::unique_lock<std::shared_mutex> uniqueLock(muret.first->second);
 		sflock.unlock();
 
 		return FetchFromProducerSingle<T>(opts, readPackedData, suppressLogging);
@@ -454,7 +454,7 @@ shared_ptr<info<T>> fetcher::FetchFromProducer(search_options& opts, bool readPa
 
 	// this data is being fetched right now by other thread, or it has been fetched
 	// earlier
-	boost::shared_lock<boost::shared_mutex> lock(muret.first->second);
+	std::shared_lock<std::shared_mutex> lock(muret.first->second);
 
 	return FetchFromProducerSingle<T>(opts, readPackedData, suppressLogging);
 }

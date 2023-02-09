@@ -30,7 +30,6 @@ Requires: smartmet-library-newbase >= 22.3.22
 Requires: smartmet-library-gis
 Requires: smartmet-library-macgyver
 Requires: boost169-iostreams
-Requires: boost169-thread
 Requires: libs3 >= 4.1
 Requires: jasper-libs
 Requires: eccodes
