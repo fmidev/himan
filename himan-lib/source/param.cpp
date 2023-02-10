@@ -190,7 +190,22 @@ param::param(const map<string, string>& databaseInfo) : param()
 }
 
 param::param(const std::string& name, const aggregation& agg, const processing_type& proc)
-    : itsName(name), itsAggregation(agg), itsProcessingType(proc)
+    : itsId(kHPMissingInt),
+      itsName(name),
+      itsScale(1),
+      itsBase(0),
+      itsUnivId(kHPMissingInt),
+      itsGribParameter(kHPMissingInt),
+      itsGribCategory(kHPMissingInt),
+      itsGribDiscipline(kHPMissingInt),
+      itsGribTableVersion(kHPMissingInt),
+      itsGribIndicatorOfParameter(kHPMissingInt),
+      itsVersion(1),
+      itsInterpolationMethod(kBiLinear),
+      itsUnit(kUnknownUnit),
+      itsAggregation(agg),
+      itsPrecision(kHPMissingInt),
+      itsProcessingType(proc)
 {
 }
 bool param::operator==(const param& other) const
