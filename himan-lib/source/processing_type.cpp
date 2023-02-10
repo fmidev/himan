@@ -7,6 +7,10 @@ processing_type::processing_type(HPProcessingType theType) : itsType(theType)
 {
 }
 
+processing_type::processing_type(HPProcessingType theType, double theValue) : itsType(theType), itsValue(theValue)
+{
+}
+
 processing_type::processing_type(HPProcessingType theType, double theValue, double theValue2)
     : itsType(theType), itsValue(theValue), itsValue2(theValue2)
 {
