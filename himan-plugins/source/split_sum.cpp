@@ -297,7 +297,6 @@ void split_sum::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short 
 void split_sum::DoParam(shared_ptr<info<double>> myTargetInfo, param& par, string subThreadIndex) const
 {
 	ASSERT(myTargetInfo);
-	ASSERT(myTargetInfo->Param().Name() == myParamName);
 
 	const std::string myParamName = myTargetInfo->Param().Name();
 
