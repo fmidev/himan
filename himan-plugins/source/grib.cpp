@@ -1077,35 +1077,83 @@ void WriteParameter(NFmiGribMessage& message, const param& par, const producer& 
 			num = 0;
 		}
 
+		auto GetScale = [](double v) -> std::pair<long, long>
+		{
+			double r = floor(std::fmod(v, 1.0));
+			std::pair<long, long> s(static_cast<long>(v), 0l);
+
+			if (r != v || v < 1.0)
+			{
+				// value has decimals
+				// - convert to string
+				// - remove all trailing zeros
+				// - count number of digits
+				// --> that will be the scale factor
+				auto str = std::to_string(v);
+				str.erase(str.find_last_not_of('0') + 1, std::string::npos);
+				const auto dot = str.find('.');
+				auto num_digits = str.length() - dot - 1;
+				num_digits = std::min(num_digits, static_cast<size_t> (5)); // prevent neverending floats to inflate digitcount
+
+				s = make_pair(static_cast<long>(v * pow(10., static_cast<double>(num_digits))), -num_digits);
+			}
+			return s;
+		};
+
 		switch (procType)
 		{
 			default:
 				break;
 			case kProbabilityGreaterThan:  // Probability of event above upper limit
 			case kProbabilityGreaterThanOrEqual:
+			{
 				message.SetLongKey("probabilityType", 1);
-				message.SetLongKey("scaledValueOfUpperLimit", static_cast<long>(par.ProcessingType().Value()));
+				auto s = GetScale(par.ProcessingType().Value());
+				message.SetLongKey("scaledValueOfUpperLimit", s.first);
+				message.SetLongKey("scaleFactorOfUpperLimit", s.second);
 				break;
+			}
 			case kProbabilityLessThan:  // Probability of event below lower limit
 			case kProbabilityLessThanOrEqual:
+			{
 				message.SetLongKey("probabilityType", 0);
-				message.SetLongKey("scaledValueOfLowerLimit", static_cast<long>(par.ProcessingType().Value()));
+				auto s = GetScale(par.ProcessingType().Value());
+				message.SetLongKey("scaledValueOfLowerLimit", s.first);
+				message.SetLongKey("scaleFactorOfLowerLimit", s.second);
 				break;
+			}
 			case kProbabilityBetween:
+			{
 				message.SetLongKey("probabilityType", 192);
-				message.SetLongKey("scaledValueOfLowerLimit", static_cast<long>(par.ProcessingType().Value()));
-				message.SetLongKey("scaledValueOfUpperLimit", static_cast<long>(par.ProcessingType().Value2()));
+				auto s = GetScale(par.ProcessingType().Value());
+				message.SetLongKey("scaledValueOfLowerLimit", s.first);
+				message.SetLongKey("scaleFactorOfLowerLimit", s.second);
+				s = GetScale(par.ProcessingType().Value2());
+				message.SetLongKey("scaledValueOfUpperLimit", s.first);
+				message.SetLongKey("scaleFactorOfUpperLimit", s.second);
 				break;
+			}
 			case kProbabilityEquals:
+			{
 				message.SetLongKey("probabilityType", 193);
-				message.SetLongKey("scaledValueOfLowerLimit", static_cast<long>(par.ProcessingType().Value()));
+				auto s = GetScale(par.ProcessingType().Value());
+				message.SetLongKey("scaledValueOfLowerLimit", s.first);
+				message.SetLongKey("scaleFactorOfLowerLimit", s.second);
 				break;
+			}
 			case kProbabilityNotEquals:
+			{
 				message.SetLongKey("probabilityType", 193);
-				message.SetLongKey("scaledValueOfLowerLimit", static_cast<long>(par.ProcessingType().Value()));
+				auto s = GetScale(par.ProcessingType().Value());
+				message.SetLongKey("scaledValueOfLowerLimit", s.first);
+				message.SetLongKey("scaleFactorOfLowerLimit", s.second);
 				break;
+			}
 			case kProbabilityEqualsIn:
 				message.SetLongKey("probabilityType", 194);
+				break;
+			case kProbability:
+				message.SetLongKey("probabilityType", 195);
 				break;
 			case kFractile:
 				message.SetLongKey("percentileValue", static_cast<long>(par.ProcessingType().Value()));
