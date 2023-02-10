@@ -328,7 +328,8 @@ void BindEnum(lua_State* L)
 				 value("kEnsembleMean", kEnsembleMean),
 				 value("kSpread", kSpread),
 				 value("kStandardDeviation", kStandardDeviation),
-				 value("kEFI", kEFI)],
+				 value("kEFI", kEFI),
+				 value("kProbability", kProbability)],
 	     class_<HPModifierType>("HPModifierType")
 	         .enum_("constants")
 	             [
@@ -1437,6 +1438,8 @@ void BindLib(lua_State* L)
 		      .def("Seconds", &time_duration::Seconds)
 		      .def("Empty", &time_duration::Empty),
 	          class_<aggregation>("aggregation")
+	              .def(constructor<>())
+	              .def(constructor<const std::string&>())
 	              .def(constructor<HPAggregationType, const time_duration&>())
 	              .def(constructor<HPAggregationType, const time_duration&, const time_duration&>())
 	              .def("ClassName", &aggregation::ClassName)
@@ -1447,6 +1450,10 @@ void BindLib(lua_State* L)
 	              .def("GetTimeOffset", LUA_CMEMFN(time_duration, aggregation, TimeOffset, void))
 	              .def("SetTimeOffset", LUA_MEMFN(void, aggregation, TimeOffset, const time_duration&)),
 	          class_<processing_type>("processing_type")
+	              .def(constructor<>())
+	              .def(constructor<const std::string&>())
+	              .def(constructor<HPProcessingType>())
+	              .def(constructor<HPProcessingType, double>())
 	              .def(constructor<HPProcessingType, double, double>())
 	              .def("ClassName", &processing_type::ClassName)
 	              .def("GetType", LUA_CMEMFN(HPProcessingType, processing_type, Type, void))
