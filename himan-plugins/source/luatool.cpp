@@ -1339,6 +1339,7 @@ void BindLib(lua_State* L)
 	              .def("Fill", &matrix_wrapper::Fill<float>),
 	          class_<param>("param")
 	              .def(constructor<const std::string&>())
+	              .def(constructor<const std::string&, const aggregation&, const processing_type&>())
 	              .def("ClassName", &param::ClassName)
 	              .def("GetName", LUA_CMEMFN(std::string, param, Name, void))
 	              .def("SetName", LUA_MEMFN(void, param, Name, const std::string&))
