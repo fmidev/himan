@@ -2325,7 +2325,7 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 		if (pt.Type() != kUnknownProcessingType)
 		{
 			const int numMemb = static_cast<int>(message.GetLongKey("numberOfForecastsInEnsemble"));
-			pt.NumberOfEnsembleMembers(numMemb == INVALID_INT_VALUE ? 255 : numMemb);
+			pt.NumberOfEnsembleMembers(numMemb == INVALID_INT_VALUE ? kHPMissingInt : numMemb);
 			p.ProcessingType(pt);
 		}
 	}
