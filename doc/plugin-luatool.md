@@ -98,6 +98,7 @@ enum HPProcessingType
     kSpread
     kStandardDeviation
     kEFI
+    kProbability
 
 HPForecastType
     kUnknownType = 0
@@ -121,6 +122,10 @@ aggregation is a parameter component, defining for example that it is an accumul
 
 | Return value  | Name | Arguments | Description | 
 |---|---|---|---|
+|   | constructor |   |   |
+|   | constructor | string |   |
+|   | constructor | HPAggregationType, time_duration |   |
+|   | constructor | HPAggregationType, time_duration, time_duration |   |
 | string | ClassName | | Returns class name |
 | HPAggregationType | GetType | | Returns aggregation type (for example: cumulative) |
 |   | SetType | HPAggregationType  | Set aggregation type |
@@ -154,12 +159,33 @@ forecast_time contains both analysis time and valid time.
 
 | Return value  | Name | Arguments | Description | 
 |---|---|---|---|
+|   | constructor | raw_time, raw_time |   |
+|   | constructor | raw_time, time_duration |   |
 | string | ClassName | | Returns class name |
 | raw_time | GetOriginDateTime | | Returns origin date time (forecast analysis time) as full timestamp |
 |   | SetOriginDateTime | raw_time  | Set origin date time |
 | raw_time | GetValidDateTime | | Returns valid date time (forecast "lead time") as full timestamp |
 |   | SetValidDateTime | raw_time  | Set valid date time |
 | number | GetStep | | Returns time step (valid time - origin time) as time_duration |
+
+
+## forecast_type
+
+forecast_type informs the type of forecast, typically "deterministic" or an ensemble member.
+
+    local ft = forecast_type(HPForecastType.kDeterministic)
+
+
+| Return value  | Name | Arguments | Description | 
+|---|---|---|---|
+|   | constructor | HPForecastType |   |
+|   | constructor | HPForecastType, number |   |
+| string | ClassName | | Returns class name |
+| HPForecastType | GetType | | Returns forecast type |
+|   | SetForecastType | HPForecastType  | Set forecast type |
+| number | GetValue | | Returns forecast type value |
+|   | SetValue | number  | Set forecast type value |
+
 
 ## info
 
@@ -211,7 +237,9 @@ level class instance consists of level type (HPLevelType), and level value (one 
 Typically most levels only have a single value.
 
 | Return value  | Name | Arguments | Description | 
-|---|---|---|---|
+|---|---|---|---
+|   | constructor | HPLevelType, number |   |
+|   | constructor | HPLevelType, number, number |   |
 | string | ClassName | | Returns class name |
 | HPLevelType | GetType | | Return level type (enum HPLevelType) |
 | | SetTYpe | HPLevelType | Set level type |
@@ -240,6 +268,7 @@ It provides basic 2D accessing capabilities.
 
 | Return value  | Name | Arguments | Description |
 |---|---|---|---|
+|   | constructor | number, number, number, number | nx, ny, nz, missing_value |
 | | SetValues | table | Set matrix values |
 | table | GetValues | | Return matrix values |
 | | Fill | | Fill matrix with given value |
@@ -281,9 +310,13 @@ Note! In most cases hitool-plugin should be used to automate fetching of data!
 A basic identifer for a param is its name. The name is always in the form of NAME-UNIT, for example T-K (temperature in Kelvins). 
 
     local p = param("T-K")
+    local p = param("T-K", aggregation("unknown"), processing_type("unknown"))
+
 
 | Return value  | Name | Arguments | Description | 
 |---|---|---|---|
+|   | constructor | string |   |
+|   | constructor | string, aggregation, processing_type |   |
 | string | ClassName | | Returns class name |
 | string | GetName | | Return parameter name |
 | | SetName | string | Set parameter name |
@@ -310,6 +343,7 @@ point represent an xy or latlon point.
 
 | Return value  | Name | Arguments | Description | 
 |---|---|---|---|
+|   | constructor | number, number |   |
 | string | ClassName | | Returns class name |
 | number | GetX | Returns x or longitude value |
 | | SetX | number | Set x value |
@@ -333,6 +367,11 @@ processing_type is another parameter component, defining for example that it is 
 
 | Return value  | Name | Arguments | Description |
 |---|---|---|---|
+|   | constructor |   |   |
+|   | constructor | string |   |
+|   | constructor | HPProcessingType  |   |
+|   | constructor | HPProcessingType, number  |   |
+|   | constructor | HPProcessingType, number, number  |   |
 | string | ClassName | | Returns class name |
 | HPProcessingType | GetType | | Returns processing type type (for example: probability greater than) |
 |   | SetType | HPProcessingType  | Set processing type type |
@@ -345,6 +384,9 @@ processing_type is another parameter component, defining for example that it is 
 
 | Return value  | Name | Arguments | Description | 
 |---|---|---|---|
+|   | constructor |   |   |
+|   | constructor | number |   |
+|   | constructor | number, string |   |
 | string | ClassName | | Returns class name |
 | string | GetName | | Return producer name |
 | | SetName | string | Sets producer name |
@@ -363,6 +405,7 @@ raw_time represents a timestamp and is a thin wrapper over boost::posix_time::pt
 
 | Return value  | Name | Arguments | Description | 
 |---|---|---|---|
+|   | constructor | string |   |
 | string | ClassName | | Returns class name |
 | string | String | string | Returns the time in user-given format (for format details see boost documentation) |
 | | Adjust | HPTimeResolution, number | Adjust time as needed |
@@ -392,6 +435,8 @@ time_duration represents a time interval or duration, and it's a thin wrapper ov
 
 | Return value  | Name | Arguments | Description | 
 |---|---|---|---|
+|   | constructor | string |   |
+|   | constructor | HPTimeResolution, number |   |
 | string | ClassName | | Returns class name |
 | number | Hours | | Return number of hours in time interval (not normalized) |
 | number | Minutes | | Return number of minutes in time interval (not normalized) |
@@ -408,6 +453,8 @@ forecast.
 
 | Return value | Name | Arguments | Description |
 |---|---|---|---|
+|   | constructor | param, number |   |
+|   | constructor | param, number, number |   | 
 | string | ClassName | | Returns class name |
 | table | Fetch | plugin_configuration, forecast_time, forecast_level | Returns a fetched array of infos |
 | number | Value | integer | Returns the value of the ensemble member at the current location |
@@ -440,6 +487,10 @@ lagged_ensemble is derived from ensemble.
 
 | Return value | Name | Arguments | Description |
 |---|---|---|---|
+|   | constructor | param, number, time_duration, number |   |
+|   | constructor | param, number, time_duration, number, number |   |
+|   | constructor | param, string |   |
+|   | constructor | param, string, number |   |
 | string | ClassName | | Returns class name |
 | table | Fetch | plugin_configuration, forecast_time, forecast_level | Returns a fetched array of infos |
 | number | Value | integer | Returns the value of the ensemble member at the current location |
