@@ -758,17 +758,17 @@ void ReadData(GDALRasterBand* poBand, matrix<T>& mat, const std::map<std::string
 }
 
 std::vector<std::shared_ptr<info<double>>> geotiff::FromFile(const file_information& theInputFile,
-                                                             const search_options& options, bool validate,
-                                                             bool readData) const
+                                                             const search_options& options, bool readData) const
 {
-	return FromFile<double>(theInputFile, options, validate, readData);
+	return FromFile<double>(theInputFile, options, readData);
 }
 
 template <typename T>
 std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& theInputFile,
-                                                        const search_options& options, bool validate,
-                                                        bool readData) const
+                                                        const search_options& options, bool readData) const
 {
+	const bool validate = options.configuration->ValidateMetadata();
+
 	std::vector<std::shared_ptr<himan::info<T>>> infos;
 
 	auto ParseFileName = [](const file_information& finfo)
@@ -906,11 +906,11 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 }
 
 template std::vector<std::shared_ptr<info<double>>> geotiff::FromFile<double>(const file_information&,
-                                                                              const search_options&, bool, bool) const;
+                                                                              const search_options&, bool) const;
 template std::vector<std::shared_ptr<info<float>>> geotiff::FromFile<float>(const file_information&,
-                                                                            const search_options&, bool, bool) const;
+                                                                            const search_options&, bool) const;
 template std::vector<std::shared_ptr<info<short>>> geotiff::FromFile<short>(const file_information&,
-                                                                            const search_options&, bool, bool) const;
+                                                                            const search_options&, bool) const;
 template std::vector<std::shared_ptr<info<unsigned char>>> geotiff::FromFile<unsigned char>(const file_information&,
-                                                                                            const search_options&, bool,
+                                                                                            const search_options&,
                                                                                             bool) const;

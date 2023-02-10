@@ -2766,16 +2766,17 @@ void ReadData(shared_ptr<info<T>> newInfo, bool readPackedData, const NFmiGribMe
 }
 
 template <typename T>
-bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData, bool readIfNotMatching,
+bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData, bool forceCaching,
                               shared_ptr<info<T>> newInfo, const NFmiGribMessage& message, bool readData) const
 {
 	bool dataIsValid = true;
+	const bool validate = options.configuration->ValidateMetadata();
 
 	auto prod = ReadProducer(options, message);
 
 	if (options.prod.Process() != prod.Process() || options.prod.Centre() != prod.Centre())
 	{
-		if (!readIfNotMatching)
+		if (!forceCaching)
 		{
 			itsLogger.Trace("centre/process do not match: " + to_string(options.prod.Process()) + " vs " +
 			                to_string(prod.Process()));
@@ -2788,11 +2789,11 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 
 	if (p != options.param)
 	{
-		if (readIfNotMatching)
+		if (forceCaching)
 		{
 			dataIsValid = false;
 		}
-		else
+		else if (validate)
 		{
 			itsLogger.Trace("Parameter does not match: " + options.param.Name() + " (requested) vs " + p.Name() +
 			                " (found)");
@@ -2808,11 +2809,11 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 
 	if (t != options.time)
 	{
-		if (readIfNotMatching)
+		if (forceCaching)
 		{
 			dataIsValid = false;
 		}
-		else
+		else if (validate)
 		{
 			forecast_time optsTime(options.time);
 
@@ -2838,11 +2839,11 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 
 	if (l != options.level)
 	{
-		if (readIfNotMatching)
+		if (forceCaching)
 		{
 			dataIsValid = false;
 		}
-		else
+		else if (validate)
 		{
 			itsLogger.Trace("Level does not match");
 			itsLogger.Trace(static_cast<string>(options.level) + " vs " + static_cast<string>(l));
@@ -2856,11 +2857,11 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 
 	if (options.ftype.Type() != ty.Type() || options.ftype.Value() != ty.Value())
 	{
-		if (readIfNotMatching)
+		if (forceCaching)
 		{
 			dataIsValid = false;
 		}
-		else
+		else if (validate)
 		{
 			itsLogger.Trace("Forecast type does not match");
 			itsLogger.Trace(static_cast<string>(options.ftype) + " vs " + static_cast<string>(ty));
@@ -2940,21 +2941,21 @@ template bool grib::CreateInfoFromGrib<double>(const search_options&, bool, bool
 
 vector<shared_ptr<himan::info<double>>> grib::FromFile(const file_information& theInputFile,
                                                        const search_options& options, bool readPackedData,
-                                                       bool readIfNotMatching) const
+                                                       bool forceCaching) const
 {
-	return FromFile<double>(theInputFile, options, readPackedData, readIfNotMatching);
+	return FromFile<double>(theInputFile, options, readPackedData, forceCaching);
 }
 
 template <typename T>
 vector<shared_ptr<himan::info<T>>> grib::FromFile(const file_information& theInputFile, const search_options& options,
-                                                  bool readPackedData, bool readIfNotMatching) const
+                                                  bool readPackedData, bool forceCaching) const
 {
 	vector<shared_ptr<himan::info<T>>> infos;
 
 	timer aTimer(true);
 	NFmiGrib reader;
 
-	if (readIfNotMatching || !theInputFile.offset)
+	if (forceCaching || !theInputFile.offset)
 	{
 		// read all messages from local 'auxiliary' file
 		if (!reader.Open(theInputFile.file_location))
@@ -2966,8 +2967,7 @@ vector<shared_ptr<himan::info<T>>> grib::FromFile(const file_information& theInp
 		while (reader.NextMessage())
 		{
 			auto newInfo = make_shared<info<T>>();
-			if (CreateInfoFromGrib(options, readPackedData, readIfNotMatching, newInfo, reader.Message()) ||
-			    readIfNotMatching)
+			if (CreateInfoFromGrib(options, readPackedData, forceCaching, newInfo, reader.Message()) || forceCaching)
 			{
 				infos.push_back(newInfo);
 				newInfo->First();

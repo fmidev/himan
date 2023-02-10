@@ -29,10 +29,9 @@ class geotiff : public io_plugin
 
 	template <typename T>
 	std::vector<std::shared_ptr<info<T>>> FromFile(const file_information& inputFile, const search_options& options,
-	                                               bool validate = true, bool readData = true) const;
+	                                               bool readData = true) const;
 	std::vector<std::shared_ptr<info<double>>> FromFile(const file_information& inputFile,
-	                                                    const search_options& options, bool validate = true,
-	                                                    bool readData = true) const;
+	                                                    const search_options& options, bool readData = true) const;
 
 	template <typename T>
 	std::pair<HPWriteStatus, file_information> ToFile(info<T>& anInfo);

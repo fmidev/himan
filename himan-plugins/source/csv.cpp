@@ -115,15 +115,16 @@ template pair<himan::HPWriteStatus, himan::file_information> csv::ToFile<short>(
 template pair<himan::HPWriteStatus, himan::file_information> csv::ToFile<unsigned char>(info<unsigned char>&);
 
 shared_ptr<himan::info<double>> csv::FromFile(const string& inputFile, const search_options& options,
-                                              bool readIfNotMatching) const
+                                              bool forceCaching) const
 {
-	return FromFile<double>(inputFile, options, readIfNotMatching);
+	return FromFile<double>(inputFile, options, forceCaching);
 }
 
 template <typename T>
 shared_ptr<himan::info<T>> csv::FromFile(const string& inputFile, const search_options& options,
-                                         bool readIfNotMatching) const
+                                         bool forceCaching) const
 {
+	const bool validate = options.configuration->ValidateMetadata();
 	shared_ptr<info<T>> all, requested;
 
 	vector<string> lines;
@@ -138,7 +139,7 @@ shared_ptr<himan::info<T>> csv::FromFile(const string& inputFile, const search_o
 
 	all = util::CSVToInfo<T>(lines);
 
-	if (readIfNotMatching)
+	if (forceCaching)
 	{
 		// CSV file does not have producer information attached.
 		// We just have to trust that it came from the producer that was requested.
@@ -168,7 +169,7 @@ shared_ptr<himan::info<T>> csv::FromFile(const string& inputFile, const search_o
 	// Remove those dimensions that are not requested
 	while (all->Next())
 	{
-		if (all->Param() != options.param)
+		if (validate && all->Param() != options.param)
 		{
 			itsLogger.Debug("Param does not match");
 			itsLogger.Debug(fmt::format("{} vs {}", options.param.Name(), all->Param().Name()));
@@ -178,7 +179,7 @@ shared_ptr<himan::info<T>> csv::FromFile(const string& inputFile, const search_o
 			params.push_back(all->Param());
 		}
 
-		if (all->Level() != options.level)
+		if (validate && all->Level() != options.level)
 		{
 			itsLogger.Debug("Level does not match");
 			itsLogger.Debug(
@@ -189,7 +190,7 @@ shared_ptr<himan::info<T>> csv::FromFile(const string& inputFile, const search_o
 			levels.push_back(all->Level());
 		}
 
-		if (all->Time() != options.time)
+		if (validate && all->Time() != options.time)
 		{
 			itsLogger.Debug("Time does not match");
 			itsLogger.Debug(fmt::format("Origin time {} vs {}", static_cast<string>(optsTime.OriginDateTime()),
@@ -202,7 +203,7 @@ shared_ptr<himan::info<T>> csv::FromFile(const string& inputFile, const search_o
 			times.push_back(all->Time());
 		}
 
-		if (all->ForecastType() != options.ftype)
+		if (validate && all->ForecastType() != options.ftype)
 		{
 			itsLogger.Debug("Forecast type does not match");
 			itsLogger.Debug(

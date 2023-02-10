@@ -48,7 +48,8 @@ configuration::configuration()
       itsForecastTypes({forecast_type(kDeterministic)}),
       itsBaseGrid(nullptr),
       itsSSStateTableName(),
-      itsProgramName(kHiman)
+      itsProgramName(kHiman),
+      itsValidateMetadata(true)
 {
 }
 
@@ -85,7 +86,6 @@ configuration::configuration(const configuration& o)
       itsWriteToDatabase(o.itsWriteToDatabase),
       itsLegacyWriteMode(o.itsLegacyWriteMode),
       itsWriteToObjectStorageBetweenPluginCalls(o.itsWriteToObjectStorageBetweenPluginCalls),
-
       itsWriteStorageType(o.itsWriteStorageType),
       itsFilenameTemplate(o.itsFilenameTemplate),
       itsPackingType(o.itsPackingType),
@@ -95,7 +95,8 @@ configuration::configuration(const configuration& o)
       itsTimes(o.itsTimes),
       itsBaseGrid(o.itsBaseGrid ? std::unique_ptr<grid>(o.itsBaseGrid->Clone()) : nullptr),
       itsSSStateTableName(o.itsSSStateTableName),
-      itsProgramName(o.itsProgramName)
+      itsProgramName(o.itsProgramName),
+      itsValidateMetadata(o.itsValidateMetadata)
 {
 }
 
@@ -154,6 +155,7 @@ std::ostream& configuration::Write(std::ostream& file) const
 	file << "__itsAllowedMissingValues__" << itsAllowedMissingValues << std::endl;
 	file << "__itsSSStateTableName__ " << itsSSStateTableName << std::endl;
 	file << "__itsProgramName__ " << static_cast<int>(itsProgramName) << std::endl;
+	file << "__itsValidateMetadata__ " << itsValidateMetadata << std::endl;
 
 	for (size_t i = 0; i < itsForecastTypes.size(); i++)
 	{
@@ -552,4 +554,14 @@ bool configuration::WriteToObjectStorageBetweenPluginCalls() const
 void configuration::WriteToObjectStorageBetweenPluginCalls(bool flag)
 {
 	itsWriteToObjectStorageBetweenPluginCalls = flag;
+}
+
+bool configuration::ValidateMetadata() const
+{
+	return itsValidateMetadata;
+}
+
+void configuration::ValidateMetadata(bool val)
+{
+	itsValidateMetadata = val;
 }

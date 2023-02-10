@@ -40,6 +40,7 @@ in global scope.
   * [ss_state table name](#ss_state_table_name)
   * [grib decimal precision](#grib_decimal_precision)
   * [Write between plugin calls](#write_between_plugin_calls)
+  * [Validate metadata](#Validate_metadata)
 * [Environment variables](#Environment_variables)
 * [Full examples](#Full_examples)
 
@@ -645,6 +646,22 @@ Example:
 
     {
         "write_to_object_storage_between_plugin_calls" : true,
+    }
+
+
+<a name="Validate_metadata"/>
+
+## Validate metadata
+
+By default Himan will validate all metadata it reads from a file, against information received from radon. If the validation is not successful,
+Himan will discard the data.
+
+By setting 'validate_metadata' key to 'false', Himan will trust radon database and will not do validation. Default value for this key is 'true'.
+
+Example:
+
+    {
+        "validate_metadata" : false,
     }
 
 

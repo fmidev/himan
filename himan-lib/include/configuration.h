@@ -261,6 +261,9 @@ class configuration
 	bool WriteToObjectStorageBetweenPluginCalls() const;
 	void WriteToObjectStorageBetweenPluginCalls(bool flag);
 
+	bool ValidateMetadata() const;
+	void ValidateMetadata(bool val);
+
    protected:
 	std::vector<producer> itsSourceProducers;
 
@@ -315,6 +318,7 @@ class configuration
 	std::string itsSSStateTableName;
 
 	HPProgramName itsProgramName;
+	bool itsValidateMetadata;
 };
 
 inline std::ostream& operator<<(std::ostream& file, const configuration& ob)

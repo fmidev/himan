@@ -466,7 +466,7 @@ template shared_ptr<info<unsigned char>> fetcher::FetchFromProducer<unsigned cha
 
 template <typename T>
 vector<shared_ptr<info<T>>> fetcher::FromFile(const vector<file_information>& files, search_options& options,
-                                              bool readPackedData, bool readIfNotMatching)
+                                              bool readPackedData, bool forceCaching)
 {
 	vector<shared_ptr<info<T>>> allInfos;
 
@@ -488,7 +488,7 @@ vector<shared_ptr<info<T>>> fetcher::FromFile(const vector<file_information>& fi
 			case kGRIB2:
 			{
 				auto g = GET_PLUGIN(grib);
-				curInfos = g->FromFile<T>(inputFile, options, readPackedData, readIfNotMatching);
+				curInfos = g->FromFile<T>(inputFile, options, readPackedData, forceCaching);
 				break;
 			}
 
@@ -501,7 +501,7 @@ vector<shared_ptr<info<T>>> fetcher::FromFile(const vector<file_information>& fi
 			case kCSV:
 			{
 				auto c = GET_PLUGIN(csv);
-				auto anInfo = c->FromFile<T>(inputFile.file_location, options, readIfNotMatching);
+				auto anInfo = c->FromFile<T>(inputFile.file_location, options, forceCaching);
 				curInfos.push_back(anInfo);
 				break;
 			}

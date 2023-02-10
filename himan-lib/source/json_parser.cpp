@@ -427,6 +427,14 @@ void WriteToObjectStorageBetweenPluginCalls(const boost::property_tree::ptree& p
 	}
 }
 
+void ValidateMetadata(const boost::property_tree::ptree& pt, shared_ptr<configuration>& conf)
+{
+	if (auto validateMetadata = ReadElement<bool>(pt, "validate_metadata"))
+	{
+		conf->ValidateMetadata(validateMetadata.get());
+	}
+}
+
 void CheckConsistency(shared_ptr<configuration>& conf)
 {
 	logger logr("json_parser");
@@ -461,6 +469,7 @@ void CheckCommonOptions(const boost::property_tree::ptree& pt, shared_ptr<config
 	ForecastTypes(pt, conf);
 	WriteMode(conf, pt);
 	SSStateTableName(pt, conf);
+	ValidateMetadata(pt, conf);
 
 	CheckConsistency(conf);
 }
@@ -640,9 +649,9 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 			}
 
 			pc->OrdinalNumber(static_cast<unsigned int>(pluginContainer.size()));
-			pc->RelativeOrdinalNumber(static_cast<unsigned int>(
-			    count_if(pluginContainer.begin(), pluginContainer.end(),
-			             [pc](const shared_ptr<plugin_configuration>& c) { return c->Name() == pc->Name(); })));
+			pc->RelativeOrdinalNumber(static_cast<unsigned int>(count_if(pluginContainer.begin(), pluginContainer.end(),
+			                                                             [pc](const shared_ptr<plugin_configuration>& c)
+			                                                             { return c->Name() == pc->Name(); })));
 
 			pluginContainer.push_back(pc);
 		}
@@ -709,8 +718,9 @@ void Steps(const boost::property_tree::ptree& pt, shared_ptr<configuration>& con
 
 	ASSERT(originDateTimes.empty() == false);
 
-	auto GenerateList = [&originDateTimes](const time_duration& start, const time_duration& stop,
-	                                       const time_duration& step) {
+	auto GenerateList =
+	    [&originDateTimes](const time_duration& start, const time_duration& stop, const time_duration& step)
+	{
 		vector<forecast_time> times;
 		for (const auto& originDateTime : originDateTimes)
 		{
