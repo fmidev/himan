@@ -2,6 +2,8 @@
 // Effective cloudinessin fiksausta
 // Leila & Anniina Versio 31/3/22
 // Korjaa satelliitin karkean resoluution aiheuttamia aukkoja ylä- ja alapilvialueiden rajoilla
+//
+// This is also the so called "winter fix"
 ]]
 
 
@@ -69,8 +71,8 @@ function LowAndHighCloudGapFix()
 
     -- Luodaan alkuun näennäinen cloudmask cloudtop brightness temperaturen avulla.
     -- Jos arvo -> on pilvi
-    if IsValid(ctt_) then
-      effc_ = math.max(effc_, 0.8)
+    if IsValid(ctt_) and effc_ == 0.0 then
+      effc_ = 0.8
     end
 
     -- Keskiarvostetaan pienimpiä aukkoja ja reunoja.

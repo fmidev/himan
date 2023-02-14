@@ -7,6 +7,8 @@
 // 3:  konvektion aiheuttamat pilvet on 100% vaikka pitäisi olla vähemmän
 // --> ECWMF mallin lyhytaaltosäteilyn voimakkuuden perusteella vähentää pilvisyyttä, jos konvektiota
 // --> Lasketaan SWR max ("clearsky") arvon avulla "SWR kerroin" ja korjaus huomioidaan vain päviällä
+//
+// This is also the so called "summer fix"
 ]]
 
 function Write(res)
