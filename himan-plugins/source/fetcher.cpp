@@ -411,7 +411,7 @@ shared_ptr<info<T>> fetcher::FetchFromProducerSingle(search_options& opts, bool 
 	}
 
 	ASSERT((theInfos[0]->Time()) == opts.time);
-	ASSERT((theInfos[0]->Param()) == opts.param);
+	ASSERT(opts.configuration->ValidateMetadata() == false || theInfos[0]->Param() == opts.param);
 
 	return theInfos[0];
 }
