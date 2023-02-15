@@ -39,7 +39,7 @@ void pop::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 
-	param theRequestedParam("POP-0TO1");
+	param theRequestedParam("POP-0TO1", aggregation(), processing_type(kProbability));
 
 	theRequestedParam.Unit(kPrcnt);
 
@@ -93,7 +93,8 @@ void pop::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 		int tryNo = 0;
 
 		forecast_time curTime = forecastTime;
-		const param p("PROB-RR-7");  // MEPS(1h) RR>=0.025mm
+		const param p("PROB-RR-7", aggregation(),
+		              processing_type(kProbabilityGreaterThan, 0.025));  // MEPS(1h) RR>0.025mm
 		const producer MEPSprod(260, 86, 204, "MEPSMTA");
 		do
 		{
@@ -115,7 +116,7 @@ void pop::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 	{
 		myThreadedLogger.Info("Fetching ECMWF");
 
-		param p("PROB-RR3-6");  // EC(3h) RR>0.2mm
+		param p("PROB-RR3-6", aggregation(), processing_type(kProbabilityGreaterThan, 0.4));  // EC(3h) RR>0.2mm
 
 		int tryNo = 0;
 
@@ -128,7 +129,8 @@ void pop::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 
 			if (curTime.Step().Hours() > 131)
 			{
-				p = param("PROB-RR-4");  // EC(6h) RR>0.4mm
+				p = param("PROB-RR-4", aggregation(),
+				          processing_type(kProbabilityGreaterThan, 0.4));  // EC(6h) RR>0.4mm
 			}
 
 			EC = Fetch(curTime, forecastLevel, p, forecast_type(kStatisticalProcessing), {itsECEPSGeom}, ECprod, false);

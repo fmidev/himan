@@ -314,7 +314,7 @@ end
 function WeatherNumber()
   logger:Debug("Calculating WeatherNumber")
 
-  local POT  = Fetch(param("POT-PRCNT"))
+  local POT  = Fetch(param("POT-PRCNT"), aggregation(), processing_type(HPProcessingType.kProbability))
   local PREF = Fetch(param("POTPRECF-N"))
   local PRET = Fetch(param("POTPRECT-N"))
   local RR   = Fetch(param("RRR-KGM2"))

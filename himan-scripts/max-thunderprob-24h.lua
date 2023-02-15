@@ -43,7 +43,8 @@ function MaxThunderprob(curTime)
       break
     end
 
-    local  pot = luatool:FetchWithType(curTime, current_level, param("PROB-POT-3"), forecast_type(HPForecastType.kStatisticalProcessing))
+    local potpar = param("PROB-POT-3", aggregation(), processing_type(HPProcessingType.kProbabilityGreaterThan, 60))
+    local pot = luatool:FetchWithType(curTime, current_level, potpar, forecast_type(HPForecastType.kStatisticalProcessing))
 
     if pot then
       if #gsum == 0 then

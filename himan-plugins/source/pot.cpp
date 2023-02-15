@@ -24,7 +24,7 @@ void pot::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 
-	param POT("POT-PRCNT");
+	param POT("POT-PRCNT", aggregation(), processing_type(kProbability));
 
 	POT.Unit(kPrcnt);
 

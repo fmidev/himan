@@ -178,7 +178,7 @@ void pot_gfs::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 
-	param POT("POT-PRCNT", 12100, 0, 19, 2);
+	param POT("POT-PRCNT", aggregation(), processing_type(kProbability));
 
 	POT.Unit(kPrcnt);
 

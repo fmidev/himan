@@ -34,7 +34,8 @@ void frost::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 
-	SetParams({param("PROB-FROST-1"), param("PROB-FROST-2")});
+	SetParams({param("PROB-FROST-1", aggregation(), processing_type(kProbability)),
+	           param("PROB-FROST-2", aggregation(), processing_type(kProbability))});
 
 	Start();
 }
@@ -81,7 +82,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 	const param TDParam("TD-K");
 	const param TGParam("TG-K");
 	const param WGParam("FFG-MS");
-	const param T0Param("PROB-TC-0");
+	const param T0Param("PROB-TC-0", aggregation(), processing_type(kProbabilityLessThanOrEqual, 273.15));
 	const params NParams({param("N-PRCNT"), param("N-0TO1")});
 	const param RADParam("RADGLO-WM2");
 	const param ICNParam("IC-0TO1");

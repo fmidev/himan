@@ -1,6 +1,8 @@
 -- Calculate windgust duration within 24h
 -- Function reads past 24h from given time. Works only with ECMWF data.
 
+local potpar = param("PROB-POT-3", aggregation(), processing_type(HPProcessingType.kProbabilityGreaterThan, 60))
+
 function WriteToFile(gsum, ftime)
   local start = ftime:GetStep():Hours()
   local agg = aggregation(HPAggregationType.kAccumulation, time_duration(HPTimeResolution.kHourResolution, 24))
@@ -45,7 +47,7 @@ function TimeMax(curTime,param_csi)
       break
     end
 
-    local pot_3 = luatool:FetchWithType(myTime, current_level, param("PROB-POT-3"), forecast_type(HPForecastType.kStatisticalProcessing))
+    local pot_3 = luatool:FetchWithType(myTime, current_level, potpar, forecast_type(HPForecastType.kStatisticalProcessing))
     local csi = luatool:FetchWithType(myTime, current_level, param_csi, forecast_type(HPForecastType.kStatisticalProcessing))
 
     if pot_3 then
@@ -85,11 +87,11 @@ function Rajuilma(curTime)
 
   local warning = {}
 
-  local yellow = TimeMax(curTime,param("PROB-CSI-1"))
-  local amber = TimeMax(curTime,param("PROB-CSI-2"))
-  local red = TimeMax(curTime,param("PROB-CSI-3"))
+  local yellow = TimeMax(curTime,param("PROB-CSI-1", aggregation(), processing_type(HPProcessingType.kProbabilityGreaterThan, 30)))
+  local amber = TimeMax(curTime,param("PROB-CSI-2", aggregation(), processing_type(HPProcessingType.kProbabilityGreaterThan, 60)))
+  local red = TimeMax(curTime,param("PROB-CSI-3", aggregation(), processing_type(HPProcessingType.kProbabilityGreaterThan, 100)))
 
-  local ukkonen = TimeMax(curTime,param("PROB-POT-3"))
+  local ukkonen = TimeMax(curTime, potpar)
 
   if #warning == 0 then
     for i=1, #yellow do
