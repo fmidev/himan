@@ -125,6 +125,7 @@ long DetermineProductDefinitionTemplateNumber(long agg, long proc, long ftype)
 			case kProbabilityEquals:
 			case kProbabilityNotEquals:
 			case kProbabilityEqualsIn:
+			case kProbability:
 				// probabilities
 				templateNumber =
 				    5;  // Probability forecasts at a horizontal level or in a horizontal layer at a point in time
@@ -1093,7 +1094,8 @@ void WriteParameter(NFmiGribMessage& message, const param& par, const producer& 
 				str.erase(str.find_last_not_of('0') + 1, std::string::npos);
 				const auto dot = str.find('.');
 				auto num_digits = str.length() - dot - 1;
-				num_digits = std::min(num_digits, static_cast<size_t> (5)); // prevent neverending floats to inflate digitcount
+				num_digits =
+				    std::min(num_digits, static_cast<size_t>(5));  // prevent neverending floats to inflate digitcount
 
 				s = make_pair(static_cast<long>(v * pow(10., static_cast<double>(num_digits))), -num_digits);
 			}
