@@ -9,6 +9,7 @@
 
 #include "himan_common.h"
 #include "serialization.h"
+#include <fmt/format.h>
 
 namespace himan
 {
@@ -136,5 +137,21 @@ inline std::ostream& operator<<(std::ostream& file, const level& ob)
 	return ob.Write(file);
 }
 }  // namespace himan
+
+template <>
+struct fmt::formatter<himan::level>
+{
+	template <typename ParseContext>
+	constexpr auto parse(ParseContext& ctx)
+	{
+		return ctx.begin();
+	}
+
+	template <typename FormatContext>
+	auto format(const himan::level& l, FormatContext& ctx) const -> decltype(ctx.out())
+	{
+		return fmt::format_to(ctx.out(), "{}", static_cast<std::string>(l));
+	}
+};
 
 #endif /* LEVEL_H */

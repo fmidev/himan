@@ -13,6 +13,7 @@
 #include "serialization.h"
 #include "time_duration.h"
 #include <boost/date_time.hpp>
+#include <fmt/format.h>
 
 #ifdef SERIALIZATION
 namespace cereal
@@ -113,5 +114,21 @@ inline std::ostream& operator<<(std::ostream& file, const raw_time& ob)
 	return ob.Write(file);
 }
 }  // namespace himan
+
+template <>
+struct fmt::formatter<himan::raw_time>
+{
+	template <typename ParseContext>
+	constexpr auto parse(ParseContext& ctx)
+	{
+		return ctx.begin();
+	}
+
+	template <typename FormatContext>
+	auto format(const himan::raw_time& r, FormatContext& ctx) const -> decltype(ctx.out())
+	{
+		return fmt::format_to(ctx.out(), "{}", static_cast<std::string>(r));
+	}
+};
 
 #endif /* RAW_TIME_H */

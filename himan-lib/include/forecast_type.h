@@ -18,6 +18,7 @@
 
 #include "himan_common.h"
 #include "serialization.h"
+#include <fmt/format.h>
 
 namespace himan
 {
@@ -82,5 +83,21 @@ inline std::ostream& operator<<(std::ostream& file, const forecast_type& ob)
 	return ob.Write(file);
 }
 }  // namespace himan
+
+template <>
+struct fmt::formatter<himan::forecast_type>
+{
+	template <typename ParseContext>
+	constexpr auto parse(ParseContext& ctx)
+	{
+		return ctx.begin();
+	}
+
+	template <typename FormatContext>
+	auto format(const himan::forecast_type& ft, FormatContext& ctx) const -> decltype(ctx.out())
+	{
+		return fmt::format_to(ctx.out(), "{}", static_cast<std::string>(ft));
+	}
+};
 
 #endif /* FORECAST_TYPE_H */
