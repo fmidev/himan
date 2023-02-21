@@ -179,9 +179,10 @@ void compiled_plugin_base::WriteToFile(const shared_ptr<info<T>> targetInfo, wri
 			// check missing values
 			if (itsConfiguration->AllowedMissingValues() < tempInfo->Data().MissingCount())
 			{
-				itsBaseLogger.Fatal(fmt::format("Data contains more missing values ({}) than allowed ({})",
-				                                tempInfo->Data().MissingCount(),
-				                                itsConfiguration->AllowedMissingValues()));
+				itsBaseLogger.Fatal(
+				    fmt::format("Parameter {} for leadtime {} contains more missing values ({}) than allowed ({})",
+				                tempInfo->Param().Name(), tempInfo->Time().Step(), tempInfo->Data().MissingCount(),
+				                itsConfiguration->AllowedMissingValues()));
 				exit(1);
 			}
 		}
