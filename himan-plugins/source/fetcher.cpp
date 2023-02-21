@@ -789,39 +789,43 @@ pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAuxili
 
 			auto c = GET_PLUGIN(cache);
 
-			call_once(oflag,
-			          [&]()
-			          {
-				          itsLogger.Debug("Start full auxiliary files read");
+			call_once(
+			    oflag,
+			    [&]()
+			    {
+				    vector<string> filenames;
+				    std::for_each(files.begin(), files.end(),
+				                  [&filenames](const auto& a) { filenames.push_back(a.file_location); });
+				    itsLogger.Debug(fmt::format("Start full auxiliary files read for: {}", fmt::join(filenames, ", ")));
 
-				          timer t(true);
+				    timer t(true);
 
-				          ret = FromFile<double>(files, opts, readPackedData, true);
+				    ret = FromFile<double>(files, opts, readPackedData, true);
 
-				          AuxiliaryFilesRotateAndInterpolate(opts, ret);
+				    AuxiliaryFilesRotateAndInterpolate(opts, ret);
 
 #ifdef HAVE_CUDA
-				          if (readPackedData && opts.configuration->UseCudaForUnpacking())
-				          {
-					          util::Unpack<double>(ret, false);
-				          }
+				    if (readPackedData && opts.configuration->UseCudaForUnpacking())
+				    {
+					    util::Unpack<double>(ret, false);
+				    }
 #endif
 
-				          for (const auto& info : ret)
-				          {
-					          info->First();
-					          info->Reset<param>();
+				    for (const auto& info : ret)
+				    {
+					    info->First();
+					    info->Reset<param>();
 
-					          while (info->Next())
-					          {
-						          c->Insert(info);
-					          }
-				          }
+					    while (info->Next())
+					    {
+						    c->Insert(info);
+					    }
+				    }
 
-				          t.Stop();
-				          itsLogger.Debug(fmt::format("Auxiliary files read finished in {} ms, cache size: {}",
-				                                      t.GetTime(), c->Size()));
-			          });
+				    t.Stop();
+				    itsLogger.Debug(
+				        fmt::format("Auxiliary files read finished in {} ms, cache size: {}", t.GetTime(), c->Size()));
+			    });
 
 			auxiliaryFilesRead = true;
 			source = HPDataFoundFrom::kCache;
