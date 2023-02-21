@@ -269,24 +269,29 @@ void probability::Process(const std::shared_ptr<const plugin_configuration> conf
 
 std::unique_ptr<ensemble> Mogrify(const ensemble* baseEns, const himan::param& par)
 {
+	std::unique_ptr<ensemble> ens = nullptr;
+
 	if (baseEns->ClassName() == "himan::ensemble")
 	{
-		return std::move(std::make_unique<ensemble>(par, baseEns->ExpectedSize(), baseEns->MaximumMissingForecasts()));
+		ens = std::make_unique<ensemble>(*baseEns);
 	}
 	else if (baseEns->ClassName() == "himan::lagged_ensemble")
 	{
-		return std::move(
-		    std::make_unique<lagged_ensemble>(par, dynamic_cast<const lagged_ensemble*>(baseEns)->DesiredForecasts(),
-		                                      baseEns->MaximumMissingForecasts()));
+		ens = std::make_unique<lagged_ensemble>(*dynamic_cast<const lagged_ensemble*>(baseEns));
 	}
 	else if (baseEns->ClassName() == "himan::time_ensemble")
 	{
-		const auto d = dynamic_cast<const time_ensemble*>(baseEns);
-		return std::move(std::make_unique<time_ensemble>(par, baseEns->ExpectedSize(), d->PrimaryTimeSpan(),
-		                                                 d->SecondaryTimeMaskLen(), d->SecondaryTimeMaskStep(),
-		                                                 d->SecondaryTimeSpan(), baseEns->MaximumMissingForecasts()));
+		ens = std::make_unique<time_ensemble>(*dynamic_cast<const time_ensemble*>(baseEns));
 	}
-	return nullptr;
+	else
+	{
+		himan::logger logr("probability");
+		logr.Fatal(fmt::format("Unknown ensemble class: {}", baseEns->ClassName()));
+		himan::Abort();
+	}
+
+	ens->Param(par);
+	return std::move(ens);
 }
 
 PROB::partial_param_configuration probability::GetTarget()

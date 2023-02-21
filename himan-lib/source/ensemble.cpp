@@ -246,5 +246,12 @@ std::shared_ptr<info<float>> ensemble::Forecast(size_t i)
 
 	return itsForecasts[i];
 }
-
+void ensemble::Param(const param& par)
+{
+	itsParam = par;
+}
+std::vector<forecast_type> ensemble::DesiredForecasts() const
+{
+	return itsDesiredForecasts;
+}
 }  // namespace himan

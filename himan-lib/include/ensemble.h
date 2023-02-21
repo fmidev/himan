@@ -96,6 +96,7 @@ class ensemble
 	size_t ExpectedSize() const;
 
 	param Param() const;
+	void Param(const param& par);
 
 	HPEnsembleType EnsembleType() const;
 
@@ -103,6 +104,8 @@ class ensemble
 
 	/// @brief Return all data for given ensemble member
 	std::shared_ptr<info<float>> Forecast(size_t i);
+
+	virtual std::vector<forecast_type> DesiredForecasts() const;
 
    protected:
 	ensemble() = default;

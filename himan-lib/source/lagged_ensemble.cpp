@@ -147,9 +147,16 @@ lagged_ensemble::lagged_ensemble(const param& parameter, const std::string& name
 	itsMaximumMissingForecasts = maximumMissingForecasts;
 }
 
-std::vector<std::pair<forecast_type, time_duration>> lagged_ensemble::DesiredForecasts() const
+std::vector<forecast_type> lagged_ensemble::DesiredForecasts() const
 {
-	return itsDesiredForecasts;
+	std::vector<forecast_type> vec;
+	vec.reserve(itsDesiredForecasts.size());
+
+	for (const auto& f : itsDesiredForecasts)
+	{
+		vec.push_back(f.first);
+	}
+	return vec;
 }
 
 void lagged_ensemble::Fetch(std::shared_ptr<const plugin_configuration> config, const forecast_time& time,

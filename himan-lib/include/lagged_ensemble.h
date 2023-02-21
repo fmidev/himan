@@ -24,7 +24,7 @@ class lagged_ensemble : public ensemble
 	/// @brief Verify and report the number of forecasts succesfully loaded.
 	/// Abort execution if the specified limit is exceeded.
 	void VerifyValidForecastCount(int numLoadedForecasts, int numMissingForecasts);
-	std::vector<std::pair<forecast_type, time_duration>> DesiredForecasts() const;
+	std::vector<forecast_type> DesiredForecasts() const override;
 
 	virtual std::string ClassName() const final
 	{
