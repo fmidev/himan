@@ -2333,9 +2333,17 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 				}
 			}
 
+			if (tosp != effective_tosp)
+			{
+				logr.Trace(fmt::format("Changing typeOfStatisticatalProcessing to {} as param processing type is {}",
+				                       effective_tosp, HPProcessingTypeToString, at(pt.Type())));
+			}
+
+			tosp = effective_tosp;
+
 			auto parminfo =
 			    r->RadonDB().GetParameterFromGrib2(prod.Id(), discipline, category, number, message.LevelType(),
-			                                       static_cast<double>(message.LevelValue()), effective_tosp);
+			                                       static_cast<double>(message.LevelValue()), tosp);
 
 			if (parminfo.size())
 			{
