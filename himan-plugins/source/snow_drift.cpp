@@ -228,7 +228,18 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 
 				if (pSAInfo && pDAInfo)
 				{
-					break;
+					if (pSAInfo->Data().MissingCount() == pSAInfo->Data().Size() ||
+					    pDAInfo->Data().MissingCount() == pDAInfo->Data().Size())
+					{
+						itsLogger.Error(fmt::format("Data from {} and/or {} from LAPSFIN is all missing",
+						                            SAParam.Name(), DAParam.Name()));
+						pSAInfo = nullptr;
+						pDAInfo = nullptr;
+					}
+					else
+					{
+						break;
+					}
 				}
 
 				prevTime.ValidDateTime().Adjust(kHourResolution, -1);
@@ -291,7 +302,8 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 		pDAInfo = std::make_shared<info<double>>(*myTargetInfo);
 	}
 
-	myThreadedLogger.Info("[" + deviceType + "] Missing: " + std::to_string(util::MissingPercent(*myTargetInfo)) + "%");
+	myThreadedLogger.Info(fmt::format("[{}] Missing values: {}/{}", deviceType, myTargetInfo->Data().MissingCount(),
+	                                  myTargetInfo->Data().Size()));
 }
 
 double DriftMagnitude(double ff, double mi)
