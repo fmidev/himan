@@ -2209,7 +2209,7 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 		const long unitForTimeRange = message.GetLongKey("indicatorOfUnitForTimeRange");
 		const long category = message.ParameterCategory();
 		const long discipline = message.ParameterDiscipline();
-		const long tosp = (message.TypeOfStatisticalProcessing() == -999) ? -1 : message.TypeOfStatisticalProcessing();
+		long tosp = (message.TypeOfStatisticalProcessing() == -999) ? -1 : message.TypeOfStatisticalProcessing();
 
 		// If there is no time aggregation, set td values to "not_a_time_duration" to indicate
 		// that there is no time aggregation (aggregation is done in some other dimension)
@@ -2336,7 +2336,7 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 			if (tosp != effective_tosp)
 			{
 				logr.Trace(fmt::format("Changing typeOfStatisticatalProcessing to {} as param processing type is {}",
-				                       effective_tosp, HPProcessingTypeToString, at(pt.Type())));
+				                       effective_tosp, HPProcessingTypeToString.at(pt.Type())));
 			}
 
 			tosp = effective_tosp;
