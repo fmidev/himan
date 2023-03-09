@@ -57,8 +57,12 @@ HPFileType
     kGRIB1 = 1
     kGRIB2 = 2
     kGRIB = 3
-    kQueryData = 4
-    kNetCDF = 5
+    kGribIndex = 4
+    kQueryData = 5
+    kNetCDF = 6
+    kCSV = 7
+    kGeoTIFF = 8
+    kNetCDFv4 = 9
 
 HPProjectionType
     kUnknownProjection = 0

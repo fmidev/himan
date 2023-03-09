@@ -139,7 +139,8 @@ enum HPFileType
 	kQueryData,
 	kNetCDF,
 	kCSV,
-	kGeoTIFF
+	kGeoTIFF,
+	kNetCDFv4
 };
 
 const boost::unordered_map<HPFileType, std::string> HPFileTypeToString =
@@ -152,7 +153,8 @@ const boost::unordered_map<HPFileType, std::string> HPFileTypeToString =
 	(kQueryData, "QueryData")
 	(kNetCDF, "NetCDF")
 	(kCSV, "CSV")
-	(kGeoTIFF, "GeoTIFF");
+	(kGeoTIFF, "GeoTIFF")
+	(kNetCDFv4, "NetCDFv4");
 
 // Defined external compression types
 

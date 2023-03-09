@@ -526,10 +526,10 @@ void SetOutputFileType(shared_ptr<configuration>& conf, const string& outfileTyp
 	{
 		conf->OutputFileType(kGRIB2);
 	}
-	else if (outfileType == "netcdf")
-	{
-		conf->OutputFileType(kNetCDF);
-	}
+//	else if (outfileType == "netcdf")
+//	{
+//		conf->OutputFileType(kNetCDF);
+//	}
 	else if (outfileType == "querydata")
 	{
 		conf->OutputFileType(kQueryData);

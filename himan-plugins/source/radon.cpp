@@ -483,8 +483,10 @@ vector<himan::file_information> radon::Files(search_options& options)
 			finfo.file_type = static_cast<HPFileType>(stoi(values[4]));
 			break;
 		case 3:
-		case 4:
 			finfo.file_type = kNetCDF;
+			break;
+		case 4:
+			finfo.file_type = kNetCDFv4;
 			break;
 		case 5:
 			finfo.file_type = kGeoTIFF;
@@ -816,6 +818,9 @@ pair<bool, radon_record> radon::SaveGrid(const info<T>& resultInfo, const file_i
 			radonFileFormat = 2;
 			break;
 		case kNetCDF:
+			radonFileFormat = 3;
+			break;
+		case kNetCDFv4:
 			radonFileFormat = 4;
 			break;
 		case kGeoTIFF:

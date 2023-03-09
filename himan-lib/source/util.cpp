@@ -133,6 +133,7 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 			case kCSV:
 				return "csv";
 			case kNetCDF:
+			case kNetCDFv4:
 				return "nc";
 			case kGeoTIFF:
 				return "tif";
@@ -509,10 +510,6 @@ himan::HPFileType util::FileType(const string& theFile)
 	{
 		return kGRIB2;
 	}
-	else if (ext == ".nc")
-	{
-		return kNetCDF;
-	}
 	else if (ext == ".tif" || ext == ".tiff")
 	{
 		return kGeoTIFF;
@@ -529,15 +526,24 @@ himan::HPFileType util::FileType(const string& theFile)
 
 	HPFileType ret = kUnknownFile;
 
-	if (strncmp(content, "GRIB", 4) == 0)
+	static const char* grib = "GRIB";
+	static const unsigned char ncv3[4] = {0x43, 0x44, 0x46, 0x01};
+	static const unsigned char ncv4[4] = {0xD3, 0x48, 0x44, 0x46};  // 211 H D F
+	static const char* tiff = "II*\0";
+
+	if (strncmp(content, grib, 4) == 0)
 	{
 		ret = kGRIB;
 	}
-	else if (strncmp(content, "CDF", 3) == 0)
+	else if (memcmp(content, ncv3, 4) == 0)
 	{
 		ret = kNetCDF;
 	}
-	else if (strncmp(content, "II*", 3) == 0)
+	else if (memcmp(content, ncv4, 4) == 0)
+	{
+		ret = kNetCDFv4;
+	}
+	else if (memcmp(content, tiff, 4) == 0)
 	{
 		ret = kGeoTIFF;
 	}

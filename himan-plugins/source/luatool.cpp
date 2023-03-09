@@ -297,7 +297,9 @@ void BindEnum(lua_State* L)
 				 value("kGRIB2", kGRIB2),
 				 value("kGRIB", kGRIB),
 				 value("kQueryData", kQueryData),
-				 value("kNetCDF", kNetCDF)],
+				 value("kNetCDF", kNetCDF),
+				 value("kNetCDFv4", kNetCDFv4),
+				 value("kGeoTIFF", kGeoTIFF)],
 	     class_<HPScanningMode>("HPScanningMode")
 	         .enum_("constants")[
 				 value("kUnknownScanningMode", kUnknownScanningMode),

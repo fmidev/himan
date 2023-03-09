@@ -110,6 +110,7 @@ std::pair<himan::HPWriteStatus, himan::file_information> writer::CreateFile(
 		}
 		// Must have this or compiler complains
 		case kNetCDF:
+		case kNetCDFv4:
 		default:
 			itsLogger.Error(
 			    fmt::format("Invalid file type: {}", HPFileTypeToString.at(wo.configuration->OutputFileType())));
@@ -218,7 +219,8 @@ void writer::WriteOptions(const write_options& theWriteOptions)
 
 void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 {
-	auto FetchPendingFromCache = [&]() -> std::vector<std::shared_ptr<himan::info<double>>> {
+	auto FetchPendingFromCache = [&]() -> std::vector<std::shared_ptr<himan::info<double>>>
+	{
 		auto c = GET_PLUGIN(cache);
 
 		std::vector<std::shared_ptr<himan::info<double>>> infos;

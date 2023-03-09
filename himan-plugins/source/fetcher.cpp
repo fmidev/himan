@@ -496,6 +496,7 @@ vector<shared_ptr<info<T>>> fetcher::FromFile(const vector<file_information>& fi
 				throw runtime_error("QueryData as input is not supported");
 
 			case kNetCDF:
+			case kNetCDFv4:
 				throw runtime_error("NetCDF as input is not supported");
 
 			case kCSV:
