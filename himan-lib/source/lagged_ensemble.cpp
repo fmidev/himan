@@ -147,6 +147,13 @@ lagged_ensemble::lagged_ensemble(const param& parameter, const std::string& name
 	itsMaximumMissingForecasts = maximumMissingForecasts;
 }
 
+lagged_ensemble::lagged_ensemble(const lagged_ensemble& other)
+    : ensemble(other), itsDesiredForecasts(other.itsDesiredForecasts)
+{
+	itsEnsembleType = other.itsEnsembleType;
+	itsLogger = logger("lagged_ensemble");
+}
+
 std::vector<forecast_type> lagged_ensemble::DesiredForecasts() const
 {
 	std::vector<forecast_type> vec;

@@ -8,6 +8,8 @@
 
 #include "compiled_plugin.h"
 #include "compiled_plugin_base.h"
+#include "ensemble.h"
+#include "lagged_ensemble.h"
 #include <vector>
 
 namespace himan
@@ -39,7 +41,8 @@ class transformer : public compiled_plugin, private compiled_plugin_base
 	                         write_options opts = write_options()) override;
 
    private:
-	virtual void Calculate(std::shared_ptr<info<double>> theTargetInfo, unsigned short theThreadIndex) override;
+	virtual void Calculate(std::shared_ptr<info<float>> theTargetInfo, unsigned short threadIndex) override;
+	virtual void Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex) override;
 
 	// Check and write json parameters needed for transformer plug-in to local variables.
 	void SetAdditionalParameters();
@@ -72,6 +75,7 @@ class transformer : public compiled_plugin, private compiled_plugin_base
 	bool itsDoLandscapeInterpolation;
 	bool itsParamDefinitionFromConfig;
 	std::vector<std::pair<std::string, std::string>> itsExtraFileMetadata;
+	std::unique_ptr<ensemble> itsEnsemble;
 };
 
 // the class factory

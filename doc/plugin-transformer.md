@@ -139,3 +139,7 @@ extra_file_metadata: write any metadata to resulting files, overriding any exist
 
     "extra_file_metadata" : "shapeOfTheEarth=6,latitudeOfFirstGridPointInDegrees:d=10.01"
 
+named_ensemble: fetch ensemble configuration from database. Makes it easier to handle complicated ensembles like MEPS. This options is not supported with landscape/time/level interpolation, land sea masking or vector component rotation
+
+    "named_ensemble" : "MEPS_SINGLE_ENSEMBLE"
+

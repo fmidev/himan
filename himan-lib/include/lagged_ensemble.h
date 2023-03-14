@@ -17,6 +17,7 @@ class lagged_ensemble : public ensemble
 	                const std::vector<std::pair<forecast_type, time_duration>>& itsEnsembleConfiguration,
 	                int maximumMissingForecasts = 0);
 	lagged_ensemble(const param& parameter, const std::string& namedEnsemble, int maximumMissingForecasts = 0);
+	lagged_ensemble(const lagged_ensemble& other);
 
 	void Fetch(std::shared_ptr<const plugin_configuration> config, const forecast_time& time,
 	           const level& forecastLevel) override;

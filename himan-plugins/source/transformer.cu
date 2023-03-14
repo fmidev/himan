@@ -10,25 +10,26 @@ __global__ void TransformerKernel(const T* __restrict__ d_source, T* __restrict_
 
 	if (idx < N)
 	{
-		d_dest[idx] = __fma_rn(d_source[idx], scale, base);
+		d_dest[idx] = __fma_rn(d_source[idx], static_cast<T>(scale), static_cast<T>(base));
 	}
 }
 
 namespace transformergpu
 {
-void Process(std::shared_ptr<const himan::plugin_configuration> conf, std::shared_ptr<info<double>> myTargetInfo,
-             std::shared_ptr<info<double>> sourceInfo, double scale, double base)
+template <typename T>
+void Process(std::shared_ptr<const himan::plugin_configuration> conf, std::shared_ptr<info<T>> myTargetInfo,
+             std::shared_ptr<info<T>> sourceInfo, double scale, double base)
 {
 	cudaStream_t stream;
 
 	CUDA_CHECK(cudaStreamCreate(&stream));
 
 	const size_t N = myTargetInfo->SizeLocations();
-	size_t memsize = N * sizeof(double);
+	size_t memsize = N * sizeof(T);
 
 	// Allocate device arrays
 
-	double *d_source = 0, *d_dest = 0;
+	T *d_source = 0, *d_dest = 0;
 
 	// Allocate memory on device
 
@@ -46,7 +47,7 @@ void Process(std::shared_ptr<const himan::plugin_configuration> conf, std::share
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
-	TransformerKernel<double><<<gridSize, blockSize, 0, stream>>>(d_source, d_dest, scale, base, N);
+	TransformerKernel<T><<<gridSize, blockSize, 0, stream>>>(d_source, d_dest, scale, base, N);
 	cuda::ReleaseInfo(myTargetInfo, d_dest, stream);
 
 	// block until the stream has completed
@@ -57,4 +58,9 @@ void Process(std::shared_ptr<const himan::plugin_configuration> conf, std::share
 
 	cudaStreamDestroy(stream);
 }
-}
+template void Process(std::shared_ptr<const himan::plugin_configuration>, std::shared_ptr<info<double>>,
+                      std::shared_ptr<info<double>>, double, double);
+template void Process(std::shared_ptr<const himan::plugin_configuration>, std::shared_ptr<info<float>>,
+                      std::shared_ptr<info<float>>, double, double);
+
+}  // namespace transformergpu

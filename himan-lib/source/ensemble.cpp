@@ -244,7 +244,7 @@ std::shared_ptr<info<float>> ensemble::Forecast(size_t i)
 		throw kFileDataNotFound;
 	}
 
-	return itsForecasts[i];
+	return itsForecasts.at(i);
 }
 void ensemble::Param(const param& par)
 {

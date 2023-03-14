@@ -26,8 +26,9 @@ mutex paramMutex;
 #ifdef HAVE_CUDA
 namespace transformergpu
 {
-void Process(shared_ptr<const himan::plugin_configuration> conf, shared_ptr<himan::info<double>> myTargetInfo,
-             shared_ptr<himan::info<double>> sourceInfo, double scale, double base);
+template <typename T>
+void Process(shared_ptr<const himan::plugin_configuration> conf, shared_ptr<himan::info<T>> myTargetInfo,
+             shared_ptr<himan::info<T>> sourceInfo, double scale, double base);
 }
 #endif
 
@@ -46,7 +47,8 @@ transformer::transformer()
       itsWriteEmptyGrid(true),
       itsDecimalPrecision(kHPMissingInt),
       itsDoLandscapeInterpolation(false),
-      itsParamDefinitionFromConfig(false)
+      itsParamDefinitionFromConfig(false),
+      itsEnsemble(nullptr)
 {
 	itsCudaEnabledCalculation = true;
 
@@ -66,6 +68,25 @@ vector<himan::level> transformer::LevelsFromString(const string& levelType, cons
 	               [&](int levelValue) { return level(theLevelType, static_cast<float>(levelValue), levelType); });
 
 	return levels;
+}
+
+template <typename T>
+void SetParamAggregation(const himan::param& src, shared_ptr<himan::info<T>> myTargetInfo)
+{
+	if (src.Name() == myTargetInfo->Param().Name() && (src.Aggregation().Type() != himan::kUnknownAggregationType ||
+	                                                   src.ProcessingType().Type() != himan::kUnknownProcessingType))
+	{
+		// If source parameter is an aggregation or processed somehow, copy that
+		// information to target param
+		himan::param p = myTargetInfo->Param();
+		p.Aggregation(src.Aggregation());
+		p.ProcessingType(src.ProcessingType());
+
+		{
+			lock_guard<mutex> lock(paramMutex);
+			myTargetInfo->template Set<himan::param>(p);
+		}
+	}
 }
 
 namespace
@@ -593,6 +614,21 @@ void transformer::SetAdditionalParameters()
 			itsLogger.Warning("querydata metadata set but output file type is not querydata");
 		}
 	}
+
+	if (itsConfiguration->Exists("ensemble_type") || itsConfiguration->Exists("named_ensemble"))
+	{
+		itsEnsemble = util::CreateEnsembleFromConfiguration(itsConfiguration);
+		itsEnsemble->Param(itsSourceParam[0]);
+	}
+
+	if (itsEnsemble && (itsDoLandscapeInterpolation || itsDoTimeInterpolation || itsDoLevelInterpolation ||
+	                    itsRotateVectorComponents || itsApplyLandSeaMask))
+	{
+		itsLogger.Fatal(
+		    "Conflicting options: ensemble and (landscape/time/level interpolation, vector component rotation, land "
+		    "sea masking)");
+		himan::Abort();
+	}
 }
 
 void transformer::Process(shared_ptr<const plugin_configuration> conf)
@@ -613,7 +649,29 @@ void transformer::Process(shared_ptr<const plugin_configuration> conf)
 			// Copy the original so that we can fetch the right data.
 			itsSourceForecastType = itsForecastTypeIterator.At();
 			itsForecastTypeIterator.Replace(itsTargetForecastType);
+
+			itsLogger.Info(fmt::format("Notice: overriding forecast_type from configuration file ({}) with {}",
+			                           static_cast<string>(itsSourceForecastType),
+			                           static_cast<string>(itsTargetForecastType)));
 		}
+	}
+
+	if (itsEnsemble != nullptr)
+	{
+		auto ensembleConfiguration = itsEnsemble->DesiredForecasts();
+		itsForecastTypeIterator.First();
+		itsSourceForecastType = itsForecastTypeIterator.At();
+
+		if (ensembleConfiguration.size() == 0)
+		{
+			itsLogger.Fatal("Ensemble with zero members");
+			himan::Abort();
+		}
+		itsForecastTypeIterator = forecast_type_iter(ensembleConfiguration);
+		itsThreadDistribution = ThreadDistribution::kThreadForTimeAndLevel;
+
+		itsLogger.Info(fmt::format("Notice: overriding forecast_type from configuration file ({}) with {}",
+		                           static_cast<string>(itsSourceForecastType), fmt::join(ensembleConfiguration, ", ")));
 	}
 
 	if (itsInterpolationMethod != kUnknownInterpolationMethod)
@@ -626,7 +684,14 @@ void transformer::Process(shared_ptr<const plugin_configuration> conf)
 
 	SetParams(itsTargetParam, itsParamDefinitionFromConfig);
 
-	Start();
+	if (itsEnsemble)
+	{
+		Start<float>();
+	}
+	else
+	{
+		Start();
+	}
 }
 
 void transformer::Rotate(shared_ptr<info<double>> myTargetInfo)
@@ -664,9 +729,117 @@ void transformer::Rotate(shared_ptr<info<double>> myTargetInfo)
 	                                    itsConfiguration->UseCuda());
 }
 
+void transformer::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short threadIndex)
+{
+	auto myThreadedLogger = logger("transformerThread #" + to_string(threadIndex));
+
+	if (!itsEnsemble)
+	{
+		itsLogger.Error("float mode calculation started without ensemble configuration");
+		return;
+	}
+
+	unique_ptr<ensemble> myEnsemble;
+
+	switch (itsEnsemble->EnsembleType())
+	{
+		case kPerturbedEnsemble:
+			myEnsemble = make_unique<ensemble>(*itsEnsemble);
+			break;
+		case kLaggedEnsemble:
+			myEnsemble = make_unique<lagged_ensemble>(dynamic_cast<lagged_ensemble&>(*itsEnsemble));
+			break;
+		default:
+			myThreadedLogger.Error("Don't know how to handle this ensemble type");
+			return;
+	}
+
+	try
+	{
+		myEnsemble->Fetch(itsConfiguration, myTargetInfo->Time(), myTargetInfo->Level());
+	}
+	catch (const std::exception& e)
+	{
+		myThreadedLogger.Error(e.what());
+		return;
+	}
+
+	string deviceType = "CPU";
+
+	const auto desired = myEnsemble->DesiredForecasts();
+
+	for (size_t i = 0; i < desired.size(); i++)
+	{
+		shared_ptr<info<float>> sourceInfo = nullptr;
+
+		try
+		{
+			sourceInfo = myEnsemble->Forecast(i);
+		}
+		catch (const HPExceptionType& e)
+		{
+			if (e == kFileDataNotFound)
+			{
+				myThreadedLogger.Warning(fmt::format("Skipping forecast type {}", desired[i]));
+				continue;
+			}
+		}
+
+		myTargetInfo->Find<forecast_type>(sourceInfo->ForecastType());
+
+		// No SetAB since template types differ (double vs float)
+		if (myTargetInfo->Level().Type() == kHybrid)
+		{
+			const size_t paramIndex = myTargetInfo->Index<param>();
+
+			for (myTargetInfo->Reset<param>(); myTargetInfo->Next<param>();)
+			{
+				myTargetInfo->Level().AB(sourceInfo->Level().AB());
+			}
+
+			myTargetInfo->Index<param>(paramIndex);
+		}
+
+		myTargetInfo->Grid()->UVRelativeToGrid(sourceInfo->Grid()->UVRelativeToGrid());
+		SetParamAggregation(sourceInfo->Param(), myTargetInfo);
+
+		auto& result = VEC(myTargetInfo);
+		const auto& source = VEC(sourceInfo);
+#ifdef HAVE_CUDA
+
+		if (itsConfiguration->UseCuda())
+		{
+			deviceType = "GPU";
+
+			transformergpu::Process<float>(itsConfiguration, myTargetInfo, sourceInfo, itsScale, itsBase);
+		}
+		else
+#endif
+		{
+			transform(source.begin(), source.end(), result.begin(),
+			          [&](const float& value) { return fma(value, itsScale, itsBase); });
+
+			if (!IsMissing(itsChangeMissingTo))
+			{
+				auto& vec = VEC(myTargetInfo);
+				replace_if(
+				    vec.begin(), vec.end(), [=](float d) { return IsMissing(d); }, itsChangeMissingTo);
+			}
+		}
+		myThreadedLogger.Info(fmt::format("[{}] Missing values: {}/{}", deviceType, myTargetInfo->Data().MissingCount(),
+		                                  myTargetInfo->Data().Size()));
+	}
+}
+
 void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	auto myThreadedLogger = logger("transformerThread #" + to_string(threadIndex));
+
+	if (itsEnsemble)
+	{
+		itsLogger.Error("double mode calculation started with ensemble configuration");
+		return;
+	}
 
 	forecast_time forecastTime = myTargetInfo->Time();
 	level forecastLevel = myTargetInfo->Level();
@@ -738,22 +911,7 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 		}
 	}
 
-	if (itsSourceParam[0].Name() == itsTargetParam[0].Name() &&
-	    (sourceInfo->Param().Aggregation().Type() != kUnknownAggregationType ||
-	     sourceInfo->Param().ProcessingType().Type() != kUnknownProcessingType))
-	{
-		// If source parameter is an aggregation or processed somehow, copy that
-		// information to target param
-		param p = myTargetInfo->Param();
-		p.Aggregation(sourceInfo->Param().Aggregation());
-		p.ProcessingType(sourceInfo->Param().ProcessingType());
-
-		{
-			lock_guard<mutex> lock(paramMutex);
-			myTargetInfo->Set<param>(p);
-		}
-	}
-
+	SetParamAggregation(sourceInfo->Param(), myTargetInfo);
 	SetAB(myTargetInfo, sourceInfo);
 	myTargetInfo->Grid()->UVRelativeToGrid(sourceInfo->Grid()->UVRelativeToGrid());
 
@@ -761,7 +919,7 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 
 #ifdef HAVE_CUDA
 
-	if (itsConfiguration->UseCuda())
+	if (itsConfiguration->UseCuda() && itsEnsemble == nullptr)
 	{
 		deviceType = "GPU";
 
@@ -786,8 +944,8 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 		    vec.begin(), vec.end(), [=](double d) { return IsMissing(d); }, itsChangeMissingTo);
 	}
 
-	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
-	                      "/" + to_string(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info(fmt::format("[{}] Missing values: {}/{}", deviceType, myTargetInfo->Data().MissingCount(),
+	                                  myTargetInfo->Data().Size()));
 }
 
 void transformer::WriteToFile(const shared_ptr<info<double>> targetInfo, write_options writeOptions)
