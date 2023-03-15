@@ -205,18 +205,19 @@ struct write_data
 static int putObjectDataCallback(int bufferSize, char* buffer, void* callbackData)
 {
 	write_data* data = static_cast<write_data*>(callbackData);
-	int bytesWritten = 0;
+	int bytesToWrite = 0;
 
 	if (data->buffer.length)
 	{
-		bytesWritten =
-		    static_cast<int>((static_cast<int>(data->buffer.length) > bufferSize) ? bufferSize : data->buffer.length);
-		memcpy(buffer, data->buffer.data + data->write_ptr, bytesWritten);
-		data->write_ptr += bytesWritten;
-		data->buffer.length -= bytesWritten;
+		const unsigned long buffer_len = data->buffer.length;
+		const unsigned int read_buffer_len = static_cast<unsigned int>(bufferSize);
+		bytesToWrite = static_cast<int>((buffer_len > read_buffer_len) ? read_buffer_len : buffer_len);
+		memcpy(buffer, data->buffer.data + data->write_ptr, bytesToWrite);
+		data->write_ptr += bytesToWrite;
+		data->buffer.length -= bytesToWrite;
 	}
 
-	return bytesWritten;
+	return bytesToWrite;
 }
 
 S3Protocol GetProtocol(const std::string& endpoint)
