@@ -6,6 +6,7 @@
 #include "timer.h"
 #include "util.h"
 #include <fstream>
+#include <thread>
 
 #include "cache.h"
 #include "csv.h"
@@ -261,35 +262,89 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 		std::map<std::string, int> count;
 		std::vector<std::pair<std::shared_ptr<info<double>>, file_information>> finfos;
 
-		auto g = GET_PLUGIN(grib);
 		itsWriteOptions.configuration = conf;
-		g->WriteOptions(itsWriteOptions);
 
 		ASSERT(conf);
 
-		for (const auto& info : infos)
+		// Building grib messages from infos is time consuming, mostly cpu intensive
+		// work. Parallelize it.
+
+		std::vector<std::thread> threads;
+		std::mutex m_, n_;
+
+		auto GetInfo = [&]() -> std::shared_ptr<info<double>>
 		{
-			itsLogger.Trace(fmt::format("Creating grib message from '{}'", util::UniqueName(*info)));
+			static int infonum = -1;
+
+			{
+				std::lock_guard<std::mutex> locka(n_);
+
+				infonum++;
+				if (infonum >= static_cast<int>(infos.size()))
+				{
+					return nullptr;
+				}
+				return infos[infonum];
+			}
+		};
+
+		auto ProcessInfo = [&](std::shared_ptr<info<double>> info)
+		{
+			auto g = GET_PLUGIN(grib);
+			g->WriteOptions(itsWriteOptions);
+
+			// create grib message
 			auto ret = g->CreateGribMessage(*info);
-			file_information& finfo = ret.first;
 			NFmiGribMessage& msg = ret.second;
 			const size_t griblength = msg.GetLongKey("totalLength");
+			file_information& finfo = ret.first;
 
-			himan::buffer& buff = list[finfo.file_location];
-			int& message_no = count[finfo.file_location];
+			{
+				std::lock_guard<std::mutex> lockb(m_);
+				himan::buffer& buff = list[finfo.file_location];
+				int& message_no = count[finfo.file_location];
+				buff.data = static_cast<unsigned char*>(realloc(buff.data, buff.length + griblength));
+				msg.GetMessage(buff.data + buff.length, griblength);
+				finfo.offset = buff.length;
+				finfo.length = griblength;
+				finfo.message_no = message_no;
 
-			buff.data = static_cast<unsigned char*>(realloc(buff.data, buff.length + griblength));
+				buff.length += griblength;
+				message_no++;
+				finfos.push_back(make_pair(info, finfo));
+			}
+		};
 
-			msg.GetMessage(buff.data + buff.length, griblength);
+		int threadCount = conf->ThreadCount();
 
-			finfo.offset = buff.length;
-			finfo.length = griblength;
-			finfo.message_no = message_no;
+		if (threadCount == -1)
+		{
+			threadCount = std::min(12, static_cast<int>(infos.size()));
+		}
 
-			buff.length += griblength;
-			message_no++;
+		for (size_t i = 0; i < static_cast<size_t>(threadCount); i++)
+		{
+			threads.push_back(std::thread(
+			    [&]()
+			    {
+				    logger logr("grib");
+				    while (true)
+				    {
+					    auto info = GetInfo();
+					    if (info == nullptr)
+					    {
+						    break;
+					    }
+					    logr.Trace(fmt::format("Creating grib message from '{}'", util::UniqueName(*info)));
 
-			finfos.push_back(make_pair(info, finfo));
+					    ProcessInfo(info);
+				    }
+			    }));
+		}
+
+		for (auto& t : threads)
+		{
+			t.join();
 		}
 
 		// Write the buffers to s3
