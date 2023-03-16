@@ -270,22 +270,19 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 		// work. Parallelize it.
 
 		std::vector<std::thread> threads;
-		std::mutex m_, n_;
+		std::mutex m_;
 
-		int infonum = -1;
+		std::atomic_int infonum{-1};
 
 		auto GetInfo = [&]() -> std::shared_ptr<info<double>>
 		{
-			{
-				std::lock_guard<std::mutex> locka(n_);
+			int myinfonum = ++infonum;
 
-				infonum++;
-				if (infonum >= static_cast<int>(infos.size()))
-				{
-					return nullptr;
-				}
-				return infos[infonum];
+			if (myinfonum >= static_cast<int>(infos.size()))
+			{
+				return nullptr;
 			}
+			return infos[myinfonum];
 		};
 
 		auto ProcessInfo = [&](std::shared_ptr<info<double>> info)
