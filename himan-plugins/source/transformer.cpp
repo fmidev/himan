@@ -948,6 +948,15 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 	                                  myTargetInfo->Data().Size()));
 }
 
+void transformer::WriteToFile(const shared_ptr<info<float>> targetInfo, write_options writeOptions)
+{
+	writeOptions.write_empty_grid = itsWriteEmptyGrid;
+	writeOptions.precision = itsDecimalPrecision;
+	writeOptions.extra_metadata = itsExtraFileMetadata;
+
+	return compiled_plugin_base::WriteToFile(targetInfo, writeOptions);
+}
+
 void transformer::WriteToFile(const shared_ptr<info<double>> targetInfo, write_options writeOptions)
 {
 	writeOptions.write_empty_grid = itsWriteEmptyGrid;

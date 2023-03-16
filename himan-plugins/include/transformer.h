@@ -39,6 +39,8 @@ class transformer : public compiled_plugin, private compiled_plugin_base
    protected:
 	virtual void WriteToFile(const std::shared_ptr<info<double>> targetInfo,
 	                         write_options opts = write_options()) override;
+	virtual void WriteToFile(const std::shared_ptr<info<float>> targetInfo,
+	                         write_options opts = write_options()) override;
 
    private:
 	virtual void Calculate(std::shared_ptr<info<float>> theTargetInfo, unsigned short threadIndex) override;
