@@ -272,10 +272,10 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 		std::vector<std::thread> threads;
 		std::mutex m_, n_;
 
+		int infonum = -1;
+
 		auto GetInfo = [&]() -> std::shared_ptr<info<double>>
 		{
-			static int infonum = -1;
-
 			{
 				std::lock_guard<std::mutex> locka(n_);
 
@@ -321,6 +321,8 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 		{
 			threadCount = std::min(12, static_cast<int>(infos.size()));
 		}
+
+		itsLogger.Trace(fmt::format("Starting {} threads to convert infos to grib messages", threadCount));
 
 		for (size_t i = 0; i < static_cast<size_t>(threadCount); i++)
 		{
