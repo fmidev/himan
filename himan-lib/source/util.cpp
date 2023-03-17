@@ -1720,9 +1720,19 @@ std::unique_ptr<ensemble> util::CreateEnsembleFromConfiguration(const std::share
 	switch (ensType)
 	{
 		case kPerturbedEnsemble:
-			ens = make_unique<ensemble>(param(paramName), ensSize, maximumMissing);
-			break;
+		{
+			if (conf->GetValue("members").empty() == false)
+			{
+				const std::vector<forecast_type> members = util::ForecastTypesFromString(conf->GetValue("members"));
 
+				ens = make_unique<ensemble>(param(paramName), members, maximumMissing);
+			}
+			else
+			{
+				ens = make_unique<ensemble>(param(paramName), ensSize, maximumMissing);
+			}
+			break;
+		}
 		case kTimeEnsemble:
 		{
 			int secondaryLen = 0, secondaryStep = 1;

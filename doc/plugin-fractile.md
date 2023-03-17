@@ -36,14 +36,19 @@ param: what parameter is used for fractile calculation
 
 ensemble_size: define the expected ensemble size.
 
-    "ensemble_size" : "<number>"
+    "ensemble_size" : 10
 
 If key is not specified, ensemble size is fetched from database table producer_meta.
 For time ensemble, the ensemble_size number determines how many steps to history data is read.
 
+members: specify ensemble member types explicitly (only for regular ensembles).  If key is not specified, ensemble is
+assumed to consist of one control forecast and rest are perturbed forecasts.
+
+    "members" : "pf1-30"
+
 max_missing_forecasts: define how many forecasts are allowed to be missing from the ensemble (default is 0)
 
-    "max_missing_forecasts" : "<number>"
+    "max_missing_forecasts" : 5
 
 fractiles: which set of fractiles to calculate.
 

@@ -47,28 +47,15 @@ ensemble::ensemble(const param& parameter, size_t expectedEnsembleSize, int maxi
 	}
 }
 
-ensemble::ensemble(const param& parameter, size_t expectedEnsembleSize,
-                   const std::vector<forecast_type>& controlForecasts, int maximumMissingForecasts)
+ensemble::ensemble(const param& parameter, const std::vector<forecast_type>& desiredForecasts,
+                   int maximumMissingForecasts)
     : itsParam(parameter),
-      itsExpectedEnsembleSize(expectedEnsembleSize),
+      itsDesiredForecasts(desiredForecasts),
       itsForecasts(),
       itsEnsembleType(kPerturbedEnsemble),
       itsLogger(logger("ensemble")),
       itsMaximumMissingForecasts(maximumMissingForecasts)
 {
-	ASSERT(controlForecasts.size() < expectedEnsembleSize);
-
-	itsDesiredForecasts.reserve(expectedEnsembleSize);
-
-	for (const auto& c : controlForecasts)
-	{
-		itsDesiredForecasts.push_back(c);
-	}
-
-	for (size_t i = controlForecasts.size(); i < itsDesiredForecasts.capacity(); i++)
-	{
-		itsDesiredForecasts.push_back(forecast_type(kEpsPerturbation, static_cast<float>(i)));
-	}
 }
 
 ensemble::ensemble(const ensemble& other)

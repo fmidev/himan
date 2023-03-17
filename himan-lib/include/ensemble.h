@@ -42,7 +42,7 @@ class ensemble
 
 	/// @brief Constructs an ensemble with control forecasts taken from `controlForecasts` and
 	/// expectedEnsembleSize - controlForecasts.size() perturbations
-	ensemble(const param& parameter, size_t expectedEnsembleSize, const std::vector<forecast_type>& controlForecasts,
+	ensemble(const param& parameter, const std::vector<forecast_type>& desiredForecasts,
 	         int maximumMissingForecasts = 0);
 
 	virtual ~ensemble() = default;
