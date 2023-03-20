@@ -116,8 +116,8 @@ long DetermineProductDefinitionTemplateNumber(long agg, long proc, long ftype)
 		switch (proc)
 		{
 			default:
-				templateNumber = 2;  // Derived forecasts based on all ensemble members at a horizontal level or in a
-				                     // horizontal layer at a point in time.
+				templateNumber = 2;  // Derived forecasts based on all ensemble members at a horizontal level or in
+				                     // a horizontal layer at a point in time.
 				break;
 			case kProbabilityGreaterThan:
 			case kProbabilityLessThan:
@@ -127,7 +127,6 @@ long DetermineProductDefinitionTemplateNumber(long agg, long proc, long ftype)
 			case kProbabilityEquals:
 			case kProbabilityNotEquals:
 			case kProbabilityEqualsIn:
-			case kProbability:
 				// probabilities
 				templateNumber =
 				    5;  // Probability forecasts at a horizontal level or in a horizontal layer at a point in time
@@ -136,6 +135,10 @@ long DetermineProductDefinitionTemplateNumber(long agg, long proc, long ftype)
 			case kFractile:
 				templateNumber =
 				    6;  //  Percentile forecasts at a horizontal level or in a horizontal layer at a point in time
+				break;
+			case kProbability:
+				// A non-ensemble based probability product
+				templateNumber = (ftype == kEpsPerturbation || ftype == kEpsControl) ? 1 : 0;
 				break;
 		}
 	}
@@ -178,6 +181,10 @@ long DetermineProductDefinitionTemplateNumber(long agg, long proc, long ftype)
 			case kFractile:
 				templateNumber = 10;  // Percentile forecasts at a horizontal level or in a horizontal layer in a
 				                      // continuous or non-continuous time interval
+				break;
+			case kProbability:
+				// A non-ensemble based probability product
+				templateNumber = (ftype == kEpsPerturbation || ftype == kEpsControl) ? 11 : 8;
 				break;
 		}
 	}
@@ -1080,6 +1087,13 @@ void WriteParameter(NFmiGribMessage& message, const param& par, const producer& 
 			num = 0;
 		}
 
+		if (procType == kProbability)
+		{
+			// If this is a probability product not derived from an ensemble, hence it is
+			// impossible to add further grib2 metadata
+			return;
+		}
+
 		auto GetScale = [](double v) -> std::pair<long, long>
 		{
 			double r = floor(std::fmod(v, 1.0));
@@ -1256,7 +1270,7 @@ void WriteForecastType(NFmiGribMessage& message, const forecast_type& forecastTy
 	}
 
 	// For grib2 there are several keys:
-	// - type of data (https://apps.ecmwf.int/codes/grib/format/grib2/ctables/1/4)
+	// - type of processed data (https://apps.ecmwf.int/codes/grib/format/grib2/ctables/1/4)
 	// - type of generating process (https://apps.ecmwf.int/codes/grib/format/grib2/ctables/4/3)
 	// - product definition template number (https://apps.ecmwf.int/codes/grib/format/grib2/ctables/4/0)
 	//
@@ -1299,7 +1313,7 @@ void WriteForecastType(NFmiGribMessage& message, const forecast_type& forecastTy
 		case kStatisticalProcessing:
 			// "Post-processed forecast", one could consider everything produced by
 			// Himan to be of this category but we only use this to represent statistical
-			// post processing
+			// post processing using an ensemble
 			message.TypeOfGeneratingProcess(13);
 			// Use locally reserved number because standard tables do not have a suitable
 			// option
@@ -1368,18 +1382,7 @@ int DetermineCorrectGribEdition(int edition, const himan::forecast_type& ftype, 
 
 himan::forecast_type DetermineCorrectForecastType(const himan::forecast_type& ftype, const himan::param& par)
 {
-	// A kind of a workaround to make sure metadata in grib2 is correct when writing
-	// statistically processed fields.
-
-	using namespace himan;
-
-	if (par.ProcessingType().Type() != kUnknownProcessingType && ftype.Type() != kStatisticalProcessing)
-	{
-		logger lgr("grib");
-		lgr.Debug("Changing forecast type from " + static_cast<string>(ftype) + " to statistical processing");
-		return forecast_type(kStatisticalProcessing);
-	}
-
+	// Placeholder function
 	return ftype;
 }
 
