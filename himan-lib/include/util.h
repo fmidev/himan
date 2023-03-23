@@ -248,6 +248,14 @@ aggregation GetAggregationFromParamName(const std::string& name, const forecast_
 processing_type GetProcessingTypeFromParamName(const std::string& name);
 
 /**
+ * @brief Get a scaled long valie from a double
+ *
+ * @return scaled value and scale factor
+ */
+
+std::pair<long, long> GetScaledValue(double v);
+
+/**
  * @brief map and reduce in single function call
  *
  * Function naming does not follow usual Himan syntax but is

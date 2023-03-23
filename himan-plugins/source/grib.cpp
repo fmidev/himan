@@ -1094,30 +1094,6 @@ void WriteParameter(NFmiGribMessage& message, const param& par, const producer& 
 			return;
 		}
 
-		auto GetScale = [](double v) -> std::pair<long, long>
-		{
-			double r = floor(std::fmod(v, 1.0));
-			std::pair<long, long> s(static_cast<long>(v), 0l);
-
-			if (r != v || v < 1.0)
-			{
-				// value has decimals
-				// - convert to string
-				// - remove all trailing zeros
-				// - count number of digits
-				// --> that will be the scale factor
-				auto str = std::to_string(v);
-				str.erase(str.find_last_not_of('0') + 1, std::string::npos);
-				const auto dot = str.find('.');
-				auto num_digits = str.length() - dot - 1;
-				num_digits =
-				    std::min(num_digits, static_cast<size_t>(5));  // prevent neverending floats to inflate digitcount
-
-				s = make_pair(static_cast<long>(v * pow(10., static_cast<double>(num_digits))), -num_digits);
-			}
-			return s;
-		};
-
 		switch (procType)
 		{
 			default:
@@ -1126,7 +1102,7 @@ void WriteParameter(NFmiGribMessage& message, const param& par, const producer& 
 			case kProbabilityGreaterThanOrEqual:
 			{
 				message.SetLongKey("probabilityType", 1);
-				auto s = GetScale(par.ProcessingType().Value());
+				auto s = util::GetScaledValue(par.ProcessingType().Value());
 				message.SetLongKey("scaledValueOfUpperLimit", s.first);
 				message.SetLongKey("scaleFactorOfUpperLimit", s.second);
 				break;
@@ -1135,7 +1111,7 @@ void WriteParameter(NFmiGribMessage& message, const param& par, const producer& 
 			case kProbabilityLessThanOrEqual:
 			{
 				message.SetLongKey("probabilityType", 0);
-				auto s = GetScale(par.ProcessingType().Value());
+				auto s = util::GetScaledValue(par.ProcessingType().Value());
 				message.SetLongKey("scaledValueOfLowerLimit", s.first);
 				message.SetLongKey("scaleFactorOfLowerLimit", s.second);
 				break;
@@ -1143,10 +1119,10 @@ void WriteParameter(NFmiGribMessage& message, const param& par, const producer& 
 			case kProbabilityBetween:
 			{
 				message.SetLongKey("probabilityType", 192);
-				auto s = GetScale(par.ProcessingType().Value());
+				auto s = util::GetScaledValue(par.ProcessingType().Value());
 				message.SetLongKey("scaledValueOfLowerLimit", s.first);
 				message.SetLongKey("scaleFactorOfLowerLimit", s.second);
-				s = GetScale(par.ProcessingType().Value2());
+				s = util::GetScaledValue(par.ProcessingType().Value2());
 				message.SetLongKey("scaledValueOfUpperLimit", s.first);
 				message.SetLongKey("scaleFactorOfUpperLimit", s.second);
 				break;
@@ -1154,7 +1130,7 @@ void WriteParameter(NFmiGribMessage& message, const param& par, const producer& 
 			case kProbabilityEquals:
 			{
 				message.SetLongKey("probabilityType", 193);
-				auto s = GetScale(par.ProcessingType().Value());
+				auto s = util::GetScaledValue(par.ProcessingType().Value());
 				message.SetLongKey("scaledValueOfLowerLimit", s.first);
 				message.SetLongKey("scaleFactorOfLowerLimit", s.second);
 				break;
@@ -1162,7 +1138,7 @@ void WriteParameter(NFmiGribMessage& message, const param& par, const producer& 
 			case kProbabilityNotEquals:
 			{
 				message.SetLongKey("probabilityType", 193);
-				auto s = GetScale(par.ProcessingType().Value());
+				auto s = util::GetScaledValue(par.ProcessingType().Value());
 				message.SetLongKey("scaledValueOfLowerLimit", s.first);
 				message.SetLongKey("scaleFactorOfLowerLimit", s.second);
 				break;

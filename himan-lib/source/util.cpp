@@ -1843,3 +1843,34 @@ std::unique_ptr<ensemble> util::CreateEnsembleFromConfiguration(const std::share
 
 	return std::move(ens);
 }
+
+std::pair<long, long> util::GetScaledValue(double v)
+{
+	// Scale a float value so it can be encoded as a long
+	// For example, value=273.15 --> scaled_value=27315, scale_factor=-2
+	//              value=100    --> scaled_value=100, scale_factor=0
+
+	const double r = floor(std::fmod(v, 1.0));
+	std::pair<long, long> s(static_cast<long>(v), 0l);
+
+	if (r != v || v < 1.0)
+	{
+		// value has decimals
+		// - convert to string
+		// - remove all trailing zeros
+		// - count number of digits
+		// --> that will be the scale factor
+		auto str = fmt::format("{}", v);
+		str.erase(str.find_last_not_of('0') + 1, std::string::npos);
+		const auto dot = str.find('.');
+		size_t num_digits = (dot == string::npos) ? 0 : str.length() - dot - 1;
+		num_digits = std::min(num_digits, static_cast<size_t>(8));  // prevent neverending floats to inflate digitcount
+		const double scaled = ::round(
+		    v * pow(10., static_cast<double>(num_digits)));  // round before conversion to long,
+		                                                     // because f.ex. 273.15 * pow(10, 2) = 27314.999999999996
+
+		s = make_pair(static_cast<long>(scaled), -num_digits);
+	}
+
+	return s;
+}
