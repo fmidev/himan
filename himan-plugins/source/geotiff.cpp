@@ -19,6 +19,7 @@
 #include <boost/regex.hpp>
 #include <filesystem>
 #include <ogr_spatialref.h>
+#include <regex>
 #include <thread>
 
 #include "plugin_factory.h"
@@ -32,6 +33,17 @@
 
 using namespace himan;
 using namespace himan::plugin;
+
+namespace
+{
+// from s3.cpp
+std::string StripProtocol(const std::string& str)
+{
+	const static std::regex r("^(https)|(http)|(s3)*://");
+
+	return regex_replace(str, r, "");
+}
+}  // namespace
 
 struct GDALDatasetCloser
 {
@@ -121,6 +133,8 @@ geotiff::geotiff()
 		          // * AWS_SESSION_TOKEN     S3_SESSION_TOKEN
 		          //
 		          // if latter is found, copy it to former
+		          //
+		          // also remove any protocol (https:// or s3://) from S3_HOSTNAME
 
 		          const std::vector<std::pair<std::string, std::string>> keys{
 		              {"S3_HOSTNAME", "AWS_S3_ENDPOINT"},
@@ -132,7 +146,7 @@ geotiff::geotiff()
 		          {
 			          try
 			          {
-				          const std::string val = util::GetEnv(key.first);
+				          const std::string val = StripProtocol(util::GetEnv(key.first));
 				          setenv(key.second.c_str(), val.c_str(), 0);
 			          }
 			          catch (...)
@@ -777,14 +791,7 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 
 		if (finfo.storage_type == kS3ObjectStorageSystem)
 		{
-			const auto pos = ret.find("s3://");
-
-			if (pos != std::string::npos)
-			{
-				ret = ret.erase(pos, 5);
-			}
-
-			ret = fmt::format("/vsis3_streaming/{}", ret);
+			ret = fmt::format("/vsis3_streaming/{}", StripProtocol(ret));
 		}
 		return ret;
 	};
