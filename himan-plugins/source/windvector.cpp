@@ -37,7 +37,7 @@ windvector::windvector()
 	itsLogger = logger("windvector");
 }
 
-vector<himan::param> GetParams(HPWindVectorTargetType ttype, bool reverse)
+vector<himan::param> GetParams(HPWindVectorTargetType ttype, bool reverse, const himan::time_duration& step)
 {
 	if (inout.find(ttype) == inout.end())
 	{
@@ -60,7 +60,13 @@ vector<himan::param> GetParams(HPWindVectorTargetType ttype, bool reverse)
 
 	for (const auto& name : tpars)
 	{
-		ret.emplace_back(name);
+		auto p = himan::param(name);
+
+		if (name == "FFG-MS")
+		{
+			p.Aggregation(himan::aggregation(himan::kMaximum, step));
+		}
+		ret.push_back(p);
 	}
 
 	return ret;
@@ -103,7 +109,7 @@ void windvector::Process(const std::shared_ptr<const plugin_configuration> conf)
 		itsCalculationTarget = kWind;
 	}
 
-	auto pars = GetParams(itsCalculationTarget, itsReverseCalculation);
+	auto pars = GetParams(itsCalculationTarget, itsReverseCalculation, itsConfiguration->ForecastStep());
 	if (itsVectorCalculation && itsCalculationTarget == kWind)
 	{
 		pars.emplace_back("DF-MS");
@@ -166,7 +172,7 @@ void DoCalculation(vector<float>& A, vector<float>& B, const vector<shared_ptr<h
 
 void windvector::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short threadIndex)
 {
-	const auto sourceParams = GetParams(itsCalculationTarget, !itsReverseCalculation);
+	const auto sourceParams = GetParams(itsCalculationTarget, !itsReverseCalculation, itsConfiguration->ForecastStep());
 
 	float directionOffset = 180;  // For wind direction add this
 
