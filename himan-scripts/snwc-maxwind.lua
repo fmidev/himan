@@ -25,7 +25,7 @@ if use_smartmet == true then
   FFG = luatool:FetchWithProducer(editor_time, current_level, param("FFG-MS"), current_forecast_type, editor_prod, "")
 
 else
-  FFG = luatool:FetchWithType(current_time, level(HPLevelType.kHeight, 10), param("FFG-MS"), current_forecast_type)
+  FFG = luatool:FetchWithType(current_time, current_level, param("FFG-MS"), current_forecast_type)
 
 end
 
