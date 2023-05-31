@@ -2913,19 +2913,16 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 
 	newInfo->Producer(prod);
 
-	std::vector<double> ab;
-
 	if (l.Type() == himan::kHybrid)
 	{
-		long nv = message.NV();
+		const long pvPresent = message.GetLongKey("PVPresent");
 
-		if (nv > 0)
+		if (pvPresent)
 		{
-			ab = message.PV();
+			std::vector<double> ab = message.PV();
+			l.AB(ab);
 		}
 	}
-
-	l.AB(ab);
 
 	newInfo->template Iterator<param>().Add({p});
 	newInfo->template Iterator<forecast_time>().Add({t});
