@@ -2645,7 +2645,7 @@ himan::producer ReadProducer(const search_options& options, const NFmiGribMessag
 				return prod;
 			}
 
-			if (process <= 152 && process >= 142)
+			if (process <= 153 && process >= 142)
 			{
 				if (message.ForecastType() <= 2)
 				{
@@ -2817,10 +2817,10 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 	{
 		if (!forceCaching)
 		{
-			itsLogger.Trace("centre/process do not match: " + to_string(options.prod.Process()) + " vs " +
-			                to_string(prod.Process()));
-			itsLogger.Trace("centre/process do not match: " + to_string(options.prod.Centre()) + " vs " +
-			                to_string(prod.Centre()));
+			itsLogger.Warning("centre/process do not match: " + to_string(options.prod.Process()) + " vs " +
+			                  to_string(prod.Process()));
+			itsLogger.Warning("centre/process do not match: " + to_string(options.prod.Centre()) + " vs " +
+			                  to_string(prod.Centre()));
 		}
 	}
 
@@ -2834,12 +2834,12 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 		}
 		else if (validate)
 		{
-			itsLogger.Trace("Parameter does not match: " + options.param.Name() + " (requested) vs " + p.Name() +
-			                " (found)");
-			itsLogger.Trace("Aggregation: " + static_cast<string>(options.param.Aggregation()) + " (requested) vs " +
-			                static_cast<string>(p.Aggregation()) + " (found)");
-			itsLogger.Trace("Processing type: " + static_cast<string>(options.param.ProcessingType()) +
-			                " (requested) vs " + static_cast<string>(p.ProcessingType()) + " (found)");
+			itsLogger.Warning("Parameter does not match: " + options.param.Name() + " (requested) vs " + p.Name() +
+			                  " (found)");
+			itsLogger.Warning("Aggregation: " + static_cast<string>(options.param.Aggregation()) + " (requested) vs " +
+			                  static_cast<string>(p.Aggregation()) + " (found)");
+			itsLogger.Warning("Processing type: " + static_cast<string>(options.param.ProcessingType()) +
+			                  " (requested) vs " + static_cast<string>(p.ProcessingType()) + " (found)");
 			return false;
 		}
 	}
@@ -2860,14 +2860,14 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 
 			if (optsTime.OriginDateTime() != t.OriginDateTime())
 			{
-				itsLogger.Trace("OriginDateTime: " + optsTime.OriginDateTime().String() + " (requested) vs " +
-				                t.OriginDateTime().String() + " (found)");
+				itsLogger.Warning("OriginDateTime: " + optsTime.OriginDateTime().String() + " (requested) vs " +
+				                  t.OriginDateTime().String() + " (found)");
 			}
 
 			if (optsTime.ValidDateTime() != t.ValidDateTime())
 			{
-				itsLogger.Trace("ValidDateTime: " + optsTime.ValidDateTime().String() + " (requested) vs " +
-				                t.ValidDateTime().String() + " (found)");
+				itsLogger.Warning("ValidDateTime: " + optsTime.ValidDateTime().String() + " (requested) vs " +
+				                  t.ValidDateTime().String() + " (found)");
 			}
 
 			return false;
@@ -2884,8 +2884,8 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 		}
 		else if (validate)
 		{
-			itsLogger.Trace("Level does not match");
-			itsLogger.Trace(static_cast<string>(options.level) + " vs " + static_cast<string>(l));
+			itsLogger.Warning("Level does not match");
+			itsLogger.Warning(static_cast<string>(options.level) + " vs " + static_cast<string>(l));
 
 			return false;
 		}
@@ -2902,8 +2902,8 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 		}
 		else if (validate)
 		{
-			itsLogger.Trace("Forecast type does not match");
-			itsLogger.Trace(static_cast<string>(options.ftype) + " vs " + static_cast<string>(ty));
+			itsLogger.Warning("Forecast type does not match");
+			itsLogger.Warning(static_cast<string>(options.ftype) + " vs " + static_cast<string>(ty));
 
 			return false;
 		}
@@ -2913,19 +2913,16 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 
 	newInfo->Producer(prod);
 
-	std::vector<double> ab;
-
 	if (l.Type() == himan::kHybrid)
 	{
-		long nv = message.NV();
+		const long pvPresent = message.GetLongKey("PVPresent");
 
-		if (nv > 0)
+		if (pvPresent)
 		{
-			ab = message.PV();
+			std::vector<double> ab = message.PV();
+			l.AB(ab);
 		}
 	}
-
-	l.AB(ab);
 
 	newInfo->template Iterator<param>().Add({p});
 	newInfo->template Iterator<forecast_time>().Add({t});

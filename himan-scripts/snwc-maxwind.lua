@@ -1,17 +1,33 @@
 --
 -- SmartMet NWC parameters
 --
--- Create maximum wind speed and maximum wind gust parameters to SNWC 
--- using data from both original snwc and "edited data".
+-- Create maximum wind speed and maximum wind gust parameters to SNWC.
+-- Source data can be only SNWC (current preop) or a combination of SNWC
+-- and smartmet (current prod).
 -- 
 
-local editor_prod = producer(181, "SMARTMET")
+local FFG = {}
 
-editor_prod:SetCentre(86)
-editor_prod:SetProcess(181)
+local use_smartmet = true
 
-local editor_origintime = raw_time(radon:GetLatestTime(editor_prod, "", 0))
-local editor_time = forecast_time(editor_origintime, current_time:GetValidDateTime())
+if configuration:GetValue("use_smartmet") == "false" then
+  use_smartmet = false
+end
+
+if use_smartmet == true then
+  local editor_prod = producer(181, "SMARTMET")
+  editor_prod:SetCentre(86)
+  editor_prod:SetProcess(181)
+
+  local editor_origintime = raw_time(radon:GetLatestTime(editor_prod, "", 0))
+  local editor_time = forecast_time(editor_origintime, current_time:GetValidDateTime())
+
+  FFG = luatool:FetchWithProducer(editor_time, current_level, param("FFG-MS"), current_forecast_type, editor_prod, "")
+
+else
+  FFG = luatool:FetchWithType(current_time, current_level, param("FFG-MS"), current_forecast_type)
+
+end
 
 -- maximum wind hourly factors are:
 --   0    1    2    3    4    5    6    7    8    9
@@ -25,7 +41,6 @@ if step > 2 then
 end
 
 local FF = luatool:FetchWithType(current_time, level(HPLevelType.kHeight, 10), param("FF-MS"), current_forecast_type)
-local FFG = luatool:FetchWithProducer(editor_time, current_level, param("FFG-MS"), current_forecast_type, editor_prod, "")
 
 if not FF or not FFG then
   return

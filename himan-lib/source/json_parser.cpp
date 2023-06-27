@@ -1088,8 +1088,12 @@ unique_ptr<grid> ParseAreaAndGridFromBbox(const boost::property_tree::ptree& pt)
 			throw runtime_error("Only bottom_left or top_left scanning mode is supported with bbox");
 		}
 
-		vector<string> coordinates = himan::util::Split(pt.get<string>("bbox"), ",");
+		const vector<string> coordinates = himan::util::Split(pt.get<string>("bbox"), ",");
 
+		if (coordinates.size() != 4)
+		{
+			throw runtime_error("Invalid coordinate format: correct format is x1,y1,x2,y2");
+		}
 		point fp, lp;
 		if (scmode == kTopLeft)
 		{

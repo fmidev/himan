@@ -7,6 +7,7 @@
 -- 6: Wet snow (starting to melt) -----> 2 sleet
 -- 7: Mixture of rain and snow -----> 2 sleet
 -- 8: Ice pellets -----> 8 ice pellets
+-- 12: Freezing drizzle -----> 4 freezing drizzle
 --
 
 logger:Info("Converting ECMWF precipitation form values to FMI precipitation form values")
@@ -43,6 +44,9 @@ for i=1, #pf do
   elseif _pf == 8 then
     -- ice pellets
     res = 8
+  elseif _pf == 12 then
+    -- freezing drizzle
+    res = 4
   end
 
   fmipf[i] = res

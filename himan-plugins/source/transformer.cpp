@@ -188,7 +188,9 @@ shared_ptr<himan::info<T>> transformer::LandscapeInterpolation(const forecast_ti
 	auto source = f->Fetch<T>(cnf, ftime, lvl, par, ftype, false);
 	auto hgt = f->Fetch<float>(cnf, ftime, zeroH, z, ftype, false);
 	auto lr = f->Fetch<float>(cnf, ftime, zeroH, param("LR-KM"), ftype, false);
-	auto mask = f->Fetch<float>(cnf, ftime, zeroH, param("LC-0TO1"), ftype, false);  // Model has land cover 0..1
+	// Model has land cover 0..1 for analysis time only (typically
+	auto mask = f->Fetch<float>(cnf, forecast_time(ftime.OriginDateTime(), ftime.OriginDateTime()), zeroH,
+	                            param("LC-0TO1"), ftype, false);
 
 	if (source->Data().MissingCount() > 0 || hgt->Data().MissingCount() > 0 || lr->Data().MissingCount() > 0 ||
 	    mask->Data().MissingCount() > 0)

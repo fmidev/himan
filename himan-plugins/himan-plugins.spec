@@ -45,7 +45,7 @@ Requires: grib_api
 %else
 BuildRequires: make
 BuildRequires: gdal34-devel
-BuildRequires: gcc-c++ >= 4.8.2
+BuildRequires: gcc-c++ >= 8.2.1
 BuildRequires: cuda-nvcc-11-1
 BuildRequires: cuda-cudart-devel-11-1
 BuildRequires: libcublas-devel-11-1

@@ -33,7 +33,6 @@ BuildRequires: bzip2-devel
 BuildRequires: redhat-rpm-config
 BuildRequires: cuda-nvcc-11-1
 BuildRequires: cuda-cudart-devel-11-1
-BuildRequires: gcc-c++ >= 4.8.2
 BuildRequires: geos310-devel
 BuildRequires: gdal34-devel
 BuildRequires: libfmidb-devel >= 22.1.10

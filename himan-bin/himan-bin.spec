@@ -39,7 +39,7 @@ BuildRequires: boost169-devel
 BuildRequires: fmt-devel >= 7.1.0
 BuildRequires: python3-scons
 BuildRequires: redhat-rpm-config
-BuildRequires: gcc-c++ >= 4.8.2
+BuildRequires: gcc-c++ >= 8.2.1
 BuildRequires: cuda-nvcc-11-1
 BuildRequires: cuda-cudart-devel-11-1
 BuildRequires: make

@@ -89,7 +89,7 @@ void gust::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 
-	param theRequestedParam("FFG2-MS", 417, 0, 2, 22);
+	param theRequestedParam("FFG2-MS", aggregation(kMaximum, conf->ForecastStep()), processing_type());
 
 	theRequestedParam.Unit(kMs);
 
@@ -114,9 +114,10 @@ void gust::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threa
 	 */
 	const size_t gridSize = myTargetInfo->Grid()->Size();
 
-	const param BLHParam("MIXHGT-M");                                     // boundary layer height
-	const param WSParam("FF-MS");                                         // wind speed
-	const param GustParam("FFG-MS");                                      // wind gust
+	const param BLHParam("MIXHGT-M");  // boundary layer height
+	const param WSParam("FF-MS");      // wind speed
+	const param GustParam("FFG-MS", aggregation(kMaximum, itsConfiguration->ForecastStep()),
+	                      processing_type());                             // wind gust
 	const param TParam("T-K");                                            // temperature
 	const param TopoParam("Z-M2S2");                                      // geopotential height
 	const params LowCloudParam = {param("NL-0TO1"), param("NL-PRCNT")};   // low cloud cover

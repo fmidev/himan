@@ -10,7 +10,7 @@ Possible transformations are:
 * level change
 * forecast type change
 * time interpolation
-* level interpolation
+* vertical interpolation
 
 Plugin is optimized for GPU use.
 
@@ -100,9 +100,9 @@ time_interpolation: define if Himan should do time interpolation if data is not 
 
     "time_interpolation" : true
 
-level_interpolation: define if Himan should do vertical interpolation, if data is not found for some level (default: false). Only supported for level types 'height' (unit=meters) and 'pressure' (unit=hectopascal). Both time_interpolation and level_interpolation cannot be defined at the same time.
+vertical_interpolation: define if Himan should do vertical interpolation, if data is not found for some level (default: false). Only supported for level types 'height' (unit=meters) and 'pressure' (unit=hectopascal). Both time_interpolation and vertical_interpolation cannot be defined at the same time.
 
-    "level_interpolation" : true
+    "vertical_interpolation" : true
 
 change_missing_value_to: define if missing value should be changed to some normal floating point value (note: this is not the same as defining a different missing value: the resulting grib will have no missing values defined!)
 
