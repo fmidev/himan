@@ -54,7 +54,7 @@ function MaxThunderprob(curTime)
       end
 
       for i=1, #pot do
-        gsum[i] = math.max(gsum[i], pot[i])
+        gsum[i] = math.max(gsum[i], 100 * pot[i])
       end
     end
 
