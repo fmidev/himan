@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <ogr_spatialref.h>
+#include <regex>
 
 using namespace std;
 using namespace himan;
@@ -320,7 +321,7 @@ void EncodePrecipitationFormToGrib2(vector<T>& arr)
 			case 8:
 				break;
 			default:
-				throw runtime_error("Unknown precipitation form: " + to_string(val));
+				throw runtime_error(fmt::format("Unknown precipitation form: {}", val));
 		}
 	}
 }
@@ -328,6 +329,8 @@ void EncodePrecipitationFormToGrib2(vector<T>& arr)
 template <typename T>
 void DecodePrecipitationFormFromGrib2(vector<T>& arr)
 {
+	bool issueWarning(false);
+
 	for (auto& val : arr)
 	{
 		if (himan::IsMissing(val))
@@ -335,6 +338,10 @@ void DecodePrecipitationFormFromGrib2(vector<T>& arr)
 
 		switch (static_cast<int>(val))
 		{
+			// reserved
+			case 0:
+				val = MissingValue<T>();
+				break;
 			// rain
 			case 1:
 				break;
@@ -343,6 +350,7 @@ void DecodePrecipitationFormFromGrib2(vector<T>& arr)
 				val = 0.;
 				break;
 			// sleet
+			case 6:
 			case 7:
 				val = 2.;
 				break;
@@ -369,9 +377,22 @@ void DecodePrecipitationFormFromGrib2(vector<T>& arr)
 			// ice pellet
 			case 8:
 				break;
+			case 2:   // thunderstorm
+			case 4:   // mixed/ice
+			case 10:  // hail
+				val = MissingValue<T>();
+				issueWarning = true;
+				break;
 			default:
-				throw runtime_error("Unknown precipitation form: " + to_string(val));
+				throw runtime_error(fmt::format("Unknown precipitation form: {}", val));
 		}
+	}
+	if (issueWarning)
+	{
+		himan::logger logr("grib");
+		logr.Warning(
+		    "Encountered unsupported precipitation form values when decoding data (2, 4 or 10). These values have been "
+		    "removed from data");
 	}
 }
 
@@ -2720,17 +2741,16 @@ void ReadData(shared_ptr<info<T>> newInfo, bool readPackedData, const NFmiGribMe
 
 	logger logr("grib");
 
-#if defined GRIB_READ_PACKED_DATA && defined HAVE_CUDA
-
 	const auto paramName = newInfo->Param().Name();
-	long producerId = newInfo->Producer().Id();
 
-	if (message.Edition() == 2 && (paramName == "PRECFORM-N" || paramName == "PRECFORM2-N") &&
-	    (producerId == 230 || producerId == 240 || producerId == 243 || producerId == 250 || producerId == 260 ||
-	     producerId == 265 || producerId == 270 || producerId == 271))
+	const std::regex pfRegex("^PRECFORM[0-9]*-N");
+
+	if (message.Edition() == 2 && std::regex_search(paramName, pfRegex))
 	{
 		decodePrecipitationForm = true;
 	}
+
+#if defined GRIB_READ_PACKED_DATA && defined HAVE_CUDA
 
 	if (readPackedData && decodePrecipitationForm == false && message.PackingType() == "grid_simple")
 	{
