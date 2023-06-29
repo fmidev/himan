@@ -1,6 +1,11 @@
-local dy = 2500
-local ni = 949
-local nj = 1069
+--Updraft helicity
+--Defined as integral from 2km-5km over w*(dv/dx-du/dy) dz
+
+local mode = configuration:GetValue("mode")
+local dx = result:GetGrid():GetDi()
+local dy = result:GetGrid():GetDj()
+local ni = result:GetGrid():GetNi()
+local nj = result:GetGrid():GetNj()
 
 --Helper function to compute gradients of the velocity field using a central difference scheme.
 function ddx(v,dx)
@@ -72,4 +77,3 @@ if mode == "finalize" then
   result:SetParam(p)
   luatool:WriteToFile(result)
 end
-
