@@ -2614,6 +2614,7 @@ himan::level ReadLevel(const search_options& opts, const producer& prod, const N
 
 		case himan::kGroundDepth:
 		case himan::kPressureDelta:
+		case kGeneralizedVerticalLayer:
 		{
 			long gribLevelValue2 = message.LevelValue2();
 			// Missing in grib is all bits set
