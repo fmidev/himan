@@ -78,10 +78,10 @@ class radon : public auxiliary_plugin
 
 	template <typename T>
 	std::pair<bool, radon_record> Save(const info<T>& resultInfo, const file_information& finfo,
-	                                   const std::string& targetGeomName);
+	                                   const std::string& targetGeomName, bool dryRun = false);
 
 	std::pair<bool, radon_record> Save(const info<double>& resultInfo, const file_information& finfo,
-	                                   const std::string& targetGeomName);
+	                                   const std::string& targetGeomName, bool dryRun = false);
 
 	/**
 	 * @brief Function to expose the NFmiRadonDB interface
@@ -106,10 +106,10 @@ class radon : public auxiliary_plugin
 	void Init();
 	template <typename T>
 	std::pair<bool, radon_record> SaveGrid(const info<T>& resultInfo, const file_information& theFileName,
-	                                       const std::string& targetGeomName);
+	                                       const std::string& targetGeomName, bool dryRun = false);
 
 	template <typename T>
-	std::pair<bool, radon_record> SavePrevi(const info<T>& resultInfo);
+	std::pair<bool, radon_record> SavePrevi(const info<T>& resultInfo, bool dryRun = false);
 
 	bool itsInit;                             //!< Holds the initialization status of the database connection
 	std::unique_ptr<NFmiRadonDB> itsRadonDB;  //<! The actual database class instance

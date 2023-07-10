@@ -522,37 +522,38 @@ vector<himan::file_information> radon::Files(search_options& options)
 }
 
 pair<bool, radon_record> radon::Save(const info<double>& resultInfo, const file_information& finfo,
-                                     const string& targetGeomName)
+                                     const string& targetGeomName, bool dryRun)
 {
-	return Save<double>(resultInfo, finfo, targetGeomName);
+	return Save<double>(resultInfo, finfo, targetGeomName, dryRun);
 }
 
 template <typename T>
 pair<bool, radon_record> radon::Save(const info<T>& resultInfo, const file_information& finfo,
-                                     const string& targetGeomName)
+                                     const string& targetGeomName, bool dryRun)
 {
 	Init();
 
 	if (resultInfo.Producer().Class() == kGridClass)
 	{
-		return SaveGrid(resultInfo, finfo, targetGeomName);
+		return SaveGrid(resultInfo, finfo, targetGeomName, dryRun);
 	}
 	else if (resultInfo.Producer().Class() == kPreviClass)
 	{
-		return SavePrevi(resultInfo);
+		return SavePrevi(resultInfo, dryRun);
 	}
 
 	himan::Abort();
 }
 
-template pair<bool, radon_record> radon::Save<double>(const info<double>&, const file_information&, const string&);
-template pair<bool, radon_record> radon::Save<float>(const info<float>&, const file_information&, const string&);
-template pair<bool, radon_record> radon::Save<short>(const info<short>&, const file_information&, const string&);
+template pair<bool, radon_record> radon::Save<double>(const info<double>&, const file_information&, const string&,
+                                                      bool);
+template pair<bool, radon_record> radon::Save<float>(const info<float>&, const file_information&, const string&, bool);
+template pair<bool, radon_record> radon::Save<short>(const info<short>&, const file_information&, const string&, bool);
 template pair<bool, radon_record> radon::Save<unsigned char>(const info<unsigned char>&, const file_information&,
-                                                             const string&);
+                                                             const string&, bool);
 
 template <typename T>
-pair<bool, radon_record> radon::SavePrevi(const info<T>& resultInfo)
+pair<bool, radon_record> radon::SavePrevi(const info<T>& resultInfo, bool dryRun)
 {
 	stringstream query;
 
@@ -623,6 +624,12 @@ pair<bool, radon_record> radon::SavePrevi(const info<T>& resultInfo)
 		      << static_cast<int>(localInfo.ForecastType().Type()) << ", " << forecastTypeValue << ","
 		      << localInfo.Value() << ")";
 
+		if (dryRun)
+		{
+			itsLogger.Trace(query.str());
+			continue;
+		}
+
 		try
 		{
 			itsRadonDB->Execute(query.str());
@@ -655,14 +662,14 @@ pair<bool, radon_record> radon::SavePrevi(const info<T>& resultInfo)
 	return make_pair(true, radon_record(schema_name, table_name, partition_name, "", -1));
 }
 
-template pair<bool, radon_record> radon::SavePrevi<double>(const info<double>&);
-template pair<bool, radon_record> radon::SavePrevi<float>(const info<float>&);
-template pair<bool, radon_record> radon::SavePrevi<short>(const info<short>&);
-template pair<bool, radon_record> radon::SavePrevi<unsigned char>(const info<unsigned char>&);
+template pair<bool, radon_record> radon::SavePrevi<double>(const info<double>&, bool);
+template pair<bool, radon_record> radon::SavePrevi<float>(const info<float>&, bool);
+template pair<bool, radon_record> radon::SavePrevi<short>(const info<short>&, bool);
+template pair<bool, radon_record> radon::SavePrevi<unsigned char>(const info<unsigned char>&, bool);
 
 template <typename T>
 pair<bool, radon_record> radon::SaveGrid(const info<T>& resultInfo, const file_information& finfo,
-                                         const string& targetGeomName)
+                                         const string& targetGeomName, bool dryRun)
 {
 	stringstream query;
 
@@ -772,7 +779,6 @@ pair<bool, radon_record> radon::SaveGrid(const info<T>& resultInfo, const file_i
 		                HPLevelTypeToString.at(resultInfo.Level().Type()) + ", producer " +
 		                to_string(resultInfo.Producer().Id()));
 		return make_pair(false, radon_record());
-		;
 	}
 
 	if (resultInfo.Param().Id() == kHPMissingInt)
@@ -845,6 +851,12 @@ pair<bool, radon_record> radon::SaveGrid(const info<T>& resultInfo, const file_i
 	    << FormatToSQL(finfo.message_no) << ", " << FormatToSQL(finfo.offset) << ", " << FormatToSQL(finfo.length)
 	    << ")";
 
+	if (dryRun)
+	{
+		itsLogger.Trace(query.str());
+		return make_pair(true, radon_record(schema_name, table_name, partition_name, geom_name, stoi(geom_id)));
+	}
+
 	try
 	{
 		itsRadonDB->Execute(query.str());
@@ -906,11 +918,14 @@ pair<bool, radon_record> radon::SaveGrid(const info<T>& resultInfo, const file_i
 	return make_pair(true, radon_record(schema_name, table_name, partition_name, geom_name, stoi(geom_id)));
 }
 
-template pair<bool, radon_record> radon::SaveGrid<double>(const info<double>&, const file_information&, const string&);
-template pair<bool, radon_record> radon::SaveGrid<float>(const info<float>&, const file_information&, const string&);
-template pair<bool, radon_record> radon::SaveGrid<short>(const info<short>&, const file_information&, const string&);
+template pair<bool, radon_record> radon::SaveGrid<double>(const info<double>&, const file_information&, const string&,
+                                                          bool);
+template pair<bool, radon_record> radon::SaveGrid<float>(const info<float>&, const file_information&, const string&,
+                                                         bool);
+template pair<bool, radon_record> radon::SaveGrid<short>(const info<short>&, const file_information&, const string&,
+                                                         bool);
 template pair<bool, radon_record> radon::SaveGrid<unsigned char>(const info<unsigned char>&, const file_information&,
-                                                                 const string&);
+                                                                 const string&, bool);
 
 std::string radon::GetVersion() const
 {
