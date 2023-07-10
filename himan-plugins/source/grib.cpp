@@ -2592,7 +2592,15 @@ himan::level ReadLevel(const search_options& opts, const producer& prod, const N
 			}
 		}
 
-		levelType = HPStringToLevelType.at(levelName);
+		try
+		{
+			levelType = HPStringToLevelType.at(levelName);
+		}
+		catch (const std::out_of_range& e)
+		{
+			logr.Error(fmt::format("Failed to match database level name '{}' to enum", levelName));
+			throw e;
+		}
 	}
 
 	himan::level l;
