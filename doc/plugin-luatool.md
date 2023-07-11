@@ -35,6 +35,7 @@ HPLevelType
     kHeightLayer = 106
     kHybrid = 109
     kGroundDepth = 112
+    kGeneralizedVerticalLayer = 150
     kDepth = 160
     kEntireAtmosphere = 200
     kEntireOcean = 201
@@ -70,9 +71,11 @@ HPProjectionType
     kStereographic
     kAzimuthalEquidistant 
     kRotatedLatitudeLongitude
-    kReducedGaussian
-    kPointList
     kLambertConformalConic
+    kReducedGaussian
+    kLambertEqualArea
+    kTransverseMercator
+    kPointList = 100
 
 HPScanningMode
     kUnknownScanningMode = 0

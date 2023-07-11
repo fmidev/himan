@@ -279,6 +279,7 @@ void BindEnum(lua_State* L)
 				 value("kHeightLayer", kHeightLayer),
 				 value("kHybrid", kHybrid),
 				 value("kGroundDepth", kGroundDepth),
+				 value("kGeneralizedVerticalLayer", kGeneralizedVerticalLayer),
 				 value("kDepth", kDepth),
 				 value("kEntireAtmosphere", kEntireAtmosphere),
 				 value("kEntireOcean", kEntireOcean),
@@ -289,7 +290,8 @@ void BindEnum(lua_State* L)
 				 value("kHourResolution", kHourResolution),
 				 value("kMinuteResolution", kMinuteResolution),
 				 value("kDayResolution", kDayResolution),
-				 value("kMonthResolution", kMonthResolution)],
+				 value("kMonthResolution", kMonthResolution),
+				 value("kYearResolution", kYearResolution)],
 	     class_<HPFileType>("HPFileType")
 	         .enum_("constants")[
 				 value("kUnknownFile", kUnknownFile),
@@ -362,7 +364,10 @@ void BindEnum(lua_State* L)
 	                         value("kAzimuthalEquidistant", kAzimuthalEquidistant),
 	                         value("kRotatedLatitudeLongitude", kRotatedLatitudeLongitude),
 	                         value("kReducedGaussian", kReducedGaussian),
-				 value("kPointList", kPointList)],
+				 value("kPointList", kPointList),
+				 value("kLambertConformalConic", kLambertConformalConic),
+				 value("kLambertEqualArea", kLambertEqualArea),
+				 value("kTransverseMercator", kTransverseMercator)],
 	     class_<HPParameterUnit>("HPParameterUnit").enum_("constants")[
 				 value("kM", kM),
 				 value("kHPa", kHPa)],
