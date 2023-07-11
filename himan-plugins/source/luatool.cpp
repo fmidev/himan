@@ -1376,7 +1376,9 @@ void BindLib(lua_State* L)
 	              .def("GetType", LUA_CMEMFN(HPLevelType, level, Type, void))
 	              .def("SetType", LUA_MEMFN(void, level, Type, HPLevelType))
 	              .def("GetValue", LUA_CMEMFN(double, level, Value, void))
-	              .def("SetValue", LUA_MEMFN(void, level, Value, double)),
+	              .def("SetValue", LUA_MEMFN(void, level, Value, double))
+	              .def("GetValue2", LUA_CMEMFN(double, level, Value2, void))
+	              .def("SetValue2", LUA_MEMFN(void, level, Value2, double)),
 	          class_<raw_time>("raw_time")
 	              .def(constructor<const std::string&>())
                       .def(const_self - other<const raw_time&>())
