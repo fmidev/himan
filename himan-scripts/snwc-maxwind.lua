@@ -20,6 +20,9 @@ if configuration:GetValue("use_smartmet") == "false" then
   use_smartmet = false
 end
 
+local ffgparam = param("FFG-MS")
+ffgparam:SetAggregation(aggregation(HPAggregationType.kMaximum, time_duration("01:00")))
+
 if use_smartmet == true then
   local editor_prod = producer(181, "SMARTMET")
   editor_prod:SetCentre(86)
@@ -28,10 +31,10 @@ if use_smartmet == true then
   local editor_origintime = raw_time(radon:GetLatestTime(editor_prod, "", 0))
   local editor_time = forecast_time(editor_origintime, current_time:GetValidDateTime())
 
-  FFG = luatool:FetchWithProducer(editor_time, h10, param("FFG-MS"), current_forecast_type, editor_prod, "")
+  FFG = luatool:FetchWithProducer(editor_time, h10, ffgparam, current_forecast_type, editor_prod, "")
 
 else
-  FFG = luatool:FetchWithType(current_time, h10, param("FFG-MS"), current_forecast_type)
+  FFG = luatool:FetchWithType(current_time, h10, ffgparam, current_forecast_type)
 
 end
 
@@ -68,7 +71,7 @@ for i=1, #FF do
 end
 
 result:SetLevel(h10)
-result:SetParam(param("FFG-MS"))
+result:SetParam(ffgparam)
 result:SetValues(_FFG)
 luatool:WriteToFile(result)
 result:SetLevel(mw)
