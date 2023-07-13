@@ -316,6 +316,12 @@ Example:
     "leveltype" : "hybrid"
     "levels" : "4,5,6,7-10"
 
+For a level that has two values, they should be separated with an underscore
+
+    "leveltype" : "general"
+    "levels" : "74_75, 73_74"
+
+
 <a name="Plugins"/>
 
 # Plugins

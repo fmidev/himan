@@ -1375,22 +1375,29 @@ vector<level> LevelsFromString(const string& levelType, const string& levelValue
 	HPLevelType theLevelType = HPStringToLevelType.at(boost::to_lower_copy(levelType));
 	vector<level> levels;
 
-	if (theLevelType == kHeightLayer || theLevelType == kGroundDepth || theLevelType == kPressureDelta)
+	if (theLevelType == kHeightLayer || theLevelType == kGroundDepth || theLevelType == kPressureDelta ||
+	    theLevelType == kGeneralizedVerticalLayer)
 	{
 		const vector<string> levelsStr = util::Split(levelValuesStr, ",");
 		for (size_t i = 0; i < levelsStr.size(); i++)
 		{
 			const vector<string> levelIntervals = himan::util::Split(levelsStr[i], "_");
 
-			if (levelIntervals.size() != 2)
+			if (levelIntervals.size() == 2)
+			{
+				levels.emplace_back(theLevelType, stof(levelIntervals[0]), stof(levelIntervals[1]));
+			}
+			else if (theLevelType == kGeneralizedVerticalLayer)
+			{
+				levels.emplace_back(theLevelType, stof(levelIntervals[0]));
+			}
+			else
 			{
 				throw runtime_error(
 				    "height_layer, ground_depth and pressure delta requires two level values per definition (lx1_ly1, "
 				    "lx2_ly2, ..., "
 				    "lxN_lyN)");
 			}
-
-			levels.push_back(level(theLevelType, stof(levelIntervals[0]), stof(levelIntervals[1])));
 		}
 	}
 	else

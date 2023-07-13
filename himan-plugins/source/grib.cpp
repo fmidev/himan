@@ -1215,6 +1215,18 @@ void WriteLevel(NFmiGribMessage& message, const level& lev)
 			message.LevelType(106);
 			message.SetLongKey("typeOfSecondFixedSurface", 106);
 		}
+		else if (lev.Type() == kGeneralizedVerticalLayer)
+		{
+			// Seems like a workaround to for genVertHeightCoords but that's
+			// how it works _shrug_
+			message.SetLongKey("genVertHeightCoords", 1);
+			message.LevelType(150);
+			// These are from ICON data -- we have no other producer that
+			// uses this level type
+			message.SetLongKey("NV", 6);
+			message.SetDoubleKey("nlev", 75.);  // number of half-levels
+			message.SetDoubleKey("numberOfVGridUsed", 4.);
+		}
 		else
 		{
 			// TODO: get rid of 'LevelTypeToAnotherEdition()' function
@@ -1248,6 +1260,19 @@ void WriteLevel(NFmiGribMessage& message, const level& lev)
 			}
 
 			message.LevelValue(static_cast<long>(lev.Value() * scale));
+			break;
+		}
+		case kGeneralizedVerticalLayer:
+		{
+			const double v2 = lev.Value2();
+
+			if (v2 != kHPMissingValue)
+			{
+				message.SetLongKey("typeOfSecondFixedSurface", message.GetLongKey("typeOfFirstFixedSurface"));
+				message.LevelValue2(static_cast<long>(v2));
+			}
+
+			message.LevelValue(static_cast<long>(lev.Value()));
 			break;
 		}
 		default:
@@ -2129,9 +2154,10 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 
 		if (parmName.empty())
 		{
-			logr.Warning(fmt::format(
-			    "Parameter name not found from {} for producer: {} table version: {} number: {} timeRangeIndicator: {}",
-			    HPDatabaseTypeToString.at(dbtype), prod.Id(), no_vers, number, timeRangeIndicator));
+			logr.Warning(
+			    fmt::format("Parameter name not found from {} for producer: {} table version: {} number: {} "
+			                "timeRangeIndicator: {}",
+			                HPDatabaseTypeToString.at(dbtype), prod.Id(), no_vers, number, timeRangeIndicator));
 			throw kFileMetaDataNotFound;
 		}
 		else
@@ -2274,8 +2300,8 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 		if (pdtn == 5 || pdtn == 9)
 		{
 			// 5: Probability forecasts at a horizontal level or in a horizontal layer at a point in time
-			// 9: Probability forecasts at a horizontal level or in a horizontal layer in a continuous or non-continuous
-			// time interval
+			// 9: Probability forecasts at a horizontal level or in a horizontal layer in a continuous or
+			// non-continuous time interval
 			const long probType = message.GetLongKey("probabilityType");
 			const long scaleFactorLower = message.GetLongKey("scaleFactorOfLowerLimit");
 			const long scaledValueLower = message.GetLongKey("scaledValueOfLowerLimit");
@@ -2299,8 +2325,8 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 		else if (pdtn == 6 || pdtn == 10)
 		{
 			// 6: Percentile forecasts at a horizontal level or in a horizontal layer at a point in time
-			// 10: Percentile forecasts at a horizontal level or in a horizontal layer in a continuous or non-continuous
-			// time interval
+			// 10: Percentile forecasts at a horizontal level or in a horizontal layer in a continuous or
+			// non-continuous time interval
 
 			pt.Type(kFractile);
 			pt.Value(static_cast<double>(message.GetLongKey("percentileValue")));
