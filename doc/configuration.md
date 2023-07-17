@@ -636,6 +636,19 @@ Example:
         "plugins" : [ { "name" : "...", "write_options.precision" : 2 } ]
     }
 
+<a name="extra_file_metadata"/>
+
+## extra file metadata
+
+Pass any custom metadata to resulting files, overriding any existing or database information. Implementation and support depends on the filetype. Currently only grib is supported. Arguments are given in key-value pairs, comma separated. Data type of value can be string (:s), integer (:i) or float (:d). Default is integer.
+
+
+    "plugins" : [ { "name" : "...", "write_options.extra_metadata" : "shapeOfTheEarth=6,latitudeOfFirstGridPointInDegrees:d=10.01" } ]
+
+
+This functionality was previously a part of transformer plugin, where the property was called "extra_file_metadata". This key is now an alias for write_options.extra_metadata.
+
+
 <a name="write_between_plugin_calls"/>
 
 ## Write between plugin calls

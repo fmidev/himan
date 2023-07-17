@@ -36,12 +36,6 @@ class transformer : public compiled_plugin, private compiled_plugin_base
 		return kCompiled;
 	}
 
-   protected:
-	virtual void WriteToFile(const std::shared_ptr<info<double>> targetInfo,
-	                         write_options opts = write_options()) override;
-	virtual void WriteToFile(const std::shared_ptr<info<float>> targetInfo,
-	                         write_options opts = write_options()) override;
-
    private:
 	virtual void Calculate(std::shared_ptr<info<float>> theTargetInfo, unsigned short threadIndex) override;
 	virtual void Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex) override;
@@ -76,7 +70,6 @@ class transformer : public compiled_plugin, private compiled_plugin_base
 	int itsDecimalPrecision;
 	bool itsDoLandscapeInterpolation;
 	bool itsParamDefinitionFromConfig;
-	std::vector<std::pair<std::string, std::string>> itsExtraFileMetadata;
 	std::unique_ptr<ensemble> itsEnsemble;
 };
 

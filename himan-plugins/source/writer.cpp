@@ -55,6 +55,33 @@ void ReadConfigurationWriteOptions(write_options& writeOptions)
 	{
 		writeOptions.precision = std::stoi(precision);
 	}
+
+	std::string extra = writeOptions.configuration->GetValue("write_options.extra_metadata");
+
+	if (extra.empty())
+	{
+		extra = writeOptions.configuration->GetValue("extra_file_metadata");
+	}
+
+	if (extra.empty() == false)
+	{
+		himan::logger logr("writer");
+		std::vector<std::pair<std::string, std::string>> options;
+		const auto list = himan::util::Split(extra, ",");
+		for (const auto& e : list)
+		{
+			const auto kv = himan::util::Split(e, "=");
+			if (kv.size() != 2)
+			{
+				logr.Warning(fmt::format("Invalid extra_file_metadata option: {}", e));
+				continue;
+			}
+
+			options.emplace_back(kv[0], kv[1]);
+		}
+
+		writeOptions.extra_metadata = options;
+	}
 }
 
 template <typename T>

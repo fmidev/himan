@@ -588,24 +588,6 @@ void transformer::SetAdditionalParameters()
 		}
 	}
 
-	const auto grib_kv = itsConfiguration->GetValue("extra_file_metadata");
-
-	if (!grib_kv.empty())
-	{
-		const auto list = util::Split(grib_kv, ",");
-		for (const auto& e : list)
-		{
-			const auto kv = util::Split(e, "=");
-			if (kv.size() != 2)
-			{
-				itsLogger.Warning(fmt::format("Invalid extra_file_metadata option: {}", e));
-				continue;
-			}
-
-			itsExtraFileMetadata.emplace_back(kv[0], kv[1]);
-		}
-	}
-
 	if (itsConfiguration->Exists("univ_id"))
 	{
 		itsTargetParam[0].UnivId(stoi(itsConfiguration->GetValue("univ_id")));
@@ -948,22 +930,4 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 
 	myThreadedLogger.Info(fmt::format("[{}] Missing values: {}/{}", deviceType, myTargetInfo->Data().MissingCount(),
 	                                  myTargetInfo->Data().Size()));
-}
-
-void transformer::WriteToFile(const shared_ptr<info<float>> targetInfo, write_options writeOptions)
-{
-	writeOptions.write_empty_grid = itsWriteEmptyGrid;
-	writeOptions.precision = itsDecimalPrecision;
-	writeOptions.extra_metadata = itsExtraFileMetadata;
-
-	return compiled_plugin_base::WriteToFile(targetInfo, writeOptions);
-}
-
-void transformer::WriteToFile(const shared_ptr<info<double>> targetInfo, write_options writeOptions)
-{
-	writeOptions.write_empty_grid = itsWriteEmptyGrid;
-	writeOptions.precision = itsDecimalPrecision;
-	writeOptions.extra_metadata = itsExtraFileMetadata;
-
-	return compiled_plugin_base::WriteToFile(targetInfo, writeOptions);
 }
