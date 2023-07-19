@@ -225,6 +225,16 @@ bool param::operator==(const param& other) const
 	{
 		return false;
 	}
+	else if ((itsAggregation.Type() != kUnknownAggregationType &&
+	          other.itsAggregation.Type() == kUnknownAggregationType) ||
+	         (itsAggregation.Type() == kUnknownAggregationType &&
+	          other.itsAggregation.Type() != kUnknownAggregationType))
+	{
+		fmt::print(
+		    "Warning::param Imprecise comparison for aggregations: {} vs {} is considered true. This will change in "
+		    "near-future\n",
+		    itsAggregation.Type(), other.itsAggregation.Type());
+	}
 
 	if (itsVersion != other.itsVersion)
 	{
