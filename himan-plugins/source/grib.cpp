@@ -2872,10 +2872,10 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 	{
 		if (!forceCaching)
 		{
-			itsLogger.Warning("centre/process do not match: " + to_string(options.prod.Process()) + " vs " +
-			                  to_string(prod.Process()));
-			itsLogger.Warning("centre/process do not match: " + to_string(options.prod.Centre()) + " vs " +
-			                  to_string(prod.Centre()));
+			itsLogger.Trace("centre/process do not match: " + to_string(options.prod.Process()) + " vs " +
+			                to_string(prod.Process()));
+			itsLogger.Trace("centre/process do not match: " + to_string(options.prod.Centre()) + " vs " +
+			                to_string(prod.Centre()));
 		}
 	}
 
