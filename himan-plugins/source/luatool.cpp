@@ -281,6 +281,7 @@ void BindEnum(lua_State* L)
 				 value("kGroundDepth", kGroundDepth),
 				 value("kGeneralizedVerticalLayer", kGeneralizedVerticalLayer),
 				 value("kDepth", kDepth),
+				 value("kMixingLayer", kMixingLayer),
 				 value("kEntireAtmosphere", kEntireAtmosphere),
 				 value("kEntireOcean", kEntireOcean),
 				 value("kMaximumThetaE", kMaximumThetaE)],

@@ -37,6 +37,7 @@ HPLevelType
     kGroundDepth = 112
     kGeneralizedVerticalLayer = 150
     kDepth = 160
+    kMixingLayer = 166
     kEntireAtmosphere = 200
     kEntireOcean = 201
     kMaximumThetaE = 246
