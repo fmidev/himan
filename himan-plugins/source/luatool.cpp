@@ -292,7 +292,8 @@ void BindEnum(lua_State* L)
 				 value("kMinuteResolution", kMinuteResolution),
 				 value("kDayResolution", kDayResolution),
 				 value("kMonthResolution", kMonthResolution),
-				 value("kYearResolution", kYearResolution)],
+				 value("kYearResolution", kYearResolution),
+				 value("kSecondResolution", kSecondResolution)],
 	     class_<HPFileType>("HPFileType")
 	         .enum_("constants")[
 				 value("kUnknownFile", kUnknownFile),

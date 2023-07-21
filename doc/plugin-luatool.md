@@ -53,6 +53,7 @@ HPTimeResolution
     kYearResolution = 3
     kMonthResulution = 4
     kDayResolution = 5
+    kSecondResolution = 6
 
 HPFileType
     kUnknownFile = 0
