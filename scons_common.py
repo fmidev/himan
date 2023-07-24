@@ -112,7 +112,7 @@ except:
 	pass
 
 librarypaths.append('/usr/lib64/boost169')
-librarypaths.append('/usr/gdal34/lib')
+librarypaths.append('/usr/gdal35/lib')
 env.Append(LIBPATH = librarypaths)
 
 # Libraries
@@ -176,7 +176,7 @@ env.Append(CCFLAGS = cflags_normal)
 env.Append(CCFLAGS = cflags_extra)
 
 env.AppendUnique(CCFLAGS=('-isystem', '/usr/include/boost169'))
-env.AppendUnique(CCFLAGS=('-isystem', '/usr/gdal34/include'))
+env.AppendUnique(CCFLAGS=('-isystem', '/usr/gdal35/include'))
 env.AppendUnique(CCFLAGS=('-isystem', '/usr/include/eigen3'))
 
 if IS_CLANG:
@@ -207,7 +207,7 @@ env.Append(NVCCFLAGS = ['-gencode=arch=compute_80,code=sm_80'])
 
 env.AppendUnique(NVCCFLAGS = ['-std=' + cpp_standard])
 env.AppendUnique(NVCCFLAGS = ('-isystem', '/usr/include/boost169'))
-env.AppendUnique(NVCCFLAGS = ('-isystem', '/usr/gdal34/include'))
+env.AppendUnique(NVCCFLAGS = ('-isystem', '/usr/gdal35/include'))
 
 for flag in cflags_normal:
 	if flag == '-Wcast-qual':

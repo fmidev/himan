@@ -8,7 +8,7 @@ assert env['IS_RHEL'] == True
 
 # Includes
 
-env.Append(CPPPATH = ['/usr/geos310/include'])
+env.Append(CPPPATH = ['/usr/geos311/include'])
 env.Append(CPPPATH = ['/usr/include'])
 
 # Library paths

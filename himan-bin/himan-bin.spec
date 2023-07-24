@@ -27,7 +27,7 @@ Requires: zlib
 Requires: libfmidb
 Requires: xerces-c
 Requires: libpqxx >= 7.7.0
-Requires: gdal34-libs
+Requires: gdal35-libs
 Requires: jasper-libs
 Requires: boost169-program-options
 Requires: boost169-system
