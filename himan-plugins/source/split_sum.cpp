@@ -3,6 +3,7 @@
 #include "level.h"
 #include "logger.h"
 #include "plugin_factory.h"
+#include "util.h"
 #include <iostream>
 #include <map>
 #include <thread>
@@ -10,18 +11,38 @@
 #include "radon.h"
 #include "writer.h"
 
-using namespace std;
+using namespace himan;
 using namespace himan::plugin;
 
 const int SUB_THREAD_COUNT = 5;
 
-map<string, himan::params> sourceParameters;
+std::map<std::string, params> sourceParameters;
+
+struct target_paramdef
+{
+	param targetParam;
+	bool isRate;  // define if this param is a rate or an accumulation (rates are divided by the time period)
+	double truncateSmallerValues;     // truncate smaller values than this to zero
+	double lowerLimit;                // define lowest possible value
+	double scale;                     // scale values by this
+	HPTimeResolution rateResolution;  // base time resolution when calculating rates
+
+	target_paramdef(const param& p, bool ir = false, double tsv = MissingDouble(), double ll = 0.0, double s = 1.0,
+	                HPTimeResolution rr = kHourResolution)
+	    : targetParam(p), isRate(ir), truncateSmallerValues(tsv), lowerLimit(ll), scale(s), rateResolution(rr)
+	{
+	}
+};
+
+std::vector<target_paramdef> targetParameters;
 
 split_sum::split_sum()
 {
 	itsLogger = logger("split_sum");
 
 	// Define source parameters for each output parameter
+
+	targetParameters.clear();
 
 	// General precipitation (liquid + solid)
 	sourceParameters["RR-1-MM"] = {param("RR-KGM2")};
@@ -65,10 +86,8 @@ split_sum::split_sum()
 	sourceParameters["RADLWC-WM2"] = {param("RADLWCA-JM2")};
 }
 
-void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
+void SetupParameters(std::shared_ptr<const plugin_configuration> conf)
 {
-	Init(conf);
-
 	/*
 	 * Set target parameter to split_sum.
 	 *
@@ -77,166 +96,282 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 	 *
 	 */
 
-	vector<param> params;
+	const long producerId = conf->TargetProducer().Id();
+	const bool isMetcoop = producerId == 260 || producerId == 261 || (producerId >= 270 && producerId <= 272);
+	const bool isECMWF = producerId == 240 || producerId == 241 || producerId == 243;
 
-	if (itsConfiguration->Exists("rr1h") && itsConfiguration->GetValue("rr1h") == "true")
+	if (conf->Exists("rr1h") && conf->GetValue("rr1h") == "true")
 	{
-		params.emplace_back("RR-1-MM", aggregation(kAccumulation, ONE_HOUR), processing_type());
+		targetParameters.emplace_back(param("RR-1-MM", aggregation(kAccumulation, ONE_HOUR), processing_type()), false,
+		                              isMetcoop ? 0.01 : MissingDouble(), 0.0, isECMWF ? 1000. : 1.);
 	}
 
-	if (itsConfiguration->Exists("rr3h") && itsConfiguration->GetValue("rr3h") == "true")
+	if (conf->Exists("rr3h") && conf->GetValue("rr3h") == "true")
 	{
-		params.emplace_back("RR-3-MM", aggregation(kAccumulation, THREE_HOURS), processing_type());
+		targetParameters.emplace_back(param("RR-3-MM", aggregation(kAccumulation, THREE_HOURS), processing_type()),
+		                              false, isMetcoop ? 0.01 : MissingDouble(), 0.0, isECMWF ? 1000. : 1.);
 	}
 
-	if (itsConfiguration->Exists("rr6h") && itsConfiguration->GetValue("rr6h") == "true")
+	if (conf->Exists("rr6h") && conf->GetValue("rr6h") == "true")
 	{
-		params.emplace_back("RR-6-MM", aggregation(kAccumulation, SIX_HOURS), processing_type());
+		targetParameters.emplace_back(param("RR-6-MM", aggregation(kAccumulation, SIX_HOURS), processing_type()), false,
+		                              isMetcoop ? 0.01 : MissingDouble(), 0.0, isECMWF ? 1000. : 1.);
 	}
 
-	if (itsConfiguration->Exists("rr12h") && itsConfiguration->GetValue("rr12h") == "true")
+	if (conf->Exists("rr12h") && conf->GetValue("rr12h") == "true")
 	{
-		params.emplace_back("RR-12-MM", aggregation(kAccumulation, TWELVE_HOURS), processing_type());
+		targetParameters.emplace_back(param("RR-12-MM", aggregation(kAccumulation, TWELVE_HOURS), processing_type()),
+		                              false, isMetcoop ? 0.01 : MissingDouble(), 0.0, isECMWF ? 1000. : 1.);
 	}
 
-	if (itsConfiguration->Exists("rr24h") && itsConfiguration->GetValue("rr24h") == "true")
+	if (conf->Exists("rr24h") && conf->GetValue("rr24h") == "true")
 	{
-		params.emplace_back("RR-24-MM", aggregation(kAccumulation, time_duration("24:00")), processing_type());
+		targetParameters.emplace_back(
+		    param("RR-24-MM", aggregation(kAccumulation, time_duration("24:00")), processing_type()), false,
+		    isMetcoop ? 0.01 : MissingDouble(), 0.0, isECMWF ? 1000. : 1.);
 	}
 
-	if (itsConfiguration->Exists("sn3h") && itsConfiguration->GetValue("sn3h") == "true")
+	if (conf->Exists("sn3h") && conf->GetValue("sn3h") == "true")
 	{
-		params.emplace_back("SN-3-MM", aggregation(kAccumulation, THREE_HOURS), processing_type());
+		targetParameters.emplace_back(param("SN-3-MM", aggregation(kAccumulation, THREE_HOURS), processing_type()),
+		                              false, MissingDouble(), 0.0, isECMWF ? 1000. : 1.);
 	}
 
-	if (itsConfiguration->Exists("sn6h") && itsConfiguration->GetValue("sn6h") == "true")
+	if (conf->Exists("sn6h") && conf->GetValue("sn6h") == "true")
 	{
-		params.emplace_back("SN-6-MM", aggregation(kAccumulation, SIX_HOURS), processing_type());
+		targetParameters.emplace_back(param("SN-6-MM", aggregation(kAccumulation, SIX_HOURS), processing_type()), false,
+		                              MissingDouble(), 0.0, isECMWF ? 1000. : 1.);
 	}
 
-	if (itsConfiguration->Exists("sn24h") && itsConfiguration->GetValue("sn24h") == "true")
+	if (conf->Exists("sn24h") && conf->GetValue("sn24h") == "true")
 	{
-		params.emplace_back("SN-24-MM", aggregation(kAccumulation, time_duration("24:00")), processing_type());
+		targetParameters.emplace_back(
+		    param("SN-24-MM", aggregation(kAccumulation, time_duration("24:00")), processing_type()), false,
+		    MissingDouble(), 0.0, isECMWF ? 1000. : 1.);
 	}
 
-	if (itsConfiguration->Exists("sn120h") && itsConfiguration->GetValue("sn120h") == "true")
+	if (conf->Exists("sn120h") && conf->GetValue("sn120h") == "true")
 	{
-		params.emplace_back("SN-120-MM", aggregation(kAccumulation, time_duration("120:00")), processing_type());
+		targetParameters.emplace_back(
+		    param("SN-120-MM", aggregation(kAccumulation, time_duration("120:00")), processing_type()), false,
+		    MissingDouble(), 0.0, isECMWF ? 1000. : 1.);
 	}
 
-	if (itsConfiguration->Exists("rrc3h") && itsConfiguration->GetValue("rrc3h") == "true")
+	if (conf->Exists("rrc3h") && conf->GetValue("rrc3h") == "true")
 	{
-		params.emplace_back("RRC-3-MM", aggregation(kAccumulation, THREE_HOURS), processing_type());
+		targetParameters.emplace_back(param("RRC-3-MM", aggregation(kAccumulation, THREE_HOURS), processing_type()),
+		                              false, isMetcoop ? 0.01 : MissingDouble(), 0.0, isECMWF ? 1000. : 1.);
 	}
 
-	if (itsConfiguration->Exists("rrr") && itsConfiguration->GetValue("rrr") == "true")
+	if (conf->Exists("rrr") && conf->GetValue("rrr") == "true")
 	{
-		params.emplace_back("RRR-KGM2", aggregation(kAccumulation, ONE_HOUR), processing_type());
+		targetParameters.emplace_back(param("RRR-KGM2", aggregation(kAccumulation, ONE_HOUR), processing_type()), true,
+		                              isMetcoop ? 0.01 : MissingDouble(), 0.0, isECMWF ? 1000. : 1.);
 	}
 
-	if (itsConfiguration->Exists("rrrc") && itsConfiguration->GetValue("rrrc") == "true")
+	if (conf->Exists("rrrc") && conf->GetValue("rrrc") == "true")
 	{
-		params.emplace_back("RRRC-KGM2", aggregation(kAccumulation, ONE_HOUR), processing_type());
+		targetParameters.emplace_back(param("RRRC-KGM2", aggregation(kAccumulation, ONE_HOUR), processing_type()), true,
+		                              isMetcoop ? 0.01 : MissingDouble(), 0.0, isECMWF ? 1000. : 1.);
 	}
 
-	if (itsConfiguration->Exists("rrrl") && itsConfiguration->GetValue("rrrl") == "true")
+	if (conf->Exists("rrrl") && conf->GetValue("rrrl") == "true")
 	{
-		params.emplace_back("RRRL-KGM2", aggregation(kAccumulation, ONE_HOUR), processing_type());
+		targetParameters.emplace_back(param("RRRL-KGM2", aggregation(kAccumulation, ONE_HOUR), processing_type()), true,
+		                              isMetcoop ? 0.01 : MissingDouble(), 0.0, isECMWF ? 1000. : 1.);
 	}
 
 	// Graupel
 
-	if (itsConfiguration->Exists("grr") && itsConfiguration->GetValue("grr") == "true")
+	if (conf->Exists("grr") && conf->GetValue("grr") == "true")
 	{
-		params.emplace_back("GRR-MMH", aggregation(kAccumulation, ONE_HOUR), processing_type());
+		targetParameters.emplace_back(param("GRR-MMH", aggregation(kAccumulation, ONE_HOUR), processing_type()), true);
 	}
 
 	// Solid
 
-	if (itsConfiguration->Exists("rrrs") && itsConfiguration->GetValue("rrrs") == "true")
+	if (conf->Exists("rrrs") && conf->GetValue("rrrs") == "true")
 	{
-		params.emplace_back("RRRS-KGM2", aggregation(kAccumulation, ONE_HOUR), processing_type());
+		targetParameters.emplace_back(param("RRRS-KGM2", aggregation(kAccumulation, ONE_HOUR), processing_type()),
+		                              true);
 	}
 
-	if (itsConfiguration->Exists("rrs3h") && itsConfiguration->GetValue("rrs3h") == "true")
+	if (conf->Exists("rrs3h") && conf->GetValue("rrs3h") == "true")
 	{
-		params.emplace_back("RRS-3-MM", aggregation(kAccumulation, THREE_HOURS), processing_type());
+		targetParameters.emplace_back(param("RRS-3-MM", aggregation(kAccumulation, THREE_HOURS), processing_type()));
 	}
 
-	if (itsConfiguration->Exists("rrs24h") && itsConfiguration->GetValue("rrs24h") == "true")
+	if (conf->Exists("rrs24h") && conf->GetValue("rrs24h") == "true")
 	{
-		params.emplace_back("RRS-24-MM", aggregation(kAccumulation, time_duration("24:00")), processing_type());
+		targetParameters.emplace_back(
+		    param("RRS-24-MM", aggregation(kAccumulation, time_duration("24:00")), processing_type()));
 	}
 
 	// Snow
 
-	if (itsConfiguration->Exists("snr") && itsConfiguration->GetValue("snr") == "true")
+	if (conf->Exists("snr") && conf->GetValue("snr") == "true")
 	{
-		params.emplace_back("SNR-KGM2", aggregation(kAccumulation, ONE_HOUR), processing_type());
+		targetParameters.emplace_back(param("SNR-KGM2", aggregation(kAccumulation, ONE_HOUR), processing_type()), true,
+		                              MissingDouble(), 0.0, isECMWF ? 1000. : 1.);
 	}
 
-	if (itsConfiguration->Exists("snrc") && itsConfiguration->GetValue("snrc") == "true")
+	if (conf->Exists("snrc") && conf->GetValue("snrc") == "true")
 	{
-		params.emplace_back("SNRC-KGM2", aggregation(kAccumulation, ONE_HOUR), processing_type());
+		targetParameters.emplace_back(param("SNRC-KGM2", aggregation(kAccumulation, ONE_HOUR), processing_type()), true,
+		                              MissingDouble(), 0.0, isECMWF ? 1000. : 1.);
 	}
 
-	if (itsConfiguration->Exists("snrl") && itsConfiguration->GetValue("snrl") == "true")
+	if (conf->Exists("snrl") && conf->GetValue("snrl") == "true")
 	{
-		params.emplace_back("SNRL-KGM2", aggregation(kAccumulation, ONE_HOUR), processing_type());
+		targetParameters.emplace_back(param("SNRL-KGM2", aggregation(kAccumulation, ONE_HOUR), processing_type()), true,
+		                              MissingDouble(), 0.0, isECMWF ? 1000. : 1.);
 	}
 
 	// Radiation
-	// These are RATES not SUMS
 
-	if (itsConfiguration->Exists("glob") && itsConfiguration->GetValue("glob") == "true")
+	if (conf->Exists("glob") && conf->GetValue("glob") == "true")
 	{
-		params.emplace_back("RADGLO-WM2", aggregation(kAverage), processing_type());
+		targetParameters.emplace_back(param("RADGLO-WM2", aggregation(kAverage), processing_type()), true,
+		                              MissingDouble(), 0.0, 1., kSecondResolution);
 	}
 
-	if (itsConfiguration->Exists("globc") && itsConfiguration->GetValue("globc") == "true")
+	if (conf->Exists("globc") && conf->GetValue("globc") == "true")
 	{
-		params.emplace_back("RADGLOC-WM2", aggregation(kAverage), processing_type());
+		targetParameters.emplace_back(param("RADGLOC-WM2", aggregation(kAverage), processing_type()), true,
+		                              MissingDouble(), 0.0, 1., kSecondResolution);
 	}
 
-	if (itsConfiguration->Exists("lw") && itsConfiguration->GetValue("lw") == "true")
+	if (conf->Exists("lw") && conf->GetValue("lw") == "true")
 	{
-		params.emplace_back("RADLW-WM2", aggregation(kAverage), processing_type());
+		targetParameters.emplace_back(param("RADLW-WM2", aggregation(kAverage), processing_type()), true,
+		                              MissingDouble(), 0.0, 1., kSecondResolution);
 	}
 
-	if (itsConfiguration->Exists("lwc") && itsConfiguration->GetValue("lwc") == "true")
+	if (conf->Exists("lwc") && conf->GetValue("lwc") == "true")
 	{
-		params.emplace_back("RADLWC-WM2", aggregation(kAverage), processing_type());
+		targetParameters.emplace_back(param("RADLWC-WM2", aggregation(kAverage), processing_type()), true,
+		                              MissingDouble(), 0.0, 1., kSecondResolution);
 	}
 
-	if (itsConfiguration->Exists("toplw") && itsConfiguration->GetValue("toplw") == "true")
+	if (conf->Exists("toplw") && conf->GetValue("toplw") == "true")
 	{
 		// Same grib2 parameter definition as with RADLW-WM2, this is just on
 		// another surface
-		params.emplace_back("RTOPLW-WM2", aggregation(kAverage), processing_type());
+		targetParameters.emplace_back(param("RTOPLW-WM2", aggregation(kAverage), processing_type()), true,
+		                              MissingDouble(), MissingDouble(), 1., kSecondResolution);
 	}
 
-	if (itsConfiguration->Exists("netlw") && itsConfiguration->GetValue("netlw") == "true")
+	if (conf->Exists("netlw") && conf->GetValue("netlw") == "true")
 	{
-		params.emplace_back("RNETLW-WM2", aggregation(kAverage), processing_type());
+		targetParameters.emplace_back(param("RNETLW-WM2", aggregation(kAverage), processing_type()), true,
+		                              MissingDouble(), MissingDouble(), 1., kSecondResolution);
 	}
 
-	if (itsConfiguration->Exists("sw") && itsConfiguration->GetValue("sw") == "true")
+	if (conf->Exists("sw") && conf->GetValue("sw") == "true")
 	{
-		params.emplace_back("RADSW-WM2", aggregation(kAverage), processing_type());
+		targetParameters.emplace_back(param("RADSW-WM2", aggregation(kAverage), processing_type()), true,
+		                              MissingDouble(), 0.0, 1., kSecondResolution);
 	}
 
-	if (itsConfiguration->Exists("netsw") && itsConfiguration->GetValue("netsw") == "true")
+	if (conf->Exists("netsw") && conf->GetValue("netsw") == "true")
 	{
-		params.emplace_back("RNETSW-WM2", aggregation(kAverage), processing_type());
+		targetParameters.emplace_back(param("RNETSW-WM2", aggregation(kAverage), processing_type()), true,
+		                              MissingDouble(), MissingDouble(), 1., kSecondResolution);
 	}
 
-	if (params.empty())
+	auto ParseParamFromString =
+	    [](const std::string& name, const std::string& aname, const std::string& adur, const std::string& pname)
+	{
+		param p(name);
+
+		if (aname.empty() == false)
+		{
+			time_duration d = adur.empty() ? time_duration() : time_duration(adur);
+
+			aggregation a(HPStringToAggregationType.at(aname), d);
+			p.Aggregation(a);
+		}
+
+		return p;
+	};
+
+	if (conf->Exists("source_param") && conf->Exists("target_param") && conf->Exists("target_param_aggregation"))
+	{
+		const auto sourceParam =
+		    ParseParamFromString(conf->GetValue("source_param"), conf->GetValue("source_param_aggregation"),
+		                         conf->GetValue("source_param_aggregation_period"), "");
+		const auto targetParam =
+		    ParseParamFromString(conf->GetValue("target_param"), conf->GetValue("target_param_aggregation"),
+		                         conf->GetValue("target_param_aggregation_period"), "");
+
+		sourceParameters[targetParam.Name()] = {sourceParam};
+		targetParameters.emplace_back(targetParam);
+
+		if (conf->Exists("is_rate"))
+		{
+			targetParameters.back().isRate = util::ParseBoolean(conf->GetValue("is_rate"));
+		}
+
+		if (conf->Exists("truncate_smaller_values"))
+		{
+			const std::string str = conf->GetValue("truncate_smaller_values");
+			if (str == "MISSING")
+			{
+				targetParameters.back().truncateSmallerValues = MissingDouble();
+			}
+			else
+			{
+				targetParameters.back().truncateSmallerValues = stod(str);
+			}
+		}
+
+		if (conf->Exists("lower_limit"))
+		{
+			const std::string str = conf->GetValue("lower_limit");
+			if (str == "MISSING")
+			{
+				targetParameters.back().lowerLimit = MissingDouble();
+			}
+			else
+			{
+				targetParameters.back().lowerLimit = stod(str);
+			}
+		}
+
+		if (conf->Exists("scale"))
+		{
+			const std::string str = conf->GetValue("scale");
+			targetParameters.back().scale = stod(str);
+		}
+
+		if (conf->Exists("rate_resolution"))
+		{
+			const std::string str = conf->GetValue("rate_resolution");
+			targetParameters.back().rateResolution = HPStringToTimeResolution.at(str);
+		}
+	}
+}
+
+void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
+{
+	Init(conf);
+
+	SetupParameters(conf);
+
+	if (targetParameters.empty())
 	{
 		itsLogger.Error("No parameter definition given, abort");
 		return;
 	}
 
-	SetParams(params);
+	params pp;
+
+	for (const auto& p : targetParameters)
+	{
+		pp.push_back(p.targetParam);
+	}
+
+	SetParams(pp);
 
 	// Default max workers (db connections) is 16.
 	// Later in this plugin we launch sub threads so that the total number of
@@ -256,24 +391,24 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
  * This function does the actual calculation.
  */
 
-void split_sum::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
+void split_sum::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
-	vector<thread*> threads;
-	vector<shared_ptr<info<double>>> infos;
+	std::vector<std::thread*> threads;
+	std::vector<std::shared_ptr<info<double>>> infos;
 
 	int subThreadIndex = 0;
 
 	for (myTargetInfo->Reset<param>(); myTargetInfo->Next<param>(); ++subThreadIndex)
 	{
-		auto newInfo = make_shared<info<double>>(*myTargetInfo);
+		auto newInfo = std::make_shared<info<double>>(*myTargetInfo);
 
 		infos.push_back(newInfo);  // extend lifetime over this loop
 
 		// Pass param by reference to sub-thread: aggregation duration is only available there
 		// when data is actually fetched, and we need that information when writing data to disk
 
-		threads.push_back(new thread(&split_sum::DoParam, this, newInfo, std::ref(myTargetInfo->Param()),
-		                             fmt::format("{}_{}", threadIndex, subThreadIndex)));
+		threads.push_back(new std::thread(&split_sum::DoParam, this, newInfo, std::ref(myTargetInfo->Param()),
+		                                  fmt::format("{}_{}", threadIndex, subThreadIndex)));
 
 		if (subThreadIndex % SUB_THREAD_COUNT == 0)
 		{
@@ -294,9 +429,20 @@ void split_sum::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short 
 	}
 }
 
-void split_sum::DoParam(shared_ptr<info<double>> myTargetInfo, param& par, string subThreadIndex) const
+void split_sum::DoParam(std::shared_ptr<info<double>> myTargetInfo, param& par, std::string subThreadIndex) const
 {
 	ASSERT(myTargetInfo);
+
+	target_paramdef pd(param("XX"));
+
+	for (const auto& p : targetParameters)
+	{
+		if (p.targetParam == par)
+		{
+			pd = p;
+			break;
+		}
+	}
 
 	const std::string myParamName = myTargetInfo->Param().Name();
 
@@ -305,38 +451,22 @@ void split_sum::DoParam(shared_ptr<info<double>> myTargetInfo, param& par, strin
 
 	auto myThreadedLogger = logger("splitSumSubThread#" + subThreadIndex);
 
-	myThreadedLogger.Info("Calculating parameter " + myParamName + " time " +
-	                      static_cast<string>(myTargetInfo->Time().ValidDateTime()) + " level " +
-	                      static_cast<string>(forecastLevel));
-
-	const bool isRadiationCalculation =
-	    (myParamName == "RADGLO-WM2" || myParamName == "RADGLOC-WM2" || myParamName == "RADLW-WM2" ||
-	     myParamName == "RADLWC-WM2" || myParamName == "RTOPLW-WM2" || myParamName == "RNETLW-WM2" ||
-	     myParamName == "RADSW-WM2" || myParamName == "RNETSW-WM2");
-
-	const bool isRateCalculation =
-	    (isRadiationCalculation || myParamName == "RRR-KGM2" || myParamName == "RRRL-KGM2" ||
-	     myParamName == "RRRC-KGM2" || myParamName == "SNR-KGM2" || myParamName == "SNRC-KGM2" ||
-	     myParamName == "SNRL-KGM2" || myParamName == "GRR-MMH" || myParamName == "RRRS-KGM2" ||
-	     myParamName == "RRC-KGM2");
-	const bool isPrecipitationCalculation =
-	    myParamName == "RR-1-MM" || myParamName == "RR-3-MM" || myParamName == "RR-6-MM" || myParamName == "RR-12-MM" ||
-	    myParamName == "RR-24-MM" || myParamName == "RRC-3-MM" || myParamName == "RRR-KGM2" ||
-	    myParamName == "RRRC-KGM2" || myParamName == "RRRL-KGM2";
-	const long producerId = myTargetInfo->Producer().Id();
+	myThreadedLogger.Info(fmt::format("Calculating parameter {} time {} level {}", myParamName,
+	                                  static_cast<std::string>(myTargetInfo->Time().ValidDateTime()),
+	                                  static_cast<std::string>(forecastLevel)));
 
 	// Have to re-fetch infos each time since we might have to change element
 	// from liquid to snow to radiation so we need also different source parameters
 
-	shared_ptr<info<double>> curSumInfo;
-	shared_ptr<info<double>> prevSumInfo;
+	std::shared_ptr<info<double>> curSumInfo;
+	std::shared_ptr<info<double>> prevSumInfo;
 
 	if (myTargetInfo->Time().Step().Minutes() == 0)
 	{
 		// This is the first time step, calculation can not be done
 
 		myThreadedLogger.Info(fmt::format("This is the first time step -- not calculating {} for step {}", myParamName,
-		                                  static_cast<string>(forecastTime.Step())));
+		                                  static_cast<std::string>(forecastTime.Step())));
 		return;
 	}
 
@@ -355,11 +485,13 @@ void split_sum::DoParam(shared_ptr<info<double>> myTargetInfo, param& par, strin
 	 * based on those values.
 	 */
 
+	time_duration paramStep = myTargetInfo->Param().Aggregation().TimeDuration();
 	int step = static_cast<int>(itsConfiguration->ForecastStep().Hours());
 
-	if (isRateCalculation)
+	if (pd.isRate)
 	{
-		auto infos = GetSourceDataForRate(myTargetInfo, step);
+		auto infos =
+		    GetSourceDataForRate(myTargetInfo, (paramStep.Empty() ? step : static_cast<int>(paramStep.Hours())));
 
 		prevSumInfo = infos.first;
 		curSumInfo = infos.second;
@@ -377,32 +509,20 @@ void split_sum::DoParam(shared_ptr<info<double>> myTargetInfo, param& par, strin
 	else
 	{
 		// Fetch data for previous step
-		time_duration paramStep = myTargetInfo->Param().Aggregation().TimeDuration();
+		// time_duration paramStep = myTargetInfo->Param().Aggregation().TimeDuration();
 
 		if (paramStep.Empty())
 		{
-			myThreadedLogger.Error(
-			    fmt::format("Parameter {} has no aggregation duration set, unable to continue", myParamName));
+			myThreadedLogger.Error(fmt::format(
+			    "Parameter {} is an accumulation with no time period set, unable to continue", myParamName));
 			return;
 		}
-		// Skip early steps if necessary
 
-		if (myTargetInfo->Time().Step() >= paramStep)
-		{
-			forecast_time prevTimeStep = myTargetInfo->Time();
+		forecast_time prevTimeStep = myTargetInfo->Time();
+		prevTimeStep.ValidDateTime() -= paramStep;
+		prevSumInfo = FetchSourceData(myTargetInfo, prevTimeStep);
 
-			prevTimeStep.ValidDateTime() -= paramStep;
-
-			prevSumInfo = FetchSourceData(myTargetInfo, prevTimeStep);
-		}
-
-		// Data from current time step, but only if we have data for previous
-		// step
-
-		if (prevSumInfo)
-		{
-			curSumInfo = FetchSourceData(myTargetInfo, myTargetInfo->Time());
-		}
+		curSumInfo = FetchSourceData(myTargetInfo, myTargetInfo->Time());
 	}
 
 	if (!prevSumInfo || !curSumInfo)
@@ -410,53 +530,47 @@ void split_sum::DoParam(shared_ptr<info<double>> myTargetInfo, param& par, strin
 		// Data was not found
 
 		myThreadedLogger.Warning(fmt::format("Data not found: not calculating {} for step {}", myParamName,
-		                                     static_cast<string>(myTargetInfo->Time().Step())));
+		                                     static_cast<std::string>(myTargetInfo->Time().Step())));
 		return;
 	}
 
-	myThreadedLogger.Trace("Previous data step is " + static_cast<string>(prevSumInfo->Time().Step()));
-	myThreadedLogger.Trace("Current/next data step is " + static_cast<string>(curSumInfo->Time().Step()));
-
-	double scaleFactor = 1.;
+	myThreadedLogger.Trace("Previous data step is " + static_cast<std::string>(prevSumInfo->Time().Step()));
+	myThreadedLogger.Trace("Current/next data step is " + static_cast<std::string>(curSumInfo->Time().Step()));
 
 	// EC gives precipitation in meters, we are calculating millimeters
 
-	if (curSumInfo->Param().Unit() == kM ||
-	    ((producerId == 240 || producerId == 241 || producerId == 243) && !isRadiationCalculation))  // HIMAN-98
+	if (curSumInfo->Param().Unit() == kM)
 	{
-		scaleFactor = 1000.;
+		// HIMAN-98
+		pd.scale = 1000.;
 	}
 
-	string deviceType = "CPU";
+	std::string deviceType = "CPU";
 
+	// By default values are scaled (divided) over the time period in question (in hours)
 	step = static_cast<int>(curSumInfo->Time().Step().Hours() - prevSumInfo->Time().Step().Hours());
 
-	if (isRadiationCalculation)
+	step = 1;  // NO rate
+
+	if (pd.isRate)
 	{
-		/*
-		 * Radiation unit is W/m^2 which is J/m^2/s, so we need to convert
-		 * time to seconds.
-		 *
-		 * Step is always one hour or more, even in the case of Harmonie.
-		 */
-
-		step *= 3600;
-	}
-	else if (!isRateCalculation)
-	{
-		/*
-		 * If calculating for Harmonie, use hour as base time unit, or disable
-		 * it if sum is calculated.
-		 */
-
-		step = 1;
-	}
-
-	double lowLimit = 0.0;  // value can't be lower than 0
-
-	if (myParamName == "RTOPLW-WM2" || myParamName == "RNETLW-WM2" || myParamName == "RNETSW-WM2")
-	{
-		lowLimit = himan::MissingDouble();  // no low limit
+		const time_duration td = curSumInfo->Time().Step() - prevSumInfo->Time().Step();
+		switch (pd.rateResolution)
+		{
+			case kHourResolution:
+				step = static_cast<int>(td.Hours());
+				break;
+			case kMinuteResolution:
+				step = static_cast<int>(td.Minutes());
+				break;
+			case kSecondResolution:
+				step = static_cast<int>(td.Seconds());
+				break;
+			default:
+				myThreadedLogger.Fatal(
+				    fmt::format("Unsupported rate resolution: {}", HPTimeResolutionToString.at(pd.rateResolution)));
+				Abort();
+		}
 	}
 
 	const double invstep = 1. / step;
@@ -469,25 +583,23 @@ void split_sum::DoParam(shared_ptr<info<double>> myTargetInfo, param& par, strin
 		const double currentSum = tup.get<1>();
 		const double previousSum = tup.get<2>();
 
-		result = fmax(lowLimit, ((currentSum - previousSum) * invstep * scaleFactor));
+		result = fmax(pd.lowerLimit, ((currentSum - previousSum) * invstep * pd.scale));
 
 		// STU-13786: remove precipitations smaller than 0.01mm/h for MEPS/MEPS_preop/MNWC/MNWC_preop
-		if (isPrecipitationCalculation &&
-		    (producerId == 260 || producerId == 261 || (producerId >= 270 && producerId <= 272)) && result < 0.01)
+		if (result < pd.truncateSmallerValues)
 		{
 			result = 0.0;
 		}
-		ASSERT(isRadiationCalculation || result >= 0 || IsMissing(result));
 	}
 
 	myThreadedLogger.Info(fmt::format("[{}] Parameter: {} missing values: {}/{}", deviceType, myParamName,
 	                                  myTargetInfo->Data().MissingCount(), myTargetInfo->Data().Size()));
 }
 
-pair<shared_ptr<himan::info<double>>, shared_ptr<himan::info<double>>> split_sum::GetSourceDataForRate(
-    shared_ptr<info<double>> myTargetInfo, int step) const
+std::pair<std::shared_ptr<info<double>>, std::shared_ptr<info<double>>> split_sum::GetSourceDataForRate(
+    std::shared_ptr<info<double>> myTargetInfo, int step) const
 {
-	shared_ptr<info<double>> prevInfo, curInfo;
+	std::shared_ptr<info<double>> prevInfo, curInfo;
 
 	// 1. Assuming we *know* what the step is, fetch previous and current
 	// based on that step.
@@ -523,7 +635,7 @@ pair<shared_ptr<himan::info<double>>, shared_ptr<himan::info<double>>> split_sum
 	int maxSteps = 6;  // by default look for 6 hours forward or backward
 	step = 1;          // by default the difference between time steps is one (ie. one hour))
 
-	itsLogger.Trace("Target time is " + static_cast<string>(myTargetInfo->Time().ValidDateTime()));
+	itsLogger.Trace("Target time is " + static_cast<std::string>(myTargetInfo->Time().ValidDateTime()));
 
 	if (!prevInfo)
 	{
@@ -543,7 +655,7 @@ pair<shared_ptr<himan::info<double>>, shared_ptr<himan::info<double>>> split_sum
 				continue;
 			}
 
-			itsLogger.Trace("Trying time " + static_cast<string>(wantedTimeStep.ValidDateTime()));
+			itsLogger.Trace("Trying time " + static_cast<std::string>(wantedTimeStep.ValidDateTime()));
 			prevInfo = FetchSourceData(myTargetInfo, wantedTimeStep);
 
 			if (prevInfo)
@@ -572,7 +684,7 @@ pair<shared_ptr<himan::info<double>>, shared_ptr<himan::info<double>>> split_sum
 		{
 			wantedTimeStep.ValidDateTime().Adjust(kHourResolution, step);
 
-			itsLogger.Trace("Trying time " + static_cast<string>(wantedTimeStep.ValidDateTime()));
+			itsLogger.Trace("Trying time " + static_cast<std::string>(wantedTimeStep.ValidDateTime()));
 			curInfo = FetchSourceData(myTargetInfo, wantedTimeStep);
 
 			if (curInfo)
@@ -585,8 +697,8 @@ pair<shared_ptr<himan::info<double>>, shared_ptr<himan::info<double>>> split_sum
 	return make_pair(prevInfo, curInfo);
 }
 
-shared_ptr<himan::info<double>> split_sum::FetchSourceData(shared_ptr<info<double>> myTargetInfo,
-                                                           const forecast_time& wantedTime) const
+std::shared_ptr<info<double>> split_sum::FetchSourceData(std::shared_ptr<info<double>> myTargetInfo,
+                                                         const forecast_time& wantedTime) const
 {
 	level wantedLevel = myTargetInfo->Level();
 
@@ -595,7 +707,7 @@ shared_ptr<himan::info<double>> split_sum::FetchSourceData(shared_ptr<info<doubl
 	if (params.empty())
 	{
 		itsLogger.Fatal("Source parameter for " + myTargetInfo->Param().Name() + " not found");
-		himan::Abort();
+		Abort();
 	}
 
 	if (myTargetInfo->Param().Name() == "RTOPLW-WM2")
@@ -603,16 +715,25 @@ shared_ptr<himan::info<double>> split_sum::FetchSourceData(shared_ptr<info<doubl
 		wantedLevel = level(kTopOfAtmosphere, 0, "TOP");
 	}
 
-	shared_ptr<info<double>> SumInfo = Fetch(wantedTime, wantedLevel, params, myTargetInfo->ForecastType());
+	for (auto& p : params)
+	{
+		auto& a = p.Aggregation();
+		if (a.Type() != kUnknownAggregationType && a.TimeDuration() == time_duration())
+		{
+			a.TimeDuration(wantedTime.Step());
+		}
+	}
+
+	auto SumInfo = Fetch(wantedTime, wantedLevel, params, myTargetInfo->ForecastType());
 
 	// If model does not provide data for timestep 0, emulate it
 	// by providing a zero-grid
 
 	if (!SumInfo && wantedTime.Step().Minutes() == 0)
 	{
-		SumInfo = make_shared<info<double>>(*myTargetInfo);
-		vector<forecast_time> times = {wantedTime};
-		vector<level> levels = {wantedLevel};
+		SumInfo = std::make_shared<info<double>>(*myTargetInfo);
+		std::vector<forecast_time> times = {wantedTime};
+		std::vector<level> levels = {wantedLevel};
 		params = {sourceParameters[myTargetInfo->Param().Name()][0]};
 
 		SumInfo->Set<param>(params);

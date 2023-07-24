@@ -30,7 +30,10 @@ Radiation
 * RNETLW-WM2: net long wave radiation accumulation (RADGLOA-JM2)
 * RADSW-WM2: short wave radiation accumulation (RADGLOA-JM2)
 
-Note! Due to historical reasons plugin also accepts the flux parameters as input parameters. In this case cache must be disabled. This behavior will be removed in future releases.
+General format
+
+Because user might want arbitrary aggregation periods to be used, it is also possible to give all the necessary 
+details in json-configuration. Details below.
 
 # Output parameters
 
@@ -86,7 +89,11 @@ Rates
 
 Powers (radiation)
 
-    power = (value - previous_value) / 3600
+    power = (value - previous_value) / (period_length * 3600)
+
+NB! All precipitation rates that are calculated for time periods of one hour or more, are
+marked with aggregation type 'accumulation'. Aggregation type 'average' is only used when
+time period is second, for radiations.
 
 # Per-plugin configuration options
 
@@ -130,3 +137,61 @@ Calculate power from radiation accumulation for global radiation, long wave radi
     "toplw" : true
     "netlw" : true
     "netsw" : true
+
+General configuration
+
+Here we define all the required components:
+* source_param: name of the source parametee
+* source_param_aggregation: aggregation type of the target parameter
+* target_param: name of the source parametee
+* target_param_aggregation: aggregation type of the target parameter
+* target_param_aggregation_period: aggregation period length for the target parameter
+* lower_limit: set hard coded lower limit, default: 0 (remove by setting value to "MISSING")
+* is_rate: define if this parameter is a rate (values are divided by the length of the time period), default: false
+* truncate_smaller_values: define if smaller values than this threshold are truncated to zero, default: "MISSING" (no truncation)
+* scale: apply scaling, default: 1.0
+* rate_resolution: if rates are calculated, define rate base time unit (second, minute, hour), default: hour
+
+Example: produce the same thing as shortcut option "rrr" (for meps producer):
+
+    "name" : "split_sum",
+    "source_param" : "RR-KGM2",
+    "source_param_aggregation" : "accumulation",
+    "target_param" : "RRR-KGM2",
+    "target_param_aggregation" : "accumulation",
+    "target_param_aggregation_period" : "01:00:00",
+    "lower_limit" : "0",
+    "is_rate" : true
+    "truncate_smaller_values" : "0.01" 
+    "scale" : "1.0"
+    "rate_resolution" : "hour"
+
+
+Example: produce the same thing as shortcut option "glob":
+
+    "name" : "split_sum",
+    "source_param" : "RADGLOBA-JM2",
+    "source_param_aggregation" : "accumulation",
+    "target_param" : "RADGLO-WM2",
+    "target_param_aggregation" : "average",
+    "lower_limit" : "0",
+    "is_rate" : true
+    "truncate_smaller_values" : "MISSING" 
+    "scale" : "1.0"
+    "rate_resolution" : "second"
+
+
+Example: produce net short wave radiation power from averages (powers) ie case icon:
+
+    "name" : "split_sum",
+    "source_param" : "RNETSW-WM2",
+    "source_param_aggregation" : "average",
+    "target_param" : "RNETSW-WM2",
+    "target_param_aggregation" : "average",
+    "lower_limit" : "MISSING",
+    "is_rate" : false
+    "truncate_smaller_values" : "MISSING" 
+    "scale" : "1.0"
+    "rate_resolution" : "hour"
+
+
