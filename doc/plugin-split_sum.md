@@ -1,6 +1,6 @@
 # Summary
 
-split_sum plugin is used to split cumulative parameters such as precipitation and radiation to rates and powers.
+split_sum plugin is used to split cumulative parameters such as precipitation and radiation to rates and fluxes.
 
 # Required source parameters
 
@@ -87,9 +87,9 @@ Rates
 
     rate = value - previous_value / period_length
 
-Powers (radiation)
+Fluxes (radiation)
 
-    power = (value - previous_value) / (period_length * 3600)
+    flux = (value - previous_value) / (period_length * 3600)
 
 NB! All precipitation rates that are calculated for time periods of one hour or more, are
 marked with aggregation type 'accumulation'. Aggregation type 'average' is only used when
@@ -128,7 +128,7 @@ Calculate graupel precipitation rate, solid precipitation rate and solid precipi
     "rrs3h" : true
     "rrs24h" : true
 
-Calculate power from radiation accumulation for global radiation, long wave radiation, short wave radiation, radiation at the top of atmosphere and net long wave radiation.
+Calculate flux from radiation accumulation for global radiation, long wave radiation, short wave radiation, radiation at the top of atmosphere and net long wave radiation.
 
     "glob" :true
     "globc" : true
@@ -181,7 +181,7 @@ Example: produce the same thing as shortcut option "glob":
     "rate_resolution" : "second"
 
 
-Example: produce net short wave radiation power from averages (powers) ie case icon:
+Example: produce net short wave radiation flux from other fluxes (averages) ie case icon:
 
     "name" : "split_sum",
     "source_param" : "RNETSW-WM2",
