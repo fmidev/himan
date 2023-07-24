@@ -76,12 +76,12 @@ split_sum::split_sum()
 	sourceParameters["RRS-24-MM"] = {param("RRS-KGM2")};
 
 	// Radiation
-	sourceParameters["RADGLO-WM2"] = {param("RADGLOA-JM2"), param("RADGLO-WM2")};
-	sourceParameters["RADLW-WM2"] = {param("RADLWA-JM2"), param("RADLW-WM2")};
-	sourceParameters["RTOPLW-WM2"] = {param("RTOPLWA-JM2"), param("RTOPLW-WM2")};
-	sourceParameters["RNETLW-WM2"] = {param("RNETLWA-JM2"), param("RNETLW-WM2")};
+	sourceParameters["RADGLO-WM2"] = {param("RADGLOA-JM2")};
+	sourceParameters["RADLW-WM2"] = {param("RADLWA-JM2")};
+	sourceParameters["RTOPLW-WM2"] = {param("RTOPLWA-JM2")};
+	sourceParameters["RNETLW-WM2"] = {param("RNETLWA-JM2")};
 	sourceParameters["RADSW-WM2"] = {param("RADSWA-JM2")};
-	sourceParameters["RNETSW-WM2"] = {param("RNETSWA-JM2"), param("RNETSW-WM2")};
+	sourceParameters["RNETSW-WM2"] = {param("RNETSWA-JM2")};
 	sourceParameters["RADGLOC-WM2"] = {param("RADGLOCA-JM2")};
 	sourceParameters["RADLWC-WM2"] = {param("RADLWCA-JM2")};
 }
