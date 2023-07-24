@@ -20,8 +20,8 @@ Source0: %{name}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: lua >= 5.3.0
-Requires: himan-plugins >= 21.8.16
-Requires: himan-lib >= 20.10.26
+Requires: himan-plugins >= 23.7.13
+Requires: himan-lib >= 23.7.13
 BuildRequires: make
 BuildRequires: redhat-rpm-config
 
