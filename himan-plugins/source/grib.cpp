@@ -957,9 +957,10 @@ void WriteTime(NFmiGribMessage& message, const forecast_time& ftime, const produ
 
 				message.ForecastTime(stepValue);  // start step
 
-				// for productDefinitionTemplateNumber 9,10,11,12,13,14,34,43,47,61,73,73
-				// grib2 has extra keys for "end of overall time interval"
-				if (templateNumber >= 9 && templateNumber <= 14)
+				// Following productDefinitionTemplateNumbers have extra keys for "end of overall time interval"
+				if ((templateNumber >= 8 && templateNumber <= 14) || templateNumber == 34 ||
+				    (templateNumber != 44 && (templateNumber >= 42 && templateNumber <= 47)) ||
+				    (templateNumber >= 61 && templateNumber <= 63) || templateNumber == 72 || templateNumber == 73)
 				{
 					raw_time endOfInterval = raw_time(ftime.ValidDateTime());
 
