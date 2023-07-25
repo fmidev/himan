@@ -543,6 +543,9 @@ class hitool : public auxiliary_plugin
 	void HeightUnit(HPParameterUnit theHeightUnit);
 	HPParameterUnit HeightUnit() const;
 
+	void LevelType(HPLevelType theType);
+	HPLevelType LevelType() const;
+
 	/**
 	 * @brief Determine minimum and maximum hybrid levels that can contain data for a specific height
 	 *
@@ -575,8 +578,7 @@ class hitool : public auxiliary_plugin
 	 */
 
 	template <typename T>
-	std::vector<T> VerticalExtremeValue(std::shared_ptr<modifier> mod, HPLevelType wantedLevelType,
-	                                    const param& wantedParam,
+	std::vector<T> VerticalExtremeValue(std::shared_ptr<modifier> mod, const param& wantedParam,
 	                                    const std::vector<T>& firstLevelValue = std::vector<T>(),
 	                                    const std::vector<T>& lastLevelValue = std::vector<T>(),
 	                                    const std::vector<T>& findValue = std::vector<T>()) const;
@@ -596,6 +598,7 @@ class hitool : public auxiliary_plugin
 	 */
 
 	HPParameterUnit itsHeightUnit;
+	mutable HPLevelType itsLevelType;
 };
 
 #ifndef HIMAN_AUXILIARY_INCLUDE

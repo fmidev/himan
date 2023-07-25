@@ -17,11 +17,12 @@ using namespace std;
 using namespace himan;
 using namespace himan::plugin;
 
-hitool::hitool() : itsTime(), itsForecastType(kDeterministic), itsHeightUnit(kM)
+hitool::hitool() : itsTime(), itsForecastType(kDeterministic), itsHeightUnit(kM), itsLevelType(kHybrid)
 {
 	itsLogger = logger("hitool");
 }
-hitool::hitool(shared_ptr<plugin_configuration> conf) : itsTime(), itsForecastType(kDeterministic), itsHeightUnit(kM)
+hitool::hitool(shared_ptr<plugin_configuration> conf)
+    : itsTime(), itsForecastType(kDeterministic), itsHeightUnit(kM), itsLevelType(kHybrid)
 {
 	itsLogger = logger("hitool");
 	itsConfiguration = conf;
@@ -146,6 +147,11 @@ pair<level, level> hitool::LevelForHeight(const producer& prod, double height) c
 			producerId = 265;
 			break;
 
+		case 170:
+		case 220:
+			producerId = 220;
+			break;
+
 		default:
 			itsLogger.Error("Unsupported producer for hitool::LevelForHeight(): " + to_string(prod.Id()));
 			break;
@@ -236,16 +242,23 @@ pair<level, level> hitool::LevelForHeight(const producer& prod, double height) c
 
 	ASSERT(newlowest >= newhighest);
 
-	return make_pair(level(kHybrid, static_cast<double>(newlowest)), level(kHybrid, static_cast<double>(newhighest)));
+	double l = static_cast<double>(newlowest);
+	double h = static_cast<double>(newhighest);
+
+	if (itsLevelType == kHybrid)
+	{
+		return make_pair(level(itsLevelType, l), level(itsLevelType, h));
+	}
+	else
+	{
+		return make_pair(level(itsLevelType, l, l + 1), level(itsLevelType, h, h + 1));
+	}
 }
 
 template <typename T>
-vector<T> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelType wantedLevelType, const param& wantedParam,
-                                       const vector<T>& lowerHeight, const vector<T>& upperHeight,
-                                       const vector<T>& findValue) const
+vector<T> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, const param& wantedParam, const vector<T>& lowerHeight,
+                                       const vector<T>& upperHeight, const vector<T>& findValue) const
 {
-	ASSERT(wantedLevelType == kHybrid);
-
 	mod->FindValue(util::Convert<T, double>(findValue));
 	mod->LowerHeight(util::Convert<T, double>(lowerHeight));
 	mod->UpperHeight(util::Convert<T, double>(upperHeight));
@@ -278,6 +291,14 @@ vector<T> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelType wan
 		{
 			itsLogger.Error("Unable to get hybrid level information from database");
 			throw;
+		}
+
+		try
+		{
+			itsLevelType = HPStringToLevelType.at(r->RadonDB().GetProducerMetaData(prod.Id(), "hybrid level type"));
+		}
+		catch (const exception& e)
+		{
 		}
 	}
 
@@ -380,7 +401,9 @@ vector<T> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelType wan
 	for (long levelValue = lowestHybridLevel; levelValue >= highestHybridLevel && !mod->CalculationFinished();
 	     levelValue--)
 	{
-		level currentLevel(kHybrid, static_cast<double>(levelValue), "HYBRID");
+		const double lv = static_cast<double>(levelValue);
+		level currentLevel =
+		    itsLevelType == kHybrid ? level(itsLevelType, lv, "HYBRID") : level(kGeneralizedVerticalLayer, lv, lv + 1);
 
 		auto data = GetData<double>(currentLevel, wantedParam, itsTime, itsForecastType);
 
@@ -415,12 +438,10 @@ vector<T> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, HPLevelType wan
 	return util::Convert<double, T>(ret);
 }
 
-template vector<double> hitool::VerticalExtremeValue<double>(shared_ptr<modifier>, HPLevelType, const param&,
-                                                             const vector<double>&, const vector<double>&,
-                                                             const vector<double>&) const;
-template vector<float> hitool::VerticalExtremeValue<float>(shared_ptr<modifier>, HPLevelType, const param&,
-                                                           const vector<float>&, const vector<float>&,
-                                                           const vector<float>&) const;
+template vector<double> hitool::VerticalExtremeValue<double>(shared_ptr<modifier>, const param&, const vector<double>&,
+                                                             const vector<double>&, const vector<double>&) const;
+template vector<float> hitool::VerticalExtremeValue<float>(shared_ptr<modifier>, const param&, const vector<float>&,
+                                                           const vector<float>&, const vector<float>&) const;
 
 template <typename T>
 pair<shared_ptr<info<T>>, shared_ptr<info<T>>> hitool::GetData(const level& wantedLevel, const param& wantedParam,
@@ -587,7 +608,7 @@ vector<T> hitool::VerticalHeight(const param& wantedParam, const vector<T>& firs
 	auto modifier = CreateModifier(kFindHeightModifier);
 	modifier->FindNth(findNth);
 
-	return VerticalExtremeValue<T>(modifier, kHybrid, wantedParam, firstLevelValue, lastLevelValue, findValue);
+	return VerticalExtremeValue<T>(modifier, wantedParam, firstLevelValue, lastLevelValue, findValue);
 }
 
 template vector<double> hitool::VerticalHeight<double>(const param&, const vector<double>&, const vector<double>&,
@@ -710,7 +731,7 @@ vector<T> hitool::VerticalHeightGreaterThan(const param& wantedParam, const vect
 	auto modifier = CreateModifier(kFindHeightGreaterThanModifier);
 	modifier->FindNth(findNth);
 
-	return VerticalExtremeValue<T>(modifier, kHybrid, wantedParam, firstLevelValue, lastLevelValue, findValue);
+	return VerticalExtremeValue<T>(modifier, wantedParam, firstLevelValue, lastLevelValue, findValue);
 }
 
 template vector<double> hitool::VerticalHeightGreaterThan<double>(const param&, const vector<double>&,
@@ -831,7 +852,7 @@ vector<T> hitool::VerticalHeightLessThan(const param& wantedParam, const vector<
 	auto modifier = CreateModifier(kFindHeightLessThanModifier);
 	modifier->FindNth(findNth);
 
-	return VerticalExtremeValue<T>(modifier, kHybrid, wantedParam, firstLevelValue, lastLevelValue, findValue);
+	return VerticalExtremeValue<T>(modifier, wantedParam, firstLevelValue, lastLevelValue, findValue);
 }
 
 template vector<double> hitool::VerticalHeightLessThan<double>(const param&, const vector<double>&,
@@ -906,8 +927,7 @@ vector<T> hitool::VerticalMinimum(const param& wantedParam, T lowerHeight, T upp
 	vector<T> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
 	vector<T> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
 
-	return VerticalExtremeValue<T>(CreateModifier(kMinimumModifier), kHybrid, wantedParam, firstLevelValue,
-	                               lastLevelValue);
+	return VerticalExtremeValue<T>(CreateModifier(kMinimumModifier), wantedParam, firstLevelValue, lastLevelValue);
 }
 
 template vector<double> hitool::VerticalMinimum<double>(const param&, double, double) const;
@@ -917,8 +937,7 @@ template <typename T>
 vector<T> hitool::VerticalMinimum(const param& wantedParam, const vector<T>& firstLevelValue,
                                   const vector<T>& lastLevelValue) const
 {
-	return VerticalExtremeValue<T>(CreateModifier(kMinimumModifier), kHybrid, wantedParam, firstLevelValue,
-	                               lastLevelValue);
+	return VerticalExtremeValue<T>(CreateModifier(kMinimumModifier), wantedParam, firstLevelValue, lastLevelValue);
 }
 
 template vector<double> hitool::VerticalMinimum<double>(const param&, const vector<double>&,
@@ -991,8 +1010,7 @@ vector<T> hitool::VerticalMaximum(const param& wantedParam, T lowerHeight, T upp
 	vector<T> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
 	vector<T> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
 
-	return VerticalExtremeValue<T>(CreateModifier(kMaximumModifier), kHybrid, wantedParam, firstLevelValue,
-	                               lastLevelValue);
+	return VerticalExtremeValue<T>(CreateModifier(kMaximumModifier), wantedParam, firstLevelValue, lastLevelValue);
 }
 
 template vector<double> hitool::VerticalMaximum<double>(const param&, double, double) const;
@@ -1002,8 +1020,7 @@ template <typename T>
 vector<T> hitool::VerticalMaximum(const param& wantedParam, const vector<T>& firstLevelValue,
                                   const vector<T>& lastLevelValue) const
 {
-	return VerticalExtremeValue<T>(CreateModifier(kMaximumModifier), kHybrid, wantedParam, firstLevelValue,
-	                               lastLevelValue);
+	return VerticalExtremeValue<T>(CreateModifier(kMaximumModifier), wantedParam, firstLevelValue, lastLevelValue);
 }
 
 template vector<double> hitool::VerticalMaximum<double>(const param&, const vector<double>&,
@@ -1074,8 +1091,7 @@ vector<T> hitool::VerticalAverage(const param& wantedParam, T lowerHeight, T upp
 	vector<T> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
 	vector<T> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
 
-	return VerticalExtremeValue<T>(CreateModifier(kAverageModifier), kHybrid, wantedParam, firstLevelValue,
-	                               lastLevelValue);
+	return VerticalExtremeValue<T>(CreateModifier(kAverageModifier), wantedParam, firstLevelValue, lastLevelValue);
 }
 
 template vector<double> hitool::VerticalAverage<double>(const param&, double, double) const;
@@ -1085,8 +1101,7 @@ template <typename T>
 vector<T> hitool::VerticalAverage(const param& wantedParam, const vector<T>& firstLevelValue,
                                   const vector<T>& lastLevelValue) const
 {
-	return VerticalExtremeValue<T>(CreateModifier(kAverageModifier), kHybrid, wantedParam, firstLevelValue,
-	                               lastLevelValue);
+	return VerticalExtremeValue<T>(CreateModifier(kAverageModifier), wantedParam, firstLevelValue, lastLevelValue);
 }
 
 template vector<double> hitool::VerticalAverage<double>(const param&, const vector<double>&,
@@ -1146,7 +1161,7 @@ vector<T> hitool::VerticalSum(const param& wantedParam, T firstLevelValue, T las
 	vector<T> firstLevelValueVector(itsConfiguration->BaseGrid()->Size(), firstLevelValue);
 	vector<T> lastLevelValueVector(itsConfiguration->BaseGrid()->Size(), lastLevelValue);
 
-	return VerticalExtremeValue<T>(CreateModifier(kAccumulationModifier), kHybrid, wantedParam, firstLevelValueVector,
+	return VerticalExtremeValue<T>(CreateModifier(kAccumulationModifier), wantedParam, firstLevelValueVector,
 	                               lastLevelValueVector);
 }
 
@@ -1169,8 +1184,7 @@ template <typename T>
 vector<T> hitool::VerticalSum(const param& wantedParam, const vector<T>& firstLevelValue,
                               const vector<T>& lastLevelValue) const
 {
-	return VerticalExtremeValue<T>(CreateModifier(kAccumulationModifier), kHybrid, wantedParam, firstLevelValue,
-	                               lastLevelValue);
+	return VerticalExtremeValue<T>(CreateModifier(kAccumulationModifier), wantedParam, firstLevelValue, lastLevelValue);
 }
 
 template vector<double> hitool::VerticalSum<double>(const param&, const vector<double>&, const vector<double>&) const;
@@ -1227,8 +1241,8 @@ template <typename T>
 vector<T> hitool::VerticalCount(const param& wantedParam, const vector<T>& firstLevelValue,
                                 const vector<T>& lastLevelValue, const vector<T>& findValue) const
 {
-	return VerticalExtremeValue<T>(CreateModifier(kCountModifier), kHybrid, wantedParam, firstLevelValue,
-	                               lastLevelValue, findValue);
+	return VerticalExtremeValue<T>(CreateModifier(kCountModifier), wantedParam, firstLevelValue, lastLevelValue,
+	                               findValue);
 }
 
 template vector<double> hitool::VerticalCount<double>(const param&, const vector<double>&, const vector<double>&,
@@ -1243,7 +1257,7 @@ vector<T> hitool::VerticalCount(const param& wantedParam, T firstLevelValue, T l
 	vector<T> lastLevelValueVector(itsConfiguration->BaseGrid()->Size(), lastLevelValue);
 	vector<T> findValueVector(itsConfiguration->BaseGrid()->Size(), findValue);
 
-	return VerticalExtremeValue<T>(CreateModifier(kCountModifier), kHybrid, wantedParam, firstLevelValueVector,
+	return VerticalExtremeValue<T>(CreateModifier(kCountModifier), wantedParam, firstLevelValueVector,
 	                               lastLevelValueVector, findValueVector);
 }
 
@@ -1325,7 +1339,7 @@ vector<T> hitool::VerticalValue(const param& wantedParam, T height) const
 {
 	vector<T> heightInfo(itsConfiguration->BaseGrid()->Size(), height);
 
-	return VerticalExtremeValue<T>(CreateModifier(kFindValueModifier), kHybrid, wantedParam, vector<T>(), vector<T>(),
+	return VerticalExtremeValue<T>(CreateModifier(kFindValueModifier), wantedParam, vector<T>(), vector<T>(),
 	                               heightInfo);
 }
 
@@ -1335,7 +1349,7 @@ template vector<float> hitool::VerticalValue<float>(const param&, float) const;
 template <typename T>
 vector<T> hitool::VerticalValue(const param& wantedParam, const vector<T>& heightInfo) const
 {
-	return VerticalExtremeValue<T>(CreateModifier(kFindValueModifier), kHybrid, wantedParam, vector<T>(), vector<T>(),
+	return VerticalExtremeValue<T>(CreateModifier(kFindValueModifier), wantedParam, vector<T>(), vector<T>(),
 	                               heightInfo);
 }
 
@@ -1406,7 +1420,7 @@ vector<T> hitool::PlusMinusArea(const param& wantedParam, T lowerHeight, T upper
 	vector<T> firstLevelValue(itsConfiguration->BaseGrid()->Size(), lowerHeight);
 	vector<T> lastLevelValue(itsConfiguration->BaseGrid()->Size(), upperHeight);
 
-	return VerticalExtremeValue<T>(CreateModifier(kPlusMinusAreaModifier), kHybrid, wantedParam, firstLevelValue,
+	return VerticalExtremeValue<T>(CreateModifier(kPlusMinusAreaModifier), wantedParam, firstLevelValue,
 	                               lastLevelValue);
 }
 
@@ -1417,7 +1431,7 @@ template <typename T>
 vector<T> hitool::PlusMinusArea(const param& wantedParam, const vector<T>& firstLevelValue,
                                 const vector<T>& lastLevelValue) const
 {
-	return VerticalExtremeValue<T>(CreateModifier(kPlusMinusAreaModifier), kHybrid, wantedParam, firstLevelValue,
+	return VerticalExtremeValue<T>(CreateModifier(kPlusMinusAreaModifier), wantedParam, firstLevelValue,
 	                               lastLevelValue);
 }
 
@@ -1450,4 +1464,19 @@ void hitool::HeightUnit(HPParameterUnit theHeightUnit)
 	}
 
 	itsHeightUnit = theHeightUnit;
+}
+
+HPLevelType hitool::LevelType() const
+{
+	return itsLevelType;
+}
+void hitool::LevelType(HPLevelType theType)
+{
+	if (theType != kHybrid && theType != kGeneralizedVerticalLayer)
+	{
+		itsLogger.Error("Invalid level type: " + HPLevelTypeToString.at(theType));
+		return;
+	}
+
+	itsLevelType = theType;
 }
