@@ -437,11 +437,18 @@ void split_sum::DoParam(std::shared_ptr<info<double>> myTargetInfo, param& par, 
 
 	for (const auto& p : targetParameters)
 	{
-		if (p.targetParam == par)
+		if (p.targetParam.Name() == par.Name())
 		{
 			pd = p;
 			break;
 		}
+	}
+
+	if (pd.targetParam.Name() == "XX")
+	{
+		itsLogger.Error(fmt::format("Given parameter {} aggregation {} not found from configuration", par.Name(),
+		                            static_cast<std::string>(par.Aggregation())));
+		return;
 	}
 
 	const std::string myParamName = myTargetInfo->Param().Name();
