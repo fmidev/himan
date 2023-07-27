@@ -48,7 +48,8 @@ transformer::transformer()
       itsDecimalPrecision(kHPMissingInt),
       itsDoLandscapeInterpolation(false),
       itsParamDefinitionFromConfig(false),
-      itsEnsemble(nullptr)
+      itsEnsemble(nullptr),
+      itsSourceForecastPeriod()
 {
 	itsCudaEnabledCalculation = true;
 
@@ -162,6 +163,19 @@ Fmi::CoordinateMatrix CreateCoordinateMatrix(const himan::regular_grid* from, co
 	}
 	return cm;
 }
+
+himan::forecast_time GetSourceTime(const himan::forecast_time& targetTime, const himan::time_duration& forecastPeriod)
+{
+	auto sourceTime = targetTime;
+
+	if (forecastPeriod.Empty() == false)
+	{
+		sourceTime = himan::forecast_time(targetTime.OriginDateTime(), targetTime.OriginDateTime() + forecastPeriod);
+	}
+
+	return sourceTime;
+}
+
 }  // namespace
 
 template <typename T>
@@ -178,6 +192,8 @@ shared_ptr<himan::info<T>> transformer::LandscapeInterpolation(const forecast_ti
 	auto cnf = make_shared<plugin_configuration>(*itsConfiguration);
 	const level zeroH(kHeight, 0);
 
+	const auto srctime = GetSourceTime(ftime, itsSourceForecastPeriod);
+
 	// Specify nearest interpolation for these, especially
 	// required for LC-N which is not a fraction between 0...1
 	// (as name suggests) but a code table.
@@ -185,9 +201,9 @@ shared_ptr<himan::info<T>> transformer::LandscapeInterpolation(const forecast_ti
 	const param lc("LC-N", -1, 1, 0, himan::kNearestPoint);
 	const param z("Z-M2S2", -1, 1, 0, himan::kNearestPoint);
 
-	auto source = f->Fetch<T>(cnf, ftime, lvl, par, ftype, false);
-	auto hgt = f->Fetch<float>(cnf, ftime, zeroH, z, ftype, false);
-	auto lr = f->Fetch<float>(cnf, ftime, zeroH, param("LR-KM"), ftype, false);
+	auto source = f->Fetch<T>(cnf, srctime, lvl, par, ftype, false);
+	auto hgt = f->Fetch<float>(cnf, srctime, zeroH, z, ftype, false);
+	auto lr = f->Fetch<float>(cnf, srctime, zeroH, param("LR-KM"), ftype, false);
 	// Model has land cover 0..1 for analysis time only (typically
 	auto mask = f->Fetch<float>(cnf, forecast_time(ftime.OriginDateTime(), ftime.OriginDateTime()), zeroH,
 	                            param("LC-0TO1"), ftype, false);
@@ -420,6 +436,11 @@ void transformer::SetAdditionalParameters()
 		itsLogger.Trace("source_levels not specified, set to target levels");
 	}
 
+	if (!itsConfiguration->GetValue("source_forecast_period").empty())
+	{
+		itsSourceForecastPeriod = time_duration(itsConfiguration->GetValue("source_forecast_period"));
+	}
+
 	if (!itsConfiguration->GetValue("target_forecast_type").empty())
 	{
 		targetForecastType = itsConfiguration->GetValue("target_forecast_type");
@@ -516,6 +537,11 @@ void transformer::SetAdditionalParameters()
 	if (itsDoTimeInterpolation && itsDoLevelInterpolation)
 	{
 		itsLogger.Fatal("Cannot have both 'time_interpolation' and 'vertical_interpolation' defined");
+		himan::Abort();
+	}
+	if (itsDoTimeInterpolation && itsSourceForecastPeriod.Empty() == false)
+	{
+		itsLogger.Fatal("Cannot have both 'time_interpolation' and 'source_forecast_period' defined");
 		himan::Abort();
 	}
 
@@ -688,8 +714,10 @@ void transformer::Rotate(shared_ptr<info<double>> myTargetInfo)
 		return;
 	}
 
-	auto a = Fetch(myTargetInfo->Time(), myTargetInfo->Level(), itsSourceParam[0], myTargetInfo->ForecastType(), false);
-	auto b = Fetch(myTargetInfo->Time(), myTargetInfo->Level(), itsSourceParam[1], myTargetInfo->ForecastType(), false);
+	const auto sourceTime = GetSourceTime(myTargetInfo->Time(), itsSourceForecastPeriod);
+
+	auto a = Fetch(sourceTime, myTargetInfo->Level(), itsSourceParam[0], myTargetInfo->ForecastType(), false);
+	auto b = Fetch(sourceTime, myTargetInfo->Level(), itsSourceParam[1], myTargetInfo->ForecastType(), false);
 
 	if (!a || !b)
 	{
@@ -825,7 +853,9 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 		return;
 	}
 
-	forecast_time forecastTime = myTargetInfo->Time();
+	const forecast_time forecastTime = myTargetInfo->Time();
+	const auto sourceTime = GetSourceTime(myTargetInfo->Time(), itsSourceForecastPeriod);
+
 	level forecastLevel = myTargetInfo->Level();
 
 	forecast_type forecastType;
@@ -863,12 +893,12 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 	{
 		if (itsDoLandscapeInterpolation)
 		{
-			sourceInfo = LandscapeInterpolation<double>(forecastTime, itsSourceLevels[myTargetInfo->Index<level>()],
+			sourceInfo = LandscapeInterpolation<double>(sourceTime, itsSourceLevels[myTargetInfo->Index<level>()],
 			                                            itsSourceParam[0], forecastType);
 		}
 		else
 		{
-			sourceInfo = f->Fetch(itsConfiguration, forecastTime, itsSourceLevels[myTargetInfo->Index<level>()],
+			sourceInfo = f->Fetch(itsConfiguration, sourceTime, itsSourceLevels[myTargetInfo->Index<level>()],
 			                      itsSourceParam[0], forecastType, itsConfiguration->UseCudaForPacking());
 		}
 	}
@@ -878,12 +908,12 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 		{
 			if (itsDoTimeInterpolation)
 			{
-				sourceInfo = InterpolateTime(forecastTime, itsSourceLevels[myTargetInfo->Index<level>()],
+				sourceInfo = InterpolateTime(sourceTime, itsSourceLevels[myTargetInfo->Index<level>()],
 				                             itsSourceParam[0], forecastType);
 			}
 			else if (itsDoLevelInterpolation)
 			{
-				sourceInfo = InterpolateLevel(forecastTime, itsSourceLevels[myTargetInfo->Index<level>()],
+				sourceInfo = InterpolateLevel(sourceTime, itsSourceLevels[myTargetInfo->Index<level>()],
 				                              itsSourceParam[0], forecastType);
 			}
 		}

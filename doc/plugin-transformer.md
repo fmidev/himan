@@ -143,3 +143,8 @@ named_ensemble: fetch ensemble configuration from database. Makes it easier to h
 
     "named_ensemble" : "MEPS_SINGLE_ENSEMBLE"
 
+source_forecast_period: specify a different leadtime for fetching data. Cannot be combined with 'time_interpolation'.
+
+    "source_forecast_period" : "00:00:00"
+
+

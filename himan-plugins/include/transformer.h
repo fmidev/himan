@@ -71,6 +71,7 @@ class transformer : public compiled_plugin, private compiled_plugin_base
 	bool itsDoLandscapeInterpolation;
 	bool itsParamDefinitionFromConfig;
 	std::unique_ptr<ensemble> itsEnsemble;
+	time_duration itsSourceForecastPeriod;
 };
 
 // the class factory
