@@ -1235,32 +1235,63 @@ void WriteLevel(NFmiGribMessage& message, const level& lev)
 		}
 	}
 
+	if (lev.Value() < 0)
+	{
+		logger logr("grib");
+		logr.Fatal("Cannot encode negative level value to grib");
+		himan::Abort();
+	}
+
+	auto [lev1s, lev1f] = util::GetScaledValue(lev.Value());
+	auto [lev2s, lev2f] = util::GetScaledValue(lev.Value2());
+
+	if (edition == 1)
+	{
+		// grib1 does not support 'scaleFactorOf...', so return
+		// the value to its scaled form
+		lev1s *= static_cast<long>(pow(10., static_cast<double>(-lev1f)));
+		lev2s *= static_cast<long>(pow(10., static_cast<double>(-lev2f)));
+	}
+
+	// Do not use scaled value if original value is small - just to be
+	// more backwards compatible (a number of tests would brake)
+	if (lev.Value() <= 1000.)
+	{
+		lev1s = static_cast<long>(lev.Value());
+		lev1f = 0L;
+	}
+	if (lev.Value2() <= 1000.)
+	{
+		lev2s = static_cast<long>(lev.Value2());
+		lev2f = 0L;
+	}
+
 	switch (lev.Type())
 	{
 		case kHeightLayer:
 		{
-			// TODO: fix these invalid scale factors
-			message.LevelValue(static_cast<long>(0.01 * lev.Value()), 100);    // top
-			message.LevelValue2(static_cast<long>(0.01 * lev.Value2()), 100);  // bottom
+			message.LevelValue(lev1s, lev1f);   // top
+			message.LevelValue2(lev2s, lev2f);  // bottom
 			break;
 		}
 		case kGroundDepth:
 		{
-			// Convert values from cm -> m with scale factor 2 (value = scaledValue * 10^-scaleFactor)
-			message.LevelValue(static_cast<long>(lev.Value()), 2);    // top (closer to ground surface)
-			message.LevelValue2(static_cast<long>(lev.Value2()), 2);  // bottom
+			// Convert values from cm -> m
+			message.LevelValue(lev1s, lev1f + 2);   // top (closer to ground surface)
+			message.LevelValue2(lev2s, lev2f + 2);  // bottom
 			break;
 		}
 		case kPressure:
 		{
-			// pressure in grib2 is pascals
-			double scale = 1;
 			if (edition == 2)
 			{
-				scale = 100;
+				// Convert values from hPa -> Pa
+				message.LevelValue(lev1s, lev1f - 2);
 			}
-
-			message.LevelValue(static_cast<long>(lev.Value() * scale));
+			else
+			{
+				message.LevelValue(lev1s, lev1f);
+			}
 			break;
 		}
 		case kGeneralizedVerticalLayer:
@@ -1273,11 +1304,11 @@ void WriteLevel(NFmiGribMessage& message, const level& lev)
 				message.LevelValue2(static_cast<long>(v2));
 			}
 
-			message.LevelValue(static_cast<long>(lev.Value()));
+			message.LevelValue(lev1s, lev1f);
 			break;
 		}
 		default:
-			message.LevelValue(static_cast<long>(lev.Value()));
+			message.LevelValue(lev1s, lev1f);
 			break;
 	}
 }

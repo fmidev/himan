@@ -1846,21 +1846,30 @@ std::unique_ptr<ensemble> util::CreateEnsembleFromConfiguration(const std::share
 
 std::pair<long, long> util::GetScaledValue(double v)
 {
+	std::pair<long, long> s(static_cast<long>(v), 0l);
+
+	if (v == 0.)
+	{
+		return s;
+	}
+
 	// Scale a float value so it can be encoded as a long
 	// For example, value=273.15 --> scaled_value=27315, scale_factor=-2
 	//              value=100    --> scaled_value=100, scale_factor=0
 
-	const double r = floor(std::fmod(v, 1.0));
-	std::pair<long, long> s(static_cast<long>(v), 0l);
+	const double r = std::fmod(fabs(v), 1.0);  // trailing decimals
 
-	if (r != v || v < 1.0)
+	// convert to string so that counting is possible
+	// note to future refactorers: __builtin_ctz() should not be used here
+
+	auto str = fmt::format("{}", v);
+
+	if (r > 0 || v < 1.0)
 	{
 		// value has decimals
-		// - convert to string
 		// - remove all trailing zeros
 		// - count number of digits
 		// --> that will be the scale factor
-		auto str = fmt::format("{}", v);
 		str.erase(str.find_last_not_of('0') + 1, std::string::npos);
 		const auto dot = str.find('.');
 		size_t num_digits = (dot == string::npos) ? 0 : str.length() - dot - 1;
@@ -1870,6 +1879,26 @@ std::pair<long, long> util::GetScaledValue(double v)
 		                                                     // because f.ex. 273.15 * pow(10, 2) = 27314.999999999996
 
 		s = make_pair(static_cast<long>(scaled), -num_digits);
+	}
+	else
+	{
+		// find the position of first zero that has no other digit behind it
+		auto last = str.find_last_not_of('0');
+
+		if (last == std::string::npos)
+		{
+			// No trailing zeros
+			return s;
+		}
+
+		unsigned lv = static_cast<unsigned>(v);
+
+		// count number of trailing zeros
+		size_t nz = str.size() - (last + 1);
+
+		lv /= static_cast<unsigned>(pow(10., static_cast<double>(nz)));
+
+		s = make_pair(lv, -nz);
 	}
 
 	return s;
