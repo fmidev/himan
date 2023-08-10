@@ -1916,6 +1916,7 @@ himan::earth_shape<double> ReadEarthShape(const NFmiGribMessage& msg)
 	// cannot trust this information too much :-(
 	// it is still kept here for now to maintain backwards compatibility
 	// with the data we produce currently
+	himan::logger logr("grib");
 
 	double a = himan::MissingDouble(), b = himan::MissingDouble();
 	if (msg.Edition() == 1)
@@ -2013,8 +2014,7 @@ himan::earth_shape<double> ReadEarthShape(const NFmiGribMessage& msg)
 				break;
 			default:
 			{
-				himan::logger log("grib");
-				log.Fatal("Unknown shape of earth in grib: " + to_string(flag));
+				logr.Fatal("Unknown shape of earth in grib: " + to_string(flag));
 				himan::Abort();
 			}
 		}
@@ -2024,10 +2024,12 @@ himan::earth_shape<double> ReadEarthShape(const NFmiGribMessage& msg)
 
 	if (a == 63712200. || b == 63712200. || a == 637120. || b == 637120.)
 	{
+		logr.Warning(fmt::format("Invalid earth shape found: a={}, b={}\n", a, b));
 		a = b = 6371220.;
 	}
 	else if (a == 63674700. || b == 63674700.)
 	{
+		logr.Warning(fmt::format("Invalid earth shape found: a={}, b={}\n", a, b));
 		a = b = 6367470.;
 	}
 
