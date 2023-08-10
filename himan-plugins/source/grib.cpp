@@ -1416,7 +1416,8 @@ int DetermineCorrectGribEdition(int edition, const himan::forecast_type& ftype, 
 
 	using namespace himan;
 
-	const bool lvlCondition = lvl.AB().size() > 255;
+	const bool lvlCondition = lvl.AB().size() > 255 || lvl.Value() > 65535 ||
+	                          (lvl.Value2() != kHPMissingValue && (lvl.Value() > 255 || lvl.Value2() > 255));
 	const bool ftypeCondition = (ftype.Type() != kAnalysis && ftype.Type() != kDeterministic);
 	const bool parCondition = par.ProcessingType().Type() != kUnknownProcessingType;
 	const bool timeCondition = ftime.Step().Minutes() % 60 != 0;
