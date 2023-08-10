@@ -193,6 +193,17 @@ void himan::plugin::windvector_cuda::RunCuda(std::shared_ptr<const plugin_config
 		CUDA_CHECK(cudaFree(d_dir));
 	}
 
+	if (itsTargetType == kGust)
+	{
+		// Check aggregation period from source file
+		const auto agg = UInfo->Param().Aggregation();
+		if (agg.Type() != kUnknownAggregationType)
+		{
+			auto& par = myTargetInfo->Param();
+			par.Aggregation(agg);
+		}
+	}
+
 	CUDA_CHECK(cudaStreamDestroy(stream));
 }
 
