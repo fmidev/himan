@@ -34,7 +34,6 @@ string kObsGeom = "SMARTMET2500";
 const blend_producer OBS(forecast_type(kDeterministic), 0, 1);
 const blend_producer MOS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kMos)), 240, 12);
 const blend_producer ECMWF(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kEcmwf)), 240, 12);
-const blend_producer HIRLAM(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kHirlam)), 54, 12);
 const blend_producer MEPS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kMeps)), 66, 12);
 const blend_producer GFS(forecast_type(kEpsPerturbation, static_cast<float>(blend_producer::kGfs)), 240, 12);
 
@@ -68,8 +67,6 @@ std::string IdToName(size_t id)
 			return "MOS";
 		case 2:
 			return "ECMWF";
-		case 3:
-			return "HIRLAM";
 		case 4:
 			return "MEPS";
 		case 5:
@@ -129,10 +126,6 @@ bool blend::ParseConfigurationOptions(const shared_ptr<const plugin_configuratio
 		if (prod == "ECG")
 		{
 			itsBlendProducer = ECMWF;
-		}
-		else if (prod == "HL2")
-		{
-			itsBlendProducer = HIRLAM;
 		}
 		else if (prod == "MEPS")
 		{
@@ -553,8 +546,8 @@ std::vector<shared_ptr<info<double>>> blend::FetchRawGrids(shared_ptr<info<doubl
 	const param& currentParam = targetInfo->Param();
 	const level& currentLevel = targetInfo->Level();
 
-	std::vector<forecast_type> types = {MOS.type, ECMWF.type, HIRLAM.type, MEPS.type, GFS.type};
-	std::vector<shared_ptr<info<double>>> ret(5);
+	std::vector<forecast_type> types = {MOS.type, ECMWF.type, MEPS.type, GFS.type};
+	std::vector<shared_ptr<info<double>>> ret(4);
 
 	for (size_t i = 0; i < types.size(); i++)
 	{
@@ -582,8 +575,8 @@ std::vector<shared_ptr<info<double>>> blend::FetchMAEAndBiasGrids(shared_ptr<inf
 
 	logger log(fmt::format("calculateBlend_Fetch{}Grids#{}", typestr, threadIdx));
 
-	std::vector<forecast_type> types = {MOS.type, ECMWF.type, HIRLAM.type, MEPS.type, GFS.type};
-	std::vector<shared_ptr<info<double>>> ret(5);
+	std::vector<forecast_type> types = {MOS.type, ECMWF.type, MEPS.type, GFS.type};
+	std::vector<shared_ptr<info<double>>> ret(4);
 
 	// try to fetch bias/mae fields from current day or day before that, ie
 	// newest or second newest

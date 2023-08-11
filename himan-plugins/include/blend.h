@@ -23,7 +23,6 @@ struct blend_producer
 		kNone = 0,
 		kMos = 1,
 		kEcmwf = 2,
-		kHirlam = 3,
 		kMeps = 4,
 		kGfs = 5
 	};
