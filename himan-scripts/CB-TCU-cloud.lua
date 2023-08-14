@@ -28,6 +28,10 @@ TtopMU = luatool:FetchWithType(current_time, MU, param("EL-K"), current_forecast
 --LFC probably better than LCL for elev conv. base
 TbaseMU = luatool:FetchWithType(current_time, MU, param("LFC-K"), current_forecast_type)
 
+if not EL500 or not LCLmu or not Ttop then
+  logger:Error("Some data not found")
+  return
+end
 
 NL = luatool:FetchWithType(current_time, HG, param("NL-PRCNT"), current_forecast_type)
 NM = luatool:FetchWithType(current_time, HG, param("NM-PRCNT"), current_forecast_type)
