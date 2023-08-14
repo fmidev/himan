@@ -2669,9 +2669,23 @@ himan::level ReadLevel(const search_options& opts, const producer& prod, const N
 	switch (levelType)
 	{
 		case himan::kHeightLayer:
-			l = level(levelType, static_cast<double>(message.LevelValue()), static_cast<double>(message.LevelValue2()));
-			break;
-
+		{
+			// backward compatibility; remove when height_layer is written to radon in grib2
+			if (message.Edition() == 1)
+			{
+				l = level(levelType, 100 * static_cast<double>(message.LevelValue()),
+				          100 * static_cast<double>(message.LevelValue2()));
+			}
+			else
+			{
+				const double v1 = static_cast<double>(message.LevelValue());
+				const double s1 = static_cast<double>(message.GetLongKey("scaleFactorOfFirstFixedSurface"));
+				const double v2 = static_cast<double>(message.LevelValue2());
+				const double s2 = static_cast<double>(message.GetLongKey("scaleFactorOfSecondFixedSurface"));
+				l = level(levelType, v1 * pow(10, -s1), v2 * pow(10, -s2));
+			}
+		}
+		break;
 		case himan::kGroundDepth:
 		case himan::kPressureDelta:
 		case kGeneralizedVerticalLayer:
@@ -2929,8 +2943,8 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 			                              static_cast<string>(options.param.Aggregation()),
 			                              static_cast<string>(p.Aggregation())));
 			itsLogger.Warning(fmt::format("Processing type requested: {} found: {}",
-			                  static_cast<string>(options.param.ProcessingType()),
-			                  static_cast<string>(p.ProcessingType())));
+			                              static_cast<string>(options.param.ProcessingType()),
+			                              static_cast<string>(p.ProcessingType())));
 			return false;
 		}
 	}
