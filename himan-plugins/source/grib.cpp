@@ -1425,7 +1425,7 @@ int DetermineCorrectGribEdition(int edition, const himan::forecast_type& ftype, 
 	if (lvlCondition || ftypeCondition || parCondition || timeCondition)
 	{
 		himan::logger lgr("grib");
-		lgr.Trace(
+		lgr.Debug(
 		    fmt::format("File type forced to GRIB2 (level value: {}, forecast type: {}, processing type: {}, step: {})",
 		                lvl.Value(), HPForecastTypeToString.at(ftype.Type()),
 		                HPProcessingTypeToString.at(par.ProcessingType().Type()), static_cast<string>(ftime.Step())));
@@ -2669,8 +2669,7 @@ himan::level ReadLevel(const search_options& opts, const producer& prod, const N
 	switch (levelType)
 	{
 		case himan::kHeightLayer:
-			l = level(levelType, 100 * static_cast<double>(message.LevelValue()),
-			          100 * static_cast<double>(message.LevelValue2()));
+			l = level(levelType, static_cast<double>(message.LevelValue()), static_cast<double>(message.LevelValue2()));
 			break;
 
 		case himan::kGroundDepth:
@@ -2924,12 +2923,14 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 		}
 		else if (validate)
 		{
-			itsLogger.Warning("Parameter does not match: " + options.param.Name() + " (requested) vs " + p.Name() +
-			                  " (found)");
-			itsLogger.Warning("Aggregation: " + static_cast<string>(options.param.Aggregation()) + " (requested) vs " +
-			                  static_cast<string>(p.Aggregation()) + " (found)");
-			itsLogger.Warning("Processing type: " + static_cast<string>(options.param.ProcessingType()) +
-			                  " (requested) vs " + static_cast<string>(p.ProcessingType()) + " (found)");
+			itsLogger.Warning(
+			    fmt::format("Parameter does not match, requested: {} found: {}", options.param.Name(), p.Name()));
+			itsLogger.Warning(fmt::format("Aggregation requested: {} found: {}",
+			                              static_cast<string>(options.param.Aggregation()),
+			                              static_cast<string>(p.Aggregation())));
+			itsLogger.Warning(fmt::format("Processing type requested: {} found: {}",
+			                  static_cast<string>(options.param.ProcessingType()),
+			                  static_cast<string>(p.ProcessingType())));
 			return false;
 		}
 	}
@@ -2946,18 +2947,18 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 		{
 			forecast_time optsTime(options.time);
 
-			itsLogger.Trace("Times do not match");
+			itsLogger.Warning("Times do not match");
 
 			if (optsTime.OriginDateTime() != t.OriginDateTime())
 			{
-				itsLogger.Warning("OriginDateTime: " + optsTime.OriginDateTime().String() + " (requested) vs " +
-				                  t.OriginDateTime().String() + " (found)");
+				itsLogger.Warning(fmt::format("Requested OriginDateTime: {} found: {}",
+				                              optsTime.OriginDateTime().String(), t.OriginDateTime().String()));
 			}
 
 			if (optsTime.ValidDateTime() != t.ValidDateTime())
 			{
-				itsLogger.Warning("ValidDateTime: " + optsTime.ValidDateTime().String() + " (requested) vs " +
-				                  t.ValidDateTime().String() + " (found)");
+				itsLogger.Warning(fmt::format("Requested ValidDateTime: {} found: {}",
+				                              optsTime.ValidDateTime().String(), t.ValidDateTime().String()));
 			}
 
 			return false;
@@ -2974,8 +2975,8 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 		}
 		else if (validate)
 		{
-			itsLogger.Warning("Level does not match");
-			itsLogger.Warning(static_cast<string>(options.level) + " vs " + static_cast<string>(l));
+			itsLogger.Warning(fmt::format("Level does not match, requested: {} found: {}",
+			                              static_cast<string>(options.level), static_cast<string>(l)));
 
 			return false;
 		}
@@ -2992,9 +2993,8 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 		}
 		else if (validate)
 		{
-			itsLogger.Warning("Forecast type does not match");
-			itsLogger.Warning(static_cast<string>(options.ftype) + " vs " + static_cast<string>(ty));
-
+			itsLogger.Warning(fmt::format("Forecast type does not match, requested: {} found: {}",
+			                              static_cast<string>(options.ftype), static_cast<string>(ty)));
 			return false;
 		}
 	}
