@@ -72,7 +72,7 @@ std::string IdToName(size_t id)
 		case 5:
 			return "GFS";
 		default:
-			return "UNKNOWN";
+			return fmt::format("UNKNOWN{}", id);
 	}
 }
 
@@ -558,7 +558,7 @@ std::vector<shared_ptr<info<double>>> blend::FetchRawGrids(shared_ptr<info<doubl
 
 	for (size_t i = 0; i < ret.size(); i++)
 	{
-		log.Info(fmt::format("{} RAW missing {}", IdToName(i + 1),
+		log.Info(fmt::format("{} RAW missing {}", IdToName(static_cast<int>(types[i].Value())),
 		                     (ret[i]) ? to_string(ret[i]->Data().MissingCount()) : "completely"));
 	}
 
@@ -603,7 +603,7 @@ std::vector<shared_ptr<info<double>>> blend::FetchMAEAndBiasGrids(shared_ptr<inf
 
 	for (size_t i = 0; i < ret.size(); i++)
 	{
-		log.Info(fmt::format("{} {} missing {}", IdToName(i + 1), typestr,
+		log.Info(fmt::format("{} {} missing {}", IdToName(static_cast<int>(types[i].Value())), typestr,
 		                     (ret[i]) ? to_string(ret[i]->Data().MissingCount()) : "completely"));
 	}
 
