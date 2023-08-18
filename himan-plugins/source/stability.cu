@@ -12,6 +12,8 @@
 
 using namespace himan;
 
+namespace hc = himan::cuda;
+
 himan::level himan::plugin::stability_cuda::itsBottomLevel;
 
 namespace STABILITY
@@ -24,7 +26,7 @@ std::pair<std::vector<double>, std::vector<double>> GetEBSLevelData(std::shared_
                                                                     std::shared_ptr<info<double>>& myTargetInfo,
                                                                     std::shared_ptr<plugin::hitool>& h,
                                                                     const level& sourceLevel, const level& targetLevel);
-}
+}  // namespace STABILITY
 
 template <typename T>
 __global__ void MultiplyWith(T* d_arr, T val, size_t N)
@@ -271,7 +273,7 @@ void CalculateBulkShear(std::shared_ptr<const plugin_configuration> conf, std::s
 
 		myTargetInfo->Find<param>(BSParam);
 		myTargetInfo->Find<level>(OneKMLevel);
-		cuda::ReleaseInfo(myTargetInfo, d_bs, stream);
+		hc::ReleaseInfo(myTargetInfo, d_bs, stream);
 
 		u = STABILITY::Shear(h, UParam, 10, 3000, N);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_u, (const void*)u.data(), memsize, cudaMemcpyHostToDevice, stream));
@@ -282,7 +284,7 @@ void CalculateBulkShear(std::shared_ptr<const plugin_configuration> conf, std::s
 		BulkShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u, d_v, d_bs, N);
 
 		myTargetInfo->Find<level>(ThreeKMLevel);
-		cuda::ReleaseInfo(myTargetInfo, d_bs, stream);
+		hc::ReleaseInfo(myTargetInfo, d_bs, stream);
 
 		u = STABILITY::Shear(h, UParam, 10, 6000, N);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_u, (const void*)u.data(), memsize, cudaMemcpyHostToDevice, stream));
@@ -293,7 +295,7 @@ void CalculateBulkShear(std::shared_ptr<const plugin_configuration> conf, std::s
 		BulkShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u, d_v, d_bs, N);
 
 		myTargetInfo->Find<level>(SixKMLevel);
-		cuda::ReleaseInfo(myTargetInfo, d_bs, stream);
+		hc::ReleaseInfo(myTargetInfo, d_bs, stream);
 
 		// Maximum effective bulk shear
 
@@ -309,7 +311,7 @@ void CalculateBulkShear(std::shared_ptr<const plugin_configuration> conf, std::s
 
 		myTargetInfo->Find<level>(MaxWindLevel);
 		myTargetInfo->Find<param>(EBSParam);
-		cuda::ReleaseInfo(myTargetInfo, d_bs, stream);
+		hc::ReleaseInfo(myTargetInfo, d_bs, stream);
 
 		// CAPE shear
 
@@ -323,8 +325,8 @@ void CalculateBulkShear(std::shared_ptr<const plugin_configuration> conf, std::s
 
 		BulkShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u, d_v, d_bs, N);
 
-		auto CAPEInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), MaxThetaELevel, param("CAPE-JKG"),
-		                                    myTargetInfo->ForecastType(), false);
+		auto CAPEInfo = hc::Fetch<double>(conf, myTargetInfo->Time(), MaxThetaELevel, param("CAPE-JKG"),
+		                                  myTargetInfo->ForecastType(), false);
 
 		if (!CAPEInfo)
 		{
@@ -332,13 +334,13 @@ void CalculateBulkShear(std::shared_ptr<const plugin_configuration> conf, std::s
 		}
 
 		CUDA_CHECK(cudaStreamSynchronize(stream));
-		cuda::PrepareInfo(CAPEInfo, d_u, stream, conf->UseCacheForReads());
+		hc::PrepareInfo(CAPEInfo, d_u, stream, conf->UseCacheForReads());
 
 		CAPEShearKernel<<<gridSize, blockSize, 0, stream>>>(d_u, d_bs, d_capes, N);
 
 		myTargetInfo->Find<param>(CAPESParam);
 		myTargetInfo->Find<level>(Height0Level);
-		cuda::ReleaseInfo(myTargetInfo, d_capes, stream);
+		hc::ReleaseInfo(myTargetInfo, d_capes, stream);
 	}
 	catch (HPExceptionType& e)
 	{
@@ -444,20 +446,20 @@ void StormRelativeHelicity(std::shared_ptr<const plugin_configuration> conf, std
 		InitializeArray<unsigned char>(d_found, 0, N, stream);
 
 		auto prevUInfo =
-		    cuda::Fetch<double>(conf, myTargetInfo->Time(), itsBottomLevel, UParam, myTargetInfo->ForecastType());
+		    hc::Fetch<double>(conf, myTargetInfo->Time(), itsBottomLevel, UParam, myTargetInfo->ForecastType());
 		auto prevVInfo =
-		    cuda::Fetch<double>(conf, myTargetInfo->Time(), itsBottomLevel, VParam, myTargetInfo->ForecastType());
+		    hc::Fetch<double>(conf, myTargetInfo->Time(), itsBottomLevel, VParam, myTargetInfo->ForecastType());
 		auto prevZInfo =
-		    cuda::Fetch<double>(conf, myTargetInfo->Time(), itsBottomLevel, HLParam, myTargetInfo->ForecastType());
+		    hc::Fetch<double>(conf, myTargetInfo->Time(), itsBottomLevel, HLParam, myTargetInfo->ForecastType());
 
 		if (!prevUInfo || !prevVInfo || !prevZInfo)
 		{
 			throw himan::kFileDataNotFound;
 		}
 
-		cuda::PrepareInfo(prevUInfo, d_pu, stream, conf->UseCacheForReads());
-		cuda::PrepareInfo(prevVInfo, d_pv, stream, conf->UseCacheForReads());
-		cuda::PrepareInfo(prevZInfo, d_pz, stream, conf->UseCacheForReads());
+		hc::PrepareInfo(prevUInfo, d_pu, stream, conf->UseCacheForReads());
+		hc::PrepareInfo(prevVInfo, d_pv, stream, conf->UseCacheForReads());
+		hc::PrepareInfo(prevZInfo, d_pz, stream, conf->UseCacheForReads());
 
 		thrust::device_ptr<unsigned char> dt_found = thrust::device_pointer_cast(d_found);
 
@@ -467,21 +469,18 @@ void StormRelativeHelicity(std::shared_ptr<const plugin_configuration> conf, std
 		{
 			curLevel.Value(curLevel.Value() - 1);
 
-			auto UInfo =
-			    cuda::Fetch<double>(conf, myTargetInfo->Time(), curLevel, UParam, myTargetInfo->ForecastType());
-			auto VInfo =
-			    cuda::Fetch<double>(conf, myTargetInfo->Time(), curLevel, VParam, myTargetInfo->ForecastType());
-			auto ZInfo =
-			    cuda::Fetch<double>(conf, myTargetInfo->Time(), curLevel, HLParam, myTargetInfo->ForecastType());
+			auto UInfo = hc::Fetch<double>(conf, myTargetInfo->Time(), curLevel, UParam, myTargetInfo->ForecastType());
+			auto VInfo = hc::Fetch<double>(conf, myTargetInfo->Time(), curLevel, VParam, myTargetInfo->ForecastType());
+			auto ZInfo = hc::Fetch<double>(conf, myTargetInfo->Time(), curLevel, HLParam, myTargetInfo->ForecastType());
 
 			if (!UInfo || !VInfo || !ZInfo)
 			{
 				break;
 			}
 
-			cuda::PrepareInfo(UInfo, d_u, stream, conf->UseCacheForReads());
-			cuda::PrepareInfo(VInfo, d_v, stream, conf->UseCacheForReads());
-			cuda::PrepareInfo(ZInfo, d_z, stream, conf->UseCacheForReads());
+			hc::PrepareInfo(UInfo, d_u, stream, conf->UseCacheForReads());
+			hc::PrepareInfo(VInfo, d_v, stream, conf->UseCacheForReads());
+			hc::PrepareInfo(ZInfo, d_z, stream, conf->UseCacheForReads());
 
 			StormRelativeHelicityKernel<<<gridSize, blockSize, 0, stream>>>(d_srh, d_u, d_v, d_pu, d_pv, d_uid, d_vid,
 			                                                                d_z, d_pz, d_found, stopHeight, N);
@@ -540,8 +539,8 @@ void EnergyHelicityIndex(std::shared_ptr<const plugin_configuration> conf, std::
 
 	try
 	{
-		auto CAPEInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), himan::level(himan::kHeightLayer, 500, 0),
-		                                    himan::param("CAPE-JKG"), myTargetInfo->ForecastType());
+		auto CAPEInfo = hc::Fetch<double>(conf, myTargetInfo->Time(), himan::level(himan::kHeightLayer, 500, 0),
+		                                  himan::param("CAPE-JKG"), myTargetInfo->ForecastType());
 
 		if (!CAPEInfo)
 		{
@@ -550,7 +549,7 @@ void EnergyHelicityIndex(std::shared_ptr<const plugin_configuration> conf, std::
 
 		CUDA_CHECK(cudaMalloc((void**)&d_cape, memsize));
 
-		cuda::PrepareInfo(CAPEInfo, d_cape, stream, conf->UseCacheForReads());
+		hc::PrepareInfo(CAPEInfo, d_cape, stream, conf->UseCacheForReads());
 
 		EHIKernel<<<gridSize, blockSize, 0, stream>>>(d_cape, d_srh, d_ehi, myTargetInfo->SizeLocations());
 
@@ -577,17 +576,17 @@ void CalculateHelicity(std::shared_ptr<const plugin_configuration> conf, std::sh
 	myTargetInfo->Find<level>(ThreeKMLevel);
 
 	StormRelativeHelicity(conf, myTargetInfo, h, d_srh, 3000, stream);
-	cuda::ReleaseInfo(myTargetInfo, d_srh, stream);
+	hc::ReleaseInfo(myTargetInfo, d_srh, stream);
 
 	myTargetInfo->Find<level>(OneKMLevel);
 
 	StormRelativeHelicity(conf, myTargetInfo, h, d_srh, 1000, stream);
-	cuda::ReleaseInfo(myTargetInfo, d_srh, stream);
+	hc::ReleaseInfo(myTargetInfo, d_srh, stream);
 
 	myTargetInfo->Find<param>(EHIParam);
 
 	EnergyHelicityIndex(conf, myTargetInfo, d_srh, d_ehi, stream);
-	cuda::ReleaseInfo(myTargetInfo, d_ehi, stream);
+	hc::ReleaseInfo(myTargetInfo, d_ehi, stream);
 
 	CUDA_CHECK(cudaFree(d_srh));
 	CUDA_CHECK(cudaFree(d_ehi));
@@ -606,8 +605,8 @@ void CalculateBulkRichardsonNumber(std::shared_ptr<const plugin_configuration> c
 
 	try
 	{
-		auto CAPEInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), himan::level(himan::kHeightLayer, 500, 0),
-		                                    himan::param("CAPE-JKG"), myTargetInfo->ForecastType());
+		auto CAPEInfo = hc::Fetch<double>(conf, myTargetInfo->Time(), himan::level(himan::kHeightLayer, 500, 0),
+		                                  himan::param("CAPE-JKG"), myTargetInfo->ForecastType());
 
 		if (!CAPEInfo)
 		{
@@ -620,7 +619,7 @@ void CalculateBulkRichardsonNumber(std::shared_ptr<const plugin_configuration> c
 		CUDA_CHECK(cudaMalloc((void**)&d_u05, memsize));
 		CUDA_CHECK(cudaMalloc((void**)&d_v05, memsize));
 
-		cuda::PrepareInfo(CAPEInfo, d_cape, stream, conf->UseCacheForReads());
+		hc::PrepareInfo(CAPEInfo, d_cape, stream, conf->UseCacheForReads());
 
 		auto U6 = h->VerticalAverage<double>(UParam, 10, 6000);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_u6, (const void*)U6.data(), memsize, cudaMemcpyHostToDevice, stream));
@@ -642,7 +641,7 @@ void CalculateBulkRichardsonNumber(std::shared_ptr<const plugin_configuration> c
 		myTargetInfo->Find<param>(BRNParam);
 		myTargetInfo->Find<level>(SixKMLevel);
 
-		cuda::ReleaseInfo(myTargetInfo, d_brn, stream);
+		hc::ReleaseInfo(myTargetInfo, d_brn, stream);
 
 		CUDA_CHECK(cudaFree(d_brn));
 		CUDA_CHECK(cudaFree(d_cape));
@@ -682,9 +681,9 @@ void CalculateLiftedIndices(std::shared_ptr<const plugin_configuration> conf,
 	double* d_t850 = 0;
 	double* d_td850 = 0;
 
-	auto T850Info = cuda::Fetch<double>(conf, myTargetInfo->Time(), P850Level, TParam, myTargetInfo->ForecastType());
-	auto T500Info = cuda::Fetch<double>(conf, myTargetInfo->Time(), P500Level, TParam, myTargetInfo->ForecastType());
-	auto TD850Info = cuda::Fetch<double>(conf, myTargetInfo->Time(), P850Level, TDParam, myTargetInfo->ForecastType());
+	auto T850Info = hc::Fetch<double>(conf, myTargetInfo->Time(), P850Level, TParam, myTargetInfo->ForecastType());
+	auto T500Info = hc::Fetch<double>(conf, myTargetInfo->Time(), P500Level, TParam, myTargetInfo->ForecastType());
+	auto TD850Info = hc::Fetch<double>(conf, myTargetInfo->Time(), P850Level, TDParam, myTargetInfo->ForecastType());
 
 	if (!T850Info || !T500Info || !TD850Info)
 	{
@@ -700,9 +699,9 @@ void CalculateLiftedIndices(std::shared_ptr<const plugin_configuration> conf,
 	CUDA_CHECK(cudaMalloc((void**)&d_td500m, memsize));
 	CUDA_CHECK(cudaMalloc((void**)&d_p500m, memsize));
 
-	cuda::PrepareInfo(T850Info, d_t850, stream, conf->UseCacheForReads());
-	cuda::PrepareInfo(T500Info, d_t500, stream, conf->UseCacheForReads());
-	cuda::PrepareInfo(TD850Info, d_td850, stream, conf->UseCacheForReads());
+	hc::PrepareInfo(T850Info, d_t850, stream, conf->UseCacheForReads());
+	hc::PrepareInfo(T500Info, d_t500, stream, conf->UseCacheForReads());
+	hc::PrepareInfo(TD850Info, d_td850, stream, conf->UseCacheForReads());
 
 	const size_t N = myTargetInfo->SizeLocations();
 
@@ -754,10 +753,10 @@ void CalculateLiftedIndices(std::shared_ptr<const plugin_configuration> conf,
 
 	myTargetInfo->Find<level>(Height0Level);
 	myTargetInfo->Find<param>(LIParam);
-	cuda::ReleaseInfo(myTargetInfo, d_li, stream);
+	hc::ReleaseInfo(myTargetInfo, d_li, stream);
 
 	myTargetInfo->Find<param>(SIParam);
-	cuda::ReleaseInfo(myTargetInfo, d_si, stream);
+	hc::ReleaseInfo(myTargetInfo, d_si, stream);
 
 	CUDA_CHECK(cudaFree(d_t850));
 	CUDA_CHECK(cudaFree(d_t500));
@@ -816,7 +815,7 @@ void CalculateThetaEIndices(std::shared_ptr<info<double>> myTargetInfo, std::sha
 
 		myTargetInfo->Find<level>(ThreeKMLevel);
 		myTargetInfo->Find<param>(TPEParam);
-		cuda::ReleaseInfo(myTargetInfo, d_thetaediff, stream);
+		hc::ReleaseInfo(myTargetInfo, d_thetaediff, stream);
 
 		CUDA_CHECK(cudaFree(d_tstop));
 		CUDA_CHECK(cudaFree(d_rhstop));
@@ -850,12 +849,12 @@ void CalculateConvectiveSeverityIndex(std::shared_ptr<const plugin_configuration
 
 	try
 	{
-		auto muCAPEInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), MaxThetaELevel, param("CAPE-JKG"),
-		                                      myTargetInfo->ForecastType());
-		auto muLPLInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), MaxThetaELevel, param("LPL-M"),
-		                                     myTargetInfo->ForecastType());
-		auto mlCAPEInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), HalfKMLevel, param("CAPE-JKG"),
-		                                      myTargetInfo->ForecastType());
+		auto muCAPEInfo = hc::Fetch<double>(conf, myTargetInfo->Time(), MaxThetaELevel, param("CAPE-JKG"),
+		                                    myTargetInfo->ForecastType());
+		auto muLPLInfo =
+		    hc::Fetch<double>(conf, myTargetInfo->Time(), MaxThetaELevel, param("LPL-M"), myTargetInfo->ForecastType());
+		auto mlCAPEInfo =
+		    hc::Fetch<double>(conf, myTargetInfo->Time(), HalfKMLevel, param("CAPE-JKG"), myTargetInfo->ForecastType());
 
 		if (!muCAPEInfo || !muLPLInfo || !mlCAPEInfo)
 		{
@@ -906,7 +905,7 @@ void CalculateConvectiveSeverityIndex(std::shared_ptr<const plugin_configuration
 		myTargetInfo->Find<param>(CSIParam);
 		myTargetInfo->Find<level>(Height0Level);
 
-		cuda::ReleaseInfo(myTargetInfo, d_csi, stream);
+		hc::ReleaseInfo(myTargetInfo, d_csi, stream);
 
 		CUDA_CHECK(cudaFree(d_mucape));
 		CUDA_CHECK(cudaFree(d_mlcape));
@@ -1001,4 +1000,4 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 
 	CUDA_CHECK(cudaStreamDestroy(stream));
 }
-}
+}  // namespace stabilitygpu

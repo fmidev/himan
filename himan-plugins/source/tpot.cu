@@ -48,6 +48,8 @@ namespace tpotgpu
 void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info<double>> myTargetInfo, bool theta,
              bool thetaw, bool thetae)
 {
+	namespace hc = himan::cuda;
+
 	cudaStream_t stream;
 	CUDA_CHECK(cudaStreamCreate(&stream));
 
@@ -68,8 +70,8 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 
 	std::shared_ptr<info<double>> TDInfo;
 
-	auto TInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("T-K"),
-	                                 myTargetInfo->ForecastType());
+	auto TInfo = hc::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("T-K"),
+	                               myTargetInfo->ForecastType());
 
 	if (!TInfo)
 	{
@@ -78,8 +80,8 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 
 	if (thetae || thetaw)
 	{
-		TDInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("TD-K"),
-		                             myTargetInfo->ForecastType());
+		TDInfo = hc::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("TD-K"),
+		                           myTargetInfo->ForecastType());
 
 		if (!TDInfo)
 		{
@@ -89,8 +91,8 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 
 	if (myTargetInfo->Level().Type() != kPressure)
 	{
-		auto PInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(),
-		                                 params{param("P-HPA"), param("P-PA")}, myTargetInfo->ForecastType());
+		auto PInfo = hc::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(),
+		                               params{param("P-HPA"), param("P-PA")}, myTargetInfo->ForecastType());
 
 		if (!PInfo)
 		{
@@ -98,7 +100,7 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 		}
 
 		CUDA_CHECK(cudaMalloc((void**)&d_p, memsize));
-		cuda::PrepareInfo(PInfo, d_p, stream, conf->UseCacheForReads());
+		hc::PrepareInfo(PInfo, d_p, stream, conf->UseCacheForReads());
 
 		if (PInfo->Param().Unit() == kHPa || PInfo->Param().Name() == "P-HPA")
 		{
@@ -115,12 +117,12 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 	}
 
 	CUDA_CHECK(cudaMalloc((void**)&d_t, memsize));
-	cuda::PrepareInfo(TInfo, d_t, stream, conf->UseCacheForReads());
+	hc::PrepareInfo(TInfo, d_t, stream, conf->UseCacheForReads());
 
 	if (TDInfo)
 	{
 		CUDA_CHECK(cudaMalloc((void**)&d_td, memsize));
-		cuda::PrepareInfo(TDInfo, d_td, stream, conf->UseCacheForReads());
+		hc::PrepareInfo(TDInfo, d_td, stream, conf->UseCacheForReads());
 	}
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
@@ -153,19 +155,19 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 	if (theta)
 	{
 		myTargetInfo->Find<param>(param("TP-K"));
-		cuda::ReleaseInfo(myTargetInfo, d_tp, stream);
+		hc::ReleaseInfo(myTargetInfo, d_tp, stream);
 	}
 
 	if (thetaw)
 	{
 		myTargetInfo->Find<param>(param("TPW-K"));
-		cuda::ReleaseInfo(myTargetInfo, d_tpw, stream);
+		hc::ReleaseInfo(myTargetInfo, d_tpw, stream);
 	}
 
 	if (thetae)
 	{
 		myTargetInfo->Find<param>(param("TPE-K"));
-		cuda::ReleaseInfo(myTargetInfo, d_tpe, stream);
+		hc::ReleaseInfo(myTargetInfo, d_tpe, stream);
 	}
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
@@ -185,4 +187,4 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 
 	CUDA_CHECK(cudaStreamDestroy(stream));
 }
-}
+}  // namespace tpotgpu

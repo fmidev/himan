@@ -40,7 +40,7 @@ env.Append(CCFLAGS = ['-Wno-sign-promo'])
 # Linker flags
 
 env.Append(LINKFLAGS = ['-rdynamic'])
-env.Append(NVCCFLAGS = ['--expt-extended-lambda', '--expt-relaxed-constexpr'])
+env.Append(NVCCFLAGS = ['--expt-extended-lambda', '--expt-relaxed-constexpr', ('-diag-suppress', '20012')])
 
 SConscript('SConscript', exports = ['env'], variant_dir=build_dir, duplicate=0)
 Clean('.', build_dir)

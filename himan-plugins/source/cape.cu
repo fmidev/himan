@@ -3,6 +3,8 @@
 #include <string>
 
 #include <cuda_runtime.h>
+#include <thrust/copy.h>
+#include <thrust/count.h>
 #include <thrust/device_vector.h>
 #include <thrust/system/cuda/execution_policy.h>
 
@@ -29,6 +31,7 @@
 using namespace himan;
 using namespace himan::numerical_functions;
 using namespace himan::plugin;
+namespace hc = himan::cuda;
 
 himan::level cape_cuda::itsBottomLevel;
 bool cape_cuda::itsUseVirtualTemperature;
@@ -873,9 +876,9 @@ cape_multi_source cape_cuda::GetNHighestThetaEValuesGPU(const std::shared_ptr<co
 	size_t K = 0;  // this will hold the number of levels read (should match what we calculated previously)
 	while (true)
 	{
-		auto TInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType());
-		auto RHInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, RHParam, myTargetInfo->ForecastType());
-		auto PInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType());
+		auto TInfo = hc::Fetch<float>(conf, myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType());
+		auto RHInfo = hc::Fetch<float>(conf, myTargetInfo->Time(), curLevel, RHParam, myTargetInfo->ForecastType());
+		auto PInfo = hc::Fetch<float>(conf, myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType());
 
 		if (!TInfo || !RHInfo || !PInfo)
 		{
@@ -897,9 +900,9 @@ cape_multi_source cape_cuda::GetNHighestThetaEValuesGPU(const std::shared_ptr<co
 			return cape_multi_source();
 		}
 
-		cuda::PrepareInfo(TInfo, d_T, stream, conf->UseCacheForReads());
-		cuda::PrepareInfo(PInfo, d_P, stream, conf->UseCacheForReads());
-		cuda::PrepareInfo(RHInfo, d_RH, stream, conf->UseCacheForReads());
+		hc::PrepareInfo(TInfo, d_T, stream, conf->UseCacheForReads());
+		hc::PrepareInfo(PInfo, d_P, stream, conf->UseCacheForReads());
+		hc::PrepareInfo(RHInfo, d_RH, stream, conf->UseCacheForReads());
 
 		ThetaEKernel<<<gridSize, blockSize, 0, stream>>>(d_T, d_RH, d_P, d_prevT, d_prevRH, d_prevP, d_ThetaE, d_TD,
 		                                                 d_found, N);
@@ -1057,18 +1060,18 @@ void GetSampledSourceDataGPU(std::shared_ptr<const himan::plugin_configuration> 
 
 	while (curLevel.Value() >= stopLevel.Value())
 	{
-		auto TInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType());
-		cuda::PrepareInfo(TInfo, d_arr, stream, conf->UseCacheForReads());
+		auto TInfo = hc::Fetch<float>(conf, myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType());
+		hc::PrepareInfo(TInfo, d_arr, stream, conf->UseCacheForReads());
 		CopyProfileValuesKernel<<<gridSize, blockSize, 0, stream>>>(d_Tsurface, d_temperatureProfile, d_arr, k,
 		                                                            levelCount, N);
 
-		auto PInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType());
-		cuda::PrepareInfo(PInfo, d_arr, stream, conf->UseCacheForReads());
+		auto PInfo = hc::Fetch<float>(conf, myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType());
+		hc::PrepareInfo(PInfo, d_arr, stream, conf->UseCacheForReads());
 		CopyProfileValuesKernel<<<gridSize, blockSize, 0, stream>>>(d_Psurface, d_pressureProfile, d_arr, k, levelCount,
 		                                                            N);
 
-		auto RHInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, RHParam, myTargetInfo->ForecastType());
-		cuda::PrepareInfo(RHInfo, d_arr, stream, conf->UseCacheForReads());
+		auto RHInfo = hc::Fetch<float>(conf, myTargetInfo->Time(), curLevel, RHParam, myTargetInfo->ForecastType());
+		hc::PrepareInfo(RHInfo, d_arr, stream, conf->UseCacheForReads());
 		CopyProfileValuesKernel<<<gridSize, blockSize, 0, stream>>>(d_RHsurface, d_humidityProfile, d_arr, k,
 		                                                            levelCount, N);
 
@@ -1112,10 +1115,9 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	h->Time(myTargetInfo->Time());
 	h->ForecastType(myTargetInfo->ForecastType());
 
-	auto PInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType(), false);
-	auto TInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType(), false);
-	auto RHInfo =
-	    cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, RHParam, myTargetInfo->ForecastType(), false);
+	auto PInfo = hc::Fetch<float>(conf, myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType(), false);
+	auto TInfo = hc::Fetch<float>(conf, myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType(), false);
+	auto RHInfo = hc::Fetch<float>(conf, myTargetInfo->Time(), curLevel, RHParam, myTargetInfo->ForecastType(), false);
 
 	if (!PInfo || PInfo->Data().MissingCount() == PInfo->SizeLocations() || !TInfo || !RHInfo)
 	{
@@ -1325,11 +1327,11 @@ std::vector<std::pair<std::vector<float>, std::vector<float>>> cape_cuda::GetLFC
 
 	level curLevel = levels.first;
 
-	auto prevPenvInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType());
-	auto prevTenvInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType());
+	auto prevPenvInfo = hc::Fetch<float>(conf, myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType());
+	auto prevTenvInfo = hc::Fetch<float>(conf, myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType());
 
-	cuda::PrepareInfo(prevTenvInfo, d_prevTenv, stream, conf->UseCacheForReads());
-	cuda::PrepareInfo(prevPenvInfo, d_prevPenv, stream, conf->UseCacheForReads());
+	hc::PrepareInfo(prevTenvInfo, d_prevTenv, stream, conf->UseCacheForReads());
+	hc::PrepareInfo(prevPenvInfo, d_prevPenv, stream, conf->UseCacheForReads());
 
 	if (cape_cuda::itsUseVirtualTemperature)
 	{
@@ -1366,11 +1368,11 @@ std::vector<std::pair<std::vector<float>, std::vector<float>>> cape_cuda::GetLFC
 	while (curLevel.Value() > stopLevel.first.Value())
 	{
 		// Get environment temperature and pressure values for this level
-		auto TenvInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType());
-		auto PenvInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType());
+		auto TenvInfo = hc::Fetch<float>(conf, myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType());
+		auto PenvInfo = hc::Fetch<float>(conf, myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType());
 
-		cuda::PrepareInfo(PenvInfo, d_Penv, stream, conf->UseCacheForReads());
-		cuda::PrepareInfo(TenvInfo, d_Tenv, stream, conf->UseCacheForReads());
+		hc::PrepareInfo(PenvInfo, d_Penv, stream, conf->UseCacheForReads());
+		hc::PrepareInfo(TenvInfo, d_Tenv, stream, conf->UseCacheForReads());
 
 		if (cape_cuda::itsUseVirtualTemperature)
 		{
@@ -1461,9 +1463,9 @@ std::vector<float> cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_confi
 
 	level curLevel = itsBottomLevel;
 
-	auto prevZenvInfo = cuda::Fetch<float>(conf, ftime, curLevel, ZParam, ftype);
-	auto prevTenvInfo = cuda::Fetch<float>(conf, ftime, curLevel, TParam, ftype);
-	auto prevPenvInfo = cuda::Fetch<float>(conf, ftime, curLevel, PParam, ftype);
+	auto prevZenvInfo = hc::Fetch<float>(conf, ftime, curLevel, ZParam, ftype);
+	auto prevTenvInfo = hc::Fetch<float>(conf, ftime, curLevel, TParam, ftype);
+	auto prevPenvInfo = hc::Fetch<float>(conf, ftime, curLevel, PParam, ftype);
 
 	const size_t N = myTargetInfo->Data().Size();
 	const int blockSize = 256;
@@ -1505,9 +1507,9 @@ std::vector<float> cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_confi
 
 	CUDA_CHECK(cudaMalloc((unsigned char**)&d_found, N * sizeof(unsigned char)));
 
-	cuda::PrepareInfo(prevZenvInfo, d_prevZenv, stream, conf->UseCacheForReads());
-	cuda::PrepareInfo(prevTenvInfo, d_prevTenv, stream, conf->UseCacheForReads());
-	cuda::PrepareInfo(prevPenvInfo, d_prevPenv, stream, conf->UseCacheForReads());
+	hc::PrepareInfo(prevZenvInfo, d_prevZenv, stream, conf->UseCacheForReads());
+	hc::PrepareInfo(prevTenvInfo, d_prevTenv, stream, conf->UseCacheForReads());
+	hc::PrepareInfo(prevPenvInfo, d_prevPenv, stream, conf->UseCacheForReads());
 
 	InitializeArray<float>(d_cinh, 0., N, stream);
 	InitializeArray<float>(d_Tparcel, himan::MissingFloat(), N, stream);
@@ -1543,13 +1545,13 @@ std::vector<float> cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_confi
 
 	while (curLevel.Value() > hPa100.first.Value())
 	{
-		auto ZenvInfo = cuda::Fetch<float>(conf, ftime, curLevel, ZParam, ftype);
-		auto TenvInfo = cuda::Fetch<float>(conf, ftime, curLevel, TParam, ftype);
-		auto PenvInfo = cuda::Fetch<float>(conf, ftime, curLevel, PParam, ftype);
+		auto ZenvInfo = hc::Fetch<float>(conf, ftime, curLevel, ZParam, ftype);
+		auto TenvInfo = hc::Fetch<float>(conf, ftime, curLevel, TParam, ftype);
+		auto PenvInfo = hc::Fetch<float>(conf, ftime, curLevel, PParam, ftype);
 
-		cuda::PrepareInfo(ZenvInfo, d_Zenv, stream, conf->UseCacheForReads());
-		cuda::PrepareInfo(PenvInfo, d_Penv, stream, conf->UseCacheForReads());
-		cuda::PrepareInfo(TenvInfo, d_Tenv, stream, conf->UseCacheForReads());
+		hc::PrepareInfo(ZenvInfo, d_Zenv, stream, conf->UseCacheForReads());
+		hc::PrepareInfo(PenvInfo, d_Penv, stream, conf->UseCacheForReads());
+		hc::PrepareInfo(TenvInfo, d_Tenv, stream, conf->UseCacheForReads());
 
 		LiftLCLKernel<<<gridSize, blockSize, 0, stream>>>(d_Psource, d_Tsource, d_PLCL, d_Penv, d_Tparcel, N);
 
@@ -1749,14 +1751,14 @@ CAPEdata cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>
 
 	level curLevel = levels.first;
 
-	auto prevZenvInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, ZParam, myTargetInfo->ForecastType());
-	auto prevTenvInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType());
-	auto prevPenvInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType());
+	auto prevZenvInfo = hc::Fetch<float>(conf, myTargetInfo->Time(), curLevel, ZParam, myTargetInfo->ForecastType());
+	auto prevTenvInfo = hc::Fetch<float>(conf, myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType());
+	auto prevPenvInfo = hc::Fetch<float>(conf, myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType());
 
 	// "orig" variables are just as a temporary placeholder
-	cuda::PrepareInfo(prevZenvInfo, d_origZenv, stream, conf->UseCacheForReads());
-	cuda::PrepareInfo(prevPenvInfo, d_origPenv, stream, conf->UseCacheForReads());
-	cuda::PrepareInfo(prevTenvInfo, d_origTenv, stream, conf->UseCacheForReads());
+	hc::PrepareInfo(prevZenvInfo, d_origZenv, stream, conf->UseCacheForReads());
+	hc::PrepareInfo(prevPenvInfo, d_origPenv, stream, conf->UseCacheForReads());
+	hc::PrepareInfo(prevTenvInfo, d_origTenv, stream, conf->UseCacheForReads());
 
 	thrust::copy_if(thrust::cuda::par.on(stream), d_origZenv, d_origZenv + NB, d_bitmap, d_prevZenv, bitmapHot);
 	thrust::copy_if(thrust::cuda::par.on(stream), d_origPenv, d_origPenv + NB, d_bitmap, d_prevPenv, bitmapHot);
@@ -1778,18 +1780,18 @@ CAPEdata cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>
 
 	while (curLevel.Value() > stopLevel.first.Value())
 	{
-		PenvInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType());
-		TenvInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType());
-		ZenvInfo = cuda::Fetch<float>(conf, myTargetInfo->Time(), curLevel, ZParam, myTargetInfo->ForecastType());
+		PenvInfo = hc::Fetch<float>(conf, myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType());
+		TenvInfo = hc::Fetch<float>(conf, myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType());
+		ZenvInfo = hc::Fetch<float>(conf, myTargetInfo->Time(), curLevel, ZParam, myTargetInfo->ForecastType());
 
 		if (!PenvInfo || !TenvInfo || !ZenvInfo)
 		{
 			break;
 		}
 
-		cuda::PrepareInfo<float>(ZenvInfo, d_origZenv, stream, conf->UseCacheForReads());
-		cuda::PrepareInfo<float>(PenvInfo, d_origPenv, stream, conf->UseCacheForReads());
-		cuda::PrepareInfo<float>(TenvInfo, d_origTenv, stream, conf->UseCacheForReads());
+		hc::PrepareInfo<float>(ZenvInfo, d_origZenv, stream, conf->UseCacheForReads());
+		hc::PrepareInfo<float>(PenvInfo, d_origPenv, stream, conf->UseCacheForReads());
+		hc::PrepareInfo<float>(TenvInfo, d_origTenv, stream, conf->UseCacheForReads());
 
 		thrust::copy_if(thrust::cuda::par.on(stream), d_origZenv, d_origZenv + NB, d_bitmap, d_Zenv, bitmapHot);
 		thrust::copy_if(thrust::cuda::par.on(stream), d_origPenv, d_origPenv + NB, d_bitmap, d_Penv, bitmapHot);
