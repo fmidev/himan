@@ -1,5 +1,6 @@
 import os
 import platform
+import re
 
 SConscript("scons_common.py")
 
@@ -40,7 +41,15 @@ env.Append(CCFLAGS = ['-Wno-sign-promo'])
 # Linker flags
 
 env.Append(LINKFLAGS = ['-rdynamic'])
-env.Append(NVCCFLAGS = ['--expt-extended-lambda', '--expt-relaxed-constexpr', ('-diag-suppress', '20012')])
+env.Append(NVCCFLAGS = ['--expt-extended-lambda', '--expt-relaxed-constexpr'])
+
+# check nvcc version
+
+nvcc_ver = os.popen('nvcc -V').read()
+m = re.findall("release (\d*)", nvcc_ver)
+
+if len(m) > 0 and m[0] == '12':
+    env.Append(NVCCFLAGS = [('-diag-suppress', '20012')])
 
 SConscript('SConscript', exports = ['env'], variant_dir=build_dir, duplicate=0)
 Clean('.', build_dir)
