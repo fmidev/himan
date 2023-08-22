@@ -464,6 +464,31 @@ Example:
 
     "filename_template" : "fc{analysis_time:%Y%m%d%H%M}_{step:%03h}_{level_name}.{file_type}"
 
+Default formatters for different keys are:
+
+```
+    case Component::kAnalysisTime:
+    case Component::kForecastTime:
+        return "%Y%m%d%H%M";
+    case Component::kStep:
+    case Component::kAggregationDuration:
+        return "%Hh%Mm";
+    case Component::kProcessingTypeValue:
+    case Component::kProcessingTypeValue2:
+    case Component::kLevelValue:
+    case Component::kLevelValue2:
+    case Component::kForecastTypeValue:
+        return "%.0f";
+    case Component::kForecastTypeId:
+    case Component::kProducerId:
+    case Component::kGridNi:
+    case Component::kGridNj:
+        return "%d";
+    case Component::kWallTime:
+        return "%Y%m%d%H%M%S";
+```
+
+
 Himan can pack data with a few different methods. Packing is controlled with key `packing_type`.
 
     "file_packing_type" : "simple_packing" | "jpeg_packing" | "ccsds_packing"

@@ -21,10 +21,10 @@
 #include "time_ensemble.h"
 #include "transverse_mercator_grid.h"
 #include <boost/algorithm/string.hpp>
-#include <boost/format.hpp>
 #include <boost/math/constants/constants.hpp>
 #include <boost/regex.hpp>
 #include <filesystem>
+#include <fmt/printf.h>
 #include <iomanip>
 #include <ogr_spatialref.h>
 #include <sstream>
@@ -62,7 +62,7 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 	// {aggregation_duration:FORMAT_SPECIFIER} - aggregation duration
 	// {processing_type_name}                  - processing type name
 	// {processing_type_value:FORMAT_SPECIFIER}- processing type value
-	// {processing_type_value:FORMAT_SPECIFIER}- second possible processing type value
+	// {processing_type_value2:FORMAT_SPECIFIER}- second possible processing type value
 	// {level_name }                           - level name
 	// {level_value:FORMAT_SPECIFIER}          - level value
 	// {level_value2:FORMAT_SPECIFIER}         - second possible level value
@@ -72,6 +72,8 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 	// {producer_id}                           - radon producer id
 	// {file_type}                             - file type extension, like grib, grib2, fqd, ...
 	// {wall_time:FORMAT_SPECIFIER}	           - current wall clock time
+	// {masala_base}                           - environment variable MASALA_PROCESSED_DATA_BASE or
+	//                                           MASALA_REF_BASE, depending on program name
 
 	enum class Component
 	{
@@ -98,6 +100,61 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 		kProducerId,
 		kFileType,
 		kWallTime
+	};
+
+	auto ComponentToString = [](Component c) -> string
+	{
+		switch (c)
+		{
+			case Component::kMasalaBase:
+				return "masala_base";
+			case Component::kAnalysisTime:
+				return "analysis_time";
+			case Component::kForecastTime:
+				return "forecast_time";
+			case Component::kStep:
+				return "step";
+			case Component::kGeometryName:
+				return "geom_name";
+			case Component::kGridName:
+				return "grid_name";
+			case Component::kGridNi:
+				return "ni";
+			case Component::kGridNj:
+				return "nj";
+			case Component::kParamName:
+				return "param_name";
+			case Component::kAggregationName:
+				return "aggregation_name";
+			case Component::kAggregationDuration:
+				return "aggregation_duration";
+			case Component::kProcessingTypeName:
+				return "processing_type_name";
+			case Component::kProcessingTypeValue:
+				return "processing_type_value";
+			case Component::kProcessingTypeValue2:
+				return "processing_type_value2";
+			case Component::kLevelName:
+				return "level_name";
+			case Component::kLevelValue:
+				return "level_value";
+			case Component::kLevelValue2:
+				return "level_value2";
+			case Component::kForecastTypeId:
+				return "forecast_type_id";
+			case Component::kForecastTypeValue:
+				return "forecast_type_value";
+			case Component::kForecastTypeName:
+				return "forecast_type_name";
+			case Component::kFileType:
+				return "file_type";
+			case Component::kProducerId:
+				return "producer_id";
+			case Component::kWallTime:
+				return "wall_time";
+			default:
+				return "unknown";
+		}
 	};
 
 	auto ForecastTypeToShortString = [](HPForecastType type) -> string
@@ -156,8 +213,9 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 			case Component::kProcessingTypeValue2:
 			case Component::kLevelValue:
 			case Component::kLevelValue2:
-			case Component::kForecastTypeId:
 			case Component::kForecastTypeValue:
+				return "%.0f";
+			case Component::kForecastTypeId:
 			case Component::kProducerId:
 			case Component::kGridNi:
 			case Component::kGridNj:
@@ -203,104 +261,112 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 
 		while (boost::regex_search(filename, what, re))
 		{
-			string fmt = DefaultFormat(k);
+			string mask = DefaultFormat(k);
 
 			if (what.size() == 3 && string(what[2]).empty() == false)
 			{
-				fmt = string(what[2]);
-				fmt.erase(fmt.begin());  // remove starting ':'
+				mask = string(what[2]);
+				mask.erase(mask.begin());  // remove starting ':'
 			}
 
 			string replacement;
-
-			switch (k)
+			try
 			{
-				case Component::kMasalaBase:
-					replacement = GetMasalaBase(conf.ProgramName());
-					break;
-				case Component::kAnalysisTime:
-					replacement = ftime.OriginDateTime().String(fmt);
-					break;
-				case Component::kForecastTime:
-					replacement = ftime.ValidDateTime().String(fmt);
-					break;
-				case Component::kStep:
-					replacement = ftime.Step().String(fmt);
-					break;
-				case Component::kGeometryName:
-					replacement = conf.TargetGeomName();
-					break;
-				case Component::kGridName:
-					replacement = HPGridTypeToString.at(info.Grid()->Type());
-					break;
-				case Component::kGridNi:
+				switch (k)
 				{
-					if (info.Grid()->Class() == kRegularGrid)
+					case Component::kMasalaBase:
+						replacement = GetMasalaBase(conf.ProgramName());
+						break;
+					case Component::kAnalysisTime:
+						replacement = ftime.OriginDateTime().String(mask);
+						break;
+					case Component::kForecastTime:
+						replacement = ftime.ValidDateTime().String(mask);
+						break;
+					case Component::kStep:
+						replacement = ftime.Step().String(mask);
+						break;
+					case Component::kGeometryName:
+						replacement = conf.TargetGeomName();
+						break;
+					case Component::kGridName:
+						replacement = HPGridTypeToString.at(info.Grid()->Type());
+						break;
+					case Component::kGridNi:
 					{
-						replacement =
-						    (boost::format(fmt) % (dynamic_pointer_cast<regular_grid>(info.Grid())->Ni())).str();
+						if (info.Grid()->Class() == kRegularGrid)
+						{
+							replacement = fmt::sprintf(mask, dynamic_pointer_cast<regular_grid>(info.Grid())->Ni());
+						}
+						break;
 					}
-					break;
-				}
-				case Component::kGridNj:
-				{
-					if (info.Grid()->Class() == kRegularGrid)
+					case Component::kGridNj:
 					{
-						replacement =
-						    (boost::format(fmt) % (dynamic_pointer_cast<regular_grid>(info.Grid())->Nj())).str();
+						if (info.Grid()->Class() == kRegularGrid)
+						{
+							replacement = fmt::sprintf(mask, dynamic_pointer_cast<regular_grid>(info.Grid())->Nj());
+						}
+						break;
 					}
-					break;
+					case Component::kParamName:
+						replacement = par.Name();
+						break;
+					case Component::kAggregationName:
+						replacement = HPAggregationTypeToString.at(par.Aggregation().Type());
+						break;
+					case Component::kAggregationDuration:
+						replacement = par.Aggregation().TimeDuration().String(mask);
+						break;
+					case Component::kProcessingTypeName:
+						replacement = HPProcessingTypeToString.at(par.ProcessingType().Type());
+						break;
+					case Component::kProcessingTypeValue:
+						replacement = fmt::sprintf(mask, par.ProcessingType().Value());
+						break;
+					case Component::kProcessingTypeValue2:
+						replacement = fmt::sprintf(mask, par.ProcessingType().Value2());
+						break;
+					case Component::kLevelName:
+						replacement = HPLevelTypeToString.at(lvl.Type());
+						break;
+					case Component::kLevelValue:
+						replacement = fmt::sprintf(mask, lvl.Value());
+						break;
+					case Component::kLevelValue2:
+						replacement = fmt::sprintf(mask, lvl.Value2());
+						break;
+					case Component::kForecastTypeId:
+						replacement = fmt::sprintf(mask, ftype.Type());
+						break;
+					case Component::kForecastTypeName:
+						replacement = ForecastTypeToShortString(ftype.Type());
+						break;
+					case Component::kForecastTypeValue:
+						replacement = fmt::sprintf(mask, ftype.Value());
+						break;
+					case Component::kProducerId:
+						replacement = fmt::sprintf(mask, prod.Id());
+						break;
+					case Component::kFileType:
+						replacement = FileTypeToShortString(conf.OutputFileType());
+						break;
+					case Component::kWallTime:
+						replacement = raw_time::Now().String(mask);
+						break;
+					default:
+						break;
 				}
-				case Component::kParamName:
-					replacement = par.Name();
-					break;
-				case Component::kAggregationName:
-					replacement = HPAggregationTypeToString.at(par.Aggregation().Type());
-					break;
-				case Component::kAggregationDuration:
-					replacement = par.Aggregation().TimeDuration().String(fmt);
-					break;
-				case Component::kProcessingTypeName:
-					replacement = HPProcessingTypeToString.at(par.ProcessingType().Type());
-					break;
-				case Component::kProcessingTypeValue:
-					replacement = (boost::format(fmt) % par.ProcessingType().Value()).str();
-					break;
-				case Component::kProcessingTypeValue2:
-					replacement = (boost::format(fmt) % par.ProcessingType().Value2()).str();
-					break;
-				case Component::kLevelName:
-					replacement = HPLevelTypeToString.at(lvl.Type());
-					break;
-				case Component::kLevelValue:
-					replacement = (boost::format(fmt) % lvl.Value()).str();
-					break;
-				case Component::kLevelValue2:
-					replacement = (boost::format(fmt) % lvl.Value2()).str();
-					break;
-				case Component::kForecastTypeId:
-					replacement = (boost::format(fmt) % ftype.Type()).str();
-					break;
-				case Component::kForecastTypeName:
-					replacement = ForecastTypeToShortString(ftype.Type());
-					break;
-				case Component::kForecastTypeValue:
-					replacement = (boost::format(fmt) % ftype.Value()).str();
-					break;
-				case Component::kProducerId:
-					replacement = (boost::format(fmt) % prod.Id()).str();
-					break;
-				case Component::kFileType:
-					replacement = FileTypeToShortString(conf.OutputFileType());
-					break;
-				case Component::kWallTime:
-					replacement = raw_time::Now().String(fmt);
-					break;
-				default:
-					break;
-			}
 
-			filename = boost::regex_replace(filename, re, replacement, boost::regex_constants::format_first_only);
+				filename = boost::regex_replace(filename, re, replacement, boost::regex_constants::format_first_only);
+			}
+			catch (const std::exception& e)
+			{
+				auto errstr = fmt::format(
+				    "{} mask: {} component: {}\nfmt-library enforces strict type checks, make sure formatting "
+				    "specifier is for correct data type\nFor example for level_value change %03d to %03.0f",
+				    e.what(), mask, ComponentToString(k));
+				throw invalid_argument(errstr);
+			}
 		}
 	};
 
