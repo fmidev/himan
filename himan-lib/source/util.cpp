@@ -22,11 +22,11 @@
 #include "transverse_mercator_grid.h"
 #include <boost/algorithm/string.hpp>
 #include <boost/math/constants/constants.hpp>
-#include <boost/regex.hpp>
 #include <filesystem>
 #include <fmt/printf.h>
 #include <iomanip>
 #include <ogr_spatialref.h>
+#include <regex>
 #include <sstream>
 #include <wordexp.h>
 
@@ -255,11 +255,11 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 		}
 	};
 
-	auto ReplaceTemplateValue = [&](const boost::regex& re, string& filename, Component k)
+	auto ReplaceTemplateValue = [&](const std::regex& re, string& filename, Component k)
 	{
-		boost::smatch what;
+		std::smatch what;
 
-		while (boost::regex_search(filename, what, re))
+		while (std::regex_search(filename, what, re))
 		{
 			string mask = DefaultFormat(k);
 
@@ -357,7 +357,7 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 						break;
 				}
 
-				filename = boost::regex_replace(filename, re, replacement, boost::regex_constants::format_first_only);
+				filename = std::regex_replace(filename, re, replacement, std::regex_constants::format_first_only);
 			}
 			catch (const std::exception& e)
 			{
@@ -399,7 +399,7 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 
 	for (const auto& p : regexs)
 	{
-		ReplaceTemplateValue(boost::regex(p.second), filename, p.first);
+		ReplaceTemplateValue(std::regex(p.second), filename, p.first);
 	}
 
 	return filename;
