@@ -48,7 +48,7 @@ BuildRequires: gdal35-devel
 BuildRequires: gcc-c++ >= 8.2.1
 BuildRequires: cuda-nvcc-12-2
 BuildRequires: cuda-cudart-devel-12-2
-BuildRequires: libcublas-devel-11-1
+BuildRequires: libcublas-devel-12-2
 BuildRequires: eccodes-devel
 BuildRequires: eccodes
 BuildRequires: redhat-rpm-config
