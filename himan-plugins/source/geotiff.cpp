@@ -16,7 +16,6 @@
 #include "transverse_mercator_grid.h"
 #include "util.h"
 #include <algorithm>
-#include <boost/regex.hpp>
 #include <filesystem>
 #include <ogr_spatialref.h>
 #include <regex>
@@ -705,9 +704,9 @@ std::map<std::string, std::string> ParseMetadata(char** mdata, const producer& p
 		}
 		else
 		{
-			const boost::regex re(keyMask);
-			boost::smatch what;
-			if (boost::regex_search(metadata, what, re) == false || what.size() == 0)
+			const std::regex re(keyMask);
+			std::smatch what;
+			if (std::regex_search(metadata, what, re) == false || what.size() == 0)
 			{
 				log.Warning(fmt::format("Regex did not match for attribute {}", attribute));
 				log.Warning(fmt::format("Regex: '{}' Metadata: '{}'", keyMask, metadata));
