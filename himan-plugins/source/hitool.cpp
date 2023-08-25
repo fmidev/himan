@@ -8,7 +8,6 @@
 #include "plugin_factory.h"
 #include "util.h"
 #include <algorithm>
-#include <boost/format.hpp>
 
 #include "fetcher.h"
 #include "radon.h"
@@ -342,10 +341,8 @@ vector<T> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, const param& wa
 
 			ASSERT(lowestHybridLevel >= highestHybridLevel);
 
-			itsLogger.Debug("Adjusting level range to " + to_string(lowestHybridLevel) + " .. " +
-			                to_string(highestHybridLevel) + " for height range " +
-			                boost::str(boost::format("%.2f") % min_value) + " .. " +
-			                boost::str(boost::format("%.2f") % max_value) + " " + heightUnit);
+			itsLogger.Debug(fmt::format("Adjusting level range to {} .. {} for height range {:.2f} .. {:.2f} {}",
+			                            lowestHybridLevel, highestHybridLevel, min_value, max_value, heightUnit));
 		}
 		break;
 
@@ -387,10 +384,8 @@ vector<T> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, const param& wa
 
 			ASSERT(lowestHybridLevel >= highestHybridLevel);
 
-			itsLogger.Debug("Adjusting level range to " + to_string(lowestHybridLevel) + " .. " +
-			                to_string(highestHybridLevel) + " for height range " +
-			                boost::str(boost::format("%.2f") % min_value) + " .. " +
-			                boost::str(boost::format("%.2f") % max_value) + " " + heightUnit);
+			itsLogger.Debug(fmt::format("Adjusting level range to {} .. {} for height range {} .. {} {}",
+			                            lowestHybridLevel, highestHybridLevel, min_value, max_value, heightUnit));
 		}
 		break;
 
