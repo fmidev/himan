@@ -145,7 +145,7 @@ end
 
 local mon = tonumber(current_time:GetValidDateTime():String("%m"))
 
--- Fix is valid for summer months April .. August
-if mon >= 4 and mon <= 8 then
+-- Fix is valid for summer months April .. September
+if mon >= 4 and mon <= 9 then
   CumulusFix()
 end
