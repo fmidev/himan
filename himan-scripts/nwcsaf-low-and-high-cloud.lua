@@ -169,7 +169,7 @@ end
 
 local mon = tonumber(current_time:GetValidDateTime():String("%m"))
 
--- Fix is valid for winter months September ... March
+-- Fix is valid for winter months October ... March
 if mon >= 10 or mon <= 3 then
   effc = LowAndHighCloudGapFix()
   effc = MissingCloudFixWithRH(effc)

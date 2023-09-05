@@ -86,7 +86,7 @@ if step == 1 then
   rrparam = param("RRR-KGM2")
 elseif step == 3 then
   rrparam = param("RR-3-MM")
-elseif step == 3 then
+elseif step == 6 then
   rrparam = param("RR-6-MM")
 end
 
