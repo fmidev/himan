@@ -17,6 +17,7 @@
 #include "plugin_factory.h"
 #include "point_list.h"
 #include "reduced_gaussian_grid.h"
+#include "s3.h"
 #include "stereographic_grid.h"
 #include "time_ensemble.h"
 #include "transverse_mercator_grid.h"
@@ -582,13 +583,27 @@ himan::HPFileType util::FileType(const string& theFile)
 	}
 	// Try the check the file header; CSV is not possible anymore
 
-	ifstream f(theFile.c_str(), ios::in | ios::binary);
-
-	long keywordLength = 4;
-
+	const long keywordLength = 5;
 	char content[keywordLength];
 
-	f.read(content, keywordLength);
+	if (theFile.substr(0, 5) == "s3://")
+	{
+		himan::file_information finfo;
+		finfo.message_no = std::nullopt;
+		finfo.offset = 0;
+		finfo.length = 5;
+		finfo.storage_type = himan::kS3ObjectStorageSystem;
+		finfo.file_location = theFile;
+		finfo.file_server = util::GetEnv("S3_HOSTNAME");
+		auto buffer = s3::ReadFile(finfo);
+		ASSERT(keywordLength == buffer.length);
+		memcpy(&content, buffer.data, keywordLength);
+	}
+	else
+	{
+		ifstream f(theFile.c_str(), ios::in | ios::binary);
+		f.read(content, keywordLength);
+	}
 
 	HPFileType ret = kUnknownFile;
 
@@ -596,6 +611,7 @@ himan::HPFileType util::FileType(const string& theFile)
 	static const unsigned char ncv3[4] = {0x43, 0x44, 0x46, 0x01};
 	static const unsigned char ncv4[4] = {0xD3, 0x48, 0x44, 0x46};  // 211 H D F
 	static const char* tiff = "II*\0";
+	static const char* qinfo = "QINFO";
 
 	if (strncmp(content, grib, 4) == 0)
 	{
@@ -613,20 +629,9 @@ himan::HPFileType util::FileType(const string& theFile)
 	{
 		ret = kGeoTIFF;
 	}
-	else
+	else if (strncmp(content, qinfo, 5) == 0)
 	{
-		// Not GRIB or NetCDF, keep on searching
-
-		keywordLength = 5;
-
-		char qcontent[keywordLength];
-
-		f.read(qcontent, keywordLength);
-
-		if (strncmp(qcontent, "QINFO", 5) == 0)
-		{
-			ret = kQueryData;
-		}
+		ret = kQueryData;
 	}
 
 	return ret;
