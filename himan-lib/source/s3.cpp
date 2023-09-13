@@ -245,8 +245,15 @@ buffer s3::ReadFile(const file_information& fileInformation)
 	const auto bucket = bucketAndFileName[0];
 	const auto key = bucketAndFileName[1];
 
+	if (fileInformation.file_server.empty())
+	{
+		logr.Error("Empty s3 host name given, don't know where to read data from");
+		throw himan::kFileDataNotFound;
+	}
+
 	buffer ret;
 	auto hostname = StripProtocol(fileInformation.file_server);
+
 #ifdef S3_DEFAULT_REGION
 
 	std::string region = ReadAWSRegionFromHostname(fileInformation.file_server);
