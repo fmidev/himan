@@ -583,7 +583,7 @@ himan::HPFileType util::FileType(const string& theFile)
 	}
 	// Try the check the file header; CSV is not possible anymore
 
-	const long keywordLength = 5;
+	const long keywordLength = 9;
 	char content[keywordLength];
 
 	if (theFile.substr(0, 5) == "s3://")
@@ -611,7 +611,7 @@ himan::HPFileType util::FileType(const string& theFile)
 	static const unsigned char ncv3[4] = {0x43, 0x44, 0x46, 0x01};
 	static const unsigned char ncv4[4] = {0xD3, 0x48, 0x44, 0x46};  // 211 H D F
 	static const char* tiff = "II*\0";
-	static const char* qinfo = "QINFO";
+	static const char* qinfo = "@$\260\243QINFO";
 
 	if (strncmp(content, grib, 4) == 0)
 	{
@@ -629,7 +629,7 @@ himan::HPFileType util::FileType(const string& theFile)
 	{
 		ret = kGeoTIFF;
 	}
-	else if (strncmp(content, qinfo, 5) == 0)
+	else if (strncmp(content, qinfo, 9) == 0)
 	{
 		ret = kQueryData;
 	}
