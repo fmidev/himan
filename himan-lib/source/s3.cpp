@@ -25,9 +25,10 @@ void CheckS3Error(S3Status errarg, const char* file, const int line);
 
 #define S3_CHECK(errarg) CheckS3Error(errarg, __FILE__, __LINE__)
 
-void HandleS3Error(himan::logger& logr, const std::string& host, const std::string& object, const std::string& op)
+void HandleS3Error(himan::logger& logr, const std::string& host, const std::string& bucket, const std::string& key,
+                   const std::string& op)
 {
-	logr.Error(fmt::format("{} operation to/from host={} object=s3://{} failed", op, host, object));
+	logr.Error(fmt::format("{} operation for host={} bucket={} object={} failed", op, host, bucket, key));
 
 	const std::string errorstr = S3_get_status_name(statusG);
 	switch (statusG)
@@ -47,6 +48,9 @@ void HandleS3Error(himan::logger& logr, const std::string& host, const std::stri
 			logr.Error(fmt::format(
 			    "{}: invalid credentials or access protocol (http vs https, hint: set env variable S3_PROTOCOL)?",
 			    errorstr));
+			throw himan::kFileDataNotFound;
+		case S3StatusHttpErrorBadRequest:
+			logr.Error(fmt::format("{}: make sure correct session credentials are used", errorstr));
 			throw himan::kFileDataNotFound;
 		default:
 			logr.Error(fmt::format("S3 error: {}", errorstr));
@@ -137,14 +141,10 @@ void Initialize()
 
 		    logger logr("s3");
 
-		    if (!access_key)
+		    if (!access_key || !secret_key)
 		    {
-			    logr.Info("Environment variable S3_ACCESS_KEY_ID not defined");
-		    }
-
-		    if (!secret_key)
-		    {
-			    logr.Info("Environment variable S3_SECRET_ACCESS_KEY not defined");
+			    logr.Info(
+			        "S3_ACCESS_KEY_ID and/or S3_SECRET_ACCESS_KEY missing, only unauthenticated access is possible");
 		    }
 
 		    try
@@ -318,7 +318,7 @@ buffer s3::ReadFile(const file_information& fileInformation)
 		case S3StatusOK:
 			break;
 		default:
-			HandleS3Error(logr, fileInformation.file_server, fmt::format("{}/{}", bucket, key), "Read");
+			HandleS3Error(logr, fileInformation.file_server,  bucket, key, "Read");
 			break;
 	}
 
@@ -385,7 +385,7 @@ void s3::WriteObject(const std::string& objectName, const buffer& buff)
 		}
 		break;
 		default:
-			HandleS3Error(logr, host, fmt::format("{}/{}", bucket, key), "Write");
+			HandleS3Error(logr, host, bucket, key, "Write");
 			break;
 	}
 }
@@ -416,7 +416,7 @@ bool s3::Exists(const std::string& objectName)
 		case S3StatusHttpErrorNotFound:
 			return false;
 		default:
-			HandleS3Error(logr, host, fmt::format("{}/{}", bucket, key), "Head");
+			HandleS3Error(logr, host, bucket, key, "Head");
 			himan::Abort();
 	}
 }
