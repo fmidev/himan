@@ -232,6 +232,45 @@ S3Protocol GetProtocol(const std::string& endpoint)
 	return protocol;
 }
 
+S3BucketContext GetBucketContext(const std::string& host, const std::string& bucket)
+{
+#ifdef S3_DEFAULT_REGION
+
+	std::string region = ReadAWSRegionFromHostname(host);
+
+	// clang-format off
+
+        S3BucketContext bucketContext =
+        {
+                host.c_str(),
+                bucket.c_str(),
+                GetProtocol(host),
+                S3UriStylePath,
+                access_key,
+                secret_key,
+                security_token,
+                region.c_str()
+        };
+#else
+
+	// clang-format off
+
+	S3BucketContext bucketContext =
+	{
+		host.c_str(),
+		bucket.c_str(),
+		GetProtocol(host),
+		S3UriStylePath,
+		access_key,
+		secret_key,
+		security_token
+	};
+#endif
+
+	return bucketContext;
+}
+
+
 }  // namespace
 
 buffer s3::ReadFile(const file_information& fileInformation)
@@ -254,40 +293,7 @@ buffer s3::ReadFile(const file_information& fileInformation)
 	buffer ret;
 	auto hostname = StripProtocol(fileInformation.file_server);
 
-#ifdef S3_DEFAULT_REGION
-
-	std::string region = ReadAWSRegionFromHostname(fileInformation.file_server);
-
-	// clang-format off
-
-        S3BucketContext bucketContext =
-        {
-                hostname.c_str(),
-                bucket.c_str(),
-                GetProtocol(fileInformation.file_server),
-                S3UriStylePath,
-                access_key,
-                secret_key,
-                security_token,
-                region.c_str()
-        };
-#else
-
-	// clang-format off
-
-	S3BucketContext bucketContext = 
-	{
-		hostname.c_str(),
-		bucket.c_str(),
-		GetProtocol(fileInformation.file_server),
-		S3UriStylePath,
-		access_key,
-		secret_key,
-		security_token
-	};
-
-	// clang-format on
-#endif
+	S3BucketContext bucketContext = GetBucketContext(hostname, bucket);
 
 	int count = 0;
 	do
@@ -332,52 +338,11 @@ void s3::WriteObject(const std::string& objectName, const buffer& buff)
 	const auto bucket = bucketAndFileName[0];
 	const auto key = bucketAndFileName[1];
 
-	const char* chost = getenv("S3_HOSTNAME");
+	auto host = StripProtocol(util::GetEnv("S3_HOSTNAME"));
 
 	logger logr("s3");
 
-	if (!chost)
-	{
-		logr.Fatal("Environment variable S3_HOSTNAME not defined");
-		himan::Abort();
-	}
-
-	const std::string host = StripProtocol(std::string(chost));
-
-#ifdef S3_DEFAULT_REGION
-
-	std::string region = ReadAWSRegionFromHostname(std::string(host));
-
-	// clang-format off
-
-        S3BucketContext bucketContext =
-        {
-                host.c_str(),
-                bucket.c_str(),
-                GetProtocol(std::string(chost)),
-                S3UriStylePath,
-                access_key,
-                secret_key,
-                security_token,
-                region.c_str()
-        };
-#else
-
-	// clang-format off
-
-	S3BucketContext bucketContext =
-	{
-		host.c_str(),
-		bucket.c_str(),
-		GetProtocol(std::string(chost)),
-		S3UriStylePath,
-		access_key,
-		secret_key,
-		security_token
-	};
-#endif
-
-	// clang-format on
+	const auto bucketContext = GetBucketContext(host, bucket);
 
 	S3PutObjectHandler putObjectHandler = {responseHandler, &putObjectDataCallback};
 
@@ -425,12 +390,47 @@ void s3::WriteObject(const std::string& objectName, const buffer& buff)
 	}
 }
 
+bool s3::Exists(const std::string& objectName)
+{
+	Initialize();
+
+	const auto host = StripProtocol(util::GetEnv("S3_HOSTNAME"));
+
+	const auto bucketAndFileName = GetBucketAndFileName(objectName);
+	const auto bucket = bucketAndFileName[0];
+	const auto key = bucketAndFileName[1];
+
+	const auto bucketContext = GetBucketContext(host, bucket);
+	const int timeoutms = 5000;
+
+	S3_head_object(&bucketContext, key.c_str(), NULL, timeoutms, &responseHandler,
+	               NULL);
+
+	himan::logger logr("s3");
+
+	switch (statusG)
+	{
+		case S3StatusOK:
+			return true;
+		case S3StatusErrorNoSuchKey:
+		case S3StatusHttpErrorNotFound:
+			return false;
+		default:
+			HandleS3Error(logr, host, fmt::format("{}/{}", bucket, key), "Head");
+			himan::Abort();
+	}
+}
+
 #else
 buffer s3::ReadFile(const file_information& fileInformation)
 {
 	throw std::runtime_error("S3 support not compiled");
 }
 void s3::WriteObject(const std::string& objectName, const buffer& buff)
+{
+	throw std::runtime_error("S3 support not compiled");
+}
+bool s3::Exists(const std::string& objectName)
 {
 	throw std::runtime_error("S3 support not compiled");
 }
