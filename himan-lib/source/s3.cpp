@@ -50,7 +50,9 @@ void HandleS3Error(himan::logger& logr, const std::string& host, const std::stri
 			    errorstr));
 			throw himan::kFileDataNotFound;
 		case S3StatusHttpErrorBadRequest:
-			logr.Error(fmt::format("{}: make sure correct session credentials are used", errorstr));
+			logr.Error(
+			    fmt::format("{}: make sure correct session credentials are used (access_key: {}..., secret_key: {}...",
+			                errorstr, std::string(access_key).substr(0, 10), std::string(secret_key).substr(0, 10)));
 			throw himan::kFileDataNotFound;
 		default:
 			logr.Error(fmt::format("S3 error: {}", errorstr));
@@ -193,7 +195,7 @@ std::string ReadAWSRegionFromHostname(const std::string& hostname)
 		}
 	}
 
-	return "";
+	return std::string();
 }
 
 struct write_data
@@ -234,11 +236,11 @@ S3Protocol GetProtocol(const std::string& endpoint)
 
 S3BucketContext GetBucketContext(const std::string& host, const std::string& bucket)
 {
+	// clang-format off
+
 #ifdef S3_DEFAULT_REGION
 
 	std::string region = ReadAWSRegionFromHostname(host);
-
-	// clang-format off
 
         S3BucketContext bucketContext =
         {
@@ -249,11 +251,11 @@ S3BucketContext GetBucketContext(const std::string& host, const std::string& buc
                 access_key,
                 secret_key,
                 security_token,
-                region.c_str()
+                // check size, otherwise c_str() will return random garbage from some
+                // uninitialized memory location
+                region.size() == 0 ? nullptr : region.c_str()
         };
 #else
-
-	// clang-format off
 
 	S3BucketContext bucketContext =
 	{
@@ -266,10 +268,10 @@ S3BucketContext GetBucketContext(const std::string& host, const std::string& buc
 		security_token
 	};
 #endif
+	// clang-format on
 
 	return bucketContext;
 }
-
 
 }  // namespace
 
@@ -318,7 +320,7 @@ buffer s3::ReadFile(const file_information& fileInformation)
 		case S3StatusOK:
 			break;
 		default:
-			HandleS3Error(logr, fileInformation.file_server,  bucket, key, "Read");
+			HandleS3Error(logr, fileInformation.file_server, bucket, key, "Read");
 			break;
 	}
 
@@ -403,8 +405,7 @@ bool s3::Exists(const std::string& objectName)
 	const auto bucketContext = GetBucketContext(host, bucket);
 	const int timeoutms = 5000;
 
-	S3_head_object(&bucketContext, key.c_str(), NULL, timeoutms, &responseHandler,
-	               NULL);
+	S3_head_object(&bucketContext, key.c_str(), NULL, timeoutms, &responseHandler, NULL);
 
 	himan::logger logr("s3");
 
