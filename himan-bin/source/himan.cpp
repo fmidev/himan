@@ -649,7 +649,7 @@ shared_ptr<configuration> ReadEnvironment()
 				SetCompression(conf, val);
 			else if (key == "HIMAN_CONFIGURATION_FILE")
 				SetConfigurationFile(conf, val);
-			else if (key == "HIMAN_THREADS")
+			else if (key == "HIMAN_THREADS" || key == "HIMAN_NUM_THREADS")
 				conf->ThreadCount(static_cast<short>(stoi(val)));
 			else if (key == "HIMAN_DEBUG_LEVEL")
 				SetLogLevel(conf, stoi(val));
@@ -679,10 +679,6 @@ shared_ptr<configuration> ReadEnvironment()
 			{
 				auto files = util::Split(val, " ");
 				conf->AuxiliaryFiles(files);
-			}
-			else if (key == "HIMAN_NUM_THREADS")
-			{
-				conf->ThreadCount(static_cast<short>(stoi(val)));
 			}
 		}
 		catch (const invalid_argument& e)
