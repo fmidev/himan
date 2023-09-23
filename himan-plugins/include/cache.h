@@ -22,10 +22,14 @@ struct cache_item
 	             std::shared_ptr<himan::info<short>>, std::shared_ptr<himan::info<unsigned char>>>
 
 	    info;
+	// time when this data was last accessed
 	time_t access_time;
+	// if pinned data is not evicted ever
 	bool pinned;
+	// size of data in bytes
+	size_t size_bytes;
 
-	cache_item() : access_time(0), pinned(false)
+	cache_item() : access_time(0), pinned(false), size_bytes(0)
 	{
 	}
 };
@@ -122,10 +126,10 @@ class cache_pool : public auxiliary_plugin
 		return kAuxiliary;
 	};
 	void UpdateTime(const std::string& uniqueName);
-	void CacheLimit(int theCacheLimit);
+	void CacheLimit(size_t theCacheLimit);
 
 	/**
-	 * @brief Return current cache size (number of elements)
+	 * @brief Return current cache size in bytes)
 	 */
 
 	size_t Size() const;
@@ -150,10 +154,9 @@ class cache_pool : public auxiliary_plugin
 
 	// Cache limit specifies how many grids are held in the cache.
 	// When limit is reached, oldest grids are automatically pruned.
-	// Value of -1 means no limit, 0 is not allowed (since there is a
-	// separate configuration option to prevent himan from using cache)
+	// Value of 0 means no limit.
 
-	int itsCacheLimit;
+	size_t itsCacheLimit;
 };
 
 #ifndef HIMAN_AUXILIARY_INCLUDE

@@ -13,6 +13,34 @@
 using namespace std;
 using namespace himan::plugin;
 
+namespace
+{
+std::string FormatSize(size_t size)
+{
+	const static size_t Ki = 1024;
+	const static size_t Mi = 1024 * 1024;
+	const static size_t Gi = 1024 * 1024 * 1024;
+
+	if (size < Mi)
+	{
+		return fmt::format("{:d}Ki", size / Ki);
+	}
+	else if (size >= Mi && size < Gi)
+	{
+		return fmt::format("{:d}Mi", size / Mi);
+	}
+	else if (size >= Gi)
+	{
+		return fmt::format("{:d}Gi", size / Gi);
+	}
+	return fmt::format("{}", size);
+}
+float Ratio(size_t a, size_t b)
+{
+	return 100 * static_cast<float>(a) / static_cast<float>(b);
+}
+}  // namespace
+
 typedef lock_guard<mutex> Lock;
 
 cache::cache()
@@ -158,7 +186,7 @@ void cache::Remove(const std::string& uniqueName)
 
 cache_pool* cache_pool::itsInstance = NULL;
 
-cache_pool::cache_pool() : itsCacheLimit(-1)
+cache_pool::cache_pool() : itsCacheLimit(0)
 {
 	itsLogger = logger("cache_pool");
 }
@@ -173,7 +201,7 @@ cache_pool* cache_pool::Instance()
 	return itsInstance;
 }
 
-void cache_pool::CacheLimit(int theCacheLimit)
+void cache_pool::CacheLimit(size_t theCacheLimit)
 {
 	itsCacheLimit = theCacheLimit;
 }
@@ -190,6 +218,7 @@ void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info<T>> anI
 	item.info = anInfo;
 	item.access_time = time(nullptr);
 	item.pinned = pin;
+	item.size_bytes = anInfo->Data().Size() * sizeof(T);
 
 	{
 		Lock lock(itsAccessMutex);
@@ -197,9 +226,9 @@ void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info<T>> anI
 		itsCache.insert(pair<string, cache_item>(uniqueName, item));
 	}
 
-	itsLogger.Trace("Data added to cache with name: " + uniqueName + ", pinned: " + to_string(pin));
+	itsLogger.Trace(fmt::format("New cache item: {} pinned: {} size: {}", uniqueName, pin, item.size_bytes));
 
-	if (itsCacheLimit > -1 && itsCache.size() > static_cast<size_t>(itsCacheLimit))
+	if (itsCacheLimit > 0)
 	{
 		Clean();
 	}
@@ -228,7 +257,7 @@ void cache_pool::Replace(const string& uniqueName, shared_ptr<himan::info<T>> an
 			Lock lock(itsAccessMutex);
 			itsCache[uniqueName] = item;
 		}
-		itsLogger.Trace("Data with name " + uniqueName + " replaced");
+		itsLogger.Trace(fmt::format("Replaced cache item {}", uniqueName));
 	}
 	else
 	{
@@ -249,7 +278,7 @@ void cache_pool::Remove(const string& uniqueName)
 		const auto it = itsCache.find(uniqueName);
 		itsCache.erase(it);
 	}
-	itsLogger.Trace("Data with name " + uniqueName + " removed");
+	itsLogger.Trace(fmt::format("Cache item {} removed", uniqueName));
 }
 
 void cache_pool::UpdateTime(const std::string& uniqueName)
@@ -260,33 +289,46 @@ void cache_pool::UpdateTime(const std::string& uniqueName)
 void cache_pool::Clean()
 {
 	ASSERT(itsCacheLimit > 0);
-	if (itsCache.size() <= static_cast<size_t>(itsCacheLimit))
+	if (Size() <= itsCacheLimit)
 	{
 		return;
 	}
 
-	string oldestName;
-	time_t oldestTime = INT_MAX;
-
+	while (Size() > itsCacheLimit)
 	{
-		Lock lock(itsAccessMutex);
+		string oldestName;
+		time_t oldestTime = INT_MAX;
 
-		for (const auto& kv : itsCache)
 		{
-			if (kv.second.access_time < oldestTime && !kv.second.pinned)
+			Lock lock(itsAccessMutex);
+
+			for (const auto& kv : itsCache)
 			{
-				oldestName = kv.first;
-				oldestTime = kv.second.access_time;
+				if (kv.second.access_time < oldestTime && !kv.second.pinned)
+				{
+					oldestName = kv.first;
+					oldestTime = kv.second.access_time;
+				}
+			}
+
+			if (oldestTime != INT_MAX)
+			{
+				itsCache.erase(oldestName);
 			}
 		}
 
-		ASSERT(!oldestName.empty());
+		const size_t sz = Size();
 
-		itsCache.erase(oldestName);
+		if (oldestTime == INT_MAX)
+		{
+			itsLogger.Warning(fmt::format("Cannot clear cache, all existing data is pinned. Cache size {}/{} ({:.1f}%)",
+			                              FormatSize(sz), FormatSize(itsCacheLimit), Ratio(sz, itsCacheLimit)));
+			break;
+		}
+		itsLogger.Trace(fmt::format("Cache item {} with time {} removed", oldestName, oldestTime));
+		itsLogger.Trace(fmt::format("Cache size: {}/{} ({:.1f}%)", FormatSize(sz), FormatSize(itsCacheLimit),
+		                            Ratio(sz, itsCacheLimit)));
 	}
-
-	itsLogger.Trace("Data cleared from cache: " + oldestName + " with time: " + to_string(oldestTime));
-	itsLogger.Trace("Cache size: " + to_string(itsCache.size()));
 }
 
 namespace
@@ -360,5 +402,10 @@ template shared_ptr<himan::info<unsigned char>> cache_pool::GetInfo<unsigned cha
 
 size_t cache_pool::Size() const
 {
-	return itsCache.size();
+	size_t bytes = 0;
+	for (const auto& m : itsCache)
+	{
+		bytes += m.second.size_bytes;
+	}
+	return bytes;
 }

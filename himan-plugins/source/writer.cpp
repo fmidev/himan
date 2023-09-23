@@ -216,9 +216,13 @@ himan::HPWriteStatus writer::ToFile(std::shared_ptr<info<T>> theInfo, std::share
 	{
 		auto c = GET_PLUGIN(cache);
 
-		// Pin those items that are not written to file at all
+		// Pin those items that
+		// * are not written to file at all
+		// * are written in s3 at the end of the execution
+		//
 		// so they can't be removed from cache if cache size is limited
-		c->Insert<T>(theInfo, (conf->WriteMode() == kNoFileWrite));
+		c->Insert<T>(theInfo,
+		             (conf->WriteMode() == kNoFileWrite) || (conf->WriteStorageType() == kS3ObjectStorageSystem));
 	}
 
 	if (conf->StatisticsEnabled())
