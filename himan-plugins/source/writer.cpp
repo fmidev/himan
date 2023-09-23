@@ -14,6 +14,7 @@
 #include "grib.h"
 #include "querydata.h"
 #include "radon.h"
+#include <filesystem>
 
 static std::vector<std::pair<std::string, himan::HPWriteStatus>> writeStatuses;
 static std::mutex writeStatusMutex;
@@ -41,6 +42,52 @@ void writer::ClearPending()
 	                                   { return v.second == himan::HPWriteStatus::kPending; }),
 	                    writeStatuses.end());
 }
+
+#ifdef SERIALIZATION
+std::string SpillDirectory()
+{
+	std::string tmpdir = "/tmp";
+
+	try
+	{
+		tmpdir = himan::util::GetEnv("HIMAN_TEMP_DIRECTORY");
+	}
+	catch (...)
+	{
+	}
+
+	tmpdir = fmt::format("{}/himan-spill-{}", tmpdir, getpid());
+
+	if (std::filesystem::is_directory(tmpdir) == false)
+	{
+		std::filesystem::create_directory(tmpdir);
+	}
+
+	return tmpdir;
+}
+
+template <typename T>
+std::string writer::SpillToDisk(std::shared_ptr<himan::info<T>> info)
+{
+	const std::string spillFile = fmt::format("{}/{:010d}", SpillDirectory(), rand());
+	std::ofstream outfile(spillFile, std::ios::binary);
+	cereal::BinaryOutputArchive archive(outfile);
+
+	// extract only currently active info and set file type to double
+	auto newInfo =
+	    std::make_shared<himan::info<double>>(info->ForecastType(), info->Time(), info->Level(), info->Param());
+	newInfo->Producer(info->Producer());
+
+	auto b = std::make_shared<himan::base<double>>();
+	b->grid = std::shared_ptr<himan::grid>(info->Grid()->Clone());
+	b->data = info->Data();
+	newInfo->Base(b);
+	archive(newInfo);
+	itsLogger.Debug(fmt::format("Cache is full, spilling {} to file {}", util::UniqueName(*info), spillFile));
+
+	return spillFile;
+}
+#endif
 
 void ReadConfigurationWriteOptions(write_options& writeOptions)
 {
@@ -221,6 +268,10 @@ himan::HPWriteStatus writer::ToFile(std::shared_ptr<info<T>> theInfo, std::share
 		}
 	}
 
+	// write status name, either file name if data was spilled to disk,
+	// or unique name of the info otherwise
+	std::string wsName = util::UniqueName(*theInfo);
+
 	if (conf->UseCacheForWrites())
 	{
 		auto c = GET_PLUGIN(cache);
@@ -230,15 +281,22 @@ himan::HPWriteStatus writer::ToFile(std::shared_ptr<info<T>> theInfo, std::share
 		// * are written in s3 at the end of the execution
 		//
 		// so they can't be removed from cache if cache size is limited
-		c->Insert<T>(theInfo,
-		             (conf->WriteMode() == kNoFileWrite) || (conf->WriteStorageType() == kS3ObjectStorageSystem));
+		auto ret = c->Insert<T>(
+		    theInfo, (conf->WriteMode() == kNoFileWrite) || (conf->WriteStorageType() == kS3ObjectStorageSystem));
+#ifdef SERIALIZATION
+		if (ret == HPWriteStatus::kFailed)
+		{
+			status = HPWriteStatus::kSpilled;
+			wsName = SpillToDisk(theInfo);
+		}
+#endif
 	}
 
-	const std::string uName = util::UniqueName<T>(*theInfo);
-
 	{
-		std::lock_guard<std::mutex> lock(writeStatusMutex);
-		writeStatuses.push_back(make_pair(uName, status));
+		{
+			std::lock_guard<std::mutex> lock(writeStatusMutex);
+			writeStatuses.push_back(make_pair(wsName, status));
+		}
 	}
 
 	if (conf->StatisticsEnabled())
@@ -265,15 +323,194 @@ void writer::WriteOptions(const write_options& theWriteOptions)
 	itsWriteOptions = theWriteOptions;
 }
 
+std::vector<write_information> writer::WritePendingGribs(const std::vector<std::shared_ptr<himan::info<double>>>& infos)
+{
+	// Next create a grib message of each info and store them sequentially
+	// in a buffer. All infos that have the same filename will end up in the
+	// same buffer.
+
+	std::map<std::string, himan::buffer> list;
+	std::map<std::string, int> count;
+	std::vector<std::pair<std::shared_ptr<info<double>>, file_information>> finfos;
+
+	// Building grib messages from infos is time consuming, mostly cpu intensive
+	// work. Parallelize it.
+
+	std::vector<std::thread> threads;
+	std::mutex m_;
+
+	std::atomic_int infonum{-1};
+
+	auto GetInfo = [&]() -> std::shared_ptr<info<double>>
+	{
+		int myinfonum = ++infonum;
+
+		if (myinfonum >= static_cast<int>(infos.size()))
+		{
+			return nullptr;
+		}
+		return infos[myinfonum];
+	};
+
+	auto ProcessInfo = [&](std::shared_ptr<info<double>> info)
+	{
+		auto g = GET_PLUGIN(grib);
+		g->WriteOptions(itsWriteOptions);
+
+		// create grib message
+		auto ret = g->CreateGribMessage(*info);
+		NFmiGribMessage& msg = ret.second;
+		const size_t griblength = msg.GetLongKey("totalLength");
+		file_information& finfo = ret.first;
+
+		{
+			std::lock_guard<std::mutex> lockb(m_);
+			himan::buffer& buff = list[finfo.file_location];
+			int& message_no = count[finfo.file_location];
+			buff.data = static_cast<unsigned char*>(realloc(buff.data, buff.length + griblength));
+			msg.GetMessage(buff.data + buff.length, griblength);
+			finfo.offset = buff.length;
+			finfo.length = griblength;
+			finfo.message_no = message_no;
+
+			buff.length += griblength;
+			message_no++;
+			finfos.push_back(make_pair(info, finfo));
+		}
+	};
+
+	int threadCount = itsWriteOptions.configuration->ThreadCount();
+
+	if (threadCount == -1)
+	{
+		threadCount = 4;
+	}
+
+	itsLogger.Trace(fmt::format("Starting {} threads to convert infos to grib messages", threadCount));
+	timer tmr(true);
+
+	for (size_t i = 0; i < static_cast<size_t>(threadCount); i++)
+	{
+		threads.push_back(std::thread(
+		    [&]()
+		    {
+			    logger logr("grib");
+			    while (true)
+			    {
+				    auto info = GetInfo();
+				    if (info == nullptr)
+				    {
+					    break;
+				    }
+				    logr.Trace(fmt::format("Creating grib message from '{}'", util::UniqueName(*info)));
+
+				    ProcessInfo(info);
+			    }
+		    }));
+	}
+
+	for (auto& t : threads)
+	{
+		t.join();
+	}
+	tmr.Stop();
+
+	itsLogger.Debug(fmt::format("Converted {} infos to gribs in {:.1f}s", infos.size(),
+	                            static_cast<float>(tmr.GetTime()) / 1000.f));
+
+	// Write the buffers to s3
+
+	for (const auto& p : list)
+	{
+		s3::WriteObject(p.first, p.second);
+	}
+
+	std::vector<write_information> ret;
+
+	for (size_t i = 0; i < infos.size(); i++)
+	{
+		ret.push_back(std::make_tuple(HPWriteStatus::kFinished, finfos[i].second, finfos[i].first));
+	}
+
+	return ret;
+}
+
+std::vector<write_information> writer::WritePendingGeotiffs(
+    const std::vector<std::shared_ptr<himan::info<double>>>& infos)
+{
+	auto g = GET_PLUGIN(geotiff);
+	g->WriteOptions(itsWriteOptions);
+
+	std::vector<info<double>> plain;
+	for (const auto& x : infos)
+	{
+		plain.push_back(*x);
+	}
+
+	auto finfos = g->ToFile<double>(plain);
+
+	std::vector<write_information> ret;
+
+	for (size_t i = 0; i < infos.size(); i++)
+	{
+		ret.push_back(std::make_tuple(finfos[i].first, finfos[i].second, infos[i]));
+	}
+
+	return ret;
+}
+
+void writer::WritePendingToRadon(std::vector<write_information>& list)
+{
+	for (const auto& elem : list)
+	{
+		const HPWriteStatus status = std::get<0>(elem);
+		const file_information& finfo = std::get<1>(elem);
+		const std::shared_ptr<himan::info<double>>& info = std::get<2>(elem);
+
+		if (status == HPWriteStatus::kFinished)
+		{
+			auto& conf = itsWriteOptions.configuration;
+			auto ret = WriteToRadon(conf, finfo, info);
+
+			if (ret.first)
+			{
+				conf->Statistics()->AddToSummaryRecords(summary_record(finfo, ret.second, info->Producer(),
+				                                                       info->ForecastType(), info->Time(),
+				                                                       info->Level(), info->Param()));
+			}
+		}
+	}
+}
+
 void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 {
-	auto FetchPendingFromCache =
-	    [](const std::vector<std::string>& pending) -> std::vector<std::shared_ptr<himan::info<double>>>
+	itsWriteOptions.configuration = conf;
+
+	ASSERT(conf);
+
+	using std::string, std::vector;
+	auto Filter = [](const vector<std::pair<string, himan::HPWriteStatus>>& ws,
+	                 himan::HPWriteStatus req) -> vector<string>
 	{
+		vector<string> ret;
+		for (const auto& m : ws)
+		{
+			if (m.second == req)
+			{
+				ret.push_back(m.first);
+			}
+		}
+		return ret;
+	};
+
+	auto FetchPendingFromCache = [&Filter]() -> vector<std::shared_ptr<himan::info<double>>>
+	{
+		vector<string> pending = Filter(writeStatuses, himan::HPWriteStatus::kPending);
+
 		auto c = GET_PLUGIN(cache);
 		logger logr("writer");
 
-		std::vector<std::shared_ptr<himan::info<double>>> infos;
+		vector<std::shared_ptr<himan::info<double>>> infos;
 		for (const auto& name : pending)
 		{
 			auto ret = c->GetInfo<double>(name);
@@ -289,21 +526,45 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 		return infos;
 	};
 
-	std::vector<std::string> pendingWrites;
-
-	for (const auto& m : writeStatuses)
+#ifdef SERIALIZATION
+	auto FetchSpilledFromDisk = [&Filter]() -> vector<std::shared_ptr<himan::info<double>>>
 	{
-		if (m.second == himan::HPWriteStatus::kPending)
-		{
-			pendingWrites.push_back(m.first);
-		}
-	}
+		vector<string> spilled = Filter(writeStatuses, himan::HPWriteStatus::kSpilled);
 
-	if (conf->WriteStorageType() == kS3ObjectStorageSystem &&
-	    (conf->OutputFileType() == kGRIB || conf->OutputFileType() == kGRIB1 || conf->OutputFileType() == kGRIB2))
+		// read serialized infos from disk and de-serialize (is there a word for that?)
+		// remove the files after they are read to memory
+		vector<std::shared_ptr<himan::info<double>>> infos;
+		logger logr("writer");
+		for (const auto& name : spilled)
+		{
+			logr.Trace(fmt::format("De-serializing spilled file {}", name));
+			auto info = std::make_shared<himan::info<double>>();
+			{
+				std::ifstream infile(name, std::ios::binary);
+				cereal::BinaryInputArchive iarchive(infile);
+
+				iarchive(info);
+			}
+			infos.push_back(info);
+
+			std::filesystem::remove(name);
+		}
+		if (spilled.size() > 0)
+		{
+			std::filesystem::remove_all(std::filesystem::path{spilled[0]}.parent_path().string());
+		}
+		return infos;
+	};
+#endif
+
+	std::vector<std::shared_ptr<himan::info<double>>> infos;
+	size_t pendingSize = 0;
+#ifdef SERIALIZATION
+	size_t spilledSize = 0;  // just for logging
+#endif
+
 	{
 		std::lock_guard<std::mutex> lock(writeStatusMutex);
-		itsLogger.Info(fmt::format("Writing {} pending infos to file", pendingWrites.size()));
 
 		// The only case when we have pending writes is (currently) when
 		// writing to s3
@@ -311,171 +572,55 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 		// First get the infos from cache that match the names given
 		// to us by the caller
 
-		auto infos = FetchPendingFromCache(pendingWrites);
+		infos = FetchPendingFromCache();
+		pendingSize = infos.size();
 
-		// Next create a grib message of each info and store them sequentially
-		// in a buffer. All infos that have the same filename will end up in the
-		// same buffer.
+#ifdef SERIALIZATION
+		auto spilledInfos = FetchSpilledFromDisk();
 
-		std::map<std::string, himan::buffer> list;
-		std::map<std::string, int> count;
-		std::vector<std::pair<std::shared_ptr<info<double>>, file_information>> finfos;
+		auto c = GET_PLUGIN(cache);
+		c->Clean(CleanType::kAll);
 
-		itsWriteOptions.configuration = conf;
+		infos.insert(infos.end(), spilledInfos.begin(), spilledInfos.end());
+		spilledSize = spilledInfos.size();
+#endif
+	}
 
-		ASSERT(conf);
+	if (infos.size() == 0)
+	{
+		return;
+	}
 
-		// Building grib messages from infos is time consuming, mostly cpu intensive
-		// work. Parallelize it.
+#ifdef SERIALIZATION
+	itsLogger.Info(fmt::format("Writing {} pending and {} spilled infos to file", pendingSize, spilledSize));
+#else
+	itsLogger.Info(fmt::format("Writing {} pending infos to file", pendingSize));
+#endif
 
-		std::vector<std::thread> threads;
-		std::mutex m_;
+	if (conf->WriteStorageType() == kS3ObjectStorageSystem &&
+	    (conf->OutputFileType() == kGRIB || conf->OutputFileType() == kGRIB1 || conf->OutputFileType() == kGRIB2))
+	{
+		auto ret = WritePendingGribs(infos);
 
-		std::atomic_int infonum{-1};
-
-		auto GetInfo = [&]() -> std::shared_ptr<info<double>>
-		{
-			int myinfonum = ++infonum;
-
-			if (myinfonum >= static_cast<int>(infos.size()))
-			{
-				return nullptr;
-			}
-			return infos[myinfonum];
-		};
-
-		auto ProcessInfo = [&](std::shared_ptr<info<double>> info)
-		{
-			auto g = GET_PLUGIN(grib);
-			g->WriteOptions(itsWriteOptions);
-
-			// create grib message
-			auto ret = g->CreateGribMessage(*info);
-			NFmiGribMessage& msg = ret.second;
-			const size_t griblength = msg.GetLongKey("totalLength");
-			file_information& finfo = ret.first;
-
-			{
-				std::lock_guard<std::mutex> lockb(m_);
-				himan::buffer& buff = list[finfo.file_location];
-				int& message_no = count[finfo.file_location];
-				buff.data = static_cast<unsigned char*>(realloc(buff.data, buff.length + griblength));
-				msg.GetMessage(buff.data + buff.length, griblength);
-				finfo.offset = buff.length;
-				finfo.length = griblength;
-				finfo.message_no = message_no;
-
-				buff.length += griblength;
-				message_no++;
-				finfos.push_back(make_pair(info, finfo));
-			}
-		};
-
-		int threadCount = conf->ThreadCount();
-
-		if (threadCount == -1)
-		{
-			threadCount = 4;
-		}
-
-		itsLogger.Trace(fmt::format("Starting {} threads to convert infos to grib messages", threadCount));
-		timer tmr(true);
-
-		for (size_t i = 0; i < static_cast<size_t>(threadCount); i++)
-		{
-			threads.push_back(std::thread(
-			    [&]()
-			    {
-				    logger logr("grib");
-				    while (true)
-				    {
-					    auto info = GetInfo();
-					    if (info == nullptr)
-					    {
-						    break;
-					    }
-					    logr.Trace(fmt::format("Creating grib message from '{}'", util::UniqueName(*info)));
-
-					    ProcessInfo(info);
-				    }
-			    }));
-		}
-
-		for (auto& t : threads)
-		{
-			t.join();
-		}
-		tmr.Stop();
-
-		itsLogger.Debug(fmt::format("Converted {} infos to gribs in {:.1f}s", infos.size(),
-		                            static_cast<float>(tmr.GetTime()) / 1000.f));
-
-		// Write the buffers to s3
-
-		for (const auto& p : list)
-		{
-			s3::WriteObject(p.first, p.second);
-		}
-
-		// And finally update radon
-
-		for (const auto& elem : finfos)
-		{
-			const auto& finfo = elem.second;
-			const auto& info = elem.first;
-
-			auto ret = WriteToRadon(conf, finfo, info);
-
-			if (ret.first)
-			{
-				conf->Statistics()->AddToSummaryRecords(summary_record(finfo, ret.second, info->Producer(),
-				                                                       info->ForecastType(), info->Time(),
-				                                                       info->Level(), info->Param()));
-			}
-		}
+		WritePendingToRadon(ret);
 	}
 	else if (conf->OutputFileType() == kGeoTIFF)
 	{
-		std::lock_guard<std::mutex> lock(writeStatusMutex);
-		itsLogger.Info(fmt::format("Writing {} pending infos to file", pendingWrites.size()));
-		auto infos = FetchPendingFromCache(pendingWrites);
+		auto ret = WritePendingGeotiffs(infos);
 
-		auto g = GET_PLUGIN(geotiff);
-		itsWriteOptions.configuration = conf;
-		g->WriteOptions(itsWriteOptions);
-
-		std::vector<info<double>> plain;
-		for (const auto& x : infos)
-		{
-			plain.push_back(*x);
-		}
-
-		auto finfos = g->ToFile<double>(plain);
-
-		for (size_t i = 0; i < finfos.size(); i++)
-		{
-			const auto& finfo = finfos[i].second;
-			const auto& info = infos[i];
-
-			if (finfos[i].first == HPWriteStatus::kFinished)
-			{
-				auto ret = WriteToRadon(conf, finfo, info);
-
-				if (ret.first)
-				{
-					conf->Statistics()->AddToSummaryRecords(summary_record(finfo, ret.second, info->Producer(),
-					                                                       info->ForecastType(), info->Time(),
-					                                                       info->Level(), info->Param()));
-				}
-			}
-		}
+		WritePendingToRadon(ret);
 	}
-	else if (pendingWrites.empty() == false)
+	else
 	{
-		itsLogger.Fatal(fmt::format("Pending write started with invalid conditions: write_mode: {}, storage_type: {}",
-		                            HPWriteModeToString.at(conf->WriteMode()),
-		                            HPFileStorageTypeToString.at(conf->WriteStorageType())));
-		himan::Abort();
+		auto pending = Filter(writeStatuses, HPWriteStatus::kPending);
+
+		if (pending.empty() == false)
+		{
+			itsLogger.Fatal(fmt::format(
+			    "Pending write started with invalid conditions: write_mode: {}, storage_type: {}",
+			    HPWriteModeToString.at(conf->WriteMode()), HPFileStorageTypeToString.at(conf->WriteStorageType())));
+			himan::Abort();
+		}
 	}
 }
 

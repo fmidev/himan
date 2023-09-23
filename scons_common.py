@@ -82,6 +82,11 @@ env['HAVE_S3'] = False
 if os.path.isfile('/usr/include/libs3.h'):
 	env['HAVE_S3'] = True
 
+env['HAVE_CEREAL'] = False
+
+if os.path.isfile('/usr/include/cereal/cereal.hpp'):
+	env['HAVE_CEREAL'] = True
+
 # Required for scan-build
 env["ENV"].update(x for x in os.environ.items() if x[0].startswith("CCC_"))
 
@@ -196,6 +201,8 @@ if env['HAVE_CUDA']:
         env.Append(CPPDEFINES=['HAVE_CUDA'])
 if env['HAVE_S3']:
         env.Append(CPPDEFINES=['HAVE_S3'])
+if env['HAVE_CEREAL']:
+        env.Append(CPPDEFINES=['SERIALIZATION'])
 
 env.Append(NVCCDEFINES=['HAVE_CUDA'])
 

@@ -34,6 +34,12 @@ struct cache_item
 	}
 };
 
+enum class CleanType
+{
+	kExcess,
+	kAll
+};
+
 class cache : public auxiliary_plugin
 {
    public:
@@ -51,9 +57,9 @@ class cache : public auxiliary_plugin
 	 */
 
 	template <typename T>
-	void Insert(std::shared_ptr<info<T>> anInfo, bool pin = false);
+	HPWriteStatus Insert(std::shared_ptr<info<T>> anInfo, bool pin = false);
 
-	void Insert(std::shared_ptr<info<double>> anInfo, bool pin = false);
+	HPWriteStatus Insert(std::shared_ptr<info<double>> anInfo, bool pin = false);
 
 	template <typename T>
 	std::vector<std::shared_ptr<info<T>>> GetInfo(search_options& options, bool strict = false);
@@ -63,7 +69,7 @@ class cache : public auxiliary_plugin
 	template <typename T>
 	std::vector<std::shared_ptr<info<T>>> GetInfo(const std::string& uniqueName, bool strict = false);
 
-	void Clean();
+	size_t Clean(CleanType type = CleanType::kExcess);
 
 	virtual std::string ClassName() const override
 	{
@@ -103,7 +109,7 @@ class cache_pool : public auxiliary_plugin
 	bool Exists(const std::string& uniqueName);
 
 	template <typename T>
-	void Insert(const std::string& uniqueName, std::shared_ptr<info<T>> info, bool pin);
+	HPWriteStatus Insert(const std::string& uniqueName, std::shared_ptr<info<T>> info, bool pin);
 
 	/**
 	 * @brief Get info from cache
@@ -115,7 +121,7 @@ class cache_pool : public auxiliary_plugin
 	template <typename T>
 	std::shared_ptr<info<T>> GetInfo(const std::string& uniqueName, bool strict);
 
-	void Clean();
+	size_t Clean(CleanType type = CleanType::kExcess);
 
 	virtual std::string ClassName() const override
 	{

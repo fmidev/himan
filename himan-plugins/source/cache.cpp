@@ -48,13 +48,13 @@ cache::cache()
 	itsLogger = logger("cache");
 }
 
-void cache::Insert(shared_ptr<info<double>> anInfo, bool pin)
+himan::HPWriteStatus cache::Insert(shared_ptr<info<double>> anInfo, bool pin)
 {
 	return Insert<double>(anInfo, pin);
 }
 
 template <typename T>
-void cache::Insert(shared_ptr<info<T>> anInfo, bool pin)
+himan::HPWriteStatus cache::Insert(shared_ptr<info<T>> anInfo, bool pin)
 {
 	auto localInfo = make_shared<info<T>>(*anInfo);
 
@@ -65,12 +65,11 @@ void cache::Insert(shared_ptr<info<T>> anInfo, bool pin)
 
 	if (cache_pool::Instance()->Exists(uniqueName))
 	{
-		// TODO: should we replace existing item?
-		itsLogger.Trace("Data with key " + uniqueName + " already exists at cache");
+		itsLogger.Trace(fmt::format("Cache item {} already exists", uniqueName));
 
 		// Update timestamp of this cache item
 		cache_pool::Instance()->UpdateTime(uniqueName);
-		return;
+		return himan::HPWriteStatus::kFinished;
 	}
 
 #ifdef HAVE_CUDA
@@ -96,13 +95,13 @@ void cache::Insert(shared_ptr<info<T>> anInfo, bool pin)
 	}
 
 	ASSERT(localInfo->DimensionSize() == 1);
-	cache_pool::Instance()->Insert<T>(uniqueName, localInfo, pin);
+	return cache_pool::Instance()->Insert<T>(uniqueName, localInfo, pin);
 }
 
-template void cache::Insert<double>(shared_ptr<info<double>>, bool);
-template void cache::Insert<float>(shared_ptr<info<float>>, bool);
-template void cache::Insert<short>(shared_ptr<info<short>>, bool);
-template void cache::Insert<unsigned char>(shared_ptr<info<unsigned char>>, bool);
+template himan::HPWriteStatus cache::Insert<double>(shared_ptr<info<double>>, bool);
+template himan::HPWriteStatus cache::Insert<float>(shared_ptr<info<float>>, bool);
+template himan::HPWriteStatus cache::Insert<short>(shared_ptr<info<short>>, bool);
+template himan::HPWriteStatus cache::Insert<unsigned char>(shared_ptr<info<unsigned char>>, bool);
 
 vector<shared_ptr<himan::info<double>>> cache::GetInfo(search_options& options, bool strict)
 {
@@ -143,10 +142,11 @@ template vector<shared_ptr<himan::info<float>>> cache::GetInfo<float>(const stri
 template vector<shared_ptr<himan::info<short>>> cache::GetInfo<short>(const string&, bool);
 template vector<shared_ptr<himan::info<unsigned char>>> cache::GetInfo<unsigned char>(const string&, bool);
 
-void cache::Clean()
+size_t cache::Clean(CleanType cleanType)
 {
-	cache_pool::Instance()->Clean();
+	return cache_pool::Instance()->Clean(cleanType);
 }
+
 size_t cache::Size() const
 {
 	return cache_pool::Instance()->Size();
@@ -212,7 +212,7 @@ bool cache_pool::Exists(const string& uniqueName)
 }
 
 template <typename T>
-void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info<T>> anInfo, bool pin)
+himan::HPWriteStatus cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info<T>> anInfo, bool pin)
 {
 	cache_item item;
 	item.info = anInfo;
@@ -220,24 +220,40 @@ void cache_pool::Insert(const string& uniqueName, shared_ptr<himan::info<T>> anI
 	item.pinned = pin;
 	item.size_bytes = anInfo->Data().Size() * sizeof(T);
 
+	if (pin && itsCacheLimit > 0 && (Size() + item.size_bytes) > itsCacheLimit)
+	{
+		// cache is full and a pinned info needs to be written
+		size_t cleaned = Clean(CleanType::kExcess);
+#ifdef SERIALIZATION
+		// cache clean failed, activate spill mechanism
+		if (pin && cleaned == 0)
+		{
+			return HPWriteStatus::kFailed;
+		}
+#endif
+	}
+
 	{
 		Lock lock(itsAccessMutex);
 
 		itsCache.insert(pair<string, cache_item>(uniqueName, item));
-	}
 
-	itsLogger.Trace(fmt::format("New cache item: {} pinned: {} size: {}", uniqueName, pin, item.size_bytes));
+		itsLogger.Trace(fmt::format("New cache item: {} pinned: {} size: {}", uniqueName, pin, item.size_bytes));
+	}
 
 	if (itsCacheLimit > 0)
 	{
 		Clean();
 	}
+
+	return himan::HPWriteStatus::kFinished;
 }
 
-template void cache_pool::Insert<double>(const string&, shared_ptr<himan::info<double>>, bool);
-template void cache_pool::Insert<float>(const string&, shared_ptr<himan::info<float>>, bool);
-template void cache_pool::Insert<short>(const string&, shared_ptr<himan::info<short>>, bool);
-template void cache_pool::Insert<unsigned char>(const string&, shared_ptr<himan::info<unsigned char>>, bool);
+template himan::HPWriteStatus cache_pool::Insert<double>(const string&, shared_ptr<himan::info<double>>, bool);
+template himan::HPWriteStatus cache_pool::Insert<float>(const string&, shared_ptr<himan::info<float>>, bool);
+template himan::HPWriteStatus cache_pool::Insert<short>(const string&, shared_ptr<himan::info<short>>, bool);
+template himan::HPWriteStatus cache_pool::Insert<unsigned char>(const string&, shared_ptr<himan::info<unsigned char>>,
+                                                                bool);
 
 template <typename T>
 void cache_pool::Replace(const string& uniqueName, shared_ptr<himan::info<T>> anInfo, bool pin)
@@ -287,18 +303,30 @@ void cache_pool::UpdateTime(const std::string& uniqueName)
 	Lock lock(itsAccessMutex);
 	itsCache[uniqueName].access_time = time(nullptr);
 }
-void cache_pool::Clean()
+
+size_t cache_pool::Clean(CleanType cleanType)
 {
 	ASSERT(itsCacheLimit > 0);
+	size_t cleaned = 0;
+
+	if (cleanType == CleanType::kAll)
+	{
+		cleaned = Size();
+		Lock lock(itsAccessMutex);
+		itsCache.clear();
+		return cleaned;
+	}
+
 	if (Size() <= itsCacheLimit)
 	{
-		return;
+		return cleaned;
 	}
 
 	while (Size() > itsCacheLimit)
 	{
 		string oldestName;
 		time_t oldestTime = INT_MAX;
+		size_t oldestSize = 0;
 
 		{
 			Lock lock(itsAccessMutex);
@@ -309,6 +337,7 @@ void cache_pool::Clean()
 				{
 					oldestName = kv.first;
 					oldestTime = kv.second.access_time;
+					oldestSize = kv.second.size_bytes;
 				}
 			}
 
@@ -317,6 +346,8 @@ void cache_pool::Clean()
 				itsCache.erase(oldestName);
 			}
 		}
+
+		cleaned += oldestSize;
 
 		const size_t sz = Size();
 
@@ -330,6 +361,7 @@ void cache_pool::Clean()
 		itsLogger.Trace(fmt::format("Cache size: {}/{} ({:.1f}%)", FormatSize(sz), FormatSize(itsCacheLimit),
 		                            Ratio(sz, itsCacheLimit)));
 	}
+	return cleaned;
 }
 
 namespace

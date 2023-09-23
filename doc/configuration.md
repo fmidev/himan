@@ -834,6 +834,10 @@ Specify list of auxiliary files to read (whitespace-separated)
 
 Specify at most how many threads should be used for data processing
 
+* HIMAN_TEMP_DIRECTORY
+
+Specify where to write temporary files if needed. Default: /tmp
+
 <a name="Full_examples"/>
 
 # Full examples

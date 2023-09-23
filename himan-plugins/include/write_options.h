@@ -14,7 +14,8 @@ enum class HPWriteStatus
 	kUnknown = 0,
 	kFinished,
 	kPending,
-	kFailed
+	kFailed,
+	kSpilled
 };
 
 namespace plugin
