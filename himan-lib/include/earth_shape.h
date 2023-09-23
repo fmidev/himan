@@ -69,7 +69,7 @@ class earth_shape
 	template <class Archive>
 	void serialize(Archive& ar)
 	{
-		ar(CEREAL_NVP(itsA), CEREAL_NVP(itsB), CEREAL_NCP(itsName));
+		ar(CEREAL_NVP(itsA), CEREAL_NVP(itsB), CEREAL_NVP(itsName));
 	}
 #endif
 };
