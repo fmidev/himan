@@ -15,7 +15,7 @@
 using namespace std;
 using namespace himan::plugin;
 
-pot::pot() : itsStrictMode(false)
+pot::pot()
 {
 	itsLogger = logger("pot");
 }
