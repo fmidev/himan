@@ -818,7 +818,7 @@ cape_multi_source cape_cuda::GetNHighestThetaEValuesGPU(const std::shared_ptr<co
 	// We need to get the number of layers so we can preallocate
 	// a suitable sized array.
 
-	const auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), mucape_search_limit);
+	const auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), mucape_search_limit, conf->TargetGeomName());
 	const auto levelSpan = curLevel.Value() - stopLevel.second.Value();
 
 	const size_t N = myTargetInfo->Data().Size();
@@ -1129,7 +1129,7 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	auto RHSurface = VEC(RHInfo);
 
 	auto P500m = h->VerticalValue<double>(PParam, 500.);
-	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 500.);
+	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 500., conf->TargetGeomName());
 
 	auto P500mf = util::Convert<double, float>(P500m);
 
@@ -1323,7 +1323,7 @@ std::vector<std::pair<std::vector<float>, std::vector<float>>> cape_cuda::GetLFC
 	// For each grid point find the hybrid level that's below LCL and then pick the lowest level
 	// among all grid points; most commonly it's the lowest hybrid level
 
-	auto levels = h->LevelForHeight(myTargetInfo->Producer(), ::Max(P));
+	auto levels = h->LevelForHeight(myTargetInfo->Producer(), ::Max(P), conf->TargetGeomName());
 
 	level curLevel = levels.first;
 
@@ -1362,8 +1362,8 @@ std::vector<std::pair<std::vector<float>, std::vector<float>>> cape_cuda::GetLFC
 	CUDA_CHECK(cudaMemcpyAsync(d_LFCP, &LFCP[0], sizeof(float) * N, cudaMemcpyHostToDevice, stream));
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
-	auto hPa450 = h->LevelForHeight(myTargetInfo->Producer(), 450.);
-	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 250.);
+	auto hPa450 = h->LevelForHeight(myTargetInfo->Producer(), 450., conf->TargetGeomName());
+	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 250., conf->TargetGeomName());
 
 	while (curLevel.Value() > stopLevel.first.Value())
 	{
@@ -1540,7 +1540,7 @@ std::vector<float> cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_confi
 	h->ForecastType(myTargetInfo->ForecastType());
 	h->HeightUnit(kHPa);
 
-	auto hPa100 = h->LevelForHeight(myTargetInfo->Producer(), 100.);
+	auto hPa100 = h->LevelForHeight(myTargetInfo->Producer(), 100., conf->TargetGeomName());
 	thrust::device_ptr<unsigned char> dt_found = thrust::device_pointer_cast(d_found);
 
 	while (curLevel.Value() > hPa100.first.Value())
@@ -1747,7 +1747,7 @@ CAPEdata cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>
 	// For each grid point find the hybrid level that's below LFC and then pick the lowest level
 	// among all grid points
 
-	auto levels = h->LevelForHeight(myTargetInfo->Producer(), ::Max(P));
+	auto levels = h->LevelForHeight(myTargetInfo->Producer(), ::Max(P), conf->TargetGeomName());
 
 	level curLevel = levels.first;
 
@@ -1771,8 +1771,8 @@ CAPEdata cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>
 
 	curLevel.Value(curLevel.Value());
 
-	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 50.);
-	auto hPa450 = h->LevelForHeight(myTargetInfo->Producer(), 450.);
+	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 50., conf->TargetGeomName());
+	auto hPa450 = h->LevelForHeight(myTargetInfo->Producer(), 450., conf->TargetGeomName());
 
 	thrust::device_ptr<unsigned char> dt_found = thrust::device_pointer_cast(d_found);
 

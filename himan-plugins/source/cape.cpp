@@ -998,7 +998,7 @@ vector<float> cape::GetCINCPU(shared_ptr<info<float>> myTargetInfo, const vector
 	h->ForecastType(myTargetInfo->ForecastType());
 	h->HeightUnit(kHPa);
 
-	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 100.);
+	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 100., itsConfiguration->TargetGeomName());
 
 	while (curLevel.Value() > stopLevel.first.Value() && foundCount != found.size())
 	{
@@ -1191,7 +1191,7 @@ CAPEdata cape::GetCAPECPU(shared_ptr<info<float>> myTargetInfo, const vector<flo
 	{
 		throw runtime_error("CAPE: LFC pressure is missing");
 	}
-	auto levels = h->LevelForHeight(myTargetInfo->Producer(), maxP);
+	auto levels = h->LevelForHeight(myTargetInfo->Producer(), maxP, itsConfiguration->TargetGeomName());
 
 	level curLevel = levels.first;
 
@@ -1225,7 +1225,7 @@ CAPEdata cape::GetCAPECPU(shared_ptr<info<float>> myTargetInfo, const vector<flo
 
 	shared_ptr<info<float>> TenvInfo, PenvInfo, ZenvInfo;
 
-	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 50.);
+	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 50., itsConfiguration->TargetGeomName());
 
 	while (curLevel.Value() > stopLevel.first.Value() && foundCount != found.size())
 	{
@@ -1504,7 +1504,7 @@ vector<pair<vector<float>, vector<float>>> cape::GetLFCCPU(shared_ptr<info<float
 		throw runtime_error("LFC: LCL pressure is missing");
 	}
 
-	auto levels = h->LevelForHeight(myTargetInfo->Producer(), maxP);
+	auto levels = h->LevelForHeight(myTargetInfo->Producer(), maxP, itsConfiguration->TargetGeomName());
 	level curLevel = levels.first;
 
 	auto prevPenvInfo = Fetch<float>(myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType(), false);
@@ -1528,8 +1528,8 @@ vector<pair<vector<float>, vector<float>>> cape::GetLFCCPU(shared_ptr<info<float
 
 	curLevel.Value(curLevel.Value() - 1);
 
-	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 250.);
-	auto hPa450 = h->LevelForHeight(myTargetInfo->Producer(), 450.);
+	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 250., itsConfiguration->TargetGeomName());
+	auto hPa450 = h->LevelForHeight(myTargetInfo->Producer(), 450., itsConfiguration->TargetGeomName());
 	vector<float> prevTparcelVec(P.size(), MissingFloat());
 
 	size_t foundCount = 0;
@@ -1839,7 +1839,7 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info<float>> myTargetIn
 
 	auto curP = VEC(PInfo);
 
-	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 500.);
+	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 500., itsConfiguration->TargetGeomName());
 	auto P500m = h->VerticalValue<double>(PParam, 500.);
 
 	auto sourceData = GetSampledSourceData(itsConfiguration, myTargetInfo, util::Convert<double, float>(P500m),

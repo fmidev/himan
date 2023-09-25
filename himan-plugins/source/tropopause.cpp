@@ -40,8 +40,8 @@ void tropopause::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short
 	h->HeightUnit(kHPa);
 
 	// Search is limited to the interval FL140-FL530 i.e. 600-100 HPa
-	auto FL530 = h->LevelForHeight(myTargetInfo->Producer(), 100.);
-	auto FL140 = h->LevelForHeight(myTargetInfo->Producer(), 600.);
+	auto FL530 = h->LevelForHeight(myTargetInfo->Producer(), 100., itsConfiguration->TargetGeomName());
+	auto FL140 = h->LevelForHeight(myTargetInfo->Producer(), 600., itsConfiguration->TargetGeomName());
 
 	auto myThreadedLogger = logger("tropopause_pluginThread #" + to_string(threadIndex));
 

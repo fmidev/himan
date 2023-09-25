@@ -552,10 +552,11 @@ class hitool : public auxiliary_plugin
 	 * @param prod Producer from where data is fetched, function will try to determine correct producer even if raw
 	 * producer is defined
 	 * @param height The height in question, meters or hPa
+	 * @param geomName Name of the geometry (different areas have different characteristics)
 	 * @return Two level definitions, minimum level that contains this height and maximum level
 	 */
 
-	std::pair<level, level> LevelForHeight(const producer& prod, double height) const;
+	std::pair<level, level> LevelForHeight(const producer& prod, double height, const std::string& geomName) const;
 
    private:
 	std::shared_ptr<modifier> CreateModifier(HPModifierType modifierType) const;
