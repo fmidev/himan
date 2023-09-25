@@ -175,6 +175,15 @@ himan::HPWriteStatus writer::ToFile(std::shared_ptr<info<T>> theInfo, std::share
 		}
 	}
 
+	const size_t allowedMissing = itsWriteOptions.configuration->AllowedMissingValues();
+	if (allowedMissing < std::numeric_limits<size_t>::max() && allowedMissing < theInfo->Data().MissingCount())
+	{
+		itsLogger.Fatal(fmt::format("Parameter {} for leadtime {} contains more missing values ({}) than allowed ({})",
+		                            theInfo->Param().Name(), theInfo->Time().Step(), theInfo->Data().MissingCount(),
+		                            allowedMissing));
+		exit(1);
+	}
+
 	timer t;
 
 	if (conf->StatisticsEnabled())

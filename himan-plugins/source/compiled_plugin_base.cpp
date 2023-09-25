@@ -175,16 +175,6 @@ void compiled_plugin_base::WriteToFile(const shared_ptr<info<T>> targetInfo, wri
 				lock_guard<mutex> lock(writeStatusMutex);
 				itsWriteStatuses.push_back(make_pair(uName, status));
 			}
-
-			// check missing values
-			if (itsConfiguration->AllowedMissingValues() < tempInfo->Data().MissingCount())
-			{
-				itsBaseLogger.Fatal(
-				    fmt::format("Parameter {} for leadtime {} contains more missing values ({}) than allowed ({})",
-				                tempInfo->Param().Name(), tempInfo->Time().Step(), tempInfo->Data().MissingCount(),
-				                itsConfiguration->AllowedMissingValues()));
-				exit(1);
-			}
 		}
 	};
 
