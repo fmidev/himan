@@ -48,40 +48,6 @@ double ApplyScaling(long val, long exp)
 	return dval * std::pow(10., static_cast<double>(exp));
 }
 
-earth_shape<double> DetermineEarthShapeForProducer(const producer& prod, const earth_shape<double>& defaultShape)
-{
-	// The curated list below is confirmed to be correct and different from for
-	// example grib information. This ellipsoid information refers to the value
-	// used when coordinates are derived for the output data (not for example
-	// what earth shape is used by the physics core)
-	//
-	// Using producer-level granularity should be enough for now, because even if
-	// a producer has multiple different projections/geoms (like ecmwf), they are
-	// all using the same reference ellipsoid (as far as we know). Of course a case
-	// might arise where data is projected to different ellipsoids by some producer,
-	// but we can deal with that when it happens.
-
-	switch (prod.Id())
-	{
-		case 4:    // MEPS
-		case 5:    // MEPSCALIB
-		case 7:    // MNWC
-		case 8:    // MNWC_PREOP
-		case 10:   // MEPS_PREOP
-		case 11:   // CMEPS_PREOP
-		case 260:  // MEPSMTA
-		case 261:  // MEPS_PREOPMTA
-		case 262:  // MEPSCALIBMTA
-		case 265:  // CMEPS_PREOPMTA
-		case 270:  // MNWCMTA
-		case 271:  // MNWCMTA_DEV
-		case 272:  // MNWC_PREOPMTA
-			return ELLIPS_WGS84;
-		default:
-			return defaultShape;
-	}
-}
-
 long DetermineProductDefinitionTemplateNumber(long agg, long proc, long ftype)
 {
 	// Determine which code table to use to represent our data
@@ -704,6 +670,10 @@ void WriteAreaAndGrid(NFmiGribMessage& message, const shared_ptr<himan::grid>& g
 				if (earth.A() == 6367470)
 				{
 					message.SetLongKey("shapeOfTheEarth", 0);
+				}
+				else if (earth.A() == 6371229)
+				{
+					message.SetLongKey("shapeOfTheEarth", 6);
 				}
 				else
 				{
@@ -2081,7 +2051,6 @@ unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message, const pr
 	unique_ptr<grid> newGrid;
 
 	auto earth = ReadEarthShape(message);
-	earth = DetermineEarthShapeForProducer(prod, earth);
 
 	switch (message.NormalizedGridType())
 	{
