@@ -246,6 +246,7 @@ void cache_pool::Replace(const string& uniqueName, shared_ptr<himan::info<T>> an
 	item.info = anInfo;
 	item.access_time = time(nullptr);
 	item.pinned = pin;
+	item.size_bytes = anInfo->Data().Size() * sizeof(T);
 
 	// possible race condition ?
 
