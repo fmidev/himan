@@ -40,16 +40,12 @@ class writer : public auxiliary_plugin
 
 	write_options WriteOptions() const;
 	void WriteOptions(const write_options& theWriteOptions);
-
-	static void AddToPending(const std::vector<std::string>& names);
 	static void ClearPending();
-
 	void WritePendingInfos(std::shared_ptr<const plugin_configuration> conf);
 
    private:
 	template <typename T>
-	std::pair<HPWriteStatus, file_information> CreateFile(info<T>& theInfo,
-	                                                      std::shared_ptr<const plugin_configuration> conf);
+	std::pair<HPWriteStatus, file_information> CreateFile(info<T>& theInfo);
 
 	template <typename T>
 	std::pair<bool, radon_record> WriteToRadon(std::shared_ptr<const plugin_configuration> conf,

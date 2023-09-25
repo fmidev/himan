@@ -22,7 +22,7 @@ using namespace std;
 using namespace himan;
 using namespace himan::plugin;
 
-mutex dimensionMutex, writeStatusMutex;
+mutex dimensionMutex;
 
 template <typename T>
 bool compiled_plugin_base::Next(info<T>& myTargetInfo)
@@ -165,16 +165,7 @@ void compiled_plugin_base::WriteToFile(const shared_ptr<info<T>> targetInfo, wri
 				continue;
 			}
 
-			const HPWriteStatus status = aWriter->ToFile(tempInfo, itsConfiguration);
-			const std::string uName = util::UniqueName<T>(*tempInfo);
-
-			// status of all writes is recorded, although currently we are
-			// only interested of pending writes
-
-			{
-				lock_guard<mutex> lock(writeStatusMutex);
-				itsWriteStatuses.push_back(make_pair(uName, status));
-			}
+			aWriter->ToFile(tempInfo, itsConfiguration);
 		}
 	};
 
@@ -485,22 +476,6 @@ void compiled_plugin_base::Finish()
 	{
 		itsTimer.Stop();
 		itsConfiguration->Statistics()->AddToProcessingTime(itsTimer.GetTime());
-	}
-
-	// Check if we have pending writes in write statuses
-
-	vector<string> pending;
-
-	util::transform_if(
-	    itsWriteStatuses.cbegin(), itsWriteStatuses.cend(), back_inserter(pending),
-	    [](const pair<string, HPWriteStatus>& element) { return element.second == HPWriteStatus::kPending; },
-	    [](const pair<string, HPWriteStatus>& element) { return element.first; });
-
-	itsBaseLogger.Trace(fmt::format("Pending write status for {} infos", pending.size()));
-
-	if (pending.empty() == false)
-	{
-		writer::AddToPending(pending);
 	}
 }
 

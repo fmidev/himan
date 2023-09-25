@@ -15,8 +15,8 @@
 #include "querydata.h"
 #include "radon.h"
 
-static std::vector<std::string> pendingWrites;
-static std::mutex pendingMutex;
+static std::vector<std::pair<std::string, himan::HPWriteStatus>> writeStatuses;
+static std::mutex writeStatusMutex;
 
 using namespace himan::plugin;
 
@@ -25,22 +25,21 @@ writer::writer() : itsWriteOptions()
 	itsLogger = logger("writer");
 }
 
-void writer::AddToPending(const std::vector<std::string>& names)
-{
-	std::lock_guard<std::mutex> lock(pendingMutex);
-	pendingWrites.reserve(pendingWrites.size() + names.size());
-	pendingWrites.insert(pendingWrites.end(), names.begin(), names.end());
-}
-
 void writer::ClearPending()
 {
 	auto c = GET_PLUGIN(cache);
-	std::lock_guard<std::mutex> lock(pendingMutex);
-	for (const auto& uname : pendingWrites)
+	std::lock_guard<std::mutex> lock(writeStatusMutex);
+	for (const auto& m : writeStatuses)
 	{
-		c->Remove(uname);
+		if (m.second == himan::HPWriteStatus::kPending)
+		{
+			c->Remove(m.first);
+		}
 	}
-	pendingWrites.clear();
+	writeStatuses.erase(std::remove_if(writeStatuses.begin(), writeStatuses.end(),
+	                                   [](const std::pair<std::string, himan::HPWriteStatus>& v)
+	                                   { return v.second == himan::HPWriteStatus::kPending; }),
+	                    writeStatuses.end());
 }
 
 void ReadConfigurationWriteOptions(write_options& writeOptions)
@@ -85,11 +84,8 @@ void ReadConfigurationWriteOptions(write_options& writeOptions)
 }
 
 template <typename T>
-std::pair<himan::HPWriteStatus, himan::file_information> writer::CreateFile(
-    info<T>& theInfo, std::shared_ptr<const plugin_configuration> conf)
+std::pair<himan::HPWriteStatus, himan::file_information> writer::CreateFile(info<T>& theInfo)
 {
-	itsWriteOptions.configuration = conf;
-
 	// do not modify write configuration of fetcher instance,
 	// as it may be shared among many writes
 	auto wo = itsWriteOptions;
@@ -148,10 +144,8 @@ std::pair<himan::HPWriteStatus, himan::file_information> writer::CreateFile(
 	throw kInvalidWriteOptions;
 }
 
-template std::pair<himan::HPWriteStatus, himan::file_information> writer::CreateFile<double>(
-    info<double>&, std::shared_ptr<const plugin_configuration>);
-template std::pair<himan::HPWriteStatus, himan::file_information> writer::CreateFile<float>(
-    info<float>&, std::shared_ptr<const plugin_configuration>);
+template std::pair<himan::HPWriteStatus, himan::file_information> writer::CreateFile<double>(info<double>&);
+template std::pair<himan::HPWriteStatus, himan::file_information> writer::CreateFile<float>(info<float>&);
 
 himan::HPWriteStatus writer::ToFile(std::shared_ptr<info<double>> theInfo,
                                     std::shared_ptr<const plugin_configuration> conf)
@@ -163,16 +157,15 @@ himan::HPWriteStatus writer::ToFile(std::shared_ptr<info<double>> theInfo,
 template <typename T>
 himan::HPWriteStatus writer::ToFile(std::shared_ptr<info<T>> theInfo, std::shared_ptr<const plugin_configuration> conf)
 {
-	if (!itsWriteOptions.write_empty_grid)
+	itsWriteOptions.configuration = conf;
+
+	if (!itsWriteOptions.write_empty_grid && theInfo->Data().MissingCount() == theInfo->Data().Size())
 	{
-		if (theInfo->Data().MissingCount() == theInfo->Data().Size())
-		{
-			itsLogger.Info(fmt::format("Not writing empty grid for param {} time {} step {} level {}",
-			                           theInfo->Param().Name(), theInfo->Time().OriginDateTime().String(),
-			                           static_cast<std::string>(theInfo->Time().Step()),
-			                           static_cast<std::string>(theInfo->Level())));
-			return himan::HPWriteStatus::kFailed;
-		}
+		itsLogger.Info(fmt::format("Not writing empty grid for param {} time {} step {} level {}",
+		                           theInfo->Param().Name(), theInfo->Time().OriginDateTime().String(),
+		                           static_cast<std::string>(theInfo->Time().Step()),
+		                           static_cast<std::string>(theInfo->Level())));
+		return himan::HPWriteStatus::kFailed;
 	}
 
 	const size_t allowedMissing = itsWriteOptions.configuration->AllowedMissingValues();
@@ -203,7 +196,7 @@ himan::HPWriteStatus writer::ToFile(std::shared_ptr<info<T>> theInfo, std::share
 		if (theInfo->Producer().Class() == kGridClass ||
 		    (theInfo->Producer().Class() == kPreviClass && conf->WriteToDatabase() == false))
 		{
-			auto ret = CreateFile<T>(*theInfo, conf);
+			auto ret = CreateFile<T>(*theInfo);
 			status = ret.first;
 			finfo = ret.second;
 		}
@@ -234,6 +227,13 @@ himan::HPWriteStatus writer::ToFile(std::shared_ptr<info<T>> theInfo, std::share
 		             (conf->WriteMode() == kNoFileWrite) || (conf->WriteStorageType() == kS3ObjectStorageSystem));
 	}
 
+	const std::string uName = util::UniqueName<T>(*theInfo);
+
+	{
+		std::lock_guard<std::mutex> lock(writeStatusMutex);
+		writeStatuses.push_back(make_pair(uName, status));
+	}
+
 	if (conf->StatisticsEnabled())
 	{
 		t.Stop();
@@ -260,18 +260,20 @@ void writer::WriteOptions(const write_options& theWriteOptions)
 
 void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 {
-	auto FetchPendingFromCache = [&]() -> std::vector<std::shared_ptr<himan::info<double>>>
+	auto FetchPendingFromCache =
+	    [](const std::vector<std::string>& pending) -> std::vector<std::shared_ptr<himan::info<double>>>
 	{
 		auto c = GET_PLUGIN(cache);
+		logger logr("writer");
 
 		std::vector<std::shared_ptr<himan::info<double>>> infos;
-		for (const auto& name : pendingWrites)
+		for (const auto& name : pending)
 		{
 			auto ret = c->GetInfo<double>(name);
 
 			if (ret.empty())
 			{
-				itsLogger.Fatal(fmt::format("Failed to find pending write from cache with key: {}", name));
+				logr.Fatal(fmt::format("Failed to find pending write from cache with key: {}", name));
 				himan::Abort();
 			}
 
@@ -280,10 +282,20 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 		return infos;
 	};
 
+	std::vector<std::string> pendingWrites;
+
+	for (const auto& m : writeStatuses)
+	{
+		if (m.second == himan::HPWriteStatus::kPending)
+		{
+			pendingWrites.push_back(m.first);
+		}
+	}
+
 	if (conf->WriteStorageType() == kS3ObjectStorageSystem &&
 	    (conf->OutputFileType() == kGRIB || conf->OutputFileType() == kGRIB1 || conf->OutputFileType() == kGRIB2))
 	{
-		std::lock_guard<std::mutex> lock(pendingMutex);
+		std::lock_guard<std::mutex> lock(writeStatusMutex);
 		itsLogger.Info(fmt::format("Writing {} pending infos to file", pendingWrites.size()));
 
 		// The only case when we have pending writes is (currently) when
@@ -292,7 +304,7 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 		// First get the infos from cache that match the names given
 		// to us by the caller
 
-		auto infos = FetchPendingFromCache();
+		auto infos = FetchPendingFromCache(pendingWrites);
 
 		// Next create a grib message of each info and store them sequentially
 		// in a buffer. All infos that have the same filename will end up in the
@@ -356,10 +368,11 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 
 		if (threadCount == -1)
 		{
-			threadCount = std::min(12, static_cast<int>(infos.size()));
+			threadCount = 4;
 		}
 
 		itsLogger.Trace(fmt::format("Starting {} threads to convert infos to grib messages", threadCount));
+		timer tmr(true);
 
 		for (size_t i = 0; i < static_cast<size_t>(threadCount); i++)
 		{
@@ -385,6 +398,10 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 		{
 			t.join();
 		}
+		tmr.Stop();
+
+		itsLogger.Debug(fmt::format("Converted {} infos to gribs in {:.1f}s", infos.size(),
+		                            static_cast<float>(tmr.GetTime()) / 1000.f));
 
 		// Write the buffers to s3
 
@@ -412,9 +429,9 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 	}
 	else if (conf->OutputFileType() == kGeoTIFF)
 	{
-		std::lock_guard<std::mutex> lock(pendingMutex);
+		std::lock_guard<std::mutex> lock(writeStatusMutex);
 		itsLogger.Info(fmt::format("Writing {} pending infos to file", pendingWrites.size()));
-		auto infos = FetchPendingFromCache();
+		auto infos = FetchPendingFromCache(pendingWrites);
 
 		auto g = GET_PLUGIN(geotiff);
 		itsWriteOptions.configuration = conf;
