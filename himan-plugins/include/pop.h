@@ -37,9 +37,13 @@ class pop : public compiled_plugin, private compiled_plugin_base
 
    private:
 	virtual void Calculate(std::shared_ptr<info<double>> theTargetInfo, unsigned short theThreadIndex);
+	std::shared_ptr<himan::info<double>> GetShortProbabilityData(const forecast_time& forecastTime, const level& level,
+	                                                             logger& logr);
 
 	std::string itsECEPSGeom;
 	std::string itsMEPSGeom;
+
+	bool itsUseMEPS;
 };
 
 extern "C" std::shared_ptr<himan_plugin> create()
