@@ -159,7 +159,14 @@ himan::HPWriteStatus writer::ToFile(std::shared_ptr<info<T>> theInfo, std::share
 {
 	itsWriteOptions.configuration = conf;
 
-	if (!itsWriteOptions.write_empty_grid && theInfo->Data().MissingCount() == theInfo->Data().Size())
+	bool writeEmptyGrid = itsWriteOptions.write_empty_grid;
+
+	if (conf->Exists("write_empty_grid"))
+	{
+		writeEmptyGrid = util::ParseBoolean(conf->GetValue("write_empty_grid"));
+	}
+
+	if (writeEmptyGrid == false && theInfo->Data().MissingCount() == theInfo->Data().Size())
 	{
 		itsLogger.Info(fmt::format("Not writing empty grid for param {} time {} step {} level {}",
 		                           theInfo->Param().Name(), theInfo->Time().OriginDateTime().String(),
