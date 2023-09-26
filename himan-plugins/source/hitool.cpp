@@ -360,7 +360,7 @@ vector<T> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, const param& wa
 
 			ASSERT(lowestHybridLevel >= highestHybridLevel);
 
-			itsLogger.Debug(fmt::format("Adjusting level range to {} .. {} for height range {:.2f} .. {:.2f} {}",
+			itsLogger.Debug(fmt::format("Adjusting level range to {} .. {} for height range {:.1f} .. {:.1f} {}",
 			                            lowestHybridLevel, highestHybridLevel, min_value, max_value, heightUnit));
 		}
 		break;
@@ -403,7 +403,7 @@ vector<T> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, const param& wa
 
 			ASSERT(lowestHybridLevel >= highestHybridLevel);
 
-			itsLogger.Debug(fmt::format("Adjusting level range to {} .. {} for height range {} .. {} {}",
+			itsLogger.Debug(fmt::format("Adjusting level range to {} .. {} for height range {:.1f} .. {:.1f} {}",
 			                            lowestHybridLevel, highestHybridLevel, min_value, max_value, heightUnit));
 		}
 		break;
