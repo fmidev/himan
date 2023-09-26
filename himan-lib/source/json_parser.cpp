@@ -256,11 +256,11 @@ void CacheLimit(const boost::property_tree::ptree& pt, std::shared_ptr<configura
 		size_t sz = 0;
 		if (lim.find("Gi") != std::string::npos)
 		{
-			sz = std::stol(lim.substr(0, lim.size() - 2)) * 1024 * 1024 * 1024;
+			sz = static_cast<size_t> (std::stod(lim.substr(0, lim.size() - 2)) * 1024 * 1024 * 1024);
 		}
 		else if (lim.find("Mi") != std::string::npos)
 		{
-			sz = std::stol(lim.substr(0, lim.size() - 2)) * 1024 * 1024;
+			sz = static_cast<size_t> (std::stod(lim.substr(0, lim.size() - 2)) * 1024 * 1024);
 		}
 		else
 		{
