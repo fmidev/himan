@@ -21,7 +21,7 @@
 
 class OGRPolygon;
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 #include <ogr_spatialref.h>
 
 namespace cereal
@@ -185,7 +185,7 @@ class grid
 	bool itsUVRelativeToGrid;
 	std::string itsName;
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 
 	friend class cereal::access;
 
@@ -277,7 +277,7 @@ class regular_grid : public grid
 	size_t itsNi;
 	size_t itsNj;
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 
 	friend class cereal::access;
 
@@ -313,7 +313,7 @@ class irregular_grid : public grid
 	bool EqualsTo(const irregular_grid& other) const;
 	earth_shape<double> itsEarthShape;
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 	friend class cereal::access;
 
 	template <class Archive>
@@ -336,7 +336,7 @@ inline std::ostream& operator<<(std::ostream& file, const regular_grid& ob)
 
 }  // namespace himan
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 CEREAL_REGISTER_TYPE(himan::regular_grid);
 CEREAL_REGISTER_POLYMORPHIC_RELATION(himan::grid, himan::regular_grid);
 #endif

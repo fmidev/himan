@@ -4,7 +4,7 @@
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <fmt/format.h>
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 #include <boost/date_time.hpp>
 #include <boost/date_time/posix_time/time_parsers.hpp>
 
@@ -93,7 +93,7 @@ class time_duration
    private:
 	boost::posix_time::time_duration itsDuration;
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 	friend class cereal::access;
 
 	template <class Archive>

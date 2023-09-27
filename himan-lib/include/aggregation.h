@@ -70,7 +70,7 @@ class aggregation
 	time_duration itsTimeOffset;    // offset of the beginning of the aggregation period compared to current hour,
 	                                // usually -1 * itsTimeDuration
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 	friend class cereal::access;
 
 	template <class Archive>

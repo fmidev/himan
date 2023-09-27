@@ -76,7 +76,7 @@ class logger
 	HPDebugState itsDebugState;
 	std::string itsUserName;
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 	friend class cereal::access;
 
 	template <class Archive>

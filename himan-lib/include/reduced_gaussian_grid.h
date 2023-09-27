@@ -70,7 +70,7 @@ class reduced_gaussian_grid : public irregular_grid
 
 	static std::map<int, std::vector<double>> cachedLatitudes;
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 	friend class cereal::access;
 
 	template <class Archive>
@@ -88,7 +88,7 @@ inline std::ostream& operator<<(std::ostream& file, const reduced_gaussian_grid&
 }
 }  // namespace himan
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 CEREAL_REGISTER_TYPE(himan::reduced_gaussian_grid);
 #endif
 

@@ -17,6 +17,9 @@ namespace himan
 {
 namespace plugin
 {
+
+typedef std::tuple<HPWriteStatus, file_information, std::shared_ptr<himan::info<double>>> write_information;
+
 class writer : public auxiliary_plugin
 {
    public:
@@ -50,6 +53,15 @@ class writer : public auxiliary_plugin
 	template <typename T>
 	std::pair<bool, radon_record> WriteToRadon(std::shared_ptr<const plugin_configuration> conf,
 	                                           const file_information& finfo, std::shared_ptr<himan::info<T>> info);
+
+	std::vector<write_information> WritePendingGribs(const std::vector<std::shared_ptr<himan::info<double>>>& infos);
+	std::vector<write_information> WritePendingGeotiffs(const std::vector<std::shared_ptr<himan::info<double>>>& infos);
+	void WritePendingToRadon(std::vector<write_information>& list);
+
+#ifdef HAVE_CEREAL
+	template <typename T>
+	std::string SpillToDisk(std::shared_ptr<himan::info<T>> info);
+#endif
 
 	write_options itsWriteOptions;
 };

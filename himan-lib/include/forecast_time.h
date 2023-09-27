@@ -57,7 +57,7 @@ class forecast_time
 	raw_time itsOriginDateTime;
 	raw_time itsValidDateTime;
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 	friend class cereal::access;
 
 	template <class Archive>
