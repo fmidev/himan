@@ -33,7 +33,7 @@ configuration::configuration()
       itsCudaDeviceCount(-1),
       itsCudaDeviceId(0),
       itsForecastStep(),
-      itsCacheLimit(-1),
+      itsCacheLimit(0),
       itsParamFile(),
       itsAsyncExecution(false),
       itsUpdateSSStateTable(true),
@@ -362,11 +362,11 @@ void configuration::TargetGeomName(const std::string& theTargetGeomName)
 {
 	itsTargetGeomName = theTargetGeomName;
 }
-int configuration::CacheLimit() const
+size_t configuration::CacheLimit() const
 {
 	return itsCacheLimit;
 }
-void configuration::CacheLimit(int theCacheLimit)
+void configuration::CacheLimit(size_t theCacheLimit)
 {
 	itsCacheLimit = theCacheLimit;
 }
