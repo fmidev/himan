@@ -415,7 +415,7 @@ class matrix
 
 	std::mutex itsValueMutex;
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 	friend class cereal::access;
 
 	template <class Archive>

@@ -63,7 +63,7 @@ class earth_shape
 	T itsB;               // size of minor axis in meters
 	std::string itsName;  // Name to describe "well-known" values
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 	friend class cereal::access;
 
 	template <class Archive>

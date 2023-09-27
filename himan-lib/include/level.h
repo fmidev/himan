@@ -122,7 +122,7 @@ class level
 	std::string itsName;
 	std::vector<double> itsAB;
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 	friend class cereal::access;
 
 	template <class Archive>

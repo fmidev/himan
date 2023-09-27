@@ -50,7 +50,7 @@ class transverse_mercator_grid : public regular_grid
 	bool EqualsTo(const transverse_mercator_grid& other) const;
 	void CreateCoordinateTransformations(const point& firstPoint, bool isProjected);
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 	friend class cereal::access;
 
 	template <class Archive>
@@ -81,7 +81,7 @@ inline std::ostream& operator<<(std::ostream& file, const transverse_mercator_gr
 }
 }  // namespace himan
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 CEREAL_REGISTER_TYPE(himan::transverse_mercator_grid);
 CEREAL_REGISTER_POLYMORPHIC_RELATION(himan::regular_grid, himan::transverse_mercator_grid);
 #endif

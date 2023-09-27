@@ -202,7 +202,7 @@ if env['HAVE_CUDA']:
 if env['HAVE_S3']:
         env.Append(CPPDEFINES=['HAVE_S3'])
 if env['HAVE_CEREAL']:
-        env.Append(CPPDEFINES=['SERIALIZATION'])
+        env.Append(CPPDEFINES=['HAVE_CEREAL'])
 
 env.Append(NVCCDEFINES=['HAVE_CUDA'])
 

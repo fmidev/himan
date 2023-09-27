@@ -25,7 +25,7 @@ class station : public point
    private:
 	int itsId;  // FMISID
 	std::string itsName;
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 	friend class cereal::access;
 
 	template <class Archive>

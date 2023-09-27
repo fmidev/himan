@@ -58,7 +58,7 @@ class writer : public auxiliary_plugin
 	std::vector<write_information> WritePendingGeotiffs(const std::vector<std::shared_ptr<himan::info<double>>>& infos);
 	void WritePendingToRadon(std::vector<write_information>& list);
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 	template <typename T>
 	std::string SpillToDisk(std::shared_ptr<himan::info<T>> info);
 #endif

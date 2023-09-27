@@ -48,7 +48,7 @@ class lambert_equal_area_grid : public regular_grid
 	bool EqualsTo(const lambert_equal_area_grid& other) const;
 	void CreateCoordinateTransformations(const point& firstPoint, bool isProjected);
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 	friend class cereal::access;
 
 	template <class Archive>
@@ -80,7 +80,7 @@ inline std::ostream& operator<<(std::ostream& file, const lambert_equal_area_gri
 }
 }  // namespace himan
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 CEREAL_REGISTER_TYPE(himan::lambert_equal_area_grid);
 CEREAL_REGISTER_POLYMORPHIC_RELATION(himan::regular_grid, himan::lambert_equal_area_grid);
 #endif

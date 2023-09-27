@@ -95,7 +95,7 @@ class processing_type
 
 	int itsNumberOfEnsembleMembers = kHPMissingInt;
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 	friend class cereal::access;
 
 	template <class Archive>

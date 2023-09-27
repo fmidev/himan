@@ -224,7 +224,7 @@ himan::HPWriteStatus cache_pool::Insert(const string& uniqueName, shared_ptr<him
 	{
 		// cache is full and a pinned info needs to be written
 		size_t cleaned = Clean(CleanType::kExcess);
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 		// cache clean failed, activate spill mechanism
 		if (pin && cleaned == 0)
 		{

@@ -43,7 +43,7 @@ void writer::ClearPending()
 	                    writeStatuses.end());
 }
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 std::string SpillDirectory()
 {
 	std::string tmpdir = "/tmp";
@@ -283,7 +283,7 @@ himan::HPWriteStatus writer::ToFile(std::shared_ptr<info<T>> theInfo, std::share
 		// so they can't be removed from cache if cache size is limited
 		auto ret = c->Insert<T>(
 		    theInfo, (conf->WriteMode() == kNoFileWrite) || (conf->WriteStorageType() == kS3ObjectStorageSystem));
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 		if (ret == HPWriteStatus::kFailed)
 		{
 			status = HPWriteStatus::kSpilled;
@@ -526,7 +526,7 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 		return infos;
 	};
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 	auto FetchSpilledFromDisk = [&Filter]() -> vector<std::shared_ptr<himan::info<double>>>
 	{
 		vector<string> spilled = Filter(writeStatuses, himan::HPWriteStatus::kSpilled);
@@ -559,7 +559,7 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 
 	std::vector<std::shared_ptr<himan::info<double>>> infos;
 	size_t pendingSize = 0;
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 	size_t spilledSize = 0;  // just for logging
 #endif
 
@@ -575,7 +575,7 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 		infos = FetchPendingFromCache();
 		pendingSize = infos.size();
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 		auto spilledInfos = FetchSpilledFromDisk();
 
 		auto c = GET_PLUGIN(cache);
@@ -591,7 +591,7 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 		return;
 	}
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 	itsLogger.Info(fmt::format("Writing {} pending and {} spilled infos to file", pendingSize, spilledSize));
 #else
 	itsLogger.Info(fmt::format("Writing {} pending infos to file", pendingSize));
