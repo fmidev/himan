@@ -3,6 +3,7 @@
 #include "logger.h"
 #include "numerical_functions.h"
 #include "plugin_factory.h"
+#include "spiller.h"
 #include "statistics.h"
 #include "util.h"
 #include <filesystem>
@@ -637,6 +638,20 @@ pair<HPDataFoundFrom, vector<shared_ptr<info<T>>>> fetcher::FetchFromAllSources(
 		return make_pair(HPDataFoundFrom::kCache, fromCache);
 	}
 
+#ifdef HAVE_CEREAL
+	if (spiller::Enabled())
+	{
+		auto fromSpill = spiller::ReadFromUniqueName<T>(util::UniqueName(opts));
+		if (fromSpill)
+		{
+			itsLogger.Warning(
+			    fmt::format("Spill files accessed: increase cache_limit to speed up processing (currently {} bytes)",
+			                opts.configuration->CacheLimit()));
+
+			return make_pair(HPDataFoundFrom::kSpillFile, vector<shared_ptr<info<T>>>({fromSpill}));
+		}
+	}
+#endif
 	if (!auxiliaryFilesRead)
 	{
 		auto fromAux = FetchFromAuxiliaryFiles(opts, readPackedData);

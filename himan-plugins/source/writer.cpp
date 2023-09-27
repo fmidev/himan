@@ -14,6 +14,7 @@
 #include "grib.h"
 #include "querydata.h"
 #include "radon.h"
+#include "spiller.h"
 #include <filesystem>
 
 static std::vector<std::pair<std::string, himan::HPWriteStatus>> writeStatuses;
@@ -42,52 +43,6 @@ void writer::ClearPending()
 	                                   { return v.second == himan::HPWriteStatus::kPending; }),
 	                    writeStatuses.end());
 }
-
-#ifdef HAVE_CEREAL
-std::string SpillDirectory()
-{
-	std::string tmpdir = "/tmp";
-
-	try
-	{
-		tmpdir = himan::util::GetEnv("HIMAN_TEMP_DIRECTORY");
-	}
-	catch (...)
-	{
-	}
-
-	tmpdir = fmt::format("{}/himan-spill-{}", tmpdir, getpid());
-
-	if (std::filesystem::is_directory(tmpdir) == false)
-	{
-		std::filesystem::create_directory(tmpdir);
-	}
-
-	return tmpdir;
-}
-
-template <typename T>
-std::string writer::SpillToDisk(std::shared_ptr<himan::info<T>> info)
-{
-	const std::string spillFile = fmt::format("{}/{:010d}", SpillDirectory(), rand());
-	std::ofstream outfile(spillFile, std::ios::binary);
-	cereal::BinaryOutputArchive archive(outfile);
-
-	// extract only currently active info and set file type to double
-	auto newInfo =
-	    std::make_shared<himan::info<double>>(info->ForecastType(), info->Time(), info->Level(), info->Param());
-	newInfo->Producer(info->Producer());
-
-	auto b = std::make_shared<himan::base<double>>();
-	b->grid = std::shared_ptr<himan::grid>(info->Grid()->Clone());
-	b->data = info->Data();
-	newInfo->Base(b);
-	archive(newInfo);
-	itsLogger.Debug(fmt::format("Cache is full, spilling {} to file {}", util::UniqueName(*info), spillFile));
-
-	return spillFile;
-}
-#endif
 
 void ReadConfigurationWriteOptions(write_options& writeOptions)
 {
@@ -287,7 +242,8 @@ himan::HPWriteStatus writer::ToFile(std::shared_ptr<info<T>> theInfo, std::share
 		if (ret == HPWriteStatus::kFailed)
 		{
 			status = HPWriteStatus::kSpilled;
-			wsName = SpillToDisk(theInfo);
+			wsName = spiller::Write(theInfo);
+			itsLogger.Debug(fmt::format("Cache is full, spilling {} to file {}", util::UniqueName(*theInfo), wsName));
 		}
 #else
 		if (ret != HPWriteStatus::kFinished)
@@ -536,28 +492,17 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 	{
 		vector<string> spilled = Filter(writeStatuses, himan::HPWriteStatus::kSpilled);
 
-		// read serialized infos from disk and de-serialize (is there a word for that?)
-		// remove the files after they are read to memory
 		vector<std::shared_ptr<himan::info<double>>> infos;
 		logger logr("writer");
 		for (const auto& name : spilled)
 		{
 			logr.Trace(fmt::format("De-serializing spilled file {}", name));
-			auto info = std::make_shared<himan::info<double>>();
-			{
-				std::ifstream infile(name, std::ios::binary);
-				cereal::BinaryInputArchive iarchive(infile);
-
-				iarchive(info);
-			}
+			auto info = spiller::ReadFromFileName<double>(name);
 			infos.push_back(info);
 
-			std::filesystem::remove(name);
+			spiller::RemoveFromFileName(name);
 		}
-		if (spilled.size() > 0)
-		{
-			std::filesystem::remove_all(std::filesystem::path{spilled[0]}.parent_path().string());
-		}
+
 		return infos;
 	};
 #endif
