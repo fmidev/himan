@@ -30,6 +30,14 @@ himan::raw_time GetOriginTime(const himan::raw_time& start, int producerId)
 	return ret;
 }
 
+himan::raw_time GetValidTime(const himan::raw_time& start)
+{
+	himan::raw_time ret = start;
+	ret -= himan::ONE_HOUR;
+
+	return ret;
+}
+
 pop::pop() : itsECEPSGeom("ECGLO0200"), itsMEPSGeom("MEPS2500D"), itsUseMEPS(true)
 {
 	itsLogger = logger("pop");
@@ -111,6 +119,46 @@ shared_ptr<himan::info<double>> pop::GetShortProbabilityData(const himan::foreca
 	return ret;
 }
 
+std::shared_ptr<himan::info<double>> pop::GetLongProbabilityData(const himan::forecast_time& forecastTime,
+                                                                 const level& forecastLevel, logger& logr)
+
+{
+	logr.Info("Fetching ECMWF");
+
+	param p("PROB-RR3-6", aggregation(), processing_type(kProbabilityGreaterThan, 0.2));  // EC(3h) RR>0.2mm
+
+	if (forecastTime.Step().Hours() > 131)
+	{
+		p = param("PROB-RR-4", aggregation(), processing_type(kProbabilityGreaterThan, 0.4));  // EC(6h) RR>0.4mm
+	}
+
+	shared_ptr<info<double>> ret = nullptr;
+
+	// origin time counter
+	int otryNo = 0;
+
+	forecast_time curTime = forecastTime;
+	const producer ECprod(242, 86, 242, "ECGEPSMTA");
+
+	do
+	{
+		// valid time counter
+		int vtryNo = 0;
+		do
+		{
+			ret =
+			    Fetch(curTime, forecastLevel, p, forecast_type(kStatisticalProcessing), {itsECEPSGeom}, ECprod, false);
+			vtryNo++;
+			curTime = forecast_time(curTime.OriginDateTime(), GetValidTime(curTime.ValidDateTime()));
+		} while (vtryNo < 6 && !ret);
+		otryNo++;
+		curTime = forecast_time(GetOriginTime(curTime.OriginDateTime(), 242), forecastTime.ValidDateTime());
+
+	} while (otryNo < 2 && !ret);
+
+	return ret;
+}
+
 void pop::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	// 2021 POP
@@ -135,7 +183,7 @@ void pop::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 	                                   static_cast<string>(forecastTime.ValidDateTime()),
 	                                   static_cast<string>(forecastLevel)));
 
-	shared_ptr<info<double>> ShortProb, EC, Precipitation;
+	shared_ptr<info<double>> ShortProb, LongProb, Precipitation;
 
 	const long step = forecastTime.Step().Hours();
 
@@ -150,30 +198,9 @@ void pop::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 
 	if (step >= 43)
 	{
-		myThreadedLogger.Info("Fetching ECMWF");
+		LongProb = GetLongProbabilityData(forecastTime, forecastLevel, myThreadedLogger);
 
-		param p("PROB-RR3-6", aggregation(), processing_type(kProbabilityGreaterThan, 0.2));  // EC(3h) RR>0.2mm
-
-		int tryNo = 0;
-
-		forecast_time curTime = forecastTime;
-		const producer ECprod(242, 86, 242, "ECGEPSMTA");
-
-		do
-		{
-			if (curTime.Step().Hours() > 131)
-			{
-				p = param("PROB-RR-4", aggregation(),
-				          processing_type(kProbabilityGreaterThan, 0.4));  // EC(6h) RR>0.4mm
-			}
-
-			EC = Fetch(curTime, forecastLevel, p, forecast_type(kStatisticalProcessing), {itsECEPSGeom}, ECprod, false);
-			tryNo++;
-			curTime = forecast_time(GetOriginTime(curTime.OriginDateTime(), 242), curTime.ValidDateTime());
-
-		} while (tryNo < 2 && !EC);
-
-		if (!EC)
+		if (!LongProb)
 		{
 			return;
 		}
@@ -191,7 +218,7 @@ void pop::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 	vector<double> result(myTargetInfo->Data().Size(), MissingDouble());
 
 	const auto& ShortProbData = (ShortProb) ? VEC(ShortProb) : result;
-	const auto& LongProbData = (EC) ? VEC(EC) : result;
+	const auto& LongProbData = (LongProb) ? VEC(LongProb) : result;
 	const auto& PrecipitationData = VEC(Precipitation);
 
 	auto& resultdata = VEC(myTargetInfo);
