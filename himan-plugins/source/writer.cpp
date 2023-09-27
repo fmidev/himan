@@ -289,6 +289,11 @@ himan::HPWriteStatus writer::ToFile(std::shared_ptr<info<T>> theInfo, std::share
 			status = HPWriteStatus::kSpilled;
 			wsName = SpillToDisk(theInfo);
 		}
+#else
+		if (ret != HPWriteStatus::kFinished)
+		{
+			itsLogger.Error(fmt::format("Unexpected return value from cache: {}", HPWriteStatusToString.at(ret)));
+		}
 #endif
 	}
 

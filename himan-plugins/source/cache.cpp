@@ -223,13 +223,17 @@ himan::HPWriteStatus cache_pool::Insert(const string& uniqueName, shared_ptr<him
 	if (pin && itsCacheLimit > 0 && (Size() + item.size_bytes) > itsCacheLimit)
 	{
 		// cache is full and a pinned info needs to be written
-		size_t cleaned = Clean(CleanType::kExcess);
 #ifdef HAVE_CEREAL
+		size_t cleaned = Clean(CleanType::kExcess);
+
 		// cache clean failed, activate spill mechanism
+
 		if (pin && cleaned == 0)
 		{
 			return HPWriteStatus::kFailed;
 		}
+#else
+		Clean(CleanType::kExcess);
 #endif
 	}
 
