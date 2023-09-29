@@ -182,16 +182,6 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 	forecast_type stat_type = forecast_type(kStatisticalProcessing);
 
-	// ECMWF PROB-TC-0 is calculated only for every 3 hours.
-
-	int forecastHour = std::stoi(ec_forecastTime.ValidDateTime().String("%H"));
-
-	if (forecastHour % 3 == 1 || forecastHour % 3 == 2)
-	{
-		myThreadedLogger.Error(fmt::format("ECMWF PROB-TC-0 not available for forecast hour: {}",
-		                                   ec_forecastTime.ValidDateTime().String("%H")));
-		return;
-	}
 	ec_forecastTime = original_forecastTime;
 	adjustment = (latestHour - latestHour % 12) - latestHour;
 	ec_forecastTime.OriginDateTime().Adjust(kHourResolution, adjustment);
