@@ -115,6 +115,14 @@ S3Status responsePropertiesCallback(const S3ResponseProperties* properties, void
 static void responseCompleteCallback(S3Status status, const S3ErrorDetails* error, void* callbackData)
 {
 	statusG = status;
+
+	if (status != S3StatusOK && error->message != nullptr)
+	{
+		logger logr("s3");
+		logr.Error(fmt::format("{} resource: {} further details: {}", error->message,
+		                       error->resource == nullptr ? "NULL" : error->resource,
+		                       error->furtherDetails == nullptr ? "NULL" : error->furtherDetails));
+	}
 	return;
 }
 
@@ -234,13 +242,11 @@ S3Protocol GetProtocol(const std::string& endpoint)
 	return protocol;
 }
 
-S3BucketContext GetBucketContext(const std::string& host, const std::string& bucket)
+S3BucketContext GetBucketContext(const std::string& host, const std::string& bucket, const std::string& region)
 {
 	// clang-format off
 
 #ifdef S3_DEFAULT_REGION
-
-	std::string region = ReadAWSRegionFromHostname(host);
 
         S3BucketContext bucketContext =
         {
@@ -293,9 +299,10 @@ buffer s3::ReadFile(const file_information& fileInformation)
 	}
 
 	buffer ret;
-	auto hostname = StripProtocol(fileInformation.file_server);
+	auto host = StripProtocol(fileInformation.file_server);
+	const auto region = ReadAWSRegionFromHostname(host);
 
-	S3BucketContext bucketContext = GetBucketContext(hostname, bucket);
+	S3BucketContext bucketContext = GetBucketContext(host, bucket, region);
 
 	int count = 0;
 	do
@@ -341,10 +348,11 @@ void s3::WriteObject(const std::string& objectName, const buffer& buff)
 	const auto key = bucketAndFileName[1];
 
 	auto host = StripProtocol(util::GetEnv("S3_HOSTNAME"));
+	const auto region = ReadAWSRegionFromHostname(host);
 
 	logger logr("s3");
 
-	const auto bucketContext = GetBucketContext(host, bucket);
+	const auto bucketContext = GetBucketContext(host, bucket, region);
 
 	S3PutObjectHandler putObjectHandler = {responseHandler, &putObjectDataCallback};
 
@@ -401,8 +409,9 @@ bool s3::Exists(const std::string& objectName)
 	const auto bucketAndFileName = GetBucketAndFileName(objectName);
 	const auto bucket = bucketAndFileName[0];
 	const auto key = bucketAndFileName[1];
+	const auto region = ReadAWSRegionFromHostname(host);
 
-	const auto bucketContext = GetBucketContext(host, bucket);
+	const auto bucketContext = GetBucketContext(host, bucket, region);
 	const int timeoutms = 5000;
 
 	S3_head_object(&bucketContext, key.c_str(), NULL, timeoutms, &responseHandler, NULL);
