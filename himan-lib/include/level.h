@@ -93,6 +93,12 @@ class level
 
 	std::ostream& Write(std::ostream& file) const;
 
+	/**
+	 * @brief Adjust all level values (depending on type) equally
+	 */
+
+	static void EqualAdjustment(level& lev, double adjustment);
+
    private:
 	HPLevelType itsType;
 
