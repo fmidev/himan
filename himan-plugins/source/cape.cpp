@@ -1248,6 +1248,8 @@ CAPEdata cape::GetCAPECPU(shared_ptr<info<float>> myTargetInfo, const vector<flo
 
 	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 50., itsConfiguration->TargetGeomName());
 
+	int breakLevel = static_cast<int> (itsBottomLevel.Value() * 0.4);
+
 	while (curLevel.Value() > stopLevel.first.Value() && foundCount != found.size())
 	{
 		// Get environment temperature, pressure and height values for this level
@@ -1333,7 +1335,7 @@ CAPEdata cape::GetCAPECPU(shared_ptr<info<float>> myTargetInfo, const vector<flo
 				}
 			}
 
-			if (curLevel.Value() < 85 && (Tenv - Tparcel) > 25.)
+			if (curLevel.Value() < breakLevel && (Tenv - Tparcel) > 25.)
 			{
 				// Temperature gap between environment and parcel too large --> abort search.
 				// Only for values higher in the atmosphere, to avoid the effects of inversion
