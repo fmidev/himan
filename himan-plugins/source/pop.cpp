@@ -15,18 +15,24 @@
 using namespace std;
 using namespace himan::plugin;
 
-himan::raw_time GetOriginTime(const himan::raw_time& start, int producerId)
+himan::raw_time RoundOriginTime(const himan::raw_time& start, int producerId)
 {
-	ASSERT(producerId == 242 || producerId == 260);
-
-	// Provide latest analysis time for either MEPS or ECEPS
 	himan::raw_time ret = start;
-
 	const int hour = stoi(start.String("%H"));
 	const int ostep = (producerId == 242) ? 12 : 3;  // origin time "step"
-	const int adjust = (hour % ostep == 0) ? ostep : hour % ostep;
+	const int adjust = hour % ostep;
+
 	ret.Adjust(himan::kHourResolution, -adjust);
 
+	return ret;
+}
+
+himan::raw_time GetOriginTime(const himan::raw_time& start, int producerId)
+{
+	himan::raw_time ret = start;
+	const int adjust = (producerId == 242) ? 12 : 3;  // origin time "step"
+
+	ret.Adjust(himan::kHourResolution, -adjust);
 	return ret;
 }
 
@@ -82,7 +88,9 @@ shared_ptr<himan::info<double>> pop::GetShortProbabilityData(const himan::foreca
 
 		int tryNo = 0;
 
-		forecast_time curTime = forecastTime;
+		forecast_time curTime =
+		    forecast_time(RoundOriginTime(forecastTime.OriginDateTime(), 260), forecastTime.ValidDateTime());
+
 		const param p("PROB-RR-7", aggregation(),
 		              processing_type(kProbabilityGreaterThan, 0.025));  // MEPS(1h) RR>0.025mm
 		const producer MEPSprod(260, 86, 204, "MEPSMTA");
@@ -101,7 +109,9 @@ shared_ptr<himan::info<double>> pop::GetShortProbabilityData(const himan::foreca
 
 		int tryNo = 0;
 
-		forecast_time curTime = forecastTime;
+		forecast_time curTime =
+		    forecast_time(RoundOriginTime(forecastTime.OriginDateTime(), 242), forecastTime.ValidDateTime());
+
 		const param p("PROB-RR1-1", aggregation(),
 		              processing_type(kProbabilityGreaterThan, 0.14));  // ECMWF(1h) RR>0.14mm
 		const producer ECprod(242, 86, 242, "ECGEPSMTA");
@@ -137,7 +147,9 @@ std::shared_ptr<himan::info<double>> pop::GetLongProbabilityData(const himan::fo
 	// origin time counter
 	int otryNo = 0;
 
-	forecast_time curTime = forecastTime;
+	forecast_time curTime =
+	    forecast_time(RoundOriginTime(forecastTime.OriginDateTime(), 242), forecastTime.ValidDateTime());
+
 	const producer ECprod(242, 86, 242, "ECGEPSMTA");
 
 	do
