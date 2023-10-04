@@ -72,9 +72,11 @@ class level
 
 	void Value(double theLevelValue);
 	double Value() const;
+	double& Value();
 
 	void Value2(double theLevelValue2);
 	double Value2() const;
+	double& Value2();
 
 	void Index(int theIndex);
 

@@ -74,6 +74,10 @@ double level::Value() const
 {
 	return itsValue;
 }
+double& level::Value()
+{
+	return itsValue;
+}
 void level::Value2(double theValue2)
 {
 	itsValue2 = theValue2;
@@ -82,6 +86,11 @@ double level::Value2() const
 {
 	return itsValue2;
 }
+double& level::Value2()
+{
+	return itsValue2;
+}
+
 int level::Index() const
 {
 	return itsIndex;
