@@ -467,7 +467,7 @@ void StormRelativeHelicity(std::shared_ptr<const plugin_configuration> conf, std
 
 		while (curLevel.Value() > 0)
 		{
-			curLevel.Value(curLevel.Value() - 1);
+			level::EqualAdjustment(curLevel, -1.);
 
 			auto UInfo = hc::Fetch<double>(conf, myTargetInfo->Time(), curLevel, UParam, myTargetInfo->ForecastType());
 			auto VInfo = hc::Fetch<double>(conf, myTargetInfo->Time(), curLevel, VParam, myTargetInfo->ForecastType());

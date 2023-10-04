@@ -916,7 +916,7 @@ cape_multi_source cape_cuda::GetNHighestThetaEValuesGPU(const std::shared_ptr<co
 
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
-		curLevel.Value(curLevel.Value() - 1);
+		level::EqualAdjustment(curLevel, -1.);
 		K++;
 
 		if (foundCount == N || levelSpan == K)
@@ -1076,7 +1076,7 @@ void GetSampledSourceDataGPU(std::shared_ptr<const himan::plugin_configuration> 
 		                                                            levelCount, N);
 
 		k++;
-		curLevel.Value(curLevel.Value() - 1);
+		level::EqualAdjustment(curLevel, -1.);
 	}
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
@@ -1338,7 +1338,7 @@ std::vector<std::pair<std::vector<float>, std::vector<float>>> cape_cuda::GetLFC
 		VirtualTemperatureKernel<<<gridSize, blockSize, 0, stream>>>(d_prevTenv, d_prevPenv, N);
 	}
 
-	curLevel.Value(curLevel.Value() - 1);
+	level::EqualAdjustment(curLevel, -1.);
 
 	std::vector<unsigned char> found(N, 0);
 	std::vector<float> LFCT(N, himan::MissingFloat());
@@ -1404,7 +1404,7 @@ std::vector<std::pair<std::vector<float>, std::vector<float>>> cape_cuda::GetLFC
 		CUDA_CHECK(cudaMemcpyAsync(d_prevTenv, d_Tenv, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
 		CUDA_CHECK(cudaMemcpyAsync(d_prevPenv, d_Penv, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
 
-		curLevel.Value(curLevel.Value() - 1);
+		level::EqualAdjustment(curLevel, -1.);
 	}
 
 	LastLFCCopyKernel<<<gridSize, blockSize, 0, stream>>>(d_LFCT, d_LFCP, d_LastLFCT, d_LastLFCP, N);
@@ -1532,7 +1532,7 @@ std::vector<float> cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_confi
 
 	CUDA_CHECK(cudaMemcpyAsync(d_found, &found[0], sizeof(unsigned char) * N, cudaMemcpyHostToDevice, stream));
 
-	curLevel.Value(curLevel.Value() - 1);
+	level::EqualAdjustment(curLevel, -1.);
 
 	auto h = GET_PLUGIN(hitool);
 	h->Configuration(conf);
@@ -1573,7 +1573,7 @@ std::vector<float> cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_confi
 		CUDA_CHECK(cudaMemcpyAsync(d_prevTenv, d_Tenv, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
 		CUDA_CHECK(cudaMemcpyAsync(d_prevPenv, d_Penv, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
 
-		curLevel.Value(curLevel.Value() - 1);
+		level::EqualAdjustment(curLevel, -1.);
 	}
 
 	std::vector<float> cinh(N, 0);
@@ -1769,8 +1769,6 @@ CAPEdata cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>
 		VirtualTemperatureKernel<<<gridSize, blockSize, 0, stream>>>(d_prevTenv, d_prevPenv, N);
 	}
 
-	curLevel.Value(curLevel.Value());
-
 	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 50., conf->TargetGeomName());
 	auto hPa450 = h->LevelForHeight(myTargetInfo->Producer(), 450., conf->TargetGeomName());
 
@@ -1822,7 +1820,7 @@ CAPEdata cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>
 		CUDA_CHECK(cudaMemcpyAsync(d_prevTenv, d_Tenv, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
 		CUDA_CHECK(cudaMemcpyAsync(d_prevPenv, d_Penv, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
 
-		curLevel.Value(curLevel.Value() - 1);
+		level::EqualAdjustment(curLevel, -1.);
 	}
 
 	CUDA_CHECK(cudaFree(d_Tparcel));

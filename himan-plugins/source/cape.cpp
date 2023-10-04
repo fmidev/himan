@@ -139,7 +139,7 @@ tuple<vec2d, vec2d, vec2d> GetSampledSourceData(shared_ptr<const himan::plugin_c
 			humidityProfile[i][k] = RH[i];
 		}
 		k++;
-		curLevel.Value(curLevel.Value() - 1);
+		level::EqualAdjustment(curLevel, -1.);
 	}
 
 	auto Psample = numerical_functions::Arange<float>(Psurface, P500m, -1);
@@ -276,15 +276,28 @@ void cape::Process(shared_ptr<const plugin_configuration> conf)
 
 	itsLogger.Info("Virtual temperature correction is " + string(itsUseVirtualTemperature ? "enabled" : "disabled"));
 
+	HPLevelType hybridLevelType = kHybrid;
+	const producer& prod = itsConfiguration->TargetProducer();
+
 	try
 	{
-		itsBottomLevel = level(kHybrid, stoi(r->RadonDB().GetProducerMetaData(itsConfiguration->TargetProducer().Id(),
-		                                                                      "last hybrid level number")));
+		hybridLevelType = HPStringToLevelType.at(r->RadonDB().GetProducerMetaData(prod.Id(), "hybrid level type"));
+	}
+	catch (const exception& e)
+	{
+	}
+
+	try
+	{
+		int bottomLevelValue = stoi(r->RadonDB().GetProducerMetaData(prod.Id(), "last hybrid level number"));
+
+		itsBottomLevel = (hybridLevelType == kHybrid) ? level(hybridLevelType, bottomLevelValue)
+		                                              : level(hybridLevelType, bottomLevelValue, bottomLevelValue + 1);
 	}
 	catch (const std::exception& e)
 	{
-		itsLogger.Fatal(fmt::format("Unable to fetch hybrid level information from producer_meta for producer {}",
-		                            itsConfiguration->TargetProducer().Id()));
+		itsLogger.Fatal(
+		    fmt::format("Unable to fetch hybrid level information from producer_meta for producer {}", prod.Id()));
 		return;
 	}
 
@@ -705,6 +718,14 @@ void cape::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short thread
 	auto& CAPE1040 = get<7>(CAPEresult);
 	auto& CAPE3km = get<8>(CAPEresult);
 
+	const auto missingCAPEcount = count_if(CAPE.begin(), CAPE.end(), [](const float& f) { return IsMissing(f); });
+
+	if (CAPE.empty() || static_cast<int>(CAPE.size()) == missingCAPEcount)
+	{
+		log.Warning("CAPE not found");
+		return;
+	}
+
 	CheckDataConsistency(LCLZ, LastLFCT, LastLFCP, LastLFCZ, ELT, ELP, ELZ, LastELT, LastELP, LastELZ, CAPE, CAPE1040,
 	                     CAPE3km, CIN);
 	SetDataToInfo(myTargetInfo, LCLT, LCLP, LCLZ, LastLFCT, LastLFCP, LastLFCZ, ELT, ELP, ELZ, LastELT, LastELP,
@@ -990,7 +1011,7 @@ vector<float> cape::GetCINCPU(shared_ptr<info<float>> myTargetInfo, const vector
 	auto Titer = Tsource;
 	auto prevTparcelVec = Tsource;
 
-	curLevel.Value(curLevel.Value() - 1);
+	level::EqualAdjustment(curLevel, -1.);
 
 	auto h = GET_PLUGIN(hitool);
 	h->Configuration(itsConfiguration);
@@ -1113,7 +1134,7 @@ vector<float> cape::GetCINCPU(shared_ptr<info<float>> myTargetInfo, const vector
 
 		itsLogger.Trace("CIN read for " + to_string(foundCount) + "/" + to_string(found.size()) + " gridpoints");
 
-		curLevel.Value(curLevel.Value() - 1);
+		level::EqualAdjustment(curLevel, -1.);
 
 		prevZenvVec = ZenvVec;
 		prevTenvVec = TenvVec;
@@ -1360,7 +1381,7 @@ CAPEdata cape::GetCAPECPU(shared_ptr<info<float>> myTargetInfo, const vector<flo
 			}
 		}
 
-		curLevel.Value(curLevel.Value() - 1);
+		level::EqualAdjustment(curLevel, -1.);
 
 		foundCount = count(found.begin(), found.end(), true);
 
@@ -1526,7 +1547,7 @@ vector<pair<vector<float>, vector<float>>> cape::GetLFCCPU(shared_ptr<info<float
 		prevTenvVec = VEC(prevTenvInfo);
 	}
 
-	curLevel.Value(curLevel.Value() - 1);
+	level::EqualAdjustment(curLevel, -1.);
 
 	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 250., itsConfiguration->TargetGeomName());
 	auto hPa450 = h->LevelForHeight(myTargetInfo->Producer(), 450., itsConfiguration->TargetGeomName());
@@ -1681,7 +1702,7 @@ vector<pair<vector<float>, vector<float>>> cape::GetLFCCPU(shared_ptr<info<float
 			}
 		}
 
-		curLevel.Value(curLevel.Value() - 1);
+		level::EqualAdjustment(curLevel, -1.);
 
 		foundCount = count(found.begin(), found.end(), true);
 		itsLogger.Trace("LFC processed for " + to_string(foundCount) + "/" + to_string(found.size()) + " grid points");
@@ -2125,7 +2146,7 @@ cape_multi_source cape::GetNHighestThetaEValuesCPU(shared_ptr<info<float>> myTar
 		itsLogger.Trace("Max ThetaE processed for " + to_string(foundCount) + "/" + to_string(found.size()) +
 		                " grid points");
 
-		curLevel.Value(curLevel.Value() - 1);
+		level::EqualAdjustment(curLevel, -1.);
 
 		prevP = curP;
 		prevT = curT;

@@ -134,11 +134,11 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 	level prevLevel, nextLevel;
 
 	prevLevel = level(myTargetInfo->Level());
-	prevLevel.Value(myTargetInfo->Level().Value() - 1);
+	level::EqualAdjustment(prevLevel, -1.);
 	prevLevel.Index(prevLevel.Index() - 1);
 
 	nextLevel = level(myTargetInfo->Level());
-	nextLevel.Value(myTargetInfo->Level().Value() + 1);
+	level::EqualAdjustment(nextLevel, 1.);
 	nextLevel.Index(nextLevel.Index() + 1);
 
 	auto prevUInfo =
