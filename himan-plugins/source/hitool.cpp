@@ -218,6 +218,14 @@ pair<level, level> hitool::LevelForHeight(const producer& prod, double height, c
 
 			row = r->RadonDB().FetchRow();
 		}
+
+		try
+		{
+			itsLevelType = HPStringToLevelType.at(r->RadonDB().GetProducerMetaData(prod.Id(), "hybrid level type"));
+		}
+		catch (const exception& e)
+		{
+		}
 	}
 
 	long newlowest = absolutelowest, newhighest = absolutehighest;
