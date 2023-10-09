@@ -4,6 +4,31 @@
 
 local MISS = missing
 
+function SnowFall()
+
+  -- total snow fall rate from convective and large scale rates
+
+  local convdata = luatool:FetchWithType(current_time, current_level, param("SNRC-KGM2"), current_forecast_type)
+  local lsdata = luatool:FetchWithType(current_time, current_level, param("SNRL-KGM2"), current_forecast_type)
+
+  if not convdata or not lsdata then
+    print("Some data not found, aborting")
+    return
+  end
+
+  local data = {}
+
+  for i=1, #lsdata do
+    data[i] = lsdata[i] + convdata[i]
+  end
+
+  result:SetParam(param("SNR-KGM2"))
+  result:SetValues(data)
+  luatool:WriteToFile(result)
+
+end
+
+
 function RadGlo()
 
   -- global radiation from direct and diffuse short wave radiation
@@ -111,3 +136,4 @@ H0CFix()
 LCLFix()
 TSnowFix()
 RadGlo()
+SnowFall()
