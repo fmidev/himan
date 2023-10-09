@@ -187,6 +187,11 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 		{
 			// if ice coverage information is not found, use land-sea mask
 			MaskInfo = Fetch(forecastTime, level(kHeight, 0), param("LC-0TO1"), forecastType, false);
+			if (!MaskInfo)
+			{
+				auto atime = forecast_time(forecastTime.OriginDateTime(), time_duration("00:00:00"));
+				MaskInfo = Fetch(atime, level(kHeight, 0), param("LC-0TO1"), forecastType, false);
+			}
 		}
 
 		// Is mask value is true, grid point will be processed
