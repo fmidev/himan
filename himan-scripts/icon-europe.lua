@@ -4,6 +4,30 @@
 
 local MISS = missing
 
+function RadGlo()
+
+  -- global radiation from direct and diffuse short wave radiation
+
+  local difdata = luatool:FetchWithType(current_time, current_level, param("RDIFSW-WM2"), current_forecast_type)
+  local dirdata = luatool:FetchWithType(current_time, current_level, param("RADSWDIR-WM2"), current_forecast_type)
+
+  if not difdata or not dirdata then
+    print("Some data not found, aborting")
+    return
+  end
+
+  local data = {}
+
+  for i=1, #difdata do
+    data[i] = difdata[i] + dirdata[i]
+  end
+
+  result:SetParam(param("RADGLO-WM2"))
+  result:SetValues(data)
+  luatool:WriteToFile(result)
+
+end
+
 function H0CFix()
 
   -- height of 0 degree isotherm is from MSL -- we want it from ground level
@@ -86,3 +110,4 @@ end
 H0CFix()
 LCLFix()
 TSnowFix()
+RadGlo()
