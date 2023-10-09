@@ -22,15 +22,9 @@ local currentProducerName = currentProducer.GetName(currentProducer)
 
 local turbparam = param("BLTURB-N")
 
--- Surface (10m) wind speed in m/s = lowest model level = 65
-local lev = {}
+-- Surface (10m) wind speed in m/s
 local ws = param("FF-MS")
-if currentProducerName == "ECGMTA" then
-  lev = level(HPLevelType.kHeight, 10)
-else
-  lev = level(HPLevelType.kHybrid, 65)
-end
-
+local lev = level(HPLevelType.kHeight, 10)
 local wsms = luatool:FetchWithType(current_time, lev, ws, current_forecast_type)
 
 -- Wind gust
