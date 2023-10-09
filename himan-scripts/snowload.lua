@@ -88,6 +88,9 @@ elseif step == 3 then
   rrparam = param("RR-3-MM")
 elseif step == 6 then
   rrparam = param("RR-6-MM")
+else
+  -- don't know what to choose; configuration was maybe given with 'hours' (no step)
+  rrparam = param("RRR-KGM2")
 end
 
 result:ResetTime()

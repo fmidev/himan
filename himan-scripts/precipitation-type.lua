@@ -52,7 +52,7 @@ end
 local pref = CheckedFetch("POTPRECF-N", level(HPLevelType.kHeight, 0), current_time)
 local rrr = CheckedFetch("RRR-KGM2", level(HPLevelType.kHeight, 0), current_time)
 
-if not pref or not rrr then
+if not pref or not rrr or not rh925 or not rh850 or not rh700 then
   error("Data not found")
 end
 
@@ -60,14 +60,9 @@ end
 -- HARMONIE and HIRLAM seem to have PRCNT in the range [0,1] but EC
 -- seems to have it in [0,100]
 
-local Limit
+local Limit = 80
 
-if currentProducerName == "ECG" or currentProducerName == "ECGMTA" or currentProducerName == "GFSMTA" then
-  Limit = 80
-elseif currentProducerName == "AROME" or currentProducerName == "AROMTA" or
-  currentProducerName == "HL2" or currentProducerName == "HL2MTA" or
-  currentProducerName == "MEPS" or currentProducerName == "MEPSMTA" or
-  currentProducerName == "MNWCMTA" then
+if RHParam == "RH-0TO1" then
   Limit = 0.8
 end
 

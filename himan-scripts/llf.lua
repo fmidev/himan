@@ -15,9 +15,15 @@
 
 logger:Info("Calculating low level forecast cloud top height")
 local MISS = missing
+local NParam = param("N-0TO1")
 
 function GetBase(lowlimitdata, highlimitdata, thresholddata, zFL125data)
-  local basedata = hitool:VerticalHeightGreaterThanGrid(param("N-0TO1"), lowlimitdata, highlimitdata, thresholddata, 1)
+  local basedata = hitool:VerticalHeightGreaterThanGrid(NParam, lowlimitdata, highlimitdata, thresholddata, 1)
+
+  if not basedata then
+    NParam = param("N-PRCNT")
+    basedata = hitool:VerticalHeightGreaterThanGrid(NParam, lowlimitdata, highlimitdata, thresholddata, 1)
+  end
 
   for i=1,#basedata do
     if basedata[i] > zFL125data[i] then
@@ -29,7 +35,7 @@ function GetBase(lowlimitdata, highlimitdata, thresholddata, zFL125data)
 end
 
 function GetTop(lowlimitdata, highlimitdata, thresholddata, zFL125data)
-  local topdata = hitool:VerticalHeightLessThanGrid(param("N-0TO1"), lowlimitdata, highlimitdata, thresholddata, 1)
+  local topdata = hitool:VerticalHeightLessThanGrid(NParam, lowlimitdata, highlimitdata, thresholddata, 1)
 
   for i=1,#topdata do
     topdata[i] = math.min(topdata[i], zFL125data[i])
