@@ -63,8 +63,9 @@ void tropopause::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short
 
 	auto r = GET_PLUGIN(radon);
 
-	const HPLevelType hybridLevelType =
-	    HPStringToLevelType.at(r->RadonDB().GetProducerMetaData(myTargetInfo->Producer().Id(), "hybrid level type"));
+	const std::string lt = r->RadonDB().GetProducerMetaData(myTargetInfo->Producer().Id(), "hybrid level type");
+
+	const HPLevelType hybridLevelType = (lt.empty()) ? kHybrid : HPStringToLevelType.at(lt);
 
 	level curLevel;
 	double firstValue = static_cast<double>(firstLevel);
