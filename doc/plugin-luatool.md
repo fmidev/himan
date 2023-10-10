@@ -344,6 +344,26 @@ A basic identifer for a param is its name. The name is always in the form of NAM
 | aggregation | GetAggregation | | Return aggregation of parameter (if applicable) |
 | | SetAggregation | aggregation | Set aggregation for a parameter
 
+
+## params
+
+params is a container-wrapper for param. In c++ code it's simply std::vector<param>.
+
+
+    local ps = params.create({param("T-K"), param("T-C")})
+
+
+| Return value  | Name | Arguments | Description | 
+|---|---|---|---|
+|   | constructor | string |   |
+| params | create | table of params | static function to create a params instance |
+| number | size | | Container size | 
+| | push_back | param | Append a param to container |
+| | clear | | Empty container |
+| param | get | number | Get param from given position (1-indexed) |
+| | set | number, param | Set param to given positiob (1-indexed) |
+
+
 ## point
 
 point represent an xy or latlon point.

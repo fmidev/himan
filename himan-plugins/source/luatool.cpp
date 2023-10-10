@@ -1172,6 +1172,40 @@ matrix<T> ProbLimitEq2D(const matrix<T>& A, const matrix<T>& B, T limit)
 }
 }  // namespace luabind_workaround
 
+namespace params_wrapper
+{
+params create(const object& table)
+{
+	if (table.is_valid() == false || type(table) == 0)
+	{
+		return std::vector<param>();
+	}
+
+	luabind::iterator iter(table), end;
+
+	std::vector<param> ret;
+
+	for (; iter != end; ++iter)
+	{
+		try
+		{
+			ret.push_back(object_cast<param>(*iter));
+		}
+		catch (cast_failed& e)
+		{
+		}
+	}
+	return ret;
+}
+param get(const params& ps, size_t num)
+{
+	return ps.at(num - 1);
+}
+void set(params& ps, size_t num, const param& p)
+{
+	ps.at(num - 1) = p;
+}
+}  // namespace params_wrapper
 // clang-format off
 
 #pragma GCC diagnostic push
@@ -1369,6 +1403,17 @@ void BindLib(lua_State* L)
 	              .def("SetAggregation", LUA_MEMFN(void, param, Aggregation, const aggregation&))
 	              .def("GetProcessingType", LUA_CMEMFN(const processing_type&, param, ProcessingType, void))
 	              .def("SetProcessingType", LUA_MEMFN(void, param, ProcessingType, const processing_type&)),
+	          class_<std::vector<param>>("params")
+	              .def(constructor<>())
+	              .def("push_back", LUA_MEMFN(void, std::vector<param>, push_back, const param&))
+	              .def("size", &std::vector<param>::size)
+	              .def("clear", &std::vector<param>::clear)
+	              .def("set", &params_wrapper::set)
+	              .def("get", &params_wrapper::get)
+	              .scope
+	              [
+	                  def("create", &params_wrapper::create)
+	              ],
 	          class_<level>("level")
 	              .def(constructor<HPLevelType, double>())
 	              .def(constructor<HPLevelType, double, double>())
@@ -1687,7 +1732,26 @@ std::shared_ptr<info<double>> luatool::FetchInfoWithArgs(const luabind::object& 
 		// mandatory arguments
 		const auto ftime = object_cast<forecast_time>(o["forecast_time"]);
 		const auto lvl = object_cast<level>(o["level"]);
-		const auto par = object_cast<param>(o["param"]);
+
+		// either param or params
+		const auto par = GetOptional(o, "param", param());
+		params pars;
+
+		if (par.Name() == "XX-X")
+		{
+			pars = GetOptional(o, "params", params());
+
+			if (pars.size() == 0)
+			{
+				logger logr;
+				logr.Error("Neither 'param' nor 'params' were given");
+				return nullptr;
+			}
+		}
+		else
+		{
+			pars = {par};
+		}
 
 		// optional arguments
 		const auto ftype = GetOptional(o, "forecast_type", forecast_type(kDeterministic));
@@ -1730,19 +1794,24 @@ std::shared_ptr<info<double>> luatool::FetchInfoWithArgs(const luabind::object& 
 		}
 		f->TimeInterpolationSearchStep(tintrpstep);
 
-		return f->Fetch<double>(cnf, ftime, lvl, par, ftype, rpacked, sl, rprev, tintrp);
+		for (const auto& par_ : pars)
+		{
+			try
+			{
+				return f->Fetch<double>(cnf, ftime, lvl, par_, ftype, rpacked, sl, rprev, tintrp);
+			}
+			catch (const HPExceptionType& e)
+			{
+				if (e != kFileDataNotFound)
+				{
+					throw e;
+				}
+			}
+		}
 	}
 	catch (cast_failed& e)
 	{
 		itsLogger.Error(e.what());
-	}
-	catch (const HPExceptionType& e)
-	{
-		if (e == kFileDataNotFound)
-		{
-			return nullptr;
-		}
-		throw e;
 	}
 
 	return nullptr;
