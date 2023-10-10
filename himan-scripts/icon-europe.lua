@@ -8,8 +8,8 @@ function SnowFall()
 
   -- total snow fall rate from convective and large scale rates
 
-  local convdata = luatool:FetchWithType(current_time, current_level, param("SNRC-KGM2"), current_forecast_type)
-  local lsdata = luatool:FetchWithType(current_time, current_level, param("SNRL-KGM2"), current_forecast_type)
+  local convdata = luatool:Fetch(current_time, current_level, param("SNRC-KGM2"), current_forecast_type)
+  local lsdata = luatool:Fetch(current_time, current_level, param("SNRL-KGM2"), current_forecast_type)
 
   if not convdata or not lsdata then
     print("Some data not found, aborting")
@@ -33,8 +33,8 @@ function RadGlo()
 
   -- global radiation from direct and diffuse short wave radiation
 
-  local difdata = luatool:FetchWithType(current_time, current_level, param("RDIFSW-WM2"), current_forecast_type)
-  local dirdata = luatool:FetchWithType(current_time, current_level, param("RADSWDIR-WM2"), current_forecast_type)
+  local difdata = luatool:Fetch(current_time, current_level, param("RDIFSW-WM2"), current_forecast_type)
+  local dirdata = luatool:Fetch(current_time, current_level, param("RADSWDIR-WM2"), current_forecast_type)
 
   if not difdata or not dirdata then
     print("Some data not found, aborting")
@@ -57,9 +57,9 @@ function H0CFix()
 
   -- height of 0 degree isotherm is from MSL -- we want it from ground level
 
-  local h0cdata = luatool:FetchWithType(current_time, current_level, param("H0C-M"), current_forecast_type)
+  local h0cdata = luatool:Fetch(current_time, current_level, param("H0C-M"), current_forecast_type)
   local srctime = forecast_time(current_time:GetOriginDateTime(), current_time:GetOriginDateTime())
-  local topodata = luatool:FetchWithType(srctime, current_level, param("HL-M"), current_forecast_type)
+  local topodata = luatool:Fetch(srctime, current_level, param("HL-M"), current_forecast_type)
 
   if not h0cdata or not topodata then
     print("Some data not found, aborting")
@@ -80,9 +80,9 @@ function LCLFix()
 
   -- height of LCL is from MSL -- we want it from ground level
 
-  local lcldata = luatool:FetchWithType(current_time, current_level, param("LCL-M"), current_forecast_type)
+  local lcldata = luatool:Fetch(current_time, current_level, param("LCL-M"), current_forecast_type)
   local srctime = forecast_time(current_time:GetOriginDateTime(), current_time:GetOriginDateTime())
-  local topodata = luatool:FetchWithType(srctime, current_level, param("HL-M"), current_forecast_type)
+  local topodata = luatool:Fetch(srctime, current_level, param("HL-M"), current_forecast_type)
 
   if not lcldata or not topodata then
     print("Some data not found, aborting")
@@ -107,8 +107,8 @@ function TSnowFix()
   -- Use snow depth as a mask to determine when there is no snow and set all
   -- those points to missing
 
-  local snowtdata = luatool:FetchWithType(current_time, current_level, param("TSNOW-K"), current_forecast_type)
-  local snowhdata = luatool:FetchWithType(current_time, current_level, param("SD-M"), current_forecast_type)
+  local snowtdata = luatool:Fetch(current_time, current_level, param("TSNOW-K"), current_forecast_type)
+  local snowhdata = luatool:Fetch(current_time, current_level, param("SD-M"), current_forecast_type)
  
   if not snowtdata or not snowhdata then
     print("Some data not found, aborting")

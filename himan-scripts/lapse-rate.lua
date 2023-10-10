@@ -25,7 +25,7 @@ if not T_top then
   return
 end
 
-local T_bot = luatool:FetchWithType(current_time, LowestLevel, Temp, current_forecast_type)
+local T_bot = luatool:Fetch(current_time, LowestLevel, Temp, current_forecast_type)
 
 if not T_bot then
   return

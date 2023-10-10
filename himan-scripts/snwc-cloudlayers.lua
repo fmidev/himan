@@ -15,10 +15,10 @@ local editor_origintime = raw_time(radon:GetLatestTime(editor_prod, "", 0))
 local editor_time = forecast_time(editor_origintime, current_time:GetValidDateTime())
 
 local H0 = level(HPLevelType.kHeight, 0)
-local CC = luatool:FetchWithType(current_time, H0, param("N-0TO1"), current_forecast_type)
-local CH = luatool:FetchWithType(current_time, H0, param("NH-0TO1"), current_forecast_type)
-local CM = luatool:FetchWithType(current_time, H0, param("NM-0TO1"), current_forecast_type)
-local CL = luatool:FetchWithType(current_time, H0, param("NL-0TO1"), current_forecast_type)
+local CC = luatool:Fetch(current_time, H0, param("N-0TO1"), current_forecast_type)
+local CH = luatool:Fetch(current_time, H0, param("NH-0TO1"), current_forecast_type)
+local CM = luatool:Fetch(current_time, H0, param("NM-0TO1"), current_forecast_type)
+local CL = luatool:Fetch(current_time, H0, param("NL-0TO1"), current_forecast_type)
 
 if not CC or not CH or not CM or not CL then
   return

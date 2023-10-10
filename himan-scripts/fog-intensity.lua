@@ -11,11 +11,11 @@ par2 = param("VV-M") -- visibility from model
 par3 = param("FOGINT-N") -- Fog intensity
 
 local lvl = level(HPLevelType.kHeight, 0)
-local hp_vis = luatool:FetchWithType(current_time, lvl, par1, current_forecast_type)
+local hp_vis = luatool:Fetch(current_time, lvl, par1, current_forecast_type)
 
 if not hp_vis then
   logger:Info("Post processed visibility not found, trying raw")
-  hp_vis = luatool:FetchWithType(current_time, lvl, par2, current_forecast_type)
+  hp_vis = luatool:Fetch(current_time, lvl, par2, current_forecast_type)
 
   if not hp_vis then
     logger:Error("No visibility data found")

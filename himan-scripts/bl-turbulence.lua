@@ -25,20 +25,20 @@ local turbparam = param("BLTURB-N")
 -- Surface (10m) wind speed in m/s
 local ws = param("FF-MS")
 local lev = level(HPLevelType.kHeight, 10)
-local wsms = luatool:FetchWithType(current_time, lev, ws, current_forecast_type)
+local wsms = luatool:Fetch(current_time, lev, ws, current_forecast_type)
 
 -- Wind gust
 local gustlevel = level(HPLevelType.kHeight, 10) 
 local gust = param("FFG-MS")
 
-local gustms = luatool:FetchWithType(current_time, gustlevel, gust, current_forecast_type)
+local gustms = luatool:Fetch(current_time, gustlevel, gust, current_forecast_type)
 
 -- land-sea-mask, proportion from 0 to 1 where 1=land, 0=sea
 local landseamask = param("LC-0TO1")
 local surface = level(HPLevelType.kHeight, 0)
 local mytime = forecast_time(current_time:GetOriginDateTime(),time_duration(HPTimeResolution.kHourResolution,0))
 
-local lcmask = luatool:FetchWithType(mytime, surface, landseamask, current_forecast_type)
+local lcmask = luatool:Fetch(mytime, surface, landseamask, current_forecast_type)
 
 if not (wsms and gustms and lcmask) then
   logger:Error("No data found")
@@ -58,8 +58,8 @@ local dz = 304.8
 
 local U_HIR = param("U-MS")
 local V_HIR = param("V-MS")
-local u_0 = luatool:FetchWithType(current_time, lev, U_HIR, current_forecast_type)
-local v_0 = luatool:FetchWithType(current_time, lev, V_HIR, current_forecast_type)
+local u_0 = luatool:Fetch(current_time, lev, U_HIR, current_forecast_type)
+local v_0 = luatool:Fetch(current_time, lev, V_HIR, current_forecast_type)
 local u = hitool:VerticalValue(U_HIR,dz+12)
 local v = hitool:VerticalValue(V_HIR,dz+12)
 

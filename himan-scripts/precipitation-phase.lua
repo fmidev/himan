@@ -14,12 +14,12 @@
 -- snow,  when P(W) < 0.2
 
 
-local T = luatool:FetchWithType(current_time, level(HPLevelType.kHeight, 2), param("T-K"), current_forecast_type)
-local RH = luatool:FetchWithType(current_time, level(HPLevelType.kHeight, 2), param("RH-0TO1"), current_forecast_type)
+local T = luatool:Fetch(current_time, level(HPLevelType.kHeight, 2), param("T-K"), current_forecast_type)
+local RH = luatool:Fetch(current_time, level(HPLevelType.kHeight, 2), param("RH-0TO1"), current_forecast_type)
 local RHscale = 100
 
 if not RH then
-  RH = luatool:FetchWithType(current_time, level(HPLevelType.kHeight, 2), param("RH-PRCNT"), current_forecast_type)
+  RH = luatool:Fetch(current_time, level(HPLevelType.kHeight, 2), param("RH-PRCNT"), current_forecast_type)
   RHscale = 1
 end
 

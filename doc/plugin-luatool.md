@@ -573,7 +573,7 @@ hitool instance can be used to examine the properties of the atmosphere. See hit
 
 luatool variable represents the plugin itself. This variable is used to fetch and write data.
 
-    local grid = luatool:Fetch(current_time, current_level, par1)
+    local grid = luatool:Fetch(current_time, current_level, par1, current_forecast_type)
 
     luatool:WriteToFile(result)
 
@@ -583,7 +583,6 @@ Note! The argument for WriteToFile MUST be 'result'!
 |---|---|---|---|
 | string | ClassName | | Returns class name |
 | table | Fetch | forecast_time, level, param | Fetch data with given search arguments |
-| table | FetchWithType | forecast_time, level, param, forecast_type | Fetch data with given search arguments including forecast_type |
 | info | FetchInfo | forecast_time, level, param | Fetch data with given search arguments, return info |
 | info | FetchInfoWithType | forecast_time, level, param, forecast_type | Fetch data with given search arguments including forecast_type, return info |
 | table | FetchWithArgs | table | Fetch data with given search arguments |
@@ -597,7 +596,7 @@ Mandatory fields are:
 
 * forecast_time
 * level
-* param
+* param OR params
     
 Optional fields are:
 

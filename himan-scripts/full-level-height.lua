@@ -7,9 +7,9 @@ local z2 = current_level:GetValue2()
 local hlparam = param("HL-M")
 local atime = forecast_time(current_time:GetOriginDateTime(), current_time:GetOriginDateTime())
 
-local hhl = luatool:FetchWithType(atime, level(HPLevelType.kGeneralizedVerticalLayer, z1, 0), hlparam, current_forecast_type)
-local hhl_n = luatool:FetchWithType(atime, level(HPLevelType.kGeneralizedVerticalLayer, z1+1, 0), hlparam, current_forecast_type)
-local hsurf = luatool:FetchWithType(atime, level(HPLevelType.kGround, 0), hlparam, current_forecast_type)
+local hhl = luatool:Fetch(atime, level(HPLevelType.kGeneralizedVerticalLayer, z1, 0), hlparam, current_forecast_type)
+local hhl_n = luatool:Fetch(atime, level(HPLevelType.kGeneralizedVerticalLayer, z1+1, 0), hlparam, current_forecast_type)
+local hsurf = luatool:Fetch(atime, level(HPLevelType.kGround, 0), hlparam, current_forecast_type)
 
 if not hhl or not hhl_n or not hsurf then
   logger:Error("Some (or all) of the data is not found")

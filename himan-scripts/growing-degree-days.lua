@@ -23,7 +23,7 @@ while true do
 
   logger:Info(string.format("Fetching mean temperature for a 24h period ending at %s (+%d)", curtime:GetValidDateTime():String("%Y%m%d%H"), curtime:GetStep():Hours()))
 
-  local mean = luatool:FetchWithType(curtime, current_level, param("T-MEAN-K"), current_forecast_type)
+  local mean = luatool:Fetch(curtime, current_level, param("T-MEAN-K"), current_forecast_type)
 
   if mean then
     -- initialize frost sum array to zero

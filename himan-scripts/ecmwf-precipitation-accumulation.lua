@@ -6,9 +6,9 @@
   logger:Info("Calculating accumulated " .. acc_period .. "h total precipitation")
 
 
-  local currRR = luatool:FetchWithType(current_time, current_level, param("RR-KGM2"), current_forecast_type)
+  local currRR = luatool:Fetch(current_time, current_level, param("RR-KGM2"), current_forecast_type)
   current_time:GetValidDateTime():Adjust(HPTimeResolution.kHourResolution, -tonumber(acc_period))
-  local prevRR= luatool:FetchWithType(current_time, current_level, param("RR-KGM2"), current_forecast_type)
+  local prevRR= luatool:Fetch(current_time, current_level, param("RR-KGM2"), current_forecast_type)
 
   if not currRR or not prevRR then
     return

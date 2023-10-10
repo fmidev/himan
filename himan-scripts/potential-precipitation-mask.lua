@@ -2,9 +2,9 @@
 -- Only for smartmet editor data
 -- partio 2018-02-16
 
-local ppf = luatool:FetchWithType(current_time, level(HPLevelType.kHeight, 0), param("POTPRECF-N"), current_forecast_type)
-local ppt = luatool:FetchWithType(current_time, level(HPLevelType.kHeight, 0), param("POTPRECT-N"), current_forecast_type)
-local rrr = luatool:FetchWithType(current_time, level(HPLevelType.kHeight, 0), param("RRR-KGM2"), current_forecast_type)
+local ppf = luatool:Fetch(current_time, level(HPLevelType.kHeight, 0), param("POTPRECF-N"), current_forecast_type)
+local ppt = luatool:Fetch(current_time, level(HPLevelType.kHeight, 0), param("POTPRECT-N"), current_forecast_type)
+local rrr = luatool:Fetch(current_time, level(HPLevelType.kHeight, 0), param("RRR-KGM2"), current_forecast_type)
 
 if not ppf or not ppt or not rrr then
   return

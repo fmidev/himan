@@ -15,7 +15,7 @@ msg = string.format("Calculating frozen soil bottom and top depth for producer: 
 logger:Info(msg)
 
 local function CheckedFetch(paramName, lvl, time)
-  local p = luatool:FetchWithType(time, lvl, param(paramName), current_forecast_type)
+  local p = luatool:Fetch(time, lvl, param(paramName), current_forecast_type)
   if not p then
     msg = string.format("Failed to find parameter '%s'", paramName)
     error(msg)

@@ -99,10 +99,10 @@ while result:NextTime() do
 	local curtime = result:GetTime()
 	if (curtime:GetStep():Hours() ~= 0) then
 		-- fetch input data
-		local T = luatool:FetchWithType(curtime, level(HPLevelType.kHeight,2), param("T-K"), current_forecast_type) -- fetch temperature
-		local rr = luatool:FetchWithType(curtime, current_level, rrparam, current_forecast_type) -- fetch precipitation
-		local phi = luatool:FetchWithType(curtime, current_level, param("RADGLO-WM2"), current_forecast_type) -- fetch solar radiation
-		local v = luatool:FetchWithType(curtime, level(HPLevelType.kHeight,10), param("FF-MS"), current_forecast_type) -- fetch wind speed
+		local T = luatool:Fetch(curtime, level(HPLevelType.kHeight,2), param("T-K"), current_forecast_type) -- fetch temperature
+		local rr = luatool:Fetch(curtime, current_level, rrparam, current_forecast_type) -- fetch precipitation
+		local phi = luatool:Fetch(curtime, current_level, param("RADGLO-WM2"), current_forecast_type) -- fetch solar radiation
+		local v = luatool:Fetch(curtime, level(HPLevelType.kHeight,10), param("FF-MS"), current_forecast_type) -- fetch wind speed
 
 		if T and rr and phi and v then
 			for i=1, #T do

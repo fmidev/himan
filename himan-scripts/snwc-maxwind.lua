@@ -34,7 +34,7 @@ if use_smartmet == true then
   FFG = luatool:FetchWithProducer(editor_time, h10, ffgparam, current_forecast_type, editor_prod, "")
 
 else
-  FFG = luatool:FetchWithType(current_time, h10, ffgparam, current_forecast_type)
+  FFG = luatool:Fetch(current_time, h10, ffgparam, current_forecast_type)
 
 end
 
@@ -49,7 +49,7 @@ if step > 2 then
   maxWindFactor = 1.03 + 0.01 * (step - 2)
 end
 
-local FF = luatool:FetchWithType(current_time, h10, param("FF-MS"), current_forecast_type)
+local FF = luatool:Fetch(current_time, h10, param("FF-MS"), current_forecast_type)
 
 if not FF or not FFG then
   return

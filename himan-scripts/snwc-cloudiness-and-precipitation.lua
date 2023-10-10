@@ -8,8 +8,8 @@
 -- show up as precipitation in weather radar images (PDTK-74).
 -- 
 
-local CC = luatool:FetchWithType(current_time, current_level, param("N-0TO1"), current_forecast_type)
-local RR = luatool:FetchWithType(current_time, current_level, param("RRR-KGM2"), current_forecast_type)
+local CC = luatool:Fetch(current_time, current_level, param("N-0TO1"), current_forecast_type)
+local RR = luatool:Fetch(current_time, current_level, param("RRR-KGM2"), current_forecast_type)
 
 if not CC or not RR then
   return

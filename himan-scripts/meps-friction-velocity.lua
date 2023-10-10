@@ -10,9 +10,9 @@ local par4 = param("FRVEL-MS") -- friction velocity
 
 local lvl = level(HPLevelType.kHeight, 0)
 
-local ewss = luatool:FetchWithType(current_time, lvl, par1, current_forecast_type)
-local nsss = luatool:FetchWithType(current_time, lvl, par2, current_forecast_type)
-local rho = luatool:FetchWithType(current_time, lvl, par3, current_forecast_type)
+local ewss = luatool:Fetch(current_time, lvl, par1, current_forecast_type)
+local nsss = luatool:Fetch(current_time, lvl, par2, current_forecast_type)
+local rho = luatool:Fetch(current_time, lvl, par3, current_forecast_type)
 
 local timestepSize = configuration:GetForecastStep():Hours()*3600
 

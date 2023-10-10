@@ -98,11 +98,11 @@ local l = level(HPLevelType.kHeight, 0)
 
 local rr = param("RR-1-MM")  --rain over the last hour, same parameter name for EC and Hirlam
 
-local PRECR = luatool:FetchWithType(current_time, l, rr, current_forecast_type)
+local PRECR = luatool:Fetch(current_time, l, rr, current_forecast_type)
 
 if not PRECR then
 
-  PRECR = luatool:FetchWithType(current_time, l, param("RRR-KGM2"), current_forecast_type ) -- rain over one hour, no matter
+  PRECR = luatool:Fetch(current_time, l, param("RRR-KGM2"), current_forecast_type ) -- rain over one hour, no matter
 
   if not PRECR then
     return

@@ -36,7 +36,7 @@ end
 
 local SW = luatool:FetchWithProducer(latest_time, lvl0, glob, ftype, rad_prod, "")
 local LW = luatool:FetchWithProducer(latest_time, lvl0, lw, ftype, rad_prod, "")
-local CC = luatool:FetchWithType(current_time, lvl0, n, current_forecast_type)
+local CC = luatool:Fetch(current_time, lvl0, n, current_forecast_type)
 
 if not CC then
   return

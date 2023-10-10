@@ -22,8 +22,8 @@ if prod:GetId() == 131 then
    scale = 1000
 end
 
-local sd = luatool:FetchWithType(current_time, lvl, par1, current_forecast_type)
-local sw = luatool:FetchWithType(current_time, lvl, par2, current_forecast_type)
+local sd = luatool:Fetch(current_time, lvl, par1, current_forecast_type)
+local sw = luatool:Fetch(current_time, lvl, par2, current_forecast_type)
 
 if not sd or not sw then
   return

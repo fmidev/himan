@@ -61,10 +61,10 @@ function Top()
   local maxH = 4500
 
   -- station pressure
-  local qfedata = luatool:FetchWithType(current_time, level(HPLevelType.kHeight, 0), param("P-PA"), current_forecast_type)
+  local qfedata = luatool:Fetch(current_time, level(HPLevelType.kHeight, 0), param("P-PA"), current_forecast_type)
 
   -- cb/tcu
-  local cbtcudata = luatool:FetchWithType(current_time, level(HPLevelType.kHeight, 0), param("CBTCU-FL"), current_forecast_type)
+  local cbtcudata = luatool:Fetch(current_time, level(HPLevelType.kHeight, 0), param("CBTCU-FL"), current_forecast_type)
 
   if not qfedata or not cbtcudata then
     return
