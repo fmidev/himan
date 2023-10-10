@@ -13,7 +13,7 @@
 logger:Info("Converting ECMWF precipitation form values to FMI precipitation form values")
 
 local MISS = missing
-local pf = luatool:Fetch(current_time, level(HPLevelType.kGround, 0), param("PRECFORM-N"))
+local pf = luatool:FetchWithType(current_time, level(HPLevelType.kGround, 0), param("PRECFORM-N"), current_forecast_type)
 
 if not pf then
   return

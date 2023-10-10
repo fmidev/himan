@@ -13,9 +13,9 @@ function Product1()
   local ptype = param("PRECFORM2-N")
   local wiparam = param("TOPL2-N")
 
-  local visdata = luatool:Fetch(current_time, lvl, vis)
-  local rrdata = luatool:Fetch(current_time, lvl, rr)
-  local ptypedata = luatool:Fetch(current_time, lvl, ptype)
+  local visdata = luatool:FetchWithType(current_time, lvl, vis, current_forecast_type)
+  local rrdata = luatool:FetchWithType(current_time, lvl, rr, current_forecast_type)
+  local ptypedata = luatool:FetchWithType(current_time, lvl, ptype, current_forecast_type)
 
   if not visdata or not rrdata or not ptypedata then
     logger:Error("Some(or all) of the data is not found")
@@ -104,10 +104,10 @@ function Product2()
   local ceil = param("CEIL-2-M")
   local wiparam = param("TOPL3-N")
 
-  local visdata = luatool:Fetch(current_time, lvl, vis)
-  local rrdata = luatool:Fetch(current_time, lvl, rr)
-  local ptypedata = luatool:Fetch(current_time, lvl, ptype)
-  local ceildata = luatool:Fetch(current_time, lvl, ceil)
+  local visdata = luatool:FetchWithType(current_time, lvl, vis, current_forecast_type)
+  local rrdata = luatool:FetchWithType(current_time, lvl, rr, current_forecast_type)
+  local ptypedata = luatool:FetchWithType(current_time, lvl, ptype, current_forecast_type)
+  local ceildata = luatool:FetchWithType(current_time, lvl, ceil, current_forecast_type)
 
   if not visdata or not rrdata or not ptypedata or not ceildata then
     logger:Error("Some(or all) of the data is not found")

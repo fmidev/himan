@@ -1671,7 +1671,6 @@ void BindPlugins(lua_State* L)
 	              .def("FetchInfo", LUA_CMEMFN(std::shared_ptr<himan::info<double>>, luatool, FetchInfo, const forecast_time&, const level&, const param&))
                       .def("FetchInfoWithType", LUA_CMEMFN(std::shared_ptr<himan::info<double>>, luatool, FetchInfo, const forecast_time&, const level&,
                                                            const param&, const forecast_type&))
-	              .def("Fetch", LUA_CMEMFN(object, luatool, Fetch, const forecast_time&, const level&, const param&))
 	              .def("FetchWithType", LUA_CMEMFN(object, luatool, Fetch, const forecast_time&, const level&,
 	                                               const param&, const forecast_type&))
 	              .def("FetchWithProducer", LUA_CMEMFN(object, luatool, Fetch, const forecast_time&, const level&,

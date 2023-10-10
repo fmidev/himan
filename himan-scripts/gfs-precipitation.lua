@@ -117,10 +117,10 @@ end
 
 function Form()
 
-  local snowdata = luatool:Fetch(current_time, groundlevel, param("CSNOW-0OR1"))
-  local raindata = luatool:Fetch(current_time, groundlevel, param("CRAIN-0OR1"))
-  local frzrdata = luatool:Fetch(current_time, groundlevel, param("CFRZR-0OR1"))
-  local icepdata = luatool:Fetch(current_time, groundlevel, param("CICEP-0OR1"))
+  local snowdata = luatool:FetchWithType(current_time, groundlevel, param("CSNOW-0OR1"), current_forecast_type)
+  local raindata = luatool:FetchWithType(current_time, groundlevel, param("CRAIN-0OR1"), current_forecast_type)
+  local frzrdata = luatool:FetchWithType(current_time, groundlevel, param("CFRZR-0OR1"), current_forecast_type)
+  local icepdata = luatool:FetchWithType(current_time, groundlevel, param("CICEP-0OR1"), current_forecast_type)
 
   local preformdata = {}
 

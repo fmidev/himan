@@ -20,8 +20,8 @@ function InterpolateToFullLevel(par)
   local z1 = current_level:GetValue()  -- full level value 1
   local hlparam = param("HL-M")        -- half level height param
 
-  local data = luatool:Fetch(current_time, level(HPLevelType.kGeneralizedVerticalLayer, z1, -1), par)
-  local data_n = luatool:Fetch(current_time, level(HPLevelType.kGeneralizedVerticalLayer, z1+1, -1), par)
+  local data = luatool:FetchWithType(current_time, level(HPLevelType.kGeneralizedVerticalLayer, z1, -1), par, current_forecast_type)
+  local data_n = luatool:FetchWithType(current_time, level(HPLevelType.kGeneralizedVerticalLayer, z1+1, -1), par, current_forecast_type)
 
   if not data or not data_n then
     logger:Error("Some (or all) of the data is not found")
