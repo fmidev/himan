@@ -5,6 +5,15 @@
 -- For Himan/lua: partio 15.5.2020
 --
 
+function IsPercents(t)
+  for k, v in ipairs(t) do
+    if t[k] > 2 then
+      return true
+    end
+  end
+  return false
+end
+
 local o = {forecast_time = current_time,
            level = level(HPLevelType.kPressure, 300),
            params = params.create({param("RH-0TO1"), param("RH-PRCNT")}),
@@ -41,12 +50,12 @@ end
 Nscale = 100
 RHscale = 100
 
-if math.max(RH500) > 2 then
+if IsPercents(RH500) then
   RHscale = 1
 end
 
-if math.max(N500) > 2 then
-  RHscale = 1
+if IsPercents(N500) then
+  Nscale = 1
 end
 
 
@@ -55,7 +64,7 @@ local CH = {}
 
 for i=1,#N300 do
   local n500 = N500[i] * Nscale
-  local n300 = N300[i] * Nsacle
+  local n300 = N300[i] * Nscale
 
   local rh500 = RH500[i] * RHscale
   local rh300 = RH300[i] * RHscale
