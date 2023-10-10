@@ -8,8 +8,8 @@ function SnowFall()
 
   -- total snow fall rate from convective and large scale rates
 
-  local convdata = luatool:Fetch(current_time, current_level, param("SNRC-KGM2"), current_forecast_type)
-  local lsdata = luatool:Fetch(current_time, current_level, param("SNRL-KGM2"), current_forecast_type)
+  local convdata = luatool:Fetch(current_time, current_level, param("SNC-KGM2"), current_forecast_type)
+  local lsdata = luatool:Fetch(current_time, current_level, param("SNL-KGM2"), current_forecast_type)
 
   if not convdata or not lsdata then
     print("Some data not found, aborting")
@@ -22,7 +22,7 @@ function SnowFall()
     data[i] = lsdata[i] + convdata[i]
   end
 
-  result:SetParam(param("SNR-KGM2"))
+  result:SetParam(param("SNACC-KGM2"))
   result:SetValues(data)
   luatool:WriteToFile(result)
 
