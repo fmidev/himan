@@ -11,7 +11,6 @@
 
 #include "fetcher.h"
 #include "hitool.h"
-#include "radon.h"
 #include "writer.h"
 
 using namespace std;
@@ -158,10 +157,7 @@ void stability::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 
-	auto r = GET_PLUGIN(radon);
-
-	itsBottomLevel = level(kHybrid, stoi(r->RadonDB().GetProducerMetaData(itsConfiguration->TargetProducer().Id(),
-	                                                                      "last hybrid level number")));
+	itsBottomLevel = util::CreateHybridLevel(itsConfiguration->TargetProducer(), "last");
 
 #ifdef HAVE_CUDA
 	stability_cuda::itsBottomLevel = itsBottomLevel;

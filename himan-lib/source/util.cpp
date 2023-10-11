@@ -1974,3 +1974,30 @@ std::pair<long, long> util::GetScaledValue(double v)
 
 	return s;
 }
+
+level util::CreateHybridLevel(const producer& prod, const std::string& first_last)
+{
+	if (first_last != "first" && first_last != "last")
+	{
+		logger logr("util");
+		logr.Error(fmt::format("Argument 'first_last' must be either 'first' or 'last', got: {}", first_last));
+		return level();
+	}
+
+	auto r = GET_PLUGIN(radon);
+
+	const std::string levType = r->RadonDB().GetProducerMetaData(prod.Id(), "hybrid level type");
+	const std::string valKey = fmt::format("{} hybrid level number", first_last);
+
+	int val = stoi(r->RadonDB().GetProducerMetaData(prod.Id(), valKey));
+	HPLevelType hybType = levType.empty() ? kHybrid : HPStringToLevelType.at(levType);
+
+	switch (hybType)
+	{
+		default:
+		case kHybrid:
+			return level(hybType, val);
+		case kGeneralizedVerticalLayer:
+			return level(hybType, val, val + 1);
+	}
+}
