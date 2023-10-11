@@ -106,6 +106,21 @@ function TSnowFix()
   --
   -- Use snow depth as a mask to determine when there is no snow and set all
   -- those points to missing
+  --
+  -- Edit: unfortunately that's not enough as even with this filttering there
+  -- are many points that have t ~ 10 degrees K, which seems a bit cold.
+  --
+  -- How cold can snow temperature get?
+  --
+  -- https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2018GL078133
+  --
+  -- "Approximately 100 sites have observed minimum surface temperatures of ~−98 °C during the winters of 2004–2016"
+  --
+  -- (At Antarctica)
+  --
+  -- It's safe to assume that in Europe we don't get colder weather than in Antarctica, so limit
+  -- minimum snow temperature to -100C (=173K).
+  --
 
   local snowtdata = luatool:Fetch(current_time, current_level, param("TSNOW-K"), current_forecast_type)
   local snowhdata = luatool:Fetch(current_time, current_level, param("SD-M"), current_forecast_type)
@@ -120,9 +135,10 @@ function TSnowFix()
     local t = snowtdata[i]
     local h = snowhdata[i]
 
-    if h == 0 then
+    if h == 0 or t < 173 then
         t = MISS
     end
+
     data[i] = t
   end
 
