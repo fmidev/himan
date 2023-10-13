@@ -65,7 +65,7 @@ class stereographic_grid : public regular_grid
 	void CreateCoordinateTransformations(const point& firstPoint, bool isProjected);
 	bool EqualsTo(const stereographic_grid& other) const;
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 	friend class cereal::access;
 
 	template <class Archive>
@@ -97,7 +97,7 @@ inline std::ostream& operator<<(std::ostream& file, const stereographic_grid& ob
 }
 }  // namespace himan
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 CEREAL_REGISTER_TYPE(himan::stereographic_grid);
 CEREAL_REGISTER_POLYMORPHIC_RELATION(himan::regular_grid, himan::stereographic_grid);
 #endif

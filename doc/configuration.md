@@ -563,15 +563,18 @@ Example:
 
 Note: this key was previously called `use_cache`, and that is still supported for backwards compatibility.
 
-Memory cache size can be controlled with key `cache_limit`. The value of the key specifies the maximum number of fields (grids) Himan will hold in memory. When the limit is reached, data is evicted using an LRU algorithm. Valid values for key are >= 1. The actual size of the cache in bytes depends on the size of the grids. 
+Memory cache size can be controlled with key `cache_limit`. Minimum cache limit if 100Mi ie 104857600. Mi and Gi modifiers are supported. The value of the key specifies the maximum number of data bytes Himan will hold in memory. Note that this is not the overall total memory consumption.
 
-    "cache_limit" : "<integer value larger than 0>",
+When the limit is reached, data is evicted using an LRU algorithm.
 
-Default value for key is -1, i.e. no upper limit for cache size.
+    "cache_limit" : "<integer value larger or equal to than 104857600 OR integer{Mi|Gi}>",
+
+Default value for key is 0, i.e. no upper limit for cache size.
 
 Example:
 
-    "cache_limit" : "200",
+    "cache_limit" : "104857600"
+    "cache_limit" : "6Gi"
 
 By default himan will allocate all necessary memory when it starts. In low-memory environments this might be problematic. With key `dynamic_memory_allocation`, Himan can be forced to allocate memory dynamically (reserving it just before needed, and releasing immediately afterwards).
 
@@ -830,6 +833,10 @@ Specify list of auxiliary files to read (whitespace-separated)
 * HIMAN_NUM_THREADS
 
 Specify at most how many threads should be used for data processing
+
+* HIMAN_TEMP_DIRECTORY
+
+Specify where to write temporary files if needed. Default: /tmp
 
 <a name="Full_examples"/>
 

@@ -45,7 +45,7 @@ function Fetch(...)
       return nil
     end
 
-    ret = luatool:FetchWithType(current_time, current_level, param, current_forecast_type)
+    ret = luatool:Fetch(current_time, current_level, param, current_forecast_type)
 
     if ret then
       if not first then

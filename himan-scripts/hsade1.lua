@@ -138,7 +138,7 @@ local MISS = missing
 
 logger:Debug("Calculating Hsade1")
 
-local WN = luatool:FetchWithType(current_time, current_level, param("WEATHERNUMBER-N"), current_forecast_type)
+local WN = luatool:Fetch(current_time, current_level, param("WEATHERNUMBER-N"), current_forecast_type)
 
 if not WN then
   return

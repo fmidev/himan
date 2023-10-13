@@ -139,7 +139,7 @@ tuple<vec2d, vec2d, vec2d> GetSampledSourceData(shared_ptr<const himan::plugin_c
 			humidityProfile[i][k] = RH[i];
 		}
 		k++;
-		curLevel.Value(curLevel.Value() - 1);
+		level::EqualAdjustment(curLevel, -1.);
 	}
 
 	auto Psample = numerical_functions::Arange<float>(Psurface, P500m, -1);
@@ -276,17 +276,7 @@ void cape::Process(shared_ptr<const plugin_configuration> conf)
 
 	itsLogger.Info("Virtual temperature correction is " + string(itsUseVirtualTemperature ? "enabled" : "disabled"));
 
-	try
-	{
-		itsBottomLevel = level(kHybrid, stoi(r->RadonDB().GetProducerMetaData(itsConfiguration->TargetProducer().Id(),
-		                                                                      "last hybrid level number")));
-	}
-	catch (const std::exception& e)
-	{
-		itsLogger.Fatal(fmt::format("Unable to fetch hybrid level information from producer_meta for producer {}",
-		                            itsConfiguration->TargetProducer().Id()));
-		return;
-	}
+	itsBottomLevel = util::CreateHybridLevel(itsConfiguration->TargetProducer(), "last");
 
 #ifdef HAVE_CUDA
 	cape_cuda::itsUseVirtualTemperature = itsUseVirtualTemperature;
@@ -705,6 +695,14 @@ void cape::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short thread
 	auto& CAPE1040 = get<7>(CAPEresult);
 	auto& CAPE3km = get<8>(CAPEresult);
 
+	const auto missingCAPEcount = count_if(CAPE.begin(), CAPE.end(), [](const float& f) { return IsMissing(f); });
+
+	if (CAPE.empty() || static_cast<int>(CAPE.size()) == missingCAPEcount)
+	{
+		log.Warning("CAPE not found");
+		return;
+	}
+
 	CheckDataConsistency(LCLZ, LastLFCT, LastLFCP, LastLFCZ, ELT, ELP, ELZ, LastELT, LastELP, LastELZ, CAPE, CAPE1040,
 	                     CAPE3km, CIN);
 	SetDataToInfo(myTargetInfo, LCLT, LCLP, LCLZ, LastLFCT, LastLFCP, LastLFCZ, ELT, ELP, ELZ, LastELT, LastELP,
@@ -990,7 +988,7 @@ vector<float> cape::GetCINCPU(shared_ptr<info<float>> myTargetInfo, const vector
 	auto Titer = Tsource;
 	auto prevTparcelVec = Tsource;
 
-	curLevel.Value(curLevel.Value() - 1);
+	level::EqualAdjustment(curLevel, -1.);
 
 	auto h = GET_PLUGIN(hitool);
 	h->Configuration(itsConfiguration);
@@ -998,7 +996,7 @@ vector<float> cape::GetCINCPU(shared_ptr<info<float>> myTargetInfo, const vector
 	h->ForecastType(myTargetInfo->ForecastType());
 	h->HeightUnit(kHPa);
 
-	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 100.);
+	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 100., itsConfiguration->TargetGeomName());
 
 	while (curLevel.Value() > stopLevel.first.Value() && foundCount != found.size())
 	{
@@ -1113,7 +1111,7 @@ vector<float> cape::GetCINCPU(shared_ptr<info<float>> myTargetInfo, const vector
 
 		itsLogger.Trace("CIN read for " + to_string(foundCount) + "/" + to_string(found.size()) + " gridpoints");
 
-		curLevel.Value(curLevel.Value() - 1);
+		level::EqualAdjustment(curLevel, -1.);
 
 		prevZenvVec = ZenvVec;
 		prevTenvVec = TenvVec;
@@ -1191,7 +1189,7 @@ CAPEdata cape::GetCAPECPU(shared_ptr<info<float>> myTargetInfo, const vector<flo
 	{
 		throw runtime_error("CAPE: LFC pressure is missing");
 	}
-	auto levels = h->LevelForHeight(myTargetInfo->Producer(), maxP);
+	auto levels = h->LevelForHeight(myTargetInfo->Producer(), maxP, itsConfiguration->TargetGeomName());
 
 	level curLevel = levels.first;
 
@@ -1225,7 +1223,9 @@ CAPEdata cape::GetCAPECPU(shared_ptr<info<float>> myTargetInfo, const vector<flo
 
 	shared_ptr<info<float>> TenvInfo, PenvInfo, ZenvInfo;
 
-	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 50.);
+	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 50., itsConfiguration->TargetGeomName());
+
+	int breakLevel = static_cast<int> (itsBottomLevel.Value() * 0.4);
 
 	while (curLevel.Value() > stopLevel.first.Value() && foundCount != found.size())
 	{
@@ -1312,7 +1312,7 @@ CAPEdata cape::GetCAPECPU(shared_ptr<info<float>> myTargetInfo, const vector<flo
 				}
 			}
 
-			if (curLevel.Value() < 85 && (Tenv - Tparcel) > 25.)
+			if (curLevel.Value() < breakLevel && (Tenv - Tparcel) > 25.)
 			{
 				// Temperature gap between environment and parcel too large --> abort search.
 				// Only for values higher in the atmosphere, to avoid the effects of inversion
@@ -1360,7 +1360,7 @@ CAPEdata cape::GetCAPECPU(shared_ptr<info<float>> myTargetInfo, const vector<flo
 			}
 		}
 
-		curLevel.Value(curLevel.Value() - 1);
+		level::EqualAdjustment(curLevel, -1.);
 
 		foundCount = count(found.begin(), found.end(), true);
 
@@ -1504,7 +1504,7 @@ vector<pair<vector<float>, vector<float>>> cape::GetLFCCPU(shared_ptr<info<float
 		throw runtime_error("LFC: LCL pressure is missing");
 	}
 
-	auto levels = h->LevelForHeight(myTargetInfo->Producer(), maxP);
+	auto levels = h->LevelForHeight(myTargetInfo->Producer(), maxP, itsConfiguration->TargetGeomName());
 	level curLevel = levels.first;
 
 	auto prevPenvInfo = Fetch<float>(myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType(), false);
@@ -1526,10 +1526,10 @@ vector<pair<vector<float>, vector<float>>> cape::GetLFCCPU(shared_ptr<info<float
 		prevTenvVec = VEC(prevTenvInfo);
 	}
 
-	curLevel.Value(curLevel.Value() - 1);
+	level::EqualAdjustment(curLevel, -1.);
 
-	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 250.);
-	auto hPa450 = h->LevelForHeight(myTargetInfo->Producer(), 450.);
+	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 250., itsConfiguration->TargetGeomName());
+	auto hPa450 = h->LevelForHeight(myTargetInfo->Producer(), 450., itsConfiguration->TargetGeomName());
 	vector<float> prevTparcelVec(P.size(), MissingFloat());
 
 	size_t foundCount = 0;
@@ -1681,7 +1681,7 @@ vector<pair<vector<float>, vector<float>>> cape::GetLFCCPU(shared_ptr<info<float
 			}
 		}
 
-		curLevel.Value(curLevel.Value() - 1);
+		level::EqualAdjustment(curLevel, -1.);
 
 		foundCount = count(found.begin(), found.end(), true);
 		itsLogger.Trace("LFC processed for " + to_string(foundCount) + "/" + to_string(found.size()) + " grid points");
@@ -1839,7 +1839,7 @@ cape_source cape::Get500mMixingRatioValuesCPU(shared_ptr<info<float>> myTargetIn
 
 	auto curP = VEC(PInfo);
 
-	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 500.);
+	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 500., itsConfiguration->TargetGeomName());
 	auto P500m = h->VerticalValue<double>(PParam, 500.);
 
 	auto sourceData = GetSampledSourceData(itsConfiguration, myTargetInfo, util::Convert<double, float>(P500m),
@@ -2125,7 +2125,7 @@ cape_multi_source cape::GetNHighestThetaEValuesCPU(shared_ptr<info<float>> myTar
 		itsLogger.Trace("Max ThetaE processed for " + to_string(foundCount) + "/" + to_string(found.size()) +
 		                " grid points");
 
-		curLevel.Value(curLevel.Value() - 1);
+		level::EqualAdjustment(curLevel, -1.);
 
 		prevP = curP;
 		prevT = curT;

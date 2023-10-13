@@ -4,8 +4,6 @@
 #include "level.h"
 #include "logger.h"
 #include "plugin_factory.h"
-//#include <NFmiLocation.h>
-//#include <NFmiMetTime.h>
 
 using namespace std;
 using namespace himan;
@@ -134,7 +132,15 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 	// Get the latest TG-K.
 
 	cnf->SourceProducers({producer(131, 98, 150, "ECG")});
-	cnf->SourceGeomNames({"ECGLO0100", "ECEUR0100"});
+
+	if (cnf->GetValue("ecmwf_geometry").empty() == false)
+	{
+		cnf->SourceGeomNames({cnf->GetValue("ecmwf_geometry")});
+	}
+	else
+	{
+		cnf->SourceGeomNames({"ECGLO0100", "ECEUR0100"});
+	}
 
 	shared_ptr<info<double>> TGInfo =
 	    BackwardsFetchFromProducer(cnf, forecastType, ec_forecastTime, level(kGroundDepth, 0, 7), TGParam, -6);
@@ -176,16 +182,6 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 	forecast_type stat_type = forecast_type(kStatisticalProcessing);
 
-	// ECMWF PROB-TC-0 is calculated only for every 3 hours.
-
-	int forecastHour = std::stoi(ec_forecastTime.ValidDateTime().String("%H"));
-
-	if (forecastHour % 3 == 1 || forecastHour % 3 == 2)
-	{
-		myThreadedLogger.Error(fmt::format("ECMWF PROB-TC-0 not available for forecast hour: {}",
-		                                   ec_forecastTime.ValidDateTime().String("%H")));
-		return;
-	}
 	ec_forecastTime = original_forecastTime;
 	adjustment = (latestHour - latestHour % 12) - latestHour;
 	ec_forecastTime.OriginDateTime().Adjust(kHourResolution, adjustment);
@@ -194,6 +190,15 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 	cnf->SourceGeomNames({"ECGLO0200", "ECEUR0200"});
 	shared_ptr<info<double>> T0ECInfo =
 	    BackwardsFetchFromProducer(cnf, stat_type, ec_forecastTime, level(kHeight, 2), T0Param, -12);
+
+	// ECMWF is optional data
+	if (!T0ECInfo)
+	{
+		T0ECInfo = make_shared<info<double>>(stat_type, ec_forecastTime, level(kHeight, 2), T0Param);
+		T0ECInfo->Producer(myTargetInfo->Producer());
+		T0ECInfo->Create(myTargetInfo->Base(), true);
+		myThreadedLogger.Warning("ECMWF probabilities not found");
+	}
 
 	// Get the latest MEPS PROB-TC-0 from hour 00, 03, 06, 09, 12, 15, 18 or 21. If not found get earlier.
 
@@ -213,6 +218,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 		T0MEPSInfo = make_shared<info<double>>(stat_type, meps_forecastTime, level(kHeight, 2), T0Param);
 		T0MEPSInfo->Producer(myTargetInfo->Producer());
 		T0MEPSInfo->Create(myTargetInfo->Base(), true);
+		myThreadedLogger.Warning("MEPS probabilities not found");
 	}
 
 	if (!TGInfo || !WGInfo || !ICNInfo || !LCInfo || !RADInfo || !T0ECInfo || !T0MEPSInfo)
@@ -244,7 +250,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 		double T0EC = T0ECInfo->Value();
 		double T0MEPS = T0MEPSInfo->Value();
 
-		if (IsMissingValue({T, TD, TG, WG, N, LC, RAD, T0EC}))
+		if (IsMissingValue({T, TD, TG, WG, N, LC, RAD}))
 		{
 			continue;
 		}

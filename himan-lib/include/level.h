@@ -72,9 +72,11 @@ class level
 
 	void Value(double theLevelValue);
 	double Value() const;
+	double& Value();
 
 	void Value2(double theLevelValue2);
 	double Value2() const;
+	double& Value2();
 
 	void Index(int theIndex);
 
@@ -90,6 +92,12 @@ class level
 	std::vector<double> AB() const;
 
 	std::ostream& Write(std::ostream& file) const;
+
+	/**
+	 * @brief Adjust all level values (depending on type) equally
+	 */
+
+	static void EqualAdjustment(level& lev, double adjustment);
 
    private:
 	HPLevelType itsType;
@@ -122,7 +130,7 @@ class level
 	std::string itsName;
 	std::vector<double> itsAB;
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 	friend class cereal::access;
 
 	template <class Archive>

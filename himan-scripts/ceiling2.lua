@@ -17,65 +17,57 @@ local maxH = 15000
 -- Threshold for N (cloud amount) to calculate base [%]
 local Nthreshold = 0.55
 
--- 1st model level: Hirlam ~12m, EC ~10m
--- 2nd model level: Hirlam ~37m, EC ~31m
--- 3rd model level: Hirlam ~65m, EC ~53m
--- 4th model level: Hirlam ~87m, EC ~76m
--- 5th model level: Hirlam ~112m, EC ~102m
--- 6th model level: Hirlam ~141m, EC ~130m
+function GetClouds(N)
+  -- 1st model level: Hirlam ~12m, EC ~10m
+  -- 2nd model level: Hirlam ~37m, EC ~31m
+  -- 3rd model level: Hirlam ~65m, EC ~53m
+  -- 4th model level: Hirlam ~87m, EC ~76m
+  -- 5th model level: Hirlam ~112m, EC ~102m
+  -- 6th model level: Hirlam ~141m, EC ~130m
 
--- Based on model level heights, calculate low stratus cloud layers with ~1 model level in each:
+  -- Based on model level heights, calculate low stratus cloud layers with ~1 model level in each:
 
--- 0-15m (~0-50ft), i.e. ~lowest model level
--- 15-45m (~50-150ft)
--- 45-70m (~150-230ft)
--- 70-95m (~230-310ft)
--- 95-120m (~310-400ft)
--- 120-150m (~400-500ft)
+  -- 0-15m (~0-50ft), i.e. ~lowest model level
+  -- 15-45m (~50-150ft)
+  -- 45-70m (~150-230ft)
+  -- 70-95m (~230-310ft)
+  -- 95-120m (~310-400ft)
+  -- 120-150m (~400-500ft)
 
--- Low stratus cloud layers below 150m (500ft)
-local N = param("N-0TO1")
-
--- Stratus clouds below 15m (~0-50ft)
-local N15 = hitool:VerticalAverage(N, 0, 15)
-
--- Stratus between 15-45m (~50-150ft)
-local N45 = hitool:VerticalAverage(N, 15, 45)
-
--- Stratus between 45-70m (~150-230ft)
-local N70 = hitool:VerticalAverage(N, 45, 70)
-
--- Stratus between 70-95m (~230-310ft)
-local N95 = hitool:VerticalAverage(N, 70, 95)
-
--- Stratus between 95-120m (~310-400ft)
-local N120 = hitool:VerticalAverage(N, 95, 120)
-
--- Stratus between 120-150m (~400-500ft)
-local N150 = hitool:VerticalAverage(N, 120, 150)
-
-if not N15 or not N45 or not N70 or not N95 or not N120 or not N150 then
-
-  N = param("N-PRCNT")  -- N-PRCNT values also 0...1 despite the name
+  -- Low stratus cloud layers below 150m (500ft)
 
   -- Stratus clouds below 15m (~0-50ft)
-  N15 = hitool:VerticalAverage(N, 0, 15)
+  local N15 = hitool:VerticalAverage(N, 0, 15)
+
+  if not N15 then
+    return nil, nil, nil, nil, nil, nil
+  end
 
   -- Stratus between 15-45m (~50-150ft)
-  N45 = hitool:VerticalAverage(N, 15, 45)
+  local N45 = hitool:VerticalAverage(N, 15, 45)
 
   -- Stratus between 45-70m (~150-230ft)
-  N70 = hitool:VerticalAverage(N, 45, 70)
+  local N70 = hitool:VerticalAverage(N, 45, 70)
 
   -- Stratus between 70-95m (~230-310ft)
-  N95 = hitool:VerticalAverage(N, 70, 95)
+  local N95 = hitool:VerticalAverage(N, 70, 95)
 
   -- Stratus between 95-120m (~310-400ft)
-  N120 = hitool:VerticalAverage(N, 95, 120)
+  local N120 = hitool:VerticalAverage(N, 95, 120)
 
   -- Stratus between 120-150m (~400-500ft)
-  N150 = hitool:VerticalAverage(N, 120, 150)
+  local N150 = hitool:VerticalAverage(N, 120, 150)
 
+  return N15, N45, N70, N95, N120, N150
+end
+
+local N = param("N-0TO1")
+local N15, N45, N70, N95, N120, N150 = GetClouds(N)
+
+if not N15 or not N45 or not N70 or not N95 or not N120 or not N150 then
+  N = param("N-PRCNT")
+  N15, N45, N70, N95, N120, N150 = GetClouds(N)
+  Nthreshold = Nthreshold * 100
 end
 
 if not N15 or not N45 or not N70 or not N95 or not N120 or not N150 then
@@ -96,13 +88,13 @@ end
 
 local l = level(HPLevelType.kHeight, 0)
 
-local rr = param("RR-1-MM")  --rain over the last hour, same parameter name for EC and Hirlam
+local rr = param("RRR-KGM2")  --rain over the last hour, same parameter name for EC and Hirlam
 
-local PRECR = luatool:FetchWithType(current_time, l, rr, current_forecast_type)
+local PRECR = luatool:Fetch(current_time, l, rr, current_forecast_type)
 
 if not PRECR then
 
-  PRECR = luatool:FetchWithType(current_time, l, param("RRR-KGM2"), current_forecast_type ) -- rain over one hour, no matter
+  PRECR = luatool:Fetch(current_time, l, param("RR-1-MM"), current_forecast_type ) -- rain over one hour, no matter
 
   if not PRECR then
     return

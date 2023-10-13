@@ -10,41 +10,41 @@ local MU = level(HPLevelType.kMaximumThetaE,0)
 local HL = level(HPLevelType.kHeightLayer,500,0)
 local HG = level(HPLevelType.kHeight,0)
 
-EL500 = luatool:FetchWithType(current_time, HL, param("EL-LAST-HPA"), current_forecast_type)
-LCL500 = luatool:FetchWithType(current_time, HL, param("LCL-HPA"), current_forecast_type)
-LFC500 = luatool:FetchWithType(current_time, HL, param("LFC-HPA"), current_forecast_type)
-CAPE500 = luatool:FetchWithType(current_time, HL, param("CAPE-JKG"), current_forecast_type)
-CIN500 = luatool:FetchWithType(current_time, HL, param("CIN-JKG"), current_forecast_type)
+EL500 = luatool:Fetch(current_time, HL, param("EL-LAST-HPA"), current_forecast_type)
+LCL500 = luatool:Fetch(current_time, HL, param("LCL-HPA"), current_forecast_type)
+LFC500 = luatool:Fetch(current_time, HL, param("LFC-HPA"), current_forecast_type)
+CAPE500 = luatool:Fetch(current_time, HL, param("CAPE-JKG"), current_forecast_type)
+CIN500 = luatool:Fetch(current_time, HL, param("CIN-JKG"), current_forecast_type)
 
-LCLmu = luatool:FetchWithType(current_time, MU, param("LCL-HPA"), current_forecast_type)
-LFCmu = luatool:FetchWithType(current_time, MU, param("LFC-HPA"), current_forecast_type)
-ELmu = luatool:FetchWithType(current_time, MU, param("EL-LAST-HPA"), current_forecast_type)
-CINmu = luatool:FetchWithType(current_time, MU, param("CIN-JKG"), current_forecast_type)
-CAPEmu = luatool:FetchWithType(current_time, MU, param("CAPE-JKG"), current_forecast_type)
+LCLmu = luatool:Fetch(current_time, MU, param("LCL-HPA"), current_forecast_type)
+LFCmu = luatool:Fetch(current_time, MU, param("LFC-HPA"), current_forecast_type)
+ELmu = luatool:Fetch(current_time, MU, param("EL-LAST-HPA"), current_forecast_type)
+CINmu = luatool:Fetch(current_time, MU, param("CIN-JKG"), current_forecast_type)
+CAPEmu = luatool:Fetch(current_time, MU, param("CAPE-JKG"), current_forecast_type)
 
-Ttop = luatool:FetchWithType(current_time, HL, param("EL-K"), current_forecast_type)
-Tbase = luatool:FetchWithType(current_time, HL, param("LCL-K"), current_forecast_type)
-TtopMU = luatool:FetchWithType(current_time, MU, param("EL-K"), current_forecast_type)
+Ttop = luatool:Fetch(current_time, HL, param("EL-K"), current_forecast_type)
+Tbase = luatool:Fetch(current_time, HL, param("LCL-K"), current_forecast_type)
+TtopMU = luatool:Fetch(current_time, MU, param("EL-K"), current_forecast_type)
 --LFC probably better than LCL for elev conv. base
-TbaseMU = luatool:FetchWithType(current_time, MU, param("LFC-K"), current_forecast_type)
+TbaseMU = luatool:Fetch(current_time, MU, param("LFC-K"), current_forecast_type)
 
 if not EL500 or not LCLmu or not Ttop then
   logger:Error("Some data not found")
   return
 end
 
-NL = luatool:FetchWithType(current_time, HG, param("NL-PRCNT"), current_forecast_type)
-NM = luatool:FetchWithType(current_time, HG, param("NM-PRCNT"), current_forecast_type)
+NL = luatool:Fetch(current_time, HG, param("NL-PRCNT"), current_forecast_type)
+NM = luatool:Fetch(current_time, HG, param("NM-PRCNT"), current_forecast_type)
 
 if not NL then
-  NL = luatool:FetchWithType(current_time, HG, param("NL-0TO1"), current_forecast_type)
+  NL = luatool:Fetch(current_time, HG, param("NL-0TO1"), current_forecast_type)
 end
 
 if not NM then
-  NM = luatool:FetchWithType(current_time, HG, param("NM-0TO1"), current_forecast_type)
+  NM = luatool:Fetch(current_time, HG, param("NM-0TO1"), current_forecast_type)
 end
 
-RR = luatool:FetchWithType(current_time, HG, param("RRR-KGM2"), current_forecast_type)
+RR = luatool:Fetch(current_time, HG, param("RRR-KGM2"), current_forecast_type)
 
 CBlimit = 12  --required vertical thickness [degrees C] to consider a CB (tweak this..!)
 TCUlimit = 9  --required vertical thickness [degrees C] to consider a TCU (tweak this..!)

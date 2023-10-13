@@ -344,6 +344,26 @@ A basic identifer for a param is its name. The name is always in the form of NAM
 | aggregation | GetAggregation | | Return aggregation of parameter (if applicable) |
 | | SetAggregation | aggregation | Set aggregation for a parameter
 
+
+## params
+
+params is a container-wrapper for param. In c++ code it's simply std::vector<param>.
+
+
+    local ps = params.create({param("T-K"), param("T-C")})
+
+
+| Return value  | Name | Arguments | Description | 
+|---|---|---|---|
+|   | constructor | string |   |
+| params | create | table of params | static function to create a params instance |
+| number | size | | Container size | 
+| | push_back | param | Append a param to container |
+| | clear | | Empty container |
+| param | get | number | Get param from given position (1-indexed) |
+| | set | number, param | Set param to given positiob (1-indexed) |
+
+
 ## point
 
 point represent an xy or latlon point.
@@ -553,7 +573,7 @@ hitool instance can be used to examine the properties of the atmosphere. See hit
 
 luatool variable represents the plugin itself. This variable is used to fetch and write data.
 
-    local grid = luatool:Fetch(current_time, current_level, par1)
+    local grid = luatool:Fetch(current_time, current_level, par1, current_forecast_type)
 
     luatool:WriteToFile(result)
 
@@ -563,7 +583,6 @@ Note! The argument for WriteToFile MUST be 'result'!
 |---|---|---|---|
 | string | ClassName | | Returns class name |
 | table | Fetch | forecast_time, level, param | Fetch data with given search arguments |
-| table | FetchWithType | forecast_time, level, param, forecast_type | Fetch data with given search arguments including forecast_type |
 | info | FetchInfo | forecast_time, level, param | Fetch data with given search arguments, return info |
 | info | FetchInfoWithType | forecast_time, level, param, forecast_type | Fetch data with given search arguments including forecast_type, return info |
 | table | FetchWithArgs | table | Fetch data with given search arguments |
@@ -577,7 +596,7 @@ Mandatory fields are:
 
 * forecast_time
 * level
-* param
+* param OR params
     
 Optional fields are:
 

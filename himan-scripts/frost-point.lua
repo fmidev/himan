@@ -54,8 +54,8 @@ end
 
 local Missing = missing
 
-local P = luatool:FetchWithType(current_time, level(HPLevelType.kHeight, 0), PParam, current_forecast_type)
-local DP = luatool:FetchWithType(current_time, level(HPLevelType.kHeight, 2), param("TD-K"), current_forecast_type)
+local P = luatool:Fetch(current_time, level(HPLevelType.kHeight, 0), PParam, current_forecast_type)
+local DP = luatool:Fetch(current_time, level(HPLevelType.kHeight, 2), param("TD-K"), current_forecast_type)
 
 local i = 0
 local res = {}

@@ -45,7 +45,7 @@ function DailyMeanTemperature(curTime)
       break
     end
 
-    local t2m = luatool:FetchWithType(curTime, current_level, param("T-K"), current_forecast_type)
+    local t2m = luatool:Fetch(curTime, current_level, param("T-K"), current_forecast_type)
 
     if t2m then
       if #tsum == 0 then

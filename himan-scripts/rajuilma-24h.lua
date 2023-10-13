@@ -47,8 +47,8 @@ function TimeMax(curTime,param_csi)
       break
     end
 
-    local pot_3 = luatool:FetchWithType(myTime, current_level, potpar, forecast_type(HPForecastType.kStatisticalProcessing))
-    local csi = luatool:FetchWithType(myTime, current_level, param_csi, forecast_type(HPForecastType.kStatisticalProcessing))
+    local pot_3 = luatool:Fetch(myTime, current_level, potpar, forecast_type(HPForecastType.kStatisticalProcessing))
+    local csi = luatool:Fetch(myTime, current_level, param_csi, forecast_type(HPForecastType.kStatisticalProcessing))
 
     if pot_3 then
       if #csimax == 0 then

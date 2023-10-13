@@ -78,11 +78,11 @@ void turbulence::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short 
 	level prevLevel, nextLevel;
 
 	prevLevel = level(myTargetInfo->Level());
-	prevLevel.Value(myTargetInfo->Level().Value() - 1);
+	level::EqualAdjustment(prevLevel, -1.);
 	prevLevel.Index(prevLevel.Index() - 1);
 
 	nextLevel = level(myTargetInfo->Level());
-	nextLevel.Value(myTargetInfo->Level().Value() + 1);
+	level::EqualAdjustment(nextLevel, 1.);
 	nextLevel.Index(nextLevel.Index() + 1);
 
 	auto myThreadedLogger = logger("turbulence_pluginThread #" + to_string(threadIndex));

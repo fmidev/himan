@@ -176,7 +176,7 @@ class param
 	int itsPrecision;
 	processing_type itsProcessingType;
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 	friend class cereal::access;
 
 	template <class Archive>

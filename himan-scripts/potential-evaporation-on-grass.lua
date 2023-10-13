@@ -20,11 +20,11 @@ if prod:GetId() == 134 then
 end
 
 -- Fetch
-local temp = luatool:FetchWithType(current_time, current_level, param("T-K"), current_forecast_type)
-local windspeed = luatool:FetchWithType(current_time, level(HPLevelType.kHeight, 10), param("FF-MS"), current_forecast_type)
-local netsw = luatool:FetchWithType(current_time, current_level, param("RNETSW-WM2"), current_forecast_type)
-local netlw = luatool:FetchWithType(current_time, current_level, param("RNETLW-WM2"), current_forecast_type)
-local relhum = luatool:FetchWithType(current_time, level(HPLevelType.kHeight, 2), RHParam, current_forecast_type)
+local temp = luatool:Fetch(current_time, current_level, param("T-K"), current_forecast_type)
+local windspeed = luatool:Fetch(current_time, level(HPLevelType.kHeight, 10), param("FF-MS"), current_forecast_type)
+local netsw = luatool:Fetch(current_time, current_level, param("RNETSW-WM2"), current_forecast_type)
+local netlw = luatool:Fetch(current_time, current_level, param("RNETLW-WM2"), current_forecast_type)
+local relhum = luatool:Fetch(current_time, level(HPLevelType.kHeight, 2), RHParam, current_forecast_type)
 
 -- Output
 local evaporation = {}

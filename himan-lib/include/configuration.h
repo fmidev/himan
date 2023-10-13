@@ -199,8 +199,8 @@ class configuration
 	std::string TargetGeomName() const;
 	void TargetGeomName(const std::string& theTargetGeomName);
 
-	int CacheLimit() const;
-	void CacheLimit(int theCacheLimit);
+	size_t CacheLimit() const;
+	void CacheLimit(size_t theCacheLimit);
 
 	bool UseDynamicMemoryAllocation() const;
 	void UseDynamicMemoryAllocation(bool theUseDynamicMemoryAllocation);
@@ -297,7 +297,7 @@ class configuration
 
 	time_duration itsForecastStep;
 
-	int itsCacheLimit;
+	size_t itsCacheLimit;
 	std::string itsParamFile;
 	bool itsAsyncExecution;
 	bool itsUpdateSSStateTable;

@@ -43,9 +43,9 @@ end
 --A pre calculation that computes the integrand of the updraft helicity on the hybrid levels.
 --The precalculation is yielding intermediate results that should be written to cache.
 if mode == "precalculation" then
-  U = luatool:FetchWithType(current_time, current_level, param("U-MS"), current_forecast_type)
-  V = luatool:FetchWithType(current_time, current_level, param("V-MS"), current_forecast_type)
-  W = luatool:FetchWithType(current_time, current_level, param("VV-MS"), current_forecast_type)
+  U = luatool:Fetch(current_time, current_level, param("U-MS"), current_forecast_type)
+  V = luatool:Fetch(current_time, current_level, param("V-MS"), current_forecast_type)
+  W = luatool:Fetch(current_time, current_level, param("VV-MS"), current_forecast_type)
 
   dudy = ddy(U,dy)
   dvdx = ddx(V,dx)

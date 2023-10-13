@@ -55,7 +55,7 @@ class point_list : public irregular_grid
 	bool EqualsTo(const point_list& other) const;
 
 	std::vector<station> itsStations;
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 	friend class cereal::access;
 
 	template <class Archive>
@@ -72,7 +72,7 @@ inline std::ostream& operator<<(std::ostream& file, const point_list& ob)
 }
 }  // namespace himan
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 CEREAL_REGISTER_TYPE(himan::point_list);
 #endif
 

@@ -14,8 +14,13 @@ enum class HPWriteStatus
 	kUnknown = 0,
 	kFinished,
 	kPending,
-	kFailed
+	kFailed,
+	kSpilled
 };
+
+const boost::unordered_map<HPWriteStatus, std::string> HPWriteStatusToString =
+    ba::map_list_of(HPWriteStatus::kUnknown, "unknown")(HPWriteStatus::kFinished, "finished")(
+        HPWriteStatus::kPending, "pending")(HPWriteStatus::kFailed, "failed")(HPWriteStatus::kSpilled, "spilled");
 
 namespace plugin
 {

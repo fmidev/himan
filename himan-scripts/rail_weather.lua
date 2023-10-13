@@ -9,17 +9,17 @@ prev_time:GetValidDateTime():Adjust(HPTimeResolution.kHourResolution, -6)
 -- 2. Snowfallrate 5cm/12h; Calculate +/-6h
 -- 3. Wind Speed 5 m/s or above
 
-local min_t = luatool:FetchWithType(current_time, level(HPLevelType.kHeight,2), param("TMIN6H-K"), current_forecast_type)
+local min_t = luatool:Fetch(current_time, level(HPLevelType.kHeight,2), param("TMIN6H-K"), current_forecast_type)
 
 if not min_t then
-	min_t = luatool:FetchWithType(current_time,
+	min_t = luatool:Fetch(current_time,
 	level(HPLevelType.kHeight,2), param("TMIN3H-K"), current_forecast_type)
 end
 
-local max_ws = luatool:FetchWithType(current_time, level(HPLevelType.kHeight,10), param("FFG-MS"), current_forecast_type)
+local max_ws = luatool:Fetch(current_time, level(HPLevelType.kHeight,10), param("FFG-MS"), current_forecast_type)
 
-local snow_next = luatool:FetchWithType(next_time, current_level, param('SNACC-KGM2'), current_forecast_type) 
-local snow_prev = luatool:FetchWithType(prev_time, current_level, param('SNACC-KGM2'), current_forecast_type)
+local snow_next = luatool:Fetch(next_time, current_level, param('SNACC-KGM2'), current_forecast_type) 
+local snow_prev = luatool:Fetch(prev_time, current_level, param('SNACC-KGM2'), current_forecast_type)
 
 if min_t == nil or snow_next == nil or (snow_prev == nil and current_time:GetStep():Hours() ~= 6) or max_ws == nil then  
     return

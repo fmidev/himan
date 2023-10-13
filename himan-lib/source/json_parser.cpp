@@ -250,17 +250,30 @@ void UseCache(const boost::property_tree::ptree& pt, std::shared_ptr<configurati
 
 void CacheLimit(const boost::property_tree::ptree& pt, std::shared_ptr<configuration>& conf)
 {
-	if (auto cacheLimit = ReadElement<int>(pt, "cache_limit"))
+	if (auto cacheLimit = ReadElement<std::string>(pt, "cache_limit"))
 	{
-		if (cacheLimit.get() < 1)
+		std::string lim = cacheLimit.get();
+		size_t sz = 0;
+		if (lim.find("Gi") != std::string::npos)
 		{
-			itsLogger.Warning("cache_limit must be larger than 0");
+			sz = static_cast<size_t>(std::stod(lim.substr(0, lim.size() - 2)) * 1024 * 1024 * 1024);
+		}
+		else if (lim.find("Mi") != std::string::npos)
+		{
+			sz = static_cast<size_t>(std::stod(lim.substr(0, lim.size() - 2)) * 1024 * 1024);
 		}
 		else
 		{
-			conf->CacheLimit(cacheLimit.get());
-			plugin::cache_pool::Instance()->CacheLimit(cacheLimit.get());
+			sz = std::stol(lim);
 		}
+
+		if (sz < 100 * 1024 * 1024)
+		{
+			itsLogger.Error("cache_limit must be larger than or equal to 100Mi");
+			himan::Abort();
+		}
+		plugin::cache_pool::Instance()->CacheLimit(sz);
+		conf->CacheLimit(sz);
 	}
 }
 

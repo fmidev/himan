@@ -35,7 +35,8 @@ enum class HPDataFoundFrom : int
 {
 	kCache = 0,
 	kAuxFile,
-	kDatabase
+	kDatabase,
+	kSpillFile
 };
 
 class fetcher : public auxiliary_plugin

@@ -6,6 +6,7 @@
 #include "logger.h"
 #include "metutil.h"
 #include "plugin_factory.h"
+#include "radon.h"
 #include <algorithm>
 
 using namespace std;
@@ -40,8 +41,8 @@ void tropopause::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short
 	h->HeightUnit(kHPa);
 
 	// Search is limited to the interval FL140-FL530 i.e. 600-100 HPa
-	auto FL530 = h->LevelForHeight(myTargetInfo->Producer(), 100.);
-	auto FL140 = h->LevelForHeight(myTargetInfo->Producer(), 600.);
+	auto FL530 = h->LevelForHeight(myTargetInfo->Producer(), 100., itsConfiguration->TargetGeomName());
+	auto FL140 = h->LevelForHeight(myTargetInfo->Producer(), 600., itsConfiguration->TargetGeomName());
 
 	auto myThreadedLogger = logger("tropopause_pluginThread #" + to_string(threadIndex));
 
@@ -60,11 +61,33 @@ void tropopause::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short
 	vector<vector<double>> temp;
 	vector<vector<double>> pres;
 
-	for (size_t lvl = firstLevel; lvl > lastLevel; --lvl)
+	auto r = GET_PLUGIN(radon);
+
+	const std::string lt = r->RadonDB().GetProducerMetaData(myTargetInfo->Producer().Id(), "hybrid level type");
+
+	const HPLevelType hybridLevelType = (lt.empty()) ? kHybrid : HPStringToLevelType.at(lt);
+
+	level curLevel;
+	double firstValue = static_cast<double>(firstLevel);
+
+	switch (hybridLevelType)
 	{
-		auto heightInfo = Fetch(forecastTime, level(kHybrid, static_cast<double>(lvl)), H, forecastType, false);
-		auto tempInfo = Fetch(forecastTime, level(kHybrid, static_cast<double>(lvl)), T, forecastType, false);
-		auto presInfo = Fetch(forecastTime, level(kHybrid, static_cast<double>(lvl)), P, forecastType, false);
+		case kHybrid:
+		default:
+			curLevel = level(hybridLevelType, firstValue);
+			break;
+		case kGeneralizedVerticalLayer:
+			curLevel = level(hybridLevelType, firstValue, firstValue + 1);
+			break;
+	}
+
+	while (curLevel.Value() > static_cast<double>(lastLevel))
+	{
+		auto heightInfo = Fetch(forecastTime, curLevel, H, forecastType, false);
+		auto tempInfo = Fetch(forecastTime, curLevel, T, forecastType, false);
+		auto presInfo = Fetch(forecastTime, curLevel, P, forecastType, false);
+
+		level::EqualAdjustment(curLevel, -1);
 
 		if (!(heightInfo && tempInfo && presInfo))
 		{

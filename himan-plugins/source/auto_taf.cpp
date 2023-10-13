@@ -142,8 +142,8 @@ void auto_taf::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short t
 	}
 	auto bounds = minmax_element(VEC(LCL500).begin(), VEC(LCL500).end());
 
-	auto levelsMax = h->LevelForHeight(myTargetInfo->Producer(), *(bounds.second));
-	auto levelsMin = h->LevelForHeight(myTargetInfo->Producer(), *(bounds.first));
+	auto levelsMax = h->LevelForHeight(myTargetInfo->Producer(), *(bounds.second), itsConfiguration->TargetGeomName());
+	auto levelsMin = h->LevelForHeight(myTargetInfo->Producer(), *(bounds.first), itsConfiguration->TargetGeomName());
 
 	h->HeightUnit(kM);
 

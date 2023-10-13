@@ -73,7 +73,7 @@ class latitude_longitude_grid : public regular_grid
 	earth_shape<double> itsEarthShape;
 
    private:
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 	friend class cereal::access;
 
 	template <class Archive>
@@ -159,7 +159,7 @@ class rotated_latitude_longitude_grid : public latitude_longitude_grid
 	himan::geoutil::rotation<double> itsFromRotLatLon;
 	himan::geoutil::rotation<double> itsToRotLatLon;
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 	friend class cereal::access;
 
 	template <class Archive>
@@ -191,7 +191,7 @@ inline std::ostream& operator<<(std::ostream& file, const rotated_latitude_longi
 }
 }  // namespace himan
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 CEREAL_REGISTER_TYPE(himan::latitude_longitude_grid);
 CEREAL_REGISTER_TYPE(himan::rotated_latitude_longitude_grid);
 CEREAL_REGISTER_POLYMORPHIC_RELATION(himan::regular_grid, himan::latitude_longitude_grid);

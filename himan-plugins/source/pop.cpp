@@ -15,22 +15,36 @@
 using namespace std;
 using namespace himan::plugin;
 
-himan::raw_time GetOriginTime(const himan::raw_time& start, int producerId)
+himan::raw_time RoundOriginTime(const himan::raw_time& start, int producerId)
 {
-	ASSERT(producerId == 242 || producerId == 260);
-
-	// Provide latest analysis time for either MEPS or ECEPS
 	himan::raw_time ret = start;
-
 	const int hour = stoi(start.String("%H"));
 	const int ostep = (producerId == 242) ? 12 : 3;  // origin time "step"
-	const int adjust = (hour % ostep == 0) ? ostep : hour % ostep;
+	const int adjust = hour % ostep;
+
 	ret.Adjust(himan::kHourResolution, -adjust);
 
 	return ret;
 }
 
-pop::pop() : itsECEPSGeom("ECGLO0200"), itsMEPSGeom("MEPS2500D")
+himan::raw_time GetOriginTime(const himan::raw_time& start, int producerId)
+{
+	himan::raw_time ret = start;
+	const int adjust = (producerId == 242) ? 12 : 3;  // origin time "step"
+
+	ret.Adjust(himan::kHourResolution, -adjust);
+	return ret;
+}
+
+himan::raw_time GetValidTime(const himan::raw_time& start)
+{
+	himan::raw_time ret = start;
+	ret -= himan::ONE_HOUR;
+
+	return ret;
+}
+
+pop::pop() : itsECEPSGeom("ECGLO0200"), itsMEPSGeom("MEPS2500D"), itsUseMEPS(true)
 {
 	itsLogger = logger("pop");
 }
@@ -55,7 +69,106 @@ void pop::Process(std::shared_ptr<const plugin_configuration> conf)
 		itsMEPSGeom = itsConfiguration->GetValue("meps_geom");
 	}
 
+	if (itsConfiguration->Exists("disable_meps"))
+	{
+		itsUseMEPS = !util::ParseBoolean(itsConfiguration->GetValue("disable_meps"));
+	}
+
 	Start();
+}
+
+shared_ptr<himan::info<double>> pop::GetShortProbabilityData(const himan::forecast_time& forecastTime,
+                                                             const level& forecastLevel, logger& logr)
+{
+	shared_ptr<info<double>> ret = nullptr;
+
+	if (itsUseMEPS)
+	{
+		logr.Info("Fetching MEPS");
+
+		int tryNo = 0;
+
+		forecast_time curTime =
+		    forecast_time(RoundOriginTime(forecastTime.OriginDateTime(), 260), forecastTime.ValidDateTime());
+
+		const param p("PROB-RR-7", aggregation(),
+		              processing_type(kProbabilityGreaterThan, 0.025));  // MEPS(1h) RR>0.025mm
+		const producer MEPSprod(260, 86, 204, "MEPSMTA");
+		do
+		{
+			ret =
+			    Fetch(curTime, forecastLevel, p, forecast_type(kStatisticalProcessing), {itsMEPSGeom}, MEPSprod, false);
+			tryNo++;
+			curTime = forecast_time(GetOriginTime(curTime.OriginDateTime(), 260), curTime.ValidDateTime());
+
+		} while (tryNo < 3 && !ret);
+	}
+	else
+	{
+		logr.Info("Fetching ECMWF");
+
+		int tryNo = 0;
+
+		forecast_time curTime =
+		    forecast_time(RoundOriginTime(forecastTime.OriginDateTime(), 242), forecastTime.ValidDateTime());
+
+		const param p("PROB-RR1-1", aggregation(),
+		              processing_type(kProbabilityGreaterThan, 0.14));  // ECMWF(1h) RR>0.14mm
+		const producer ECprod(242, 86, 242, "ECGEPSMTA");
+
+		do
+		{
+			ret =
+			    Fetch(curTime, forecastLevel, p, forecast_type(kStatisticalProcessing), {itsECEPSGeom}, ECprod, false);
+			tryNo++;
+			curTime = forecast_time(GetOriginTime(curTime.OriginDateTime(), 242), curTime.ValidDateTime());
+
+		} while (tryNo < 2 && !ret);
+	}
+
+	return ret;
+}
+
+std::shared_ptr<himan::info<double>> pop::GetLongProbabilityData(const himan::forecast_time& forecastTime,
+                                                                 const level& forecastLevel, logger& logr)
+
+{
+	logr.Info("Fetching ECMWF");
+
+	param p("PROB-RR3-6", aggregation(), processing_type(kProbabilityGreaterThan, 0.2));  // EC(3h) RR>0.2mm
+
+	if (forecastTime.Step().Hours() > 131)
+	{
+		p = param("PROB-RR-4", aggregation(), processing_type(kProbabilityGreaterThan, 0.4));  // EC(6h) RR>0.4mm
+	}
+
+	shared_ptr<info<double>> ret = nullptr;
+
+	// origin time counter
+	int otryNo = 0;
+
+	forecast_time curTime =
+	    forecast_time(RoundOriginTime(forecastTime.OriginDateTime(), 242), forecastTime.ValidDateTime());
+
+	const producer ECprod(242, 86, 242, "ECGEPSMTA");
+
+	do
+	{
+		// valid time counter
+		int vtryNo = 0;
+		do
+		{
+			ret =
+			    Fetch(curTime, forecastLevel, p, forecast_type(kStatisticalProcessing), {itsECEPSGeom}, ECprod, false);
+			vtryNo++;
+			curTime = forecast_time(curTime.OriginDateTime(), GetValidTime(curTime.ValidDateTime()));
+		} while (vtryNo < 6 && !ret);
+		otryNo++;
+		curTime = forecast_time(GetOriginTime(curTime.OriginDateTime(), 242), forecastTime.ValidDateTime());
+
+	} while (otryNo < 2 && !ret);
+
+	return ret;
 }
 
 void pop::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
@@ -63,7 +176,7 @@ void pop::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 	// 2021 POP
 	// version 6.9.2021
 	// Use ensemble forecasts precipitation probabilies as source data
-	// <= 45h forecasts: Prob MEPS(1h) RR>=0.025mm
+	// <= 45h forecasts: Prob MEPS(1h) RR>=0.025mm OR Prob Ec(1h) RR>=0.14
 	// 46h - 130h forecasts: Prob EC(3h) RR>=0.2mm
 	// >131h forecasts: Prob EC(6h) RR>=0.4mm
 	// also: if smartemt data contains rain, POP should have values
@@ -82,31 +195,14 @@ void pop::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 	                                   static_cast<string>(forecastTime.ValidDateTime()),
 	                                   static_cast<string>(forecastLevel)));
 
-	shared_ptr<info<double>> MEPS, EC, SmartMet;
+	shared_ptr<info<double>> ShortProb, LongProb, Precipitation;
 
 	const long step = forecastTime.Step().Hours();
 
 	if (step <= 46)
 	{
-		myThreadedLogger.Info("Fetching MEPS");
-
-		int tryNo = 0;
-
-		forecast_time curTime = forecastTime;
-		const param p("PROB-RR-7", aggregation(),
-		              processing_type(kProbabilityGreaterThan, 0.025));  // MEPS(1h) RR>0.025mm
-		const producer MEPSprod(260, 86, 204, "MEPSMTA");
-		do
-		{
-			raw_time now;
-			curTime = forecast_time(GetOriginTime(curTime.OriginDateTime(), 260), curTime.ValidDateTime());
-
-			MEPS =
-			    Fetch(curTime, forecastLevel, p, forecast_type(kStatisticalProcessing), {itsMEPSGeom}, MEPSprod, false);
-			tryNo++;
-		} while (tryNo < 3 && !MEPS);
-
-		if (!MEPS)
+		ShortProb = GetShortProbabilityData(forecastTime, forecastLevel, myThreadedLogger);
+		if (!ShortProb)
 		{
 			return;
 		}
@@ -114,49 +210,28 @@ void pop::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 
 	if (step >= 43)
 	{
-		myThreadedLogger.Info("Fetching ECMWF");
+		LongProb = GetLongProbabilityData(forecastTime, forecastLevel, myThreadedLogger);
 
-		param p("PROB-RR3-6", aggregation(), processing_type(kProbabilityGreaterThan, 0.4));  // EC(3h) RR>0.2mm
-
-		int tryNo = 0;
-
-		forecast_time curTime = forecastTime;
-		const producer ECprod(242, 86, 242, "ECGEPSMTA");
-
-		do
-		{
-			curTime = forecast_time(GetOriginTime(curTime.OriginDateTime(), 242), curTime.ValidDateTime());
-
-			if (curTime.Step().Hours() > 131)
-			{
-				p = param("PROB-RR-4", aggregation(),
-				          processing_type(kProbabilityGreaterThan, 0.4));  // EC(6h) RR>0.4mm
-			}
-
-			EC = Fetch(curTime, forecastLevel, p, forecast_type(kStatisticalProcessing), {itsECEPSGeom}, ECprod, false);
-			tryNo++;
-		} while (tryNo < 2 && !EC);
-
-		if (!EC)
+		if (!LongProb)
 		{
 			return;
 		}
 	}
 
-	myThreadedLogger.Info("Fetching SmartMet");
+	myThreadedLogger.Info("Fetching Precipitation");
 
-	SmartMet = Fetch(forecastTime, forecastLevel, param("RRR-KGM2"), forecastType);
+	Precipitation = Fetch(forecastTime, forecastLevel, param("RRR-KGM2"), forecastType);
 
-	if (!SmartMet)
+	if (!Precipitation)
 	{
 		return;
 	}
 
 	vector<double> result(myTargetInfo->Data().Size(), MissingDouble());
 
-	const auto& MEPSdata = (MEPS) ? VEC(MEPS) : result;
-	const auto& ECdata = (EC) ? VEC(EC) : result;
-	const auto& SmartMetdata = VEC(SmartMet);
+	const auto& ShortProbData = (ShortProb) ? VEC(ShortProb) : result;
+	const auto& LongProbData = (LongProb) ? VEC(LongProb) : result;
+	const auto& PrecipitationData = VEC(Precipitation);
 
 	auto& resultdata = VEC(myTargetInfo);
 
@@ -190,24 +265,24 @@ void pop::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 	// Minimum precipitation value to be accepted, mm/h
 	const double RRlimit = 0.01;
 
-	for (auto&& tup : zip_range(resultdata, MEPSdata, ECdata, SmartMetdata))
+	for (auto&& tup : zip_range(resultdata, ShortProbData, LongProbData, PrecipitationData))
 	{
 		double& r = tup.get<0>();
-		const double meps = tup.get<1>();
-		const double ec = tup.get<2>();
+		const double shrt = tup.get<1>();
+		const double lng = tup.get<2>();
 		const double rr = tup.get<3>();
 
 		if (step < 43)
 		{
-			r = meps;
+			r = shrt;
 		}
 		else if (step >= 43 && step <= 46)
 		{
-			r = (meps + ec) * 0.5;
+			r = (shrt + lng) * 0.5;
 		}
 		else
 		{
-			r = ec;
+			r = lng;
 		}
 
 		if (rr > RRlimit)

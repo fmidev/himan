@@ -6,8 +6,8 @@ local Missing = missing
 
 function CloudLayers()
 
-  local ct = luatool:FetchWithType(current_time, level(HPLevelType.kHeight, 0), param("NWCSAF_CLDTYPE-N"), current_forecast_type)
-  --local ctqc = luatool:FetchWithType(current_time, level(HPLevelType.kHeight, 0), param("NWCSAF_CLDTYPE_QC-N"), current_forecast_type)
+  local ct = luatool:Fetch(current_time, level(HPLevelType.kHeight, 0), param("NWCSAF_CLDTYPE-N"), current_forecast_type)
+  --local ctqc = luatool:Fetch(current_time, level(HPLevelType.kHeight, 0), param("NWCSAF_CLDTYPE_QC-N"), current_forecast_type)
 
   if not ct then -- or not ctqc then
     return
@@ -93,8 +93,8 @@ function CloudLayers()
 end
 
 function EffectiveCloudinessMissingToZero()
-  local ec = luatool:FetchWithType(current_time, level(HPLevelType.kHeight, 0), param("NWCSAF_EFFCLD-0TO1"), current_forecast_type)
-  local ecqc = luatool:FetchWithType(current_time, level(HPLevelType.kHeight, 0), param("NWCSAF_CTTH_QC-N"), current_forecast_type)
+  local ec = luatool:Fetch(current_time, level(HPLevelType.kHeight, 0), param("NWCSAF_EFFCLD-0TO1"), current_forecast_type)
+  local ecqc = luatool:Fetch(current_time, level(HPLevelType.kHeight, 0), param("NWCSAF_CTTH_QC-N"), current_forecast_type)
 
   if not ec or not ecqc then
     return

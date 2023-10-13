@@ -13,9 +13,9 @@ par2 = param("GRI-KGM2") -- Instantaneous graupel rate in mm/s
 par3 = param("SNRI-KGM2") -- Instantaneous snowfall rate in mm/s
 par4 = param("PRI-KGM2") -- Instantaneous precipitation intensity in mm/h, (par1+par2+par3)*3600
 
-local rri = luatool:FetchWithType(current_time, current_level, par1, current_forecast_type)
-local gri = luatool:FetchWithType(current_time, current_level, par2, current_forecast_type)
-local snri = luatool:FetchWithType(current_time, current_level, par3, current_forecast_type)
+local rri = luatool:Fetch(current_time, current_level, par1, current_forecast_type)
+local gri = luatool:Fetch(current_time, current_level, par2, current_forecast_type)
+local snri = luatool:Fetch(current_time, current_level, par3, current_forecast_type)
 
 if not rri or not gri or not snri then
   return

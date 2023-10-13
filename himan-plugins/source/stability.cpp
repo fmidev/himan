@@ -11,7 +11,6 @@
 
 #include "fetcher.h"
 #include "hitool.h"
-#include "radon.h"
 #include "writer.h"
 
 using namespace std;
@@ -38,9 +37,8 @@ void Process(shared_ptr<const plugin_configuration> conf, shared_ptr<info<double
 namespace STABILITY
 {
 std::shared_ptr<himan::info<double>> Fetch(std::shared_ptr<const plugin_configuration>& conf,
-                                             std::shared_ptr<himan::info<double>>& myTargetInfo,
-                                             const himan::level& lev, const himan::param& par,
-                                             bool returnPacked = false);
+                                           std::shared_ptr<himan::info<double>>& myTargetInfo, const himan::level& lev,
+                                           const himan::param& par, bool returnPacked = false);
 
 vec Shear(const vec& lowerValues, const vec& upperValues)
 {
@@ -73,8 +71,8 @@ vec Shear(std::shared_ptr<himan::plugin::hitool>& h, const himan::param& par, do
 }
 
 std::shared_ptr<info<double>> Fetch(std::shared_ptr<const plugin_configuration>& conf,
-                                      std::shared_ptr<himan::info<double>>& myTargetInfo, const himan::level& lev,
-                                      const himan::param& par, bool useCuda)
+                                    std::shared_ptr<himan::info<double>>& myTargetInfo, const himan::level& lev,
+                                    const himan::param& par, bool useCuda)
 {
 	const forecast_time forecastTime = myTargetInfo->Time();
 	const forecast_type forecastType = myTargetInfo->ForecastType();
@@ -149,7 +147,7 @@ pair<vec, vec> GetEBSLevelData(shared_ptr<const plugin_configuration>& conf, sha
 
 	throw runtime_error("Invalid target level: " + static_cast<string>(targetLevel));
 }
-}
+}  // namespace STABILITY
 
 stability::stability()
 {
@@ -159,10 +157,7 @@ void stability::Process(std::shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 
-	auto r = GET_PLUGIN(radon);
-
-	itsBottomLevel = level(kHybrid, stoi(r->RadonDB().GetProducerMetaData(itsConfiguration->TargetProducer().Id(),
-	                                                                      "last hybrid level number")));
+	itsBottomLevel = util::CreateHybridLevel(itsConfiguration->TargetProducer(), "last");
 
 #ifdef HAVE_CUDA
 	stability_cuda::itsBottomLevel = itsBottomLevel;
@@ -203,7 +198,7 @@ vec CalculateStormRelativeHelicity(shared_ptr<const plugin_configuration> conf, 
 
 	while (curLevel.Value() > 0)
 	{
-		curLevel.Value(curLevel.Value() - 1);
+		level::EqualAdjustment(curLevel, -1.);
 
 		auto UInfo = STABILITY::Fetch(conf, myTargetInfo, curLevel, UParam);
 		auto VInfo = STABILITY::Fetch(conf, myTargetInfo, curLevel, VParam);
@@ -259,7 +254,8 @@ vec CalculateStormRelativeHelicity(shared_ptr<const plugin_configuration> conf, 
 		prevZInfo = ZInfo;
 	}
 
-	replace_if(SRH.begin(), SRH.end(), [](const double& v) { return v == 0.; }, MissingDouble());
+	replace_if(
+	    SRH.begin(), SRH.end(), [](const double& v) { return v == 0.; }, MissingDouble());
 
 	return SRH;
 }
@@ -678,7 +674,8 @@ pair<vec, vec> GetSRHSourceData(const shared_ptr<info<double>>& myTargetInfo, sh
 
 	storm_rel_helicity -= ((u_ID-u[p])*(v[p]-v[p+1]))-((v_ID - v[p])*(u[p]-u[p+1]));
 
-	Here, u_ID and v_ID are the forecast storm motion vectors calculated with the so-called ID-method. These can be calculated as follows:
+	Here, u_ID and v_ID are the forecast storm motion vectors calculated with the so-called ID-method. These can be
+	calculated as follows:
 
 	where
 

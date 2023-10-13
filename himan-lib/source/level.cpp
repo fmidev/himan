@@ -66,11 +66,30 @@ level::operator std::string() const
 	return out;
 }
 
+void level::EqualAdjustment(level& lev, double adj)
+{
+	switch (lev.Type())
+	{
+		default:
+			lev.Value() += adj;
+			break;
+		case kGeneralizedVerticalLayer:
+		case kGroundDepth:
+		case kHeightLayer:
+			lev.Value() += adj;
+			lev.Value2() += adj;
+			break;
+	}
+}
 void level::Value(double theValue)
 {
 	itsValue = theValue;
 }
 double level::Value() const
+{
+	return itsValue;
+}
+double& level::Value()
 {
 	return itsValue;
 }
@@ -82,6 +101,11 @@ double level::Value2() const
 {
 	return itsValue2;
 }
+double& level::Value2()
+{
+	return itsValue2;
+}
+
 int level::Index() const
 {
 	return itsIndex;

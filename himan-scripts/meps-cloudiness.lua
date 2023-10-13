@@ -5,31 +5,73 @@
 -- For Himan/lua: partio 15.5.2020
 --
 
-local RH300 = luatool:FetchWithType(current_time, level(HPLevelType.kPressure, 300), param("RH-0TO1"), current_forecast_type)
-local RH500 = luatool:FetchWithType(current_time, level(HPLevelType.kPressure, 500), param("RH-0TO1"), current_forecast_type)
-local N300 = luatool:FetchWithType(current_time, level(HPLevelType.kPressure, 300), param("N-0TO1"), current_forecast_type)
-local N500 = luatool:FetchWithType(current_time, level(HPLevelType.kPressure, 500), param("N-0TO1"), current_forecast_type)
-local NL = luatool:FetchWithType(current_time, level(HPLevelType.kHeight, 0), param("NL-0TO1"), current_forecast_type)
-local NM = luatool:FetchWithType(current_time, level(HPLevelType.kHeight, 0), param("NM-0TO1"), current_forecast_type)
-local NH = luatool:FetchWithType(current_time, level(HPLevelType.kHeight, 0), param("NH-0TO1"), current_forecast_type)
+function IsPercents(t)
+  for k, v in ipairs(t) do
+    if t[k] > 2 then
+      return true
+    end
+  end
+  return false
+end
+
+local o = {forecast_time = current_time,
+           level = level(HPLevelType.kPressure, 300),
+           params = params.create({param("RH-0TO1"), param("RH-PRCNT")}),
+           forecast_type = current_forecast_type
+}
+
+local RH300 = luatool:FetchWithArgs(o)
+
+o["level"] = level(HPLevelType.kPressure, 500)
+local RH500 = luatool:FetchWithArgs(o)
+
+o["level"] = level(HPLevelType.kPressure, 300)
+o["params"] = params.create({param("N-0TO1"), param("N-PRCNT")})
+local N300 = luatool:FetchWithArgs(o)
+
+o["level"] = level(HPLevelType.kPressure, 500)
+local N500 = luatool:FetchWithArgs(o)
+
+o["level"] = level(HPLevelType.kHeight, 0)
+o["params"] = params.create({param("NL-0TO1"), param("NL-PRCNT")})
+
+local NL = luatool:FetchWithArgs(o)
+
+o["params"] = params.create({param("NM-0TO1"), param("NM-PRCNT")})
+local NM = luatool:FetchWithArgs(o)
+
+o["params"] = params.create({param("NH-0TO1"), param("NH-PRCNT")})
+local NH = luatool:FetchWithArgs(o)
 
 if not RH300 or not RH500 or not N300 or not N500 or not NL or not NM or not NH then
   return
 end
 
+Nscale = 100
+RHscale = 100
+
+if IsPercents(RH500) then
+  RHscale = 1
+end
+
+if IsPercents(N500) then
+  Nscale = 1
+end
+
+
 local N = {}
 local CH = {}
 
 for i=1,#N300 do
-  local n500 = N500[i] * 100
-  local n300 = N300[i] * 100
+  local n500 = N500[i] * Nscale
+  local n300 = N300[i] * Nscale
 
-  local rh500 = RH500[i] * 100
-  local rh300 = RH300[i] * 100
+  local rh500 = RH500[i] * RHscale
+  local rh300 = RH300[i] * RHscale
 
-  local nl = NL[i] * 100
-  local nm = NM[i] * 100
-  local nh = NH[i] * 100
+  local nl = NL[i] * Nscale
+  local nm = NM[i] * Nscale
+  local nh = NH[i] * Nscale
 
   -- "out" parameters
 

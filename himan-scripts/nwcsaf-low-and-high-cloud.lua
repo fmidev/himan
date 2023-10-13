@@ -15,8 +15,8 @@ end
 
 function LowAndHighCloudGapFix() 
 
-  local effc = luatool:FetchWithType(current_time, current_level, param("NWCSAF_EFFCLD-0TO1"), current_forecast_type)
-  local ctt = luatool:FetchWithType(current_time, current_level, param("CTBT-K"), current_forecast_type)
+  local effc = luatool:Fetch(current_time, current_level, param("NWCSAF_EFFCLD-0TO1"), current_forecast_type)
+  local ctt = luatool:Fetch(current_time, current_level, param("CTBT-K"), current_forecast_type)
 
   local mnwc_prod = producer(7, "MNWC")
   mnwc_prod:SetCentre(251)
@@ -97,7 +97,7 @@ end
 
 function MissingCloudFixWithRH(effc)
 
-  local cmqc = luatool:FetchWithType(current_time, current_level, param("NWCSAF_CLDMASK_QC-N"), current_forecast_type)
+  local cmqc = luatool:Fetch(current_time, current_level, param("NWCSAF_CLDMASK_QC-N"), current_forecast_type)
 
   local snwc_prod = producer(281, "SMARTMETNWC")
   snwc_prod:SetCentre(86)

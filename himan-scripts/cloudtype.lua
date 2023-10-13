@@ -29,7 +29,7 @@ Cloud types:
 local Missing = missing
 
 local function CheckedFetch(parm_name, lvl, time)
-  local p = luatool:FetchWithType(time, lvl, param(parm_name), current_forecast_type)
+  local p = luatool:Fetch(time, lvl, param(parm_name), current_forecast_type)
   if not p then
     logger:Error(string.format("Failed to find parameter '%s'", parm_name))
     error("luatool:Fetch failed")

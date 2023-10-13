@@ -28,8 +28,8 @@ local ws_max = 11
 
 local heightlevel = level(HPLevelType.kHeight, 0)
 
-local globdata = luatool:FetchWithType(current_time, heightlevel, globparam, current_forecast_type)
-local blheightdata = luatool:FetchWithType(current_time, heightlevel, blheightparam, current_forecast_type)
+local globdata = luatool:Fetch(current_time, heightlevel, globparam, current_forecast_type)
+local blheightdata = luatool:Fetch(current_time, heightlevel, blheightparam, current_forecast_type)
 
 hitool:SetHeightUnit(HPParameterUnit.kM)
 local winddata = hitool:VerticalValue(windparam, 100)

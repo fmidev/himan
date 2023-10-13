@@ -53,7 +53,7 @@ class lambert_conformal_grid : public regular_grid
 	bool EqualsTo(const lambert_conformal_grid& other) const;
 	void CreateCoordinateTransformations(const point& firstPoint, bool isProjected);
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 	friend class cereal::access;
 
 	template <class Archive>
@@ -84,7 +84,7 @@ inline std::ostream& operator<<(std::ostream& file, const lambert_conformal_grid
 }
 }  // namespace himan
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 CEREAL_REGISTER_TYPE(himan::lambert_conformal_grid);
 CEREAL_REGISTER_POLYMORPHIC_RELATION(himan::regular_grid, himan::lambert_conformal_grid);
 #endif

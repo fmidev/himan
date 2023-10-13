@@ -55,7 +55,7 @@ void icing::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short theTh
 	auto HeightInfo = Fetch<float>(forecastTime, forecastLevel, HeightParam, forecastType, false);
 
 	level newLevel = forecastLevel;
-	newLevel.Value(newLevel.Value() + 2);
+	level::EqualAdjustment(newLevel, 2.);
 
 	auto HeightInfo2down = Fetch<float>(forecastTime, newLevel, HeightParam, forecastType, false);
 
@@ -64,7 +64,7 @@ void icing::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short theTh
 		// Hybrid level two below not found, perhaps calculation is done for the first level?
 		// First try one level below, and if that's not found then pick the current level
 
-		newLevel.Value(newLevel.Value() - 1);
+		level::EqualAdjustment(newLevel, -1.);
 		HeightInfo2down = Fetch<float>(forecastTime, newLevel, HeightParam, forecastType, false);
 
 		if (!HeightInfo2down)
@@ -105,8 +105,8 @@ void icing::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short theTh
 
 	auto& target = VEC(myTargetInfo);
 
-	for (auto&& tup : zip_range(target, VEC(TInfo), VEC(VvInfo), VEC(ClInfo), VEC(PrecFormInfo), VEC(PrecInfo),
-	                            zl, VEC(HeightInfo), base, VEC(HeightInfo2down)))
+	for (auto&& tup : zip_range(target, VEC(TInfo), VEC(VvInfo), VEC(ClInfo), VEC(PrecFormInfo), VEC(PrecInfo), zl,
+	                            VEC(HeightInfo), base, VEC(HeightInfo2down)))
 	{
 		auto& result = tup.get<0>();
 		auto T = tup.get<1>();

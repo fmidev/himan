@@ -4,35 +4,36 @@ pop plugin calculates the probability of precipitation (any amount).
 
 # Required source parameters
 
-precipitation rate from following models
-
-* ECMWF HRES (weight: 2)
-* ECMWF HRES previous forecast (1)
-* Hirlam (1)
-* Harmonie (1)
-* GFS (1)
-* ECMWF ENS median (0.25)
-* EMCWF ENS third quartile (0.25)
-* ECMWF ENS probability of 6h precipition sum >= 1mm 
-* ECMWF ENS probability of 6h precipition sum >= 0.1mm
-* FMI Multi-Model Ensemble PEPS probability of 1h precipition sum >= 0.2mm (1)
-
-Result data is averaged using a stencile with sizes ranging from 25 to 81 grid points. 
+* precipitation rate from the primary model of the configuration.
+* PROB-RR1-1 from ecgepsmta, if disable_meps=true (limit 0.14mm/h)
+* PROB-RR-7 from mepsmta, if disable_meps=false (limit 0.025mm/h) 
+* PROB-RR-4 from ecgepsmta (limit 0.2mm/3h)
+* PROB-RR3-6 from ecgepsmta (limit 0.4mm/6h)
 
 # Output parameters
 
-POP-PRCNT
+POP-0TO1
 
-Unit of resulting parameter is %.
+Unit of resulting parameter is a number between 0..1.
 
 # Method of calculation
 
- The mathematical definition of Probability of Precipitation is defined as: PoP = C * A
- 
- C = the confidence that precipitation will occur somewhere in the forecast area
+Use probabilities derived from ensemble forecasts. Source data is MEPS for short leadtimes and ECMWF
+for longer ones.
 
- A = the percentage of the area that will receive measurable precipitation, if it occurs at all
+Plugin can be forced to use only ECMWF data.
 
 # Per-plugin configuration options
 
-None
+select meps probability data geometry name
+
+    meps_geom: >geometry_name>
+
+select ecmwf probability data geometry name
+
+    ecgeps_eom: <geometry_name>
+
+replace meps with ecmwf data
+
+    disable_meps: true
+

@@ -15,7 +15,7 @@
 #include <boost/date_time.hpp>
 #include <fmt/format.h>
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 namespace cereal
 {
 template <class Archive>
@@ -98,7 +98,7 @@ class raw_time
 
 	boost::posix_time::ptime itsDateTime;
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 	friend class cereal::access;
 
 	template <class Archive>

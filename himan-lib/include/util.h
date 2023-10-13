@@ -336,6 +336,15 @@ std::vector<forecast_type> ForecastTypesFromString(const std::string& type);
 
 std::unique_ptr<ensemble> CreateEnsembleFromConfiguration(const std::shared_ptr<const plugin_configuration>& conf);
 
+/**
+ * @brief Create a hybrid or generalized vertical layer
+ *
+ * Necessary information is fetched from radon
+ *
+ */
+
+level CreateHybridLevel(const producer& prod, const std::string& first_last);
+
 template <class... Conts>
 inline auto zip_range(Conts&... conts)
     -> decltype(boost::make_iterator_range(boost::make_zip_iterator(boost::make_tuple(conts.begin()...)),

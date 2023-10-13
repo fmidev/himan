@@ -353,7 +353,7 @@ class iterator
 	std::vector<U> itsElements;  //<! Vector to hold the elements
 	size_t itsIndex;             //<! Current index of iterator
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 	friend class cereal::access;
 
 	template <class Archive>
@@ -397,7 +397,7 @@ struct base
 	{
 	}
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 	friend class cereal::access;
 
 	template <class Archive>
@@ -913,7 +913,7 @@ class info
 
 	size_t itsLocationIndex = kIteratorResetValue;
 
-#ifdef SERIALIZATION
+#ifdef HAVE_CEREAL
 	friend class cereal::access;
 
 	template <class Archive>

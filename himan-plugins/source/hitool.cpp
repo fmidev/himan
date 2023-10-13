@@ -86,7 +86,7 @@ shared_ptr<modifier> hitool::CreateModifier(HPModifierType modifierType) const
 	return mod;
 }
 
-pair<level, level> hitool::LevelForHeight(const producer& prod, double height) const
+pair<level, level> hitool::LevelForHeight(const producer& prod, double height, const std::string& geomName) const
 {
 	ASSERT(itsConfiguration);
 
@@ -181,7 +181,11 @@ pair<level, level> hitool::LevelForHeight(const producer& prod, double height) c
 		      << "hybrid_level_height "
 		      << "WHERE "
 		      << "producer_id = " << producerId;
-		;
+	}
+
+	if (geomName.empty() == false)
+	{
+		query << " AND geometry_id = (SELECT id FROM geom WHERE name = '" << geomName << "')";
 	}
 
 	HPDatabaseType dbtype = itsConfiguration->DatabaseType();
@@ -199,6 +203,29 @@ pair<level, level> hitool::LevelForHeight(const producer& prod, double height) c
 
 		absolutelowest = stol(r->RadonDB().GetProducerMetaData(prod.Id(), "last hybrid level number"));
 		absolutehighest = stol(r->RadonDB().GetProducerMetaData(prod.Id(), "first hybrid level number"));
+
+		if (row.empty() == false && row[0].empty() && geomName.empty() == false)
+		{
+			// backwards compatibility: if no data is found with this geometry name, try without one
+			// note: this should be removed later when we have height data for all geometries
+
+			itsLogger.Warning(
+			    fmt::format("Geometry {} is missing height information at radon table hybrid_level_height", geomName));
+			auto q = query.str();
+			q = q.substr(0, q.find("AND geometry_id"));
+
+			r->RadonDB().Query(q);
+
+			row = r->RadonDB().FetchRow();
+		}
+
+		try
+		{
+			itsLevelType = HPStringToLevelType.at(r->RadonDB().GetProducerMetaData(prod.Id(), "hybrid level type"));
+		}
+		catch (const exception& e)
+		{
+		}
 	}
 
 	long newlowest = absolutelowest, newhighest = absolutehighest;
@@ -333,15 +360,15 @@ vector<T> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, const param& wa
 				throw kFileDataNotFound;
 			}
 
-			auto levelsForMaxHeight = LevelForHeight(prod, max_value);
-			auto levelsForMinHeight = LevelForHeight(prod, min_value);
+			auto levelsForMaxHeight = LevelForHeight(prod, max_value, itsConfiguration->TargetGeomName());
+			auto levelsForMinHeight = LevelForHeight(prod, min_value, itsConfiguration->TargetGeomName());
 
 			highestHybridLevel = static_cast<long>(levelsForMaxHeight.second.Value());
 			lowestHybridLevel = static_cast<long>(levelsForMinHeight.first.Value());
 
 			ASSERT(lowestHybridLevel >= highestHybridLevel);
 
-			itsLogger.Debug(fmt::format("Adjusting level range to {} .. {} for height range {:.2f} .. {:.2f} {}",
+			itsLogger.Debug(fmt::format("Adjusting level range to {} .. {} for height range {:.1f} .. {:.1f} {}",
 			                            lowestHybridLevel, highestHybridLevel, min_value, max_value, heightUnit));
 		}
 		break;
@@ -376,15 +403,15 @@ vector<T> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, const param& wa
 				ASSERT(max_value < 1200);
 			}
 
-			auto levelsForMaxHeight = LevelForHeight(prod, max_value);
-			auto levelsForMinHeight = LevelForHeight(prod, min_value);
+			auto levelsForMaxHeight = LevelForHeight(prod, max_value, itsConfiguration->TargetGeomName());
+			auto levelsForMinHeight = LevelForHeight(prod, min_value, itsConfiguration->TargetGeomName());
 
 			highestHybridLevel = static_cast<long>(levelsForMaxHeight.second.Value());
 			lowestHybridLevel = static_cast<long>(levelsForMinHeight.first.Value());
 
 			ASSERT(lowestHybridLevel >= highestHybridLevel);
 
-			itsLogger.Debug(fmt::format("Adjusting level range to {} .. {} for height range {} .. {} {}",
+			itsLogger.Debug(fmt::format("Adjusting level range to {} .. {} for height range {:.1f} .. {:.1f} {}",
 			                            lowestHybridLevel, highestHybridLevel, min_value, max_value, heightUnit));
 		}
 		break;

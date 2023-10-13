@@ -526,10 +526,10 @@ void SetOutputFileType(shared_ptr<configuration>& conf, const string& outfileTyp
 	{
 		conf->OutputFileType(kGRIB2);
 	}
-//	else if (outfileType == "netcdf")
-//	{
-//		conf->OutputFileType(kNetCDF);
-//	}
+	//	else if (outfileType == "netcdf")
+	//	{
+	//		conf->OutputFileType(kNetCDF);
+	//	}
 	else if (outfileType == "querydata")
 	{
 		conf->OutputFileType(kQueryData);
@@ -649,7 +649,7 @@ shared_ptr<configuration> ReadEnvironment()
 				SetCompression(conf, val);
 			else if (key == "HIMAN_CONFIGURATION_FILE")
 				SetConfigurationFile(conf, val);
-			else if (key == "HIMAN_THREADS")
+			else if (key == "HIMAN_THREADS" || key == "HIMAN_NUM_THREADS")
 				conf->ThreadCount(static_cast<short>(stoi(val)));
 			else if (key == "HIMAN_DEBUG_LEVEL")
 				SetLogLevel(conf, stoi(val));
@@ -679,10 +679,6 @@ shared_ptr<configuration> ReadEnvironment()
 			{
 				auto files = util::Split(val, " ");
 				conf->AuxiliaryFiles(files);
-			}
-			else if (key == "HIMAN_NUM_THREADS")
-			{
-				conf->ThreadCount(static_cast<short>(stoi(val)));
 			}
 		}
 		catch (const invalid_argument& e)
@@ -799,45 +795,47 @@ void ParseCommandLine(shared_ptr<configuration>& conf, int argc, char** argv)
 		conf->UseCudaForPacking(false);
 		conf->UseCudaForUnpacking(false);
 	}
-
-	// get cuda device count for this server
-
-	int devCount;
-
-	cudaError_t err = cudaGetDeviceCount(&devCount);
-
-	switch (err)
+	else
 	{
-		case cudaSuccess:
-			break;
+		// get cuda device count for this server
 
-		case cudaErrorNoDevice:
-			// No device
+		int devCount;
 
-			devCount = 0;
+		cudaError_t err = cudaGetDeviceCount(&devCount);
 
-			conf->UseCuda(false);
-			conf->UseCudaForPacking(false);
-			conf->UseCudaForUnpacking(false);
+		switch (err)
+		{
+			case cudaSuccess:
+				break;
 
-			break;
+			case cudaErrorNoDevice:
+				// No device
 
-		default:
-			// No driver present or other problems
-			// with installation
+				devCount = 0;
 
-			devCount = 0;
+				conf->UseCuda(false);
+				conf->UseCudaForPacking(false);
+				conf->UseCudaForUnpacking(false);
+				cerr << "No cuda devices found\n";
 
-			conf->UseCuda(false);
-			conf->UseCudaForPacking(false);
-			conf->UseCudaForUnpacking(false);
+				break;
 
-			cerr << fmt::format("Error from cuda library: {} ({})\n", cudaGetErrorName(err), err);
-			break;
+			default:
+				// No driver present or other problems
+				// with installation
+
+				devCount = 0;
+
+				conf->UseCuda(false);
+				conf->UseCudaForPacking(false);
+				conf->UseCudaForUnpacking(false);
+
+				cerr << fmt::format("Error from cuda library: {} ({})\n", cudaGetErrorName(err), err);
+				break;
+		}
+
+		conf->CudaDeviceCount(devCount);
 	}
-
-	conf->CudaDeviceCount(devCount);
-
 	if (opt.count("cuda-device-id"))
 	{
 		SetCudaDeviceId(conf, cudaDeviceId);

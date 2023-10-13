@@ -12,9 +12,9 @@
 #include "numerical_functions.h"
 #include "plugin_factory.h"
 #include <thread>
+#include "util.h"
 
 #include "hitool.h"
-#include "radon.h"
 
 using namespace std;
 using namespace himan;
@@ -127,30 +127,7 @@ void gust::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threa
 
 	level H0, H10;
 
-	producer prod = itsConfiguration->SourceProducer(0);
-
-	HPDatabaseType dbtype = itsConfiguration->DatabaseType();
-
-	long lowestHybridLevelNumber = kHPMissingInt;
-
-	if (dbtype == kRadon)
-	{
-		auto r = GET_PLUGIN(radon);
-
-		try
-		{
-			lowestHybridLevelNumber = stol(r->RadonDB().GetProducerMetaData(prod.Id(), "last hybrid level number"));
-		}
-		catch (const std::invalid_argument&)
-		{
-			myThreadedLogger.Error("Radon metadata for last hybrid level not available");
-			himan::Abort();
-		}
-	}
-
-	ASSERT(lowestHybridLevelNumber != kHPMissingInt);
-
-	level lowestHybridLevel(kHybrid, static_cast<double>(lowestHybridLevelNumber));
+	level lowestHybridLevel = util::CreateHybridLevel(itsConfiguration->SourceProducer(0), "last");
 
 	if (myTargetInfo->Producer().Id() == 240 || myTargetInfo->Producer().Id() == 243)
 	{

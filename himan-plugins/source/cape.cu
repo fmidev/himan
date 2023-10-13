@@ -818,7 +818,7 @@ cape_multi_source cape_cuda::GetNHighestThetaEValuesGPU(const std::shared_ptr<co
 	// We need to get the number of layers so we can preallocate
 	// a suitable sized array.
 
-	const auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), mucape_search_limit);
+	const auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), mucape_search_limit, conf->TargetGeomName());
 	const auto levelSpan = curLevel.Value() - stopLevel.second.Value();
 
 	const size_t N = myTargetInfo->Data().Size();
@@ -916,7 +916,7 @@ cape_multi_source cape_cuda::GetNHighestThetaEValuesGPU(const std::shared_ptr<co
 
 		CUDA_CHECK(cudaStreamSynchronize(stream));
 
-		curLevel.Value(curLevel.Value() - 1);
+		level::EqualAdjustment(curLevel, -1.);
 		K++;
 
 		if (foundCount == N || levelSpan == K)
@@ -1076,7 +1076,7 @@ void GetSampledSourceDataGPU(std::shared_ptr<const himan::plugin_configuration> 
 		                                                            levelCount, N);
 
 		k++;
-		curLevel.Value(curLevel.Value() - 1);
+		level::EqualAdjustment(curLevel, -1.);
 	}
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
@@ -1129,7 +1129,7 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	auto RHSurface = VEC(RHInfo);
 
 	auto P500m = h->VerticalValue<double>(PParam, 500.);
-	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 500.);
+	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 500., conf->TargetGeomName());
 
 	auto P500mf = util::Convert<double, float>(P500m);
 
@@ -1323,7 +1323,7 @@ std::vector<std::pair<std::vector<float>, std::vector<float>>> cape_cuda::GetLFC
 	// For each grid point find the hybrid level that's below LCL and then pick the lowest level
 	// among all grid points; most commonly it's the lowest hybrid level
 
-	auto levels = h->LevelForHeight(myTargetInfo->Producer(), ::Max(P));
+	auto levels = h->LevelForHeight(myTargetInfo->Producer(), ::Max(P), conf->TargetGeomName());
 
 	level curLevel = levels.first;
 
@@ -1338,7 +1338,7 @@ std::vector<std::pair<std::vector<float>, std::vector<float>>> cape_cuda::GetLFC
 		VirtualTemperatureKernel<<<gridSize, blockSize, 0, stream>>>(d_prevTenv, d_prevPenv, N);
 	}
 
-	curLevel.Value(curLevel.Value() - 1);
+	level::EqualAdjustment(curLevel, -1.);
 
 	std::vector<unsigned char> found(N, 0);
 	std::vector<float> LFCT(N, himan::MissingFloat());
@@ -1362,8 +1362,8 @@ std::vector<std::pair<std::vector<float>, std::vector<float>>> cape_cuda::GetLFC
 	CUDA_CHECK(cudaMemcpyAsync(d_LFCP, &LFCP[0], sizeof(float) * N, cudaMemcpyHostToDevice, stream));
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
-	auto hPa450 = h->LevelForHeight(myTargetInfo->Producer(), 450.);
-	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 250.);
+	auto hPa450 = h->LevelForHeight(myTargetInfo->Producer(), 450., conf->TargetGeomName());
+	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 250., conf->TargetGeomName());
 
 	while (curLevel.Value() > stopLevel.first.Value())
 	{
@@ -1404,7 +1404,7 @@ std::vector<std::pair<std::vector<float>, std::vector<float>>> cape_cuda::GetLFC
 		CUDA_CHECK(cudaMemcpyAsync(d_prevTenv, d_Tenv, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
 		CUDA_CHECK(cudaMemcpyAsync(d_prevPenv, d_Penv, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
 
-		curLevel.Value(curLevel.Value() - 1);
+		level::EqualAdjustment(curLevel, -1.);
 	}
 
 	LastLFCCopyKernel<<<gridSize, blockSize, 0, stream>>>(d_LFCT, d_LFCP, d_LastLFCT, d_LastLFCP, N);
@@ -1532,7 +1532,7 @@ std::vector<float> cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_confi
 
 	CUDA_CHECK(cudaMemcpyAsync(d_found, &found[0], sizeof(unsigned char) * N, cudaMemcpyHostToDevice, stream));
 
-	curLevel.Value(curLevel.Value() - 1);
+	level::EqualAdjustment(curLevel, -1.);
 
 	auto h = GET_PLUGIN(hitool);
 	h->Configuration(conf);
@@ -1540,7 +1540,7 @@ std::vector<float> cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_confi
 	h->ForecastType(myTargetInfo->ForecastType());
 	h->HeightUnit(kHPa);
 
-	auto hPa100 = h->LevelForHeight(myTargetInfo->Producer(), 100.);
+	auto hPa100 = h->LevelForHeight(myTargetInfo->Producer(), 100., conf->TargetGeomName());
 	thrust::device_ptr<unsigned char> dt_found = thrust::device_pointer_cast(d_found);
 
 	while (curLevel.Value() > hPa100.first.Value())
@@ -1573,7 +1573,7 @@ std::vector<float> cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_confi
 		CUDA_CHECK(cudaMemcpyAsync(d_prevTenv, d_Tenv, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
 		CUDA_CHECK(cudaMemcpyAsync(d_prevPenv, d_Penv, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
 
-		curLevel.Value(curLevel.Value() - 1);
+		level::EqualAdjustment(curLevel, -1.);
 	}
 
 	std::vector<float> cinh(N, 0);
@@ -1747,7 +1747,7 @@ CAPEdata cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>
 	// For each grid point find the hybrid level that's below LFC and then pick the lowest level
 	// among all grid points
 
-	auto levels = h->LevelForHeight(myTargetInfo->Producer(), ::Max(P));
+	auto levels = h->LevelForHeight(myTargetInfo->Producer(), ::Max(P), conf->TargetGeomName());
 
 	level curLevel = levels.first;
 
@@ -1769,10 +1769,8 @@ CAPEdata cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>
 		VirtualTemperatureKernel<<<gridSize, blockSize, 0, stream>>>(d_prevTenv, d_prevPenv, N);
 	}
 
-	curLevel.Value(curLevel.Value());
-
-	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 50.);
-	auto hPa450 = h->LevelForHeight(myTargetInfo->Producer(), 450.);
+	auto stopLevel = h->LevelForHeight(myTargetInfo->Producer(), 50., conf->TargetGeomName());
+	auto hPa450 = h->LevelForHeight(myTargetInfo->Producer(), 450., conf->TargetGeomName());
 
 	thrust::device_ptr<unsigned char> dt_found = thrust::device_pointer_cast(d_found);
 
@@ -1822,7 +1820,7 @@ CAPEdata cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>
 		CUDA_CHECK(cudaMemcpyAsync(d_prevTenv, d_Tenv, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
 		CUDA_CHECK(cudaMemcpyAsync(d_prevPenv, d_Penv, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
 
-		curLevel.Value(curLevel.Value() - 1);
+		level::EqualAdjustment(curLevel, -1.);
 	}
 
 	CUDA_CHECK(cudaFree(d_Tparcel));
