@@ -68,8 +68,8 @@ void visibility::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-	                      static_cast<string>(forecastLevel));
+	myThreadedLogger.Info(fmt::format("Calculating time {} level {}", static_cast<string>(forecastTime.ValidDateTime()),
+	                                  static_cast<string>(forecastLevel)));
 
 	shared_ptr<info<double>> RHInfo = Fetch(forecastTime, RHLevel, RHParam, forecastType, false);
 	shared_ptr<info<double>> PFInfo = Fetch(forecastTime, NLevel, PFParams, forecastType, false);
@@ -77,12 +77,13 @@ void visibility::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short
 
 	if (!RRInfo || !RHInfo || !PFInfo)
 	{
-		myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
-		                         static_cast<string>(forecastLevel));
+		myThreadedLogger.Warning(fmt::format("Skipping step {}, level {}", static_cast<string>(forecastTime.Step()),
+		                                     static_cast<string>(forecastLevel)));
 		return;
 	}
 
 	const double RHScale = (RHInfo->Param().Name() == "RH-PRCNT" ? 1. : 100.);
+	const double NScale = (RHInfo->Param().Name() == "N-PRCNT" ? 1. : 100.);
 
 	auto h = GET_PLUGIN(hitool);
 
@@ -140,8 +141,7 @@ void visibility::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short
 		ASSERT(stratN <= 1.0);
 		ASSERT(RR < 50);
 
-		stratN *= 100;  // Note! Cloudiness is scaled to percents
-
+		stratN *= NScale;
 		RH *= RHScale;
 
 		ASSERT(RH < 102.);
@@ -160,8 +160,8 @@ void visibility::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short
 		result = fmin(visMist, visPre);
 	}
 
-	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
-	                      "/" + to_string(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info(
+	    fmt::format("[CPU] Missing values: {}/{}", myTargetInfo->Data().MissingCount(), myTargetInfo->Data().Size()));
 }
 
 double VisibilityInRain(double stN, double stH, double RR, double RH, int PF)
