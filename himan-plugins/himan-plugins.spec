@@ -25,7 +25,7 @@ Requires: himan-lib >= 22.6.16
 Requires: lua >= 5.3.0
 Requires: unixODBC
 Requires: libfmigrib >= 23.1.26
-Requires: libfmidb >= 22.1.10
+Requires: libfmidb >= 23.10.16
 Requires: smartmet-library-newbase >= 22.3.22
 Requires: smartmet-library-gis
 Requires: smartmet-library-macgyver
