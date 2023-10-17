@@ -4,6 +4,37 @@
 
 local MISS = missing
 
+function LSPAndCP()
+
+  -- large scale precipitation and convective precipitation from rain+snow
+
+  local sconvdata = luatool:Fetch(current_time, current_level, param("SNC-KGM2"), current_forecast_type)
+  local slsdata = luatool:Fetch(current_time, current_level, param("SNL-KGM2"), current_forecast_type)
+  local rconvdata = luatool:Fetch(current_time, current_level, param("RAINC-KGM2"), current_forecast_type)
+  local rlsdata = luatool:Fetch(current_time, current_level, param("RAINL-KGM2"), current_forecast_type)
+
+  if not sconvdata or not slsdata or not rconvdata or not rlsdata then
+    print("Some data not found, aborting")
+    return
+  end
+
+  local cdata = {}
+  local ldata = {}
+
+  for i=1, #rlsdata do
+    cdata[i] = sconvdata[i] + rconvdata[i]
+    ldata[i] = slsdata[i] + rlsdata[i]
+  end
+
+  result:SetParam(param("RRRC-KGM2"))
+  result:SetValues(cdata)
+  luatool:WriteToFile(result)
+  result:SetParam(param("RRRL-KGM2"))
+  result:SetValues(ldata)
+  luatool:WriteToFile(result)
+
+end
+
 function SnowFall()
 
   -- total snow fall rate from convective and large scale rates
@@ -153,3 +184,4 @@ LCLFix()
 TSnowFix()
 RadGlo()
 SnowFall()
+LSPAndCP()
