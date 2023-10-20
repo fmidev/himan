@@ -30,7 +30,7 @@ void icing::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short theTh
 	const param TParam("T-K");
 	const params VvParam = {param("VV-MS"), param("VV-MMS")};
 	const params NParam({himan::param("N-PRCNT"), himan::param("N-0TO1")});
-	const param ClParam("CLDWAT-KGKG");
+	const params ClParam{param("CLDWAT-KGKG"), param("CLOUDMR-KGKG")};
 	const params PrecFormParam({himan::param("PRECFORM2-N"), himan::param("PRECFORM-N")});
 	const param PrecParam("RRR-KGM2");
 	const param ZeroLevelParam("H0C-M");
@@ -74,8 +74,8 @@ void icing::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short theTh
 	}
 	if (!TInfo || !VvInfo || !ClInfo || !PrecFormInfo || !PrecInfo || !HeightInfo)
 	{
-		myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
-		                         static_cast<string>(forecastLevel));
+		myThreadedLogger.Warning(fmt::format("Skipping step {}, level {}", static_cast<string>(forecastTime.Step()),
+		                                     static_cast<string>(forecastLevel)));
 		return;
 	}
 
@@ -100,8 +100,6 @@ void icing::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short theTh
 
 	// find level where temperature crosses from negative to positive
 	auto zl = h->VerticalHeightGreaterThan<float>(TParam, 50, 5000, 273.15f, 1);
-
-	string deviceType = "CPU";
 
 	auto& target = VEC(myTargetInfo);
 
@@ -234,6 +232,6 @@ void icing::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short theTh
 		result = Icing;
 	}
 
-	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
-	                      "/" + to_string(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info(
+	    fmt::format("[CPU] Missing values: {}/{}", myTargetInfo->Data().MissingCount(), myTargetInfo->Data().Size()));
 }
