@@ -178,7 +178,17 @@ himan::HPWriteStatus writer::ToFile(std::shared_ptr<info<T>> theInfo, std::share
 	}
 
 	const size_t allowedMissing = itsWriteOptions.configuration->AllowedMissingValues();
-	if (allowedMissing < std::numeric_limits<size_t>::max() && allowedMissing < theInfo->Data().MissingCount())
+
+	const time_duration td = theInfo->Param().Aggregation().TimeDuration();
+
+	// if aggregation period is for example 24 hours, we should not abort
+	// processing if data where step < 24hrs is missing, because it's not
+	// possible ever to have data at this time
+
+	const bool aggregationPeriodIsValid = td.Empty() || td > theInfo->Time().Step();
+
+	if (aggregationPeriodIsValid && allowedMissing < std::numeric_limits<size_t>::max() &&
+	    allowedMissing < theInfo->Data().MissingCount())
 	{
 		itsLogger.Fatal(fmt::format("Parameter {} for leadtime {} contains more missing values ({}) than allowed ({})",
 		                            theInfo->Param().Name(), theInfo->Time().Step(), theInfo->Data().MissingCount(),
