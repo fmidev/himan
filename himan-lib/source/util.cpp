@@ -1737,6 +1737,10 @@ std::unique_ptr<ensemble> util::CreateEnsembleFromConfiguration(const std::share
 		paramName = "XX-X";
 	}
 
+	const aggregation agg(conf->GetValue("aggregation"));
+
+	const param par(paramName, agg, processing_type());
+
 	// ENSEMBLE TYPE
 
 	HPEnsembleType ensType = kPerturbedEnsemble;
@@ -1796,11 +1800,11 @@ std::unique_ptr<ensemble> util::CreateEnsembleFromConfiguration(const std::share
 			{
 				const std::vector<forecast_type> members = util::ForecastTypesFromString(conf->GetValue("members"));
 
-				ens = make_unique<ensemble>(param(paramName), members, maximumMissing);
+				ens = make_unique<ensemble>(par, members, maximumMissing);
 			}
 			else
 			{
-				ens = make_unique<ensemble>(param(paramName), ensSize, maximumMissing);
+				ens = make_unique<ensemble>(par, ensSize, maximumMissing);
 			}
 			break;
 		}
@@ -1822,8 +1826,8 @@ std::unique_ptr<ensemble> util::CreateEnsembleFromConfiguration(const std::share
 				secondarySpan = HPStringToTimeResolution.at(conf->GetValue("secondary_time_span"));
 			}
 
-			ens = make_unique<time_ensemble>(param(paramName), ensSize, kYearResolution, secondaryLen, secondaryStep,
-			                                 secondarySpan, maximumMissing);
+			ens = make_unique<time_ensemble>(par, ensSize, kYearResolution, secondaryLen, secondaryStep, secondarySpan,
+			                                 maximumMissing);
 		}
 		break;
 		case kLaggedEnsemble:
@@ -1832,7 +1836,7 @@ std::unique_ptr<ensemble> util::CreateEnsembleFromConfiguration(const std::share
 
 			if (name.empty() == false)
 			{
-				ens = make_unique<lagged_ensemble>(param(paramName), name, maximumMissing);
+				ens = make_unique<lagged_ensemble>(par, name, maximumMissing);
 			}
 			else if (conf->GetValue("lagged_members").empty() == false)
 			{
@@ -1856,7 +1860,7 @@ std::unique_ptr<ensemble> util::CreateEnsembleFromConfiguration(const std::share
 					forecasts.emplace_back(members[i], himan::time_duration(lags[i]));
 				}
 
-				ens = std::make_unique<lagged_ensemble>(param(paramName), forecasts, maximumMissing);
+				ens = std::make_unique<lagged_ensemble>(par, forecasts, maximumMissing);
 			}
 			else
 			{
@@ -1898,8 +1902,8 @@ std::unique_ptr<ensemble> util::CreateEnsembleFromConfiguration(const std::share
 
 				steps++;
 
-				ens = make_unique<lagged_ensemble>(param(paramName), ensSize, time_duration(kHourResolution, lag),
-				                                   steps, maximumMissing);
+				ens = make_unique<lagged_ensemble>(par, ensSize, time_duration(kHourResolution, lag), steps,
+				                                   maximumMissing);
 			}
 		}
 		break;
