@@ -1544,46 +1544,92 @@ template string util::UniqueName(const info<unsigned char>&);
 
 aggregation util::GetAggregationFromParamName(const std::string& name, const forecast_time& ftime)
 {
-	if (name == "RRR-KGM2")
-	{
-		return himan::aggregation(kAccumulation, ONE_HOUR);
-	}
-	else if (name.find("RR-") != string::npos)
-	{
-		const auto tokens = util::Split(name, "-");
+	// match any precipitation accumulation, also probabilities
+	// eg. PROB-RR12-1 RRR-KGM2 RR-3-MM SN-6-MM
+	const std::regex r1(R"((?:PROB-)?(?:SN|RR|RRS|RRC|RRL|RAIN|RAINL|RAINC)-?([0-9]+)-(?:KGM2|MM|M|\d+)$)");
+	// match any max or min parameter
+	// note: only time dimension is considered, for example not
+	// maximum thickness of some level
+	// eg. TMAX-K, TMIN12H-C
+	const std::regex r2("(?:T|POT)(MAX|MIN)([0-9]+H)?-[A-Z0-9]+");
+	// match wind gust
+	const std::regex r3("FFG([0-9]+H)?-MS");
+	// match one hour precipitation accumulations
+	const std::regex r4("SNR[CL]-KGM2|SNR-KGM2|RRR-KGM2|RRR[SLC]-KGM2");
+	// match precipitation accumulation
+	const std::regex r5("RR-KGM2|SNACC-KGM2|RR[CL]-KGM2|RAIN[CL]-KGM2");
+	// match daily periods
+	const std::regex r6("PREC([0-9D]+)-(?:KGM2|MM)");
 
-		if (tokens.size() == 2 && tokens[1] == "KGM2")
-		{
-			// RR-KGM2
-			return himan::aggregation(kAccumulation, ftime.Step());
-		}
+	std::smatch m;
 
-		if (tokens[0] != "RR")
-		{
-			// PROB-RR-1 does not refer to 1-hour precipitation probability
-			return himan::aggregation();
-		}
+	if (std::regex_match(name, m, r1))
+	{
+		const std::string& period = m[1];
+
 		try
 		{
-			return himan::aggregation(kAccumulation, ONE_HOUR * stoi(tokens[1]));
+			return himan::aggregation(kAccumulation, ONE_HOUR * stoi(period));
 		}
 		catch (const std::exception& e)
 		{
 			// de nada
 		}
 	}
-	else if (name.find("-MAX-") != string::npos)
+	else if (std::regex_match(name, m, r2))
 	{
-		return himan::aggregation(kMaximum);
+		const std::string& at = m[1];
+
+		try
+		{
+			if (m[2].matched)
+			{
+				const std::string& period = m[2];
+				return himan::aggregation(at == "MIN" ? kMinimum : kMaximum, ONE_HOUR * stoi(period));
+			}
+			else
+			{
+				return himan::aggregation(at == "MIN" ? kMinimum : kMaximum, ONE_HOUR);
+			}
+		}
+		catch (const std::exception& e)
+		{
+		}
 	}
-	else if (name.find("-MIN-") != string::npos)
+	else if (std::regex_match(name, m, r3))
 	{
-		return himan::aggregation(kMinimum);
+		try
+		{
+			const int period = (m[1].matched) ? stoi(m[1]) : 1;
+			return himan::aggregation(kMaximum, ONE_HOUR * period);
+		}
+		catch (const std::exception& e)
+		{
+		}
 	}
-	else if (name.find("-MEAN-") != string::npos)
+	else if (std::regex_search(name, m, r4))
 	{
-		return himan::aggregation(kAverage);
+		return himan::aggregation(kAccumulation, ONE_HOUR);
 	}
+	else if (std::regex_search(name, m, r5))
+	{
+		return himan::aggregation(kAccumulation, ftime.Step());
+	}
+	else if (std::regex_match(name, m, r6))
+	{
+		std::string period = m[1];
+
+		period.erase(std::remove(period.begin(), period.end(), 'D'), period.end());
+
+		try
+		{
+			return himan::aggregation(kAccumulation, ONE_HOUR * 24 * stoi(period));
+		}
+		catch (const std::exception& e)
+		{
+		}
+	}
+
 	return himan::aggregation();
 }
 
