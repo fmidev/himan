@@ -122,6 +122,7 @@ static void GetConfigurationParameter(const std::string& name, const std::shared
 		}
 		else if (p.first == "aggregation")
 		{
+			param.Aggregation(aggregation(p.second));
 			output.Aggregation(aggregation(p.second));
 		}
 		else
