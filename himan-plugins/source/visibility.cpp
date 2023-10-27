@@ -82,8 +82,14 @@ void visibility::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short
 		return;
 	}
 
-	const double RHScale = (RHInfo->Param().Name() == "RH-PRCNT" ? 1. : 100.);
-	const double NScale = (RHInfo->Param().Name() == "N-PRCNT" ? 1. : 100.);
+	// Need to fetch one cloudiness data to see what range data has: 0..1 or 0..100
+
+	level lowest_hybrid = util::CreateHybridLevel(myTargetInfo->Producer(), "last");
+	auto NInfo = Fetch(forecastTime, lowest_hybrid, NParam, forecastType, false);
+
+	// Make sure that "stLimit" value matches the numbering scheme of the data
+	double NScale = (NInfo->Param().Name() == "N-PRCNT" ? 100. : 1.);
+	const double _stLimit = stLimit * NScale;
 
 	auto h = GET_PLUGIN(hitool);
 
@@ -101,11 +107,11 @@ void visibility::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short
 	auto st45 = h->VerticalAverage<double>(NParam, 15, 45);
 
 	// Sumupilven korkeus [m]
-	auto stH = h->VerticalHeightGreaterThan<double>(NParam, 0, stMaxH, stLimit);
+	auto stH = h->VerticalHeightGreaterThan<double>(NParam, 0, stMaxH, _stLimit);
 
 	// Jos sumupilveä ohut kerros (vain) ~alimmalla mallipinnalla, jätetään alin kerros huomioimatta
 	// (ehkä mieluummin ylempää keskiarvo, jottei tällöin mahdollinen ylempi st-kerros huononna näkyvyyttä liikaa?)
-	auto stHup = h->VerticalHeightGreaterThan<double>(NParam, 25, stMaxH, stLimit);
+	auto stHup = h->VerticalHeightGreaterThan<double>(NParam, 25, stMaxH, _stLimit);
 	auto stNup = h->VerticalAverage<double>(NParam, 15, stMaxH);
 
 	ASSERT(stH.size() == stHup.size());
@@ -113,14 +119,21 @@ void visibility::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short
 
 	for (size_t i = 0; i < stH.size(); i++)
 	{
-		if (st15[i] > stLimit && st45[i] < stLimit)
+		if (st15[i] > _stLimit && st45[i] < _stLimit)
 		{
 			stN[i] = stNup[i];
 			stH[i] = stHup[i];
 		}
 	}
 
+	NScale = (NInfo->Param().Name() == "N-0TO1" ? 100. : 1.);
+
 	string deviceType = "CPU";
+
+	// Scale humidity to percents
+	const double RHScale = (RHInfo->Param().Name() == "RH-PRCNT" ? 1. : 100.);
+	// Scale cloudiness to percents
+	NScale = (NInfo->Param().Name() == "N-0TO1" ? 100. : 1.);
 
 	auto& target = VEC(myTargetInfo);
 
@@ -138,13 +151,14 @@ void visibility::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short
 			continue;
 		}
 
-		ASSERT(stratN <= 1.0);
 		ASSERT(RR < 50);
 
+		// from this point on cloudiness and humidity must be in percents
 		stratN *= NScale;
 		RH *= RHScale;
 
-		ASSERT(RH < 102.);
+		ASSERT(stratN >= 0 && stratN <= 100.01);
+		ASSERT(RH >= 0 && RH < 102.);
 
 		double visPre = defaultVis;
 
