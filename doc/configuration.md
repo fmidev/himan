@@ -411,7 +411,7 @@ The write mode is defined with key `write_mode`. Possible values are:
 * `all`, all grids are written to one file
 * `no`, file is only written to cache
 
-    "file_write" : "single | few | all | no"
+    "write_mode" : "single | few | all | no"
 
 Default value for key is `single`. Key can be set in the global or processqueue scope.
 
