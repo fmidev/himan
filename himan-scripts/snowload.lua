@@ -81,19 +81,45 @@ Wetsnow = {}
 local step = configuration:GetForecastStep():Hours() -- no support for sub-hours
 
 local rrparam = nil
+local rrscale = 1
 
 if step == 1 then
   rrparam = param("RRR-KGM2")
 elseif step == 3 then
   rrparam = param("RR-3-MM")
+  rrscale = 1 / 3
 elseif step == 6 then
   rrparam = param("RR-6-MM")
+  rrscale = 1 / 6
 else
   -- don't know what to choose; configuration was maybe given with 'hours' (no step)
   rrparam = param("RRR-KGM2")
 end
 
 result:ResetTime()
+
+if current_time:GetStep():Hours() > 1 then
+  -- Processing has started mid-timeseries.
+  --
+  -- This lua script produces accumulated snow load, so we need previous
+  -- data. We'll fetch the previous timestep's snowload and use that as
+  -- starting point. If previous timestep's snowload is not available,
+  -- we have to start from scratch.
+  --
+  -- Note: usually we would run this script as a single himan process
+  -- for the whole time period (for example meps hours 0-66), but for
+  -- example for icon and ecmwf the time resolution changes so we must
+  -- have multiple himan processes.
+
+  local prev_time = current_time
+  prev_time:GetValidDateTime():Adjust(HPTimeResolution.kHourResolution, -step)
+  Wetsnow = luatool:Fetch(prev_time, current_level, param("SNOWLOAD-KGM2"), current_forecast_type)
+
+  if Wetsnow == nil then
+    logger:Warning("Previous timestep's snowload not available, starting from scratch")
+    Wetsnow = {}
+  end
+end
 
 while result:NextTime() do
 	local curtime = result:GetTime()
@@ -112,7 +138,7 @@ while result:NextTime() do
 				end
 				T[i] = T[i] - kKelvin -- convert to celsius
 				Wetsnow[i] = Wetsnow[i]*f_wind_dec(v[i])*f_temperature(T[i])*f_sunrad(phi[i]) -- snow decrease
-				local delta = f_wind_acc(v[i])*f_load(Wetsnow[i])*wetsnow(rr[i],T[i])
+				local delta = f_wind_acc(v[i])*f_load(Wetsnow[i])*wetsnow(rrscale*rr[i],T[i])
 				Wetsnow[i] = Wetsnow[i] + delta -- snow accumulation
 			end
 		end
