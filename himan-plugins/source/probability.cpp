@@ -28,20 +28,6 @@ probability::probability()
 probability::~probability()
 {
 }
-param GetParamFromDatabase(const std::string& paramName, const std::shared_ptr<const plugin_configuration> conf)
-{
-	param p;
-	auto r = GET_PLUGIN(radon);
-
-	auto paraminfo = r->RadonDB().GetParameterFromDatabaseName(conf->TargetProducer().Id(), paramName);
-
-	if (paraminfo.empty())
-	{
-		throw std::runtime_error("probability: key 'input_param' not specified");
-	}
-
-	return param(paraminfo);
-}
 
 /// @brief Configuration reading
 /// @param outParamConfig is modified to have information about the threshold value and input parameters
@@ -61,7 +47,8 @@ static void GetConfigurationParameter(const std::string& name, const std::shared
 
 	const auto paramOpts = conf->GetParameterOptions(name);
 
-	param param, output = GetParamFromDatabase(name, conf);
+	param param,
+	    output = util::InitializeParameter(conf->TargetProducer(), himan::param(name), level(kUnknownLevel, 0));
 
 	// NOTE These are plugin dependent
 	for (auto&& p : paramOpts)
@@ -74,7 +61,7 @@ static void GetConfigurationParameter(const std::string& name, const std::shared
 		else if (p.first == "input_param1" || p.first == "input_param")
 		{
 			// input_param1 is for backwards compatibility
-			param = GetParamFromDatabase(p.second, conf);
+			param = util::InitializeParameter(conf->TargetProducer(), himan::param(p.second), level(kUnknownLevel, 0));
 		}
 		else if (p.first == "input_param2")
 		{
