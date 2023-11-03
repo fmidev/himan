@@ -1648,35 +1648,37 @@ processing_type util::GetProcessingTypeFromParamName(const string& name)
 	return himan::processing_type();
 }
 
-param util::GetParameterInfoFromDatabaseName(const producer& prod, const param& par, const level& lvl)
+param util::InitializeParameter(const producer& prod, const param& par, const level& lvl)
 {
 	logger logr("util");
 	auto r = GET_PLUGIN(radon);
 
-	auto levelInfo = r->RadonDB().GetLevelFromDatabaseName(boost::to_upper_copy(HPLevelTypeToString.at(lvl.Type())));
+	param p = par;
 
-	if (levelInfo.empty())
+	if (lvl.Type() != kUnknownLevel)
 	{
-		logr.Warning(fmt::format("Level type '{}' not found from radon", HPLevelTypeToString.at(lvl.Type())));
-		return par;
+		auto levelInfo =
+		    r->RadonDB().GetLevelFromDatabaseName(boost::to_upper_copy(HPLevelTypeToString.at(lvl.Type())));
+
+		if (levelInfo.empty())
+		{
+			logr.Warning(fmt::format("Level type '{}' not found from radon", HPLevelTypeToString.at(lvl.Type())));
+			return par;
+		}
+
+		auto paraminfo =
+		    r->RadonDB().GetParameterFromDatabaseName(prod.Id(), par.Name(), stoi(levelInfo["id"]), lvl.Value());
+
+		if (paraminfo.empty())
+		{
+			logr.Warning(fmt::format("Parameter '{}' not found from radon", par.Name()));
+			return par;
+		}
+
+		p = param(paraminfo);
 	}
-
-	auto paraminfo =
-	    r->RadonDB().GetParameterFromDatabaseName(prod.Id(), par.Name(), stoi(levelInfo["id"]), lvl.Value());
-
-	if (paraminfo.empty())
-	{
-		logr.Warning(fmt::format("Parameter '{}' not found from radon", par.Name()));
-		return par;
-	}
-
-	param p(paraminfo);
-
 	// database does not provide aggregation or processing type information,
 	// but we can guess, unless the calling code has already passed an aggregation
-	//
-	// todo: figure out a better way to deal with parametres that *always* have
-	// aggregation and/or processing type
 
 	if (par.ProcessingType().Type() == kUnknownProcessingType)
 	{
@@ -1689,7 +1691,7 @@ param util::GetParameterInfoFromDatabaseName(const producer& prod, const param& 
 
 	// If processing type is ensemble mean, do not set aggregation to mean as aggregation
 	// mainly describes *time* based aggregation. But we don't know that from database name only.
-	if (par.Aggregation().Type() == kUnknownAggregationType && p.ProcessingType().Type() != kEnsembleMean)
+	if (par.Aggregation().Type() == kUnknownAggregationType)
 	{
 		p.Aggregation(GetAggregationFromParamName(p.Name(), forecast_time()));
 	}

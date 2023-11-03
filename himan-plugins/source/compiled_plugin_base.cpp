@@ -541,7 +541,7 @@ void compiled_plugin_base::SetParams(std::vector<param>& params, const vector<le
 					continue;
 				}
 
-				par = util::GetParameterInfoFromDatabaseName(itsConfiguration->TargetProducer(), par, lvl);
+				par = util::InitializeParameter(itsConfiguration->TargetProducer(), par, lvl);
 			}
 		}
 	}

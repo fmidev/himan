@@ -222,12 +222,12 @@ template <typename T>
 std::string UniqueName(const info<T>& info);
 
 /**
- * @brief Retrieve full parameter information from database based
- * on parameter name.
+ * @brief Initialize parameter with given information
  *
+ * Aggregation and processing type are determined from parameter name.
  */
 
-param GetParameterInfoFromDatabaseName(const producer& prod, const param& par, const level& lvl);
+param InitializeParameter(const producer& prod, const param& par, const level& lvl);
 
 /**
  * @brief Try to determine aggregation from parameter name
