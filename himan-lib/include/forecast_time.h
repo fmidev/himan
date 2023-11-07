@@ -74,4 +74,20 @@ inline std::ostream& operator<<(std::ostream& file, const forecast_time& ob)
 }
 }  // namespace himan
 
+template <>
+struct fmt::formatter<himan::forecast_time>
+{
+	template <typename ParseContext>
+	constexpr auto parse(ParseContext& ctx)
+	{
+		return ctx.begin();
+	}
+
+	template <typename FormatContext>
+	auto format(const himan::forecast_time& ft, FormatContext& ctx) const -> decltype(ctx.out())
+	{
+		return fmt::format_to(ctx.out(), "{} step: {}", ft.OriginDateTime(), ft.Step());
+	}
+};
+
 #endif /* FORECAST_TIME_H */
