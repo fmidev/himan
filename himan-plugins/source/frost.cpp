@@ -68,7 +68,7 @@ shared_ptr<info<double>> BackwardsFetchFromProducer(shared_ptr<plugin_configurat
 
 	if (!ret)
 	{
-		logr.Warning(fmt::format("No {} data found", par.Name()));
+		logr.Warning(fmt::format("No {} data found for time {}", par.Name(), ftime));
 	}
 
 	return ret;
