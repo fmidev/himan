@@ -51,14 +51,14 @@ shared_ptr<info<double>> BackwardsFetchFromProducer(shared_ptr<plugin_configurat
 	{
 		try
 		{
-			ret = f->Fetch(cnf, myftime, lvl, par, ftype, false);
+			ret = f->Fetch(cnf, myftime, lvl, par, ftype, false, true);
 			break;
 		}
 		catch (HPExceptionType& e)
 		{
 			if (e == kFileDataNotFound)
 			{
-				logr.Debug(fmt::format("Adjusting origin time for {} hours", adjust));
+				logr.Trace(fmt::format("Adjusting origin time for {} hours", adjust));
 				myftime.OriginDateTime().Adjust(kHourResolution, adjust);
 				if (adjustValidTime)
 					myftime.ValidDateTime().Adjust(kHourResolution, adjust);
@@ -202,15 +202,19 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 	// Get the latest MEPS PROB-TC-0 from hour 00, 03, 06, 09, 12, 15, 18 or 21. If not found get earlier.
 
+	shared_ptr<info<double>> T0MEPSInfo = nullptr;
+
 	auto meps_forecastTime = original_forecastTime;
 	adjustment = (latestHour - latestHour % 3) - latestHour;
 	meps_forecastTime.OriginDateTime().Adjust(kHourResolution, adjustment);
 
-	cnf->SourceProducers({producer(260, 86, 204, "MEPSMTA")});
-	cnf->SourceGeomNames({"MEPS2500D"});
+	if (meps_forecastTime.Step().Hours() <= 66)
+	{
+		cnf->SourceProducers({producer(260, 86, 204, "MEPSMTA")});
+		cnf->SourceGeomNames({"MEPS2500D"});
 
-	shared_ptr<info<double>> T0MEPSInfo =
-	    BackwardsFetchFromProducer(cnf, stat_type, meps_forecastTime, level(kHeight, 2), T0Param, -3);
+		T0MEPSInfo = BackwardsFetchFromProducer(cnf, stat_type, meps_forecastTime, level(kHeight, 2), T0Param, -3);
+	}
 
 	// MEPS is optional data
 	if (!T0MEPSInfo)
@@ -218,7 +222,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 		T0MEPSInfo = make_shared<info<double>>(stat_type, meps_forecastTime, level(kHeight, 2), T0Param);
 		T0MEPSInfo->Producer(myTargetInfo->Producer());
 		T0MEPSInfo->Create(myTargetInfo->Base(), true);
-		myThreadedLogger.Warning("MEPS probabilities not found");
+		myThreadedLogger.Info("MEPS probabilities not used");
 	}
 
 	if (!TGInfo || !WGInfo || !ICNInfo || !LCInfo || !RADInfo || !T0ECInfo || !T0MEPSInfo)
@@ -228,8 +232,6 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 		                                     static_cast<string>(forecastLevel)));
 		return;
 	}
-
-	string deviceType = "CPU";
 
 	const int month = stoi(original_forecastTime.ValidDateTime().String("%m"));
 	const int day = stoi(original_forecastTime.ValidDateTime().String("%d"));
@@ -394,6 +396,6 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 		myTargetInfo->Value(severe_frost_prob);
 	}
 
-	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
-	                      "/" + to_string(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info(
+	    fmt::format("[CPU] Missing values: {}/{}", myTargetInfo->Data().MissingCount(), myTargetInfo->Data().Size()));
 }
