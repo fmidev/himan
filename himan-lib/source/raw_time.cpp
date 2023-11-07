@@ -86,7 +86,7 @@ bool raw_time::operator<=(const raw_time& other) const
 }
 raw_time::operator std::string() const
 {
-	return ToDatabaseTime();
+	return ToSQLTime();
 }
 raw_time raw_time::operator+(const time_duration& adjustment) const
 {
