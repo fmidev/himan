@@ -39,6 +39,12 @@ void ncl::Process(std::shared_ptr<const plugin_configuration> conf)
 		itsTargetTemperature = 0;
 	}
 
+	if (theRequestedParam.Name() == "XX-X")
+	{
+		itsLogger.Fatal("Requested temperature not set");
+		exit(1);
+	}
+
 	SetParams({theRequestedParam});
 
 	Start();
