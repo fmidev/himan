@@ -466,6 +466,10 @@ void transformer::SetAdditionalParameters()
 	if (itsConfiguration->Exists("interpolation"))
 	{
 		itsInterpolationMethod = HPStringToInterpolationMethod.at(itsConfiguration->GetValue("interpolation"));
+		for (auto& p : itsSourceParam)
+		{
+			p.InterpolationMethod(itsInterpolationMethod);
+		}
 	}
 
 	if ((SourceLevels.empty() && !SourceLevelType.empty()) || (!SourceLevels.empty() && SourceLevelType.empty()))
