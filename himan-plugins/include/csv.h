@@ -52,6 +52,9 @@ class csv : public io_plugin
 	std::shared_ptr<info<double>> FromFile(const std::string& inputFile, const search_options& options,
 	                                       bool readifNotMatching = false) const;
 
+	template <typename T>
+	std::shared_ptr<info<T>> FromMemory(const std::vector<std::string>& lines) const;
+
 	/**
 	 * @brief Write info contents to a csv file
 	 *

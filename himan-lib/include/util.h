@@ -162,21 +162,6 @@ void DumpVector(const std::vector<T>& arr, const std::string& name = "");
 std::string GetEnv(const std::string& key);
 
 /**
- * @brief Parse csv line(s) to an info
- *
- * CSV format needs to be:
- *
- * station_id,origintime,validtime,levelname,levelvalue,levelvalue2,forecasttypeid,forecasttypevalue,paramname,value
- *
- * For example
- *
- * 134254,2017-04-13 00:00:00,2017-04-13 03:00:00,HEIGHT,0,-1,1,-1,T-K,5.3
- */
-
-template <typename T>
-std::shared_ptr<info<T>> CSVToInfo(const std::vector<std::string>& csv);
-
-/**
  * @brief Return the percentage of missing values in info for all grids.
  */
 

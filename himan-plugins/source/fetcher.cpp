@@ -753,7 +753,10 @@ vector<shared_ptr<info<T>>> fetcher::FetchFromDatabase(search_options& opts, boo
 		auto r = GET_PLUGIN(radon);
 
 		auto csv_forecasts = r->CSV(opts);
-		auto _ret = util::CSVToInfo<T>(csv_forecasts);
+
+		auto c = GET_PLUGIN(csv);
+
+		auto _ret = c->FromMemory<T>(csv_forecasts);
 
 		if (_ret)
 		{

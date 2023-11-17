@@ -16,6 +16,226 @@ csv::csv()
 	itsLogger = logger("csv");
 }
 
+namespace
+{
+
+template <typename T>
+shared_ptr<himan::info<T>> CSVToInfo(const vector<string>& csv)
+{
+	using namespace himan;
+	vector<forecast_time> times;
+	vector<param> params;
+	vector<level> levels;
+	vector<station> stats;
+	vector<forecast_type> ftypes;
+
+	producer prod;
+
+	for (auto& line : csv)
+	{
+		auto elems = util::Split(line, ",");
+
+		if (elems.size() != 14)
+		{
+			std::cerr << "Ignoring line '" << line << "'" << std::endl;
+			continue;
+		}
+
+		// CSV FORMAT
+		// 0 producer_id
+		// 1 origin time
+		// 2 station_id
+		// 3 station_name
+		// 4 longitude
+		// 5 latitude
+		// 6 param_name
+		// 7 level_name
+		// 8 level_value
+		// 9 level_value2
+		// 10 forecast period
+		// 11 forecast_type_id
+		// 12 forecast_type_value
+		// 13 value
+
+		if (elems[0][0] == '#')
+		{
+			continue;
+		}
+
+		// producer, only single producer per file is supported for now
+		prod.Id(stoi(elems[0]));
+
+		// forecast_time
+		raw_time originTime(elems[1]), validTime(elems[1]);
+
+		// split HHH:MM:SS and extract hours and minutes
+		auto timeparts = util::Split(elems[10], ":");
+
+		validTime.Adjust(kHourResolution, stoi(timeparts[0]));
+		validTime.Adjust(kMinuteResolution, stoi(timeparts[1]));
+
+		forecast_time f(originTime, validTime);
+
+		// level
+		level l;
+
+		try
+		{
+			l = level(static_cast<HPLevelType>(HPStringToLevelType.at(boost::algorithm::to_lower_copy(elems[7]))),
+			          stod(elems[8]));
+		}
+		catch (std::out_of_range& e)
+		{
+			std::cerr << "Level type " << elems[7] << " is not recognized" << std::endl;
+			himan::Abort();
+		}
+
+		if (!elems[9].empty())
+		{
+			l.Value2(stod(elems[9]));
+		}
+		// param
+		const param p(boost::algorithm::to_upper_copy(elems[6]));
+
+		// forecast_type
+		const forecast_type ftype(static_cast<HPForecastType>(stoi(elems[11])), stod(elems[12]));
+
+		// station
+		const int stationId = (elems[2].empty()) ? kHPMissingInt : stoi(elems[2]);
+		const double longitude = (elems[4].empty()) ? kHPMissingValue : stod(elems[4]);
+		const double latitude = (elems[5].empty()) ? kHPMissingValue : stod(elems[5]);
+
+		const station s(stationId, elems[3], longitude, latitude);
+
+		/* Prevent duplicates */
+
+		if (find(times.begin(), times.end(), f) == times.end())
+		{
+			times.push_back(f);
+		}
+
+		if (find(levels.begin(), levels.end(), l) == levels.end())
+		{
+			levels.push_back(l);
+		}
+
+		if (find(params.begin(), params.end(), p) == params.end())
+		{
+			params.push_back(p);
+		}
+
+		if (find(ftypes.begin(), ftypes.end(), ftype) == ftypes.end())
+		{
+			ftypes.push_back(ftype);
+		}
+
+		if (find(stats.begin(), stats.end(), s) == stats.end())
+		{
+			stats.push_back(s);
+		}
+	}
+
+	if (times.size() == 0 || params.size() == 0 || levels.size() == 0 || ftypes.size() == 0)
+	{
+		return nullptr;
+	}
+
+	auto ret = make_shared<info<T>>();
+
+	ret->Producer(prod);
+	ret->template Set<forecast_time>(times);
+	ret->template Set<param>(params);
+	ret->template Set<level>(levels);
+	ret->template Set<forecast_type>(ftypes);
+
+	auto b = make_shared<base<T>>();
+	b->grid = shared_ptr<grid>(new point_list(stats));
+	ret->Create(b, true);
+
+	for (auto& line : csv)
+	{
+		auto elems = util::Split(line, ",");
+
+		if (elems.size() != 14)
+		{
+			std::cerr << "Ignoring line '" << line << "'" << std::endl;
+			continue;
+		}
+
+		// 0 producer_id
+		// 1 origin time
+		// 2 station_id
+		// 3 station_name
+		// 4 longitude
+		// 5 latitude
+		// 6 param_name
+		// 7 level_name
+		// 8 level_value
+		// 9 level_value2
+		// 10 forecast period
+		// 11 forecast_type_id
+		// 12 forecast_type_value
+		// 13 value
+
+		if (elems[0][0] == '#')
+		{
+			continue;
+		}
+		// forecast_time
+		raw_time originTime(elems[1]), validTime(elems[1]);
+
+		auto timeparts = util::Split(elems[10], ":");
+
+		validTime.Adjust(kHourResolution, stoi(timeparts[0]));
+		validTime.Adjust(kMinuteResolution, stoi(timeparts[1]));
+
+		const forecast_time f(originTime, validTime);
+
+		// level
+		level l(static_cast<HPLevelType>(HPStringToLevelType.at(boost::algorithm::to_lower_copy(elems[7]))),
+		        stod(elems[8]));
+
+		if (!elems[9].empty())
+		{
+			l.Value2(stod(elems[9]));
+		}
+
+		// param
+		const param p(elems[6]);
+
+		// forecast_type
+		const forecast_type ftype(static_cast<HPForecastType>(stoi(elems[11])), stod(elems[12]));
+
+		// station
+		const int stationId = (elems[2].empty()) ? kHPMissingInt : stoi(elems[2]);
+		const double longitude = (elems[4].empty()) ? kHPMissingValue : stod(elems[4]);
+		const double latitude = (elems[5].empty()) ? kHPMissingValue : stod(elems[5]);
+
+		const station s(stationId, elems[3], longitude, latitude);
+
+		if (!ret->template Find<param>(p))
+			continue;
+		if (!ret->template Find<forecast_time>(f))
+			continue;
+		if (!ret->template Find<level>(l))
+			continue;
+		if (!ret->template Find<forecast_type>(ftype))
+			continue;
+		for (size_t i = 0; i < stats.size(); i++)
+		{
+			if (s == stats[i])
+			{
+				// Add the data point
+				ret->Data().Set(i, static_cast<T>(stod(elems[13])));
+			}
+		}
+	}
+
+	return ret;
+}
+
+}  // namespace
+
 pair<himan::HPWriteStatus, himan::file_information> csv::ToFile(info<double>& theInfo)
 {
 	return ToFile<double>(theInfo);
@@ -115,6 +335,17 @@ template pair<himan::HPWriteStatus, himan::file_information> csv::ToFile<float>(
 template pair<himan::HPWriteStatus, himan::file_information> csv::ToFile<short>(info<short>&);
 template pair<himan::HPWriteStatus, himan::file_information> csv::ToFile<unsigned char>(info<unsigned char>&);
 
+template <typename T>
+shared_ptr<himan::info<T>> csv::FromMemory(const vector<string>& lines) const
+{
+	return ::CSVToInfo<T>(lines);
+}
+
+template shared_ptr<himan::info<double>> csv::FromMemory<double>(const std::vector<string>&) const;
+template shared_ptr<himan::info<float>> csv::FromMemory<float>(const std::vector<string>&) const;
+template shared_ptr<himan::info<short>> csv::FromMemory<short>(const std::vector<string>&) const;
+template shared_ptr<himan::info<unsigned char>> csv::FromMemory<unsigned char>(const std::vector<string>&) const;
+
 shared_ptr<himan::info<double>> csv::FromFile(const string& inputFile, const search_options& options,
                                               bool forceCaching) const
 {
@@ -138,21 +369,10 @@ shared_ptr<himan::info<T>> csv::FromFile(const string& inputFile, const search_o
 		lines.push_back(line);
 	}
 
-	all = util::CSVToInfo<T>(lines);
+	all = ::CSVToInfo<T>(lines);
 
 	if (forceCaching)
 	{
-		// CSV file does not have producer information attached.
-		// We just have to trust that it came from the producer that was requested.
-
-		all->First();
-		all->template Reset<param>();
-
-		while (all->Next())
-		{
-			all->Producer(options.prod);
-		}
-
 		return all;
 	}
 
