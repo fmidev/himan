@@ -958,6 +958,20 @@ param util::InitializeParameter(const producer& prod, const param& par, const le
 
 		p = param(paraminfo);
 	}
+
+	if (par.InterpolationMethod() != kUnknownInterpolationMethod)
+	{
+		// User has specified interpolation method, use that
+		p.InterpolationMethod(par.InterpolationMethod());
+	}
+	else
+	{
+		// Ignore interpolation method from database - those
+		// are not up to date. By setting method to unknown here,
+		// the correct method will be picked up at interpolation.cpp
+		p.InterpolationMethod(kUnknownInterpolationMethod);
+	}
+
 	// database does not provide aggregation or processing type information,
 	// but we can guess, unless the calling code has already passed an aggregation
 

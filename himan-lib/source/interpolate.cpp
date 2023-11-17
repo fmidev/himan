@@ -305,30 +305,30 @@ bool IsNumericCodeTable(const std::string& paramName)
 HPInterpolationMethod InterpolationMethod(const std::string& paramName, HPInterpolationMethod interpolationMethod)
 {
 	// Later we'll add this information to radon directly
-	if (interpolationMethod == kBiLinear &&
-	    (
-	        // vector parameters
-	        IsVectorComponent(paramName) || paramName == "DD-D" || paramName == "FF-MS" ||
-	        // precipitation
-	        paramName == "RR-KGM2" || paramName == "SNR-KGM2" || paramName == "GRI-KGM2" || paramName == "RRR-KGM2" ||
-	        paramName == "RRRC-KGM2" || paramName == "RRRL-KGM2" || paramName == "SNRC-KGM2" ||
-	        paramName == "SNRL-KGM2" || paramName == "RRRS-KGM2" || paramName == "RR-1-MM" || paramName == "RR-3-MM" ||
-	        paramName == "RR-6-MM" || paramName == "RRI-KGM2" || paramName == "SNRI-KGM2" ||
-	        paramName == "SNACC-KGM2" ||
-	        // symbols
-	        paramName == "CLDSYM-N" || paramName == "PRECFORM-N" || paramName == "PRECFORM2-N" ||
-	        paramName == "FOGSYM-N" || paramName == "ICING-N" || paramName == "POTPRECT-N" ||
-	        paramName == "POTPRECF-N" || paramName == "FOGINT-N" || paramName == "PRECTYPE-N" ||
-	        // code tables
-	        IsNumericCodeTable(paramName)))
+	if (interpolationMethod != kUnknownInterpolationMethod)
 	{
-#ifdef DEBUG
-		std::cout << "Debug::interpolation Switching interpolation method from bilinear to nearest point" << std::endl;
-#endif
+		return interpolationMethod;
+	}
+
+	if (
+	    // vector parameters
+	    IsVectorComponent(paramName) || paramName == "DD-D" || paramName == "FF-MS" ||
+	    // precipitation
+	    paramName == "RR-KGM2" || paramName == "SNR-KGM2" || paramName == "GRI-KGM2" || paramName == "RRR-KGM2" ||
+	    paramName == "RRRC-KGM2" || paramName == "RRRL-KGM2" || paramName == "SNRC-KGM2" || paramName == "SNRL-KGM2" ||
+	    paramName == "RRRS-KGM2" || paramName == "RR-1-MM" || paramName == "RR-3-MM" || paramName == "RR-6-MM" ||
+	    paramName == "RRI-KGM2" || paramName == "SNRI-KGM2" || paramName == "SNACC-KGM2" ||
+	    // symbols
+	    paramName == "CLDSYM-N" || paramName == "PRECFORM-N" || paramName == "PRECFORM2-N" || paramName == "FOGSYM-N" ||
+	    paramName == "ICING-N" || paramName == "POTPRECT-N" || paramName == "POTPRECF-N" || paramName == "FOGINT-N" ||
+	    paramName == "PRECTYPE-N" ||
+	    // code tables
+	    IsNumericCodeTable(paramName))
+	{
 		return kNearestPoint;  // nearest point in himan and newbase
 	}
 
-	return interpolationMethod;
+	return kBiLinear;
 }
 
 template <typename T>
