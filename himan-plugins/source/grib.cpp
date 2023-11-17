@@ -1,6 +1,7 @@
 #include "grib.h"
 #include "NFmiGrib.h"
 #include "file_accessor.h"
+#include "filename.h"
 #include "grid.h"
 #include "grid_cache.h"
 #include "lambert_conformal_grid.h"
@@ -1500,7 +1501,7 @@ pair<himan::file_information, NFmiGribMessage> grib::CreateGribMessage(info<T>& 
 	// Write only that data which is currently set at descriptors
 
 	file_information finfo;
-	finfo.file_location = util::MakeFileName(anInfo, *itsWriteOptions.configuration);
+	finfo.file_location = util::filename::MakeFileName(anInfo, *itsWriteOptions.configuration);
 	finfo.storage_type = itsWriteOptions.configuration->WriteStorageType();
 
 	long edition = DetermineCorrectGribEdition(static_cast<int>(itsWriteOptions.configuration->OutputFileType()),

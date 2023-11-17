@@ -1,4 +1,5 @@
 #include "csv.h"
+#include "filename.h"
 #include "logger.h"
 #include "point_list.h"
 #include "timer.h"
@@ -33,7 +34,7 @@ pair<himan::HPWriteStatus, himan::file_information> csv::ToFile(info<T>& theInfo
 	aTimer.Start();
 
 	file_information finfo;
-	finfo.file_location = util::MakeFileName(theInfo, *itsWriteOptions.configuration);
+	finfo.file_location = util::filename::MakeFileName(theInfo, *itsWriteOptions.configuration);
 	finfo.file_type = kCSV;
 	finfo.storage_type = itsWriteOptions.configuration->WriteStorageType();
 

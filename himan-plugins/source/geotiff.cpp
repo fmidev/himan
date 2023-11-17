@@ -1,6 +1,7 @@
 #include "geotiff.h"
 #include "cpl_conv.h"  // for CPLMalloc()
 #include "file_accessor.h"
+#include "filename.h"
 #include "gdal_frmts.h"
 #include "grid.h"
 #include "lambert_conformal_grid.h"
@@ -260,7 +261,7 @@ std::pair<HPWriteStatus, file_information> geotiff::ToFile(info<T>& anInfo)
 	GDALDriver* driver = GetGDALDriverManager()->GetDriverByName("GTiff");
 
 	file_information finfo;
-	finfo.file_location = util::MakeFileName(anInfo, *itsWriteOptions.configuration);
+	finfo.file_location = util::filename::MakeFileName(anInfo, *itsWriteOptions.configuration);
 	finfo.file_type = kGeoTIFF;
 	finfo.storage_type = itsWriteOptions.configuration->WriteStorageType();
 
@@ -305,7 +306,7 @@ std::vector<std::pair<HPWriteStatus, file_information>> geotiff::ToFile(const st
 	for (size_t i = 0; i < infos.size(); i++)
 	{
 		const auto& info = infos[i];
-		const std::string fname = util::MakeFileName<T>(info, *itsWriteOptions.configuration);
+		const std::string fname = util::filename::MakeFileName<T>(info, *itsWriteOptions.configuration);
 		auto& elem = list[fname];
 		elem.push_back(i);
 	}

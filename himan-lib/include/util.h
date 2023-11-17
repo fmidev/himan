@@ -33,13 +33,6 @@ namespace util
 HPFileType FileType(const std::string& theFile);
 
 /**
- * @brief Creates a neons-style filename with path, but without file extension
- */
-
-template <typename T>
-std::string MakeFileName(const info<T>& info, const plugin_configuration& conf);
-
-/**
  * @brief Splits a string and returns part in a vector
  * @param s Input string that should be splitted
  * @param delims String containing the characters that are used in splitting. If string length > 1, all characters are

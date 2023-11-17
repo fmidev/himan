@@ -4,6 +4,7 @@
  */
 
 #include "querydata.h"
+#include "filename.h"
 #include "lambert_conformal_grid.h"
 #include "latitude_longitude_grid.h"
 #include "logger.h"
@@ -415,7 +416,7 @@ template <typename T>
 pair<himan::HPWriteStatus, himan::file_information> querydata::ToFile(info<T>& theInfo)
 {
 	file_information finfo;
-	finfo.file_location = util::MakeFileName(theInfo, *itsWriteOptions.configuration);
+	finfo.file_location = util::filename::MakeFileName(theInfo, *itsWriteOptions.configuration);
 	finfo.file_type = kQueryData;
 	finfo.storage_type = itsWriteOptions.configuration->WriteStorageType();
 
