@@ -827,7 +827,7 @@ aggregation util::GetAggregationFromParamName(const std::string& name, const for
 {
 	// match any precipitation accumulation, also probabilities
 	// eg. PROB-RR12-1 RRR-KGM2 RR-3-MM SN-6-MM
-	const std::regex r1(R"((?:PROB-)?(?:SN|RR|RRS|RRC|RRL|RAIN|RAINL|RAINC)-?([0-9]+)-(?:KGM2|MM|M|\d+)$)");
+	const std::regex r1(R"((?:PROB-)?(?:CONV-)?(?:SN|RR|RRS|RRC|RRL|RAIN|RAINL|RAINC)-?([0-9]+)-(?:KGM2|MM|M|\d+)$)");
 	// match any max or min parameter
 	// note: only time dimension is considered, for example not
 	// maximum thickness of some level
