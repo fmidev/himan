@@ -126,8 +126,6 @@ void visibility::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short
 		}
 	}
 
-	NScale = (NInfo->Param().Name() == "N-0TO1" ? 100. : 1.);
-
 	string deviceType = "CPU";
 
 	// Scale humidity to percents
