@@ -281,6 +281,7 @@ It provides basic 2D accessing capabilities.
 | | SetValues | table | Set matrix values |
 | table | GetValues | | Return matrix values |
 | | Fill | | Fill matrix with given value |
+| number | GetMissingValuesCount | | Return number of missing values in data |
 
 ## modifier
 

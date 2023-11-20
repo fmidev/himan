@@ -1107,6 +1107,11 @@ void Fill(matrix<T>& mat, T value)
 {
 	mat.Fill(value);
 }
+template <typename T>
+size_t GetMissingValuesCount(matrix<T>& mat)
+{
+	return mat.MissingCount();
+}
 }  // namespace matrix_wrapper
 
 namespace luabind_workaround
@@ -1375,12 +1380,14 @@ void BindLib(lua_State* L)
 	              .def(constructor<size_t, size_t, size_t, double>())
 	              .def("SetValues", &matrix_wrapper::SetValues<double>)
 	              .def("GetValues", &matrix_wrapper::GetValues<double>)
-	              .def("Fill", &matrix_wrapper::Fill<double>),
+	              .def("Fill", &matrix_wrapper::Fill<double>)
+		      .def("GetMissingValuesCount", &matrix_wrapper::GetMissingValuesCount<double>),
 	          class_<matrix<float>>("matrixf")
 	              .def(constructor<size_t, size_t, size_t, float>())
 	              .def("SetValues", &matrix_wrapper::SetValues<float>)
 	              .def("GetValues", &matrix_wrapper::GetValues<float>)
-	              .def("Fill", &matrix_wrapper::Fill<float>),
+	              .def("Fill", &matrix_wrapper::Fill<float>)
+		      .def("GetMissingValuesCount", &matrix_wrapper::GetMissingValuesCount<float>),
 	          class_<param>("param")
 	              .def(constructor<const std::string&>())
 	              .def(constructor<const std::string&, const aggregation&, const processing_type&>())
