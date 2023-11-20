@@ -91,7 +91,7 @@ shared_ptr<himan::info<double>> pop::GetShortProbabilityData(const himan::foreca
 		forecast_time curTime =
 		    forecast_time(RoundOriginTime(forecastTime.OriginDateTime(), 260), forecastTime.ValidDateTime());
 
-		const param p("PROB-RR-7", aggregation(),
+		const param p("PROB-RR-7", aggregation(kAccumulation, ONE_HOUR),
 		              processing_type(kProbabilityGreaterThan, 0.025));  // MEPS(1h) RR>0.025mm
 		const producer MEPSprod(260, 86, 204, "MEPSMTA");
 		do
@@ -112,7 +112,7 @@ shared_ptr<himan::info<double>> pop::GetShortProbabilityData(const himan::foreca
 		forecast_time curTime =
 		    forecast_time(RoundOriginTime(forecastTime.OriginDateTime(), 242), forecastTime.ValidDateTime());
 
-		const param p("PROB-RR1-1", aggregation(),
+		const param p("PROB-RR1-1", aggregation(kAccumulation, ONE_HOUR),
 		              processing_type(kProbabilityGreaterThan, 0.14));  // ECMWF(1h) RR>0.14mm
 		const producer ECprod(242, 86, 242, "ECGEPSMTA");
 
@@ -135,11 +135,13 @@ std::shared_ptr<himan::info<double>> pop::GetLongProbabilityData(const himan::fo
 {
 	logr.Info("Fetching ECMWF");
 
-	param p("PROB-RR3-6", aggregation(), processing_type(kProbabilityGreaterThan, 0.2));  // EC(3h) RR>0.2mm
+	param p("PROB-RR3-6", aggregation(kAccumulation, THREE_HOURS),
+	        processing_type(kProbabilityGreaterThan, 0.2));  // EC(3h) RR>0.2mm
 
 	if (forecastTime.Step().Hours() > 131)
 	{
-		p = param("PROB-RR-4", aggregation(), processing_type(kProbabilityGreaterThan, 0.4));  // EC(6h) RR>0.4mm
+		p = param("PROB-RR-4", aggregation(kAccumulation, SIX_HOURS),
+		          processing_type(kProbabilityGreaterThan, 0.4));  // EC(6h) RR>0.4mm
 	}
 
 	shared_ptr<info<double>> ret = nullptr;
@@ -220,7 +222,8 @@ void pop::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 
 	myThreadedLogger.Info("Fetching Precipitation");
 
-	Precipitation = Fetch(forecastTime, forecastLevel, param("RRR-KGM2"), forecastType);
+	Precipitation = Fetch(forecastTime, forecastLevel,
+	                      param("RRR-KGM2", aggregation(kAccumulation, ONE_HOUR), processing_type()), forecastType);
 
 	if (!Precipitation)
 	{
