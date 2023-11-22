@@ -4,6 +4,7 @@
  */
 
 #include "param.h"
+#include "logger.h"
 
 using namespace himan;
 using namespace std;
@@ -230,10 +231,12 @@ bool param::operator==(const param& other) const
 	         (itsAggregation.Type() == kUnknownAggregationType &&
 	          other.itsAggregation.Type() != kUnknownAggregationType))
 	{
-		fmt::print(
-		    "Warning::param Imprecise comparison for aggregations: {} vs {} is considered true. This will change in "
-		    "near-future\n",
-		    itsAggregation.Type(), other.itsAggregation.Type());
+		logger logr("param");
+		logr.Warning(
+		    fmt::format("Imprecise comparison for aggregation type: {} vs {} is considered true. This "
+		                "will change in near-future\n",
+		                HPAggregationTypeToString.at(itsAggregation.Type()),
+		                HPAggregationTypeToString.at(other.itsAggregation.Type())));
 	}
 
 	if (itsVersion != other.itsVersion)
