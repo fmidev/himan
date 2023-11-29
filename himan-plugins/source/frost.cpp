@@ -79,7 +79,8 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 	const param TParam("T-K");
 	const param TDParam("TD-K");
 	const param TGParam("TG-K");
-	const param WGParam("FFG-MS");
+	const param WGParam("FFG-MS", aggregation(HPAggregationType::kMaximum, itsConfiguration->ForecastStep()),
+	                    processing_type());
 	const param T0Param("PROB-TC-0", aggregation(), processing_type(kProbabilityLessThanOrEqual, 273.15));
 	const params NParams({param("N-PRCNT"), param("N-0TO1")});
 	const param RADParam("RADGLO-WM2");

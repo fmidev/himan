@@ -16,7 +16,10 @@ if not min_t then
 	level(HPLevelType.kHeight,2), param("TMIN3H-K"), current_forecast_type)
 end
 
-local max_ws = luatool:Fetch(current_time, level(HPLevelType.kHeight,10), param("FFG-MS"), current_forecast_type)
+local timestep = configuration:GetForecastStep():Hours()
+local gust_param = param("FFG-MS", aggregation(HPAggregationType.kMaximum, time_duration(HPTimeResolution.kHourResolution, timestep)), processing_type())
+
+local max_ws = luatool:Fetch(current_time, level(HPLevelType.kHeight,10), gust_param, current_forecast_type)
 
 local snow_next = luatool:Fetch(next_time, current_level, param('SNACC-KGM2'), current_forecast_type) 
 local snow_prev = luatool:Fetch(prev_time, current_level, param('SNACC-KGM2'), current_forecast_type)

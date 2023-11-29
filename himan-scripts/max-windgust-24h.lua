@@ -43,7 +43,8 @@ function GustHours(curTime)
       break
     end
 
-    local  gust = luatool:Fetch(curTime, current_level, param("FFG-MS"), current_forecast_type)
+    local gust_param = param("FFG-MS", aggregation(HPAggregationType.kMaximum, time_duration(HPTimeResolution.kHourResolution, stepAdjustment*-1)), processing_type())
+    local gust = luatool:Fetch(curTime, current_level, gust_param, current_forecast_type)
 
     if gust then
       if #gsum == 0 then

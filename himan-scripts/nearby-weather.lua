@@ -23,7 +23,10 @@ local w = luatool:FetchInfo(current_time, current_level, param("WEATHERNUMBER-N"
 local Weather = w:GetValues()
 
 --Get gust
-local g = luatool:FetchInfo(current_time, level(HPLevelType.kHeight,10), param("FFG-MS"))
+local timestep = configuration:GetForecastStep():Hours()
+local gust_param = param("FFG-MS", aggregation(HPAggregationType.kMaximum, time_duration(HPTimeResolution.kHourResolution, timestep)), processing_type())
+
+local g = luatool:FetchInfo(current_time, level(HPLevelType.kHeight,10), gust_param)
 local gust = g:GetValues()
 
 if not Weather or not gust then

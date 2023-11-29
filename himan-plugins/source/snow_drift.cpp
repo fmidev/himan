@@ -147,7 +147,10 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 
 		auto TInfo = Fetch(forecastTime, level(kHeight, 2), param("T-K"), forecastType, false);
 		auto FFInfo = Fetch(forecastTime, level(kHeight, 10), param("FF-MS"), forecastType, false);
-		auto FFGInfo = Fetch(forecastTime, level(kHeight, 10), param("FFG-MS"), forecastType, false);
+		auto FFGInfo = Fetch(forecastTime, level(kHeight, 10),
+		                     param("FFG-MS", aggregation(HPAggregationType::kMaximum, itsConfiguration->ForecastStep()),
+		                           processing_type()),
+		                     forecastType, false);
 		auto SFInfo = Fetch(forecastTime, level(kHeight, 0), param("SNR-KGM2"), forecastType, false);
 
 		if (!TInfo || !FFInfo || !SFInfo)

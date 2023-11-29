@@ -112,5 +112,12 @@ if sourceparam == "" or targetparam == "" or op == "" or limit == nil then
   return
 end
 
-logger:Info(string.format("Source: %s Target: %s Operator: %s Limit: %d", sourceparam, targetparam, op, limit))
-produceProbabilities(param(sourceparam), param(targetparam), op, limit)
+sourceparam = param(sourceparam)
+targetparam = param(targetparam)
+
+if sourceparam:GetName() == "FFG-MS" then
+  sourceparam:SetAggregation(aggregation(HPAggregationType.kMaximum, configuration:GetForecastStep()))
+end
+
+logger:Info(string.format("Source: %s Target: %s Operator: %s Limit: %d", sourceparam:GetName(), targetparam:GetName(), op, limit))
+produceProbabilities(sourceparam, targetparam, op, limit)

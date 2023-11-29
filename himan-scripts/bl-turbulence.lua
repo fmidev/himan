@@ -29,8 +29,9 @@ local wsms = luatool:Fetch(current_time, lev, ws, current_forecast_type)
 
 -- Wind gust
 local gustlevel = level(HPLevelType.kHeight, 10) 
-local gust = param("FFG-MS")
+local timestep = configuration:GetForecastStep():Hours()
 
+local gust = param("FFG-MS", aggregation(HPAggregationType.kMaximum, time_duration(HPTimeResolution.kHourResolution, timestep)), processing_type())
 local gustms = luatool:Fetch(current_time, gustlevel, gust, current_forecast_type)
 
 -- land-sea-mask, proportion from 0 to 1 where 1=land, 0=sea
