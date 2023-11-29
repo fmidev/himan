@@ -81,16 +81,19 @@ Wetsnow = {}
 local step = configuration:GetForecastStep():Hours() -- no support for sub-hours
 
 local rrparam = nil
-local rrscale = 1
+
+-- snowload calculation is an accumulative process, so we need to know
+-- the full accumulation from the previous timestep
+--
+-- this means that precipitation and radiation can be from different
+-- times, but this does not seem to matter
 
 if step == 1 then
   rrparam = param("RRR-KGM2")
 elseif step == 3 then
   rrparam = param("RR-3-MM")
-  rrscale = 1 / 3
 elseif step == 6 then
   rrparam = param("RR-6-MM")
-  rrscale = 1 / 6
 else
   -- don't know what to choose; configuration was maybe given with 'hours' (no step)
   rrparam = param("RRR-KGM2")
@@ -138,7 +141,7 @@ while result:NextTime() do
 				end
 				T[i] = T[i] - kKelvin -- convert to celsius
 				Wetsnow[i] = Wetsnow[i]*f_wind_dec(v[i])*f_temperature(T[i])*f_sunrad(phi[i]) -- snow decrease
-				local delta = f_wind_acc(v[i])*f_load(Wetsnow[i])*wetsnow(rrscale*rr[i],T[i])
+				local delta = f_wind_acc(v[i])*f_load(Wetsnow[i])*wetsnow(rr[i],T[i])
 				Wetsnow[i] = Wetsnow[i] + delta -- snow accumulation
 			end
 		end
