@@ -35,8 +35,8 @@ using namespace himan::plugin;
 std::string GetParamNameFromGribShortName(const std::string& paramFileName, const std::string& shortName);
 void UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restrict__ unpacked, size_t len, size_t unpackedLen);
 
-static shared_mutex mapModificationMutex;
-static mutex writeToFileMutex;
+static mutex singleGribMessageCounterMutex, mapModificationMutex;
+static map<string, std::mutex> singleGribMessageCounterMap;
 
 double ApplyScaling(long val, long exp)
 {
@@ -1652,7 +1652,7 @@ template pair<himan::file_information, NFmiGribMessage> grib::CreateGribMessage<
 template pair<himan::file_information, NFmiGribMessage> grib::CreateGribMessage<short>(info<short>&);
 template pair<himan::file_information, NFmiGribMessage> grib::CreateGribMessage<unsigned char>(info<unsigned char>&);
 
-void DetermineMessageNumber(NFmiGribMessage& message, file_information& finfo)
+void DetermineMessageNumber(NFmiGribMessage& message, file_information& finfo, HPWriteMode writeMode)
 {
 	// message length can only be received from eccodes since it includes
 	// all grib headers etc
@@ -1672,24 +1672,23 @@ void DetermineMessageNumber(NFmiGribMessage& message, file_information& finfo)
 
 	static map<string, unsigned long> offsets, messages;
 
-	// default: file does not exist yet --> start counting from msg 0
-	unsigned long offset = 0, message_num = 0;
-	// first time around we must insert the data to map
-	bool insert = false;
-
 	try
 	{
-		// reading from the map, must make sure nobody is modifying it at the
-		// same time
-
-		shared_lock lock(mapModificationMutex);
-		message_num = messages.at(finfo.file_location) + 1;
-		offset = offsets.at(finfo.file_location);
+		messages.at(finfo.file_location) = messages.at(finfo.file_location) + 1;
 	}
 	catch (const out_of_range& e)
 	{
-		insert = true;
-		if (filesystem::exists(finfo.file_location))
+		if (filesystem::exists(finfo.file_location) == false)
+		{
+			// Need to modify the map, not just the elements -- need to
+			// protect from simultaneous access from other threads
+			lock_guard<mutex> lock(mapModificationMutex);
+
+			// file does not exist yet --> start counting from msg 0
+			offsets[finfo.file_location] = 0;
+			messages[finfo.file_location] = 0;
+		}
+		else
 		{
 			// file existed before Himan started --> count the messages from
 			// the existing files and start numbering from there
@@ -1706,37 +1705,80 @@ void DetermineMessageNumber(NFmiGribMessage& message, file_information& finfo)
 				// What can we do now? We cannot append to this file because that will
 				// cause problems to readers.
 				//
-				// Abort processing, recovering this file is not feasible, will
-				// lead to more problems than it solves.
+				// 1. Abort and log this information
+				//  + Not destructive
+				//  - Needs manual intervention
+				//  - Log line is easily lost as a lot of logging is produced
+				//
+				// 2. Rename invalid file to something else and continue
+				//    with new file
+				//  + No data is lost
+				//  + Processing can continue without intervention
+				//  - Old file is left as an 'orphan', it will not be cleaned
+				//
+				// 3. Remove invalid file
+				//  + Clean solution
+				//  + Processing can continue without intervention
+				//  - Data is lost, could be very bad (if accidentally the filename is
+				//    the same as some very important data file)
+				//  - Possible existing memory mapping of file will cause signals
+				//    to reading programs
+				//
+				// 4. Truncate file so that invalid message is removed
+				//   + Clean solution
+				//   + Processing can continue without intervention
+				//   + Older messages are left intact and information is radon is accurate
+				//   - Slow operation
+				//
+				// Choose option 4.
 
 				logger logr("grib");
-				logr.Fatal(
-				    fmt::format("Found incomplete grib file '{}', remove file and start again", finfo.file_location));
-				himan::Abort();
-			}
+				logr.Warning(fmt::format("Found incomplete grib file '{}', truncating to last complete message",
+				                         finfo.file_location));
 
-			message_num = msgCount;
-			offset = std::filesystem::file_size(finfo.file_location);
+				ifstream fp(finfo.file_location.c_str(), ios::in | ios::binary | ios::ate);
+				ASSERT(fp);
+
+				const long long origlen = fp.tellg();
+				long long len = origlen;
+				char buffer[8];
+
+				for (long long i = 8; i <= origlen; i++)
+				{
+					fp.seekg(-i, fp.end);
+					fp.read(buffer, 8);
+					if (strncmp(buffer, "7777GRIB", 8) == 0)
+					{
+						break;
+					}
+					len = fp.tellg();
+				}
+
+				if (len <= 8)
+				{
+					logr.Error(fmt::format("Unable to truncate file '{}', remove it manually", finfo.file_location));
+					himan::Abort();
+				}
+
+				len -= 4;
+				filesystem::resize_file(finfo.file_location, len);
+
+				logr.Debug(fmt::format("Truncated file '{}' from {} to {} bytes", finfo.file_location, origlen, len));
+
+				return DetermineMessageNumber(message, finfo, writeMode);
+			}
+			else
+			{
+				messages[finfo.file_location] = msgCount;
+				offsets[finfo.file_location] = std::filesystem::file_size(finfo.file_location);
+			}
 		}
 	}
 
-	finfo.offset = offset;
-	finfo.message_no = message_num;
+	finfo.offset = offsets.at(finfo.file_location);
+	finfo.message_no = messages.at(finfo.file_location);
 
-	unique_lock lock(mapModificationMutex);
-
-	if (insert)
-	{
-		offsets.insert(make_pair(finfo.file_location, offset));
-		messages.insert(make_pair(finfo.file_location, message_num));
-	}
-	else
-	{
-		messages.at(finfo.file_location) = message_num;
-	}
-
-	// update offset for next message
-	offsets.at(finfo.file_location) = offset + finfo.length.value();
+	offsets.at(finfo.file_location) = offsets.at(finfo.file_location) + finfo.length.value();
 }
 
 HPWriteStatus WriteMessageToFile(NFmiGribMessage& message, const file_information& finfo, const write_options& wopts)
@@ -1757,15 +1799,12 @@ HPWriteStatus WriteMessageToFile(NFmiGribMessage& message, const file_informatio
 	namespace fs = filesystem;
 	fs::path pathname(finfo.file_location);
 
+	if (!pathname.parent_path().empty() && !fs::is_directory(pathname.parent_path()))
 	{
-		lock_guard<mutex> lock(writeToFileMutex);
-		if (!pathname.parent_path().empty() && !fs::is_directory(pathname.parent_path()))
-		{
-			fs::create_directories(pathname.parent_path());
-		}
-
-		message.Write(finfo.file_location, appendToFile);
+		fs::create_directories(pathname.parent_path());
 	}
+
+	message.Write(finfo.file_location, appendToFile);
 
 	aTimer.Stop();
 
@@ -1807,7 +1846,23 @@ std::pair<himan::HPWriteStatus, himan::file_information> grib::ToFile(info<T>& a
 
 	if (itsWriteOptions.configuration->WriteMode() != kSingleGridToAFile)
 	{
-		DetermineMessageNumber(msg, finfo);
+		pair<map<string, std::mutex>::iterator, bool> muret;
+
+		{
+			// Acquire mutex to (possibly) modify map containing "file name":"mutex" pairs
+			lock_guard<mutex> lock(singleGribMessageCounterMutex);
+
+			// create or refer to a mutex for this specific file name
+			muret = singleGribMessageCounterMap.emplace(piecewise_construct, forward_as_tuple(finfo.file_location),
+			                                            forward_as_tuple());
+			// allow other threads to modify the map so as not to block threads writing
+			// to other files
+		}
+
+		// lock the mutex for this file name
+		lock_guard<mutex> lock(muret.first->second);
+
+		DetermineMessageNumber(msg, finfo, itsWriteOptions.configuration->WriteMode());
 		status = WriteMessageToFile(msg, finfo, itsWriteOptions);
 	}
 	else
