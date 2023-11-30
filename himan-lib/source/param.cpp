@@ -234,7 +234,7 @@ bool param::operator==(const param& other) const
 		logger logr("param");
 		logr.Warning(
 		    fmt::format("Imprecise comparison for aggregation type: {} vs {} is considered true. This "
-		                "will change in near-future\n",
+		                "will change in near-future",
 		                HPAggregationTypeToString.at(itsAggregation.Type()),
 		                HPAggregationTypeToString.at(other.itsAggregation.Type())));
 	}
