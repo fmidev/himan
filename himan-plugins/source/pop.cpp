@@ -138,7 +138,7 @@ std::shared_ptr<himan::info<double>> pop::GetLongProbabilityData(const himan::fo
 	param p("PROB-RR3-6", aggregation(kAccumulation, THREE_HOURS),
 	        processing_type(kProbabilityGreaterThan, 0.2));  // EC(3h) RR>0.2mm
 
-	if (forecastTime.Step().Hours() > 131)
+	if (forecastTime.Step().Hours() >= 130)
 	{
 		p = param("PROB-RR-4", aggregation(kAccumulation, SIX_HOURS),
 		          processing_type(kProbabilityGreaterThan, 0.4));  // EC(6h) RR>0.4mm
