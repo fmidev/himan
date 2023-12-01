@@ -837,7 +837,7 @@ aggregation util::GetAggregationFromParamName(const std::string& name, const for
 	const std::regex r3("FFG([0-9]+H)?-MS");
 	// match one hour precipitation accumulations
 	const std::regex r4("SNR[CL]-KGM2|SNR-KGM2|RRR-KGM2|RRR[SLC]-KGM2");
-	// match precipitation accumulation
+	// match precipitation accumulation from forecast start
 	const std::regex r5("RR-KGM2|SNACC-KGM2|RR[CL]-KGM2|RAIN[CL]-KGM2");
 	// match daily periods
 	const std::regex r6("PREC([0-9D]+)-(?:KGM2|MM)");
