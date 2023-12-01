@@ -135,14 +135,19 @@ std::shared_ptr<himan::info<double>> pop::GetLongProbabilityData(const himan::fo
 {
 	logr.Info("Fetching ECMWF");
 
-	param p("PROB-RR3-6", aggregation(kAccumulation, THREE_HOURS),
-	        processing_type(kProbabilityGreaterThan, 0.2));  // EC(3h) RR>0.2mm
+	// Fetch either 3h or 6h probability data, depending on the leadtime in question.
+	// The decision is actually based on both the leadtime of the smartmet forecast and
+	// the analysis time of the latest ENS forecast.
+	//
+	// If for some reason the ENS production is delayed, we might end up trying to fetch
+	// 3h probability for leadtimes those are not available (> 144h). In this case we
+	// should continue with 6h probability.
 
-	if (forecastTime.Step().Hours() >= 130)
-	{
-		p = param("PROB-RR-4", aggregation(kAccumulation, SIX_HOURS),
-		          processing_type(kProbabilityGreaterThan, 0.4));  // EC(6h) RR>0.4mm
-	}
+	const param p3("PROB-RR3-6", aggregation(kAccumulation, THREE_HOURS),
+	               processing_type(kProbabilityGreaterThan, 0.2));  // EC(3h) RR>0.2mm
+
+	const param p6("PROB-RR-4", aggregation(kAccumulation, SIX_HOURS),
+	               processing_type(kProbabilityGreaterThan, 0.4));  // EC(6h) RR>0.4mm
 
 	shared_ptr<info<double>> ret = nullptr;
 
@@ -160,6 +165,8 @@ std::shared_ptr<himan::info<double>> pop::GetLongProbabilityData(const himan::fo
 		int vtryNo = 0;
 		do
 		{
+			const param& p = (curTime.Step().Hours() <= 144) ? p3 : p6;
+
 			ret =
 			    Fetch(curTime, forecastLevel, p, forecast_type(kStatisticalProcessing), {itsECEPSGeom}, ECprod, false);
 			vtryNo++;
