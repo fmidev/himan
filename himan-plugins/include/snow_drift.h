@@ -31,6 +31,7 @@ class snow_drift : public compiled_plugin, private compiled_plugin_base
 
    private:
 	void Calculate(std::shared_ptr<info<double>> theTargetInfo, unsigned short theThreadIndex) override;
+	bool itsResetSnowDrift;
 };
 
 // the class factory

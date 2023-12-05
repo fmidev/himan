@@ -104,7 +104,7 @@ void CalculateSnowDriftIndex(std::shared_ptr<info<double>>& myTargetInfo, const 
 	}
 }
 
-snow_drift::snow_drift()
+snow_drift::snow_drift() : itsResetSnowDrift(false)
 {
 	itsLogger = logger("snow_drift");
 }
@@ -116,6 +116,12 @@ void snow_drift::Process(std::shared_ptr<const plugin_configuration> conf)
 	SetParams({SDIParam, SAParam, DAParam});
 
 	itsThreadDistribution = ThreadDistribution::kThreadForForecastTypeAndLevel;
+
+	if (itsConfiguration->Exists("reset") && util::ParseBoolean(itsConfiguration->GetValue("reset")))
+	{
+		itsLogger.Info("Resetting snow drift calculation");
+		itsResetSnowDrift = true;
+	}
 
 	Start();
 }
@@ -219,48 +225,50 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 		// In the start of the forecast fetch the latest sa and da
 		// values from LAPS producer.
 
-		if (prod.Id() == 107 || forecastTime.Step().Hours() == 1)
+		if (itsResetSnowDrift == false)
 		{
-			prevTime.OriginDateTime(prevTime.ValidDateTime());
-
-			const std::vector<std::string> lapsGeom({"LAPS3000"});
-			const producer lapsProd(107, 86, 107, "LAPSFIN");
-
-			// Previous data can be max three hours old
-			for (int i = 0; i < 3; i++)
+			if (prod.Id() == 107 || forecastTime.Step().Hours() == 1)
 			{
-				pSAInfo =
-				    Fetch(prevTime, level(kHeight, 0), SAParam, forecast_type(kAnalysis), lapsGeom, lapsProd, false);
-				pDAInfo =
-				    Fetch(prevTime, level(kHeight, 0), DAParam, forecast_type(kAnalysis), lapsGeom, lapsProd, false);
-
-				if (pSAInfo && pDAInfo)
-				{
-					if (pSAInfo->Data().MissingCount() == pSAInfo->Data().Size() ||
-					    pDAInfo->Data().MissingCount() == pDAInfo->Data().Size())
-					{
-						itsLogger.Error(fmt::format("Data from {} and/or {} from LAPSFIN is all missing",
-						                            SAParam.Name(), DAParam.Name()));
-						pSAInfo = nullptr;
-						pDAInfo = nullptr;
-					}
-					else
-					{
-						break;
-					}
-				}
-
-				prevTime.ValidDateTime().Adjust(kHourResolution, -1);
 				prevTime.OriginDateTime(prevTime.ValidDateTime());
+
+				const std::vector<std::string> lapsGeom({"LAPS3000"});
+				const producer lapsProd(107, 86, 107, "LAPSFIN");
+
+				// Previous data can be max three hours old
+				for (int i = 0; i < 3; i++)
+				{
+					pSAInfo = Fetch(prevTime, level(kHeight, 0), SAParam, forecast_type(kAnalysis), lapsGeom, lapsProd,
+					                false);
+					pDAInfo = Fetch(prevTime, level(kHeight, 0), DAParam, forecast_type(kAnalysis), lapsGeom, lapsProd,
+					                false);
+
+					if (pSAInfo && pDAInfo)
+					{
+						if (pSAInfo->Data().MissingCount() == pSAInfo->Data().Size() ||
+						    pDAInfo->Data().MissingCount() == pDAInfo->Data().Size())
+						{
+							itsLogger.Error(fmt::format("Data from {} and/or {} from LAPSFIN is all missing",
+							                            SAParam.Name(), DAParam.Name()));
+							pSAInfo = nullptr;
+							pDAInfo = nullptr;
+						}
+						else
+						{
+							break;
+						}
+					}
+
+					prevTime.ValidDateTime().Adjust(kHourResolution, -1);
+					prevTime.OriginDateTime(prevTime.ValidDateTime());
+				}
+			}
+			else if (!pSAInfo || !pDAInfo)
+			{
+				// Calculation started "mid" timeseries
+				pSAInfo = Fetch(prevTime, level(kHeight, 0), SAParam, forecastType, false);
+				pDAInfo = Fetch(prevTime, level(kHeight, 0), DAParam, forecastType, false);
 			}
 		}
-		else if (!pSAInfo || !pDAInfo)
-		{
-			// Calculation started "mid" timeseries
-			pSAInfo = Fetch(prevTime, level(kHeight, 0), SAParam, forecastType, false);
-			pDAInfo = Fetch(prevTime, level(kHeight, 0), DAParam, forecastType, false);
-		}
-
 		if (!pSAInfo || !pDAInfo)
 		{
 			if (forecastTime.Step().Hours() == 0)

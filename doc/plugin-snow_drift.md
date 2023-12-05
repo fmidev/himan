@@ -43,4 +43,9 @@ normally. If ice coverage data is not found, land-sea mask is used with threshol
 
 # Per-plugin configuration options
 
-None
+Key word "reset" can be used to force a reset for the calculations (does not try
+to fetch previous data)
+
+    "reset" : true
+
+
