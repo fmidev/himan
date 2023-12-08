@@ -24,6 +24,7 @@ HPLevelType
     kUnknownLevel = 0
     kGround = 1
     kMaximumWind = 6
+    kTropopause = 7
     kTopOfAtmosphere = 8
     kIsoThermal = 20
     kLake = 21

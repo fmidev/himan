@@ -284,7 +284,9 @@ void BindEnum(lua_State* L)
 				 value("kMixingLayer", kMixingLayer),
 				 value("kEntireAtmosphere", kEntireAtmosphere),
 				 value("kEntireOcean", kEntireOcean),
-				 value("kMaximumThetaE", kMaximumThetaE)],
+				 value("kMaximumThetaE", kMaximumThetaE),
+				 value("kTropopause", kTropopause)
+			],
 	     class_<HPTimeResolution>("HPTimeResolution")
 	         .enum_("constants")[
 				 value("kUnknownTimeResolution", kUnknownTimeResolution),
