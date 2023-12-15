@@ -28,12 +28,18 @@ void CalculateSnowDriftIndex(std::shared_ptr<info<double>>& myTargetInfo, const 
                              const std::vector<double>& SF, const std::vector<double>& pSA,
                              const std::vector<double>& pDA, const std::vector<bool>& mask)
 {
+	logger logr("snow_drift");
 	myTargetInfo->Find<param>(SDIParam);
 	auto& SI = VEC(myTargetInfo);
 	myTargetInfo->Find<param>(SAParam);
 	auto& SA = VEC(myTargetInfo);
 	myTargetInfo->Find<param>(DAParam);
 	auto& DA = VEC(myTargetInfo);
+
+	size_t maskedCount = std::count(mask.begin(), mask.end(), false);
+
+	logr.Info(fmt::format("Masking done for {} grid points, {:.1f}% of total", maskedCount,
+	                      100. * static_cast<double>(maskedCount) / static_cast<double>(mask.size())));
 
 	for (auto&& tup : zip_range(SI, SA, DA, T, FF, FFG, SF, pSA, pDA, mask))
 	{
@@ -48,8 +54,17 @@ void CalculateSnowDriftIndex(std::shared_ptr<info<double>>& myTargetInfo, const 
 		const auto pda = tup.get<8>();  // previous accumulated snowdrift value
 		const auto m = tup.get<9>();    // mask value for this grid point (true: process grid point)
 
-		if (IsMissing(t) || IsMissing(ff) || IsMissing(sf) || IsMissing(psa) || IsMissing(pda) || !m)
+		if (m == false || IsMissing(psa) || IsMissing(pda))
 		{
+			continue;
+		}
+
+		if (IsMissing(t) || IsMissing(ff) || IsMissing(sf))
+		{
+			si = MissingDouble();
+			sa = MissingDouble();
+			da = MissingDouble();
+			logr.Warning(fmt::format("Temperature ({}), wind speed ({}) or snow fall rate ({}) missing", t, ff, sf));
 			continue;
 		}
 
@@ -96,6 +111,7 @@ void CalculateSnowDriftIndex(std::shared_ptr<info<double>>& myTargetInfo, const 
 			}
 			else
 			{
+				// temperature below zero, not snowing, effective wind speed over 6 m/s
 				const double sv = DriftMagnitude(eff, MobilityIndex(pda, sa));
 				da = pda + sv;
 				si = DriftIndex(sv);
@@ -318,8 +334,7 @@ void snow_drift::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned 
 		pDAInfo = std::make_shared<info<double>>(*myTargetInfo);
 	}
 
-	myThreadedLogger.Info(fmt::format("[{}] Missing values: {}/{}", deviceType, myTargetInfo->Data().MissingCount(),
-	                                  myTargetInfo->Data().Size()));
+	myThreadedLogger.Info(fmt::format("[{}] Missing values: {:.1f}%", deviceType, util::MissingPercent(*myTargetInfo)));
 }
 
 double DriftMagnitude(double ff, double mi)
