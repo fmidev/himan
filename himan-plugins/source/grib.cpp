@@ -678,6 +678,7 @@ void WriteAreaAndGrid(NFmiGribMessage& message, const shared_ptr<himan::grid>& g
 				}
 				else
 				{
+					message.SetLongKey("shapeOfTheEarth", 1);
 					message.SetLongKey("scaleFactorOfRadiusOfSphericalEarth", 0);
 					message.SetLongKey("scaledValueOfRadiusOfSphericalEarth", static_cast<long>(earth.A()));
 				}
