@@ -13,6 +13,7 @@ latitude_longitude_grid::latitude_longitude_grid(HPScanningMode theScanningMode,
 {
 	itsLogger = logger("latitude_longitude_grid");
 	itsEarthShape = earthShape;
+	itsLogger.Trace(Proj4String());
 }
 
 latitude_longitude_grid::latitude_longitude_grid(HPScanningMode theScanningMode, const point& theFirstPoint,
