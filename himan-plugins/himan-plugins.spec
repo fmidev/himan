@@ -21,7 +21,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 22.6.16
+Requires: himan-lib >= 23.12.28
 Requires: lua >= 5.3.0
 Requires: unixODBC
 Requires: libfmigrib >= 23.12.8
@@ -34,15 +34,10 @@ Requires: libs3 >= 4.1
 Requires: jasper-libs
 Requires: eccodes
 Requires: gdal35-libs
+Requires: libpqxx >= 7.7.0
 BuildRequires: python3-scons
 BuildRequires: eigen3-devel >= 3.3.4
 BuildRequires: libpqxx-devel >= 7.7.0
-Requires: libpqxx >= 7.7.0
-
-%if %{defined suse_version}
-Requires: libjasper
-Requires: grib_api
-%else
 BuildRequires: make
 BuildRequires: gdal35-devel
 BuildRequires: gcc-c++ >= 8.2.1
@@ -65,7 +60,6 @@ BuildRequires: fmt-devel >= 7.1.0
 BuildRequires: lua-devel
 BuildRequires: zlib-devel
 BuildRequires: bzip2-devel
-%endif
 
 AutoReqProv:	no
 

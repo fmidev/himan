@@ -56,9 +56,6 @@ class producer
 	void Name(const std::string& theName);
 	std::string Name() const;
 
-	long TableVersion() const;
-	void TableVersion(long theTableVersion);
-
 	HPProducerClass Class() const;
 	void Class(HPProducerClass theClass);
 
@@ -69,7 +66,6 @@ class producer
 	long itsFmiProducerId;
 	long itsProcess;
 	long itsCentre;
-	long itsTableVersion;
 	HPProducerClass itsClass;
 
 	std::string itsNeonsName;
@@ -80,8 +76,8 @@ class producer
 	template <class Archive>
 	void serialize(Archive& ar)
 	{
-		ar(CEREAL_NVP(itsFmiProducerId), CEREAL_NVP(itsProcess), CEREAL_NVP(itsCentre), CEREAL_NVP(itsTableVersion),
-		   CEREAL_NVP(itsNeonsName), CEREAL_NVP(itsClass));
+		ar(CEREAL_NVP(itsFmiProducerId), CEREAL_NVP(itsProcess), CEREAL_NVP(itsCentre), CEREAL_NVP(itsNeonsName),
+		   CEREAL_NVP(itsClass));
 	}
 #endif
 };

@@ -638,7 +638,6 @@ shared_ptr<himan::info<T>> querydata::CreateInfo(shared_ptr<NFmiQueryData> theDa
 
 	auto newInfo = make_shared<info<T>>(ftypes, times, levels, params);
 	producer p(230, 86, 230, "HIMAN");
-	p.TableVersion(203);
 
 	newInfo->Producer(p);
 

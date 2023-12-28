@@ -1482,10 +1482,7 @@ void BindLib(lua_State* L)
 	              .def("SetProcess", LUA_MEMFN(void, producer, Process, long))
 	              .def("GetProcess", LUA_CMEMFN(long, producer, Process, void))
 	              .def("SetCentre", LUA_MEMFN(void, producer, Centre, long))
-	              .def("GetCentre", LUA_CMEMFN(long, producer, Centre, void))
-	          // TableVersion intentionally left out since in RADON it will be only
-	          // a parameter property
-	          ,
+	              .def("GetCentre", LUA_CMEMFN(long, producer, Centre, void)),
 	          class_<logger>("logger")
 	              .def(constructor<>())
 	              .def("Trace", &logger::Trace)
