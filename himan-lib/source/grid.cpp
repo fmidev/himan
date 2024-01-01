@@ -477,7 +477,7 @@ std::unique_ptr<OGRPolygon> regular_grid::Geometry() const
 
 	auto geometry = std::unique_ptr<OGRPolygon>(new OGRPolygon());
 	geometry->addRing(&ring);
-	return std::move(geometry);
+	return geometry;
 }
 
 std::unique_ptr<OGRSpatialReference> regular_grid::SpatialReference() const

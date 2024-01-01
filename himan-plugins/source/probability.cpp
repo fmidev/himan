@@ -279,7 +279,7 @@ std::unique_ptr<ensemble> Mogrify(const ensemble* baseEns, const himan::param& p
 	}
 
 	ens->Param(par);
-	return std::move(ens);
+	return ens;
 }
 
 PROB::partial_param_configuration probability::GetTarget()

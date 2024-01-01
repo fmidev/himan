@@ -694,7 +694,7 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 			}
 
 			gg->NumberOfPointsAlongParallels(longitudes);
-			return std::move(g);
+			return g;
 		}
 
 		case 5:
@@ -1259,7 +1259,7 @@ std::unique_ptr<ensemble> util::CreateEnsembleFromConfiguration(const std::share
 
 	log.Trace(fmt::format("Created ensemble of type: {}", HPEnsembleTypeToString.at(ens->EnsembleType())));
 
-	return std::move(ens);
+	return ens;
 }
 
 std::pair<long, long> util::GetScaledValue(double v)

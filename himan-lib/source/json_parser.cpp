@@ -1211,7 +1211,7 @@ unique_ptr<grid> ParseAreaAndGridFromManualDefinition(const boost::property_tree
 		throw runtime_error(string("Error parsing area: ") + e.what());
 	}
 
-	return std::move(g);
+	return g;
 }
 
 void AreaAndGrid(const boost::property_tree::ptree& pt, const shared_ptr<configuration>& conf)

@@ -220,7 +220,7 @@ std::unique_ptr<OGRSpatialReference> latitude_longitude_grid::SpatialReference()
 {
 	auto sp = std::unique_ptr<OGRSpatialReference>(new OGRSpatialReference());
 	sp->importFromProj4(Proj4String().c_str());
-	return std::move(sp);
+	return sp;
 }
 
 point latitude_longitude_grid::Projected(const point& latlon) const
@@ -457,7 +457,7 @@ std::unique_ptr<OGRSpatialReference> rotated_latitude_longitude_grid::SpatialRef
 {
 	auto sp = std::unique_ptr<OGRSpatialReference>(new OGRSpatialReference());
 	sp->importFromProj4(Proj4String().c_str());
-	return std::move(sp);
+	return sp;
 }
 
 std::vector<point> rotated_latitude_longitude_grid::XY(const regular_grid& target) const
