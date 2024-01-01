@@ -8,6 +8,12 @@
 
 %define distnum %(/usr/lib/rpm/redhat/dist.sh --distnum)
 
+%if %{distnum} == 8
+%define boost boost169
+%else
+%define boost boost
+%endif
+
 %define BINNAME himan-bin
 Summary: himan executable
 Name: %{BINNAME}
@@ -29,13 +35,13 @@ Requires: xerces-c
 Requires: libpqxx >= 7.7.0
 Requires: gdal35-libs
 Requires: jasper-libs
-Requires: boost169-program-options
-Requires: boost169-system
-Requires: boost169-regex
-Requires: boost169-iostreams
-Requires: boost169-thread
+Requires: %{boost}-program-options
+Requires: %{boost}-system
+Requires: %{boost}-regex
+Requires: %{boost}-iostreams
+Requires: %{boost}-thread
 Requires: bzip2-libs
-BuildRequires: boost169-devel
+BuildRequires: %{boost}-devel
 BuildRequires: fmt-devel >= 7.1.0
 BuildRequires: python3-scons
 BuildRequires: redhat-rpm-config

@@ -8,6 +8,12 @@
 
 %define distnum %(/usr/lib/rpm/redhat/dist.sh --distnum)
 
+%if %{distnum} == 8
+%define boost boost169
+%else
+%define boost boost
+%endif
+
 %define LIBNAME himan-lib
 Summary: himan core library
 Name: %{LIBNAME}
@@ -38,7 +44,7 @@ BuildRequires: gdal35-devel
 BuildRequires: libfmidb-devel >= 22.1.10
 BuildRequires: libfmigrib-devel >= 23.1.26
 BuildRequires: zlib-devel
-BuildRequires: boost169-devel
+BuildRequires: %{boost}-devel
 BuildRequires: libs3-devel
 BuildRequires: fmt-devel >= 7.1.0
 BuildRequires: eccodes
@@ -46,8 +52,8 @@ BuildRequires: make
 Requires: geos311
 Requires: gdal35-libs
 Requires: eccodes
-Requires: boost169-iostreams
-Requires: boost169-filesystem
+Requires: %{boost}-iostreams
+Requires: %{boost}-filesystem
 Requires: libs3 >= 4.1-0.6.20190408git287e4be.1.el7.fmi
 Requires: himan-plugins >= 22.6.16
 

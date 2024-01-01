@@ -8,6 +8,12 @@
 
 %define distnum %(/usr/lib/rpm/redhat/dist.sh --distnum)
 
+%if %{distnum} == 8
+%define boost boost169
+%else
+%define boost boost
+%endif
+
 %define LIBNAME himan-plugins
 Summary: himan-plugins library
 Name: %{LIBNAME}
@@ -29,7 +35,7 @@ Requires: libfmidb >= 23.10.16
 Requires: smartmet-library-newbase >= 22.3.22
 Requires: smartmet-library-gis
 Requires: smartmet-library-macgyver
-Requires: boost169-iostreams
+Requires: %{boost}-iostreams
 Requires: libs3 >= 4.1
 Requires: jasper-libs
 Requires: eccodes
@@ -55,7 +61,7 @@ BuildRequires: libfmidb-devel >= 22.1.10
 BuildRequires: smartmet-library-newbase-devel >= 21.12.7
 BuildRequires: smartmet-library-gis-devel
 BuildRequires: libluabind >= 0.9.3-3
-BuildRequires: boost169-devel
+BuildRequires: %{boost}-devel
 BuildRequires: fmt-devel >= 7.1.0
 BuildRequires: lua-devel
 BuildRequires: zlib-devel

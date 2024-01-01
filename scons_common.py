@@ -2,15 +2,15 @@
 # SConscript for himan-lib
 
 import os
-import platform
+import distro
 
 # Should also get compiler version here but it seems to be rather
 # complicated with python subprocess -module
 
 env = Environment(ENV = {'PATH' : os.environ['PATH']})
 
-env['OS_NAME'] = platform.linux_distribution()[0]
-env['OS_VERSION'] = float('.'.join(platform.linux_distribution()[1].split('.')[:2]))
+env['OS_NAME'] = distro.name()
+env['OS_VERSION'] = float(distro.version())
 env['IS_RHEL'] = (env['OS_NAME'] == "Red Hat Enterprise Linux" or env['OS_NAME'] == "CentOS Linux" or env['OS_NAME'] == "Rocky Linux")
 env['IS_SLES'] = (env['OS_NAME'] == "SUSE Linux Enterprise Server")
 
@@ -116,7 +116,9 @@ try:
 except:
 	pass
 
-librarypaths.append('/usr/lib64/boost169')
+if env['OS_VERSION'] < 9:
+    librarypaths.append('/usr/lib64/boost169')
+
 librarypaths.append('/usr/gdal35/lib')
 env.Append(LIBPATH = librarypaths)
 
@@ -180,7 +182,9 @@ env.Append(CCFLAGS = '-fPIC')
 env.Append(CCFLAGS = cflags_normal)
 env.Append(CCFLAGS = cflags_extra)
 
-env.AppendUnique(CCFLAGS=('-isystem', '/usr/include/boost169'))
+if env['OS_VERSION'] < 9:
+    env.AppendUnique(CCFLAGS=('-isystem', '/usr/include/boost169'))
+
 env.AppendUnique(CCFLAGS=('-isystem', '/usr/gdal35/include'))
 env.AppendUnique(CCFLAGS=('-isystem', '/usr/include/eigen3'))
 
@@ -213,7 +217,10 @@ env.Append(NVCCFLAGS = ['-gencode=arch=compute_70,code=sm_70'])
 env.Append(NVCCFLAGS = ['-gencode=arch=compute_80,code=sm_80'])
 
 env.AppendUnique(NVCCFLAGS = ['-std=' + cpp_standard])
-env.AppendUnique(NVCCFLAGS = ('-isystem', '/usr/include/boost169'))
+
+if env['OS_VERSION'] < 9:
+    env.AppendUnique(NVCCFLAGS = ('-isystem', '/usr/include/boost169'))
+
 env.AppendUnique(NVCCFLAGS = ('-isystem', '/usr/gdal35/include'))
 
 for flag in cflags_normal:
@@ -221,7 +228,10 @@ for flag in cflags_normal:
 		continue
 	env.Append(NVCCFLAGS = ['-Xcompiler', flag])
 
-
+# thrust and cuda combined producer warnings like:
+# warning #20012-D: __device__ annotation is ignored on a function("vector") that is explicitly defaulted on its first declaration
+# disable these warnings
+env.Append(NVCCFLAGS = ['--diag-suppress', 20012])
 env.Append(NVCCPATH = [env['WORKSPACE'] + '/himan-lib/include']) # cuda-helper
 env.Append(NVCCPATH = [env['WORKSPACE'] + '/himan-plugins/include'])
 env.Append(NVCCPATH = ['/usr/include/smartmet/newbase'])

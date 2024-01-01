@@ -570,7 +570,7 @@ void compiled_plugin_base::SetParams(std::vector<param>& params, const vector<le
 		allparams.push_back(itsParamIterator.At());
 	}
 
-	for (const auto p : params)
+	for (const auto& p : params)
 	{
 		if (find(allparams.begin(), allparams.end(), p) == allparams.end())
 		{

@@ -905,7 +905,7 @@ void fetcher::AuxiliaryFilesRotateAndInterpolate(const search_options& opts, vec
 
 			shared_ptr<info<double>> u, v, other;
 
-			for (const auto temp : infos)
+			for (const auto& temp : infos)
 			{
 				if (temp->Param().Name() == otherName && temp->Level() == component->Level() &&
 				    temp->Time() == component->Time() && temp->ForecastType() == component->ForecastType())
