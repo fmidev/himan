@@ -49,6 +49,7 @@ BuildRequires: libs3-devel
 BuildRequires: fmt-devel >= 7.1.0
 BuildRequires: eccodes
 BuildRequires: make
+BuildRequires: python3-distro
 Requires: geos311
 Requires: gdal35-libs
 Requires: eccodes

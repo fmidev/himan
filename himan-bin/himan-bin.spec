@@ -49,6 +49,7 @@ BuildRequires: gcc-c++ >= 8.2.1
 BuildRequires: cuda-nvcc-12-2
 BuildRequires: cuda-cudart-devel-12-2
 BuildRequires: make
+BuildRequires: python3-distro
 Provides: himan
 
 AutoReqProv:	no

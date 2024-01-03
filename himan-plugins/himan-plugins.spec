@@ -66,7 +66,7 @@ BuildRequires: fmt-devel >= 7.1.0
 BuildRequires: lua-devel
 BuildRequires: zlib-devel
 BuildRequires: bzip2-devel
-
+BuildRequires: python3-distro
 AutoReqProv:	no
 
 %description
