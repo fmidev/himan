@@ -764,7 +764,7 @@ void ParseCommandLine(shared_ptr<configuration>& conf, int argc, char** argv)
 	if (opt.count("version"))
 	{
 		cout << "himan-bin version " << __DATE__ << " " << __TIME__ << endl;
-		exit(1);
+		exit(0);
 	}
 
 #ifndef HAVE_CUDA
@@ -776,7 +776,7 @@ void ParseCommandLine(shared_ptr<configuration>& conf, int argc, char** argv)
 	if (opt.count("cuda-properties"))
 	{
 		CudaCapabilities();
-		exit(1);
+		exit(0);
 	}
 
 	if (opt.count("no-cuda-packing"))
@@ -869,7 +869,7 @@ void ParseCommandLine(shared_ptr<configuration>& conf, int argc, char** argv)
 		cout << endl << "Examples:" << endl;
 		cout << "  himan -f etc/tpot.json" << endl;
 		cout << "  himan -f etc/vvmms.json -a file.grib -t querydata" << endl << endl;
-		exit(1);
+		exit(0);
 	}
 
 	if (opt.count("list-plugins"))
@@ -900,7 +900,7 @@ void ParseCommandLine(shared_ptr<configuration>& conf, int argc, char** argv)
 			}
 		}
 
-		exit(1);
+		exit(0);
 	}
 
 	if (opt.count("no-database"))
