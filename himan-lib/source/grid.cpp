@@ -229,6 +229,34 @@ std::string regular_grid::Proj4String() const
 	return proj;
 }
 
+std::string regular_grid::WKT(const std::map<std::string, std::string>& opts) const
+{
+	if (itsSpatialReference == nullptr)
+	{
+		throw std::runtime_error("Spatial reference instance not initialized");
+	}
+
+	char** projopts = nullptr;
+
+	// https://gdal.org/doxygen/classOGRSpatialReference.html#ae986da88649783b5c194de55c46890a5
+	for (const auto& opt : opts)
+	{
+		projopts = CSLAddNameValue(projopts, opt.first.c_str(), opt.second.c_str());
+	}
+
+	char* wkt;
+	if (itsSpatialReference->exportToWkt(&wkt) != OGRERR_NONE)
+	{
+		throw std::runtime_error("Failed to get wkt");
+	}
+
+	std::string w(wkt);
+	CPLFree(wkt);
+	CSLDestroy(projopts);
+
+	return w;
+}
+
 point regular_grid::Projected(const point& latlon) const
 {
 	double projX = latlon.X(), projY = latlon.Y();

@@ -255,6 +255,7 @@ class regular_grid : public grid
 	virtual double Dj() const;
 
 	virtual std::string Proj4String() const;
+	virtual std::string WKT(const std::map<std::string, std::string>& opts = {}) const;
 	virtual std::unique_ptr<OGRPolygon> Geometry() const;
 	virtual earth_shape<double> EarthShape() const override;
 
