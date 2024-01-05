@@ -1892,6 +1892,8 @@ himan::earth_shape<double> ReadEarthShape(const NFmiGribMessage& msg)
 	himan::logger logr("grib");
 
 	double a = himan::MissingDouble(), b = himan::MissingDouble();
+	std::string name;
+
 	if (msg.Edition() == 1)
 	{
 		const long flag = msg.ResolutionAndComponentFlags();
@@ -1952,11 +1954,13 @@ himan::earth_shape<double> ReadEarthShape(const NFmiGribMessage& msg)
 				// axis = 6,356,752.314 m, f = 1/298.257222101)
 				a = 6378137;
 				b = 6356752.314;
+				name = "GRS80";
 				break;
 			case 5:
 				// Earth assumed represented by WGS84 (as used by ICAO since 1998)
 				a = 6378137;
 				b = 6356752.314245;
+				name = "WGS84";
 				break;
 			case 6:
 				// Earth assumed spherical with radius of 6,371,229.0 m
@@ -2006,7 +2010,7 @@ himan::earth_shape<double> ReadEarthShape(const NFmiGribMessage& msg)
 		a = b = 6367470.;
 	}
 
-	return himan::earth_shape<double>(a, b);
+	return himan::earth_shape<double>(a, b, name);
 }
 
 unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message, const producer& prod)
