@@ -3004,16 +3004,7 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 	newInfo->template Iterator<level>().Add({l});
 	newInfo->template Iterator<forecast_type>().Add({ty});
 
-	unique_ptr<grid> newGrid;
-
-	if (validate)
-	{
-		newGrid = ReadAreaAndGrid(message, prod);
-	}
-	else
-	{
-		newGrid = unique_ptr<grid>(options.configuration->BaseGrid()->Clone());
-	}
+	unique_ptr<grid> newGrid = ReadAreaAndGrid(message, prod);
 
 	ASSERT(newGrid);
 
