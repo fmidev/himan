@@ -317,3 +317,117 @@ jobs:
         password: ${{ secrets.QUAY_TOKEN }}
     - name: Print image url
       run: echo "Image pushed to ${{ steps.push-to-quay.outputs.registry-paths }}"
+
+  build-rpms-for-rhel9:
+    name: build-rpms-for-rhel9
+    runs-on: ubuntu-latest
+    container:
+      image: rockylinux/rockylinux:9
+      volumes:
+      - ${{ github.workspace }}:/github/workspace
+    needs:
+    - run-tests
+    outputs:
+      trigger: ${{ steps.set-trigger.outputs.trigger }}
+    steps:
+    - name: Install build tools
+      shell: bash
+      run: |
+        dnf -y install rpm-build rpmdevtools git yum-utils dnf-plugins-core findutils
+        git config --global --add safe.directory '*'
+    - name: Checkout code
+      uses: actions/checkout@master
+    - name: List workspace
+      run: ls -lah
+    - name: Setup repositories
+      shell: bash
+      run: |
+        dnf -y install epel-release https://download.fmi.fi/smartmet-open/rhel/9/x86_64/smartmet-open-release-latest-9.noarch.rpm
+        dnf config-manager --set-enabled crb
+        dnf -y module disable postgresql
+        dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel9/x86_64/cuda-rhel9.repo
+        dnf config-manager --setopt='epel.exclude=eccodes*' --setopt='epel.exclude=proj' --setopt='smartmet-open-ext.exclude=proj82' --save
+    - name: Setup rpmtree
+      shell: bash
+      run: |
+        rpmdev-setuptree
+    - name: Build himan-lib rpm
+      id: build-himan-lib
+      if: needs.check-if-himan-lib-changed.outputs.changed == 'true'
+      shell: bash
+      run: |
+        cd himan-lib
+        yum-builddep -y himan-lib.spec
+        make rpm
+    - name: Build himan-bin rpm
+      id: build-himan-bin
+      if: needs.check-if-himan-bin-changed.outputs.changed == 'true'
+      shell: bash
+      run: |
+        cd himan-bin
+        yum-builddep -y himan-bin.spec
+        make rpm
+    - name: Build himan-plugins rpm
+      id: build-himan-plugins
+      if: needs.check-if-himan-plugins-changed.outputs.changed == 'true'
+      shell: bash
+      run: |
+        cd himan-plugins
+        yum-builddep -y himan-plugins.spec
+        make rpm
+    - name: Build himan-scripts rpm
+      id: build-himan-scripts
+      if: needs.check-if-himan-scripts-changed.outputs.changed == 'true'
+      shell: bash
+      run: |
+        cd himan-scripts
+        yum-builddep -y himan-scripts.spec
+        make rpm
+    - name: Set output
+      id: set-output
+      if: |
+        always() && (steps.build-himan-bin.conclusion == 'success' || steps.build-himan-lib.conclusion == 'success' || steps.build-himan-plugins.conclusion == 'success' || steps.build-himan-scripts.conclusion == 'success')
+      shell: bash
+      run: |
+        mkdir -p /github/workspace/rpmbuild/SRPMS  /github/workspace/rpmbuild/RPMS
+        find /github/home/rpmbuild/SRPMS/ -type f -name "*.src.rpm" -exec cp {} /github/workspace/rpmbuild/SRPMS \;
+        find /github/home/rpmbuild/RPMS/ -type f -name "*.rpm" -not -name "*debug*" -exec cp {} /github/workspace/rpmbuild/RPMS \;
+        ls -la /github/workspace/rpmbuild/SRPMS /github/workspace/rpmbuild/RPMS
+        echo "srpm_dir_path=rpmbuild/SRPMS/" >> "$GITHUB_OUTPUT"
+        echo "rpm_dir_path=rpmbuild/RPMS/" >> "$GITHUB_OUTPUT"
+    - name: Save RPM as an artifact
+      id: save-rpm
+      if: always() && steps.set-output.conclusion == 'success'
+      uses: actions/upload-artifact@v2
+      with:
+        name: rpm-files-rhel9
+        path: ${{ steps.set-output.outputs.rpm_dir_path }}
+        retention-days: 1
+    - name: Set trigger
+      id: set-trigger
+      if: always() && steps.save-rpm.conclusion == 'success'
+      shell: bash
+      run: |
+        echo "trigger=yes" >> "$GITHUB_OUTPUT"
+
+  sync-to-release-repo-rhel9:
+    name: update-rpm-release-repository-rhel9
+    needs: build-rpms-for-rhel9
+    if: always() && needs.build-rpms-for-rhel9.outputs.trigger == 'yes'
+    runs-on: ubuntu-latest
+    steps:
+    - name: Retrieve saved rpms
+      uses: actions/download-artifact@v2
+      with:
+        name: rpm-files-rhel9
+    - name: List rpms
+      run: find ${{ github.workspace }}
+      shell: bash
+    - name: Copy to repo
+      shell: bash
+      env:
+        USER: ${{ secrets.RPM_API_USER }}
+        PASS: ${{ secrets.RPM_API_PASS }}
+        HOST: ${{ secrets.RPM_API_HOST_RHEL9 }}
+      run: |
+           find ${{ github.workspace }} -type f -name "*.rpm" -not -name "*debug*" -exec curl --show-error --fail -u $USER:$PASS -F file=@{} $HOST/api/upload \;
