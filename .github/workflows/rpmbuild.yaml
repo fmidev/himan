@@ -327,6 +327,10 @@ jobs:
       - ${{ github.workspace }}:/github/workspace
     needs:
     - run-tests
+    - check-if-himan-bin-changed
+    - check-if-himan-lib-changed
+    - check-if-himan-scripts-changed
+    - check-if-himan-plugins-changed
     outputs:
       trigger: ${{ steps.set-trigger.outputs.trigger }}
     steps:
