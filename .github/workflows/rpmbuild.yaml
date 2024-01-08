@@ -1,0 +1,319 @@
+on: # yamllint disable-line rule:truthy
+  push:
+    branches:
+    - master
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+name: Create RPM Release
+
+jobs:
+  check-if-himan-bin-changed:
+    name: check-if-himan-bin-changed
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: dorny/paths-filter@v2
+      id: himan-bin-changed
+      with:
+        filters: |
+          src:
+          - 'himan-bin/**'
+    outputs:
+      changed: ${{ steps.himan-bin-changed.outputs.src }}
+
+  check-if-himan-lib-changed:
+    name: check-if-himan-lib-changed
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: dorny/paths-filter@v2
+      id: himan-lib-changed
+      with:
+        filters: |
+          src:
+          - 'himan-lib/**'
+    outputs:
+      changed: ${{ steps.himan-lib-changed.outputs.src }}
+
+  check-if-himan-plugins-changed:
+    name: check-if-himan-plugins-changed
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: dorny/paths-filter@v2
+      id: himan-plugins-changed
+      with:
+        filters: |
+          src:
+          - 'himan-plugins/**'
+    outputs:
+      changed: ${{ steps.himan-plugins-changed.outputs.src }}
+
+  check-if-himan-scripts-changed:
+    name: check-if-himan-scripts-changed
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: dorny/paths-filter@v2
+      id: himan-scripts-changed
+      with:
+        filters: |
+          src:
+          - 'himan-scripts/**'
+    outputs:
+      changed: ${{ steps.himan-scripts-changed.outputs.src }}
+
+  build-rpms:
+    name: build-rpms
+    runs-on: ubuntu-latest
+    container:
+      image: rockylinux/rockylinux:8
+      volumes:
+      - ${{ github.workspace }}:/github/workspace
+    needs:
+    - check-if-himan-bin-changed
+    - check-if-himan-lib-changed
+    - check-if-himan-scripts-changed
+    - check-if-himan-plugins-changed
+    outputs:
+      trigger: ${{ steps.set-trigger.outputs.trigger }}
+    steps:
+    - name: Install build tools
+      shell: bash
+      run: |
+        dnf -y install rpm-build rpmdevtools git yum-utils dnf-plugins-core findutils
+        git config --global --add safe.directory '*'
+    - name: Checkout code
+      uses: actions/checkout@master
+    - name: List workspace
+      run: ls -lah
+    - name: Setup repositories
+      shell: bash
+      run: |
+        dnf -y install epel-release https://download.fmi.fi/smartmet-open/rhel/8/x86_64/smartmet-open-release-latest-8.noarch.rpm
+        dnf config-manager --set-enabled powertools
+        dnf -y module disable postgresql
+        dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo
+        dnf config-manager --setopt='epel.exclude=eccodes*' --save
+    - name: Setup rpmtree
+      shell: bash
+      run: |
+        rpmdev-setuptree
+    - name: Build himan-lib rpm
+      id: build-himan-lib
+      if: needs.check-if-himan-lib-changed.outputs.changed == 'true'
+      shell: bash
+      run: |
+        cd himan-lib
+        yum-builddep -y himan-lib.spec
+        make rpm
+    - name: Build himan-bin rpm
+      id: build-himan-bin
+      if: needs.check-if-himan-bin-changed.outputs.changed == 'true'
+      shell: bash
+      run: |
+        cd himan-bin
+        yum-builddep -y himan-bin.spec
+        make rpm
+    - name: Build himan-plugins rpm
+      id: build-himan-plugins
+      if: needs.check-if-himan-plugins-changed.outputs.changed == 'true'
+      shell: bash
+      run: |
+        cd himan-plugins
+        yum-builddep -y himan-plugins.spec
+        make rpm
+    - name: Build himan-scripts rpm
+      id: build-himan-scripts
+      if: needs.check-if-himan-scripts-changed.outputs.changed == 'true'
+      shell: bash
+      run: |
+        cd himan-scripts
+        yum-builddep -y himan-scripts.spec
+        make rpm
+    - name: Set output
+      id: set-output
+      if: |
+        always() && (steps.build-himan-bin.conclusion == 'success' || steps.build-himan-lib.conclusion == 'success' || steps.build-himan-plugins.conclusion == 'success' || steps.build-himan-scripts.conclusion == 'success')
+      shell: bash
+      run: |
+        mkdir -p /github/workspace/rpmbuild/SRPMS  /github/workspace/rpmbuild/RPMS
+        find /github/home/rpmbuild/SRPMS/ -type f -name "*.src.rpm" -exec cp {} /github/workspace/rpmbuild/SRPMS \;
+        find /github/home/rpmbuild/RPMS/ -type f -name "*.rpm" -not -name "*debug*" -exec cp {} /github/workspace/rpmbuild/RPMS \;
+        ls -la /github/workspace/rpmbuild/SRPMS /github/workspace/rpmbuild/RPMS
+        echo "srpm_dir_path=rpmbuild/SRPMS/" >> "$GITHUB_OUTPUT"
+        echo "rpm_dir_path=rpmbuild/RPMS/" >> "$GITHUB_OUTPUT"
+    - name: Save RPM as an artifact
+      id: save-rpm
+      if: always() && steps.set-output.conclusion == 'success'
+      uses: actions/upload-artifact@v2
+      with:
+        name: rpm-files
+        path: ${{ steps.set-output.outputs.rpm_dir_path }}
+        retention-days: 1
+    - name: Set trigger
+      id: set-trigger
+      if: always() && steps.save-rpm.conclusion == 'success'
+      shell: bash
+      run: |
+        echo "trigger=yes" >> "$GITHUB_OUTPUT"
+
+  sync-to-beta-repo:
+    name: sync-to-beta-repo
+    needs: build-rpms
+    runs-on: ubuntu-latest
+    if: always() && needs.build-rpms.outputs.trigger == 'yes'
+    steps:
+    - name: Retrieve saved rpms
+      uses: actions/download-artifact@v2
+      with:
+        name: rpm-files
+    - name: List rpms
+      run: find ${{ github.workspace }}
+      shell: bash
+    - name: Copy to repo
+      shell: bash
+      env:
+        USER: ${{ secrets.RPM_API_USER }}
+        PASS: ${{ secrets.RPM_API_PASS }}
+        HOST: ${{ secrets.RPM_API_HOST_BETA_RHEL8 }}
+      run: |
+           find ${{ github.workspace }} -type f -name "*.rpm" -not -name "*debug*" -exec curl --show-error --fail -u $USER:$PASS -F file=@{} $HOST/api/upload \;
+
+  run-tests:
+    name: run-tests
+    runs-on: ubuntu-latest
+    needs: sync-to-beta-repo
+    steps:
+    - name: Install launch dependencies
+      shell: bash
+      run: |
+        sudo apt -y update && sudo apt -y install python3 python3-boto3 python3-requests
+    - name: Start tests
+      id: start-tests
+      shell: python
+      run: |
+        import boto3
+        import datetime
+        import os
+        batch = boto3.client('batch',
+                      aws_access_key_id="${{ secrets.AWS_ACCESS_KEY_ID }}",
+                      aws_secret_access_key="${{ secrets.AWS_SECRET_ACCESS_KEY }}",
+                      region_name="eu-west-1")
+        response = batch.submit_job(
+          jobName='himantests-testgh-{}'.format(datetime.datetime.now().strftime("%Y%m%dT%H%M%S")),
+          jobQueue='himantests-test-queue',
+          jobDefinition='himantests-testgh-job'
+        )
+        print(response)
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
+            print(f"job-id={response['jobId']}", file=fh)
+
+    - name: Wait until finished
+      id: wait-until-finished
+      shell: python
+      run: |
+        import boto3
+        import time
+        import datetime
+        import os
+        batch = boto3.client('batch',
+                      aws_access_key_id="${{ secrets.AWS_ACCESS_KEY_ID }}",
+                      aws_secret_access_key="${{ secrets.AWS_SECRET_ACCESS_KEY }}",
+                      region_name="eu-west-1")
+        jobid = "${{ steps.start-tests.outputs.job-id }}"
+        status = batch.describe_jobs(jobs=[jobid])['jobs'][0]
+        print(status)
+
+        wait = 30
+        while status['status'] not in ['FAILED', 'SUCCEEDED']:
+          time.sleep(wait)
+          status = batch.describe_jobs(jobs=[jobid])['jobs'][0]
+          curtime = datetime.datetime.now()
+
+          print(f"{curtime}: job status: {status['status']}")
+
+        print(f"Finished with status: {status['status']}")
+
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
+          print(f"status={status['status']}", file=fh)
+          print(f"logstream-name={status['attempts'][0]['container']['logStreamName']}", file=fh)
+
+    - name: Retrieve logs
+      if: always()
+      id: retrieve-logs
+      shell: python
+      run: |
+        import boto3
+        import datetime
+        logstream = "${{ steps.wait-until-finished.outputs.logstream-name }}"
+        print(f"logs at {logstream}")
+
+        logs = boto3.client('logs',
+                      aws_access_key_id="${{ secrets.AWS_ACCESS_KEY_ID }}",
+                      aws_secret_access_key="${{ secrets.AWS_SECRET_ACCESS_KEY }}",
+                      region_name="eu-west-1")
+        response = logs.get_log_events(
+          logGroupName="/aws/batch/job",
+          logStreamName=logstream,
+          startFromHead=True
+        )
+
+        for line in response['events']:
+          time = datetime.datetime.fromtimestamp(int(line['timestamp'])/1000).strftime("%Y-%m-%d %H:%M:%S.%f")
+          msg = line['message']
+          print(f"{time}: {msg}")
+
+  sync-to-release-repo:
+    name: update-rpm-release-repository
+    needs: run-tests
+    runs-on: ubuntu-latest
+    steps:
+    - name: Retrieve saved rpms
+      uses: actions/download-artifact@v2
+      with:
+        name: rpm-files
+    - name: List rpms
+      run: find ${{ github.workspace }}
+      shell: bash
+    - name: Copy to repo
+      shell: bash
+      env:
+        USER: ${{ secrets.RPM_API_USER }}
+        PASS: ${{ secrets.RPM_API_PASS }}
+        HOST: ${{ secrets.RPM_API_HOST }}
+      run: |
+           find ${{ github.workspace }} -type f -name "*.rpm" -not -name "*debug*" -exec curl --show-error --fail -u $USER:$PASS -F file=@{} $HOST/api/upload \;
+
+  build-image:
+    name: build-image-and-push-to-quay.io
+    runs-on: ubuntu-latest
+    needs: sync-to-release-repo
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - name: Build image
+      id: build-image
+      uses: redhat-actions/buildah-build@v2
+      with:
+        image: himan
+        tags: latest
+        containerfiles: Containerfile
+    - name: Test image
+      uses: fmidev/podman-run-action@v1
+      with:
+        image: ${{ steps.build-image.outputs.image-with-tag }}
+        run: himan -d 5 -l
+    - name: Push to quay.io
+      id: push-to-quay
+      uses: redhat-actions/push-to-registry@v2
+      with:
+        image: ${{ steps.build-image.outputs.image }}
+        tags: ${{ steps.build-image.outputs.tags }}
+        registry: quay.io/fmi
+        username: ${{ secrets.QUAY_USER }}
+        password: ${{ secrets.QUAY_TOKEN }}
+    - name: Print image url
+      run: echo "Image pushed to ${{ steps.push-to-quay.outputs.registry-paths }}"
