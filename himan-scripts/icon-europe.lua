@@ -14,7 +14,7 @@ function LSPAndCP()
   local rlsdata = luatool:Fetch(current_time, current_level, param("RAINL-KGM2"), current_forecast_type)
 
   if not sconvdata or not slsdata or not rconvdata or not rlsdata then
-    print("Some data not found, aborting")
+    logger:Error("Some data not found, aborting")
     return
   end
 
@@ -43,7 +43,7 @@ function SnowFall()
   local lsdata = luatool:Fetch(current_time, current_level, param("SNL-KGM2"), current_forecast_type)
 
   if not convdata or not lsdata then
-    print("Some data not found, aborting")
+    logger:Error("Some data not found, aborting")
     return
   end
 
@@ -68,7 +68,7 @@ function RadGlo()
   local dirdata = luatool:Fetch(current_time, current_level, param("RADSWDIR-WM2"), current_forecast_type)
 
   if not difdata or not dirdata then
-    print("Some data not found, aborting")
+    logger:Error("Some data not found, aborting")
     return
   end
 
@@ -93,7 +93,7 @@ function H0CFix()
   local topodata = luatool:Fetch(srctime, current_level, param("HL-M"), current_forecast_type)
 
   if not h0cdata or not topodata then
-    print("Some data not found, aborting")
+    logger:Error("Some data not found, aborting")
     return
   end
 
@@ -116,7 +116,7 @@ function LCLFix()
   local topodata = luatool:Fetch(srctime, current_level, param("HL-M"), current_forecast_type)
 
   if not lcldata or not topodata then
-    print("Some data not found, aborting")
+    logger:Error("Some data not found, aborting")
     return
   end
 
@@ -157,7 +157,7 @@ function TSnowFix()
   local snowhdata = luatool:Fetch(current_time, current_level, param("SD-M"), current_forecast_type)
  
   if not snowtdata or not snowhdata then
-    print("Some data not found, aborting")
+    logger:Error("Some data not found, aborting")
     return
   end
 
