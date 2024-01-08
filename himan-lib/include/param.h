@@ -19,6 +19,7 @@
 #include "himan_common.h"
 #include "processing_type.h"
 #include "serialization.h"
+#include <map>
 
 namespace himan
 {
