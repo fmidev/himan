@@ -22,13 +22,19 @@ enum HPEnsembleType
 	kLaggedEnsemble
 };
 
-const boost::unordered_map<HPEnsembleType, std::string> HPEnsembleTypeToString =
-    ba::map_list_of(kUnknownEnsembleType, "unknown")(kPerturbedEnsemble, "perturbed ensemble")(
-        kTimeEnsemble, "time ensemble")(kLevelEnsemble, "level ensemble")(kLaggedEnsemble, "lagged ensemble");
+const std::unordered_map<HPEnsembleType, std::string> HPEnsembleTypeToString = {
+    {kUnknownEnsembleType, "unknown"},
+    {kPerturbedEnsemble, "perturbed ensemble"},
+    {kTimeEnsemble, "time ensemble"},
+    {kLevelEnsemble, "level ensemble"},
+    {kLaggedEnsemble, "lagged ensemble"}};
 
-const boost::unordered_map<std::string, HPEnsembleType> HPStringToEnsembleType =
-    ba::map_list_of("unknown", kUnknownEnsembleType)("perturbed ensemble", kPerturbedEnsemble)(
-        "time ensemble", kTimeEnsemble)("level ensemble", kLevelEnsemble)("lagged ensemble", kLaggedEnsemble);
+const std::unordered_map<std::string, HPEnsembleType> HPStringToEnsembleType = {
+    {"unknown", kUnknownEnsembleType},
+    {"perturbed ensemble", kPerturbedEnsemble},
+    {"time ensemble", kTimeEnsemble},
+    {"level ensemble", kLevelEnsemble},
+    {"lagged ensemble", kLaggedEnsemble}};
 
 // ensemble is a thin layer on top of the usual himan data utilities.
 // It is used to make working with ensemble forecasts a bit nicer and

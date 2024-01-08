@@ -18,6 +18,7 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <map>
 #include <ogr_spatialref.h>
+#include <set>
 #include <stdexcept>
 #include <utility>
 

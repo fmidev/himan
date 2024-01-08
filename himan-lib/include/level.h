@@ -10,6 +10,7 @@
 #include "himan_common.h"
 #include "serialization.h"
 #include <fmt/format.h>
+#include <vector>
 
 namespace himan
 {
@@ -39,19 +40,49 @@ enum HPLevelType
 	kMaximumThetaE = 246  // maximum theta e level, like grib2
 };
 
-const boost::unordered_map<HPLevelType, std::string> HPLevelTypeToString = ba::map_list_of(kUnknownLevel, "unknown")(
-    kGround, "ground")(kPressure, "pressure")(kPressureDelta, "pressure_delta")(kMeanSea, "meansea")(
-    kAltitude, "altitude")(kHeight, "height")(kHeightLayer, "height_layer")(kHybrid, "hybrid")(
-    kGroundDepth, "ground_depth")(kGeneralizedVerticalLayer, "general")(kDepth, "depth")(kTopOfAtmosphere, "top")(
-    kIsothermal, "isothermal")(kEntireAtmosphere, "entatm")(kEntireOcean, "entocean")(kLake, "lake")(
-    kMaximumThetaE, "maxthetae")(kMaximumWind, "maxwind")(kMixingLayer, "mixing_layer")(kTropopause, "tropopause");
+const std::unordered_map<HPLevelType, std::string> HPLevelTypeToString = {{kUnknownLevel, "unknown"},
+                                                                          {kGround, "ground"},
+                                                                          {kPressure, "pressure"},
+                                                                          {kPressureDelta, "pressure_delta"},
+                                                                          {kMeanSea, "meansea"},
+                                                                          {kAltitude, "altitude"},
+                                                                          {kHeight, "height"},
+                                                                          {kHeightLayer, "height_layer"},
+                                                                          {kHybrid, "hybrid"},
+                                                                          {kGroundDepth, "ground_depth"},
+                                                                          {kGeneralizedVerticalLayer, "general"},
+                                                                          {kDepth, "depth"},
+                                                                          {kTopOfAtmosphere, "top"},
+                                                                          {kIsothermal, "isothermal"},
+                                                                          {kEntireAtmosphere, "entatm"},
+                                                                          {kEntireOcean, "entocean"},
+                                                                          {kLake, "lake"},
+                                                                          {kMaximumThetaE, "maxthetae"},
+                                                                          {kMaximumWind, "maxwind"},
+                                                                          {kMixingLayer, "mixing_layer"},
+                                                                          {kTropopause, "tropopause"}};
 
-const boost::unordered_map<std::string, HPLevelType> HPStringToLevelType = ba::map_list_of("unknown", kUnknownLevel)(
-    "ground", kGround)("pressure", kPressure)("pressure_delta", kPressureDelta)("meansea", kMeanSea)(
-    "altitude", kAltitude)("height", kHeight)("height_layer", kHeightLayer)("hybrid", kHybrid)(
-    "ground_depth", kGroundDepth)("general", kGeneralizedVerticalLayer)("depth", kDepth)("top", kTopOfAtmosphere)(
-    "isothermal", kIsothermal)("entatm", kEntireAtmosphere)("entocean", kEntireOcean)("lake", kLake)(
-    "maxthetae", kMaximumThetaE)("maxwind", kMaximumWind)("mixing_layer", kMixingLayer)("tropopause", kTropopause);
+const std::unordered_map<std::string, HPLevelType> HPStringToLevelType = {{"unknown", kUnknownLevel},
+                                                                          {"ground", kGround},
+                                                                          {"pressure", kPressure},
+                                                                          {"pressure_delta", kPressureDelta},
+                                                                          {"meansea", kMeanSea},
+                                                                          {"altitude", kAltitude},
+                                                                          {"height", kHeight},
+                                                                          {"height_layer", kHeightLayer},
+                                                                          {"hybrid", kHybrid},
+                                                                          {"ground_depth", kGroundDepth},
+                                                                          {"general", kGeneralizedVerticalLayer},
+                                                                          {"depth", kDepth},
+                                                                          {"top", kTopOfAtmosphere},
+                                                                          {"isothermal", kIsothermal},
+                                                                          {"entatm", kEntireAtmosphere},
+                                                                          {"entocean", kEntireOcean},
+                                                                          {"lake", kLake},
+                                                                          {"maxthetae", kMaximumThetaE},
+                                                                          {"maxwind", kMaximumWind},
+                                                                          {"mixing_layer", kMixingLayer},
+                                                                          {"tropopause", kTropopause}};
 
 class level
 {

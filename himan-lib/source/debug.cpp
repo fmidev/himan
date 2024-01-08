@@ -1,14 +1,15 @@
 #include "debug.h"
 #include "himan_common.h"
-
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <cxxabi.h>
 #include <dlfcn.h>
 #include <execinfo.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <sys/ptrace.h>
+#include <unistd.h>
 namespace himan
 {
 static bool DebuggerAttached()

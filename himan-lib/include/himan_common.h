@@ -26,14 +26,11 @@
 
 #include "cuda_helper.h"
 #include "debug.h"
-#include <boost/assign/list_of.hpp>
-#include <boost/unordered_map.hpp>
 #include <math.h>
 #include <memory>
 #include <ostream>
 #include <string>
-
-namespace ba = boost::assign;
+#include <unordered_map>
 
 // clang-format off
 
@@ -143,18 +140,19 @@ enum HPFileType
 	kNetCDFv4
 };
 
-const boost::unordered_map<HPFileType, std::string> HPFileTypeToString =
-	ba::map_list_of
-	(kUnknownFile, "unknown")
-	(kGRIB1, "grib edition 1")
-	(kGRIB2, "grib edition 2")
-	(kGRIB, "grib edition 1 or 2")
-	(kGRIBIndex, "grib index file")
-	(kQueryData, "QueryData")
-	(kNetCDF, "NetCDF")
-	(kCSV, "CSV")
-	(kGeoTIFF, "GeoTIFF")
-	(kNetCDFv4, "NetCDFv4");
+const std::unordered_map<HPFileType, std::string> HPFileTypeToString =
+{
+	{kUnknownFile, "unknown"},
+	{kGRIB1, "grib edition 1"},
+	{kGRIB2, "grib edition 2"},
+	{kGRIB, "grib edition 1 or 2"},
+	{kGRIBIndex, "grib index file"},
+	{kQueryData, "QueryData"},
+	{kNetCDF, "NetCDF"},
+	{kCSV, "CSV"},
+	{kGeoTIFF, "GeoTIFF"},
+	{kNetCDFv4, "NetCDFv4"}
+};
 
 // Defined external compression types
 
@@ -166,13 +164,13 @@ enum HPFileCompression
 	kBZIP2
 };
 
-const boost::unordered_map<HPFileCompression, std::string> HPFileCompressionToString =
-    ba::map_list_of
-	(kUnknownCompression, "unknown compression")
-	(kNoCompression, "no compression")
-	(kGZIP, "gzip compressed")
-	(kBZIP2, "bzip2 compressed");
-
+const std::unordered_map<HPFileCompression, std::string> HPFileCompressionToString =
+{
+	{kUnknownCompression, "unknown compression"},
+	{kNoCompression, "no compression"},
+	{kGZIP, "gzip compressed"},
+	{kBZIP2, "bzip2 compressed"}
+};
 
 enum HPInterpolationMethod
 {
@@ -182,19 +180,21 @@ enum HPInterpolationMethod
 	kNearestPointValue  // http://arxiv.org/pdf/1211.1768.pdf
 };
 
-const boost::unordered_map<HPInterpolationMethod, std::string> HPInterpolationMethodToString =
-    ba::map_list_of
-	(kUnknownInterpolationMethod, "unknown")
-	(kBiLinear, "bilinear")
-	(kNearestPoint, "nearest point")
-	(kNearestPointValue, "nearest point value");
+const std::unordered_map<HPInterpolationMethod, std::string> HPInterpolationMethodToString =
+{
+	{kUnknownInterpolationMethod, "unknown"},
+	{kBiLinear, "bilinear"},
+	{kNearestPoint, "nearest point"},
+	{kNearestPointValue, "nearest point value"}
+};
 
-const boost::unordered_map<std::string, HPInterpolationMethod> HPStringToInterpolationMethod =
-    ba::map_list_of
-	("unknown", kUnknownInterpolationMethod)
-	("bilinear", kBiLinear)
-	("nearest point", kNearestPoint)
-	("nearest point value", kNearestPointValue);
+const std::unordered_map<std::string, HPInterpolationMethod> HPStringToInterpolationMethod =
+{
+	{"unknown", kUnknownInterpolationMethod},
+	{"bilinear", kBiLinear},
+	{"nearest point", kNearestPoint},
+	{"nearest point value", kNearestPointValue}
+};
 
 enum HPWriteMode
 {
@@ -205,14 +205,14 @@ enum HPWriteMode
 	kNoFileWrite
 };
 
-const boost::unordered_map<HPWriteMode, std::string> HPWriteModeToString =
-    ba::map_list_of
-	(kUnknown, "unknown")
-	(kAllGridsToAFile, "all fields to single file")
-	(kFewGridsToAFile, "few fields to a file")
-	(kSingleGridToAFile, "one field per file")
-	(kNoFileWrite, "do not write file at all");
-
+const std::unordered_map<HPWriteMode, std::string> HPWriteModeToString =
+{
+	{kUnknown, "unknown"},
+	{kAllGridsToAFile, "all fields to single file"},
+	{kFewGridsToAFile, "few fields to a file"},
+	{kSingleGridToAFile, "one field per file"},
+	{kNoFileWrite, "do not write file at all"}
+};
 
 enum HPExceptionType
 {
@@ -235,25 +235,27 @@ enum HPTimeResolution
 	kSecondResolution
 };
 
-const boost::unordered_map<HPTimeResolution, std::string> HPTimeResolutionToString =
-    ba::map_list_of
-	(kUnknownTimeResolution, "unknown")
-	(kHourResolution, "hour")
-	(kMinuteResolution, "minute")
-	(kYearResolution, "year")
-	(kMonthResolution, "month")
-	(kDayResolution, "day")
-	(kSecondResolution, "second");
+const std::unordered_map<HPTimeResolution, std::string> HPTimeResolutionToString =
+{
+	{kUnknownTimeResolution, "unknown"},
+	{kHourResolution, "hour"},
+	{kMinuteResolution, "minute"},
+	{kYearResolution, "year"},
+	{kMonthResolution, "month"},
+	{kDayResolution, "day"},
+	{kSecondResolution, "second"}
+};
 
-const boost::unordered_map<std::string, HPTimeResolution> HPStringToTimeResolution =
-    ba::map_list_of
-	("unknown", kUnknownTimeResolution)
-	("hour", kHourResolution)
-	("minute", kMinuteResolution)
-	("year", kYearResolution)
-	("month", kMonthResolution)
-	("day", kDayResolution)
-	("second", kSecondResolution);
+const std::unordered_map<std::string, HPTimeResolution> HPStringToTimeResolution =
+{
+	{"unknown", kUnknownTimeResolution},
+	{"hour", kHourResolution},
+	{"minute", kMinuteResolution},
+	{"year", kYearResolution},
+	{"month", kMonthResolution},
+	{"day", kDayResolution},
+	{"second", kSecondResolution}
+};
 
 enum HPPackingType
 {
@@ -264,22 +266,23 @@ enum HPPackingType
 	kCcsdsPacking
 };
 
-const boost::unordered_map<HPPackingType, std::string> HPPackingTypeToString =
-    ba::map_list_of
-	(kUnknownPackingType, "unknown")
-	(kUnpacked, "unpacked")
-	(kSimplePacking, "simple_packing")
-	(kJpegPacking, "jpeg_packing")
-	(kCcsdsPacking, "ccsds_packing");
+const std::unordered_map<HPPackingType, std::string> HPPackingTypeToString =
+{
+	{kUnknownPackingType, "unknown"},
+	{kUnpacked, "unpacked"},
+	{kSimplePacking, "simple packing"},
+	{kJpegPacking, "jpeg packing"},
+	{kCcsdsPacking, "ccsds packing"}
+};
 
-const boost::unordered_map<std::string, HPPackingType> HPStringToPackingType =
-    ba::map_list_of
-	("unknown", kUnknownPackingType)
-	("unpacked", kUnpacked)
-	("simple_packing", kSimplePacking)
-	("jpeg_packing", kJpegPacking)
-	("ccsds_packing", kCcsdsPacking);
-
+const std::unordered_map<std::string, HPPackingType> HPStringToPackingType =
+{
+	{"unknown", kUnknownPackingType},
+	{"unpacked", kUnpacked},
+	{"simple packing", kSimplePacking},
+	{"jpeg packing", kJpegPacking},
+	{"ccsds packing", kCcsdsPacking}
+};
 
 enum HPDatabaseType
 {
@@ -288,12 +291,12 @@ enum HPDatabaseType
 	kNoDatabase
 };
 
-const boost::unordered_map<HPDatabaseType, std::string> HPDatabaseTypeToString =
-	ba::map_list_of
-	(kUnknownDatabaseType, "unknown")
-	(kRadon, "radon")
-	(kNoDatabase, "no database");
-
+const std::unordered_map<HPDatabaseType, std::string> HPDatabaseTypeToString =
+{
+	{kUnknownDatabaseType, "unknown"},
+	{kRadon, "radon"},
+	{kNoDatabase, "no database"}
+};
 
 enum HPFileStorageType
 {
@@ -302,19 +305,19 @@ enum HPFileStorageType
 	kS3ObjectStorageSystem
 };
 
-const boost::unordered_map<HPFileStorageType, std::string> HPFileStorageTypeToString =
-    ba::map_list_of
-	(kUnknownStorageType, "unknown")
-	(kLocalFileSystem, "local file system")
-	(kS3ObjectStorageSystem, "s3 object storage system")
-	;
+const std::unordered_map<HPFileStorageType, std::string> HPFileStorageTypeToString =
+{
+	{kUnknownStorageType, "unknown"},
+	{kLocalFileSystem, "local file system"},
+	{kS3ObjectStorageSystem, "s3 object storage system"}
+};
 
-const boost::unordered_map<std::string, HPFileStorageType> HPStringToFileStorageType =
-    ba::map_list_of
-	("unknown", kUnknownStorageType)
-	("local", kLocalFileSystem)
-	("s3", kS3ObjectStorageSystem)
-	;
+const std::unordered_map<std::string, HPFileStorageType> HPStringToFileStorageType =
+{
+	{"unknown", kUnknownStorageType},
+	{"local", kLocalFileSystem},
+	{"s3", kS3ObjectStorageSystem}
+};
 
 enum HPProgramName {
 	kUnknownProgram = 0,

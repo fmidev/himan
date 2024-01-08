@@ -23,13 +23,21 @@ enum HPAggregationType
 	kDifference
 };
 
-const boost::unordered_map<HPAggregationType, std::string> HPAggregationTypeToString =
-    ba::map_list_of(kUnknownAggregationType, "unknown")(kAverage, "average")(kAccumulation, "accumulation")(
-        kMaximum, "maximum")(kMinimum, "minimum")(kDifference, "difference");
+const std::unordered_map<HPAggregationType, std::string> HPAggregationTypeToString = {
+    {kUnknownAggregationType, "unknown"},
+    {kAverage, "average"},
+    {kAccumulation, "accumulation"},
+    {kMaximum, "maximum"},
+    {kMinimum, "minimum"},
+    {kDifference, "difference"}};
 
-const boost::unordered_map<std::string, HPAggregationType> HPStringToAggregationType =
-    ba::map_list_of("unknown", kUnknownAggregationType)("average", kAverage)("accumulation", kAccumulation)(
-        "maximum", kMaximum)("minimum", kMinimum)("difference", kDifference);
+const std::unordered_map<std::string, HPAggregationType> HPStringToAggregationType = {
+    {"unknown", kUnknownAggregationType},
+    {"average", kAverage},
+    {"accumulation", kAccumulation},
+    {"maximum", kMaximum},
+    {"minimum", kMinimum},
+    {"difference", kDifference}};
 
 class aggregation
 {

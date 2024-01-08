@@ -205,7 +205,7 @@ namespace
 template <typename T>
 std::string NameFromShape(T A, T B)
 {
-	std::vector<earth_shape<double>> ellps{ELLIPS_NEWBASE, ELLIPS_WGS84, ELLIPS_GRS80};
+	earth_shape<double> ellps[3] = {ELLIPS_NEWBASE, ELLIPS_WGS84, ELLIPS_GRS80};
 
 	for (const auto& e : ellps)
 	{

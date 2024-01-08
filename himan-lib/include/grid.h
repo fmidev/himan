@@ -18,6 +18,8 @@
 #include "matrix.h"
 #include "point.h"
 #include "serialization.h"
+#include <map>
+#include <vector>
 
 class OGRPolygon;
 
@@ -64,8 +66,8 @@ enum HPGridClass
 	kIrregularGrid
 };
 
-const boost::unordered_map<HPGridClass, std::string> HPGridClassToString =
-    ba::map_list_of(kUnknownGridClass, "unknown")(kRegularGrid, "regular")(kIrregularGrid, "irregular");
+const std::unordered_map<HPGridClass, std::string> HPGridClassToString = {
+    {kUnknownGridClass, "unknown"}, {kRegularGrid, "regular"}, {kIrregularGrid, "irregular"}};
 
 enum HPGridType
 {
@@ -81,10 +83,16 @@ enum HPGridType
 	kPointList = 100
 };
 
-const boost::unordered_map<HPGridType, std::string> HPGridTypeToString =
-    ba::map_list_of(kUnknownGridType, "unknown grid type")(kLatitudeLongitude, "ll")(kStereographic, "polster")(
-        kAzimuthalEquidistant, "azimuthal")(kRotatedLatitudeLongitude, "rll")(kReducedGaussian, "rgg")(
-        kPointList, "pointlist")(kLambertConformalConic, "lcc")(kLambertEqualArea, "laea")(kTransverseMercator, "tm");
+const std::unordered_map<HPGridType, std::string> HPGridTypeToString = {{kUnknownGridType, "unknown grid type"},
+                                                                        {kLatitudeLongitude, "ll"},
+                                                                        {kStereographic, "polster"},
+                                                                        {kAzimuthalEquidistant, "azimuthal"},
+                                                                        {kRotatedLatitudeLongitude, "rll"},
+                                                                        {kLambertConformalConic, "lcc"},
+                                                                        {kReducedGaussian, "rgg"},
+                                                                        {kLambertEqualArea, "laea"},
+                                                                        {kTransverseMercator, "tm"},
+                                                                        {kPointList, "pointlist"}};
 
 enum HPScanningMode
 {
@@ -95,11 +103,17 @@ enum HPScanningMode
 	kBottomRight = 34,  // -x+y
 };
 
-const boost::unordered_map<std::string, HPScanningMode> HPScanningModeFromString = ba::map_list_of(
-    "unknown", kUnknownScanningMode)("+x-y", kTopLeft)("-x+y", kTopRight)("+x+y", kBottomLeft)("-x-y", kBottomRight);
+const std::unordered_map<std::string, HPScanningMode> HPScanningModeFromString = {{"unknown", kUnknownScanningMode},
+                                                                                  {"+x-y", kTopLeft},
+                                                                                  {"-x-y", kTopRight},
+                                                                                  {"+x+y", kBottomLeft},
+                                                                                  {"-x+y", kBottomRight}};
 
-const boost::unordered_map<HPScanningMode, std::string> HPScanningModeToString = ba::map_list_of(
-    kUnknownScanningMode, "unknown")(kTopLeft, "+x-y")(kTopRight, "-x+y")(kBottomLeft, "+x+y")(kBottomRight, "-x-y");
+const std::unordered_map<HPScanningMode, std::string> HPScanningModeToString = {{kUnknownScanningMode, "unknown"},
+                                                                                {kTopLeft, "+x-y"},
+                                                                                {kTopRight, "-x-y"},
+                                                                                {kBottomLeft, "+x+y"},
+                                                                                {kBottomRight, "-x+y"}};
 
 class grid
 {

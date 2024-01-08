@@ -12,6 +12,7 @@
 #include "serialization.h"
 #include <algorithm>
 #include <mutex>
+#include <vector>
 
 namespace himan
 {

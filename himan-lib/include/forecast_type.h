@@ -32,13 +32,21 @@ enum HPForecastType
 	kStatisticalProcessing = 5
 };
 
-const boost::unordered_map<HPForecastType, std::string> HPForecastTypeToString = ba::map_list_of(
-    kUnknownType, "unknown")(kDeterministic, "deterministic")(kAnalysis, "analysis")(kEpsControl, "eps control")(
-    kEpsPerturbation, "eps perturbation")(kStatisticalProcessing, "statistical post processing");
+const std::unordered_map<HPForecastType, std::string> HPForecastTypeToString = {
+    {kUnknownType, "unknown"},
+    {kDeterministic, "deterministic"},
+    {kAnalysis, "analysis"},
+    {kEpsControl, "eps control"},
+    {kEpsPerturbation, "eps perturbation"},
+    {kStatisticalProcessing, "statistical post processing"}};
 
-const boost::unordered_map<std::string, HPForecastType> HPStringToForecastType =
-    ba::map_list_of("unknown", kUnknownType)("deterministic", kDeterministic)("analysis", kAnalysis)(
-        "eps control", kEpsControl)("eps perturbation", kEpsPerturbation);
+const std::unordered_map<std::string, HPForecastType> HPStringToForecastType = {
+    {"unknown", kUnknownType},
+    {"deterministic", kDeterministic},
+    {"analysis", kAnalysis},
+    {"eps control", kEpsControl},
+    {"eps perturbation", kEpsPerturbation},
+    {"statistical post processing", kStatisticalProcessing}};
 
 class forecast_type
 {

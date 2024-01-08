@@ -21,11 +21,11 @@ enum HPProducerClass
 	kPreviClass = 3
 };
 
-const boost::unordered_map<HPProducerClass, std::string> HPProducerClassToString =
-    ba::map_list_of(kUnknownProducerClass, "unknown")(kGridClass, "grid")(kPreviClass, "previ");
+const std::unordered_map<HPProducerClass, std::string> HPProducerClassToString = {
+    {kUnknownProducerClass, "unknown"}, {kGridClass, "grid"}, {kPreviClass, "previ"}};
 
-const boost::unordered_map<std::string, HPProducerClass> HPStringToProducerClass =
-    ba::map_list_of("unknown", kUnknownProducerClass)("grid", kGridClass)("previ", kPreviClass);
+const std::unordered_map<std::string, HPProducerClass> HPStringToProducerClass = {
+    {"unknown", kUnknownProducerClass}, {"grid", kGridClass}, {"previ", kPreviClass}};
 
 class producer
 {

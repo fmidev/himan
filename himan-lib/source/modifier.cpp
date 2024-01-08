@@ -4,6 +4,7 @@
 
 #include "modifier.h"
 #include "numerical_functions.h"
+#include <algorithm>
 
 using namespace himan;
 using namespace himan::numerical_functions;
