@@ -756,7 +756,7 @@ pair<bool, radon_record> radon::SaveGrid(const info<T>& resultInfo, const file_i
 			host = string(host_);
 			if (host.find("http") == string::npos)
 			{
-				itsLogger.Warning("S3_HOSTNAME missing protocol -- adding 'https://'");
+				itsLogger.Trace("S3_HOSTNAME missing protocol -- adding 'https://'");
 				host = "https://" + host;
 			}
 		}
