@@ -14,9 +14,8 @@
 %define boost boost
 %endif
 
-%define BINNAME himan-bin
 Summary: himan executable
-Name: %{BINNAME}
+Name: himan-bin
 Version: %{version}
 Release: %{release}%{dist}.fmi
 License: MIT
@@ -27,7 +26,7 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 23.12.28
+Requires: himan-lib >= 24.1.8
 Requires: himan-plugins >= 22.6.16
 Requires: zlib
 Requires: libfmidb

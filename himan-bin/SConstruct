@@ -24,7 +24,6 @@ libraries.append('himan')
 libraries.append('fmidb')
 libraries.append('pqxx')
 libraries.append('boost_program_options')
-libraries.append('boost_system')
 
 env.Append(LIBS = libraries)
 env.Append(LIBS = [ 'fmt', 'dl', 'rt', 'gdal' ])
