@@ -67,6 +67,8 @@ BuildRequires: lua-devel
 BuildRequires: zlib-devel
 BuildRequires: bzip2-devel
 BuildRequires: python3-distro
+BuildRequires: unixODBC
+BuildRequires: jasper-libs
 AutoReqProv:	no
 
 %description
