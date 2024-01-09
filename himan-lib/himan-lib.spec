@@ -54,7 +54,6 @@ Requires: geos311
 Requires: gdal35-libs
 Requires: eccodes
 Requires: %{boost}-iostreams
-Requires: %{boost}-filesystem
 Requires: libs3 >= 4.1-0.6.20190408git287e4be.1.el7.fmi
 Requires: himan-plugins >= 22.6.16
 

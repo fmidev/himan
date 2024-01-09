@@ -1,7 +1,7 @@
 #include "time_duration.h"
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/regex.hpp>
 #include <fmt/core.h>
+#include <regex>
 
 using namespace himan;
 
@@ -153,11 +153,11 @@ std::string time_duration::String(const std::string& fmt) const
 
 	auto ret = fmt;
 
-	const static std::vector<std::pair<char, boost::regex>> regexs{
-	    std::make_pair('H', boost::regex{R"(%([0-9]*)H)"}), std::make_pair('M', boost::regex{R"(%([0-9]*)M)"}),
-	    std::make_pair('S', boost::regex{R"(%([0-9]*)S)"}), std::make_pair('d', boost::regex{R"(%([0-9]*)d)"}),
-	    std::make_pair('h', boost::regex{R"(%([0-9]*)h)"}), std::make_pair('m', boost::regex{R"(%([0-9]*)m)"}),
-	    std::make_pair('s', boost::regex{R"(%([0-9]*)s)"})};
+	const static std::vector<std::pair<char, std::regex>> regexs{
+	    std::make_pair('H', std::regex{R"(%([0-9]*)H)"}), std::make_pair('M', std::regex{R"(%([0-9]*)M)"}),
+	    std::make_pair('S', std::regex{R"(%([0-9]*)S)"}), std::make_pair('d', std::regex{R"(%([0-9]*)d)"}),
+	    std::make_pair('h', std::regex{R"(%([0-9]*)h)"}), std::make_pair('m', std::regex{R"(%([0-9]*)m)"}),
+	    std::make_pair('s', std::regex{R"(%([0-9]*)s)"})};
 
 	for (const auto& r : regexs)
 	{
@@ -189,12 +189,12 @@ std::string time_duration::String(const std::string& fmt) const
 			default:
 				break;
 		}
-		boost::smatch what;
-		if (boost::regex_search(fmt, what, re))
+		std::smatch what;
+		if (std::regex_search(fmt, what, re))
 		{
 			try
 			{
-				ret = boost::regex_replace(ret, re, fmt::format(fmt::format("{{:0{}d}}", std::string(what[1])), value));
+				ret = std::regex_replace(ret, re, fmt::format(fmt::format("{{:0{}d}}", std::string(what[1])), value));
 			}
 			catch (const std::exception& e)
 			{
