@@ -54,8 +54,8 @@ Requires: geos311
 Requires: gdal35-libs
 Requires: eccodes
 Requires: %{boost}-iostreams
-Requires: libs3 >= 4.1-0.6.20190408git287e4be.1.el7.fmi
-Requires: himan-plugins >= 22.6.16
+Requires: libs3 >= 4.1-0.6.20190408git287e4be.1.el8.fmi
+Requires: himan-plugins >= 24.1.9
 
 Provides: libhiman.so
 
