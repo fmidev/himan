@@ -27,4 +27,17 @@ According to method provided by Juha Jantunen.
 
 # Per-plugin configuration options
 
-None
+All options are optional.
+
+ecmwf_geometry: define geometry for ecmwf data
+
+    "ecmwf_geometry" : "..."
+
+ecmwfeps_geometry: define geometry for ecmwf eps data
+
+    "ecmwfeps_geometry" : "..."
+
+meps_geometry: define geometry for meps data
+
+    "meps_geometry" : "..."
+

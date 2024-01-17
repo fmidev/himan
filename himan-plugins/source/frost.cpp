@@ -188,7 +188,16 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 	ec_forecastTime.OriginDateTime().Adjust(kHourResolution, adjustment);
 
 	cnf->SourceProducers({producer(242, 86, 242, "ECM_PROB")});
-	cnf->SourceGeomNames({"ECGLO0200", "ECEUR0200"});
+
+	if (cnf->GetValue("ecmwfeps_geometry").empty() == false)
+	{
+		cnf->SourceGeomNames({cnf->GetValue("ecmwfeps_geometry")});
+	}
+	else
+	{
+		cnf->SourceGeomNames({"ECGLO0200", "ECEUR0200"});
+	}
+
 	shared_ptr<info<double>> T0ECInfo =
 	    BackwardsFetchFromProducer(cnf, stat_type, ec_forecastTime, level(kHeight, 2), T0Param, -12);
 
@@ -212,7 +221,14 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 	if (meps_forecastTime.Step().Hours() <= 66)
 	{
 		cnf->SourceProducers({producer(260, 86, 204, "MEPSMTA")});
-		cnf->SourceGeomNames({"MEPS2500D"});
+		if (cnf->GetValue("meps_geometry").empty() == false)
+		{
+			cnf->SourceGeomNames({cnf->GetValue("meps_geometry")});
+		}
+		else
+		{
+			cnf->SourceGeomNames({"MEPS2500D"});
+		}
 
 		T0MEPSInfo = BackwardsFetchFromProducer(cnf, stat_type, meps_forecastTime, level(kHeight, 2), T0Param, -3);
 	}
