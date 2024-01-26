@@ -147,4 +147,8 @@ source_forecast_period: specify a different leadtime for fetching data. Cannot b
 
     "source_forecast_period" : "00:00:00"
 
+read_previous_forecast_if_not_found: If data for some forecast is not found, try to read it from previous forecast (preserving data valid times). Does not apply to UV vector rotation. Default: false. Cannot be used together with time_interpolation.
+
+    "read_previous_forecast_if_not_found" : true
+
 

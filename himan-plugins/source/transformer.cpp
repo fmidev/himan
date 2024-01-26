@@ -49,7 +49,8 @@ transformer::transformer()
       itsDoLandscapeInterpolation(false),
       itsParamDefinitionFromConfig(false),
       itsEnsemble(nullptr),
-      itsSourceForecastPeriod()
+      itsSourceForecastPeriod(),
+      itsReadFromPreviousForecastIfNotFound(false)
 {
 	itsCudaEnabledCalculation = true;
 
@@ -201,12 +202,13 @@ shared_ptr<himan::info<T>> transformer::LandscapeInterpolation(const forecast_ti
 	const param lc("LC-N", -1, 1, 0, himan::kNearestPoint);
 	const param z("Z-M2S2", -1, 1, 0, himan::kNearestPoint);
 
-	auto source = f->Fetch<T>(cnf, srctime, lvl, par, ftype, false);
-	auto hgt = f->Fetch<float>(cnf, srctime, zeroH, z, ftype, false);
-	auto lr = f->Fetch<float>(cnf, srctime, zeroH, param("LR-KM"), ftype, false);
+	auto source = f->Fetch<T>(cnf, srctime, lvl, par, ftype, false, false, itsReadFromPreviousForecastIfNotFound);
+	auto hgt = f->Fetch<float>(cnf, srctime, zeroH, z, ftype, false, false, itsReadFromPreviousForecastIfNotFound);
+	auto lr = f->Fetch<float>(cnf, srctime, zeroH, param("LR-KM"), ftype, false, false,
+	                          itsReadFromPreviousForecastIfNotFound);
 	// Model has land cover 0..1 for analysis time only (typically
 	auto mask = f->Fetch<float>(cnf, forecast_time(ftime.OriginDateTime(), ftime.OriginDateTime()), zeroH,
-	                            param("LC-0TO1"), ftype, false);
+	                            param("LC-0TO1"), ftype, false, false, itsReadFromPreviousForecastIfNotFound);
 
 	if (source->Data().MissingCount() > 0 || hgt->Data().MissingCount() > 0 || lr->Data().MissingCount() > 0 ||
 	    mask->Data().MissingCount() > 0)
@@ -495,11 +497,11 @@ void transformer::SetAdditionalParameters()
 		{
 			itsTargetForecastType = forecast_type(kEpsControl);
 		}
-		else if (targetForecastType == "deterministic")
+		else if (targetForecastType == "deterministic" || targetForecastType == "det")
 		{
 			itsTargetForecastType = forecast_type(kDeterministic);
 		}
-		else if (targetForecastType == "analysis")
+		else if (targetForecastType == "analysis" || targetForecastType == "an")
 		{
 			itsTargetForecastType = forecast_type(kAnalysis);
 		}
@@ -641,6 +643,16 @@ void transformer::SetAdditionalParameters()
 		itsLogger.Fatal(
 		    "Conflicting options: ensemble and (landscape/time/level interpolation, vector component rotation, land "
 		    "sea masking)");
+		himan::Abort();
+	}
+	if (itsConfiguration->Exists("read_previous_forecast_if_not_found"))
+	{
+		itsReadFromPreviousForecastIfNotFound =
+		    util::ParseBoolean(itsConfiguration->GetValue("read_previous_forecast_if_not_found"));
+	}
+	if (itsDoTimeInterpolation && itsReadFromPreviousForecastIfNotFound)
+	{
+		itsLogger.Fatal("Cannot have both 'time_interpolation' and 'read_previous_forecast_if_not_found' defined");
 		himan::Abort();
 	}
 }
@@ -903,7 +915,8 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 		else
 		{
 			sourceInfo = f->Fetch(itsConfiguration, sourceTime, itsSourceLevels[myTargetInfo->Index<level>()],
-			                      itsSourceParam[0], forecastType, itsConfiguration->UseCudaForPacking());
+			                      itsSourceParam[0], forecastType, itsConfiguration->UseCudaForPacking(), false,
+			                      itsReadFromPreviousForecastIfNotFound);
 		}
 	}
 	catch (HPExceptionType& e)
