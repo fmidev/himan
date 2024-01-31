@@ -55,6 +55,7 @@ std::vector<T> Split(const std::string& s, const std::string& delims);
  */
 
 std::vector<int> ExpandString(const std::string& identifier);
+std::vector<time_duration> ExpandTimeDuration(const std::string& identifier);
 
 /**
  * @brief Join a string-vector with given delimiter

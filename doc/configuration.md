@@ -254,7 +254,7 @@ Multiple origin times can also be specified with key `origintimes`.
 
 <a name="Time_2"/>
 
-## Lead time method 1: Listing hours
+## Lead time method 1: Listing times
 
 With key `hours` the hours (lead times) that should be calculated are listed. Values are separated with a comma, if a hyphen ('-') is used, Himan will interpolate values to fill the gap.
 
@@ -265,6 +265,19 @@ Example:
     "hours" : "1,2,3-8"
 
 This example will result to hours 1,2,3,4,5,6,7 and 8.
+
+By default when expanding a list the step value is 1, but it can be changed:
+
+    "hours" : "1,2-8-2"
+
+Result: 1,2,4,6,8
+
+For sub-hour values key `times` can be used:
+
+    "times" : "0:00:00-9:00:00-0:15:00"
+
+Result: 0:00:00,0:15:00,0:30:00,...,9:00:00
+
 
 <a name="Time_3"/>
 
@@ -296,6 +309,13 @@ Example:
     "start_minute" : "1440",
     "stop_minute" : "1470",
     "step" : "15",
+
+start_time and stop_time can be used to specify time duration value
+
+    "start_time" : "0:00:00",
+    "stop_time" : "1:00:00",
+    "step" : "0:15:00"
+
 
 <a name="Levels"/>
 

@@ -180,16 +180,27 @@ vector<int> util::ExpandString(const std::string& identifier)
 	// 1,5,10-12
 	// --> return a vector of:
 	// 1,5,10,11,12
+	// 1,5,10-16-2
+	// --> return a vector of:
+	// 1,5,10,12,14,16
 
 	vector<int> ret;
 	const auto split1 = Split(identifier, ",");
 	for (const auto& tok : split1)
 	{
-		const auto split2 = Split<int>(tok, "-");
+		auto split2 = Split<int>(tok, "-");
+
+		int step = 1;
+
+		if (split2.size() == 3)
+		{
+			step = split2[2];
+			split2.pop_back();
+		}
 
 		if (split2.size() == 2)
 		{
-			int a = split2[0], b = split2[1], step = 1;
+			int a = split2[0], b = split2[1];
 			if (a > b)
 			{
 				step *= -1;
@@ -198,6 +209,45 @@ vector<int> util::ExpandString(const std::string& identifier)
 			const auto vals = numerical_functions::Arange(
 			    split2[0], split2[1] + step, step);  // arange return half-open interval excluding the endvalue
 			std::copy(vals.begin(), vals.end(), std::back_inserter(ret));
+		}
+		else if (split2.size() == 1)
+		{
+			ret.push_back(split2[0]);
+		}
+	}
+	return ret;
+}
+
+vector<time_duration> util::ExpandTimeDuration(const std::string& identifier)
+{
+	vector<time_duration> ret;
+	const auto split1 = Split(identifier, ",");
+	for (const auto& tok : split1)
+	{
+		auto split2 = Split<std::string>(tok, "-");
+
+		time_duration step = ONE_HOUR;
+
+		if (split2.size() == 3)
+		{
+			step = time_duration(split2[2]);
+			split2.pop_back();
+		}
+
+		if (split2.size() == 2)
+		{
+			time_duration a = split2[0], b = split2[1];
+			if (a > b)
+			{
+				step *= -1;
+			}
+
+			while (a != b)
+			{
+				ret.push_back(time_duration(a));
+				a += step;
+			}
+			ret.push_back(time_duration(a));  // include end range value
 		}
 		else if (split2.size() == 1)
 		{

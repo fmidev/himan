@@ -765,14 +765,14 @@ void Steps(const boost::property_tree::ptree& pt, shared_ptr<configuration>& con
 
 	try
 	{
-		vector<string> timesStr = himan::util::Split(pt.get<string>("times"), ",");
+		vector<time_duration> timeValues = himan::util::ExpandTimeDuration(pt.get<string>("times"));
 		vector<forecast_time> times;
 
 		for (const auto& originDateTime : originDateTimes)
 		{
-			for (const auto& str : timesStr)
+			for (const auto& tv : timeValues)
 			{
-				times.push_back(forecast_time(originDateTime, time_duration(str)));
+				times.push_back(forecast_time(originDateTime, tv));
 			}
 		}
 		conf->Times(times);
