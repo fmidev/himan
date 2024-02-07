@@ -1179,6 +1179,79 @@ matrix<T> ProbLimitEq2D(const matrix<T>& A, const matrix<T>& B, T limit)
 }
 }  // namespace luabind_workaround
 
+namespace numerical_functions_wrapper
+{
+template <typename T>
+object Linear(const object& X, const object& X1, const object& X2, const object& Y1, const object& Y2)
+{
+	auto x = TableToVector<T>(X);
+	auto x1 = TableToVector<T>(X1);
+	auto x2 = TableToVector<T>(X2);
+	auto y1 = TableToVector<T>(Y1);
+	auto y2 = TableToVector<T>(Y2);
+
+	if (y1.size() != y2.size())
+	{
+		throw std::runtime_error("luatool::Linear Y1 and Y2 must be of same size");
+	}
+
+	std::vector<T> interp(y1.size());
+	for (size_t i = 0; i < y1.size(); i++)
+	{
+		interp[i] = numerical_functions::interpolation::Linear<T>(x[i], x1[i], x2[i], y1[i], y2[i]);
+	}
+
+	return VectorToTable<T>(interp);
+}
+
+template <typename T>
+object LinearAngle(const object& X, const object& X1, const object& X2, const object& Y1, const object& Y2)
+{
+	auto x = TableToVector<T>(X);
+	auto x1 = TableToVector<T>(X1);
+	auto x2 = TableToVector<T>(X2);
+	auto y1 = TableToVector<T>(Y1);
+	auto y2 = TableToVector<T>(Y2);
+
+	if (y1.size() != y2.size())
+	{
+		throw std::runtime_error("luatool::LinearAngle Y1 and Y2 must be of same size");
+	}
+
+	std::vector<T> interp(y1.size());
+	for (size_t i = 0; i < y1.size(); i++)
+	{
+		interp[i] = numerical_functions::interpolation::LinearAngle<T>(x[i], x1[i], x2[i], y1[i], y2[i]);
+	}
+
+	return VectorToTable<T>(interp);
+}
+
+template <typename T>
+object NearestPoint(const object& X, const object& X1, const object& X2, const object& Y1, const object& Y2)
+{
+	auto x = TableToVector<T>(X);
+	auto x1 = TableToVector<T>(X1);
+	auto x2 = TableToVector<T>(X2);
+	auto y1 = TableToVector<T>(Y1);
+	auto y2 = TableToVector<T>(Y2);
+
+	if (y1.size() != y2.size())
+	{
+		throw std::runtime_error("luatool::NearestPoint Y1 and Y2 must be of same size");
+	}
+
+	std::vector<T> interp(y1.size());
+	for (size_t i = 0; i < y1.size(); i++)
+	{
+		interp[i] = numerical_functions::interpolation::NearestPoint<T>(x[i], x1[i], x2[i], y1[i], y2[i]);
+	}
+
+	return VectorToTable<T>(interp);
+}
+
+}  // namespace numerical_functions_wrapper
+
 namespace params_wrapper
 {
 params create(const object& table)
@@ -1639,6 +1712,9 @@ void BindLib(lua_State* L)
 	          def("Max2D", &numerical_functions::Max2D<float>),
 	          def("Min2D", &numerical_functions::Min2D<double>),
 	          def("Min2D", &numerical_functions::Min2D<float>),
+		  def("Linear", &numerical_functions_wrapper::Linear<double>),
+		  def("LinearAngle", &numerical_functions_wrapper::LinearAngle<double>),
+		  def("NearestPoint", &numerical_functions_wrapper::NearestPoint<double>),
                   def("ProbLimitGt2D", &luabind_workaround::ProbLimitGt2D<double>),
                   def("ProbLimitGt2D", &luabind_workaround::ProbLimitGt2D<float>),
                   def("ProbLimitGe2D", &luabind_workaround::ProbLimitGe2D<double>),

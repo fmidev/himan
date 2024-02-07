@@ -191,7 +191,7 @@ std::vector<T> Arange(T start, T stop, T step)
 
 	ret[0] = start;
 
-	std::generate(ret.begin() + 1, ret.end(), [ v = ret[0], &step ]() mutable { return v += step; });
+	std::generate(ret.begin() + 1, ret.end(), [v = ret[0], &step]() mutable { return v += step; });
 	return ret;
 }
 
@@ -235,7 +235,7 @@ std::vector<std::vector<T>> Linspace(const std::vector<T>& start, const std::vec
 
 		ret[i].resize(static_cast<size_t>(length));
 		ret[i][0] = start[i];
-		std::generate(ret[i].begin() + 1, ret[i].end(), [ v = ret[i][0], &step ]() mutable { return v += step; });
+		std::generate(ret[i].begin() + 1, ret[i].end(), [v = ret[i][0], &step]() mutable { return v += step; });
 	}
 
 	return ret;
@@ -279,9 +279,29 @@ namespace interpolation
  */
 
 template <typename Type>
+CUDA_HOST CUDA_DEVICE inline Type NearestPoint(Type factor, Type Y1, Type Y2)
+{
+	if (factor < 0.5)
+	{
+		return Y1;
+	}
+	else
+	{
+		return Y2;
+	}
+}
+
+template <typename Type>
+CUDA_HOST CUDA_DEVICE inline Type NearestPoint(Type X, Type X1, Type X2, Type Y1, Type Y2)
+{
+	const Type factor = static_cast<Type>((X - X1) / (X2 - X1));
+	return NearestPoint<Type>(factor, Y1, Y2);
+}
+
+template <typename Type>
 CUDA_HOST CUDA_DEVICE inline Type Linear(Type factor, Type Y1, Type Y2)
 {
-	return static_cast<Type> (std::fma(factor, Y2, std::fma(-factor, Y1, Y1)));
+	return static_cast<Type>(std::fma(factor, Y2, std::fma(-factor, Y1, Y1)));
 }
 
 template <typename Type>
@@ -292,7 +312,7 @@ CUDA_HOST CUDA_DEVICE inline Type Linear(Type X, Type X1, Type X2, Type Y1, Type
 		return Y1;
 	}
 
-	const Type factor = static_cast<Type> ((X - X1) / (X2 - X1));
+	const Type factor = static_cast<Type>((X - X1) / (X2 - X1));
 	return Linear<Type>(factor, Y1, Y2);
 }
 
@@ -309,6 +329,30 @@ CUDA_HOST CUDA_DEVICE inline Type BiLinear(Type dx, Type dy, Type a, Type b, Typ
 	return (1 - dx) * (1 - dy) * c + dx * (1 - dy) * d + (1 - dx) * dy * a + dx * dy * b;
 }
 
+/**
+ * @brief Linear interpolation of angles, can deal with modulo 360
+ */
+
+template <typename Type>
+CUDA_HOST CUDA_DEVICE inline Type LinearAngle(Type factor, Type Y1, Type Y2)
+{
+	ASSERT(factor >= 0 && factor <= 1);
+
+	// cast to double so that can use fmod()
+	double y1 = static_cast<double>(Y1);
+	double y2 = static_cast<double>(Y2);
+
+	const double shortest_angle = fmod(fmod((y2 - y1), 360.) + 540., 360.) - 180.;
+
+	return static_cast<Type>(fmod(y1 + shortest_angle * factor + 360., 360.));
+}
+
+template <typename Type>
+CUDA_HOST CUDA_DEVICE inline Type LinearAngle(Type X, Type X1, Type X2, Type Y1, Type Y2)
+{
+	const Type factor = static_cast<Type>((X - X1) / (X2 - X1));
+	return LinearAngle<Type>(factor, Y1, Y2);
+}
 }  // namespace interpolation
 
 }  // namespace numerical_functions
