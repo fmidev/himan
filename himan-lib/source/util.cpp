@@ -839,10 +839,10 @@ string util::UniqueName(const plugin::search_options& options)
 
 	try
 	{
-		return fmt::format("{}_{}_{}_{}_{}_{}_{}", options.prod.Id(), options.time.OriginDateTime().ToSQLTime(),
+		return fmt::format("{}_{}_{}_{}_{}_{}_{}_{}", options.prod.Id(), options.time.OriginDateTime().ToSQLTime(),
 		                   options.time.ValidDateTime().ToSQLTime(), options.param.Name(),
 		                   static_cast<string>(options.level), static_cast<int>(options.ftype.Type()),
-		                   options.ftype.Value());
+		                   options.ftype.Value(), options.configuration->BaseGrid()->Size());
 	}
 	catch (const std::exception& e)
 	{
@@ -856,10 +856,10 @@ string util::UniqueName(const info<T>& info)
 {
 	try
 	{
-		return fmt::format("{}_{}_{}_{}_{}_{}_{}", info.Producer().Id(), info.Time().OriginDateTime().ToSQLTime(),
+		return fmt::format("{}_{}_{}_{}_{}_{}_{}_{}", info.Producer().Id(), info.Time().OriginDateTime().ToSQLTime(),
 		                   info.Time().ValidDateTime().ToSQLTime(), info.Param().Name(),
 		                   static_cast<string>(info.Level()), static_cast<int>(info.ForecastType().Type()),
-		                   info.ForecastType().Value());
+		                   info.ForecastType().Value(), info.Grid()->Size());
 	}
 	catch (const std::exception& e)
 	{
