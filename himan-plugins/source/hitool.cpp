@@ -160,13 +160,14 @@ pair<level, level> hitool::LevelForHeight(const producer& prod, double height, c
 
 	if (itsHeightUnit == kM)
 	{
-		query << "SELECT min(CASE WHEN maximum_height <= " << height
-		      << " THEN level_value ELSE NULL END) AS lowest_level, "
-		      << "max(CASE WHEN minimum_height >= " << height << " THEN level_value ELSE NULL END) AS highest_level "
-		      << "FROM "
-		      << "hybrid_level_height "
-		      << "WHERE "
-		      << "producer_id = " << producerId;
+		query << "WITH levels AS (SELECT max(CASE WHEN attribute = 'last hybrid level number' THEN value::int ELSE "
+		         "NULL END) AS lowest, max(CASE WHEN attribute = 'first hybrid level number' THEN value::int ELSE NULL "
+		         "END) AS highest FROM producer_meta WHERE producer_id = "
+		      << producerId << ") SELECT min(CASE WHEN maximum_height <= " << height
+		      << " THEN level_value ELSE l.lowest END) AS lowest_level, max(CASE WHEN minimum_height >= " << height
+		      << " THEN level_value ELSE l.highest END) AS highest_level FROM hybrid_level_height, levels l WHERE "
+		         "producer_id = "
+		      << producerId;
 	}
 	else if (itsHeightUnit == kHPa)
 	{
@@ -211,6 +212,7 @@ pair<level, level> hitool::LevelForHeight(const producer& prod, double height, c
 
 			itsLogger.Warning(
 			    fmt::format("Geometry {} is missing height information at radon table hybrid_level_height", geomName));
+
 			auto q = query.str();
 			q = q.substr(0, q.find("AND geometry_id"));
 
