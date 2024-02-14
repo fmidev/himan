@@ -583,6 +583,11 @@ class hitool : public auxiliary_plugin
 	                                    const std::vector<T>& firstLevelValue = std::vector<T>(),
 	                                    const std::vector<T>& lastLevelValue = std::vector<T>(),
 	                                    const std::vector<T>& findValue = std::vector<T>()) const;
+	template <typename T>
+	std::vector<T> VerticalExtremeValue(std::shared_ptr<modifier> mod, const params& wantedParams,
+	                                    const std::vector<T>& firstLevelValue = std::vector<T>(),
+	                                    const std::vector<T>& lastLevelValue = std::vector<T>(),
+	                                    const std::vector<T>& findValue = std::vector<T>()) const;
 
 	template <typename T>
 	std::pair<std::shared_ptr<info<T>>, std::shared_ptr<info<T>>> GetData(const level& wantedLevel,

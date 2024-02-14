@@ -8,6 +8,7 @@
 #include "plugin_factory.h"
 #include "util.h"
 #include <algorithm>
+#include <shared_mutex>
 
 #include "fetcher.h"
 #include "radon.h"
@@ -15,6 +16,30 @@
 using namespace std;
 using namespace himan;
 using namespace himan::plugin;
+
+static map<string, param> cachedParamMap;
+shared_mutex m;
+
+param GetCachedParamName(const param& p)
+{
+	shared_lock<shared_mutex> lock(m);
+
+	if (cachedParamMap.find(p.Name()) != cachedParamMap.end())
+	{
+		return cachedParamMap[p.Name()];
+	}
+
+	return p;
+}
+void UpdateCachedParamName(const vector<param>& params, const param& par)
+{
+	unique_lock<shared_mutex> lock(m);
+
+	for (const auto& p : params)
+	{
+		cachedParamMap[p.Name()] = par;
+	}
+}
 
 hitool::hitool() : itsTime(), itsForecastType(kDeterministic), itsHeightUnit(kM), itsLevelType(kHybrid)
 {
@@ -284,6 +309,37 @@ pair<level, level> hitool::LevelForHeight(const producer& prod, double height, c
 }
 
 template <typename T>
+vector<T> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, const params& wantedParams,
+                                       const vector<T>& lowerHeight, const vector<T>& upperHeight,
+                                       const vector<T>& findValue) const
+{
+	vector<T> ret;
+	for (const auto& par : wantedParams)
+	{
+		try
+		{
+			auto _par = GetCachedParamName(par);
+			ret = VerticalExtremeValue<T>(mod, _par, lowerHeight, upperHeight, findValue);
+			UpdateCachedParamName(wantedParams, _par);
+			return ret;
+		}
+		catch (const HPExceptionType& e)
+		{
+			if (e == kFileDataNotFound)
+			{
+				continue;
+			}
+			else
+			{
+				throw;
+			}
+		}
+	}
+
+	return ret;
+}
+
+template <typename T>
 vector<T> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, const param& wantedParam, const vector<T>& lowerHeight,
                                        const vector<T>& upperHeight, const vector<T>& findValue) const
 {
@@ -452,11 +508,12 @@ vector<T> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, const param& wa
 	}
 
 	auto ret = mod->Result();
+	const auto hc = static_cast<double>(mod->HeightsCrossed());
+	const auto sz = static_cast<double>(itsConfiguration->BaseGrid()->Size());
 
-	if (mod->HeightsCrossed() < itsConfiguration->BaseGrid()->Size())
+	if (hc < sz && hc / sz < 0.9)
 	{
-		itsLogger.Warning(to_string(ret.size() - mod->HeightsCrossed()) +
-		                  " grid points did not reach upper height limit. Did I run out of vertical levels?");
+		itsLogger.Warning(fmt::format("{} grid points are missing. Are there enough vertical levels?", sz - hc));
 	}
 
 	return util::Convert<double, T>(ret);
@@ -542,42 +599,10 @@ template <typename T>
 vector<T> hitool::VerticalHeight(const vector<param>& wantedParamList, const vector<T>& firstLevelValue,
                                  const vector<T>& lastLevelValue, const vector<T>& findValue, int findNth) const
 {
-	ASSERT(!wantedParamList.empty());
+	auto modifier = CreateModifier(kFindHeightModifier);
+	modifier->FindNth(findNth);
 
-	size_t p_i = 0;
-
-	param foundParam = wantedParamList[p_i];
-
-	for (size_t i = 0; i < wantedParamList.size(); i++)
-	{
-		try
-		{
-			return VerticalHeight<T>(foundParam, firstLevelValue, lastLevelValue, findValue, findNth);
-		}
-		catch (const HPExceptionType& e)
-		{
-			if (e == kFileDataNotFound)
-			{
-				if (++p_i < wantedParamList.size())
-				{
-					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-					                wantedParamList[p_i].Name());
-					foundParam = wantedParamList[p_i];
-				}
-				else
-				{
-					itsLogger.Warning("No more valid parameters left");
-					throw;
-				}
-			}
-			else
-			{
-				throw;
-			}
-		}
-	}
-
-	throw runtime_error("Data not found");
+	return VerticalExtremeValue<T>(modifier, wantedParamList, firstLevelValue, lastLevelValue, findValue);
 }
 
 template vector<double> hitool::VerticalHeight<double>(const vector<param>&, const vector<double>&,
@@ -703,42 +728,10 @@ vector<T> hitool::VerticalHeightGreaterThan(const vector<param>& wantedParamList
                                             const vector<T>& lastLevelValue, const vector<T>& findValue,
                                             int findNth) const
 {
-	ASSERT(!wantedParamList.empty());
+	auto modifier = CreateModifier(kFindHeightGreaterThanModifier);
+	modifier->FindNth(findNth);
 
-	size_t p_i = 0;
-
-	param foundParam = wantedParamList[p_i];
-
-	for (size_t i = 0; i < wantedParamList.size(); i++)
-	{
-		try
-		{
-			return VerticalHeightGreaterThan<T>(foundParam, firstLevelValue, lastLevelValue, findValue, findNth);
-		}
-		catch (const HPExceptionType& e)
-		{
-			if (e == kFileDataNotFound)
-			{
-				if (++p_i < wantedParamList.size())
-				{
-					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-					                wantedParamList[p_i].Name());
-					foundParam = wantedParamList[p_i];
-				}
-				else
-				{
-					itsLogger.Warning("No more valid parameters left");
-					throw;
-				}
-			}
-			else
-			{
-				throw;
-			}
-		}
-	}
-
-	throw runtime_error("Data not found");
+	return VerticalExtremeValue<T>(modifier, wantedParamList, firstLevelValue, lastLevelValue, findValue);
 }
 
 template vector<double> hitool::VerticalHeightGreaterThan<double>(const params&, const vector<double>&,
@@ -826,42 +819,10 @@ template <typename T>
 vector<T> hitool::VerticalHeightLessThan(const vector<param>& wantedParamList, const vector<T>& firstLevelValue,
                                          const vector<T>& lastLevelValue, const vector<T>& findValue, int findNth) const
 {
-	ASSERT(!wantedParamList.empty());
+	auto modifier = CreateModifier(kFindHeightLessThanModifier);
+	modifier->FindNth(findNth);
 
-	size_t p_i = 0;
-
-	param foundParam = wantedParamList[p_i];
-
-	for (size_t i = 0; i < wantedParamList.size(); i++)
-	{
-		try
-		{
-			return VerticalHeightLessThan<T>(foundParam, firstLevelValue, lastLevelValue, findValue, findNth);
-		}
-		catch (const HPExceptionType& e)
-		{
-			if (e == kFileDataNotFound)
-			{
-				if (++p_i < wantedParamList.size())
-				{
-					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-					                wantedParamList[p_i].Name());
-					foundParam = wantedParamList[p_i];
-				}
-				else
-				{
-					itsLogger.Warning("No more valid parameters left");
-					throw;
-				}
-			}
-			else
-			{
-				throw;
-			}
-		}
-	}
-
-	throw runtime_error("Data not found");
+	return VerticalExtremeValue<T>(modifier, wantedParamList, firstLevelValue, lastLevelValue, findValue);
 }
 
 template vector<double> hitool::VerticalHeightLessThan<double>(const params&, const vector<double>&,
@@ -902,42 +863,7 @@ template <typename T>
 vector<T> hitool::VerticalMinimum(const vector<param>& wantedParamList, const vector<T>& firstLevelValue,
                                   const vector<T>& lastLevelValue) const
 {
-	ASSERT(!wantedParamList.empty());
-
-	size_t p_i = 0;
-
-	param foundParam = wantedParamList[p_i];
-
-	for (size_t i = 0; i < wantedParamList.size(); i++)
-	{
-		try
-		{
-			return VerticalMinimum<T>(foundParam, firstLevelValue, lastLevelValue);
-		}
-		catch (const HPExceptionType& e)
-		{
-			if (e == kFileDataNotFound)
-			{
-				if (++p_i < wantedParamList.size())
-				{
-					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-					                wantedParamList[p_i].Name());
-					foundParam = wantedParamList[p_i];
-				}
-				else
-				{
-					itsLogger.Warning("No more valid parameters left");
-					throw;
-				}
-			}
-			else
-			{
-				throw;
-			}
-		}
-	}
-
-	throw runtime_error("Data not found");
+	return VerticalExtremeValue<T>(CreateModifier(kMinimumModifier), wantedParamList, firstLevelValue, lastLevelValue);
 }
 
 template vector<double> hitool::VerticalMinimum<double>(const vector<param>&, const vector<double>&,
@@ -986,42 +912,7 @@ template <typename T>
 vector<T> hitool::VerticalMaximum(const vector<param>& wantedParamList, const vector<T>& firstLevelValue,
                                   const vector<T>& lastLevelValue) const
 {
-	ASSERT(!wantedParamList.empty());
-
-	size_t p_i = 0;
-
-	param foundParam = wantedParamList[p_i];
-
-	for (size_t i = 0; i < wantedParamList.size(); i++)
-	{
-		try
-		{
-			return VerticalMaximum<T>(foundParam, firstLevelValue, lastLevelValue);
-		}
-		catch (const HPExceptionType& e)
-		{
-			if (e == kFileDataNotFound)
-			{
-				if (++p_i < wantedParamList.size())
-				{
-					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-					                wantedParamList[p_i].Name());
-					foundParam = wantedParamList[p_i];
-				}
-				else
-				{
-					itsLogger.Warning("No more valid parameters left");
-					throw;
-				}
-			}
-			else
-			{
-				throw;
-			}
-		}
-	}
-
-	throw runtime_error("Data not found");
+	return VerticalExtremeValue<T>(CreateModifier(kMaximumModifier), wantedParamList, firstLevelValue, lastLevelValue);
 }
 
 template vector<double> hitool::VerticalMaximum<double>(const params&, const vector<double>&,
@@ -1067,42 +958,7 @@ template <typename T>
 vector<T> hitool::VerticalAverage(const vector<param>& wantedParamList, const vector<T>& firstLevelValue,
                                   const vector<T>& lastLevelValue) const
 {
-	ASSERT(!wantedParamList.empty());
-
-	size_t p_i = 0;
-
-	param foundParam = wantedParamList[p_i];
-
-	for (size_t i = 0; i < wantedParamList.size(); i++)
-	{
-		try
-		{
-			return VerticalAverage<T>(foundParam, firstLevelValue, lastLevelValue);
-		}
-		catch (const HPExceptionType& e)
-		{
-			if (e == kFileDataNotFound)
-			{
-				if (++p_i < wantedParamList.size())
-				{
-					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-					                wantedParamList[p_i].Name());
-					foundParam = wantedParamList[p_i];
-				}
-				else
-				{
-					itsLogger.Warning("No more valid parameters left");
-					throw;
-				}
-			}
-			else
-			{
-				throw;
-			}
-		}
-	}
-
-	throw runtime_error("Data not found");
+	return VerticalExtremeValue<T>(CreateModifier(kAverageModifier), wantedParamList, firstLevelValue, lastLevelValue);
 }
 
 template vector<double> hitool::VerticalAverage<double>(const params&, const vector<double>&,
@@ -1136,42 +992,8 @@ template <typename T>
 vector<T> hitool::VerticalSum(const vector<param>& wantedParamList, const vector<T>& firstLevelValue,
                               const vector<T>& lastLevelValue) const
 {
-	ASSERT(!wantedParamList.empty());
-
-	size_t p_i = 0;
-
-	param foundParam = wantedParamList[p_i];
-
-	for (size_t i = 0; i < wantedParamList.size(); i++)
-	{
-		try
-		{
-			return VerticalSum<T>(foundParam, firstLevelValue, lastLevelValue);
-		}
-		catch (const HPExceptionType& e)
-		{
-			if (e == kFileDataNotFound)
-			{
-				if (++p_i < wantedParamList.size())
-				{
-					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-					                wantedParamList[p_i].Name());
-					foundParam = wantedParamList[p_i];
-				}
-				else
-				{
-					itsLogger.Warning("No more valid parameters left");
-					throw;
-				}
-			}
-			else
-			{
-				throw;
-			}
-		}
-	}
-
-	throw runtime_error("Data not found");
+	return VerticalExtremeValue<T>(CreateModifier(kAccumulationModifier), wantedParamList, firstLevelValue,
+	                               lastLevelValue);
 }
 
 template vector<double> hitool::VerticalSum<double>(const vector<param>&, const vector<double>&,
@@ -1218,42 +1040,8 @@ template <typename T>
 vector<T> hitool::VerticalCount(const vector<param>& wantedParamList, const vector<T>& firstLevelValue,
                                 const vector<T>& lastLevelValue, const vector<T>& findValue) const
 {
-	ASSERT(!wantedParamList.empty());
-
-	size_t p_i = 0;
-
-	param foundParam = wantedParamList[p_i];
-
-	for (size_t i = 0; i < wantedParamList.size(); i++)
-	{
-		try
-		{
-			return VerticalCount<T>(foundParam, firstLevelValue, lastLevelValue, findValue);
-		}
-		catch (const HPExceptionType& e)
-		{
-			if (e == kFileDataNotFound)
-			{
-				if (++p_i < wantedParamList.size())
-				{
-					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-					                wantedParamList[p_i].Name());
-					foundParam = wantedParamList[p_i];
-				}
-				else
-				{
-					itsLogger.Warning("No more valid parameters left");
-					throw;
-				}
-			}
-			else
-			{
-				throw;
-			}
-		}
-	}
-
-	throw runtime_error("Data not found");
+	return VerticalExtremeValue<T>(CreateModifier(kCountModifier), wantedParamList, firstLevelValue, lastLevelValue,
+	                               findValue);
 }
 
 template vector<double> hitool::VerticalCount<double>(const params&, const vector<double>&, const vector<double>&,
@@ -1317,42 +1105,8 @@ template vector<float> hitool::VerticalValue<float>(const params&, float) const;
 template <typename T>
 vector<T> hitool::VerticalValue(const vector<param>& wantedParamList, const vector<T>& heightInfo) const
 {
-	ASSERT(!wantedParamList.empty());
-
-	size_t p_i = 0;
-
-	param foundParam = wantedParamList[p_i];
-
-	for (size_t i = 0; i < wantedParamList.size(); i++)
-	{
-		try
-		{
-			return VerticalValue<T>(foundParam, heightInfo);
-		}
-		catch (const HPExceptionType& e)
-		{
-			if (e == kFileDataNotFound)
-			{
-				if (++p_i < wantedParamList.size())
-				{
-					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-					                wantedParamList[p_i].Name());
-					foundParam = wantedParamList[p_i];
-				}
-				else
-				{
-					itsLogger.Warning("No more valid parameters left");
-					throw;
-				}
-			}
-			else
-			{
-				throw;
-			}
-		}
-	}
-
-	throw runtime_error("Data not found");
+	return VerticalExtremeValue<T>(CreateModifier(kFindValueModifier), wantedParamList, vector<T>(), vector<T>(),
+	                               heightInfo);
 }
 
 template vector<double> hitool::VerticalValue<double>(const params&, const vector<double>&) const;
@@ -1396,42 +1150,8 @@ template <typename T>
 vector<T> hitool::PlusMinusArea(const vector<param>& wantedParamList, const vector<T>& firstLevelValue,
                                 const vector<T>& lastLevelValue) const
 {
-	ASSERT(!wantedParamList.empty());
-
-	size_t p_i = 0;
-
-	param foundParam = wantedParamList[p_i];
-
-	for (size_t i = 0; i < wantedParamList.size(); i++)
-	{
-		try
-		{
-			return PlusMinusArea<T>(foundParam, firstLevelValue, lastLevelValue);
-		}
-		catch (const HPExceptionType& e)
-		{
-			if (e == kFileDataNotFound)
-			{
-				if (++p_i < wantedParamList.size())
-				{
-					itsLogger.Debug("Switching parameter from " + foundParam.Name() + " to " +
-					                wantedParamList[p_i].Name());
-					foundParam = wantedParamList[p_i];
-				}
-				else
-				{
-					itsLogger.Warning("No more valid parameters left");
-					throw;
-				}
-			}
-			else
-			{
-				throw;
-			}
-		}
-	}
-
-	throw runtime_error("Data not found");
+	return VerticalExtremeValue<T>(CreateModifier(kPlusMinusAreaModifier), wantedParamList, firstLevelValue,
+	                               lastLevelValue);
 }
 
 template vector<double> hitool::PlusMinusArea<double>(const params&, const vector<double>&,
