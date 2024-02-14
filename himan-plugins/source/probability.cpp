@@ -329,7 +329,7 @@ void ProcessParameter(std::shared_ptr<const plugin_configuration>& conf, std::sh
 
 	if (pc.useGaussianSpread)
 	{
-		logr.Debug("Gaussian spread is enabled");
+		logr.Trace("Gaussian spread is enabled");
 		ProbabilityWithGaussianSpread<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens);
 	}
 	else
