@@ -2188,7 +2188,7 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 			case 0:   // forecast
 			case 1:   // analysis
 			case 10:  // forecast with timestep > 255
-				if (prod.Id() == 131)
+				if (prod.Id() == 131 || prod.Id() == 134)
 				{
 					// yeah, sometimes timeRangeIndicator=0 even if shortName=tp,
 					// what can we do :shrug:
