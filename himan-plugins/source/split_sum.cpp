@@ -667,7 +667,7 @@ std::pair<std::shared_ptr<info<double>>, std::shared_ptr<info<double>>> split_su
 
 			if (prevInfo)
 			{
-				itsLogger.Debug("Found previous data");
+				itsLogger.Trace("Found previous data");
 			}
 		}
 
@@ -696,7 +696,7 @@ std::pair<std::shared_ptr<info<double>>, std::shared_ptr<info<double>>> split_su
 
 			if (curInfo)
 			{
-				itsLogger.Debug("Found current data");
+				itsLogger.Trace("Found current data");
 			}
 		}
 	}
