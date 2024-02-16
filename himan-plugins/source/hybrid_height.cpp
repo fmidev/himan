@@ -54,9 +54,9 @@ void hybrid_height::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned sho
 {
 	auto myThreadedLogger = logger(itsName + "Thread #" + to_string(threadIndex));
 
-	myThreadedLogger.Info("Calculating time " + static_cast<string>(myTargetInfo->Time().ValidDateTime()) + " level " +
-	                      static_cast<string>(myTargetInfo->Level()) + " forecast type " +
-	                      static_cast<string>(myTargetInfo->ForecastType()));
+	myThreadedLogger.Info(fmt::format("Calculating time {} level {} forecast type {}",
+	                                  myTargetInfo->Time().ValidDateTime(), myTargetInfo->Level(),
+	                                  myTargetInfo->ForecastType()));
 
 	bool ret;
 
@@ -71,13 +71,13 @@ void hybrid_height::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned sho
 
 	if (!ret)
 	{
-		myThreadedLogger.Warning("Skipping step " + static_cast<string>(myTargetInfo->Time().Step()) + ", level " +
-		                         static_cast<string>(myTargetInfo->Level()));
+		myThreadedLogger.Warning(
+		    fmt::format("Skipping level {} step {}", myTargetInfo->Level(), myTargetInfo->Time().Step()));
 		return;
 	}
 
-	myThreadedLogger.Info("[CPU] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) + "/" +
-	                      to_string(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info(
+	    fmt::format("[CPU] Missing values: {}/{}", myTargetInfo->Data().MissingCount(), myTargetInfo->Data().Size()));
 }
 
 bool hybrid_height::WithGeopotential(shared_ptr<himan::info<float>>& myTargetInfo)
@@ -247,8 +247,8 @@ bool hybrid_height::WithHypsometricEquation(shared_ptr<himan::info<float>>& myTa
 
 		if (!prevTInfo || !prevPInfo || !PInfo || !TInfo)
 		{
-			itsLogger.Error("Source data missing for level " + to_string(myTargetInfo->Level().Value()) + " step " +
-			                static_cast<string>(myTargetInfo->Time().Step()) + ", stopping processing");
+			itsLogger.Error(fmt::format("Source data missing for level {} step {}", myTargetInfo->Level().Value(),
+			                            myTargetInfo->Time().Step()));
 			return false;
 		}
 
@@ -329,8 +329,8 @@ bool hybrid_height::WithHypsometricEquation(shared_ptr<himan::info<float>>& myTa
 		// processing any level above this one.
 		if (myTargetInfo->Data().Size() == myTargetInfo->Data().MissingCount())
 		{
-			itsLogger.Error("All data missing for level " + to_string(myTargetInfo->Level().Value()) + " step " +
-			                static_cast<string>(myTargetInfo->Time().Step()) + ", stopping processing");
+			itsLogger.Error(fmt::format("All data missing for level {} step {}", myTargetInfo->Level().Value(),
+			                            myTargetInfo->Time().Step()));
 			return false;
 		}
 
@@ -357,8 +357,7 @@ bool hybrid_height::WithHypsometricEquation(shared_ptr<himan::info<float>>& myTa
 				auto prevH = Fetch<float>(forecastTime, prevLevel, HParam, forecastType, false);
 				if (!prevH)
 				{
-					itsLogger.Error("Unable to get height of level below level " +
-					                static_cast<string>(myTargetInfo->Level()));
+					itsLogger.Error(fmt::format("Unable to get height of level below level {}", myTargetInfo->Level()));
 					return false;
 				}
 
