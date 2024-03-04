@@ -321,7 +321,7 @@ vector<T> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, const params& w
 			auto _par = GetCachedParamName(par);
 			ret = VerticalExtremeValue<T>(mod, _par, lowerHeight, upperHeight, findValue);
 			UpdateCachedParamName(wantedParams, _par);
-			return ret;
+			break;
 		}
 		catch (const HPExceptionType& e)
 		{
@@ -336,6 +336,11 @@ vector<T> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, const params& w
 		}
 	}
 
+	if (ret.empty())
+	{
+		itsLogger.Error("No data found for any of the parameters");
+		throw kFileDataNotFound;
+	}
 	return ret;
 }
 
