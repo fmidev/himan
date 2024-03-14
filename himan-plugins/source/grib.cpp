@@ -2197,8 +2197,16 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 					if (a.Type() != kUnknownAggregationType)
 					{
 						// only P1 used in grib if tri=0/1
-						a.TimeDuration(DurationFromTimeRange(message.UnitOfTimeRange()) *
-						               static_cast<int>(message.P1()));
+						if (timeRangeIndicator <= 1)
+						{
+							a.TimeDuration(DurationFromTimeRange(message.UnitOfTimeRange()) *
+							               static_cast<int>(message.P1()));
+						}
+						else if (timeRangeIndicator == 10)
+						{
+							int step = (static_cast<int>(message.P1()) << 8) | static_cast<int>(message.P2());
+							a.TimeDuration(DurationFromTimeRange(message.UnitOfTimeRange()) * step);
+						}
 					}
 				}
 				break;
