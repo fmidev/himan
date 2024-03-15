@@ -1,8 +1,8 @@
-#include "util.h"
 #include "filename.h"
 #include "forecast_time.h"
 #include "level.h"
 #include "param.h"
+#include "util.h"
 #include <fmt/printf.h>
 #include <iomanip>
 #include <regex>
@@ -47,6 +47,7 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 	// {wall_time:FORMAT_SPECIFIER}	           - current wall clock time
 	// {masala_base}                           - environment variable MASALA_PROCESSED_DATA_BASE or
 	//                                           MASALA_REF_BASE, depending on program name
+	// {env:ENV_VARIABLE}                      - environment variable ENV_VARIABLE
 
 	enum class Component
 	{
@@ -72,7 +73,8 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 		kForecastTypeValue,
 		kProducerId,
 		kFileType,
-		kWallTime
+		kWallTime,
+		kEnvironmentVariable
 	};
 
 	auto ComponentToString = [](Component c) -> string
@@ -125,6 +127,8 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 				return "producer_id";
 			case Component::kWallTime:
 				return "wall_time";
+			case Component::kEnvironmentVariable:
+				return "env";
 			default:
 				return "unknown";
 		}
@@ -326,6 +330,23 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 					case Component::kWallTime:
 						replacement = raw_time::Now().String(mask);
 						break;
+					case Component::kEnvironmentVariable:
+					{
+						const auto tokens = util::Split(string(what[1]), ":");
+
+						if (tokens.size() != 2)
+						{
+							throw invalid_argument(fmt::format("Invalid environment variable mask: {}", mask));
+						}
+
+						auto val = util::GetEnv(tokens[1]);
+						if (val.empty())
+						{
+							throw invalid_argument(fmt::format("Environment variable '{}' not defined", mask));
+						}
+						replacement = val;
+						break;
+					}
 					default:
 						break;
 				}
@@ -368,7 +389,8 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 	    make_pair(Component::kForecastTypeValue, R"(\{(forecast_type_value)(:[:\.%0-9a-zA-Z_/-]*)*\})"),
 	    make_pair(Component::kProducerId, R"(\{(producer_id)(:[:\.%0-9a-zA-Z_/-]*)*\})"),
 	    make_pair(Component::kFileType, R"(\{(file_type)\})"),
-	    make_pair(Component::kWallTime, R"(\{(wall_time)(:[:%a-zA-Z_/-]*)*\})")};
+	    make_pair(Component::kWallTime, R"(\{(wall_time)(:[:%a-zA-Z_/-]*)*\})"),
+	    make_pair(Component::kEnvironmentVariable, R"(\{(env:[a-zA-Z0-9_]+)\})")};
 
 	for (const auto& p : regexs)
 	{

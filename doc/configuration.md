@@ -466,6 +466,7 @@ Allowed template values are:
 * {producer_id:NUMBER_FORMAT_SPECIFIER}            - radon producer id
 * {file_type}                                      - file type extension, like grib, grib2, fqd, ...
 * {wall_time:DATE_FORMAT_SPECIFIER}                - wall clock time
+* {env:ENVIRONMENT_VARIABLE_NAME}                  - value from an environment variable
 
 Format specifiers:
 * DATE_FORMAT_SPECIFIER: usual c-style strftime formatting (%Y%m%d...)
