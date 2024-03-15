@@ -7,7 +7,7 @@
  * @brief Namespace containing functions to create correct filenames
  */
 
-#include "configuration.h"
+#include "plugin_configuration.h"
 #include "info.h"
 
 namespace himan
