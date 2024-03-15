@@ -44,7 +44,7 @@ himan::raw_time GetValidTime(const himan::raw_time& start)
 	return ret;
 }
 
-pop::pop() : itsECEPSGeom("ECGLO0200"), itsMEPSGeom("MEPS2500D"), itsUseMEPS(true)
+pop::pop() : itsECEPSGeom("ECGLO0100"), itsMEPSGeom("MEPS2500D"), itsUseMEPS(true)
 {
 	itsLogger = logger("pop");
 }

@@ -195,7 +195,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 	}
 	else
 	{
-		cnf->SourceGeomNames({"ECGLO0200", "ECEUR0200"});
+		cnf->SourceGeomNames({"ECGLO0100", "ECEUR0100"});
 	}
 
 	shared_ptr<info<double>> T0ECInfo =
