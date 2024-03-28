@@ -559,7 +559,7 @@ pair<bool, radon_record> radon::SavePrevi(const info<T>& resultInfo, bool dryRun
 
 	auto analysisTime = resultInfo.Time().OriginDateTime().String("%Y-%m-%d %H:%M:%S+00");
 
-	query << "SELECT id,schema_name,table_name,partition_name FROM as_previ WHERE producer_id = "
+	query << "SELECT id,schema_name,table_name,partition_name,record_count FROM as_previ WHERE producer_id = "
 	      << resultInfo.Producer().Id() << " AND (min_analysis_time, max_analysis_time) OVERLAPS ('" << analysisTime
 	      << "', '" << analysisTime << "')";
 
@@ -577,6 +577,7 @@ pair<bool, radon_record> radon::SavePrevi(const info<T>& resultInfo, bool dryRun
 	const string& schema_name = row[1];
 	const string& table_name = row[2];
 	const string& partition_name = row[3];
+	const string& record_count = row[4];
 
 	auto levelinfo = itsRadonDB->GetLevelFromDatabaseName(HPLevelTypeToString.at(resultInfo.Level().Type()));
 
@@ -680,6 +681,17 @@ pair<bool, radon_record> radon::SavePrevi(const info<T>& resultInfo, bool dryRun
 		}
 	}
 
+	if (record_count.empty() || record_count == "0")
+	{
+		itsLogger.Trace("Updating as_previ record_count column for " + table_name);
+
+		query.str("");
+		query << "UPDATE as_previ SET record_count = 1 WHERE schema_name = '" << schema_name
+		      << "' AND partition_name = '" << partition_name << "' AND analysis_time = '" << analysisTime << "'"
+		      << " AND producer_id = " << resultInfo.Producer().Id();
+
+		itsRadonDB->Execute(query.str());
+	}
 	return make_pair(true, radon_record(schema_name, table_name, partition_name, "", -1));
 }
 
