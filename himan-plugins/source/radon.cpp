@@ -609,8 +609,30 @@ pair<bool, radon_record> radon::SavePrevi(const info<T>& resultInfo, bool dryRun
 
 	auto localInfo = resultInfo;
 
+	const string leadTime = util::MakeSQLInterval(localInfo.Time());
+
+	auto NaNToNull = [](const T& value) -> string
+	{
+		if (IsMissing(value))
+		{
+			return "NULL";
+		}
+		else
+		{
+			return fmt::format("{}", value);
+		}
+	};
+
 	for (localInfo.ResetLocation(); localInfo.NextLocation();)
 	{
+		const std::string value = NaNToNull(localInfo.Value());
+
+		if (value == "NULL")
+		{
+			itsLogger.Trace(
+			    fmt::format("Inserting NULL value to {} for station {}", table_name, localInfo.Station().Id()));
+		}
+
 		query.str("");
 
 		query << "INSERT INTO data." << table_name
@@ -620,9 +642,8 @@ pair<bool, radon_record> radon::SavePrevi(const info<T>& resultInfo, bool dryRun
 		      << localInfo.Producer().Id() << ", " << localInfo.Station().Id() << ", "
 		      << "'" << analysisTime << "', " << paraminfo["id"] << ", " << levelinfo["id"] << ", "
 		      << localInfo.Level().Value() << ", " << levelValue2 << ", "
-		      << "'" << util::MakeSQLInterval(localInfo.Time()) << "', "
-		      << static_cast<int>(localInfo.ForecastType().Type()) << ", " << forecastTypeValue << ","
-		      << localInfo.Value() << ")";
+		      << "'" << leadTime << "', " << static_cast<int>(localInfo.ForecastType().Type()) << ", "
+		      << forecastTypeValue << "," << value << ")";
 
 		if (dryRun)
 		{
@@ -641,7 +662,7 @@ pair<bool, radon_record> radon::SavePrevi(const info<T>& resultInfo, bool dryRun
 
 			query.str("");
 			query << "UPDATE data." << table_name << " SET "
-			      << "value = " << localInfo.Value() << " WHERE "
+			      << "value = " << NaNToNull(localInfo.Value()) << " WHERE "
 			      << "producer_id = " << resultInfo.Producer().Id() << " AND "
 			      << "station_id = " << localInfo.Station().Id() << " AND "
 			      << "analysis_time = '" << analysisTime << "' AND "
