@@ -238,7 +238,7 @@ class fetcher : public auxiliary_plugin
 	template <typename T>
 	std::shared_ptr<himan::info<T>> InterpolateTime(const std::shared_ptr<const plugin_configuration>& conf,
 	                                                const forecast_time& ftime, const level& lev, const params& pars,
-	                                                const forecast_type& ftype);
+	                                                const forecast_type& ftype, bool suppressLogging);
 
 	HPFileType FileType(const std::string& theInputFile);
 	bool itsDoLevelTransform;           //<! Default true

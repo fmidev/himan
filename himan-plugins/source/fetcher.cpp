@@ -149,7 +149,7 @@ shared_ptr<info<T>> fetcher::Fetch(shared_ptr<const plugin_configuration> config
 			itsLogger.Warning("Not reading from previous forecast as time interpolation is enabled");
 		}
 
-		return InterpolateTime<T>(config, requestedTime, requestedLevel, requestedParams, requestedType);
+		return InterpolateTime<T>(config, requestedTime, requestedLevel, requestedParams, requestedType, false);
 	}
 
 	shared_ptr<info<T>> ret;
@@ -228,9 +228,9 @@ shared_ptr<info<T>> fetcher::Fetch(shared_ptr<const plugin_configuration> config
 			itsLogger.Warning("Not reading from previous forecast as time interpolation is enabled");
 		}
 
-		return InterpolateTime<T>(config, requestedTime, requestedLevel, {requestedParam}, requestedType);
+		return InterpolateTime<T>(config, requestedTime, requestedLevel, {requestedParam}, requestedType,
+		                          suppressLogging);
 	}
-
 	// Check sticky param cache first
 
 	shared_ptr<info<T>> ret;
@@ -1179,7 +1179,7 @@ template void fetcher::RotateVectorComponents<unsigned char>(vector<shared_ptr<i
 template <typename T>
 shared_ptr<himan::info<T>> fetcher::InterpolateTime(const shared_ptr<const plugin_configuration>& config,
                                                     const forecast_time& ftime, const level& lev, const params& pars,
-                                                    const forecast_type& ftype)
+                                                    const forecast_type& ftype, bool suppressLogging)
 {
 	itsLogger.Trace("Starting time interpolation");
 
@@ -1196,7 +1196,7 @@ shared_ptr<himan::info<T>> fetcher::InterpolateTime(const shared_ptr<const plugi
 		{
 			try
 			{
-				prev = Fetch<T>(config, curtime, lev, par, ftype, false, false, false, false);
+				prev = Fetch<T>(config, curtime, lev, par, ftype, false, suppressLogging, false, false);
 				break;
 			}
 			catch (const HPExceptionType& e)
@@ -1227,7 +1227,7 @@ shared_ptr<himan::info<T>> fetcher::InterpolateTime(const shared_ptr<const plugi
 
 			try
 			{
-				next = Fetch<T>(config, curtime, lev, par, ftype, false, false, false, false);
+				next = Fetch<T>(config, curtime, lev, par, ftype, false, suppressLogging, false, false);
 				break;
 			}
 			catch (const HPExceptionType& e)
@@ -1272,7 +1272,7 @@ shared_ptr<himan::info<T>> fetcher::InterpolateTime(const shared_ptr<const plugi
 
 template shared_ptr<himan::info<double>> fetcher::InterpolateTime<double>(const shared_ptr<const plugin_configuration>&,
                                                                           const forecast_time&, const level&,
-                                                                          const params&, const forecast_type&);
+                                                                          const params&, const forecast_type&, bool);
 template shared_ptr<himan::info<float>> fetcher::InterpolateTime<float>(const shared_ptr<const plugin_configuration>&,
                                                                         const forecast_time&, const level&,
-                                                                        const params&, const forecast_type&);
+                                                                        const params&, const forecast_type&, bool);
