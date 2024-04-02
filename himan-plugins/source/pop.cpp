@@ -133,8 +133,6 @@ std::shared_ptr<himan::info<double>> pop::GetLongProbabilityData(const himan::fo
                                                                  const level& forecastLevel, logger& logr)
 
 {
-	logr.Info("Fetching ECMWF");
-
 	// Fetch either 3h or 6h probability data, depending on the leadtime in question.
 	// The decision is actually based on both the leadtime of the smartmet forecast and
 	// the analysis time of the latest ENS forecast.
@@ -158,20 +156,24 @@ std::shared_ptr<himan::info<double>> pop::GetLongProbabilityData(const himan::fo
 	    forecast_time(RoundOriginTime(forecastTime.OriginDateTime(), 242), forecastTime.ValidDateTime());
 
 	const producer ECprod(242, 86, 242, "ECGEPSMTA");
+	const forecast_type ftype(kStatisticalProcessing);
+
+	auto f = GET_PLUGIN(fetcher);
+
+	auto cnf = make_shared<plugin_configuration>(*itsConfiguration);
+	cnf->SourceProducers({ECprod});
+	cnf->SourceGeomNames({itsECEPSGeom});
 
 	do
 	{
-		// valid time counter
-		int vtryNo = 0;
-		do
-		{
-			const param& p = (curTime.Step().Hours() <= 144) ? p3 : p6;
+		const long step = curTime.Step().Hours();
+		logr.Info(fmt::format(
+		    "Trying to fetch long probability data from ECMWF analysis time {} step {}, time interpolation enabled",
+		    curTime.OriginDateTime().String(), step));
 
-			ret =
-			    Fetch(curTime, forecastLevel, p, forecast_type(kStatisticalProcessing), {itsECEPSGeom}, ECprod, false);
-			vtryNo++;
-			curTime = forecast_time(curTime.OriginDateTime(), GetValidTime(curTime.ValidDateTime()));
-		} while (vtryNo < 6 && !ret);
+		const param& p = (step <= 144) ? p3 : p6;
+		ret = f->Fetch<double>(cnf, curTime, forecastLevel, p, ftype, false, true, false, true);
+
 		otryNo++;
 		curTime = forecast_time(GetOriginTime(curTime.OriginDateTime(), 242), forecastTime.ValidDateTime());
 
