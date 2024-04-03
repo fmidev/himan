@@ -13,8 +13,8 @@ logger:Info(msg)
 
 local ground_level = level(HPLevelType.kGround, 0)
 
-local PrecAv = luatool:Fetch(current_time, ground_level, param("F50-RR-6-MM"), current_forecast_type)
-local SnowAv = luatool:Fetch(current_time, ground_level, param("F50-SN-6-MM"), current_forecast_type)
+local PrecAv = luatool:Fetch(current_time, current_level, param("F50-RR-6-MM"), forecast_type(HPForecastType.kStatisticalProcessing))
+local SnowAv = luatool:Fetch(current_time, current_level, param("F50-SN-6-MM"), forecast_type(HPForecastType.kStatisticalProcessing))
 
 if not PrecAv or not SnowAv then
   return
