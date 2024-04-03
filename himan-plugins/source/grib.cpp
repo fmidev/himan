@@ -2212,21 +2212,13 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 				break;
 
 			case 2:  // typically max / min
-			         // but which one?
 			{
-				if (parmName == "FFG-MS" || parmName == "FFG3H-MS" || parmName == "WGU-MS" || parmName == "WGV-MS" ||
-				    parmName == "TMAX-K" || parmName == "TMAX12H-K")
-				{
-					a.Type(kMaximum);
-					a.TimeDuration(DurationFromTimeRange(message.UnitOfTimeRange()) *
-					               static_cast<int>(message.P2() - message.P1()));
-				}
-				else if (parmName == "TMIN-K" || parmName == "TMIN12H-K")
-				{
-					a.Type(kMinimum);
-					a.TimeDuration(DurationFromTimeRange(message.UnitOfTimeRange()) *
-					               static_cast<int>(message.P2() - message.P1()));
-				}
+				a = util::GetAggregationFromParamName(parmName, forecast_time());
+				const auto td =
+				    DurationFromTimeRange(message.UnitOfTimeRange()) * static_cast<int>(message.P2() - message.P1());
+
+				a.TimeDuration(td);
+				a.TimeOffset(td * -1);
 			}
 			break;
 
