@@ -883,8 +883,9 @@ aggregation util::GetAggregationFromParamName(const std::string& name, const for
 	// maximum thickness of some level
 	// eg. TMAX-K, TMIN12H-C
 	const std::regex r2("(?:T|POT)(MAX|MIN)([0-9]+H)?-[A-Z0-9]+");
-	// match wind gust
-	const std::regex r3("FFG([0-9]+H)?-MS");
+	// match wind gust, also components
+	// eg. FFG-MS, FFG3H-MS, WGU-MS
+	const std::regex r3("(?:FFG|WGU|WGV)([0-9]+H)?-MS");
 	// match one hour precipitation accumulations
 	const std::regex r4("SNR[CL]-KGM2|SNR-KGM2|RRR-KGM2|RRR[SLC]-KGM2");
 	// match precipitation accumulation from forecast start
