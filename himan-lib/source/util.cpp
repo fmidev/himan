@@ -1354,7 +1354,7 @@ std::pair<long, long> util::GetScaledValue(double v)
 		// find the position of first zero that has no other digit behind it
 		auto last = str.find_last_not_of('0');
 
-		if (last == std::string::npos)
+		if (last == std::string::npos || last == 0)
 		{
 			// No trailing zeros
 			return s;
