@@ -50,9 +50,21 @@ bool processing_type::operator==(const processing_type& other) const
 		return true;
 	}
 
+	// When comparing type, allow kProbabilityGreaterThan and kProbabilityGreaterThanOrEqual to match
+	// because grib2, our primary file type, does not distinguish these two.
+	// Same goes for kProbabilityLessThan and kProbabilityLessThanOrEqual.
+	const bool typeMatch = (itsType == other.itsType ||
+	                        (itsType == kProbabilityGreaterThan && other.itsType == kProbabilityGreaterThanOrEqual) ||
+	                        (itsType == kProbabilityGreaterThanOrEqual && other.itsType == kProbabilityGreaterThan) ||
+	                        (itsType == kProbabilityLessThan && other.itsType == kProbabilityLessThanOrEqual) ||
+	                        (itsType == kProbabilityLessThanOrEqual && other.itsType == kProbabilityLessThan));
+
+	const bool value1Match = fabs(itsValue - other.itsValue) < 0.0001;
+	const bool value2Match = fabs(itsValue2 - other.itsValue2) < 0.0001;
+
 	// Disregard number of ensemble members in comparison, because that's not a
 	// defining element for a processing type. It's more like extra meta data.
-	if (itsType != other.itsType || itsValue != other.itsValue || itsValue2 != other.itsValue2)
+	if (typeMatch == false || value1Match == false || value2Match == false)
 	//	    itsNumberOfEnsembleMembers != other.itsNumberOfEnsembleMembers)
 	{
 		return false;
