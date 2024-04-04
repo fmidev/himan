@@ -89,14 +89,14 @@ local rrparam = nil
 -- times, but this does not seem to matter
 
 if step == 1 then
-  rrparam = param("RRR-KGM2")
+  rrparam = param("RRR-KGM2", aggregation(HPAggregationType.kAccumulation, time_duration("01:00")), processing_type())
 elseif step == 3 then
-  rrparam = param("RR-3-MM")
+  rrparam = param("RR-3-MM", aggregation(HPAggregationType.kAccumulation, time_duration("03:00")), processing_type())
 elseif step == 6 then
-  rrparam = param("RR-6-MM")
+  rrparam = param("RR-6-MM", aggregation(HPAggregationType.kAccumulation, time_duration("06:00")), processing_type())
 else
   -- don't know what to choose; configuration was maybe given with 'hours' (no step)
-  rrparam = param("RRR-KGM2")
+  rrparam = param("RRR-KGM2", aggregation(HPAggregationType.kAccumulation, time_duration("01:00")), processing_type())
 end
 
 result:ResetTime()
@@ -124,13 +124,15 @@ if current_time:GetStep():Hours() > 1 then
   end
 end
 
+local radgloparam = param("RADGLO-WM2", aggregation(HPAggregationType.kAverage, time_duration(string.format("%s:00", step))), processing_type())
+
 while result:NextTime() do
 	local curtime = result:GetTime()
 	if (curtime:GetStep():Hours() ~= 0) then
 		-- fetch input data
 		local T = luatool:Fetch(curtime, level(HPLevelType.kHeight,2), param("T-K"), current_forecast_type) -- fetch temperature
 		local rr = luatool:Fetch(curtime, current_level, rrparam, current_forecast_type) -- fetch precipitation
-		local phi = luatool:Fetch(curtime, current_level, param("RADGLO-WM2"), current_forecast_type) -- fetch solar radiation
+		local phi = luatool:Fetch(curtime, current_level, radgloparam, current_forecast_type) -- fetch solar radiation
 		local v = luatool:Fetch(curtime, level(HPLevelType.kHeight,10), param("FF-MS"), current_forecast_type) -- fetch wind speed
 
 		if T and rr and phi and v then
