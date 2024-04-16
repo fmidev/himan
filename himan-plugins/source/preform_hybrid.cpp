@@ -315,12 +315,21 @@ void preform_hybrid::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned s
 		// Löytyykö riittävän paksut: pakkaskerros pinnasta ja sen yläpuolelta plussakerros, jossa pilveä/ei liian
 		// kuivaa?
 		// (Huom. hyvin paksu pakkaskerros (tai ohut sulamiskerros) -> oikeasti jääjyväsiä/ice pellets fzra sijaan)
-
-		if (IsMissing(PreForm) AND plusArea >
-		    fzraPA AND minusArea<fzraMA AND T <= 0 AND(IsMissing(upperLayerN) OR upperLayerN > dryNlim) AND rhAvgUpper>
-		        rhMeltUpper)
+		// 4.4.24 : UpperLayerN-ehto pois (eli ei välitetä mahdollisesta kuivasta kerroksesta alapilven päällä)
+		// - lisää jonkun verran jäätävän sateen määrää lumen kustannuksella
+		// - kostean sulamiskerroksen yhteydessä jäätävä olomuoto on kuitenkin parempi oletus
+		if (IsMissing(PreForm) AND plusArea > fzraPA AND minusArea<fzraMA AND T <= 0 AND rhAvgUpper> rhMeltUpper)
 		{
 			PreForm = FREEZING_RAIN;
+		}
+
+		// 4.4.2024 Lisäys/bugikorjaus: vettä, jos T2m plussalla
+		// - ei välitetä MinusArea- tai UpperLayerN -kriteereistä (eli pakkaskerroksen paksuudesta tai alapilven
+		// yläpuolisesta kerroksesta)
+		// - muuten myöhemmin sulamiskerroksen alle tulisi virheellisesti lunta/räntää
+		if (IsMissing(PreForm) AND plusArea > fzraPA AND T > 0 AND rhAvgUpper > rhMeltUpper)
+		{
+			PreForm = RAIN;
 		}
 
 		// 3. Lunta, räntää, tihkua vai vettä? PK:n koodia mukaillen
