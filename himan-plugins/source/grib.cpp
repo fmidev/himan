@@ -317,12 +317,12 @@ void DecodePrecipitationFormFromGrib2(vector<T>& arr)
 				val = 0.;
 				break;
 			// sleet
-			case 6:
 			case 7:
 				val = 2.;
 				break;
 			// snow
 			case 5:
+			case 6:
 				val = 3.;
 				break;
 			// freezing drizzle
