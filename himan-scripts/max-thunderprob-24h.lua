@@ -29,12 +29,11 @@ function MaxThunderprob(curTime)
   local count = 0
 
   while true do
-    local stepAdjustment = -1
+    -- for ENS we have smallest step 3h
+    local stepAdjustment = -3
 
     if step >= 150 then
       stepAdjustment = -6
-    elseif step >= 93 then
-      stepAdjustment = -3
     end
 
     curTime:GetValidDateTime():Adjust(HPTimeResolution.kHourResolution, stepAdjustment)
