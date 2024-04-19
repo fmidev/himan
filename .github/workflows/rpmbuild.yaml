@@ -219,6 +219,7 @@ jobs:
         import time
         import datetime
         import os
+        import sys
         batch = boto3.client('batch',
                       aws_access_key_id="${{ secrets.AWS_ACCESS_KEY_ID }}",
                       aws_secret_access_key="${{ secrets.AWS_SECRET_ACCESS_KEY }}",
@@ -240,6 +241,9 @@ jobs:
         with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
           print(f"status={status['status']}", file=fh)
           print(f"logstream-name={status['attempts'][0]['container']['logStreamName']}", file=fh)
+
+        if status['status'] == 'FAILED':
+          sys.exit(1)
 
     - name: Retrieve logs
       if: always()
