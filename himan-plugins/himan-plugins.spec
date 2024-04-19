@@ -30,8 +30,8 @@ Requires: libstdc++
 Requires: himan-lib >= 24.1.9
 Requires: lua >= 5.3.0
 Requires: unixODBC
-Requires: libfmigrib >= 23.12.8
-Requires: libfmidb >= 23.10.16
+Requires: libfmigrib >= 24.4.19
+Requires: libfmidb >= 24.4.19
 Requires: smartmet-library-newbase >= 22.3.22
 Requires: smartmet-library-gis
 Requires: smartmet-library-macgyver
@@ -55,9 +55,9 @@ BuildRequires: eccodes
 BuildRequires: redhat-rpm-config
 BuildRequires: cuda-cusp-12-4 >= 0.5.1
 BuildRequires: libs3-devel >= 4.1
-BuildRequires: libfmigrib >= 23.12.8
-BuildRequires: libfmigrib-devel >= 23.12.8
-BuildRequires: libfmidb-devel >= 22.1.10
+BuildRequires: libfmigrib >= 24.4.19
+BuildRequires: libfmigrib-devel >= 24.4.19
+BuildRequires: libfmidb-devel >= 24.4.18
 BuildRequires: smartmet-library-newbase-devel >= 21.12.7
 BuildRequires: smartmet-library-gis-devel
 BuildRequires: libluabind >= 0.9.3-3

@@ -27,8 +27,8 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: libfmidb >= 23.10.16
-Requires: libfmigrib >= 23.1.26
+Requires: libfmidb >= 24.4.18
+Requires: libfmigrib >= 24.4.19
 Requires: fmt >= 7.1.0
 Requires: libpqxx >= 7.7.0
 BuildRequires: python3-scons
@@ -41,8 +41,8 @@ BuildRequires: cuda-nvcc-12-4
 BuildRequires: cuda-cudart-devel-12-4
 BuildRequires: geos311-devel
 BuildRequires: gdal35-devel
-BuildRequires: libfmidb-devel >= 22.1.10
-BuildRequires: libfmigrib-devel >= 23.1.26
+BuildRequires: libfmidb-devel >= 24.4.18
+BuildRequires: libfmigrib-devel >= 24.4.19
 BuildRequires: zlib-devel
 BuildRequires: %{boost}-devel
 BuildRequires: libs3-devel
