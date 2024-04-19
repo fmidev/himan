@@ -837,6 +837,13 @@ string util::UniqueName(const plugin::search_options& options)
 {
 	ASSERT(options.configuration->DatabaseType() == kNoDatabase || options.prod.Id() != kHPMissingInt);
 
+	if (options.configuration->BaseGrid() == nullptr)
+	{
+		logger logr("util");
+		logr.Fatal("Requested unique name for configuration object without basegrid");
+		himan::Abort();
+	}
+
 	try
 	{
 		return fmt::format("{}_{}_{}_{}_{}_{}_{}_{}", options.prod.Id(), options.time.OriginDateTime().ToSQLTime(),
@@ -854,6 +861,12 @@ string util::UniqueName(const plugin::search_options& options)
 template <typename T>
 string util::UniqueName(const info<T>& info)
 {
+	if (info.Grid() == nullptr)
+	{
+		logger logr("util");
+		logr.Fatal("Requested unique name for info object without grid");
+		himan::Abort();
+	}
 	try
 	{
 		return fmt::format("{}_{}_{}_{}_{}_{}_{}_{}", info.Producer().Id(), info.Time().OriginDateTime().ToSQLTime(),
