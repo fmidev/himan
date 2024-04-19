@@ -161,7 +161,6 @@ std::ostream& configuration::Write(std::ostream& file) const
 	{
 		file << "__itsForecastTypes__ " << i << " " << itsForecastTypes[i] << std::endl;
 	}
-
 	for (size_t i = 0; i < itsTimes.size(); i++)
 	{
 		file << "__itsTimes__ " << i << " " << itsTimes[i] << std::endl;
@@ -171,6 +170,15 @@ std::ostream& configuration::Write(std::ostream& file) const
 		file << "__itsLevels__ " << i << " " << itsLevels[i] << std::endl;
 	}
 
+	if (itsBaseGrid)
+	{
+		file << "__itsBaseGrid__" << std::endl;
+		itsBaseGrid->Write(file);
+	}
+	else
+	{
+		file << "__itsBaseGrid__ nullptr" << std::endl;
+	}
 	return file;
 }
 
