@@ -212,9 +212,16 @@ env.Append(NVCCDEFINES=['HAVE_CUDA'])
 
 env.Append(NVCCFLAGS = ['-m64', '-Xcompiler', '-fPIC'])
 env.Append(NVCCFLAGS = ['-Wno-deprecated-declarations'])
+env.Append(NVCCFLAGS = ['-arch=sm_60'])
 env.Append(NVCCFLAGS = ['-gencode=arch=compute_60,code=sm_60'])
+env.Append(NVCCFLAGS = ['-gencode=arch=compute_61,code=sm_61'])
 env.Append(NVCCFLAGS = ['-gencode=arch=compute_70,code=sm_70'])
+env.Append(NVCCFLAGS = ['-gencode=arch=compute_75,code=sm_75'])
 env.Append(NVCCFLAGS = ['-gencode=arch=compute_80,code=sm_80'])
+env.Append(NVCCFLAGS = ['-gencode=arch=compute_86,code=sm_86'])
+env.Append(NVCCFLAGS = ['-gencode=arch=compute_87,code=sm_87'])
+env.Append(NVCCFLAGS = ['-gencode=arch=compute_90,code=sm_90'])
+env.Append(NVCCFLAGS = ['-gencode=arch=compute_90,code=compute_90'])
 
 env.AppendUnique(NVCCFLAGS = ['-std=' + cpp_standard])
 
