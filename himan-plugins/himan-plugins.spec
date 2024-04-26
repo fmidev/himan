@@ -47,13 +47,13 @@ BuildRequires: libpqxx-devel >= 7.7.0
 BuildRequires: make
 BuildRequires: gdal35-devel
 BuildRequires: gcc-c++ >= 8.2.1
-BuildRequires: cuda-nvcc-12-2
-BuildRequires: cuda-cudart-devel-12-2
-BuildRequires: libcublas-devel-12-2
+BuildRequires: cuda-nvcc-12-4
+BuildRequires: cuda-cudart-devel-12-4
+BuildRequires: libcublas-devel-12-4
 BuildRequires: eccodes-devel
 BuildRequires: eccodes
 BuildRequires: redhat-rpm-config
-BuildRequires: cuda-cusp-12-2 >= 0.5.1
+BuildRequires: cuda-cusp-12-4 >= 0.5.1
 BuildRequires: libs3-devel >= 4.1
 BuildRequires: libfmigrib >= 23.12.8
 BuildRequires: libfmigrib-devel >= 23.12.8

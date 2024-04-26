@@ -45,8 +45,8 @@ BuildRequires: fmt-devel >= 7.1.0
 BuildRequires: python3-scons
 BuildRequires: redhat-rpm-config
 BuildRequires: gcc-c++ >= 8.2.1
-BuildRequires: cuda-nvcc-12-2
-BuildRequires: cuda-cudart-devel-12-2
+BuildRequires: cuda-nvcc-12-4
+BuildRequires: cuda-cudart-devel-12-4
 BuildRequires: make
 BuildRequires: python3-distro
 Provides: himan
