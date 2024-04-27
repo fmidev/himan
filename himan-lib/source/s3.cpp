@@ -139,6 +139,18 @@ static S3Status getObjectDataCallback(int bufferSize, const char* buffer, void* 
 	return S3StatusOK;
 }
 
+static S3Status headObjectPropertiesCallback(const S3ResponseProperties* properties, void* callbackData)
+{
+	auto objectSize = static_cast<long unsigned int*>(callbackData);
+
+	if (properties->contentLength)
+	{
+		*objectSize = properties->contentLength;
+	}
+
+	return S3StatusOK;
+}
+
 void Initialize()
 {
 	call_once(
@@ -427,6 +439,38 @@ bool s3::Exists(const std::string& objectName)
 			return false;
 		default:
 			HandleS3Error(logr, host, bucket, key, "Head");
+			himan::Abort();
+	}
+}
+
+long unsigned int s3::ObjectSize(const std::string& objectName)
+{
+	Initialize();
+
+	const auto host = StripProtocol(util::GetEnv("S3_HOSTNAME"));
+
+	const auto bucketAndFileName = GetBucketAndFileName(objectName);
+	const auto bucket = bucketAndFileName[0];
+	const auto key = bucketAndFileName[1];
+	const auto region = ReadAWSRegionFromHostname(host);
+
+	const auto bucketContext = GetBucketContext(host, bucket, region);
+	const int timeoutms = 5000;
+
+	long unsigned int size = 0;
+
+	S3ResponseHandler responseHandler = {&headObjectPropertiesCallback, &responseCompleteCallback};
+
+	S3_head_object(&bucketContext, key.c_str(), NULL, timeoutms, &responseHandler, &size);
+
+	himan::logger logr("s3");
+
+	switch (statusG)
+	{
+		case S3StatusOK:
+			return size;
+		default:
+			HandleS3Error(logr, host, bucket, key, "Size");
 			himan::Abort();
 	}
 }
