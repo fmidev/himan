@@ -32,7 +32,7 @@ POTmat:SetValues(POT)
 local filter = matrix(3, 3, 1, missing)    
 filter:Fill(1/9.)
 
-local POT = Filter2D(POTmat, filter, configuration:GetUseCuda()):GetValues()
+POT = Filter2D(POTmat, filter, configuration:GetUseCuda()):GetValues()
 
 result:SetParam(param("POT-PRCNT"))
 result:SetValues(POT)
