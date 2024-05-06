@@ -273,13 +273,13 @@ vector<vector<string>> GetGridGeoms(himan::plugin::search_options& options, uniq
 	vector<vector<string>> gridgeoms;
 	vector<string> sourceGeoms = options.configuration->SourceGeomNames();
 
-	const string ref_prod = options.prod.Name();
+	long int producer_id = options.prod.Id();
 	const string analtime = options.time.OriginDateTime().String("%Y-%m-%d %H:%M:%S+00");
 
 	if (sourceGeoms.empty())
 	{
 		// Get all geometries
-		gridgeoms = itsRadonDB->GetGridGeoms(ref_prod, analtime);
+		gridgeoms = itsRadonDB->GetGridGeoms(producer_id, analtime);
 	}
 	else
 	{
@@ -290,7 +290,7 @@ vector<vector<string>> GetGridGeoms(himan::plugin::search_options& options, uniq
 
 		for (size_t i = 0; i < sourceGeoms.size(); i++)
 		{
-			vector<vector<string>> geoms = itsRadonDB->GetGridGeoms(ref_prod, analtime, sourceGeoms[i]);
+			vector<vector<string>> geoms = itsRadonDB->GetGridGeoms(producer_id, analtime, sourceGeoms[i]);
 			gridgeoms.insert(gridgeoms.end(), geoms.begin(), geoms.end());
 		}
 	}
