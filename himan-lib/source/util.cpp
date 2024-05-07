@@ -905,6 +905,9 @@ aggregation util::GetAggregationFromParamName(const std::string& name, const for
 	const std::regex r5("RR-KGM2|SNACC-KGM2|RR[CL]-KGM2|RAIN[CL]-KGM2");
 	// match daily periods
 	const std::regex r6("PREC([0-9D]+)-(?:KGM2|MM)");
+	// match radiation fluxes
+	const std::regex r7("R(?:AD|TOP|NET)(?:GLO|GLOC|LW|LWC|SW)A-JM2");
+	const std::regex r8("R(?:AD|TOP|NET)(?:GLO|GLOC|LW|LWC|SW)-WM2");
 
 	std::smatch m;
 
@@ -956,7 +959,7 @@ aggregation util::GetAggregationFromParamName(const std::string& name, const for
 	{
 		return himan::aggregation(kAccumulation, ONE_HOUR);
 	}
-	else if (std::regex_search(name, m, r5))
+	else if (std::regex_search(name, m, r5) || std::regex_search(name, m, r7))
 	{
 		return himan::aggregation(kAccumulation, ftime.Step());
 	}
@@ -973,6 +976,12 @@ aggregation util::GetAggregationFromParamName(const std::string& name, const for
 		catch (const std::exception& e)
 		{
 		}
+	}
+	else if (std::regex_search(name, m, r8))
+	{
+		// Cannot know at this stage which are the starting and ending times
+		// for the radiation period
+		return himan::aggregation(kAverage);
 	}
 
 	return himan::aggregation();
