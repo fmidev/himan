@@ -255,6 +255,13 @@ void pot::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 		POT = PoLift * PoThermoDyn * PoColdTop * PoMixedPhase * PoDepth * 100;
 	}
 
+	const himan::matrix<double> filter_kernel(3, 3, 1, MissingDouble(), 1 / 9.);
+
+	const auto smooth_pot =
+	    numerical_functions::Filter2D<double>(myTargetInfo->Data(), filter_kernel, itsConfiguration->UseCuda());
+
+	myTargetInfo->Base()->data = move(smooth_pot);
+
 	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
 	                      "/" + to_string(myTargetInfo->Data().Size()));
 }
