@@ -38,13 +38,11 @@ local topdata = hitool:VerticalHeightLessThanGrid(CATParam, basedata, highlimitd
 
 -- Find maximum value of Clear Air Turbulence intensity
 local maxdata = hitool:VerticalMaximumGrid(CATParam, basedata, highlimitdata)
-local maxheight = hitool:VerticalHeightGrid(CATParam, basedata, highlimitdata, maxdata, 1)
 
 -- Convert pressure of base and top to flight level using conversion function based on International Standard Atmonsphere (ISA)
 for i=1, #basedata do
   basedata[i] = FlightLevel_(basedata[i] * 100)
   topdata[i] = FlightLevel_(topdata[i] * 100)
-  maxheight[i] = FlightLevel_(maxdata[i] * 100)
 end
 
 -- Write output
@@ -59,8 +57,3 @@ luatool:WriteToFile(result)
 result:SetParam(param("TI2-MAX-S2"))
 result:SetValues(maxdata)
 luatool:WriteToFile(result)
-
-result:SetParam(param("TI2-MAX-FL"))
-result:SetValues(topdata)
-luatool:WriteToFile(result)
-
