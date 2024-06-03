@@ -18,7 +18,6 @@ using namespace himan::numerical_functions;
 const double DEFAULT_MAXIMUM = 1e38;
 const double DEFAULT_MINIMUM = -1e38;
 
-#define DEBUG_PRINT
 #ifdef DEBUG_PRINT
 #define DEBUG_MSG(str) if (itsIndex == 24122) { do { std::cout << ClassName() << " " << str << std::endl; } while (false); }
 #else
