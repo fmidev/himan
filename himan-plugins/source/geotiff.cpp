@@ -586,7 +586,7 @@ forecast_time ReadTime(const std::map<std::string, std::string>& meta, const for
 	raw_time origintime = ftime.OriginDateTime();
 	raw_time validtime = ftime.ValidDateTime();
 
-	std::string origintimestr, validtimestr, mask;
+	std::string origintimestr, validtimestr, mask = "%Y%m%d%H%M";
 
 	for (const auto& m : meta)
 	{
@@ -711,16 +711,26 @@ std::map<std::string, std::string> ParseMetadata(char** mdata, const producer& p
 			{
 				log.Warning(fmt::format("Regex did not match for attribute {}", attribute));
 				log.Warning(fmt::format("Regex: '{}' Metadata: '{}'", keyMask, metadata));
+				continue;
 			}
 
-			if (what.size() != 2)
+			std::string value;
+			if (what.size() == 1)
 			{
-				log.Fatal(fmt::format("Regex matched too many times: {}", what.size() - 1));
+				value = what[0];
+			}
+			else if (what.size() == 2)
+			{
+				value = what[1];
+			}
+			else
+			{
+				log.Fatal(fmt::format("Regex matched too many times: {}", what.size()));
 				himan::Abort();
 			}
 
-			log.Debug(fmt::format("Regex match for {}: {}", attribute, std::string(what[1])));
-			ret[attribute] = what[1];
+			log.Debug(fmt::format("Regex match for {}: {}", attribute, value));
+			ret[attribute] = value;
 		}
 	}
 
@@ -837,7 +847,8 @@ std::vector<std::shared_ptr<info<T>>> geotiff::FromFile(const file_information& 
 		auto bftype = ReadForecastType(bmeta, ftype);
 		auto bftime = ReadTime(bmeta, ftime);
 
-		if (bpar == param() || blvl == level() || bftype == forecast_type() || bftime == forecast_time())
+		if (bpar == param() || blvl == level() || bftype == forecast_type() || bftime == forecast_time() ||
+		    bftime.Step().Empty())
 		{
 			itsLogger.Warning("Failed to gather all required metadata");
 			itsLogger.Warning("Param: " + bpar.Name());
