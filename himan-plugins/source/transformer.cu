@@ -14,11 +14,25 @@ __global__ void TransformerKernel(const T* __restrict__ d_source, T* __restrict_
 	}
 }
 
+template <typename T>
+__global__ void ClampKernel(T* __restrict__ d_dest, T min, T max, size_t N)
+{
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < N)
+	{
+		if (isfinite(d_dest[idx]))
+		{
+			d_dest[idx] = fmax(fmin(d_dest[idx], static_cast<T>(max)), static_cast<T>(min));
+		}
+	}
+}
+
 namespace transformergpu
 {
 template <typename T>
 void Process(std::shared_ptr<const himan::plugin_configuration> conf, std::shared_ptr<info<T>> myTargetInfo,
-             std::shared_ptr<info<T>> sourceInfo, double scale, double base)
+             std::shared_ptr<info<T>> sourceInfo, double scale, double base, T min, T max)
 {
 	cudaStream_t stream;
 
@@ -48,6 +62,12 @@ void Process(std::shared_ptr<const himan::plugin_configuration> conf, std::share
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 
 	TransformerKernel<T><<<gridSize, blockSize, 0, stream>>>(d_source, d_dest, scale, base, N);
+
+	if (IsValid(min))
+	{
+		ClampKernel<T><<<gridSize, blockSize, 0, stream>>>(d_dest, min, max, N);
+	}
+
 	cuda::ReleaseInfo(myTargetInfo, d_dest, stream);
 
 	// block until the stream has completed
@@ -59,8 +79,8 @@ void Process(std::shared_ptr<const himan::plugin_configuration> conf, std::share
 	cudaStreamDestroy(stream);
 }
 template void Process(std::shared_ptr<const himan::plugin_configuration>, std::shared_ptr<info<double>>,
-                      std::shared_ptr<info<double>>, double, double);
+                      std::shared_ptr<info<double>>, double, double, double, double);
 template void Process(std::shared_ptr<const himan::plugin_configuration>, std::shared_ptr<info<float>>,
-                      std::shared_ptr<info<float>>, double, double);
+                      std::shared_ptr<info<float>>, double, double, float, float);
 
 }  // namespace transformergpu
