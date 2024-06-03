@@ -61,7 +61,7 @@ end
 
 local CBlimit = 2000  --required vertical thickness [m] to consider a CB (tweak this..!)
 local TCUlimit = 1500  --required vertical thickness [m] to consider a TCU (tweak this..!)
-local CBtopLim = -10  --required top T [K] to consider a CB (tweakable!)
+local CBtopLim = 263.15  --required top T [K] (-10 degC) to consider a CB (tweakable!)
 local CINlimTCU = -1  --CIN limit for TCu
 local RRlimit = 0.1 -- precipitation limit [mm/h] to consider a Cb
 local CAPElimit = 2.71828 --euler constant
@@ -88,10 +88,10 @@ for i=1, #EL500 do
   end
 
   --CB
-  if ((Ttop[i] < CBtopLim) and (EL500[i] - LCL500[i] > Cblimit) and (RR[i] > RRlimit)) then
+  if ((Ttop[i] < CBtopLim) and (EL500[i] - LCL500[i] > CBlimit) and (RR[i] > RRlimit)) then
     res[i] = FlightLevel_(pEL500[i] * 100)
     --Limit top value
-    if (CAPE500[i] > math.exp(1)) then
+    if (CAPE500[i] > CAPElimit) then
       --Add for overshooting top based on CAPE
       res[i] = res[i] + CAPE500[i] / (math.log(CAPE500[i]) * 10)
     end

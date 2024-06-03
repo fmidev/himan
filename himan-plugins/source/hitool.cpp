@@ -391,10 +391,49 @@ vector<T> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, const param& wa
 		}
 	}
 
-	// Karkeaa haarukointia
-
 	string heightUnit = (itsHeightUnit == kM) ? "meters" : "hectopascal";
 
+	// Two custom functions to find the smallest and largest value in an array.
+	// Using std::min_element and std::max_element is not an option since we need to skip missing values.
+	// Even with custom comparison operator they don't work correctly if the array starts with a missing value.
+
+	auto FindLargestValue = [](const vector<T>& v) -> T
+	{
+		T max = numeric_limits<T>::lowest();
+
+		for (const auto& val : v)
+		{
+			if (IsMissing(val))
+			{
+				continue;
+			}
+			max = std::max(max, val);
+		}
+		if (max == numeric_limits<T>::lowest())
+		{
+			max = MissingValue<T>();
+		}
+		return max;
+	};
+	auto FindSmallestValue = [](const vector<T>& v) -> T
+	{
+		T min = numeric_limits<T>::max();
+
+		for (const auto& val : v)
+		{
+			if (IsMissing(val))
+			{
+				continue;
+			}
+
+			min = std::min(min, val);
+		}
+		if (min == numeric_limits<T>::max())
+		{
+			min = MissingValue<T>();
+		}
+		return min;
+	};
 	switch (mod->Type())
 	{
 		case kAverageModifier:
@@ -405,77 +444,79 @@ vector<T> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, const param& wa
 		case kFindHeightGreaterThanModifier:
 		case kFindHeightLessThanModifier:
 		{
-			auto iter =
-			    std::max_element(upperHeight.begin(), upperHeight.end(),
-			                     [](const T& val1, const T& val2) { return (val1 < val2) ? true : IsMissing(val1); });
+			T lowest_value, highest_value;
 
-			const T max_value = *iter;
+			if (itsHeightUnit == kHPa)
+			{
+				lowest_value = FindLargestValue(lowerHeight);
+				highest_value = FindSmallestValue(upperHeight);
+			}
+			else
+			{
+				lowest_value = FindSmallestValue(lowerHeight);
+				highest_value = FindLargestValue(upperHeight);
+			}
 
-			iter =
-			    std::min_element(lowerHeight.begin(), lowerHeight.end(),
-			                     [](const T& val1, const T& val2) { return (val1 < val2) ? true : IsMissing(val2); });
-
-			const T min_value = *iter;
-
-			if (IsMissing(max_value) || IsMissing(min_value))
+			if (IsMissing(highest_value) || IsMissing(lowest_value))
 			{
 				itsLogger.Error("Min or max values of given heights are missing");
 				throw kFileDataNotFound;
 			}
 
-			auto levelsForMaxHeight = LevelForHeight(prod, max_value, itsConfiguration->TargetGeomName());
-			auto levelsForMinHeight = LevelForHeight(prod, min_value, itsConfiguration->TargetGeomName());
+			auto levelsForMaxHeight = LevelForHeight(prod, highest_value, itsConfiguration->TargetGeomName());
+			auto levelsForMinHeight = LevelForHeight(prod, lowest_value, itsConfiguration->TargetGeomName());
 
 			highestHybridLevel = static_cast<long>(levelsForMaxHeight.second.Value());
 			lowestHybridLevel = static_cast<long>(levelsForMinHeight.first.Value());
 
-			ASSERT(lowestHybridLevel >= highestHybridLevel);
+			if (lowestHybridLevel < highestHybridLevel)
+			{
+				itsLogger.Fatal("Number of lowest hybrid level is smaller than highest hybrid level");
+				himan::Abort();
+			}
 
 			itsLogger.Debug(fmt::format("Adjusting level range to {} .. {} for height range {:.1f} .. {:.1f} {}",
-			                            lowestHybridLevel, highestHybridLevel, min_value, max_value, heightUnit));
+			                            lowestHybridLevel, highestHybridLevel, lowest_value, highest_value,
+			                            heightUnit));
 		}
 		break;
 
 		case kFindValueModifier:
 		{
-			// Seems like minmax_elements is impossible to get to work with nan-values?
-			T min_value = numeric_limits<T>::max(), max_value = numeric_limits<T>::lowest();
-
-			for (const auto& v : findValue)
-			{
-				if (IsMissing(v))
-					continue;
-
-				min_value = min(min_value, v);
-				max_value = max(max_value, v);
-			}
-
-			if (max_value == numeric_limits<T>::lowest() || min_value == numeric_limits<T>::max())
-			{
-				itsLogger.Error("Min or max values of given heights are missing");
-				throw kFileDataNotFound;
-			}
+			auto lowest_value = FindSmallestValue(findValue);
+			auto highest_value = FindLargestValue(findValue);
 
 			if (itsHeightUnit == kHPa)
 			{
 				// larger value is closer to ground
 
-				std::swap(max_value, min_value);
+				std::swap(highest_value, lowest_value);
 
 				ASSERT(min_value >= 10);
 				ASSERT(max_value < 1200);
 			}
 
-			auto levelsForMaxHeight = LevelForHeight(prod, max_value, itsConfiguration->TargetGeomName());
-			auto levelsForMinHeight = LevelForHeight(prod, min_value, itsConfiguration->TargetGeomName());
+			if (IsMissing(highest_value) || IsMissing(lowest_value))
+			{
+				itsLogger.Error("Min or max values of given heights are missing");
+				throw kFileDataNotFound;
+			}
+
+			auto levelsForMaxHeight = LevelForHeight(prod, highest_value, itsConfiguration->TargetGeomName());
+			auto levelsForMinHeight = LevelForHeight(prod, lowest_value, itsConfiguration->TargetGeomName());
 
 			highestHybridLevel = static_cast<long>(levelsForMaxHeight.second.Value());
 			lowestHybridLevel = static_cast<long>(levelsForMinHeight.first.Value());
 
-			ASSERT(lowestHybridLevel >= highestHybridLevel);
+			if (lowestHybridLevel < highestHybridLevel)
+			{
+				itsLogger.Fatal("Number of lowest hybrid level is smaller than highest hybrid level");
+				himan::Abort();
+			}
 
 			itsLogger.Debug(fmt::format("Adjusting level range to {} .. {} for height range {:.1f} .. {:.1f} {}",
-			                            lowestHybridLevel, highestHybridLevel, min_value, max_value, heightUnit));
+			                            lowestHybridLevel, highestHybridLevel, lowest_value, highest_value,
+			                            heightUnit));
 		}
 		break;
 

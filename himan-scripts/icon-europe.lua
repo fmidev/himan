@@ -26,10 +26,11 @@ function LSPAndCP()
     ldata[i] = slsdata[i] + rlsdata[i]
   end
 
-  result:SetParam(param("RRRC-KGM2"))
+  local a = aggregation(HPAggregationType.kAccumulation, current_time:GetStep())
+  result:SetParam(param("RRC-KGM2", a, processing_type()))
   result:SetValues(cdata)
   luatool:WriteToFile(result)
-  result:SetParam(param("RRRL-KGM2"))
+  result:SetParam(param("RRL-KGM2", a, processing_type()))
   result:SetValues(ldata)
   luatool:WriteToFile(result)
 

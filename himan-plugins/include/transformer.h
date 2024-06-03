@@ -73,6 +73,8 @@ class transformer : public compiled_plugin, private compiled_plugin_base
 	std::unique_ptr<ensemble> itsEnsemble;
 	time_duration itsSourceForecastPeriod;
 	bool itsReadFromPreviousForecastIfNotFound;
+	double itsMinimumValue;
+	double itsMaximumValue;
 };
 
 // the class factory

@@ -28,7 +28,7 @@ namespace transformergpu
 {
 template <typename T>
 void Process(shared_ptr<const himan::plugin_configuration> conf, shared_ptr<himan::info<T>> myTargetInfo,
-             shared_ptr<himan::info<T>> sourceInfo, double scale, double base);
+             shared_ptr<himan::info<T>> sourceInfo, double scale, double base, T min, T max);
 }
 #endif
 
@@ -50,7 +50,10 @@ transformer::transformer()
       itsParamDefinitionFromConfig(false),
       itsEnsemble(nullptr),
       itsSourceForecastPeriod(),
-      itsReadFromPreviousForecastIfNotFound(false)
+      itsReadFromPreviousForecastIfNotFound(false),
+      itsMinimumValue(himan::MissingDouble()),
+      itsMaximumValue(himan::MissingDouble())
+
 {
 	itsCudaEnabledCalculation = true;
 
@@ -351,6 +354,23 @@ void transformer::SetAdditionalParameters()
 	else
 	{
 		itsLogger.Trace("scale not specified, using default value 1.0");
+	}
+
+	if (itsConfiguration->Exists("minimum_value"))
+	{
+		itsMinimumValue = stod(itsConfiguration->GetValue("minimum_value"));
+	}
+
+	if (itsConfiguration->Exists("maximum_value"))
+	{
+		itsMaximumValue = stod(itsConfiguration->GetValue("maximum_value"));
+	}
+
+	if ((IsMissing(itsMinimumValue) && IsValid(itsMaximumValue)) ||
+	    (IsValid(itsMinimumValue) && IsMissing(itsMaximumValue)))
+	{
+		itsLogger.Fatal("Both minimum_value and maximum_value must be specified");
+		himan::Abort();
 	}
 
 	if (itsConfiguration->Exists("rotation"))
@@ -839,7 +859,10 @@ void transformer::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short
 		{
 			deviceType = "GPU";
 
-			transformergpu::Process<float>(itsConfiguration, myTargetInfo, sourceInfo, itsScale, itsBase);
+			float min = IsValid(itsMinimumValue) ? static_cast<float>(itsMinimumValue) : MissingValue<float>();
+			float max = IsValid(itsMaximumValue) ? static_cast<float>(itsMaximumValue) : MissingValue<float>();
+
+			transformergpu::Process<float>(itsConfiguration, myTargetInfo, sourceInfo, itsScale, itsBase, min, max);
 		}
 		else
 #endif
@@ -847,13 +870,28 @@ void transformer::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short
 			transform(source.begin(), source.end(), result.begin(),
 			          [&](const float& value) { return fma(value, itsScale, itsBase); });
 
-			if (!IsMissing(itsChangeMissingTo))
+			if (IsValid(itsMinimumValue))
 			{
-				auto& vec = VEC(myTargetInfo);
-				replace_if(
-				    vec.begin(), vec.end(), [=](float d) { return IsMissing(d); }, itsChangeMissingTo);
+				float min = IsValid(itsMinimumValue) ? static_cast<float>(itsMinimumValue) : MissingValue<float>();
+				float max = IsValid(itsMaximumValue) ? static_cast<float>(itsMaximumValue) : MissingValue<float>();
+
+				for_each(result.begin(), result.end(),
+				         [&](float& value)
+				         {
+					         if (IsValid(value))
+					         {
+						         value = fmin(fmax(value, min), max);
+					         }
+				         });
 			}
 		}
+		if (!IsMissing(itsChangeMissingTo))
+		{
+			auto& vec = VEC(myTargetInfo);
+			replace_if(
+			    vec.begin(), vec.end(), [=](float d) { return IsMissing(d); }, itsChangeMissingTo);
+		}
+
 		myThreadedLogger.Info(fmt::format("[{}] Missing values: {}/{}", deviceType, myTargetInfo->Data().MissingCount(),
 		                                  myTargetInfo->Data().Size()));
 	}
@@ -954,7 +992,8 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 	{
 		deviceType = "GPU";
 
-		transformergpu::Process(itsConfiguration, myTargetInfo, sourceInfo, itsScale, itsBase);
+		transformergpu::Process(itsConfiguration, myTargetInfo, sourceInfo, itsScale, itsBase, itsMinimumValue,
+		                        itsMaximumValue);
 	}
 	else
 #endif
@@ -966,6 +1005,18 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 
 		transform(source.begin(), source.end(), result.begin(),
 		          [&](const double& value) { return fma(value, itsScale, itsBase); });
+
+		if (IsValid(itsMinimumValue))
+		{
+			for_each(result.begin(), result.end(),
+			         [&](double& value)
+			         {
+				         if (IsValid(value))
+				         {
+					         value = fmin(fmax(value, itsMinimumValue), itsMaximumValue);
+				         }
+			         });
+		}
 	}
 
 	if (!IsMissing(itsChangeMissingTo))

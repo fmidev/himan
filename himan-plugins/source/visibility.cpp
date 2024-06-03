@@ -87,6 +87,13 @@ void visibility::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short
 	level lowest_hybrid = util::CreateHybridLevel(myTargetInfo->Producer(), "last");
 	auto NInfo = Fetch(forecastTime, lowest_hybrid, NParam, forecastType, false);
 
+	if (!NInfo)
+	{
+		myThreadedLogger.Warning(fmt::format("Skipping step {}, level {}", static_cast<string>(forecastTime.Step()),
+		                                     static_cast<string>(forecastLevel)));
+		return;
+	}
+
 	// Make sure that "stLimit" value matches the numbering scheme of the data
 	double NScale = (NInfo->Param().Name() == "N-PRCNT" ? 100. : 1.);
 	const double _stLimit = stLimit * NScale;

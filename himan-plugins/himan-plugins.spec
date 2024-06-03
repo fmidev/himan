@@ -31,10 +31,10 @@ Requires: himan-lib >= 24.1.9
 Requires: lua >= 5.3.0
 Requires: unixODBC
 Requires: libfmigrib >= 24.4.19
-Requires: libfmidb >= 24.4.18
-Requires: smartmet-library-newbase >= 22.3.22
+Requires: libfmidb >= 24.5.6
+Requires: smartmet-library-newbase >= 24.5.17
 Requires: smartmet-library-gis
-Requires: smartmet-library-macgyver
+Requires: smartmet-library-macgyver >= 24.5.28
 Requires: %{boost}-iostreams
 Requires: libs3 >= 4.1
 Requires: jasper-libs
@@ -57,8 +57,8 @@ BuildRequires: cuda-cusp-12-4 >= 0.5.1
 BuildRequires: libs3-devel >= 4.1
 BuildRequires: libfmigrib >= 24.4.19
 BuildRequires: libfmigrib-devel >= 24.4.19
-BuildRequires: libfmidb-devel >= 24.4.18
-BuildRequires: smartmet-library-newbase-devel >= 21.12.7
+BuildRequires: libfmidb-devel >= 24.5.6
+BuildRequires: smartmet-library-newbase-devel >= 24.5.17
 BuildRequires: smartmet-library-gis-devel
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: %{boost}-devel

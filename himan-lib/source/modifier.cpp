@@ -18,6 +18,13 @@ using namespace himan::numerical_functions;
 const double DEFAULT_MAXIMUM = 1e38;
 const double DEFAULT_MINIMUM = -1e38;
 
+#ifdef DEBUG_PRINT
+#define DEBUG_MSG(str) if (itsIndex == 24122) { do { std::cout << ClassName() << " " << str << std::endl; } while (false); }
+#else
+#define DEBUG_MSG(str) do { } while ( false )
+#endif
+
+const int PP = 24122;
 double ExactEdgeValue(double theHeight, double theValue, double thePreviousHeight, double thePreviousValue,
                       double theLimit)
 {
@@ -28,6 +35,16 @@ double ExactEdgeValue(double theHeight, double theValue, double thePreviousHeigh
 
 	double ret = interpolation::Linear<double>(theLimit, thePreviousHeight, theHeight, thePreviousValue, theValue);
 	return ret;
+}
+
+double EpsilonRound(double d)
+{
+	// Round smaller values than machine epsilon to zero
+	if (fabs(d) < std::numeric_limits<double>::epsilon())
+	{
+		d = 0.0;
+	}
+	return d;
 }
 
 modifier::modifier()
@@ -788,6 +805,8 @@ void modifier_findheight_gt::Calculate(double theValue, double theHeight, double
 	const double lowerLimit = itsLowerHeight[itsIndex];
 	const double upperLimit = itsUpperHeight[itsIndex];
 
+	DEBUG_MSG(fmt::format("H:{:.2f} ({:.2f}) V:{:.2f} ({:.2f}) [{:.2f},{:.2f}] threshold: {:.2f}", theHeight,
+		           thePreviousHeight, theValue, thePreviousValue, lowerLimit, upperLimit, findValue));
 	// Check if we have just entered or just leaving a height zone
 	if (EnteringHeightZone(theHeight, thePreviousHeight, lowerLimit))
 	{
@@ -796,7 +815,9 @@ void modifier_findheight_gt::Calculate(double theValue, double theHeight, double
 
 		// Lower edge might be valid, check it before moving to check current height
 
-		if (thePreviousValue > findValue)
+		const double diff = thePreviousValue - findValue;
+
+		if (diff > std::numeric_limits<double>::epsilon())
 		{
 			itsFoundNValues[itsIndex] += 1;
 
@@ -819,8 +840,10 @@ void modifier_findheight_gt::Calculate(double theValue, double theHeight, double
 		itsOutOfBoundHeights[itsIndex] = true;
 	}
 
-	// Entering area
-	if (theValue > findValue && (thePreviousValue <= findValue || IsMissing(thePreviousValue)))
+	const double pdiff = EpsilonRound(thePreviousValue - findValue), diff = EpsilonRound(theValue - findValue);
+
+	// Entering area; could be crossing the threshold or just entering the area for the first time
+	if (diff > 0 && (pdiff <= 0 || IsMissing(thePreviousValue)))
 	{
 		// if last value is searched, pick actual level value
 		if (itsFindNthValue == 0)
@@ -845,14 +868,29 @@ void modifier_findheight_gt::Calculate(double theValue, double theHeight, double
 				itsOutOfBoundHeights[itsIndex] = true;
 			}
 		}
+		DEBUG_MSG(fmt::format("Entered area and got height: {}", Value()));
 	}
 	// In area
-	else if (theValue > findValue && thePreviousValue > findValue && itsFindNthValue == 0)
+	else if (diff > 0 && pdiff > 0)
 	{
-		Value(theHeight);
+		if (itsFindNthValue == 0)
+		{
+			Value(theHeight);
+		}
+		else
+		{
+			itsFoundNValues[itsIndex] += 1;
+
+			if (itsFindNthValue == itsFoundNValues[itsIndex])
+			{
+				Value(IsMissing(thePreviousHeight) ? theHeight : thePreviousHeight);
+				itsValuesFound++;
+				itsOutOfBoundHeights[itsIndex] = true;
+			}
+		}
 	}
 	// Leaving area
-	else if (theValue < findValue && (!IsMissing(thePreviousValue) && thePreviousValue > findValue))
+	else if (pdiff > 0 && diff <= 0)
 	{
 		if (itsFindNthValue == 0)
 		{
@@ -875,6 +913,8 @@ void modifier_findheight_gt::Calculate(double theValue, double theHeight, double
 				itsOutOfBoundHeights[itsIndex] = true;
 			}
 		}
+
+		DEBUG_MSG(fmt::format("Left area and got height: {}", Value()));
 	}
 }
 
@@ -903,18 +943,27 @@ void modifier_findheight_lt::Calculate(double theValue, double theHeight, double
 
 	const double lowerLimit = itsLowerHeight[itsIndex];
 	const double upperLimit = itsUpperHeight[itsIndex];
+	const bool P = (itsIndex == PP);  // 19286);
+
+	DEBUG_MSG(fmt::format("H:{:.2f} ({:.2f}) V:{:.2f} ({:.2f}) [{:.2f},{:.2f}] threshold: {:.2f}", theHeight,
+		           thePreviousHeight, theValue, thePreviousValue, lowerLimit, upperLimit, findValue));
 
 	if (EnteringHeightZone(theHeight, thePreviousHeight, lowerLimit))
 	{
 		thePreviousValue = ExactEdgeValue(theHeight, theValue, thePreviousHeight, thePreviousValue, lowerLimit);
 		thePreviousHeight = lowerLimit;
 
+		DEBUG_MSG(fmt::format("Entered height zone, current lower edge values are: V={:.2f}, H={:.2f}", thePreviousValue,
+			           thePreviousHeight));
 		// Lower edge might be valid, check it before moving to check current height
 
-		if (thePreviousValue < findValue)
-		{
-			itsFoundNValues[itsIndex] += 1;
+		const double diff = thePreviousValue - findValue;
 
+		if (diff < 0 && fabs(diff) > std::numeric_limits<double>::epsilon())
+		{
+			if (P)
+				fmt::print("Found when entered height zone: {:.2f}\n", thePreviousHeight);
+			itsFoundNValues[itsIndex] += 1;
 			if (itsFindNthValue == itsFoundNValues[itsIndex])
 			{
 				Value(thePreviousHeight);
@@ -934,8 +983,10 @@ void modifier_findheight_lt::Calculate(double theValue, double theHeight, double
 		itsOutOfBoundHeights[itsIndex] = true;
 	}
 
+	const double pdiff = EpsilonRound(thePreviousValue - findValue), diff = EpsilonRound(theValue - findValue);
+
 	// Entering area
-	if (theValue < findValue && thePreviousValue >= findValue)
+	if (diff < 0 && (pdiff >= 0 || IsMissing(thePreviousValue)))
 	{
 		// if last value is searched, pick actual level value
 		if (itsFindNthValue == 0)
@@ -960,14 +1011,30 @@ void modifier_findheight_lt::Calculate(double theValue, double theHeight, double
 				itsOutOfBoundHeights[itsIndex] = true;
 			}
 		}
+
+		DEBUG_MSG("Entered area and got height: " << Value());
 	}
 	// In area
-	else if (theValue < findValue && thePreviousValue < findValue && itsFindNthValue == 0)
+	else if (diff < 0 && pdiff < 0)
 	{
-		Value(theHeight);
+		if (itsFindNthValue == 0)
+		{
+			Value(theHeight);
+		}
+		else
+		{
+			itsFoundNValues[itsIndex] += 1;
+
+			if (itsFindNthValue == itsFoundNValues[itsIndex])
+			{
+				Value(IsMissing(thePreviousHeight) ? theHeight : thePreviousHeight);
+				itsValuesFound++;
+				itsOutOfBoundHeights[itsIndex] = true;
+			}
+		}
 	}
 	// Leaving area
-	else if (theValue > findValue && thePreviousValue < findValue)
+	else if (diff >= 0 && pdiff < 0)
 	{
 		if (itsFindNthValue == 0)
 		{
@@ -990,6 +1057,8 @@ void modifier_findheight_lt::Calculate(double theValue, double theHeight, double
 				itsOutOfBoundHeights[itsIndex] = true;
 			}
 		}
+
+		DEBUG_MSG("Left area and got height: " << Value());
 	}
 }
 

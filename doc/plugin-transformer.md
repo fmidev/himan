@@ -40,6 +40,14 @@ scale: define scale (default: 1)
 
     "scale" : "0.01"
 
+maximum_value: define the maximum value for the data. Missing values are not changed. Minimum and maximum need to be defined together.
+
+    "maximum_value" : "260"
+
+minimum_value: define the minimum value for the data. Missing values are not changed. Minimum and maximum need to be defined together.
+
+    "minimum_value" : "250"
+
 target_param: define target parameter name 
 
     "target_param" : "T-C"

@@ -100,7 +100,7 @@ function Rajuilma(curTime)
 
 
   for i=1, #warning do
-    if yellow[i] >= 0.440 then
+    if yellow[i] >= 0.40 then
       warning[i] = 1
     end
     if amber[i] >= 0.30 then
