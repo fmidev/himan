@@ -191,10 +191,14 @@ himan::HPWriteStatus writer::ToFile(std::shared_ptr<info<T>> theInfo, std::share
 
 	if (aggregationPeriodCheck && allowedMissing < theInfo->Data().MissingCount())
 	{
-		itsLogger.Fatal(fmt::format("Parameter {} for leadtime {} contains more missing values ({}) than allowed ({})",
-		                            theInfo->Param().Name(), theInfo->Time().Step(), theInfo->Data().MissingCount(),
-		                            allowedMissing));
-		exit(1);
+		size_t m = theInfo->Data().MissingCount();
+		double exceedance = static_cast<double>(m - allowedMissing) / static_cast<double>(allowedMissing) * 100.0;
+
+		itsLogger.Fatal(
+		    fmt::format("Parameter {} leadtime {} contains more missing values than allowed (allowed={}, missing={}, "
+		                "exceedance={:.2f}%)",
+		                theInfo->Param().Name(), theInfo->Time().Step(), allowedMissing, m, exceedance));
+		himan::Abort();
 	}
 
 	timer t;
