@@ -451,16 +451,15 @@ void ValidateMetadata(const boost::property_tree::ptree& pt, shared_ptr<configur
 
 void CheckConsistency(shared_ptr<configuration>& conf)
 {
-	logger logr("json_parser");
 	if (conf->WriteStorageType() != kS3ObjectStorageSystem && conf->WriteToObjectStorageBetweenPluginCalls())
 	{
-		logr.Warning("unable to set 'write_to_s3_between_plugin_calls=true' when not writing to s3");
+		itsLogger.Warning("unable to set 'write_to_s3_between_plugin_calls=true' when not writing to s3");
 		conf->WriteToObjectStorageBetweenPluginCalls(false);
 	}
 	if (conf->UseCacheForWrites() == false && conf->WriteStorageType() == kS3ObjectStorageSystem &&
 	    conf->WriteToObjectStorageBetweenPluginCalls() == false)
 	{
-		logr.Warning(
+		itsLogger.Warning(
 		    "Unable to set 'use_cache_for_writes=false' when writing to S3 and write_to_s3_between_plugin_calls=false");
 	}
 }
@@ -702,8 +701,7 @@ raw_time GetLatestOriginDateTime(const shared_ptr<configuration> conf, const str
 
 	if (!latestFromDatabase.empty())
 	{
-		logger log("json_parser");
-		log.Debug("Latest analysis time: " + latestFromDatabase);
+		itsLogger.Debug("Latest analysis time: " + latestFromDatabase);
 		return raw_time(latestFromDatabase, "%Y-%m-%d %H:%M:%S");
 	}
 
@@ -921,7 +919,7 @@ unique_ptr<grid> ParseAreaAndGridFromPoints(const boost::property_tree::ptree& p
 
 			if (point.size() != 2)
 			{
-				cout << "Error::json_parser Line " + line + " is invalid" << endl;
+				itsLogger.Error(fmt::format("Line {} is invalid", line));
 				continue;
 			}
 
@@ -973,7 +971,7 @@ unique_ptr<grid> ParseAreaAndGridFromPoints(const boost::property_tree::ptree& p
 			}
 			catch (const invalid_argument& e)
 			{
-				cout << "Error::json_parser Invalid fmisid: " << str << endl;
+				itsLogger.Error(fmt::format("Invalid fmisid: {}", str));
 				continue;
 			}
 
@@ -981,7 +979,7 @@ unique_ptr<grid> ParseAreaAndGridFromPoints(const boost::property_tree::ptree& p
 
 			if (stationinfo.empty())
 			{
-				cout << "Error::json_parser Station " << str << " not found from database" << endl;
+				itsLogger.Error(fmt::format("Station {} not found from database", fmisid));
 				continue;
 			}
 
@@ -1032,7 +1030,6 @@ unique_ptr<grid> ParseAreaAndGridFromProj4String(const boost::property_tree::ptr
 		sp.importFromProj4(proj4.c_str());
 
 		const char* projptr = sp.GetAttrValue("PROJECTION");
-		himan::logger log("json_parser");
 
 		if (projptr != nullptr)
 		{
@@ -1054,7 +1051,7 @@ unique_ptr<grid> ParseAreaAndGridFromProj4String(const boost::property_tree::ptr
 				    sm, fp, ni, nj, di, dj, std::unique_ptr<OGRSpatialReference>(sp.Clone()), false));
 			}
 
-			log.Error("Unsupported projection: " + projection);
+			itsLogger.Error("Unsupported projection: " + projection);
 		}
 		else if (sp.IsGeographic())
 		{
@@ -1068,7 +1065,7 @@ unique_ptr<grid> ParseAreaAndGridFromProj4String(const boost::property_tree::ptr
 
 			if (erra != OGRERR_NONE || errb != OGRERR_NONE)
 			{
-				log.Error("Unable to extract datum information from file");
+				itsLogger.Error("Unable to extract datum information from file");
 			}
 			else
 			{
