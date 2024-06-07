@@ -159,4 +159,7 @@ read_previous_forecast_if_not_found: If data for some forecast is not found, try
 
     "read_previous_forecast_if_not_found" : true
 
+allow_any_source_forecast_type: When specifying multiple source producers with different forecast_types, set this parameter to to true to enable fetching of data. For example if fetching T-K from ECMWF or MEPS (source_producer=131,4), then first one is deterministic and second one is control forecast. In this case if allow_any_source_forecast_type is false, Himan is able to only fetch from the one that matches the forecast_type configured to json. "Any" source forecast type in this case means either deterministic, control forecast or analysis. Default value is false.
+
+    "allow_any_source_forecast_type" : true
 

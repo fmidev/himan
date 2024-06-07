@@ -51,6 +51,8 @@ class transformer : public compiled_plugin, private compiled_plugin_base
 	template <typename T>
 	std::shared_ptr<info<T>> LandscapeInterpolation(const forecast_time& ftime, const level& lvl, const param& par,
 	                                                const forecast_type& ftype);
+	std::shared_ptr<info<double>> FetchSource(std::shared_ptr<info<double>>& myTargetInfo, forecast_time sourceTime,
+	                                          forecast_type forecastType);
 
 	double itsBase;
 	double itsScale;
@@ -75,6 +77,7 @@ class transformer : public compiled_plugin, private compiled_plugin_base
 	bool itsReadFromPreviousForecastIfNotFound;
 	double itsMinimumValue;
 	double itsMaximumValue;
+	bool itsAllowAnySourceForecastType;
 };
 
 // the class factory

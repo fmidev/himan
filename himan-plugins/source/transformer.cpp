@@ -52,8 +52,8 @@ transformer::transformer()
       itsSourceForecastPeriod(),
       itsReadFromPreviousForecastIfNotFound(false),
       itsMinimumValue(himan::MissingDouble()),
-      itsMaximumValue(himan::MissingDouble())
-
+      itsMaximumValue(himan::MissingDouble()),
+      itsAllowAnySourceForecastType(false)
 {
 	itsCudaEnabledCalculation = true;
 
@@ -675,6 +675,11 @@ void transformer::SetAdditionalParameters()
 		itsLogger.Fatal("Cannot have both 'time_interpolation' and 'read_previous_forecast_if_not_found' defined");
 		himan::Abort();
 	}
+	if (itsConfiguration->Exists("allow_any_source_forecast_type"))
+	{
+		itsAllowAnySourceForecastType =
+		    util::ParseBoolean(itsConfiguration->GetValue("allow_any_source_forecast_type"));
+	}
 }
 
 void transformer::Process(shared_ptr<const plugin_configuration> conf)
@@ -897,6 +902,53 @@ void transformer::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short
 	}
 }
 
+shared_ptr<himan::info<double>> transformer::FetchSource(shared_ptr<himan::info<double>>& myTargetInfo,
+                                                         forecast_time sourceTime, forecast_type forecastType)
+{
+	if (itsDoLandscapeInterpolation)
+	{
+		return LandscapeInterpolation<double>(sourceTime, itsSourceLevels[myTargetInfo->Index<level>()],
+		                                      itsSourceParam[0], forecastType);
+	}
+
+	const vector<forecast_type> forecastTypes =
+	    itsAllowAnySourceForecastType ? vector<forecast_type>{forecast_type(kDeterministic),
+	                                                          forecast_type(kEpsControl, 0), forecast_type(kAnalysis)}
+	                                  : vector<forecast_type>{forecastType};
+
+	auto f = GET_PLUGIN(fetcher);
+
+	if (itsApplyLandSeaMask)
+	{
+		f->ApplyLandSeaMask(true);
+		f->LandSeaMaskThreshold(itsLandSeaMaskThreshold);
+	}
+
+	for (const auto& ftype : forecastTypes)
+	{
+		try
+		{
+			if (itsAllowAnySourceForecastType)
+			{
+				itsLogger.Trace("Any source forecast_type allowed: trying to fetch source data with forecast type " +
+				                static_cast<string>(ftype));
+			}
+			return f->Fetch(itsConfiguration, sourceTime, itsSourceLevels[myTargetInfo->Index<level>()],
+			                itsSourceParam[0], ftype, itsConfiguration->UseCudaForPacking(), false,
+			                itsReadFromPreviousForecastIfNotFound);
+		}
+		catch (HPExceptionType& e)
+		{
+			if (e != kFileDataNotFound)
+			{
+				throw e;
+			}
+		}
+	}
+
+	return nullptr;
+}
+
 void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	auto myThreadedLogger = logger("transformerThread #" + to_string(threadIndex));
@@ -933,51 +985,27 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 		return;
 	}
 
-	auto f = GET_PLUGIN(fetcher);
+	shared_ptr<info<double>> sourceInfo = FetchSource(myTargetInfo, sourceTime, forecastType);
 
-	if (itsApplyLandSeaMask)
+	if (!sourceInfo)
 	{
-		f->ApplyLandSeaMask(true);
-		f->LandSeaMaskThreshold(itsLandSeaMaskThreshold);
+		if (itsDoTimeInterpolation)
+		{
+			sourceInfo = InterpolateTime(sourceTime, itsSourceLevels[myTargetInfo->Index<level>()], itsSourceParam[0],
+			                             forecastType);
+		}
+		else if (itsDoLevelInterpolation)
+		{
+			sourceInfo = InterpolateLevel(sourceTime, itsSourceLevels[myTargetInfo->Index<level>()], itsSourceParam[0],
+			                              forecastType);
+		}
 	}
 
-	shared_ptr<info<double>> sourceInfo;
-
-	try
+	if (!sourceInfo)
 	{
-		if (itsDoLandscapeInterpolation)
-		{
-			sourceInfo = LandscapeInterpolation<double>(sourceTime, itsSourceLevels[myTargetInfo->Index<level>()],
-			                                            itsSourceParam[0], forecastType);
-		}
-		else
-		{
-			sourceInfo = f->Fetch(itsConfiguration, sourceTime, itsSourceLevels[myTargetInfo->Index<level>()],
-			                      itsSourceParam[0], forecastType, itsConfiguration->UseCudaForPacking(), false,
-			                      itsReadFromPreviousForecastIfNotFound);
-		}
-	}
-	catch (HPExceptionType& e)
-	{
-		if (e == kFileDataNotFound)
-		{
-			if (itsDoTimeInterpolation)
-			{
-				sourceInfo = InterpolateTime(sourceTime, itsSourceLevels[myTargetInfo->Index<level>()],
-				                             itsSourceParam[0], forecastType);
-			}
-			else if (itsDoLevelInterpolation)
-			{
-				sourceInfo = InterpolateLevel(sourceTime, itsSourceLevels[myTargetInfo->Index<level>()],
-				                              itsSourceParam[0], forecastType);
-			}
-		}
-		if (!sourceInfo)
-		{
-			myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
-			                         static_cast<string>(forecastLevel));
-			return;
-		}
+		myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
+		                         static_cast<string>(forecastLevel));
+		return;
 	}
 
 	SetParamAggregation(sourceInfo->Param(), myTargetInfo);
