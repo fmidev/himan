@@ -613,16 +613,22 @@ forecast_time ReadTime(const std::map<std::string, std::string>& meta, const for
 		SQLTimeMaskToCTimeMask(mask);
 	}
 
-	if (!origintimestr.empty() && !mask.empty())
+	try
 	{
-		origintime = raw_time(origintimestr, mask);
-	}
+		if (!origintimestr.empty() && !mask.empty())
+		{
+			origintime = raw_time(origintimestr, mask);
+		}
 
-	if (!validtimestr.empty() && !mask.empty())
+		if (!validtimestr.empty() && !mask.empty())
+		{
+			validtime = raw_time(validtimestr, mask);
+		}
+	}
+	catch (...)
 	{
-		validtime = raw_time(validtimestr, mask);
+		// Just continue if default mask does not match
 	}
-
 	return forecast_time(origintime, validtime);
 }
 
