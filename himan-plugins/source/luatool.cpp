@@ -1177,6 +1177,39 @@ matrix<T> ProbLimitEq2D(const matrix<T>& A, const matrix<T>& B, T limit)
 #endif
 	return numerical_functions::Prob2D<T>(A, B, [=](const T& val) { return val == limit; });
 }
+
+template <typename T>
+T RampUp(T lower, T upper, T value)
+{
+	return numerical_functions::RampUp<T>(lower, upper, value);
+}
+
+template <typename T>
+object RampUpGrid(const object& lowerValues, const object& upperValues, const object& values)
+{
+	auto lowers = TableToVector<T>(lowerValues);
+	auto uppers = TableToVector<T>(upperValues);
+	auto vals = TableToVector<T>(values);
+
+	return VectorToTable<T>(numerical_functions::RampUp<T>(lowers, uppers, vals));
+}
+
+template <typename T>
+T RampDown(T lower, T upper, T value)
+{
+	return numerical_functions::RampDown<T>(lower, upper, value);
+}
+
+template <typename T>
+object RampDownGrid(const object& lowerValues, const object& upperValues, const object& values)
+{
+	auto lowers = TableToVector<T>(lowerValues);
+	auto uppers = TableToVector<T>(upperValues);
+	auto vals = TableToVector<T>(values);
+
+	return VectorToTable<T>(numerical_functions::RampDown<T>(lowers, uppers, vals));
+}
+
 }  // namespace luabind_workaround
 
 namespace numerical_functions_wrapper
@@ -1725,6 +1758,13 @@ void BindLib(lua_State* L)
                   def("ProbLimitLe2D", &luabind_workaround::ProbLimitLe2D<float>),
                   def("ProbLimitEq2D", &luabind_workaround::ProbLimitEq2D<double>),
                   def("ProbLimitEq2D", &luabind_workaround::ProbLimitEq2D<float>),
+		  def("RampUp", &luabind_workaround::RampUp<float>),
+		  def("RampUpGrid", &luabind_workaround::RampUpGrid<double>),
+		  def("RampUpGrid", &luabind_workaround::RampUpGrid<float>),
+		  def("RampDown", &luabind_workaround::RampDown<double>),
+		  def("RampDown", &luabind_workaround::RampDown<float>),
+		  def("RampDownGrid", &luabind_workaround::RampDownGrid<double>),
+		  def("RampDownGrid", &luabind_workaround::RampDownGrid<float>),
 	          // metutil namespace
 	          def("LCL_", &metutil::LCL_<double>), 
 	          def("Es_", &metutil::Es_<double>), 
