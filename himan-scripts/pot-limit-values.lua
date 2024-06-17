@@ -42,11 +42,11 @@ function ReduceValue(POT)
 
   if lead_time <= 120 then
     for i=1,#POT do
-      POT[i] = POT[i] - POT[i] * RampUp(24, 120, POT[i]) * 0.5
+      POT[i] = POT[i] - POT[i] * RampUp(24, 120, lead_time) * 0.5
     end
   else
     for i=1,#POT do
-      POT[i] = POT[i] * 0.5 - POT[i] * RampUp(123, 240, POT[i]) * 0.25
+      POT[i] = POT[i] * 0.5 - POT[i] * RampUp(123, 240, lead_time) * 0.25
     end
   end
 
