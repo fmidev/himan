@@ -272,6 +272,34 @@ T Mean(const std::vector<T>& data);
 template <typename T>
 T Variance(const std::vector<T>& data);
 
+/**
+ * Ramp up/down functions return returns a value between 0 and 1,
+ * depending where the given value is in the interval between lower and upper.
+ *
+ * Ramp up is a linear raising function, ie. RampUp(0, 1, 0.2) = 0.2
+ * Ramp down is a linear falling function, ie. RampDown(0, 1, 0.2) = 0.8
+ *
+ * Values are clamped between 0 and 1 (endpoints included).
+ */
+
+template <typename T>
+std::vector<T> RampUp(const std::vector<T>& lowerValues, const std::vector<T>& upperValues,
+                      const std::vector<T>& values);
+template <typename T>
+std::vector<T> RampUp(T lowerValue, T upperValue, const std::vector<T>& values);
+
+template <typename T>
+T RampUp(T lowerValue, T upperValue, T value);
+
+template <typename T>
+std::vector<T> RampDown(const std::vector<T>& lowerValues, const std::vector<T>& upperValues,
+                        const std::vector<T>& values);
+template <typename T>
+std::vector<T> RampDown(T lowerValue, T upperValue, const std::vector<T>& values);
+
+template <typename T>
+T RampDown(T lowerValue, T upperValue, T value);
+
 namespace interpolation
 {
 /*

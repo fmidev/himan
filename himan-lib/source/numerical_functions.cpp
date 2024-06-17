@@ -5,8 +5,8 @@
 #include "numerical_functions.h"
 #include <Eigen/Dense>
 #include <algorithm>
-#include <numeric>
 #include <limits>
+#include <numeric>
 
 using namespace himan;
 using namespace numerical_functions;
@@ -21,16 +21,17 @@ matrix<T> numerical_functions::Filter2D(const matrix<T>& A, const matrix<T>& B, 
 		return Filter2DGPU(A, B);
 	}
 #endif
-	return Reduce2D<T>(A, B,
-	                   [](T& val1, T& val2, const T& a, const T& b) {
-		                   if (IsValid(a * b))
-		                   {
-			                   val1 += a * b;
-			                   val2 += b;
-		                   }
-	                   },
-	                   [](const T& val1, const T& val2) { return val2 == T(0) ? MissingValue<T>() : val1 / val2; },
-	                   T(0), T(0));
+	return Reduce2D<T>(
+	    A, B,
+	    [](T& val1, T& val2, const T& a, const T& b)
+	    {
+		    if (IsValid(a * b))
+		    {
+			    val1 += a * b;
+			    val2 += b;
+		    }
+	    },
+	    [](const T& val1, const T& val2) { return val2 == T(0) ? MissingValue<T>() : val1 / val2; }, T(0), T(0));
 }
 
 template matrix<double> numerical_functions::Filter2D(const matrix<double>&, const matrix<double>& B, bool);
@@ -45,12 +46,14 @@ matrix<T> numerical_functions::Max2D(const matrix<T>& A, const matrix<T>& B, boo
 		return Max2DGPU(A, B);
 	}
 #endif
-	return Reduce2D<T>(A, B,
-	                   [](T& val1, T& val2, const T& a, const T& b) {
-		                   if (IsValid(a * b))
-			                   val1 = !(a * b <= val1) ? a : val1;
-	                   },
-	                   [](const T& val1, const T& val2) { return val1; }, MissingValue<T>(), T(0));
+	return Reduce2D<T>(
+	    A, B,
+	    [](T& val1, T& val2, const T& a, const T& b)
+	    {
+		    if (IsValid(a * b))
+			    val1 = !(a * b <= val1) ? a : val1;
+	    },
+	    [](const T& val1, const T& val2) { return val1; }, MissingValue<T>(), T(0));
 }
 
 template matrix<double> numerical_functions::Max2D(const matrix<double>&, const matrix<double>& B, bool);
@@ -65,12 +68,14 @@ matrix<T> numerical_functions::Min2D(const matrix<T>& A, const matrix<T>& B, boo
 		return Min2DGPU(A, B);
 	}
 #endif
-	return Reduce2D<T>(A, B,
-	                   [](T& val1, T& val2, const T& a, const T& b) {
-		                   if (IsValid(a * b))
-			                   val1 = !(a * b >= val1) ? a : val1;
-	                   },
-	                   [](const T& val1, const T& val2) { return val1; }, MissingValue<T>(), T(0));
+	return Reduce2D<T>(
+	    A, B,
+	    [](T& val1, T& val2, const T& a, const T& b)
+	    {
+		    if (IsValid(a * b))
+			    val1 = !(a * b >= val1) ? a : val1;
+	    },
+	    [](const T& val1, const T& val2) { return val1; }, MissingValue<T>(), T(0));
 }
 
 template matrix<double> numerical_functions::Min2D(const matrix<double>&, const matrix<double>& B, bool);
@@ -79,10 +84,9 @@ template matrix<float> numerical_functions::Min2D(const matrix<float>&, const ma
 template <typename T>
 matrix<size_t> numerical_functions::IndexMax2D(const matrix<T>& A, const matrix<T>& B)
 {
-	return FindIndex2D(A, B,
-			[](T& current_max, const T& a, const T& b) {
-				return (a > current_max) & IsValid(b);
-			}, std::numeric_limits<T>::lowest());
+	return FindIndex2D(
+	    A, B, [](T& current_max, const T& a, const T& b) { return (a > current_max) & IsValid(b); },
+	    std::numeric_limits<T>::lowest());
 }
 
 template matrix<size_t> numerical_functions::IndexMax2D(const matrix<float>& A, const matrix<float>& B);
@@ -176,3 +180,97 @@ T numerical_functions::Variance(const std::vector<T>& data)
 
 template double numerical_functions::Variance(const std::vector<double>&);
 template float numerical_functions::Variance(const std::vector<float>&);
+
+template <typename T>
+T numerical_functions::RampUp(T lowerLimit, T upperLimit, T value)
+{
+	auto v = (value - lowerLimit) / (upperLimit - lowerLimit);
+	return std::min(std::max(v, static_cast<T>(0.0)), static_cast<T>(1.0));
+}
+
+template double numerical_functions::RampUp(double, double, double);
+template float numerical_functions::RampUp(float, float, float);
+
+template <typename T>
+std::vector<T> numerical_functions::RampUp(T lowerLimit, T upperLimit, const std::vector<T>& values)
+{
+	std::vector<T> ret;
+	ret.reserve(values.size());
+
+	for (size_t i = 0; i < values.size(); i++)
+	{
+		ret.push_back(RampUp<T>(lowerLimit, upperLimit, values[i]));
+	}
+
+	return ret;
+}
+
+template std::vector<double> numerical_functions::RampUp(double, double, const std::vector<double>&);
+template std::vector<float> numerical_functions::RampUp(float, float, const std::vector<float>&);
+
+template <typename T>
+std::vector<T> numerical_functions::RampUp(const std::vector<T>& lowerLimits, const std::vector<T>& upperLimits,
+                                           const std::vector<T>& values)
+{
+	std::vector<T> ret;
+	ret.reserve(values.size());
+
+	for (size_t i = 0; i < values.size(); i++)
+	{
+		ret.push_back(RampUp<T>(lowerLimits[i], upperLimits[i], values[i]));
+	}
+
+	return ret;
+}
+
+template std::vector<double> numerical_functions::RampUp(const std::vector<double>&, const std::vector<double>&,
+                                                         const std::vector<double>&);
+template std::vector<float> numerical_functions::RampUp(const std::vector<float>&, const std::vector<float>&,
+                                                        const std::vector<float>&);
+
+template <typename T>
+T numerical_functions::RampDown(T lowerLimit, T upperLimit, T value)
+{
+	auto v = (upperLimit - value) / (upperLimit - lowerLimit);
+	return std::min(std::max(v, static_cast<T>(0.0)), static_cast<T>(1.0));
+}
+
+template double numerical_functions::RampDown(double, double, double);
+template float numerical_functions::RampDown(float, float, float);
+
+template <typename T>
+std::vector<T> numerical_functions::RampDown(T lowerLimit, T upperLimit, const std::vector<T>& values)
+{
+	std::vector<T> ret;
+	ret.reserve(values.size());
+
+	for (size_t i = 0; i < values.size(); i++)
+	{
+		ret.push_back(RampDown<T>(lowerLimit, upperLimit, values[i]));
+	}
+
+	return ret;
+}
+
+template std::vector<double> numerical_functions::RampDown(double, double, const std::vector<double>&);
+template std::vector<float> numerical_functions::RampDown(float, float, const std::vector<float>&);
+
+template <typename T>
+std::vector<T> numerical_functions::RampDown(const std::vector<T>& lowerLimits, const std::vector<T>& upperLimits,
+                                             const std::vector<T>& values)
+{
+	std::vector<T> ret;
+	ret.reserve(values.size());
+
+	for (size_t i = 0; i < values.size(); i++)
+	{
+		ret.push_back(RampDown<T>(lowerLimits[i], upperLimits[i], values[i]));
+	}
+
+	return ret;
+}
+
+template std::vector<double> numerical_functions::RampDown(const std::vector<double>&, const std::vector<double>&,
+                                                           const std::vector<double>&);
+template std::vector<float> numerical_functions::RampDown(const std::vector<float>&, const std::vector<float>&,
+                                                          const std::vector<float>&);
