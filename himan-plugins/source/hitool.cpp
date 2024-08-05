@@ -471,7 +471,9 @@ vector<T> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, const param& wa
 
 			if (lowestHybridLevel < highestHybridLevel)
 			{
-				itsLogger.Fatal("Number of lowest hybrid level is smaller than highest hybrid level");
+				itsLogger.Fatal(
+				    fmt::format("Number of lowest hybrid level is smaller than highest hybrid level: {} vs {}",
+				                lowestHybridLevel, highestHybridLevel));
 				himan::Abort();
 			}
 
@@ -510,7 +512,9 @@ vector<T> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, const param& wa
 
 			if (lowestHybridLevel < highestHybridLevel)
 			{
-				itsLogger.Fatal("Number of lowest hybrid level is smaller than highest hybrid level");
+				itsLogger.Fatal(
+				    fmt::format("Number of lowest hybrid level is smaller than highest hybrid level: {} vs {}",
+				                lowestHybridLevel, highestHybridLevel));
 				himan::Abort();
 			}
 
