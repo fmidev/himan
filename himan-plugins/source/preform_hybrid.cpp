@@ -448,10 +448,12 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 	vector<double> tenkm(N, 10000.);
 	vector<double> zerodeg(N, himan::constants::kKelvin);  // 0C
 
-	vector<double> numZeroLevels(N), zeroLevel1(N), zeroLevel2(N), zeroLevel3(N), zeroLevel4(N);
-	vector<double> Tavg23, Tavg34;
+	vector<double> numZeroLevels(N), zeroLevel1(N), zeroLevel2(N, MissingDouble()), zeroLevel3(N, MissingDouble()),
+	    zeroLevel4(N, MissingDouble());
+
+	vector<double> Tavg01, Tavg12, Tavg23, Tavg34;
 	vector<double> plusArea, minusArea, plusAreaSfc;
-	vector<double> rhAvgUpper23;
+	vector<double> rhAvg01, rhAvgUpper12, rhAvgUpper23;
 
 	auto log = logger("preform_hybrid-freezing_area");
 
@@ -533,12 +535,34 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 			// 3 <--> 4
 			Tavg34 = h->VerticalAverage<double>(TParam, zeroLevel3, zeroLevel4);
+
+			Tavg01 = futTavg01.get();
+			Tavg12 = futTavg12.get();
+			rhAvg01 = futrhAvg01.get();
+			rhAvgUpper12 = futrhAvgUpper12.get();
 		}
 		catch (const HPExceptionType& e)
 		{
 			if (e == kFileDataNotFound)
 			{
 				log.Debug("Some zero level not found from entire data");
+			}
+
+			if (Tavg01.empty())
+			{
+				Tavg01 = vector<double>(N, MissingDouble());
+			}
+			if (Tavg12.empty())
+			{
+				Tavg12 = vector<double>(N, MissingDouble());
+			}
+			if (rhAvg01.empty())
+			{
+				rhAvg01 = vector<double>(N, MissingDouble());
+			}
+			if (rhAvgUpper12.empty())
+			{
+				rhAvgUpper12 = vector<double>(N, MissingDouble());
 			}
 		}
 	}
@@ -562,11 +586,6 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 	// Keskimääräinen RH nollarajan alapuolisessa plussakerroksessa, ja pakkaskerroksen yläpuolisessa plussakerroksessa
 	vector<double> rhAvgUpper(N, MissingDouble());
 	vector<double> rhAvg(N, MissingDouble());
-
-	auto Tavg01 = futTavg01.get();
-	auto Tavg12 = futTavg12.get();
-	auto rhAvg01 = futrhAvg01.get();
-	auto rhAvgUpper12 = futrhAvgUpper12.get();
 
 	for (size_t i = 0; i < numZeroLevels.size(); i++)
 	{
