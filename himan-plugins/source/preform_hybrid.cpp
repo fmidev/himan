@@ -459,6 +459,24 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 	future<vector<double>> futTavg01, futTavg12, futrhAvg01, futrhAvgUpper12;
 
+	// Some data is optional; if it's not found, we'll initialize it to missing
+	auto CaptureOrInitializeToMissing = [N](future<vector<double>>& fut) -> vector<double>
+	{
+		try
+		{
+			return fut.get();
+		}
+		catch (const HPExceptionType& e)
+		{
+			if (e == kFileDataNotFound)
+			{
+				vector<double> ret_(N, MissingDouble());
+				return ret_;
+			}
+
+			throw e;
+		}
+	};
 	try
 	{
 		// 0-kohtien lkm pinnasta (yläraja 10km, jotta ylinkin nollakohta varmasti löytyy)
@@ -535,11 +553,6 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 
 			// 3 <--> 4
 			Tavg34 = h->VerticalAverage<double>(TParam, zeroLevel3, zeroLevel4);
-
-			Tavg01 = futTavg01.get();
-			Tavg12 = futTavg12.get();
-			rhAvg01 = futrhAvg01.get();
-			rhAvgUpper12 = futrhAvgUpper12.get();
 		}
 		catch (const HPExceptionType& e)
 		{
@@ -547,24 +560,12 @@ void preform_hybrid::FreezingArea(shared_ptr<const plugin_configuration> conf, c
 			{
 				log.Debug("Some zero level not found from entire data");
 			}
-
-			if (Tavg01.empty())
-			{
-				Tavg01 = vector<double>(N, MissingDouble());
-			}
-			if (Tavg12.empty())
-			{
-				Tavg12 = vector<double>(N, MissingDouble());
-			}
-			if (rhAvg01.empty())
-			{
-				rhAvg01 = vector<double>(N, MissingDouble());
-			}
-			if (rhAvgUpper12.empty())
-			{
-				rhAvgUpper12 = vector<double>(N, MissingDouble());
-			}
 		}
+
+		Tavg01 = CaptureOrInitializeToMissing(futTavg01);
+		Tavg12 = CaptureOrInitializeToMissing(futTavg12);
+		rhAvg01 = CaptureOrInitializeToMissing(futrhAvg01);
+		rhAvgUpper12 = CaptureOrInitializeToMissing(futrhAvgUpper12);
 	}
 	catch (const HPExceptionType& e)
 	{
