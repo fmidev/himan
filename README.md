@@ -5,12 +5,12 @@ Himan is a weather parameter post processing tool.
 # Properties
 
 * Forecast provider agnostic post processing
-* Able to produce several useful weather parameters not produced by the forecasts themselves
+* Able to produce several useful weather parameters not produced by the forecast models themselves
 * Main design principles are performance and maintainability
 * Written in C++11
 * Partial support for GPU's through Cuda
 * Actively developed and supported by the Finnish Meteorological Institute
-* yum repository available for RHEL7 and RHEL8
+* yum repository available for RHEL8 and RHEL9
 * Licensed under MIT license
 
 # Parameter list
@@ -88,6 +88,7 @@ Himan is able to produce the following parameters, given required source data:
 * surface roughness
 * potential evaporation
 * precipitation phase
+* and many more...
 
 # Supported file formats
 
