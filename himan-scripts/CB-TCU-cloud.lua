@@ -3,6 +3,12 @@ function round(n)
   return n % 1 >= 0.5 and math.ceil(n) or math.floor(n)
 end
 
+local currentProducer = configuration:GetTargetProducer()
+local currentProducerName = currentProducer.GetName(currentProducer)
+
+local filter = matrixf(9, 9, 1, missing)
+filter:Fill(1)
+
 --Main program
 --
 
@@ -57,6 +63,53 @@ local RR = luatool:Fetch(current_time, HG, param("RRR-KGM2"), current_forecast_t
 if not NL or not NM or not RR then
   logger:Error("Some data not found")
   return
+end
+
+if currentProducerName == "MEPS" or currentProducerName == "MEPSMTA" then
+  local Nmat = matrixf(result:GetGrid():GetNi(), result:GetGrid():GetNj(), 1, 0)
+  Nmat:SetValues(EL500)
+  EL500 = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+  Nmat:SetValues(pEL500)
+  pEL500 = Min2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+  
+  Nmat:SetValues(ELmu)
+  ELmu = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+  
+  Nmat:SetValues(pELmu)
+  pELmu = Min2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+  Nmat:SetValues(RR)
+  RR = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+  Nmat:SetValues(NL)
+  NL = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+  Nmat:SetValues(NM)
+  NM = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+  filter:Fill(1/81)
+
+  Nmat:SetValues(LCL500)
+  LCL500 = Filter2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+  Nmat:SetValues(CAPE500)
+  CAPE500 = Filter2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+  Nmat:SetValues(CIN500)
+  CIN500 = Filter2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+  Nmat:SetValues(LFCmu)
+  LFCmu = Filter2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+  Nmat:SetValues(pLFCmu)
+  pLFCmu = Filter2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+  Nmat:SetValues(CAPEmu)
+  CAPEmu = Filter2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+  Nmat:SetValues(CINmu)
+  CINmu = Filter2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
 end
 
 local CBlimit = 2000  --required vertical thickness [m] to consider a CB (tweak this..!)
