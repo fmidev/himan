@@ -493,9 +493,6 @@ vector<T> hitool::VerticalExtremeValue(shared_ptr<modifier> mod, const param& wa
 				// larger value is closer to ground
 
 				std::swap(highest_value, lowest_value);
-
-				ASSERT(min_value >= 10);
-				ASSERT(max_value < 1200);
 			}
 
 			if (IsMissing(highest_value) || IsMissing(lowest_value))
