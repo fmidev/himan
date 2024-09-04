@@ -1282,6 +1282,8 @@ void AreaAndGrid(const boost::property_tree::ptree& pt, const shared_ptr<configu
 		conf->BaseGrid(std::move(g));
 		return;
 	}
+
+	throw runtime_error("No valid area definition found from configuration");
 }
 
 void SourceProducer(const boost::property_tree::ptree& pt, const shared_ptr<configuration>& conf)
