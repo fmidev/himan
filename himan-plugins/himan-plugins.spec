@@ -62,7 +62,7 @@ BuildRequires: smartmet-library-newbase-devel >= 24.5.17
 BuildRequires: smartmet-library-gis-devel
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: %{boost}-devel
-BuildRequires: fmt-devel >= 7.1.0
+BuildRequires: fmt-devel = 8.1.1
 BuildRequires: lua-devel
 BuildRequires: zlib-devel
 BuildRequires: bzip2-devel

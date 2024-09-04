@@ -96,7 +96,7 @@ jobs:
         dnf config-manager --set-enabled powertools
         dnf -y module disable postgresql
         dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/x86_64/cuda-rhel8.repo
-        dnf config-manager --setopt='epel.exclude=eccodes*' --save
+        dnf config-manager --setopt='epel.exclude=eccodes*' --setopt='smartmet-open-ext.exclude=fmt-libs' --setopt='smartmet-open-ext.exclude=proj94' --save
     - name: Setup rpmtree
       shell: bash
       run: |
@@ -354,7 +354,7 @@ jobs:
         dnf config-manager --set-enabled crb
         dnf -y module disable postgresql
         dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel9/x86_64/cuda-rhel9.repo
-        dnf config-manager --setopt='epel.exclude=eccodes*' --setopt='epel.exclude=proj' --setopt='smartmet-open-ext.exclude=proj82' --save
+        dnf config-manager --setopt='epel.exclude=eccodes*' --setopt='epel.exclude=proj' --setopt='smartmet-open-ext.exclude=proj82' --setopt='smartmet-open-ext.exclude=fmt-libs' --save
     - name: Setup rpmtree
       shell: bash
       run: |

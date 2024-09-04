@@ -29,7 +29,7 @@ Requires: libgcc
 Requires: libstdc++
 Requires: libfmidb >= 24.4.18
 Requires: libfmigrib >= 24.4.19
-Requires: fmt >= 7.1.0
+Requires: fmt = 8.1.1
 Requires: libpqxx >= 7.7.0
 BuildRequires: python3-scons
 BuildRequires: gcc-c++ >= 8.2.1
@@ -46,7 +46,7 @@ BuildRequires: libfmigrib-devel >= 24.4.19
 BuildRequires: zlib-devel
 BuildRequires: %{boost}-devel
 BuildRequires: libs3-devel
-BuildRequires: fmt-devel >= 7.1.0
+BuildRequires: fmt-devel = 8.1.1
 BuildRequires: eccodes
 BuildRequires: make
 BuildRequires: python3-distro
