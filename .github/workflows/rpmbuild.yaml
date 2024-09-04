@@ -107,7 +107,7 @@ jobs:
       shell: bash
       run: |
         cd himan-lib
-        yum-builddep -y himan-lib.spec
+        yum-builddep -y himan-lib.spec --nobest
         make rpm
     - name: Build himan-bin rpm
       id: build-himan-bin
@@ -123,7 +123,7 @@ jobs:
       shell: bash
       run: |
         cd himan-plugins
-        yum-builddep -y himan-plugins.spec
+        yum-builddep -y himan-plugins.spec --nobest
         make rpm
     - name: Build himan-scripts rpm
       id: build-himan-scripts
@@ -365,7 +365,7 @@ jobs:
       shell: bash
       run: |
         cd himan-lib
-        yum-builddep -y himan-lib.spec
+        yum-builddep -y himan-lib.spec --nobest
         make rpm
     - name: Build himan-bin rpm
       id: build-himan-bin
@@ -381,7 +381,7 @@ jobs:
       shell: bash
       run: |
         cd himan-plugins
-        yum-builddep -y himan-plugins.spec
+        yum-builddep -y himan-plugins.spec --nobest
         make rpm
     - name: Build himan-scripts rpm
       id: build-himan-scripts
