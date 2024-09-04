@@ -13,13 +13,6 @@ namespace himan
 {
 namespace plugin
 {
-/**
- * @class fog
- *
- * @brief Calculate ...
- *
- */
-
 class fog : public compiled_plugin, private compiled_plugin_base
 {
    public:

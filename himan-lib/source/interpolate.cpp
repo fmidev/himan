@@ -1033,9 +1033,6 @@ bool interpolator<T>::Insert(const base<T>& source, const base<T>& target, HPInt
 	return cache.insert(std::move(insertValue)).second;
 }
 
-// template bool interpolator::Insert<double>(const base<double>&, const base<double>&, HPInterpolationMethod);
-// template bool interpolator::Insert<float>(const base<float>&, const base<float>&, HPInterpolationMethod);
-
 template <typename T>
 bool interpolator<T>::Interpolate(base<T>& source, base<T>& target, HPInterpolationMethod method)
 {
@@ -1062,9 +1059,6 @@ bool interpolator<T>::Interpolate(base<T>& source, base<T>& target, HPInterpolat
 		return Interpolate(source, target, method);
 	}
 }
-
-// template bool interpolator::Interpolate<double>(base<double>&, base<double>&, HPInterpolationMethod);
-// template bool interpolator::Interpolate<float>(base<float>&, base<float>&, HPInterpolationMethod);
 
 }  // namespace interpolate
 }  // namespace himan

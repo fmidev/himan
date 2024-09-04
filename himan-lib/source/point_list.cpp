@@ -115,7 +115,6 @@ const vector<station>& point_list::Stations() const
 void point_list::Stations(const vector<station>& theStations)
 {
 	itsStations = theStations;
-	// itsData.Resize(theStations.size(), 1, 1);
 }
 
 size_t point_list::Hash() const
