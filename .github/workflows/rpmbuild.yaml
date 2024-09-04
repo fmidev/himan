@@ -167,7 +167,7 @@ jobs:
     if: always() && needs.build-rpms.outputs.trigger == 'yes'
     steps:
     - name: Retrieve saved rpms
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v4.1.7
       with:
         name: rpm-files
     - name: List rpms
@@ -276,7 +276,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Retrieve saved rpms
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v4.1.7
       with:
         name: rpm-files
     - name: List rpms
@@ -425,7 +425,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Retrieve saved rpms
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v4.1.7
       with:
         name: rpm-files-rhel9
     - name: List rpms
