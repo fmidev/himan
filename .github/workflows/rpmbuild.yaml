@@ -148,7 +148,7 @@ jobs:
     - name: Save RPM as an artifact
       id: save-rpm
       if: always() && steps.set-output.conclusion == 'success'
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4.1.0
       with:
         name: rpm-files
         path: ${{ steps.set-output.outputs.rpm_dir_path }}
@@ -406,7 +406,7 @@ jobs:
     - name: Save RPM as an artifact
       id: save-rpm
       if: always() && steps.set-output.conclusion == 'success'
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4.1.0
       with:
         name: rpm-files-rhel9
         path: ${{ steps.set-output.outputs.rpm_dir_path }}
