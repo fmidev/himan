@@ -58,8 +58,8 @@ BuildRequires: libs3-devel >= 4.1
 BuildRequires: libfmigrib >= 24.4.19
 BuildRequires: libfmigrib-devel >= 24.4.19
 BuildRequires: libfmidb-devel >= 24.5.6
-BuildRequires: smartmet-library-newbase-devel >= 24.5.17
-BuildRequires: smartmet-library-gis-devel
+BuildRequires: smartmet-library-newbase-devel = 24.5.17
+BuildRequires: smartmet-library-gis-devel = 24.5.27
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: %{boost}-devel
 BuildRequires: fmt-devel = 8.1.1
