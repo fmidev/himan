@@ -1285,7 +1285,8 @@ void WriteLevel(NFmiGribMessage& message, const level& lev)
 	}
 }
 
-void WriteForecastType(NFmiGribMessage& message, const forecast_type& forecastType, const producer& prod)
+void WriteForecastType(NFmiGribMessage& message, const forecast_type& forecastType, const producer& prod,
+                       HPDatabaseType dbtype)
 {
 	// For grib1 this is simple: we only support analysis and deterministic forecasts
 	// (when writing). Those do not need any extra metadata.
@@ -1321,17 +1322,21 @@ void WriteForecastType(NFmiGribMessage& message, const forecast_type& forecastTy
 			message.SetLongKey("typeOfProcessedData", gribTOPD);
 			message.TypeOfGeneratingProcess(4);
 			message.PerturbationNumber(static_cast<long>(forecastType.Value()));
-			auto r = GET_PLUGIN(radon);
 
-			try
+			if (dbtype == kRadon)
 			{
-				const long ensembleSize = stol(r->RadonDB().GetProducerMetaData(prod.Id(), "ensemble size"));
-				message.SetLongKey("numberOfForecastsInEnsemble", ensembleSize);
-			}
-			catch (const invalid_argument& e)
-			{
-				logr.Warning("Unable to get valid ensemble size information from radon for producer " +
-				             to_string(prod.Id()));
+				auto r = GET_PLUGIN(radon);
+
+				try
+				{
+					const long ensembleSize = stol(r->RadonDB().GetProducerMetaData(prod.Id(), "ensemble size"));
+					message.SetLongKey("numberOfForecastsInEnsemble", ensembleSize);
+				}
+				catch (const invalid_argument& e)
+				{
+					logr.Warning("Unable to get valid ensemble size information from radon for producer " +
+					             to_string(prod.Id()));
+				}
 			}
 		}
 		break;
@@ -1551,7 +1556,8 @@ pair<himan::file_information, NFmiGribMessage> grib::CreateGribMessage(info<T>& 
 
 	// Forecast type
 
-	WriteForecastType(message, DetermineCorrectForecastType(anInfo.ForecastType(), anInfo.Param()), anInfo.Producer());
+	WriteForecastType(message, DetermineCorrectForecastType(anInfo.ForecastType(), anInfo.Param()), anInfo.Producer(),
+	                  itsWriteOptions.configuration->DatabaseType());
 
 	// Area and Grid
 
