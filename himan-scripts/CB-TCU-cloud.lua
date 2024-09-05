@@ -7,7 +7,22 @@ local currentProducer = configuration:GetTargetProducer()
 local currentProducerName = currentProducer.GetName(currentProducer)
 
 local filter = matrixf(9, 9, 1, missing)
-filter:Fill(1)
+--filter:Fill(1)
+local kernel = {0,0,0,0,1,0,0,0,0,
+                0,0,1,1,1,1,1,0,0,
+                0,1,1,1,1,1,1,1,0,
+                0,1,1,1,1,1,1,1,0,
+                1,1,1,1,1,1,1,1,1,
+                0,1,1,1,1,1,1,1,0,
+                0,1,1,1,1,1,1,1,0,
+                0,0,1,1,1,1,1,0,0,
+                0,0,0,0,1,0,0,0,0}
+filter:SetValues(kernel)
+
+local avgkernel = {}
+for i = 1, #kernel do
+  avgkernel[i] = kernel[i]/49
+end
 
 --Main program
 --
@@ -88,7 +103,13 @@ if currentProducerName == "MEPS" or currentProducerName == "MEPSMTA" then
   Nmat:SetValues(NM)
   NM = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
 
-  filter:Fill(1/81)
+  Nmat:SetValues(Ttop)
+  Ttop = Min2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+  Nmat:SetValues(TtopMU)
+  TtopMU = Min2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+  filter:SetValues(avgkernel)
 
   Nmat:SetValues(LCL500)
   LCL500 = Filter2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
@@ -116,7 +137,7 @@ local CBlimit = 2000  --required vertical thickness [m] to consider a CB (tweak 
 local TCUlimit = 1500  --required vertical thickness [m] to consider a TCU (tweak this..!)
 local CBtopLim = 263.15  --required top T [K] (-10 degC) to consider a CB (tweakable!)
 local CINlimTCU = -1  --CIN limit for TCu
-local RRlimit = 0.1 -- precipitation limit [mm/h] to consider a Cb
+local RRlimit = 0.1 --precipitation limit [mm/h] to consider a Cb
 local CAPElimit = 2.71828 --euler constant
 
 local i = 0
