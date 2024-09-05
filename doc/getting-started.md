@@ -1,8 +1,10 @@
 # Getting started
 
-Recommended way of using Himan is via the provided docker images (quay.io/fmi/himan). See also [using Docker images](#Using_Docker_images).
+Recommended way of using Himan is via the provided container image (https://quay.io/fmi/himan). See also [using container images](#Using_container_images).
 
 In operative environments Himan relies heavily on a database that is providing all data and metadata. This database schema is provided here: https://github.com/fmidev/radon.
+
+For simple testing Himan can be used without a database. In this case not all metadata in output files may be written correctly.
 
 Example: running seaicing plugin for Hirlam data. Seaicing plugin calculates an index that describes the amount of ice that is built up on a ship's superstructure. Files for this example are located at example/seaicing.
 
@@ -18,7 +20,7 @@ Example: running seaicing plugin for Hirlam data. Seaicing plugin calculates an 
         "target_producer" : "999999",
         "hours" : "3",
         "origintime" : "2017-04-05 00:00:00",
-        "file_write" : "multiple",
+        "write_mode" : "single",
 
         "processqueue" : [
         {
@@ -57,8 +59,7 @@ Both source and target producer id are 999999. This corresponds to missing value
 The analysis time (or origin time) for the forecast is 5th of April, 2017 00z. The calculation is done for forecast hour (leadtime) 3, i.e. valid time is 2017-04-05 03:00:00.
 
 ```
-        "file_write" : "multiple",
-
+        "write_mode" : "single",
 ```
 
 Output data is written so that each field is written to a separate file. In the context of this example this does not really matter because the calculation outputs only one field. The default output file type is Grib.
@@ -76,13 +77,30 @@ Output data is written so that each field is written to a separate file. In the 
 
 The processqueue (list of plugins that are executed) consists only one plugin: seaicing. The resulting data is written to leveltype height/0.
 
+## Define param-file
+
+Himan references to parameters via names that are defined in metadata database. It does not know how to map grib parameters to these names without explicit mapping. This is what a param-file does.
+
+```
+$ cat param-file.txt
+2t,T-K
+t,TG-K
+FF-MS,FF-MS 
+```
+
+The format of the file is 
+
+grib_shortname,himan_parametername
+
+In the listing above, a grib that has shortName 2t is mapped to Himan parameter T-K. If a grib field is not recognized, eccodes sets shortName to "unknown". This value can also be mapped to some Himan parameter, but in this case multiple different parameters cannot be "unknown". 
+
 ## Run Himan
 
 ```
 $ wget https://raw.githubusercontent.com/fmidev/himan/master/example/seaicing/seaicing.json \
        https://github.com/fmidev/himan/raw/master/example/seaicing/seaicing.grib
 
-$ himan -f seaicing.json seaicing.grib
+$ himan -f seaicing.json --param-file param-file.txt --no-database seaicing.grib
 
 ************************************************
 * By the Power of Grayskull, I Have the Power! *
@@ -113,13 +131,14 @@ min=0 max=3 size=22500
 
 Note that seaicing plugin does not separate land points from sea points: the index is mostly zero due to warm conditions on the baltic sea.
 
-<a name="Using_Docker_images"></a>
+<a name="Using_container_images"></a>
 
-# Using Docker images
+# Using container images
 
 
 ```
-$ docker run -v /tmp:/tmp quay.io/fmi/himan himan -f seaicing.json seaicing.grib 
+$ podman run -v /tmp:/tmp quay.io/fmi/himan himan -f /tmp/seaicing.json --param-file /tmp/param-file.txt --no-database seaicing.grib
+[..]
 $ grib_histogram /tmp/ICING-N_height_0_ll_150_150_0_003.grib
 min=0 max=3 size=22500
  0:0.3 0.3:0.6 0.6:0.9 0.9:1.2 1.2:1.5 1.5:1.8 1.8:2.1 2.1:2.4 2.4:2.7 2.7:3
