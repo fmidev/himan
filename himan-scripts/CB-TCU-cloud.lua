@@ -3,6 +3,27 @@ function round(n)
   return n % 1 >= 0.5 and math.ceil(n) or math.floor(n)
 end
 
+local currentProducer = configuration:GetTargetProducer()
+local currentProducerName = currentProducer.GetName(currentProducer)
+
+local filter = matrixf(9, 9, 1, missing)
+--filter:Fill(1)
+local kernel = {0,0,0,0,1,0,0,0,0,
+                0,0,1,1,1,1,1,0,0,
+                0,1,1,1,1,1,1,1,0,
+                0,1,1,1,1,1,1,1,0,
+                1,1,1,1,1,1,1,1,1,
+                0,1,1,1,1,1,1,1,0,
+                0,1,1,1,1,1,1,1,0,
+                0,0,1,1,1,1,1,0,0,
+                0,0,0,0,1,0,0,0,0}
+filter:SetValues(kernel)
+
+local avgkernel = {}
+for i = 1, #kernel do
+  avgkernel[i] = kernel[i]/49
+end
+
 --Main program
 --
 
@@ -59,11 +80,64 @@ if not NL or not NM or not RR then
   return
 end
 
+if currentProducerName == "MEPS" or currentProducerName == "MEPSMTA" then
+  local Nmat = matrixf(result:GetGrid():GetNi(), result:GetGrid():GetNj(), 1, 0)
+  Nmat:SetValues(EL500)
+  EL500 = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+  Nmat:SetValues(pEL500)
+  pEL500 = Min2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+  
+  Nmat:SetValues(ELmu)
+  ELmu = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+  
+  Nmat:SetValues(pELmu)
+  pELmu = Min2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+  Nmat:SetValues(RR)
+  RR = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+  Nmat:SetValues(NL)
+  NL = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+  Nmat:SetValues(NM)
+  NM = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+  Nmat:SetValues(Ttop)
+  Ttop = Min2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+  Nmat:SetValues(TtopMU)
+  TtopMU = Min2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+  filter:SetValues(avgkernel)
+
+  Nmat:SetValues(LCL500)
+  LCL500 = Filter2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+  Nmat:SetValues(CAPE500)
+  CAPE500 = Filter2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+  Nmat:SetValues(CIN500)
+  CIN500 = Filter2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+  Nmat:SetValues(LFCmu)
+  LFCmu = Filter2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+  Nmat:SetValues(pLFCmu)
+  pLFCmu = Filter2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+  Nmat:SetValues(CAPEmu)
+  CAPEmu = Filter2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+  Nmat:SetValues(CINmu)
+  CINmu = Filter2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+end
+
 local CBlimit = 2000  --required vertical thickness [m] to consider a CB (tweak this..!)
 local TCUlimit = 1500  --required vertical thickness [m] to consider a TCU (tweak this..!)
 local CBtopLim = 263.15  --required top T [K] (-10 degC) to consider a CB (tweakable!)
 local CINlimTCU = -1  --CIN limit for TCu
-local RRlimit = 0.1 -- precipitation limit [mm/h] to consider a Cb
+local RRlimit = 0.1 --precipitation limit [mm/h] to consider a Cb
 local CAPElimit = 2.71828 --euler constant
 
 local i = 0
