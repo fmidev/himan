@@ -29,7 +29,7 @@ Requires: libgcc
 Requires: libstdc++
 Requires: libfmidb >= 24.4.18
 Requires: libfmigrib >= 24.4.19
-Requires: fmt = 8.1.1
+Requires: fmt >= 11
 Requires: libpqxx >= 7.7.0
 BuildRequires: python3-scons
 BuildRequires: gcc-c++ >= 8.2.1
@@ -39,19 +39,19 @@ BuildRequires: bzip2-devel
 BuildRequires: redhat-rpm-config
 BuildRequires: cuda-nvcc-12-4
 BuildRequires: cuda-cudart-devel-12-4
-BuildRequires: geos311-devel
-BuildRequires: gdal35-devel
+BuildRequires: geos312-devel
+BuildRequires: gdal38-devel
 BuildRequires: libfmidb-devel >= 24.4.18
 BuildRequires: libfmigrib-devel >= 24.4.19
 BuildRequires: zlib-devel
 BuildRequires: %{boost}-devel
 BuildRequires: libs3-devel
-BuildRequires: fmt-devel = 8.1.1
+BuildRequires: fmt-devel >= 11
 BuildRequires: eccodes
 BuildRequires: make
 BuildRequires: python3-distro
-Requires: geos311
-Requires: gdal35-libs
+Requires: geos312
+Requires: gdal38-libs
 Requires: eccodes
 Requires: %{boost}-iostreams
 Requires: libs3 >= 4.1-0.6.20190408git287e4be.1.el8.fmi

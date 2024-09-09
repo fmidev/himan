@@ -26,13 +26,13 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: himan-lib >= 24.1.8
-Requires: himan-plugins >= 22.6.16
+Requires: himan-lib >= 24.9.9
+Requires: himan-plugins >= 24.9.9
 Requires: zlib
 Requires: libfmidb
 Requires: xerces-c
 Requires: libpqxx >= 7.7.0
-Requires: gdal35-libs
+Requires: gdal38-libs
 Requires: jasper-libs
 Requires: %{boost}-program-options
 Requires: %{boost}-system
@@ -41,7 +41,7 @@ Requires: %{boost}-iostreams
 Requires: %{boost}-thread
 Requires: bzip2-libs
 BuildRequires: %{boost}-devel
-BuildRequires: fmt-devel >= 7.1.0
+BuildRequires: fmt-devel >= 11
 BuildRequires: python3-scons
 BuildRequires: redhat-rpm-config
 BuildRequires: gcc-c++ >= 8.2.1
