@@ -1,23 +1,23 @@
 #include "fetcher.h"
-#include "interpolate.h"
-#include "logger.h"
-#include "numerical_functions.h"
-#include "plugin_factory.h"
-#include "spiller.h"
-#include "statistics.h"
-#include "util.h"
-#include <filesystem>
-#include <fstream>
-#include <future>
-#include <shared_mutex>
-
 #include "cache.h"
 #include "csv.h"
 #include "geotiff.h"
 #include "grib.h"
+#include "interpolate.h"
+#include "logger.h"
+#include "numerical_functions.h"
 #include "param.h"
+#include "plugin_factory.h"
 #include "querydata.h"
 #include "radon.h"
+#include "spiller.h"
+#include "statistics.h"
+#include "util.h"
+#include <filesystem>
+#include <fmt/ranges.h>
+#include <fstream>
+#include <future>
+#include <shared_mutex>
 
 using namespace himan;
 using namespace himan::plugin;
@@ -43,7 +43,7 @@ namespace
 
 std::string UniqueName(const himan::producer& prod, const himan::param& par, const himan::level& lev)
 {
-	return fmt::format("{}_{}_{}", prod.Id(), par.Name(), lev.Type());
+	return fmt::format("{}_{}_{}", prod.Id(), par.Name(), fmt::underlying(lev.Type()));
 }
 
 void AmendParamWithAggregationAndProcessingType(param& p, const forecast_time& ftime)

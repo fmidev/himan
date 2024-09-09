@@ -313,7 +313,7 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 						replacement = fmt::sprintf(mask, lvl.Value2());
 						break;
 					case Component::kForecastTypeId:
-						replacement = fmt::sprintf(mask, ftype.Type());
+						replacement = fmt::sprintf(mask, fmt::underlying(ftype.Type()));
 						break;
 					case Component::kForecastTypeName:
 						replacement = ForecastTypeToShortString(ftype.Type());

@@ -41,7 +41,7 @@ vector<himan::param> GetParams(HPWindVectorTargetType ttype, bool reverse)
 {
 	if (inout.find(ttype) == inout.end())
 	{
-		throw runtime_error(fmt::format("Invalid target type: {}", ttype));
+		throw runtime_error(fmt::format("Invalid target type: {}", fmt::underlying(ttype)));
 	}
 
 	const auto& pars = inout.at(ttype);

@@ -364,7 +364,8 @@ void ProcessParameter(std::shared_ptr<const plugin_configuration>& conf, std::sh
 				                                BTWNCompare());
 				break;
 			default:
-				logr.Error(fmt::format("Unsupported comparison operator: {}", pc.output.ProcessingType().Type()));
+				logr.Error(fmt::format("Unsupported comparison operator: {}",
+				                       fmt::underlying(pc.output.ProcessingType().Type())));
 				break;
 		}
 	}

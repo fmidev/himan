@@ -351,6 +351,24 @@ inline std::ostream& operator<<(std::ostream& file, const regular_grid& ob)
 
 }  // namespace himan
 
+// Specialize the fmt::formatter template for HPScanningMode
+// needed because of fmt v11 and grid_cache
+template <>
+struct fmt::formatter<himan::HPScanningMode>
+{
+	template <typename ParseContext>
+	constexpr auto parse(ParseContext& ctx)
+	{
+		return ctx.begin();
+	}
+
+	template <typename FormatContext>
+	auto format(const himan::HPScanningMode& c, FormatContext& ctx) const -> decltype(ctx.out())
+	{
+		return fmt::format_to(ctx.out(), "{}", fmt::underlying(c));
+	}
+};
+
 #ifdef HAVE_CEREAL
 CEREAL_REGISTER_TYPE(himan::regular_grid);
 CEREAL_REGISTER_POLYMORPHIC_RELATION(himan::grid, himan::regular_grid);

@@ -1324,7 +1324,7 @@ std::unique_ptr<ensemble> util::CreateEnsembleFromConfiguration(const std::share
 		}
 		break;
 		default:
-			log.Fatal(fmt::format("Unknown ensemble type: {}", ensType));
+			log.Fatal(fmt::format("Unknown ensemble type: {}", fmt::underlying(ensType)));
 			himan::Abort();
 	}
 

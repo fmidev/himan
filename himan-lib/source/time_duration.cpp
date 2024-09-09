@@ -194,7 +194,8 @@ std::string time_duration::String(const std::string& fmt) const
 		{
 			try
 			{
-				ret = std::regex_replace(ret, re, fmt::format(fmt::format("{{:0{}d}}", std::string(what[1])), value));
+				const auto fmtstr = fmt::format("{{:{}d}}", std::string(what[1]));
+				ret = std::regex_replace(ret, re, fmt::format(fmtstr, value));
 			}
 			catch (const std::exception& e)
 			{

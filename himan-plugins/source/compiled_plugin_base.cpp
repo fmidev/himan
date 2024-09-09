@@ -684,7 +684,7 @@ shared_ptr<info<T>> compiled_plugin_base::Fetch(const forecast_time& theTime, co
 	{
 		if (e != kFileDataNotFound)
 		{
-			itsBaseLogger.Fatal(fmt::format("Unable to proceed: {}", e));
+			itsBaseLogger.Fatal(fmt::format("Unable to proceed: {}", fmt::underlying(e)));
 			himan::Abort();
 		}
 	}

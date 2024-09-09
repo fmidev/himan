@@ -3,7 +3,9 @@
  */
 
 #include "transformer.h"
+#include "fetcher.h"
 #include "forecast_time.h"
+#include "hitool.h"
 #include "interpolate.h"
 #include "level.h"
 #include "logger.h"
@@ -11,12 +13,10 @@
 #include "newbase/NFmiFastQueryInfo.h"
 #include "numerical_functions.h"
 #include "plugin_factory.h"
-#include "util.h"
-#include <gis/CoordinateMatrix.h>
-
-#include "fetcher.h"
-#include "hitool.h"
 #include "querydata.h"
+#include "util.h"
+#include <fmt/ranges.h>
+#include <gis/CoordinateMatrix.h>
 
 using namespace std;
 using namespace himan::plugin;

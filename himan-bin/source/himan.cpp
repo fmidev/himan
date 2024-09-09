@@ -163,7 +163,8 @@ void UpdateSSState(const shared_ptr<const plugin_configuration>& pc)
 			const string query = fmt::format(
 			    "INSERT INTO ss_state (producer_id, geometry_id, analysis_time, forecast_period, forecast_type_id, "
 			    "forecast_type_value, table_name) VALUES ({}, {}, '{}', '{}', {}, {}, '{}')",
-			    producerId, geometryId, analysisTime, period, forecastTypeId, forecastTypeValue, tableName);
+			    producerId, geometryId, analysisTime, period, fmt::underlying(forecastTypeId), forecastTypeValue,
+			    tableName);
 
 			r->RadonDB().Execute(query);
 			inserts++;
@@ -174,7 +175,8 @@ void UpdateSSState(const shared_ptr<const plugin_configuration>& pc)
 			    "UPDATE ss_state SET table_name = '{}', last_updated = now() WHERE producer_id = {} AND geometry_id = "
 			    "{} AND analysis_time = '{}' AND forecast_period = '{}' AND forecast_type_id = '{}' AND "
 			    "forecast_type_value = '{}'",
-			    tableName, producerId, geometryId, analysisTime, period, forecastTypeId, forecastTypeValue);
+			    tableName, producerId, geometryId, analysisTime, period, fmt::underlying(forecastTypeId),
+			    forecastTypeValue);
 
 			r->RadonDB().Execute(query);
 			updates++;
@@ -830,7 +832,7 @@ void ParseCommandLine(shared_ptr<configuration>& conf, int argc, char** argv)
 				conf->UseCudaForPacking(false);
 				conf->UseCudaForUnpacking(false);
 
-				cerr << fmt::format("Error from cuda library: {} ({})\n", cudaGetErrorName(err), err);
+				cerr << fmt::format("Error from cuda library: {} ({})\n", cudaGetErrorName(err), fmt::underlying(err));
 				break;
 		}
 
