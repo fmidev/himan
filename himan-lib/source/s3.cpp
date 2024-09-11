@@ -132,9 +132,24 @@ static S3Status getObjectDataCallback(int bufferSize, const char* buffer, void* 
 {
 	himan::buffer* ret = static_cast<himan::buffer*>(callbackData);
 
-	ret->data = static_cast<unsigned char*>(realloc(ret->data, ret->length + bufferSize));
-	memcpy(ret->data + ret->length, buffer, bufferSize);
-	ret->length += bufferSize;
+	// extend callback buffer to accomodate the newest chunk of data
+	void* ptr = realloc(ret->data, ret->length + bufferSize);
+
+	if (ptr == nullptr)
+	{
+		logger logr("s3");
+		logr.Error("getObjectDataCallback: Memory allocation failed");
+		return S3StatusAbortedByCallback;
+	}
+
+	ret->data = static_cast<unsigned char*>(ptr);
+
+	if (bufferSize > 0)
+	{
+		// copy the new data to the end of the buffer
+		memcpy(ret->data + ret->length, buffer, bufferSize);
+		ret->length += bufferSize;
+	}
 
 	return S3StatusOK;
 }
@@ -316,6 +331,8 @@ buffer s3::ReadFile(const file_information& fileInformation)
 
 	S3BucketContext bucketContext = GetBucketContext(host, bucket, region);
 
+	const unsigned long length = fileInformation.length.value();
+
 	int count = 0;
 	do
 	{
@@ -324,7 +341,6 @@ buffer s3::ReadFile(const file_information& fileInformation)
 			sleep(2 * count);
 		}
 		const unsigned long offset = fileInformation.offset.value();
-		const unsigned long length = fileInformation.length.value();
 
 #ifdef S3_DEFAULT_REGION
 		S3_get_object(&bucketContext, key.c_str(), NULL, offset, length, NULL, 0, &getObjectHandler, &ret);
@@ -348,6 +364,11 @@ buffer s3::ReadFile(const file_information& fileInformation)
 		throw himan::kFileDataNotFound;
 	}
 
+	if (length > 0 && ret.length != length)
+	{
+		logr.Error(fmt::format("Expected {} bytes, got {} bytes", fileInformation.length.value(), ret.length));
+		throw himan::kFileDataNotFound;
+	}
 	return ret;
 }
 
