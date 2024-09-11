@@ -29,7 +29,7 @@ Requires: libgcc
 Requires: libstdc++
 Requires: libfmidb >= 24.4.18
 Requires: libfmigrib >= 24.4.19
-Requires: fmt >= 11
+Requires: fmt-libs >= 11
 Requires: libpqxx >= 7.7.0
 BuildRequires: python3-scons
 BuildRequires: gcc-c++ >= 8.2.1
