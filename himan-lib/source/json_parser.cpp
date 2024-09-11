@@ -1050,7 +1050,11 @@ unique_ptr<grid> ParseAreaAndGridFromProj4String(const boost::property_tree::ptr
 				return std::unique_ptr<lambert_conformal_grid>(new lambert_conformal_grid(
 				    sm, fp, ni, nj, di, dj, std::unique_ptr<OGRSpatialReference>(sp.Clone()), false));
 			}
-
+			else if (projection == SRS_PT_POLAR_STEREOGRAPHIC)
+			{
+				return std::make_unique<stereographic_grid>(sm, fp, ni, nj, di, dj,
+				                                            std::unique_ptr<OGRSpatialReference>(sp.Clone()), false);
+			}
 			itsLogger.Error("Unsupported projection: " + projection);
 		}
 		else if (sp.IsGeographic())
