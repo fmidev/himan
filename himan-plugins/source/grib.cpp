@@ -2166,6 +2166,11 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 		{
 			parmName =
 			    GetParamNameFromGribShortName(options.configuration->ParamFile(), message.GetStringKey("shortName"));
+			if (parmName.empty())
+			{
+				logr.Warning(fmt::format("Parameter mapping for shortName '{}' not found in '{}'",
+				                         message.GetStringKey("shortName"), options.configuration->ParamFile()));
+			}
 		}
 
 		if (parmName.empty())
@@ -2400,6 +2405,12 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 		{
 			parmName =
 			    GetParamNameFromGribShortName(options.configuration->ParamFile(), message.GetStringKey("shortName"));
+
+			if (parmName.empty())
+			{
+				logr.Warning(fmt::format("Parameter mapping for shortName '{}' not found in '{}'",
+				                         message.GetStringKey("shortName"), options.configuration->ParamFile()));
+			}
 		}
 
 		if (parmName.empty())
