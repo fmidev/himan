@@ -27,14 +27,14 @@ void frost::Process(std::shared_ptr<const plugin_configuration> conf)
 
 shared_ptr<info<double>> BackwardsFetchFromProducer(shared_ptr<plugin_configuration>& cnf, const forecast_type& ftype,
                                                     const forecast_time& ftime, const level& lvl, const param& par,
-                                                    int adjust, bool adjustValidTime = false)
+                                                    int adjust, bool adjustValidTime = false, bool logMissing = true)
 {
 	auto f = GET_PLUGIN(fetcher);
 	shared_ptr<info<double>> ret;
 	auto myftime = ftime;
 	logger logr("frost");
 
-	for (int i = 0; i < 6; i++)
+	for (int i = 0; i < 5; i++)
 	{
 		try
 		{
@@ -53,7 +53,7 @@ shared_ptr<info<double>> BackwardsFetchFromProducer(shared_ptr<plugin_configurat
 		}
 	}
 
-	if (!ret)
+	if (!ret && logMissing)
 	{
 		logr.Warning(fmt::format("No {} data found for time {}", par.Name(), ftime));
 	}
@@ -61,33 +61,39 @@ shared_ptr<info<double>> BackwardsFetchFromProducer(shared_ptr<plugin_configurat
 	return ret;
 }
 
+forecast_time TruncateToHour(forecast_time ftime, int aStep = 6)
+{
+	const int latestHour = std::stoi(ftime.OriginDateTime().String("%H"));
+	int adjustment = (latestHour - latestHour % aStep) - latestHour;
+	ftime.OriginDateTime().Adjust(kHourResolution, adjustment);
+	return ftime;
+}
+
 void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
 	const param TParam("T-K");
 	const param TDParam("TD-K");
 	const param TGParam("TG-K");
-	const param WGParam("FFG-MS", aggregation(HPAggregationType::kMaximum, itsConfiguration->ForecastStep()),
-	                    processing_type());
+	param WGParam("FFG-MS", aggregation(HPAggregationType::kMaximum, itsConfiguration->ForecastStep()),
+	              processing_type());
 	const param T0Param("PROB-TC-0", aggregation(), processing_type(kProbabilityLessThanOrEqual, 273.15));
 	const params NParams({param("N-PRCNT"), param("N-0TO1")});
-	const param RADParam("RADGLO-WM2");
+	param RADParam("RADGLO-WM2", aggregation(HPAggregationType::kAverage, itsConfiguration->ForecastStep()),
+	               processing_type());
 	const param ICNParam("IC-0TO1");
 	const param LCParam("LC-0TO1");
 
 	auto myThreadedLogger = logger("frostThread #" + to_string(threadIndex));
 
 	const forecast_time original_forecastTime = myTargetInfo->Time();
-	auto ec_forecastTime = original_forecastTime;
-	const int latestHour = std::stoi(ec_forecastTime.OriginDateTime().String("%H"));
-	int adjustment = (latestHour - latestHour % 6) - latestHour;
-	ec_forecastTime.OriginDateTime().Adjust(kHourResolution, adjustment);
+
+	auto ec_forecastTime = TruncateToHour(original_forecastTime, 6);
 
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger.Info(fmt::format("Calculating time {}, level {}",
-	                                  static_cast<string>(original_forecastTime.ValidDateTime()),
-	                                  static_cast<string>(forecastLevel)));
+	myThreadedLogger.Info(
+	    fmt::format("Calculating time {}, level {}", original_forecastTime.ValidDateTime(), forecastLevel));
 
 	// Get the latest data from producer defined in configuration file.
 
@@ -141,7 +147,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 	// Get the latest IC-0TO1.
 
 	shared_ptr<info<double>> ICNInfo =
-	    BackwardsFetchFromProducer(cnf, forecastType, ec_forecastTime, level(kGround, 0), ICNParam, -6);
+	    BackwardsFetchFromProducer(cnf, forecastType, ec_forecastTime, level(kGround, 0), ICNParam, -6, false, false);
 
 	// Create ICNInfo when no forecast found.
 
@@ -150,6 +156,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 		ICNInfo = make_shared<info<double>>(forecastType, ec_forecastTime, level(kGround, 0), ICNParam);
 		ICNInfo->Producer(myTargetInfo->Producer());
 		ICNInfo->Create(myTargetInfo->Base(), true);
+		myThreadedLogger.Info("Ice cover information not found, proceeding without it");
 	}
 
 	// Get the latest LC-0TO1, available only for hour 00.
@@ -170,9 +177,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 
 	forecast_type stat_type = forecast_type(kStatisticalProcessing);
 
-	ec_forecastTime = original_forecastTime;
-	adjustment = (latestHour - latestHour % 12) - latestHour;
-	ec_forecastTime.OriginDateTime().Adjust(kHourResolution, adjustment);
+	ec_forecastTime = TruncateToHour(original_forecastTime, 12);
 
 	cnf->SourceProducers({producer(242, 86, 242, "ECM_PROB")});
 
@@ -186,7 +191,7 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 	}
 
 	shared_ptr<info<double>> T0ECInfo =
-	    BackwardsFetchFromProducer(cnf, stat_type, ec_forecastTime, level(kHeight, 2), T0Param, -12);
+	    BackwardsFetchFromProducer(cnf, stat_type, ec_forecastTime, level(kHeight, 2), T0Param, -12, false, false);
 
 	// ECMWF is optional data
 	if (!T0ECInfo)
@@ -194,16 +199,14 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 		T0ECInfo = make_shared<info<double>>(stat_type, ec_forecastTime, level(kHeight, 2), T0Param);
 		T0ECInfo->Producer(myTargetInfo->Producer());
 		T0ECInfo->Create(myTargetInfo->Base(), true);
-		myThreadedLogger.Warning("ECMWF probabilities not found");
+		myThreadedLogger.Info("ECMWF probabilities not found, proceeding without them");
 	}
 
 	// Get the latest MEPS PROB-TC-0 from hour 00, 03, 06, 09, 12, 15, 18 or 21. If not found get earlier.
 
 	shared_ptr<info<double>> T0MEPSInfo = nullptr;
 
-	auto meps_forecastTime = original_forecastTime;
-	adjustment = (latestHour - latestHour % 3) - latestHour;
-	meps_forecastTime.OriginDateTime().Adjust(kHourResolution, adjustment);
+	auto meps_forecastTime = TruncateToHour(original_forecastTime, 3);
 
 	if (meps_forecastTime.Step().Hours() <= 66)
 	{
@@ -217,7 +220,8 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 			cnf->SourceGeomNames({"MEPS2500D"});
 		}
 
-		T0MEPSInfo = BackwardsFetchFromProducer(cnf, stat_type, meps_forecastTime, level(kHeight, 2), T0Param, -3);
+		T0MEPSInfo =
+		    BackwardsFetchFromProducer(cnf, stat_type, meps_forecastTime, level(kHeight, 2), T0Param, -3, false, false);
 	}
 
 	// MEPS is optional data
@@ -226,14 +230,12 @@ void frost::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thre
 		T0MEPSInfo = make_shared<info<double>>(stat_type, meps_forecastTime, level(kHeight, 2), T0Param);
 		T0MEPSInfo->Producer(myTargetInfo->Producer());
 		T0MEPSInfo->Create(myTargetInfo->Base(), true);
-		myThreadedLogger.Info("MEPS probabilities not used");
+		myThreadedLogger.Info("MEPS probabilities not found, proceeding without them");
 	}
 
 	if (!TGInfo || !WGInfo || !ICNInfo || !LCInfo || !RADInfo || !T0ECInfo || !T0MEPSInfo)
 	{
-		myThreadedLogger.Warning(fmt::format("Skipping step {}, level {}",
-		                                     static_cast<string>(original_forecastTime.Step()),
-		                                     static_cast<string>(forecastLevel)));
+		myThreadedLogger.Error(fmt::format("Skipping step {}, level {}", original_forecastTime.Step(), forecastLevel));
 		return;
 	}
 
