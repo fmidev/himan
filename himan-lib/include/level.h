@@ -37,6 +37,7 @@ enum HPLevelType
 	kEntireAtmosphere = 200,
 	kEntireOcean = 201,
 	// reserved numbers starting here
+	kMUDL = 211,          // most unstable parcel departure level
 	kMaximumThetaE = 246  // maximum theta e level, like grib2
 };
 
@@ -60,7 +61,8 @@ const std::unordered_map<HPLevelType, std::string> HPLevelTypeToString = {{kUnkn
                                                                           {kMaximumThetaE, "maxthetae"},
                                                                           {kMaximumWind, "maxwind"},
                                                                           {kMixingLayer, "mixing_layer"},
-                                                                          {kTropopause, "tropopause"}};
+                                                                          {kTropopause, "tropopause"},
+                                                                          {kMUDL, "mudl"}};
 
 const std::unordered_map<std::string, HPLevelType> HPStringToLevelType = {{"unknown", kUnknownLevel},
                                                                           {"ground", kGround},
@@ -82,7 +84,8 @@ const std::unordered_map<std::string, HPLevelType> HPStringToLevelType = {{"unkn
                                                                           {"maxthetae", kMaximumThetaE},
                                                                           {"maxwind", kMaximumWind},
                                                                           {"mixing_layer", kMixingLayer},
-                                                                          {"tropopause", kTropopause}};
+                                                                          {"tropopause", kTropopause},
+                                                                          {"mudl", kMUDL}};
 
 class level
 {
