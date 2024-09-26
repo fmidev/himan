@@ -382,7 +382,13 @@ void BindEnum(lua_State* L)
 				 value("kAnalysis", kAnalysis),
 				 value("kEpsControl", kEpsControl),
 				 value("kEpsPerturbation", kEpsPerturbation),
-				 value("kStatisticalProcessing", kStatisticalProcessing)]];
+				 value("kStatisticalProcessing", kStatisticalProcessing)],
+	     class_<HPDatabaseType>("HPDatabaseType")
+	         .enum_("constants")[
+				 value("kUnknownType", kUnknownDatabaseType),
+				 value("kRadon", kRadon),
+				 value("kNoDatabase", kNoDatabase)]];
+
 }
 
 // clang-format on
@@ -1640,6 +1646,7 @@ void BindLib(lua_State* L)
 	              .def("GetTargetProducer", LUA_CMEMFN(const producer&, configuration, TargetProducer, void))
 	              .def("GetForecastStep", LUA_CMEMFN(time_duration, configuration, ForecastStep, void))
 	              .def("GetUseCuda", LUA_CMEMFN(bool, configuration, UseCuda, void))
+		      .def("GetDatabaseType" , LUA_CMEMFN(HPDatabaseType, configuration, DatabaseType, void))
 	              ,
 	          class_<plugin_configuration, configuration, std::shared_ptr<plugin_configuration>>("plugin_configuration")
 	              .def(constructor<>())
