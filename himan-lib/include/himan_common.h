@@ -32,76 +32,132 @@
 #include <string>
 #include <unordered_map>
 
-// clang-format off
-
 namespace himan
 {
 // Define some missing value utilities
-inline CUDA_HOST CUDA_DEVICE double MissingDouble() {return nan("0x7fffffff");}
-inline CUDA_HOST CUDA_DEVICE float MissingFloat() {return nanf("0x7fffffff");} // Cuda version of nanf(char*) has a bug and does not respect the argument given.
-										// Bug is fixed in a later Cuda release (> 9.1)
-inline CUDA_HOST CUDA_DEVICE short MissingShort() { return static_cast<short> (-32768); }
-inline CUDA_HOST CUDA_DEVICE unsigned char MissingUnsignedChar() { return static_cast<unsigned char> (255); }
+inline CUDA_HOST CUDA_DEVICE double MissingDouble()
+{
+	return nan("0x7fffffff");
+}
+inline CUDA_HOST CUDA_DEVICE float MissingFloat()
+{
+	return nanf("0x7fffffff");
+}  // Cuda version of nanf(char*) has a bug and does not respect the argument given.
+   // Bug is fixed in a later Cuda release (> 9.1)
+inline CUDA_HOST CUDA_DEVICE short MissingShort()
+{
+	return static_cast<short>(-32768);
+}
+inline CUDA_HOST CUDA_DEVICE unsigned char MissingUnsignedChar()
+{
+	return static_cast<unsigned char>(255);
+}
 
 const int kHPMissingInt = 999999;
 const double kHPMissingValue = -999.;
 
 inline CUDA_HOST CUDA_DEVICE bool IsMissingDouble(const double& value)
 {
-        double missingValue = MissingDouble();
-        const uint64_t* _value = reinterpret_cast<const uint64_t*>(&value);
-        const uint64_t* _missingValue = reinterpret_cast<const uint64_t*>(&missingValue);
+	double missingValue = MissingDouble();
+	const uint64_t* _value = reinterpret_cast<const uint64_t*>(&value);
+	const uint64_t* _missingValue = reinterpret_cast<const uint64_t*>(&missingValue);
 
-        return (*_value == *_missingValue);
+	return (*_value == *_missingValue);
 }
 
 inline CUDA_HOST CUDA_DEVICE bool IsMissingFloat(const float& value)
 {
-        float missingValue = MissingFloat();
-        const uint32_t* _value = reinterpret_cast<const uint32_t*>(&value);
-        const uint32_t* _missingValue = reinterpret_cast<const uint32_t*>(&missingValue);
+	float missingValue = MissingFloat();
+	const uint32_t* _value = reinterpret_cast<const uint32_t*>(&value);
+	const uint32_t* _missingValue = reinterpret_cast<const uint32_t*>(&missingValue);
 
-        return (*_value == *_missingValue);
+	return (*_value == *_missingValue);
 }
 
-inline CUDA_HOST CUDA_DEVICE bool IsMissing(double value) {return IsMissingDouble(value);}
-inline CUDA_HOST CUDA_DEVICE bool IsMissing(float value) {return IsMissingFloat(value);}
-inline CUDA_HOST CUDA_DEVICE bool IsMissing(short value) {return value == MissingShort(); }
-inline CUDA_HOST CUDA_DEVICE bool IsMissing(unsigned char value) {return value == MissingUnsignedChar(); }
+inline CUDA_HOST CUDA_DEVICE bool IsMissing(double value)
+{
+	return IsMissingDouble(value);
+}
+inline CUDA_HOST CUDA_DEVICE bool IsMissing(float value)
+{
+	return IsMissingFloat(value);
+}
+inline CUDA_HOST CUDA_DEVICE bool IsMissing(short value)
+{
+	return value == MissingShort();
+}
+inline CUDA_HOST CUDA_DEVICE bool IsMissing(unsigned char value)
+{
+	return value == MissingUnsignedChar();
+}
 
-inline CUDA_HOST CUDA_DEVICE bool IsValid(double value) { return !IsMissingDouble(value);}
-inline CUDA_HOST CUDA_DEVICE bool IsValid(float value) {return !IsMissingFloat(value);}
-inline CUDA_HOST CUDA_DEVICE bool IsValid(short value) {return !IsMissing(value);}
-inline CUDA_HOST CUDA_DEVICE bool IsValid(unsigned char value) {return !IsMissing(value);}
+inline CUDA_HOST CUDA_DEVICE bool IsValid(double value)
+{
+	return !IsMissingDouble(value);
+}
+inline CUDA_HOST CUDA_DEVICE bool IsValid(float value)
+{
+	return !IsMissingFloat(value);
+}
+inline CUDA_HOST CUDA_DEVICE bool IsValid(short value)
+{
+	return !IsMissing(value);
+}
+inline CUDA_HOST CUDA_DEVICE bool IsValid(unsigned char value)
+{
+	return !IsMissing(value);
+}
 
 // templatized MissingValue() for double & float is useful in template functions
 // where "typename" is float or double
 
 template <typename T>
-CUDA_HOST CUDA_DEVICE T MissingValue() { return std::numeric_limits<T>::max(); }
+CUDA_HOST CUDA_DEVICE T MissingValue()
+{
+	return std::numeric_limits<T>::max();
+}
 
 template <>
-CUDA_HOST CUDA_DEVICE
-inline unsigned char MissingValue() { return MissingUnsignedChar(); }
+CUDA_HOST CUDA_DEVICE inline unsigned char MissingValue()
+{
+	return MissingUnsignedChar();
+}
 
 template <>
-CUDA_HOST CUDA_DEVICE
-inline short MissingValue() { return MissingShort(); }
+CUDA_HOST CUDA_DEVICE inline short MissingValue()
+{
+	return MissingShort();
+}
 
 template <>
-CUDA_HOST CUDA_DEVICE
-inline double MissingValue() { return MissingDouble(); }
+CUDA_HOST CUDA_DEVICE inline double MissingValue()
+{
+	return MissingDouble();
+}
 
 template <>
-CUDA_HOST CUDA_DEVICE
-inline float MissingValue() { return MissingFloat(); }
+CUDA_HOST CUDA_DEVICE inline float MissingValue()
+{
+	return MissingFloat();
+}
 
 template <typename T>
-inline bool IsMissing(T value) { return value == MissingValue<T>(); }
+inline bool IsMissing(T value)
+{
+	return value == MissingValue<T>();
+}
 template <typename T>
-inline bool IsValid(T value) { return !IsMissing(value); }
+inline bool IsValid(T value)
+{
+	return !IsMissing(value);
+}
 
-inline CUDA_HOST CUDA_DEVICE bool IsKHPMissingValue(const double& x) {return x == -999;}
+inline CUDA_HOST CUDA_DEVICE bool IsKHPMissingValue(const double& x)
+{
+	return x == -999;
+}
+
+// clang-format off
 
 // Define different plugin types
 
