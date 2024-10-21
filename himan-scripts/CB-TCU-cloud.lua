@@ -109,28 +109,26 @@ if currentProducerName == "MEPS" or currentProducerName == "MEPSMTA" then
   Nmat:SetValues(TtopMU)
   TtopMU = Min2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
 
-  filter:SetValues(avgkernel)
-
   Nmat:SetValues(LCL500)
-  LCL500 = Filter2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+  LCL500 = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
 
   Nmat:SetValues(CAPE500)
-  CAPE500 = Filter2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+  CAPE500 = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
 
   Nmat:SetValues(CIN500)
-  CIN500 = Filter2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+  CIN500 = Min2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
 
   Nmat:SetValues(LFCmu)
-  LFCmu = Filter2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+  LFCmu = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
 
   Nmat:SetValues(pLFCmu)
-  pLFCmu = Filter2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+  pLFCmu = Min2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
 
   Nmat:SetValues(CAPEmu)
-  CAPEmu = Filter2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+  CAPEmu = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
 
   Nmat:SetValues(CINmu)
-  CINmu = Filter2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+  CINmu = Min2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
 end
 
 local CBlimit = 2000  --required vertical thickness [m] to consider a CB (tweak this..!)
