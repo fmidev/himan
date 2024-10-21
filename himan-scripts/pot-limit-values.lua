@@ -17,8 +17,8 @@ function LimitMaximumValueDuringWinter(POT, maximum)
 
   local m = tonumber(current_time:GetValidDateTime():String("%m"))
 
-  -- winter is november to march
-  if m >= 11 or m <= 3 then
+  -- winter is from october to march
+  if m >= 10 or m <= 3 then
     for i=1, #POT do
       local pot = POT[i]
 
