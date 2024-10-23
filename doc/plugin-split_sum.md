@@ -54,6 +54,7 @@ Snow
 
 * SN-3-MM: three hour snow accumulation (mm)
 * SN-6-MM: six hour snow accumulation (mm)
+* SN-12-MM: 12 hour snow accumulation (mm)
 * SN-24-MM: 24 hour snow accumulation (mm)
 * SN-120-MM: 120 hour snow accumulation (mm)
 * SNR-KGM2: snow precipitation rate (kg/m^2 or mm/h)
@@ -109,6 +110,7 @@ Calculate 3/6/24/120 hour snow accumulation:
 
     "sn3h" : true
     "sn6h" : true
+    "sn12h" : true
     "sn24h" : true
     "sn120h" : true
 

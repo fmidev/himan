@@ -60,6 +60,7 @@ split_sum::split_sum()
 	// Snow
 	sourceParameters["SN-3-MM"] = {param("SNACC-KGM2")};
 	sourceParameters["SN-6-MM"] = {param("SNACC-KGM2")};
+	sourceParameters["SN-12-MM"] = {param("SNACC-KGM2")};
 	sourceParameters["SN-24-MM"] = {param("SNACC-KGM2")};
 	sourceParameters["SN-120-MM"] = {param("SNACC-KGM2")};
 
@@ -140,6 +141,12 @@ void SetupParameters(std::shared_ptr<const plugin_configuration> conf)
 	if (conf->Exists("sn6h") && conf->GetValue("sn6h") == "true")
 	{
 		targetParameters.emplace_back(param("SN-6-MM", aggregation(kAccumulation, SIX_HOURS), processing_type()), false,
+		                              MissingDouble(), 0.0, isECMWF ? 1000. : 1.);
+	}
+
+	if (conf->Exists("sn12h") && conf->GetValue("sn12h") == "true")
+	{
+		targetParameters.emplace_back(param("SN-12-MM", aggregation(kAccumulation, TWELVE_HOURS), processing_type()), false,
 		                              MissingDouble(), 0.0, isECMWF ? 1000. : 1.);
 	}
 
