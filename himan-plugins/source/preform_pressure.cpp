@@ -361,10 +361,9 @@ void preform_pressure::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned
 		}
 
 		// FINISHED
-
-		if (RR == 0)
+		if (RR == 0 || IsMissing(RR))
 		{
-			// If RR is zero, we can only have potential prec form
+			// If RR is zero or missing, we can only have potential prec form
 			myTargetInfo->Index<param>(1);
 			myTargetInfo->Value(PreForm);
 		}
