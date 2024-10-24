@@ -13,7 +13,7 @@ jobs:
     name: check-if-himan-bin-changed
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: dorny/paths-filter@v2
       id: himan-bin-changed
       with:
@@ -27,7 +27,7 @@ jobs:
     name: check-if-himan-lib-changed
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: dorny/paths-filter@v2
       id: himan-lib-changed
       with:
@@ -41,7 +41,7 @@ jobs:
     name: check-if-himan-plugins-changed
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: dorny/paths-filter@v2
       id: himan-plugins-changed
       with:
@@ -55,7 +55,7 @@ jobs:
     name: check-if-himan-scripts-changed
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: dorny/paths-filter@v2
       id: himan-scripts-changed
       with:
@@ -86,7 +86,7 @@ jobs:
         dnf -y install rpm-build rpmdevtools git yum-utils dnf-plugins-core findutils
         git config --global --add safe.directory '*'
     - name: Checkout code
-      uses: actions/checkout@master
+      uses: actions/checkout@v4
     - name: List workspace
       run: ls -lah
     - name: Setup repositories
@@ -297,7 +297,7 @@ jobs:
     needs: sync-to-release-repo
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Build image
       id: build-image
       uses: redhat-actions/buildah-build@v2
@@ -344,7 +344,7 @@ jobs:
         dnf -y install rpm-build rpmdevtools git yum-utils dnf-plugins-core findutils
         git config --global --add safe.directory '*'
     - name: Checkout code
-      uses: actions/checkout@master
+      uses: actions/checkout@v4
     - name: List workspace
       run: ls -lah
     - name: Setup repositories
