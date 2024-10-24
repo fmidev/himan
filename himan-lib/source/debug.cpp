@@ -195,6 +195,8 @@ void PrintBacktrace()
 void Abort()
 {
 	PrintBacktrace();
+	// flush stdout before aborting to ensure that the backtrace is printed
+	fflush(stdout);
 	abort();
 }
 }  // namespace himan
