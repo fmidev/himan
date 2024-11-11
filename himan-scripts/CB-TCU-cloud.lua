@@ -197,8 +197,10 @@ for i=1, #EL500 do
 
   res[i] = round(res[i]/10)*10
   --Threshold flight level for TCU above FL70 and CB above FL80
-  if res[i] < 80 and res[i] > -70 then
+  if res[i] < 70 and res[i] > -70 then
     res[i] = missing
+  elseif res[i] == 70 then
+    res[i] = -70
   end
 end
 
