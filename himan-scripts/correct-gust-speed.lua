@@ -34,18 +34,8 @@ if not FF or not FFG then
   return
 end
 
-if configuration:Exists("min_gust_factor") then
-  min_gust_factor = tonumber(configuration:GetValue("min_gust_factor"))
-else
-  min_gust_factor = 1.1
-end
-
-if configuration:Exists("max_gust_factor") then
-  max_gust_factor = tonumber(configuration:GetValue("max_gust_factor"))
-else
-  -- basically no limit
-  max_gust_factor = 20
-end
+local min_gust_factor = 1.1
+local max_gust_base = 25
 
 local _FF = {}
 local _FFG = {}
@@ -56,9 +46,9 @@ for i=1, #FF do
 
   -- Wind gust must be
   -- * at least as high as min_gust_factor * wind speed
-  -- * at most as high as max_gust_factor * wind speed
+  -- * at most as high as max_gust_base + wind speed
   ffg = math.max(ffg, ff * min_gust_factor)
-  ffg = math.min(ffg, ff * max_gust_factor)
+  ffg = math.min(ffg, ff + max_gust_base)
 
   _FFG[i] = ffg
 end
