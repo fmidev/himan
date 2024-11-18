@@ -155,14 +155,14 @@ function print_parameters(param_names, param_data)
   for i = 1, #param_names do
     print(param_names[i] .. ': ' .. min_max_mean(param_data[i]))
   end
-  print('Loppu')
 end
 
 function adjust_time(origin_time)
-  hour = tonumber(origin_time:String("%H"))
-  origin_time:Adjust(HPTimeResolution.kHourResolution, -math.fmod(hour, 3))
+  local adjust_time = raw_time(origin_time:String("%Y-%m-%d %H:%M%S"))
+  hour = tonumber(adjust_time:String("%H"))
+  adjust_time:Adjust(HPTimeResolution.kHourResolution, -math.fmod(hour, 3))
 
-  return origin_time
+  return adjust_time
 end 
 
 function get_prod_time(producer_name, producer_id)
@@ -171,13 +171,17 @@ function get_prod_time(producer_name, producer_id)
   local prod_origin = raw_time(radon:GetLatestTime(prod, "",0))
 
   if producer_name == 'MEPSMTA' then
-    print('MEPSMTA laskentaa')
     prod_origin = adjust_time(prod_origin)
-    print('adjusted time: ' .. prod_origin:String("%Y-%m-%d %H:%M"))
   end 
 
   local prod_time = forecast_time(prod_origin, current_time:GetValidDateTime())
   return prod_time
+end
+
+function move_valid_time(time, hours)
+  local adjusted_time = forecast_time(time:GetOriginDateTime(), time:GetValidDateTime())
+  adjusted_time:GetValidDateTime():Adjust(HPTimeResolution.kHourResolution, hours)
+  return adjusted_time
 end
 
 function fetch_parameter(param_name, level_height, prod_time, ftype)
@@ -213,21 +217,14 @@ function fetch_radiation_data(step, level_height, prod_time, ftype, is_sum)
 
   o.param = param('RADGLO-WM2', aggregation(HPAggregationType.kAverage, agg_duration), processing_type())
 
-  print('summaus '.. tostring(is_sum) .. ' ja ' .. step)
   -- Fetch radiation data
   if is_sum and step < 83 then
-    print('Siirryttiin summaamiseen')
     -- Fetch for the current and two prior time steps for summing
-    print('prod time before fetch funtion: ' .. prod_time:GetValidDateTime():String("%Y-%m-%d %H:%M"))
-    local radglo_sum = fetch_multiple_radiation(o, prod_time, 3)
-    print('prodtime after fetch function: ' .. prod_time:GetValidDateTime():String("%Y-%m-%d %H:%M"))
+    local radglo_sum = fetch_multiple_radiation(o, prod_time)
     return radglo_sum
   else
     -- Fetch single time step data and apply multiplier if needed
     local radglo_data = luatool:FetchWithArgs(o)
-    -- if radglo_data ~= nil then
-    --   print('dataa saatu. MEPSSTEP: ' .. step .. 'Vire-STEP: '.. vire_time:GetStep():Hours() .. 'EC-STEP: '.. ecmwf_time:GetStep():Hours() ..', EC-AIKA: ' .. prod_time:GetOriginDateTime():String("%Y-%m-%d %H:%M") .. ', MEPS: ' .. meps_time:GetOriginDateTime():String("%Y-%m-%d %H:%M") .. ', VIRE: ' .. vire_time:GetOriginDateTime():String("%Y-%m-%d %H:%M") .. 'valid time: ' .. prod_time:GetValidDateTime():String("%Y-%m-%d %H:%M") .. vire_time:GetValidDateTime():String("%Y-%m-%d %H:%M") .. ecmwf_time:GetValidDateTime():String("%Y-%m-%d %H:%M") .. meps_time:GetValidDateTime():String("%Y-%m-%d %H:%M"))
-    -- end 
     if is_sum then
       for i = 1, #radglo_data do
         radglo_data[i] = multiplier * radglo_data[i]
@@ -238,11 +235,11 @@ function fetch_radiation_data(step, level_height, prod_time, ftype, is_sum)
 end
 
 -- Helper function to fetch data for multiple time steps and sum them
-function fetch_multiple_radiation(o, prod_time, count)
+function fetch_multiple_radiation(o, prod_time)
   local my_time = forecast_time(prod_time:GetOriginDateTime(), prod_time:GetValidDateTime())  
 
   local radglo_sum = {}
-  for j = 0, count - 1 do
+  for j = 0, 2 do
     if j > 0 then
       my_time:GetValidDateTime():Adjust(HPTimeResolution.kHourResolution, -1)
     end
@@ -263,9 +260,9 @@ vire_time = get_prod_time('VIRE_PREOP', 287)
 ecmwf_time = get_prod_time('ECGMTA', 240)
 meps_time = get_prod_time('MEPSMTA', 260)
 
--- vire_time = forecast_time(raw_time("2024-11-14 07:00:00"), current_time:GetValidDateTime())
+-- vire_time = forecast_time(raw_time("2024-11-17 07:00:00"), current_time:GetValidDateTime())
 -- ecmwf_time = forecast_time(raw_time("2024-11-14 00:00:00"), current_time:GetValidDateTime()) 
--- meps_time = forecast_time(raw_time("2024-11-14 06:00:00"), current_time:GetValidDateTime())
+-- meps_time = forecast_time(raw_time("2024-11-15 09:00:00"), current_time:GetValidDateTime())
 
 print('vire time: ' .. vire_time:GetOriginDateTime():String("%Y-%m-%d %H:%M"))
 print('ecmwf time: ' .. ecmwf_time:GetOriginDateTime():String("%Y-%m-%d %H:%M"))
@@ -274,21 +271,16 @@ print('meps time: ' .. meps_time:GetOriginDateTime():String("%Y-%m-%d %H:%M"))
 
 -- if past 66 hours, priority 2 data is ec, not meps
 step = tonumber(meps_time:GetStep():Hours())
-print('timestep from config: ' .. step)
 
 pri2_time = nil
 pri2_ftype = nil
 if step < 66 then 
-  print('MEPS data')
   pri2_time = meps_time
   pri2_ftype = ftype_c
 else 
-  print('EC data')
   pri2_time = ecmwf_time
   pri2_ftype = ftype_d
 end
-
-print('pri2time: ' .. pri2_time:GetOriginDateTime():String("%Y-%m-%d %H:%M"))
 
 tk = fetch_parameter('T-K', 2, vire_time, ftype_d)
 ff = fetch_parameter('FF-MS', 10, vire_time, ftype_d)
@@ -298,10 +290,11 @@ tdk = fetch_parameter('TD-K', 2, vire_time, ftype_d)
 
 radglo1 = fetch_radiation_data(step, 0, pri2_time, pri2_ftype, false)
 radglo3 = fetch_radiation_data(step, 0, pri2_time, pri2_ftype, true)
-rr = fetch_parameter('RR-3-MM', 0, pri2_time, pri2_ftype)
-snr3 = fetch_parameter('SNR-KGM2', 0, pri2_time, pri2_ftype)
-snr6 = fetch_parameter('SN-6-MM', 0, pri2_time, pri2_ftype)
-snr12 = fetch_parameter('SN-12-MM', 0, pri2_time, pri2_ftype)
+
+rr = fetch_parameter('RR-3-MM', 0, move_valid_time(pri2_time, 1), pri2_ftype)
+snr3 = fetch_parameter('SNR-KGM2', 0, move_valid_time(pri2_time, 1), pri2_ftype)
+snr6 = fetch_parameter('SN-6-MM', 0, move_valid_time(pri2_time, 2), pri2_ftype)
+snr12 = fetch_parameter('SN-12-MM', 0, move_valid_time(pri2_time, 5), pri2_ftype)
 
 --set initial values for warning calculation
 snr3, snr6, snr12 = init_snow_acc_values(snr3, snr6, snr12)
@@ -324,11 +317,8 @@ radglo_w = rad_effect(radglo1)
 -- -- freezing rain and rain combination effect to the warnings
 ice_warning = freezing_rain_effect(rr, prec, tk)
 
-
 -- frost affect to warnings
 frost = frost_effect(nlm, tk, tdk, ff, radglo3)
-print_parameters({'frost'}, 
-              {frost})
 
 -- checking the most effective factor for the warning
 warning = combine_warning_factors(warning, thawing, freezing, wind, radglo_w)
