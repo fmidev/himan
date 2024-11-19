@@ -116,8 +116,8 @@ function thawing_effect(tk)
   for i = 1, #tk do
     celcius = tk[i] - 273.15
     thawing[i] =  -0.016314901*celcius^5 + 0.062931804*celcius^4 + 0.085471305*celcius^3 - 0.416382309*celcius^2 - 0.312297359*celcius + 1.238933192
-    thawing[i] = thawing[i] > 3 and 0 or thawing[i] 
-    thawing[i] = thawing[i] < -1.3 and 1 or thawing[i] 
+    thawing[i] = celcius > 3 and 0 or thawing[i] 
+    thawing[i] = celcius < -1.3 and 1 or thawing[i] 
   end
   return thawing
 end
@@ -151,6 +151,14 @@ function set_warning(snr3, snr6, snr12)
   return warning
 end
 
+function zero_array(size)
+  local arr = {}
+  for i = 1, size do
+    arr[i] = 0
+  end
+  return arr
+end
+
 function print_parameters(param_names, param_data)
   for i = 1, #param_names do
     print(param_names[i] .. ': ' .. min_max_mean(param_data[i]))
@@ -179,7 +187,7 @@ function get_prod_time(producer_name, producer_id)
 end
 
 function move_valid_time(time, hours)
-  local adjusted_time = forecast_time(time:GetOriginDateTime(), time:GetValidDateTime())
+  local adjusted_time = forecast_time(time)
   adjusted_time:GetValidDateTime():Adjust(HPTimeResolution.kHourResolution, hours)
   return adjusted_time
 end
@@ -236,7 +244,7 @@ end
 
 -- Helper function to fetch data for multiple time steps and sum them
 function fetch_multiple_radiation(o, prod_time)
-  local my_time = forecast_time(prod_time:GetOriginDateTime(), prod_time:GetValidDateTime())  
+  local my_time = forecast_time(prod_time)  
 
   local radglo_sum = {}
   for j = 0, 2 do
@@ -260,21 +268,12 @@ vire_time = get_prod_time('VIRE_PREOP', 287)
 ecmwf_time = get_prod_time('ECGMTA', 240)
 meps_time = get_prod_time('MEPSMTA', 260)
 
--- vire_time = forecast_time(raw_time("2024-11-17 07:00:00"), current_time:GetValidDateTime())
--- ecmwf_time = forecast_time(raw_time("2024-11-14 00:00:00"), current_time:GetValidDateTime()) 
--- meps_time = forecast_time(raw_time("2024-11-15 09:00:00"), current_time:GetValidDateTime())
-
-print('vire time: ' .. vire_time:GetOriginDateTime():String("%Y-%m-%d %H:%M"))
-print('ecmwf time: ' .. ecmwf_time:GetOriginDateTime():String("%Y-%m-%d %H:%M"))
-print('meps time: ' .. meps_time:GetOriginDateTime():String("%Y-%m-%d %H:%M"))
-
-
 -- if past 66 hours, priority 2 data is ec, not meps
-step = tonumber(meps_time:GetStep():Hours())
-
+meps_step = tonumber(meps_time:GetStep():Hours())
 pri2_time = nil
 pri2_ftype = nil
-if step < 66 then 
+
+if meps_step < 66 then 
   pri2_time = meps_time
   pri2_ftype = ftype_c
 else 
@@ -288,13 +287,23 @@ nlm = fetch_parameter('NLM-PRCNT', 0, vire_time, ftype_d)
 prec = fetch_parameter('PRECFORM2-N', 0, vire_time, ftype_d)
 tdk = fetch_parameter('TD-K', 2, vire_time, ftype_d)
 
-radglo1 = fetch_radiation_data(step, 0, pri2_time, pri2_ftype, false)
-radglo3 = fetch_radiation_data(step, 0, pri2_time, pri2_ftype, true)
+radglo1 = fetch_radiation_data(meps_step, 0, pri2_time, pri2_ftype, false)
+radglo3 = fetch_radiation_data(meps_step, 0, pri2_time, pri2_ftype, true)
 
-rr = fetch_parameter('RR-3-MM', 0, move_valid_time(pri2_time, 1), pri2_ftype)
-snr3 = fetch_parameter('SNR-KGM2', 0, move_valid_time(pri2_time, 1), pri2_ftype)
-snr6 = fetch_parameter('SN-6-MM', 0, move_valid_time(pri2_time, 2), pri2_ftype)
-snr12 = fetch_parameter('SN-12-MM', 0, move_valid_time(pri2_time, 5), pri2_ftype)
+ec_step = tonumber(ecmwf_time:GetStep():Hours())
+
+-- if ec step over 85, the steps increases and validation time can't be shifted
+if ec_step < 85 then
+  rr = fetch_parameter('RR-3-MM', 0, move_valid_time(pri2_time, 1), pri2_ftype)
+  snr3 = fetch_parameter('SNR-KGM2', 0, move_valid_time(pri2_time, 1), pri2_ftype)
+  snr6 = fetch_parameter('SN-6-MM', 0, move_valid_time(pri2_time, 2), pri2_ftype)
+  snr12 = fetch_parameter('SN-12-MM', 0, move_valid_time(pri2_time, 5), pri2_ftype)
+else 
+  rr = fetch_parameter('RR-3-MM', 0, pri2_time, pri2_ftype)
+  snr3 = fetch_parameter('SNR-KGM2', 0, pri2_time, pri2_ftype)
+  snr6 = zero_array(#snr3)
+  snr12 = zero_array(#snr3)
+end
 
 --set initial values for warning calculation
 snr3, snr6, snr12 = init_snow_acc_values(snr3, snr6, snr12)
@@ -324,15 +333,10 @@ frost = frost_effect(nlm, tk, tdk, ff, radglo3)
 warning = combine_warning_factors(warning, thawing, freezing, wind, radglo_w)
 reason = warning_reason(warning, ice_warning, frost)
 
-print_parameters({'snr3', 'snr6', 'snr12', 'warning', 'freezing', 'thawing', 'wind', 'radglo_w', 'ice_warning', 'reason'}, 
-              {snr3, snr6, snr12, warning, freezing, thawing, wind, radglo_w, ice_warning, reason})
 
+result:SetParam(param('TWW-N'))
+result:SetValues(reason)
 
--- -- result:SetParam(param('TRAFFIC-WEATHER-WARNING'))
--- -- result:SetValues(reason)
-
--- -- luatool:WriteToFile(result)
-              
-print('Loppu')
+luatool:WriteToFile(result)
 
 
