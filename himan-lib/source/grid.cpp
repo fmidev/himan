@@ -61,9 +61,8 @@ ostream& grid::Write(std::ostream& file) const
 	file << "<" << ClassName() << ">" << std::endl;
 
 	file << "__itsUVRelativeToGrid__ " << itsUVRelativeToGrid << std::endl;
-
-	file << EarthShape();
 	file << "__itsName__ " << itsName << std::endl;
+	file << EarthShape();
 
 	return file;
 }
@@ -598,16 +597,6 @@ std::pair<double, double> regular_grid::FalseEastingAndNorthing(const OGRSpatial
                                                                 OGRCoordinateTransformation* llToProjXForm,
                                                                 const point& firstPoint, bool firstPointIsProjected)
 {
-	// First check if spatial reference already has false easting and northing,
-	// if not, calculate them from the first point of the grid
-	double fe = spRef->GetProjParm(SRS_PP_FALSE_EASTING, 0.0);
-	double fn = spRef->GetProjParm(SRS_PP_FALSE_NORTHING, 0.0);
-
-	if (fe != 0.0 || fn != 0.0)
-	{
-		return std::make_pair(fe, fn);
-	}
-
 	// First get first point coordinates in projected space. Transform from
 	// latlon if necessary.
 	double lat = firstPoint.Y(), lon = firstPoint.X();
@@ -632,8 +621,8 @@ std::pair<double, double> regular_grid::FalseEastingAndNorthing(const OGRSpatial
 		return std::make_pair(0.0, 0.0);
 	}
 
-	fe = spRef->GetProjParm(SRS_PP_FALSE_EASTING, 0.0) - lon;
-	fn = spRef->GetProjParm(SRS_PP_FALSE_NORTHING, 0.0) - lat;
+	double fe = spRef->GetProjParm(SRS_PP_FALSE_EASTING, 0.0) - lon;
+	double fn = spRef->GetProjParm(SRS_PP_FALSE_NORTHING, 0.0) - lat;
 
 	return std::make_pair(fe, fn);
 }
