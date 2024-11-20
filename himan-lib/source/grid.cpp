@@ -4,6 +4,7 @@
  */
 
 #include "grid.h"
+#include "util.h"
 #include <cpl_conv.h>
 #include <ogr_geometry.h>
 #include <ogr_spatialref.h>
@@ -591,6 +592,50 @@ std::vector<point> regular_grid::XY(const regular_grid& target) const
 		sourceXY.emplace_back(x, y);
 	}
 	return sourceXY;
+}
+
+std::pair<double, double> regular_grid::FalseEastingAndNorthing(const OGRSpatialReference* spRef,
+                                                                OGRCoordinateTransformation* llToProjXForm,
+                                                                const point& firstPoint, bool firstPointIsProjected)
+{
+	// First check if spatial reference already has false easting and northing,
+	// if not, calculate them from the first point of the grid
+	double fe = spRef->GetProjParm(SRS_PP_FALSE_EASTING, 0.0);
+	double fn = spRef->GetProjParm(SRS_PP_FALSE_NORTHING, 0.0);
+
+	if (fe != 0.0 || fn != 0.0)
+	{
+		return std::make_pair(fe, fn);
+	}
+
+	// First get first point coordinates in projected space. Transform from
+	// latlon if necessary.
+	double lat = firstPoint.Y(), lon = firstPoint.X();
+
+	if (firstPointIsProjected == false)
+	{
+		if (!llToProjXForm->Transform(1, &lon, &lat))
+		{
+			logger logr("regular_grid");
+			logr.Error("Failed to get false easting and northing");
+			return std::make_pair(MissingDouble(), MissingDouble());
+		}
+	}
+
+	// HIMAN-336: limit false easting/northing accuracy to four decimal places (millimeters)
+
+	lon = util::round(lon, 4);
+	lat = util::round(lat, 4);
+
+	if (fabs(lon) < 1e-4 and fabs(lat) < 1e-4)
+	{
+		return std::make_pair(0.0, 0.0);
+	}
+
+	fe = spRef->GetProjParm(SRS_PP_FALSE_EASTING, 0.0) - lon;
+	fn = spRef->GetProjParm(SRS_PP_FALSE_NORTHING, 0.0) - lat;
+
+	return std::make_pair(fe, fn);
 }
 
 //--------------- irregular grid

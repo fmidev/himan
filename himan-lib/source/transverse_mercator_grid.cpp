@@ -1,6 +1,5 @@
 #include "transverse_mercator_grid.h"
 #include "info.h"
-#include "util.h"
 #include <functional>
 #include <ogr_spatialref.h>
 
@@ -69,21 +68,10 @@ void transverse_mercator_grid::CreateCoordinateTransformations(const point& firs
 	itsXYToLatLonTransformer = std::unique_ptr<OGRCoordinateTransformation>(
 	    OGRCreateCoordinateTransformation(itsSpatialReference.get(), geogCS.get()));
 
-	double lat = firstPoint.Y(), lon = firstPoint.X();
+	const auto [fe, fn] = regular_grid::FalseEastingAndNorthing(
+	    itsSpatialReference.get(), itsLatLonToXYTransformer.get(), firstPoint, firstPointIsProjected);
 
-	if (firstPointIsProjected == false)
-	{
-		if (!itsLatLonToXYTransformer->Transform(1, &lon, &lat))
-		{
-			itsLogger.Fatal("Failed to get false easting and northing");
-			himan::Abort();
-		}
-	}
-
-	lon = util::round(lon, 4);
-	lat = util::round(lat, 4);
-
-	if (fabs(lon) < 1e-4 and fabs(lat) < 1e-4)
+	if (fabs(fe) < 1e-4 && fabs(fn) < 1e-4)
 	{
 		return;
 	}
@@ -91,8 +79,6 @@ void transverse_mercator_grid::CreateCoordinateTransformations(const point& firs
 	const double orientation = Orientation();
 	const double parallel = StandardParallel();
 	const double scale = Scale();
-	const double fe = itsSpatialReference->GetProjParm(SRS_PP_FALSE_EASTING, 0.0) - lon;
-	const double fn = itsSpatialReference->GetProjParm(SRS_PP_FALSE_NORTHING, 0.0) - lat;
 
 	itsSpatialReference = std::unique_ptr<OGRSpatialReference>(itsSpatialReference->CloneGeogCS());
 	if (itsSpatialReference->SetTM(parallel, orientation, scale, fe, fn) != OGRERR_NONE)
