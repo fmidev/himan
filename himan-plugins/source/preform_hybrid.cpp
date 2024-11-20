@@ -276,12 +276,12 @@ void preform_hybrid::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned s
 		double RR = RRInfo->Value();
 		double T = TInfo->Value();
 
-		if (IsMissing(RR) || IsMissing(T))
+		if (IsMissing(T))
 		{
 			continue;
 		}
 
-		if (RR == 0 && noPotentialPrecipitationForm)
+		if ((RR == 0 || IsMissing(RR)) && noPotentialPrecipitationForm)
 		{
 			continue;
 		}
@@ -399,9 +399,9 @@ void preform_hybrid::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned s
 
 		// FINISHED
 
-		if (RR == 0)
+		if (RR == 0 || IsMissing(RR))
 		{
-			// If RR is zero, we can only have potential prec form
+			// If RR is zero or missing, we can only have potential prec form
 			myTargetInfo->Index<param>(1);
 			myTargetInfo->Value(PreForm);
 		}
