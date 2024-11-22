@@ -174,16 +174,28 @@ function adjust_time(origin_time)
 end 
 
 function get_prod_time(producer_name, producer_id)
-  
-  local prod = producer(producer_id, producer_name)
-  local prod_origin = raw_time(radon:GetLatestTime(prod, "",0))
 
-  if producer_name == 'MEPSMTA' then
-    prod_origin = adjust_time(prod_origin)
-  end 
+  if configuration:Exists("ecmwf_origintime") then
+    logger:Debug("Using hard-coded origintime")
 
-  local prod_time = forecast_time(prod_origin, current_time:GetValidDateTime())
-  return prod_time
+    if producer_name == 'ECGMTA' then
+      return forecast_time(raw_time(configuration:GetValue("ecmwf_origintime")), current_time:GetValidDateTime())
+    elseif producer_name == 'MEPSMTA' then
+      return forecast_time(raw_time(configuration:GetValue("meps_origintime")), current_time:GetValidDateTime())
+    else
+      return forecast_time(raw_time(configuration:GetValue("vire_origintime")), current_time:GetValidDateTime())
+    end
+  else 
+    local prod = producer(producer_id, producer_name)
+    local prod_origin = raw_time(radon:GetLatestTime(prod, "",0))
+
+    if producer_name == 'MEPSMTA' then
+      prod_origin = adjust_time(prod_origin)
+    end 
+
+    local prod_time = forecast_time(prod_origin, current_time:GetValidDateTime())
+    return prod_time
+  end
 end
 
 function move_valid_time(time, hours)
