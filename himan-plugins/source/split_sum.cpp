@@ -100,36 +100,37 @@ void SetupParameters(std::shared_ptr<const plugin_configuration> conf)
 	const long producerId = conf->TargetProducer().Id();
 	const bool isMetcoop = producerId == 260 || producerId == 261 || (producerId >= 270 && producerId <= 272);
 	const bool isECMWF = producerId == 240 || producerId == 241 || producerId == 243;
+	const double minprec = (isMetcoop || isECMWF) ? 0.01 : MissingDouble();
 
 	if (conf->Exists("rr1h") && conf->GetValue("rr1h") == "true")
 	{
 		targetParameters.emplace_back(param("RR-1-MM", aggregation(kAccumulation, ONE_HOUR), processing_type()), false,
-		                              isMetcoop ? 0.01 : MissingDouble(), 0.0, isECMWF ? 1000. : 1.);
+		                              minprec, 0.0, isECMWF ? 1000. : 1.);
 	}
 
 	if (conf->Exists("rr3h") && conf->GetValue("rr3h") == "true")
 	{
 		targetParameters.emplace_back(param("RR-3-MM", aggregation(kAccumulation, THREE_HOURS), processing_type()),
-		                              false, isMetcoop ? 0.01 : MissingDouble(), 0.0, isECMWF ? 1000. : 1.);
+		                              false, minprec, 0.0, isECMWF ? 1000. : 1.);
 	}
 
 	if (conf->Exists("rr6h") && conf->GetValue("rr6h") == "true")
 	{
 		targetParameters.emplace_back(param("RR-6-MM", aggregation(kAccumulation, SIX_HOURS), processing_type()), false,
-		                              isMetcoop ? 0.01 : MissingDouble(), 0.0, isECMWF ? 1000. : 1.);
+		                              minprec, 0.0, isECMWF ? 1000. : 1.);
 	}
 
 	if (conf->Exists("rr12h") && conf->GetValue("rr12h") == "true")
 	{
 		targetParameters.emplace_back(param("RR-12-MM", aggregation(kAccumulation, TWELVE_HOURS), processing_type()),
-		                              false, isMetcoop ? 0.01 : MissingDouble(), 0.0, isECMWF ? 1000. : 1.);
+		                              false, minprec, 0.0, isECMWF ? 1000. : 1.);
 	}
 
 	if (conf->Exists("rr24h") && conf->GetValue("rr24h") == "true")
 	{
 		targetParameters.emplace_back(
-		    param("RR-24-MM", aggregation(kAccumulation, time_duration("24:00")), processing_type()), false,
-		    isMetcoop ? 0.01 : MissingDouble(), 0.0, isECMWF ? 1000. : 1.);
+		    param("RR-24-MM", aggregation(kAccumulation, time_duration("24:00")), processing_type()), false, minprec,
+		    0.0, isECMWF ? 1000. : 1.);
 	}
 
 	if (conf->Exists("sn3h") && conf->GetValue("sn3h") == "true")
@@ -146,8 +147,8 @@ void SetupParameters(std::shared_ptr<const plugin_configuration> conf)
 
 	if (conf->Exists("sn12h") && conf->GetValue("sn12h") == "true")
 	{
-		targetParameters.emplace_back(param("SN-12-MM", aggregation(kAccumulation, TWELVE_HOURS), processing_type()), false,
-		                              MissingDouble(), 0.0, isECMWF ? 1000. : 1.);
+		targetParameters.emplace_back(param("SN-12-MM", aggregation(kAccumulation, TWELVE_HOURS), processing_type()),
+		                              false, MissingDouble(), 0.0, isECMWF ? 1000. : 1.);
 	}
 
 	if (conf->Exists("sn24h") && conf->GetValue("sn24h") == "true")
@@ -167,25 +168,25 @@ void SetupParameters(std::shared_ptr<const plugin_configuration> conf)
 	if (conf->Exists("rrc3h") && conf->GetValue("rrc3h") == "true")
 	{
 		targetParameters.emplace_back(param("RRC-3-MM", aggregation(kAccumulation, THREE_HOURS), processing_type()),
-		                              false, isMetcoop ? 0.01 : MissingDouble(), 0.0, isECMWF ? 1000. : 1.);
+		                              false, minprec, 0.0, isECMWF ? 1000. : 1.);
 	}
 
 	if (conf->Exists("rrr") && conf->GetValue("rrr") == "true")
 	{
 		targetParameters.emplace_back(param("RRR-KGM2", aggregation(kAccumulation, ONE_HOUR), processing_type()), true,
-		                              isMetcoop ? 0.01 : MissingDouble(), 0.0, isECMWF ? 1000. : 1.);
+		                              minprec, 0.0, isECMWF ? 1000. : 1.);
 	}
 
 	if (conf->Exists("rrrc") && conf->GetValue("rrrc") == "true")
 	{
 		targetParameters.emplace_back(param("RRRC-KGM2", aggregation(kAccumulation, ONE_HOUR), processing_type()), true,
-		                              isMetcoop ? 0.01 : MissingDouble(), 0.0, isECMWF ? 1000. : 1.);
+		                              minprec, 0.0, isECMWF ? 1000. : 1.);
 	}
 
 	if (conf->Exists("rrrl") && conf->GetValue("rrrl") == "true")
 	{
 		targetParameters.emplace_back(param("RRRL-KGM2", aggregation(kAccumulation, ONE_HOUR), processing_type()), true,
-		                              isMetcoop ? 0.01 : MissingDouble(), 0.0, isECMWF ? 1000. : 1.);
+		                              minprec, 0.0, isECMWF ? 1000. : 1.);
 	}
 
 	// Graupel
