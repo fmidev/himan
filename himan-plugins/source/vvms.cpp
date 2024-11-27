@@ -6,6 +6,7 @@
 #include "forecast_time.h"
 #include "level.h"
 #include "logger.h"
+#include "util.h"
 
 using namespace std;
 using namespace himan::plugin;
@@ -13,24 +14,24 @@ using namespace himan::plugin;
 #ifdef HAVE_CUDA
 namespace vvmsgpu
 {
-extern void Process(std::shared_ptr<const himan::plugin_configuration> conf,
-                    std::shared_ptr<himan::info<float>> myTargetInfo);
+extern void Process(shared_ptr<const himan::plugin_configuration> conf, shared_ptr<himan::info<float>> myTargetInfo,
+                    bool reverse, float scale);
 }
 #endif
 // Required source parameters
 
 const himan::param TParam("T-K");
 const himan::params PParam = {himan::param("P-PA"), himan::param("P-HPA")};
-const himan::param VVParam("VV-PAS");
+himan::param VVParam("VV-PAS");
 
-vvms::vvms() : itsScale(1)
+vvms::vvms() : itsScale(1), itsReverseCalculation(false)
 {
 	itsCudaEnabledCalculation = true;
 
 	itsLogger = logger("vvms");
 }
 
-void vvms::Process(std::shared_ptr<const plugin_configuration> conf)
+void vvms::Process(shared_ptr<const plugin_configuration> conf)
 {
 	Init(conf);
 
@@ -38,15 +39,28 @@ void vvms::Process(std::shared_ptr<const plugin_configuration> conf)
 	 * Set target parameter to vertical velocity
 	 */
 
-	param theRequestedParam("VV-MS", 143);
+	param targetParam("VV-MS");
 
-	if (itsConfiguration->Exists("millimeters") && itsConfiguration->GetValue("millimeters") == "true")
+	if (itsConfiguration->Exists("millimeters") && util::ParseBoolean(itsConfiguration->GetValue("millimeters")))
 	{
-		theRequestedParam = param("VV-MMS", 43, 0, 2, 9);
+		targetParam = param("VV-MMS");
 		itsScale = 1000;
 	}
 
-	SetParams({theRequestedParam});
+	if (itsConfiguration->Exists("reverse") && util::ParseBoolean(itsConfiguration->GetValue("reverse")))
+	{
+		targetParam = param("VV-PAS");
+		itsReverseCalculation = true;
+		VVParam = param("VV-MS");
+
+		if (itsConfiguration->Exists("millimeters") && util::ParseBoolean(itsConfiguration->GetValue("millimeters")))
+		{
+			VVParam = param("VV-MMS");
+			itsScale = 1000;
+		}
+	}
+
+	SetParams({targetParam});
 
 	Start<float>();
 }
@@ -65,8 +79,7 @@ void vvms::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short thread
 	level forecastLevel = myTargetInfo->Level();
 	forecast_type forecastType = myTargetInfo->ForecastType();
 
-	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-	                      static_cast<string>(forecastLevel));
+	myThreadedLogger.Info(fmt::format("Calculating time {} level {}", forecastTime.ValidDateTime(), forecastLevel));
 
 	string deviceType;
 
@@ -76,7 +89,7 @@ void vvms::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short thread
 	{
 		deviceType = "GPU";
 
-		vvmsgpu::Process(itsConfiguration, myTargetInfo);
+		vvmsgpu::Process(itsConfiguration, myTargetInfo, itsReverseCalculation, static_cast<float>(itsScale));
 	}
 	else
 #endif
@@ -131,18 +144,32 @@ void vvms::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short thread
 
 		auto& result = VEC(myTargetInfo);
 		const float gravity = static_cast<float>(himan::constants::kG);
-
-		for (auto&& tup : zip_range(result, VEC(TInfo), VEC(VVInfo), PData))
+		const float density = static_cast<float>(himan::constants::kRd);
+		if (itsReverseCalculation == false)
 		{
-			float& vv = tup.get<0>();
-			const float& t = tup.get<1>();
-			const float& vvpas = tup.get<2>();
-			const float& p = PScale * tup.get<3>();
+			for (auto&& tup : zip_range(result, VEC(TInfo), VEC(VVInfo), PData))
+			{
+				float& vv = tup.get<0>();
+				const float& t = tup.get<1>();
+				const float& vvpas = tup.get<2>();
+				const float& p = PScale * tup.get<3>();
 
-			vv = itsScale * (287.f * -vvpas * t / (gravity * p));
+				vv = itsScale * (density * -vvpas * t / (gravity * p));
+			}
+		}
+		else
+		{
+			for (auto&& tup : zip_range(result, VEC(TInfo), VEC(VVInfo), PData))
+			{
+				float& vv = tup.get<0>();
+				const float& t = tup.get<1>();
+				const float& vv_ms = tup.get<2>();
+				const float& p = PScale * tup.get<3>();
+
+				vv = (vv_ms / itsScale) * (gravity * p) / (density * -t);
+			}
 		}
 	}
-
-	myThreadedLogger.Info("[" + deviceType + "] Missing values: " + to_string(myTargetInfo->Data().MissingCount()) +
-	                      "/" + to_string(myTargetInfo->Data().Size()));
+	myThreadedLogger.Info(fmt::format("[{}] Missing values: {}/{}", deviceType, myTargetInfo->Data().MissingCount(),
+	                                  myTargetInfo->Data().Size()));
 }
