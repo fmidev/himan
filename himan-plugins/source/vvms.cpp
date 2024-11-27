@@ -118,29 +118,28 @@ void vvms::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short thread
 
 		SetAB(myTargetInfo, TInfo);
 
+		vector<float> PData;
 		if (PInfo)
 		{
-			PInfo->ResetLocation();
+			PData = VEC(PInfo);
+		}
+		else
+		{
+			PData =
+			    vector<float>(myTargetInfo->Data().Size(), 100.f * static_cast<float>(myTargetInfo->Level().Value()));
 		}
 
-		// Assume pressure level calculation
+		auto& result = VEC(myTargetInfo);
+		const float gravity = static_cast<float>(himan::constants::kG);
 
-		float P = 100.f * static_cast<float>(myTargetInfo->Level().Value());
-
-		LOCKSTEP(myTargetInfo, TInfo, VVInfo)
+		for (auto&& tup : zip_range(result, VEC(TInfo), VEC(VVInfo), PData))
 		{
-			float T = TInfo->Value();
-			float VV = VVInfo->Value();
+			float& vv = tup.get<0>();
+			const float& t = tup.get<1>();
+			const float& vvpas = tup.get<2>();
+			const float& p = PScale * tup.get<3>();
 
-			if (!isPressureLevel)
-			{
-				PInfo->NextLocation();
-				P = PInfo->Value();
-			}
-
-			float w = itsScale * (287.f * -VV * T / static_cast<float>(himan::constants::kG * P * PScale));
-
-			myTargetInfo->Value(w);
+			vv = itsScale * (287.f * -vvpas * t / (gravity * p));
 		}
 	}
 
