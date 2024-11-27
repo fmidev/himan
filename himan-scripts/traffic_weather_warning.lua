@@ -43,30 +43,29 @@ function combine_warning_factors(warning, thawing, freezing, wind, radglo_w)
 end
 
 function frost_effect(nlm, tk, tdk, ff, radglo3)
-  local frost, c_f, t_f, tdk_f, w_f, r_f, tc, tdc = {}, {}, {}, {}, {}, {}, {}, {}
+  local frost = {}
+  local c_f, t_f, tdk_f, w_f, r_f, tc, tdc
 
   for i = 1, #nlm do
-    tc[i] = tk[i] - 273.15
-    tdc[i] = tdk[i] - 273.15
+    tc = tk[i] - 273.15
+    tdc = tdk[i] - 273.15
 
-    c_f[i] = (125 - nlm[i])/100
+    c_f = (125 - nlm[i])/100
 
-    t_f[i] = (-0.25)*tc[i] + 1.25 < 0 and 0 or (-0.25)*tc[i] + 1.25
-    t_f[i] = t_f[i] > 1 and 1 or t_f[i]
+    t_f = (-0.25)*tc + 1.25 
+    t_f = math.max(math.min(t_f, 1), 0)
     
-    tdk_f[i] = (-0.5) * (tc[i] - tdc[i]) + 2 < 0 and 0 or (-0.5) * (tc[i] - tdc[i]) + 2
-    tdk_f[i] = tdk_f[i] > 2 and 2 or tdk_f[i]
+    tdk_f = (-0.5) * (tc - tdc) + 2 
+    tdk_f = math.max(math.min(tdk_f, 2), 0)
 
-    w_f[i] = 0.125 * ff[i] + 1 < 0.5 and 0.5 or 0.125 * ff[i] + 1
-    w_f[i] = w_f[i] > 2 and 2 or w_f[i]
+    w_f = 0.125 * ff[i] + 1
+    w_f = math.max(math.min(w_f, 2), 0.5)
 
-    r_f[i] = (-0.01) * radglo3[i] + 1 < 0 and 0 or (-0.01) * radglo3[i] + 1
-    r_f[i] = r_f[i] > 1 and 1 or r_f[i]
+    r_f = (-0.01) * radglo3[i] + 1 
+    r_f = math.max(math.min(r_f, 1), 0)
 
-    frost[i] = (r_f[i] * c_f[i] * t_f[i] * tdk_f[i] * w_f[i]) - 1
-    frost[i] = frost[i] < 0 and 0 or frost[i]
-    frost[i] = frost[i] > 2 and 2 or frost[i]
-
+    frost[i] = (r_f * c_f * t_f * tdk_f * w_f) - 1
+    frost[i] = math.max(math.min(frost[i], 2), 0)
   end
   return frost
 end
@@ -175,16 +174,15 @@ end
 
 function get_prod_time(producer_name, producer_id)
 
-  if configuration:Exists("ecmwf_origintime") then
+  if configuration:Exists("ecmwf_origintime") and configuration:Exists("meps_origintime") then
     logger:Debug("Using hard-coded origintime")
 
     if producer_name == 'ECGMTA' then
       return forecast_time(raw_time(configuration:GetValue("ecmwf_origintime")), current_time:GetValidDateTime())
     elseif producer_name == 'MEPSMTA' then
       return forecast_time(raw_time(configuration:GetValue("meps_origintime")), current_time:GetValidDateTime())
-    else
-      return forecast_time(raw_time(configuration:GetValue("vire_origintime")), current_time:GetValidDateTime())
     end
+
   else 
     local prod = producer(producer_id, producer_name)
     local prod_origin = raw_time(radon:GetLatestTime(prod, "",0))
@@ -200,8 +198,7 @@ end
 
 function move_valid_time(time, hours)
   local adjusted_time = forecast_time(time)
-  adjusted_time:GetValidDateTime():Adjust(HPTimeResolution.kHourResolution, hours)
-  return adjusted_time
+  return forecast_time(adjusted_time:GetOriginDateTime(), adjusted_time:GetValidDateTime() + time_duration(hours .. ":00:00"))
 end
 
 function fetch_parameter(param_name, level_height, prod_time, ftype)
@@ -220,7 +217,7 @@ function fetch_radiation_data(step, level_height, prod_time, ftype, is_sum)
   local o = {
     forecast_time = prod_time,
     level = level(HPLevelType.kHeight, level_height),
-    forecast_type = ftype
+    forecast_type = ftype,
   }
 
   local agg_duration, multiplier
@@ -273,17 +270,17 @@ function fetch_multiple_radiation(o, prod_time)
 end
 
 
-ftype_d = forecast_type(HPForecastType.kDeterministic)
-ftype_c = forecast_type(HPForecastType.kEpsControl, 0)
+local ftype_d = forecast_type(HPForecastType.kDeterministic)
+local ftype_c = forecast_type(HPForecastType.kEpsControl, 0)
 
-vire_time = get_prod_time('VIRE_PREOP', 287)
-ecmwf_time = get_prod_time('ECGMTA', 240)
-meps_time = get_prod_time('MEPSMTA', 260)
+local vire_time = current_time
+local ecmwf_time = get_prod_time('ECGMTA', 240)
+local meps_time = get_prod_time('MEPSMTA', 260)
 
 -- if past 66 hours, priority 2 data is ec, not meps
-meps_step = tonumber(meps_time:GetStep():Hours())
-pri2_time = nil
-pri2_ftype = nil
+local meps_step = tonumber(meps_time:GetStep():Hours())
+local pri2_time = nil
+local pri2_ftype = nil
 
 if meps_step < 66 then 
   pri2_time = meps_time
@@ -293,18 +290,19 @@ else
   pri2_ftype = ftype_d
 end
 
-tk = fetch_parameter('T-K', 2, vire_time, ftype_d)
-ff = fetch_parameter('FF-MS', 10, vire_time, ftype_d)
-nlm = fetch_parameter('NLM-PRCNT', 0, vire_time, ftype_d)
-prec = fetch_parameter('PRECFORM2-N', 0, vire_time, ftype_d)
-tdk = fetch_parameter('TD-K', 2, vire_time, ftype_d)
+local tk = fetch_parameter('T-K', 2, vire_time, ftype_d)
+local ff = fetch_parameter('FF-MS', 10, vire_time, ftype_d)
+local nlm = fetch_parameter('NLM-PRCNT', 0, vire_time, ftype_d)
+local prec = fetch_parameter('PRECFORM2-N', 0, vire_time, ftype_d)
+local tdk = fetch_parameter('TD-K', 2, vire_time, ftype_d)
 
-radglo1 = fetch_radiation_data(meps_step, 0, pri2_time, pri2_ftype, false)
-radglo3 = fetch_radiation_data(meps_step, 0, pri2_time, pri2_ftype, true)
+local radglo1 = fetch_radiation_data(meps_step, 0, pri2_time, pri2_ftype, false)
+local radglo3 = fetch_radiation_data(meps_step, 0, pri2_time, pri2_ftype, true)
 
-ec_step = tonumber(ecmwf_time:GetStep():Hours())
+local ec_step = tonumber(ecmwf_time:GetStep():Hours())
 
 -- if ec step over 85, the steps increases and validation time can't be shifted
+local rr, snr3, snr6, snr12
 if ec_step < 85 then
   rr = fetch_parameter('RR-3-MM', 0, move_valid_time(pri2_time, 1), pri2_ftype)
   snr3 = fetch_parameter('SNR-KGM2', 0, move_valid_time(pri2_time, 1), pri2_ftype)
@@ -321,29 +319,29 @@ end
 snr3, snr6, snr12 = init_snow_acc_values(snr3, snr6, snr12)
 
 -- set biggest value as warning
-warning = set_warning(snr3, snr6, snr12)
+local warning = set_warning(snr3, snr6, snr12)
 
 -- the effect of extreme freezing temperatures to the warnings
-freezing = freezing_effect(tk)
+local freezing = freezing_effect(tk)
 
 -- the effect of thawing to the warnings
-thawing = thawing_effect(tk)
+local thawing = thawing_effect(tk)
 
 -- wind effect to the warnings with snow
-wind = wind_effect(ff, snr3, snr6)
+local wind = wind_effect(ff, snr3, snr6)
 
--- -- radiation affect to the warnings
-radglo_w = rad_effect(radglo1)
+-- radiation affect to the warnings
+local radglo_w = rad_effect(radglo1)
 
--- -- freezing rain and rain combination effect to the warnings
-ice_warning = freezing_rain_effect(rr, prec, tk)
+-- freezing rain and rain combination effect to the warnings
+local ice_warning = freezing_rain_effect(rr, prec, tk)
 
 -- frost affect to warnings
-frost = frost_effect(nlm, tk, tdk, ff, radglo3)
+local frost = frost_effect(nlm, tk, tdk, ff, radglo3)
 
 -- checking the most effective factor for the warning
 warning = combine_warning_factors(warning, thawing, freezing, wind, radglo_w)
-reason = warning_reason(warning, ice_warning, frost)
+local reason = warning_reason(warning, ice_warning, frost)
 
 
 result:SetParam(param('TWW-N'))
