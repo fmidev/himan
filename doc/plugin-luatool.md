@@ -122,6 +122,11 @@ HPGridType
     kUnknownGridType = 0
     kRegularGrid
     kIrregularGrid
+
+HPDatabaseType
+    kUnknownDatabaseType = 0
+    kRadon
+    kNoDatabase
 ```
 
 # Classes
@@ -157,6 +162,7 @@ and without any plugin specific options. See also plugin_configuration.
 | producer | GetTargetProducer | | Returns target producer |
 | time_duration | GetForecastStep | | Returns the forecast step that's configured in the configuration file (if applicable) |
 | bool | GetUseCuda | | Returns true if usage of gpu functions is not disabled |
+| HPDatabaseType | GetDatabaseType | | Return database type |
 
 ## forecast_time
 

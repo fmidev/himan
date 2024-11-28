@@ -43,6 +43,7 @@ class vvms : public compiled_plugin, private compiled_plugin_base
    private:
 	virtual void Calculate(std::shared_ptr<info<float>> theTargetInfo, unsigned short theThreadIndex);
 	float itsScale;
+	bool itsReverseCalculation;
 };
 
 // the class factory

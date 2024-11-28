@@ -2166,6 +2166,11 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 		{
 			parmName =
 			    GetParamNameFromGribShortName(options.configuration->ParamFile(), message.GetStringKey("shortName"));
+			if (parmName.empty())
+			{
+				logr.Warning(fmt::format("Parameter mapping for shortName '{}' not found in '{}'",
+				                         message.GetStringKey("shortName"), options.configuration->ParamFile()));
+			}
 		}
 
 		if (parmName.empty())
@@ -2400,6 +2405,12 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 		{
 			parmName =
 			    GetParamNameFromGribShortName(options.configuration->ParamFile(), message.GetStringKey("shortName"));
+
+			if (parmName.empty())
+			{
+				logr.Warning(fmt::format("Parameter mapping for shortName '{}' not found in '{}'",
+				                         message.GetStringKey("shortName"), options.configuration->ParamFile()));
+			}
 		}
 
 		if (parmName.empty())
@@ -2730,7 +2741,7 @@ himan::producer ReadProducer(const search_options& options, const NFmiGribMessag
 				return prod;
 			}
 
-			if (process <= 153 && process >= 142)
+			if (process <= 154 && process >= 142)
 			{
 				if (message.ForecastType() <= 2)
 				{
@@ -2746,11 +2757,6 @@ himan::producer ReadProducer(const search_options& options, const NFmiGribMessag
 				logr.Warning("Producer information not found from database for centre " + to_string(centre) +
 				             ", process " + to_string(process));
 			}
-		}
-		else if (centre == 251 && process == 40)
-		{
-			// support old (40) and new (0) number for MEPS
-			prod.Id(4);
 		}
 		else
 		{

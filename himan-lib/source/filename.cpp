@@ -213,18 +213,18 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 			case kGridToRadon:
 				try
 				{
-					return util::GetEnv("MASALA_REF_BASE");
+					return util::GetEnv("MASALA_RAW_DATA_BASE");
 				}
 				catch (const invalid_argument& e)
 				{
 					try
 					{
-						return util::GetEnv("NEONS_REF_BASE");
+						return util::GetEnv("RADON_REF_BASE");
 					}
 					catch (const invalid_argument& ee)
 					{
 						throw invalid_argument(
-						    "Neither 'MASALA_REF_BASE' nor 'NEONS_REF_BASE' environment variable defined");
+						    "Neither 'MASALA_RAW_DATA_BASE' nor 'RADON_REF_BASE' environment variable defined");
 					}
 				}
 			default:

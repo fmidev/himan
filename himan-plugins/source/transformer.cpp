@@ -9,14 +9,11 @@
 #include "interpolate.h"
 #include "level.h"
 #include "logger.h"
-#include "newbase/NFmiDataMatrix.h"
-#include "newbase/NFmiFastQueryInfo.h"
 #include "numerical_functions.h"
 #include "plugin_factory.h"
 #include "querydata.h"
 #include "util.h"
 #include <fmt/ranges.h>
-#include <gis/CoordinateMatrix.h>
 
 using namespace std;
 using namespace himan::plugin;
@@ -46,7 +43,6 @@ transformer::transformer()
       itsChangeMissingTo(himan::MissingDouble()),
       itsWriteEmptyGrid(true),
       itsDecimalPrecision(kHPMissingInt),
-      itsDoLandscapeInterpolation(false),
       itsParamDefinitionFromConfig(false),
       itsEnsemble(nullptr),
       itsSourceForecastPeriod(),
@@ -96,78 +92,6 @@ void SetParamAggregation(const himan::param& src, shared_ptr<himan::info<T>> myT
 
 namespace
 {
-template <typename T>
-T NewbaseMissingValue();
-
-template <>
-float NewbaseMissingValue()
-{
-	return kFloatMissing;
-}
-
-template <typename T, typename U>
-NFmiDataMatrix<U> InfoToDataMatrix(const std::shared_ptr<himan::info<T>>& in)
-{
-	NFmiDataMatrix<U> ret(in->Data().SizeX(), in->Data().SizeY(), NewbaseMissingValue<U>());
-
-	himan::matrix<T> origdata;
-
-	if (dynamic_cast<himan::regular_grid*>(in->Grid().get())->ScanningMode() == himan::kTopLeft)
-	{
-		origdata = in->Data();
-		himan::util::Flip<T>(origdata);
-	}
-
-	const std::vector<T>& data = (origdata.Size() == 0) ? VEC(in) : origdata.Values();
-
-	for (size_t i = 0; i < data.size(); i++)
-	{
-		ret.SetValue(static_cast<int>(i), static_cast<U>(data[i]));
-	}
-	return ret;
-}
-
-template <typename T>
-NFmiDataMatrix<bool> LSMToWaterMask(const NFmiDataMatrix<float>& in)
-{
-	NFmiDataMatrix<bool> ret(in.NX(), in.NY(), false);
-
-	for (size_t i = 0; i < in.NX() * in.NY(); i++)
-	{
-		const int v = static_cast<int>(in.GetValue(static_cast<int>(i), 0.f));
-
-		switch (v)
-		{
-			case 210:
-				ret.SetValue(static_cast<int>(i), true);
-				break;
-			default:
-				break;
-		}
-	}
-
-	return ret;
-}
-
-Fmi::CoordinateMatrix CreateCoordinateMatrix(const himan::regular_grid* from, const himan::regular_grid* to)
-{
-	std::vector<himan::point> xy = from->XY(*to);
-
-	const size_t ni = to->Ni();
-	const size_t nj = to->Nj();
-
-	Fmi::CoordinateMatrix cm(ni, nj);
-
-	for (size_t j = 0; j < nj; j++)
-	{
-		for (size_t i = 0; i < ni; i++)
-		{
-			cm.set<himan::point>(i, j, xy[i + j * ni]);
-		}
-	}
-	return cm;
-}
-
 himan::forecast_time GetSourceTime(const himan::forecast_time& targetTime, const himan::time_duration& forecastPeriod)
 {
 	auto sourceTime = targetTime;
@@ -181,113 +105,6 @@ himan::forecast_time GetSourceTime(const himan::forecast_time& targetTime, const
 }
 
 }  // namespace
-
-template <typename T>
-shared_ptr<himan::info<T>> transformer::LandscapeInterpolation(const forecast_time& ftime, const level& lvl,
-                                                               const param& par, const forecast_type& ftype)
-{
-	itsLogger.Trace("Executing landscape interpolation");
-
-	// Fetch source data without interpolation (obviously)
-
-	auto f = GET_PLUGIN(fetcher);
-	f->DoInterpolation(false);
-
-	auto cnf = make_shared<plugin_configuration>(*itsConfiguration);
-	const level zeroH(kHeight, 0);
-
-	const auto srctime = GetSourceTime(ftime, itsSourceForecastPeriod);
-
-	// Specify nearest interpolation for these, especially
-	// required for LC-N which is not a fraction between 0...1
-	// (as name suggests) but a code table.
-
-	const param lc("LC-N", -1, 1, 0, himan::kNearestPoint);
-	const param z("Z-M2S2", -1, 1, 0, himan::kNearestPoint);
-
-	auto source = f->Fetch<T>(cnf, srctime, lvl, par, ftype, false, false, itsReadFromPreviousForecastIfNotFound);
-	auto hgt = f->Fetch<float>(cnf, srctime, zeroH, z, ftype, false, false, itsReadFromPreviousForecastIfNotFound);
-	auto lr = f->Fetch<float>(cnf, srctime, zeroH, param("LR-KM"), ftype, false, false,
-	                          itsReadFromPreviousForecastIfNotFound);
-	// Model has land cover 0..1 for analysis time only (typically
-	auto mask = f->Fetch<float>(cnf, forecast_time(ftime.OriginDateTime(), ftime.OriginDateTime()), zeroH,
-	                            param("LC-0TO1"), ftype, false, false, itsReadFromPreviousForecastIfNotFound);
-
-	if (source->Data().MissingCount() > 0 || hgt->Data().MissingCount() > 0 || lr->Data().MissingCount() > 0 ||
-	    mask->Data().MissingCount() > 0)
-	{
-		itsLogger.Debug("Source data has missing values");
-	}
-
-	// Interpolate DEM and LSM to our wanted (target) grid
-
-	f->DoInterpolation(true);
-
-	cnf->SourceGeomNames({""});
-	cnf->SourceProducers({producer(521, 0, 0, "GLOBCOVER")});
-
-	const raw_time lsmTime("2010-12-21", "%Y-%m-%d");
-	auto lsm =
-	    f->Fetch<unsigned char>(cnf, forecast_time(lsmTime, lsmTime), zeroH, lc, forecast_type(kAnalysis), false);
-
-	cnf->SourceProducers({producer(520, 0, 0, "VIEWFINDER")});
-
-	const raw_time demTime("2008-09-11", "%Y-%m-%d");
-	auto dem = f->Fetch<short>(cnf, forecast_time(demTime, demTime), zeroH, z, forecast_type(kAnalysis), false);
-
-	const size_t lsmMissing = lsm->Data().MissingCount();
-	const size_t demMissing = dem->Data().MissingCount();
-
-	if (lsmMissing > 0 || demMissing > 0)
-	{
-		itsLogger.Warning(fmt::format("Missing values in environment data: DEM {}, LSM {}", demMissing, lsmMissing));
-	}
-
-	const Fmi::CoordinateMatrix gp = CreateCoordinateMatrix(dynamic_cast<regular_grid*>(source->Grid().get()),
-	                                                        dynamic_cast<regular_grid*>(dem->Grid().get()));
-
-	auto q = GET_PLUGIN(querydata);
-	std::shared_ptr<NFmiQueryData> qd = q->CreateQueryData(*source, true);
-	NFmiFastQueryInfo qi(qd.get());
-
-	const auto demM = InfoToDataMatrix<short, float>(dem);
-	const auto lsmM = LSMToWaterMask<float>(InfoToDataMatrix<unsigned char, float>(lsm));
-	const auto dataM = qi.Values();
-	const auto hgtM = InfoToDataMatrix<float, float>(hgt);
-	const auto lrM = InfoToDataMatrix<float, float>(lr);
-	const auto mM = InfoToDataMatrix<float, float>(mask);
-
-	// these should be equal
-	itsLogger.Trace(fmt::format("gp        {},{}", gp.width(), gp.height()));
-	itsLogger.Trace(fmt::format("dem       {},{}", demM.NX(), demM.NY()));
-	itsLogger.Trace(fmt::format("lsm       {},{}", lsmM.NX(), lsmM.NY()));
-	itsLogger.Trace(fmt::format("source    {},{}", source->Data().SizeX(), source->Data().SizeY()));
-
-	// these should be equal
-	itsLogger.Trace(fmt::format("data      {},{}", dataM.NX(), dataM.NY()));
-	itsLogger.Trace(fmt::format("hgtmat    {},{}", hgtM.NX(), hgtM.NY()));
-	itsLogger.Trace(fmt::format("lapsemat  {},{}", lrM.NX(), lrM.NY()));
-	itsLogger.Trace(fmt::format("maskmat   {},{}", mM.NX(), mM.NY()));
-
-	NFmiDataMatrix<float> lsValues = qi.LandscapeInterpolatedValues(dataM, gp, demM, lsmM, hgtM, lrM, mM);
-
-	auto target = make_shared<info<T>>(ftype, ftime, lvl, par);
-	auto b = make_shared<base<T>>();
-	b->grid = shared_ptr<grid>(itsConfiguration->BaseGrid()->Clone());
-
-	target->Create(b, true);
-
-	auto& data = VEC(target);
-
-	for (size_t i = 0; i < target->Grid()->Size(); i++)
-	{
-		const float val = lsValues.GetValue(static_cast<int>(i), kFloatMissing);
-
-		data[i] = (val == kFloatMissing) ? MissingValue<T>() : val;
-	}
-
-	return target;
-}
 
 shared_ptr<himan::info<double>> transformer::InterpolateTime(const forecast_time& ftime, const level& lev,
                                                              const param& par, const forecast_type& ftype) const
@@ -601,11 +418,6 @@ void transformer::SetAdditionalParameters()
 		}
 	}
 
-	if (itsConfiguration->Exists("landscape_interpolation"))
-	{
-		itsDoLandscapeInterpolation = util::ParseBoolean(itsConfiguration->GetValue("landscape_interpolation"));
-	}
-
 	const auto grib1_tbl = itsConfiguration->GetValue("grib1_table_number");
 	const auto grib1_num = itsConfiguration->GetValue("grib1_parameter_number");
 
@@ -657,11 +469,11 @@ void transformer::SetAdditionalParameters()
 		itsEnsemble->Param(itsSourceParam[0]);
 	}
 
-	if (itsEnsemble && (itsDoLandscapeInterpolation || itsDoTimeInterpolation || itsDoLevelInterpolation ||
-	                    itsRotateVectorComponents || itsApplyLandSeaMask))
+	if (itsEnsemble &&
+	    (itsDoTimeInterpolation || itsDoLevelInterpolation || itsRotateVectorComponents || itsApplyLandSeaMask))
 	{
 		itsLogger.Fatal(
-		    "Conflicting options: ensemble and (landscape/time/level interpolation, vector component rotation, land "
+		    "Conflicting options: ensemble and (time/level interpolation, vector component rotation, land "
 		    "sea masking)");
 		himan::Abort();
 	}
@@ -905,12 +717,6 @@ void transformer::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short
 shared_ptr<himan::info<double>> transformer::FetchSource(shared_ptr<himan::info<double>>& myTargetInfo,
                                                          forecast_time sourceTime, forecast_type forecastType)
 {
-	if (itsDoLandscapeInterpolation)
-	{
-		return LandscapeInterpolation<double>(sourceTime, itsSourceLevels[myTargetInfo->Index<level>()],
-		                                      itsSourceParam[0], forecastType);
-	}
-
 	const vector<forecast_type> forecastTypes =
 	    itsAllowAnySourceForecastType ? vector<forecast_type>{forecast_type(kDeterministic),
 	                                                          forecast_type(kEpsControl, 0), forecast_type(kAnalysis)}

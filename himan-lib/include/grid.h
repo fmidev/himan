@@ -276,6 +276,10 @@ class regular_grid : public grid
 	virtual std::unique_ptr<OGRSpatialReference> SpatialReference() const;
 	virtual std::vector<point> GridPointsInProjectionSpace() const override;
 
+	static std::pair<double, double> FalseEastingAndNorthing(const OGRSpatialReference* spRef,
+	                                                         OGRCoordinateTransformation* llToProjXForm,
+	                                                         const point& firstPoint, bool firstPointIsProjected);
+
    protected:
 	regular_grid(HPGridType gridType, HPScanningMode scMode, double di, double dj, size_t ni, size_t nj,
 	             bool uvRelativeToGrid, const std::string& theName = "");

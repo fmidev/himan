@@ -1191,7 +1191,7 @@ shared_ptr<himan::info<T>> fetcher::InterpolateTime(const shared_ptr<const plugi
 
 		shared_ptr<info<T>> prev = nullptr, next = nullptr;
 
-		int count = 0, max = 5;
+		int count = 0, max = 6;
 		do
 		{
 			try

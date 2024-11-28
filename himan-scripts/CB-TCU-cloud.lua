@@ -80,58 +80,58 @@ if not NL or not NM or not RR then
   return
 end
 
-if currentProducerName == "MEPS" or currentProducerName == "MEPSMTA" then
-  local Nmat = matrixf(result:GetGrid():GetNi(), result:GetGrid():GetNj(), 1, 0)
-  Nmat:SetValues(EL500)
-  EL500 = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
-
-  Nmat:SetValues(pEL500)
-  pEL500 = Min2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
-  
-  Nmat:SetValues(ELmu)
-  ELmu = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
-  
-  Nmat:SetValues(pELmu)
-  pELmu = Min2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
-
-  Nmat:SetValues(RR)
-  RR = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
-
-  Nmat:SetValues(NL)
-  NL = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
-
-  Nmat:SetValues(NM)
-  NM = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
-
-  Nmat:SetValues(Ttop)
-  Ttop = Min2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
-
-  Nmat:SetValues(TtopMU)
-  TtopMU = Min2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
-
-  filter:SetValues(avgkernel)
-
-  Nmat:SetValues(LCL500)
-  LCL500 = Filter2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
-
-  Nmat:SetValues(CAPE500)
-  CAPE500 = Filter2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
-
-  Nmat:SetValues(CIN500)
-  CIN500 = Filter2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
-
-  Nmat:SetValues(LFCmu)
-  LFCmu = Filter2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
-
-  Nmat:SetValues(pLFCmu)
-  pLFCmu = Filter2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
-
-  Nmat:SetValues(CAPEmu)
-  CAPEmu = Filter2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
-
-  Nmat:SetValues(CINmu)
-  CINmu = Filter2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+if currentProducerName ~= "MEPS" and currentProducerName ~= "MEPSMTA" then
+  filter = matrixf(9, 9, 1, 1.0)
 end
+
+local Nmat = matrixf(result:GetGrid():GetNi(), result:GetGrid():GetNj(), 1, 0)
+Nmat:SetValues(EL500)
+EL500 = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+Nmat:SetValues(pEL500)
+pEL500 = Min2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+Nmat:SetValues(ELmu)
+ELmu = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+Nmat:SetValues(pELmu)
+pELmu = Min2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+Nmat:SetValues(RR)
+RR = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+Nmat:SetValues(NL)
+NL = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+Nmat:SetValues(NM)
+NM = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+Nmat:SetValues(Ttop)
+Ttop = Min2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+Nmat:SetValues(TtopMU)
+TtopMU = Min2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+Nmat:SetValues(LCL500)
+LCL500 = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+Nmat:SetValues(CAPE500)
+CAPE500 = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+Nmat:SetValues(CIN500)
+CIN500 = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+Nmat:SetValues(LFCmu)
+LFCmu = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+Nmat:SetValues(pLFCmu)
+pLFCmu = Min2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+Nmat:SetValues(CAPEmu)
+CAPEmu = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
+
+Nmat:SetValues(CINmu)
+CINmu = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
 
 local CBlimit = 2000  --required vertical thickness [m] to consider a CB (tweak this..!)
 local TCUlimit = 1500  --required vertical thickness [m] to consider a TCU (tweak this..!)
@@ -196,6 +196,12 @@ for i=1, #EL500 do
   end
 
   res[i] = round(res[i]/10)*10
+  --Threshold flight level for TCU above FL70 and CB above FL80
+  if res[i] < 70 and res[i] > -70 then
+    res[i] = missing
+  elseif res[i] == 70 then
+    res[i] = -70
+  end
 end
 
 p = param("CBTCU-FL")
