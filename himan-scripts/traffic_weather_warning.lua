@@ -1,23 +1,5 @@
-logger:Info("Alku: traffic warning calculation")
+logger:Info("Traffic warning calculation")
 
-function min_max_mean(tbl)
-
-  local min = tbl[1]
-  local max = tbl[1]
-  local sum = 0
-
-  for i = 1, #tbl do
-      if tbl[i] > max then
-          max = tbl[i]
-      end
-      if tbl[i] < min then
-          min = tbl[i]
-      end
-      sum = sum + tbl[i]
-  end
-  local mean = sum / #tbl
-  return tostring(min).. ' ' .. tostring(max).. ' '.. tostring(mean)
-end
 
 function warning_reason(warning, ice_warning, frost)
   local reason = {}
@@ -75,14 +57,13 @@ function freezing_rain_effect(rr, prec, tk)
   local freezing_rr_effect = {}
   for i = 1, #rr do
     if prec[i] == 4 or prec[i] == 5 then
-      rr[i] = rr[i]
+      celcius = tk[i] - 273.15
+      freezing_rr_effect[i] = (0.189869351*rr[i]^3-1.151769668*rr[i]^2+2.193555856*rr[i]+0.002354682)*(-0.0045696099*celcius^3-0.0556120065*celcius^2-0.2579134548*celcius+0.7711723896)
+      freezing_rr_effect[i] = freezing_rr_effect[i] < 0 and 0 or freezing_rr_effect[i]
+      freezing_rr_effect[i] = freezing_rr_effect[i] > 2 and 2 or freezing_rr_effect[i]
     else
-      rr[i] = 0
+      freezing_rr_effect[i] = 0
     end
-    celcius = tk[i] - 273.15
-    freezing_rr_effect[i] = (0.189869351*rr[i]^3-1.151769668*rr[i]^2+2.193555856*rr[i]+0.002354682)*(-0.0045696099*celcius^3-0.0556120065*celcius^2-0.2579134548*celcius+0.7711723896)
-    freezing_rr_effect[i] = freezing_rr_effect[i] < 0 and 0 or freezing_rr_effect[i]
-    freezing_rr_effect[i] = freezing_rr_effect[i] > 2 and 2 or freezing_rr_effect[i]
   end
   return freezing_rr_effect
 end 
@@ -150,20 +131,6 @@ function set_warning(snr3, snr6, snr12)
   return warning
 end
 
-function zero_array(size)
-  local arr = {}
-  for i = 1, size do
-    arr[i] = 0
-  end
-  return arr
-end
-
-function print_parameters(param_names, param_data)
-  for i = 1, #param_names do
-    print(param_names[i] .. ': ' .. min_max_mean(param_data[i]))
-  end
-end
-
 function adjust_time(origin_time)
   local adjust_time = raw_time(origin_time:String("%Y-%m-%d %H:%M%S"))
   hour = tonumber(adjust_time:String("%H"))
@@ -197,7 +164,7 @@ function get_prod_time(producer_name, producer_id)
 end
 
 function move_valid_time(time, hours)
-  local adjusted_time = forecast_time(time)
+  local adjusted_time = forecast_time(time:GetOriginDateTime(), time:GetValidDateTime())
   return forecast_time(adjusted_time:GetOriginDateTime(), adjusted_time:GetValidDateTime() + time_duration(hours .. ":00:00"))
 end
 
@@ -213,61 +180,48 @@ function fetch_parameter(param_name, level_height, prod_time, ftype)
   return data
 end
 
-function fetch_radiation_data(step, level_height, prod_time, ftype, is_sum)
-  local o = {
-    forecast_time = prod_time,
-    level = level(HPLevelType.kHeight, level_height),
-    forecast_type = ftype,
-  }
+function fetch_radiation_interpolated(step, pri2_time, pri2_ftype)
+  local origin_time = pri2_time:GetOriginDateTime()
+  local valid_time = current_time:GetValidDateTime()
 
-  local agg_duration, multiplier
+
   if step < 83 then
-    agg_duration = time_duration("01:00")
-    multiplier = 1
+    duration = time_duration("01:00")
   elseif step < 137 then
-    agg_duration = time_duration("03:00")
-    multiplier = 3
+    duration = time_duration("03:00")
   else
-    agg_duration = time_duration("06:00")
-    multiplier = 3
+    duration = time_duration("06:00")
   end
 
-  o.param = param('RADGLO-WM2', aggregation(HPAggregationType.kAverage, agg_duration), processing_type())
-
-  -- Fetch radiation data
-  if is_sum and step < 83 then
-    -- Fetch for the current and two prior time steps for summing
-    local radglo_sum = fetch_multiple_radiation(o, prod_time)
-    return radglo_sum
-  else
-    -- Fetch single time step data and apply multiplier if needed
-    local radglo_data = luatool:FetchWithArgs(o)
-    if is_sum then
-      for i = 1, #radglo_data do
-        radglo_data[i] = multiplier * radglo_data[i]
-      end
+  local interpolated_radglo = {}
+  for i=0,2 do
+    if i > 0 then
+      valid_time = valid_time - time_duration("01:00:00")
     end
-    return radglo_data
+
+    local p = param("RADGLO-WM2")
+    p:SetAggregation(aggregation(HPAggregationType.kAverage, duration))
+    local o = {
+      forecast_time = forecast_time(origin_time, valid_time),
+            level = current_level,
+            param = p,
+            forecast_type = pri2_ftype,
+            read_previous_forecast_if_not_found = false,
+            time_interpolation = true
+    }
+  
+    local data = luatool:FetchWithArgs(o)
+
+    interpolated_radglo[#interpolated_radglo + 1] = data
   end
-end
 
--- Helper function to fetch data for multiple time steps and sum them
-function fetch_multiple_radiation(o, prod_time)
-  local my_time = forecast_time(prod_time)  
-
-  local radglo_sum = {}
-  for j = 0, 2 do
-    if j > 0 then
-      my_time:GetValidDateTime():Adjust(HPTimeResolution.kHourResolution, -1)
-    end
-    o.forecast_time = my_time
-    local radglo_data = luatool:FetchWithArgs(o)
-    for i = 1, #radglo_data do
-      radglo_sum[i] = (radglo_sum[i] or 0) + radglo_data[i]
-    end
+  local sum_radglo = {}
+  for i = 1, #interpolated_radglo[1] do
+    sum_radglo[i] = (interpolated_radglo[1][i] + interpolated_radglo[2][i] + interpolated_radglo[3][i])
   end
-  return radglo_sum
-end
+
+  return interpolated_radglo[1], sum_radglo
+end 
 
 
 local ftype_d = forecast_type(HPForecastType.kDeterministic)
@@ -296,8 +250,8 @@ local nlm = fetch_parameter('NLM-PRCNT', 0, vire_time, ftype_d)
 local prec = fetch_parameter('PRECFORM2-N', 0, vire_time, ftype_d)
 local tdk = fetch_parameter('TD-K', 2, vire_time, ftype_d)
 
-local radglo1 = fetch_radiation_data(meps_step, 0, pri2_time, pri2_ftype, false)
-local radglo3 = fetch_radiation_data(meps_step, 0, pri2_time, pri2_ftype, true)
+
+local radglo1, radglo3 = fetch_radiation_interpolated(meps_step, pri2_time, pri2_ftype)
 
 local ec_step = tonumber(ecmwf_time:GetStep():Hours())
 
@@ -308,11 +262,16 @@ if ec_step < 85 then
   snr3 = fetch_parameter('SNR-KGM2', 0, move_valid_time(pri2_time, 1), pri2_ftype)
   snr6 = fetch_parameter('SN-6-MM', 0, move_valid_time(pri2_time, 2), pri2_ftype)
   snr12 = fetch_parameter('SN-12-MM', 0, move_valid_time(pri2_time, 5), pri2_ftype)
-else 
+elseif ec_step < 137 then 
   rr = fetch_parameter('RR-3-MM', 0, pri2_time, pri2_ftype)
   snr3 = fetch_parameter('SNR-KGM2', 0, pri2_time, pri2_ftype)
-  snr6 = zero_array(#snr3)
-  snr12 = zero_array(#snr3)
+  snr6 = fetch_parameter('SN-6-MM', 0, move_valid_time(pri2_time, 3), pri2_ftype)
+  snr12 = fetch_parameter('SN-12-MM', 0, move_valid_time(pri2_time, 9), pri2_ftype)
+else
+  rr = fetch_parameter('RR-3-MM', 0, pri2_time, pri2_ftype)
+  snr3 = fetch_parameter('SNR-KGM2', 0, pri2_time, pri2_ftype)
+  snr6 = fetch_parameter('SN-6-MM', 0, move_valid_time(pri2_time, 6), pri2_ftype)
+  snr12 = fetch_parameter('SN-12-MM', 0, move_valid_time(pri2_time, 6), pri2_ftype)
 end
 
 --set initial values for warning calculation
@@ -343,10 +302,10 @@ local frost = frost_effect(nlm, tk, tdk, ff, radglo3)
 warning = combine_warning_factors(warning, thawing, freezing, wind, radglo_w)
 local reason = warning_reason(warning, ice_warning, frost)
 
-
 result:SetParam(param('TWW-N'))
 result:SetValues(reason)
 
 luatool:WriteToFile(result)
+
 
 
