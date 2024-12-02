@@ -1557,6 +1557,7 @@ void BindLib(lua_State* L)
 	              .def("Adjust", &raw_time::Adjust)
 	              .def("Empty", &raw_time::Empty),
 	          class_<forecast_time>("forecast_time")
+			  	  .def(constructor<const forecast_time&>())
 	              .def(constructor<const raw_time&, const raw_time&>())
                       .def(constructor<const raw_time&, const time_duration&>())
 	              .def("ClassName", &forecast_time::ClassName)
