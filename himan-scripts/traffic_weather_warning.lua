@@ -5,12 +5,12 @@ function warning_reason(warning, ice_warning, frost)
   local reason = {}
   for i=1, #warning do
     reason[i] = 0 
-    reason[i] = warning[i] >= frost[i] and warning[i] or reason[i]
-    reason[i] = warning[i] >= ice_warning[i] and warning[i] or reason[i]
-    reason[i] = frost[i] >= warning[i] and frost[i] or reason[i]
-    reason[i] = frost[i] >= ice_warning[i] and frost[i] or reason[i]
-    reason[i] = ice_warning[i] >= warning[i] and ice_warning[i] or reason[i]
-    reason[i] = ice_warning[i] >= frost[i] and ice_warning[i] or reason[i]
+    reason[i] = warning[i] >= frost[i] and 2 or reason[i]
+    reason[i] = warning[i] >= ice_warning[i] and 2 or reason[i]
+    reason[i] = frost[i] >= warning[i] and 3 or reason[i]
+    reason[i] = frost[i] >= ice_warning[i] and 3 or reason[i]
+    reason[i] = ice_warning[i] >= warning[i] and 1 or reason[i]
+    reason[i] = ice_warning[i] >= frost[i] and 1 or reason[i]
   end
   return reason
 end
@@ -302,7 +302,7 @@ local frost = frost_effect(nlm, tk, tdk, ff, radglo3)
 warning = combine_warning_factors(warning, thawing, freezing, wind, radglo_w)
 local reason = warning_reason(warning, ice_warning, frost)
 
-result:SetParam(param('TWW-N'))
+result:SetParam(param('TRAFFIC-N'))
 result:SetValues(reason)
 
 luatool:WriteToFile(result)
