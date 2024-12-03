@@ -14,6 +14,7 @@
 #include "statistics.h"
 #include "stereographic_grid.h"
 #include <filesystem>
+#include <fmt/format.h>
 #include <ogr_spatialref.h>
 #include <thread>
 
@@ -113,8 +114,8 @@ void luatool::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned sho
 	InitLua();
 
 	ASSERT(myL);
-	myThreadedLogger.Info("Calculating time " + static_cast<std::string>(myTargetInfo->Time().ValidDateTime()) +
-	                      " level " + static_cast<std::string>(myTargetInfo->Level()));
+	myThreadedLogger.Info(
+	    fmt::format("Calculating time {} level {}", myTargetInfo->Time().ValidDateTime(), myTargetInfo->Level()));
 
 	globals(myL)["logger"] = myThreadedLogger;
 
@@ -193,7 +194,7 @@ bool luatool::ReadFile(const std::string& luaFile)
 {
 	if (!std::filesystem::exists(luaFile))
 	{
-		std::cerr << "Error: script " << luaFile << " does not exist\n";
+		itsLogger.Error("Error: script " + luaFile + " does not exist");
 		return false;
 	}
 
@@ -207,11 +208,16 @@ bool luatool::ReadFile(const std::string& luaFile)
 			return false;
 		}
 		t.Stop();
-		itsLogger.Debug("Script " + luaFile + " executed in " + std::to_string(t.GetTime()) + " ms");
+		itsLogger.Debug(fmt::format("Script {} executed in {}", luaFile, t.GetTime()));
 	}
 	catch (const error& e)
 	{
 		return false;
+	}
+	catch (const std::bad_alloc& e)
+	{
+		itsLogger.Fatal("Out of memory: " + std::string(e.what()));
+		throw e;
 	}
 	catch (const std::exception& e)
 	{
