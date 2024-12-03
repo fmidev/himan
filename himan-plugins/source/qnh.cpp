@@ -92,12 +92,12 @@ void qnh::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 	const double alt_exponent = R * L / himan::constants::kG / M;
 
 	const param topoParam("Z-M2S2");
-	const params PParams({param("PGR-PA"), param("P-PA")});  // ground level pressure for EC is PGR-PA, for Hirlam P-PA
-
+	param PParam("P-PA");
 	level groundLevel(kHeight, 0);
 
 	if (itsConfiguration->TargetProducer().Id() == 240 || itsConfiguration->TargetProducer().Id() == 243)  // EC
 	{
+		PParam = param("PGR-PA");
 		groundLevel = level(himan::kGround, 0);
 	}
 
@@ -116,7 +116,7 @@ void qnh::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 	    Fetch(forecastTime, groundLevel, topoParam,
 	          forecastType);  // surface elevation (as geopotential [m2/s2]) from database
 	shared_ptr<info<double>> pressureInfo =
-	    Fetch(forecastTime, groundLevel, PParams, forecastType);  // ground level (= 0 m) pressure [Pa] from database
+	    Fetch(forecastTime, groundLevel, PParam, forecastType);  // ground level (= 0 m) pressure [Pa] from database
 
 	if (!topoInfo || !pressureInfo)
 	{
