@@ -298,10 +298,11 @@ string MakeFileNameFromTemplate(const info<T>& info, const plugin_configuration&
 						replacement = HPProcessingTypeToString.at(par.ProcessingType().Type());
 						break;
 					case Component::kProcessingTypeValue:
-						replacement = fmt::sprintf(mask, par.ProcessingType().Value());
+						// TODO: change to MissingDouble(), requires integration test changes
+						replacement = fmt::sprintf(mask, par.ProcessingType().Value().value_or(kHPMissingValue));
 						break;
 					case Component::kProcessingTypeValue2:
-						replacement = fmt::sprintf(mask, par.ProcessingType().Value2());
+						replacement = fmt::sprintf(mask, par.ProcessingType().Value2().value_or(kHPMissingValue));
 						break;
 					case Component::kLevelName:
 						replacement = HPLevelTypeToString.at(lvl.Type());

@@ -14,117 +14,253 @@
 using namespace std;
 using namespace himan::plugin;
 
+static int radonVersion = -1;
 const int RADON_MIN_REQUIRED_VERSION = -1;
-const int RADON_MIN_RECOMMENDED_VERSION = 20210409;
+const int RADON_MIN_RECOMMENDED_VERSION = 20241119;
 const int MAX_WORKERS = 32;
 static once_flag oflag;
 static map<string, string> tableNameCache;
 static mutex tableNameMutex;
 
+namespace
+{
+template <typename T>
+string HandleNULL(const T& value);
+
+template <>
+string HandleNULL(const std::optional<double>& opt)
+{
+	if (opt)
+	{
+		return fmt::format("{}", opt.value());
+	}
+
+	return "NULL";
+}
+
+template <>
+string HandleNULL(const std::optional<int>& opt)
+{
+	if (opt)
+	{
+		return to_string(opt.value());
+	}
+
+	return "NULL";
+}
+template <>
+string HandleNULL(const std::optional<unsigned long>& opt)
+{
+	if (opt)
+	{
+		return to_string(opt.value());
+	}
+
+	return "NULL";
+}
+
+template <>
+string HandleNULL(const himan::time_duration& value)
+{
+	if (value.Empty())
+	{
+		return "NULL";
+	}
+
+	return fmt::format("'{}'", static_cast<string>(value));
+}
+
+std::optional<int> HimanAggregationToRadonAggregation(himan::HPAggregationType agg)
+{
+	using namespace himan;
+	switch (agg)
+	{
+		case kUnknownAggregationType:
+		case kAverage:
+		case kAccumulation:
+		case kMaximum:
+		case kMinimum:
+			return static_cast<int>(agg) + 1;
+		case kDifference:
+		default:
+			std::cerr << fmt::format("Unsupported Himan aggregation type: {}", HPAggregationTypeToString.at(agg))
+			          << std::endl;
+			return std::nullopt;
+	}
+}
+
+std::optional<int> HimanProcessingTypeToRadonProcessingType(himan::HPProcessingType pt)
+{
+	using namespace himan;
+	switch (pt)
+	{
+		case kUnknownProcessingType:
+		case kProbabilityGreaterThanOrEqual:
+		case kProbabilityGreaterThan:
+		case kProbabilityLessThanOrEqual:
+		case kProbabilityLessThan:
+		case kProbabilityEquals:
+		case kProbabilityEqualsIn:
+			return static_cast<int>(pt) + 1;
+		case kFractile:
+			return 8;
+		case kAreaProbabilityGreaterThanOrEqual:
+			return 9;
+		case kAreaProbabilityGreaterThan:
+			return 10;
+		case kAreaProbabilityLessThanOrEqual:
+			return 11;
+		case kAreaProbabilityLessThan:
+			return 12;
+		case kAreaProbabilityEquals:
+			return 13;
+		case kAreaProbabilityEqualsIn:
+			return 14;
+		case kBiasCorrection:
+			return 15;
+		case kMean:
+			return 16;
+		case kStandardDeviation:
+			return 17;
+		case kFiltered:
+			return 18;
+		case kDetrend:
+			return 19;
+		case kAnomaly:
+			return 20;
+		case kNormalized:
+			return 21;
+		case kClimatology:
+			return 22;
+		case kCategorized:
+			return 23;
+		case kPercentChange:
+			return 24;
+		case kEFI:
+			return 25;
+		case kProbabilityBetween:
+			return 26;
+		case kProbabilityNotEquals:
+			return 27;
+		case kProbability:
+			return 28;
+		case kAreaProbabilityBetween:
+			return 29;
+		case kAreaProbabilityNotEquals:
+			return 30;
+		case kSpread:
+		default:
+			std::cerr << fmt::format("Unsupported Himan processing type: {}", HPProcessingTypeToString.at(pt))
+			          << std::endl;
+			return std::nullopt;
+	}
+}
+}  // namespace
+
 void radon::Init()
 {
-	if (!itsInit)
+	if (itsInit)
 	{
-		try
-		{
-			call_once(
-			    oflag,
-			    [&]()
-			    {
-				    string radonHost = util::GetEnv("RADON_HOSTNAME");
-
-				    string radonName = "radon";
-
-				    try
-				    {
-					    radonName = util::GetEnv("RADON_DATABASENAME");
-				    }
-				    catch (...)
-				    {
-				    }
-
-				    int radonPort = 5432;
-
-				    try
-				    {
-					    radonPort = stoi(util::GetEnv("RADON_PORT"));
-				    }
-				    catch (...)
-				    {
-				    }
-
-				    NFmiRadonDBPool::Instance()->Username("wetodb");
-				    NFmiRadonDBPool::Instance()->Password(util::GetEnv("RADON_WETODB_PASSWORD"));
-				    NFmiRadonDBPool::Instance()->Database(radonName);
-				    NFmiRadonDBPool::Instance()->Hostname(radonHost);
-				    NFmiRadonDBPool::Instance()->Port(radonPort);
-
-				    if (NFmiRadonDBPool::Instance()->MaxWorkers() < MAX_WORKERS)
-				    {
-					    NFmiRadonDBPool::Instance()->MaxWorkers(MAX_WORKERS);
-				    }
-
-				    itsLogger.Info("Connected to radon (db=" + radonName + ", host=" + radonHost + ":" +
-				                   std::to_string(radonPort) + ")");
-
-				    try
-				    {
-					    itsRadonDB = std::unique_ptr<NFmiRadonDB>(NFmiRadonDBPool::Instance()->GetConnection());
-					    const std::string radonVersion = GetVersion();
-
-					    const int v = std::stoi(radonVersion);
-
-					    if (v < RADON_MIN_REQUIRED_VERSION)
-					    {
-						    itsLogger.Fatal(fmt::format("Radon version '{}' is too old, at least '{}' is required", v,
-						                                RADON_MIN_REQUIRED_VERSION));
-						    himan::Abort();
-					    }
-					    else if (v < RADON_MIN_RECOMMENDED_VERSION)
-					    {
-						    itsLogger.Warning(fmt::format("Radon version '{}' found, at least '{}' is recommended", v,
-						                                  RADON_MIN_RECOMMENDED_VERSION));
-					    }
-					    else
-					    {
-						    itsLogger.Debug(fmt::format("Radon version '{}' found", v));
-					    }
-				    }
-				    catch (const std::invalid_argument& e)
-				    {
-					    itsLogger.Debug(fmt::format("Unable to determine radon version: {}", e.what()));
-				    }
-				    catch (const pqxx::failure& e)
-				    {
-					    itsLogger.Trace(fmt::format("pqxx error fetching radon version"));
-				    }
-				    catch (const std::exception& e)
-				    {
-					    itsLogger.Trace(fmt::format("Unknown error fetching radon version: {}", e.what()));
-				    }
-				    catch (...)
-				    {
-				    }
-			    });
-
-			if (!itsRadonDB)
-			{
-				itsRadonDB = std::unique_ptr<NFmiRadonDB>(NFmiRadonDBPool::Instance()->GetConnection());
-			}
-		}
-		catch (int e)
-		{
-			itsLogger.Fatal("Failed to get connection");
-			himan::Abort();
-		}
-		catch (const std::exception& e)
-		{
-			itsLogger.Fatal(e.what());
-			himan::Abort();
-		}
-
-		itsInit = true;
+		return;
 	}
+	try
+	{
+		call_once(
+		    oflag,
+		    [&]()
+		    {
+			    string radonHost = util::GetEnv("RADON_HOSTNAME");
+
+			    string radonName = "radon";
+
+			    try
+			    {
+				    radonName = util::GetEnv("RADON_DATABASENAME");
+			    }
+			    catch (...)
+			    {
+			    }
+
+			    int radonPort = 5432;
+
+			    try
+			    {
+				    radonPort = stoi(util::GetEnv("RADON_PORT"));
+			    }
+			    catch (...)
+			    {
+			    }
+
+			    NFmiRadonDBPool::Instance()->Username("wetodb");
+			    NFmiRadonDBPool::Instance()->Password(util::GetEnv("RADON_WETODB_PASSWORD"));
+			    NFmiRadonDBPool::Instance()->Database(radonName);
+			    NFmiRadonDBPool::Instance()->Hostname(radonHost);
+			    NFmiRadonDBPool::Instance()->Port(radonPort);
+
+			    if (NFmiRadonDBPool::Instance()->MaxWorkers() < MAX_WORKERS)
+			    {
+				    NFmiRadonDBPool::Instance()->MaxWorkers(MAX_WORKERS);
+			    }
+
+			    itsLogger.Info(fmt::format("Connected to radon (db={}, host={}:{})", radonName, radonHost, radonPort));
+
+			    try
+			    {
+				    itsRadonDB = std::unique_ptr<NFmiRadonDB>(NFmiRadonDBPool::Instance()->GetConnection());
+				    const std::string version = GetVersion();
+
+				    radonVersion = std::stoi(version);
+
+				    if (radonVersion < RADON_MIN_REQUIRED_VERSION)
+				    {
+					    itsLogger.Fatal(fmt::format("Radon version '{}' is too old, at least '{}' is required",
+					                                radonVersion, RADON_MIN_REQUIRED_VERSION));
+					    himan::Abort();
+				    }
+				    else if (radonVersion < RADON_MIN_RECOMMENDED_VERSION)
+				    {
+					    itsLogger.Warning(fmt::format("Radon version '{}' found, at least '{}' is recommended",
+					                                  radonVersion, RADON_MIN_RECOMMENDED_VERSION));
+				    }
+				    else
+				    {
+					    itsLogger.Debug(fmt::format("Radon version '{}' found", radonVersion));
+				    }
+			    }
+			    catch (const std::invalid_argument& e)
+			    {
+				    itsLogger.Debug(fmt::format("Unable to determine radon version: {}", e.what()));
+			    }
+			    catch (const pqxx::failure& e)
+			    {
+				    itsLogger.Trace(fmt::format("pqxx error fetching radon version"));
+			    }
+			    catch (const std::exception& e)
+			    {
+				    itsLogger.Trace(fmt::format("Unknown error fetching radon version: {}", e.what()));
+			    }
+			    catch (...)
+			    {
+			    }
+		    });
+
+		if (!itsRadonDB)
+		{
+			itsRadonDB = std::unique_ptr<NFmiRadonDB>(NFmiRadonDBPool::Instance()->GetConnection());
+		}
+	}
+	catch (int e)
+	{
+		itsLogger.Fatal("Failed to get connection");
+		himan::Abort();
+	}
+	catch (const std::exception& e)
+	{
+		itsLogger.Fatal(e.what());
+		himan::Abort();
+	}
+
+	itsInit = true;
 }
 
 radon::radon() : itsInit(false), itsRadonDB()
@@ -696,8 +832,6 @@ template <typename T>
 pair<bool, radon_record> radon::SaveGrid(const info<T>& resultInfo, const file_information& finfo,
                                          const string& targetGeomName, bool dryRun)
 {
-	stringstream query;
-
 	if (resultInfo.Grid()->Class() != kRegularGrid)
 	{
 		itsLogger.Error("Only regular grid data can be stored to radon for now");
@@ -755,8 +889,6 @@ pair<bool, radon_record> radon::SaveGrid(const info<T>& resultInfo, const file_i
 	const string table_name = tableinfo["table_name"];
 	const string partition_name = tableinfo["partition_name"];
 	const string record_count = tableinfo["record_count"];
-
-	query.str("");
 
 	string host;
 
@@ -828,16 +960,6 @@ pair<bool, radon_record> radon::SaveGrid(const info<T>& resultInfo, const file_i
 	double levelValue2 = IsKHPMissingValue(resultInfo.Level().Value2()) ? -1 : resultInfo.Level().Value2();
 	const string fullTableName = fmt::format("{}.{}", schema_name, partition_name);
 
-	auto FormatToSQL = [](const std::optional<unsigned long>& opt) -> string
-	{
-		if (opt)
-		{
-			return to_string(opt.value());
-		}
-
-		return "NULL";
-	};
-
 	int radonFileFormat = 0;
 
 	switch (finfo.file_type)
@@ -862,29 +984,57 @@ pair<bool, radon_record> radon::SaveGrid(const info<T>& resultInfo, const file_i
 			himan::Abort();
 	}
 
-	query
-	    << "INSERT INTO " << fullTableName
-	    << " (producer_id, analysis_time, geometry_id, param_id, level_id, level_value, level_value2, forecast_period, "
-	    << "forecast_type_id, forecast_type_value, file_location, file_server, file_format_id, file_protocol_id, "
-	    << "message_no, byte_offset, byte_length) VALUES (" << resultInfo.Producer().Id() << ", "
-	    << "'" << analysisTime << "', " << geom_id << ", " << resultInfo.Param().Id() << ", " << levelinfo["id"] << ", "
-	    << resultInfo.Level().Value() << ", " << levelValue2 << ", "
-	    << "'" << util::MakeSQLInterval(resultInfo.Time()) << "', "
-	    << static_cast<int>(resultInfo.ForecastType().Type()) << ", " << forecastTypeValue << ","
-	    << "'" << finfo.file_location << "', "
-	    << "'" << host << "', " << radonFileFormat << ", " << finfo.storage_type << ", "
-	    << FormatToSQL(finfo.message_no) << ", " << FormatToSQL(finfo.offset) << ", " << FormatToSQL(finfo.length)
-	    << ")";
+	string query;
+
+	if (radonVersion >= 20241119)
+	{
+		const auto agg = resultInfo.Param().Aggregation();
+		const auto pt = resultInfo.Param().ProcessingType();
+
+		auto agg_str = HandleNULL(HimanAggregationToRadonAggregation(agg.Type()));
+		auto agg_period_str = HandleNULL(agg.TimeDuration());
+		auto pt_str = HandleNULL(HimanProcessingTypeToRadonProcessingType(pt.Type()));
+		auto pt_value_str = HandleNULL(pt.Value());
+		auto pt_value2_str = HandleNULL(pt.Value2());
+
+		query = fmt::format(
+		    "INSERT INTO {} (producer_id, analysis_time, geometry_id, param_id, level_id, "
+		    "level_value, level_value2, forecast_period, forecast_type_id, forecast_type_value, "
+		    "file_location, file_server, file_format_id, file_protocol_id, message_no, byte_offset, "
+		    "byte_length, aggregation_id, aggregation_period, processing_type_id, processing_type_value, "
+		    "processing_type_value2) VALUES ({}, '{}', {}, {}, {}, {}, {}, '{}', {}, {}, '{}', '{}', {}, {}, {}, {}, "
+		    "{}, {}, {}, {}, {}, {})",
+		    fullTableName, resultInfo.Producer().Id(), analysisTime, geom_id, resultInfo.Param().Id(), levelinfo["id"],
+		    resultInfo.Level().Value(), levelValue2, util::MakeSQLInterval(resultInfo.Time()),
+		    static_cast<int>(resultInfo.ForecastType().Type()), forecastTypeValue, finfo.file_location, host,
+		    radonFileFormat, static_cast<int>(finfo.storage_type), HandleNULL(finfo.message_no),
+		    HandleNULL(finfo.offset), HandleNULL(finfo.length), agg_str, agg_period_str, pt_str, pt_value_str,
+		    pt_value2_str);
+	}
+	else
+	{
+		query = fmt::format(
+		    "INSERT INTO {} (producer_id, analysis_time, geometry_id, param_id, level_id, "
+		    "level_value, level_value2, forecast_period, forecast_type_id, forecast_type_value, "
+		    "file_location, file_server, file_format_id, file_protocol_id, message_no, byte_offset, "
+		    "byte_length) VALUES ({}, '{}', {}, {}, {}, {}, {}, '{}', {}, {}, '{}', '{}', {}, {}, {}, {}, "
+		    "{})",
+		    fullTableName, resultInfo.Producer().Id(), analysisTime, geom_id, resultInfo.Param().Id(), levelinfo["id"],
+		    resultInfo.Level().Value(), levelValue2, util::MakeSQLInterval(resultInfo.Time()),
+		    static_cast<int>(resultInfo.ForecastType().Type()), forecastTypeValue, finfo.file_location, host,
+		    radonFileFormat, static_cast<int>(finfo.storage_type), HandleNULL(finfo.message_no),
+		    HandleNULL(finfo.offset), HandleNULL(finfo.length));
+	}
 
 	if (dryRun)
 	{
-		itsLogger.Trace(query.str());
+		itsLogger.Trace(query);
 		return make_pair(true, radon_record(schema_name, table_name, partition_name, geom_name, stoi(geom_id)));
 	}
 
 	try
 	{
-		itsRadonDB->Execute(query.str());
+		itsRadonDB->Execute(query);
 		itsRadonDB->Commit();
 
 		// After first insert set record_count to 1, to mark that this partition has data
@@ -893,52 +1043,91 @@ pair<bool, radon_record> radon::SaveGrid(const info<T>& resultInfo, const file_i
 		{
 			itsLogger.Trace("Updating as_grid record_count column for " + fullTableName);
 
-			query.str("");
-			query << "UPDATE as_grid SET record_count = 1 WHERE schema_name = '" << schema_name
-			      << "' AND partition_name = '" << partition_name << "' AND analysis_time = '" << analysisTime << "'"
-			      << " AND producer_id = " << resultInfo.Producer().Id() << " AND geometry_id = " << geom_id;
+			query = fmt::format(
+			    "UPDATE as_grid SET record_count = 1 WHERE schema_name = '{}' AND partition_name = '{}' AND "
+			    "analysis_time = '{}' AND producer_id = {} AND geometry_id = {}",
+			    schema_name, partition_name, analysisTime, resultInfo.Producer().Id(), geom_id);
 
-			itsRadonDB->Execute(query.str());
+			itsRadonDB->Execute(query);
 		}
 	}
 	catch (const pqxx::unique_violation& e)
 	{
 		itsRadonDB->Rollback();
 
-		query.str("");
-		query << "UPDATE " << fullTableName << " SET "
-		      << "file_location = '" << finfo.file_location << "', "
-		      << "file_server = '" << host << "', "
-		      << "file_format_id = " << radonFileFormat << ", "
-		      << "file_protocol_id = " << finfo.storage_type << ", "
-		      << "message_no = " << FormatToSQL(finfo.message_no) << ", "
-		      << "byte_offset = " << FormatToSQL(finfo.offset) << ", "
-		      << "byte_length = " << FormatToSQL(finfo.length) << " WHERE "
-		      << "producer_id = " << resultInfo.Producer().Id() << " AND "
-		      << "analysis_time = '" << analysisTime << "' AND "
-		      << "geometry_id = " << geom_id << " AND "
-		      << "param_id = " << resultInfo.Param().Id() << " AND "
-		      << "level_id = " << levelinfo["id"] << " AND "
-		      << "level_value = " << resultInfo.Level().Value() << " AND "
-		      << "level_value2 = " << levelValue2 << " AND "
-		      << "forecast_period = "
-		      << "'" << util::MakeSQLInterval(resultInfo.Time()) << "' AND "
-		      << "forecast_type_id = " << static_cast<int>(resultInfo.ForecastType().Type()) << " AND "
-		      << "forecast_type_value = " << forecastTypeValue;
+		if (radonVersion >= 20241119)
+		{
+			const auto agg = resultInfo.Param().Aggregation();
+			const auto pt = resultInfo.Param().ProcessingType();
 
-		itsRadonDB->Execute(query.str());
+			auto agg_str = HandleNULL(HimanAggregationToRadonAggregation(agg.Type()));
+			auto agg_period_str = HandleNULL(agg.TimeDuration());
+			auto pt_str = HandleNULL(HimanProcessingTypeToRadonProcessingType(pt.Type()));
+			auto pt_value_str = HandleNULL(pt.Value());
+			auto pt_value2_str = HandleNULL(pt.Value2());
+
+			query = fmt::format(
+			    "UPDATE {} SET "
+			    "file_location = '{}', "
+			    "file_server = '{}', "
+			    "file_format_id = {}, "
+			    "file_protocol_id = {}, "
+			    "message_no = {}, "
+			    "byte_offset = {}, "
+			    "byte_length = {}, "
+			    "aggregation_id = {}, "
+			    "aggregation_period = {}, "
+			    "processing_type_id = {}, "
+			    "processing_type_value = {}, "
+			    "processing_type_value2 = {} WHERE "
+			    "producer_id = {} AND "
+			    "analysis_time = '{}' AND "
+			    "geometry_id = {} AND "
+			    "param_id = {} AND "
+			    "level_id = {} AND "
+			    "level_value = {} AND "
+			    "level_value2 = {} AND "
+			    "forecast_period = '{}' AND "
+			    "forecast_type_id = {} AND "
+			    "forecast_type_value = {}",
+			    fullTableName, finfo.file_location, host, radonFileFormat, static_cast<int>(finfo.storage_type),
+			    HandleNULL(finfo.message_no), HandleNULL(finfo.offset), HandleNULL(finfo.length), agg_str,
+			    agg_period_str, pt_str, pt_value_str, pt_value2_str, resultInfo.Producer().Id(), analysisTime, geom_id,
+			    resultInfo.Param().Id(), levelinfo["id"], resultInfo.Level().Value(), levelValue2,
+			    util::MakeSQLInterval(resultInfo.Time()), static_cast<int>(resultInfo.ForecastType().Type()),
+			    forecastTypeValue);
+		}
+		else
+		{
+			query = fmt::format(
+			    "UPDATE {} SET "
+			    "file_location = '{}', "
+			    "file_server = '{}', "
+			    "file_format_id = {}, "
+			    "file_protocol_id = {}, "
+			    "message_no = {}, "
+			    "byte_offset = {}, "
+			    "byte_length = {} WHERE "
+			    "producer_id = {} AND "
+			    "analysis_time = '{}' AND "
+			    "geometry_id = {} AND "
+			    "param_id = {} AND "
+			    "level_id = {} AND "
+			    "level_value = {} AND "
+			    "level_value2 = {} AND "
+			    "forecast_period = '{}' AND "
+			    "forecast_type_id = {} AND "
+			    "forecast_type_value = {}",
+			    fullTableName, finfo.file_location, host, radonFileFormat, static_cast<int>(finfo.storage_type),
+			    HandleNULL(finfo.message_no), HandleNULL(finfo.offset), HandleNULL(finfo.length),
+			    resultInfo.Producer().Id(), analysisTime, geom_id, resultInfo.Param().Id(), levelinfo["id"],
+			    resultInfo.Level().Value(), levelValue2, util::MakeSQLInterval(resultInfo.Time()),
+			    static_cast<int>(resultInfo.ForecastType().Type()), forecastTypeValue);
+		}
+
+		itsRadonDB->Execute(query);
 		itsRadonDB->Commit();
 	}
-
-	query.str("");
-	query << "Saved information on file '" << finfo.file_location << "'";
-
-	if (finfo.message_no)
-	{
-		query << " message no " << finfo.message_no.value();
-	}
-
-	itsLogger.Trace(query.str());
 
 	return make_pair(true, radon_record(schema_name, table_name, partition_name, geom_name, stoi(geom_id)));
 }

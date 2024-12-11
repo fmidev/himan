@@ -59,8 +59,11 @@ bool processing_type::operator==(const processing_type& other) const
 	                        (itsType == kProbabilityLessThan && other.itsType == kProbabilityLessThanOrEqual) ||
 	                        (itsType == kProbabilityLessThanOrEqual && other.itsType == kProbabilityLessThan));
 
-	const bool value1Match = fabs(itsValue - other.itsValue) < 0.0001;
-	const bool value2Match = fabs(itsValue2 - other.itsValue2) < 0.0001;
+	const bool value1Match = (!itsValue && !other.itsValue) ||
+	                         ((itsValue && other.itsValue) && fabs(itsValue.value() - other.itsValue.value()) < 0.0001);
+	const bool value2Match =
+	    (!itsValue2 && !other.itsValue2) ||
+	    ((itsValue2 && other.itsValue2) && fabs(itsValue2.value() - other.itsValue2.value()) < 0.0001);
 
 	// Disregard number of ensemble members in comparison, because that's not a
 	// defining element for a processing type. It's more like extra meta data.
@@ -80,8 +83,8 @@ bool processing_type::operator!=(const processing_type& other) const
 
 processing_type::operator std::string() const
 {
-	return HPProcessingTypeToString.at(itsType) + "/" + std::to_string(itsValue) + "/" + std::to_string(itsValue2) +
-	       "/" + std::to_string(itsNumberOfEnsembleMembers);
+	return fmt::format("{}/{}/{}/{}", HPProcessingTypeToString.at(itsType), itsValue.value_or(MissingDouble()),
+	                   itsValue2.value_or(MissingDouble()), itsNumberOfEnsembleMembers);
 }
 
 HPProcessingType processing_type::Type() const
@@ -99,7 +102,7 @@ void processing_type::Value(double theValue)
 	itsValue = theValue;
 }
 
-double processing_type::Value() const
+std::optional<double> processing_type::Value() const
 {
 	return itsValue;
 }
@@ -109,7 +112,7 @@ void processing_type::Value2(double theValue2)
 	itsValue2 = theValue2;
 }
 
-double processing_type::Value2() const
+std::optional<double> processing_type::Value2() const
 {
 	return itsValue2;
 }
@@ -130,8 +133,8 @@ std::ostream& processing_type::Write(std::ostream& file) const
 
 	file << "__itsType__ " << static_cast<int>(itsType) << " (" << HPProcessingTypeToString.at(itsType) << ")"
 	     << std::endl;
-	file << "__itsValue__ " << itsValue << std::endl;
-	file << "__itsValue2__ " << itsValue2 << std::endl;
+	file << "__itsValue__ " << itsValue.value_or(MissingDouble()) << std::endl;
+	file << "__itsValue2__ " << itsValue2.value_or(MissingDouble()) << std::endl;
 	file << "__itsNumberOfEnsembleMembers__ " << itsNumberOfEnsembleMembers << std::endl;
 
 	return file;

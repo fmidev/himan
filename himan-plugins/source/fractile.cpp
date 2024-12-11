@@ -64,19 +64,19 @@ void fractile::SetParams()
 	for (float frac : itsFractiles)
 	{
 		const auto name = fmt::format("F{}-{}", frac, paramName);
-		const auto pt = processing_type(kFractile, frac, kHPMissingValue, kHPMissingInt);
+		const auto pt = processing_type(kFractile, frac);
 		calculatedParams.emplace_back(name, agg, pt);
 	}
 
 	auto name = util::Split(paramName, "-");
 
 	param mean(name[0] + "-MEAN-" + name[1]);
-	mean.ProcessingType(processing_type(kEnsembleMean, kHPMissingInt, kHPMissingInt, kHPMissingInt));
+	mean.ProcessingType(processing_type(kMean));
 
 	calculatedParams.push_back(mean);
 
 	param stdev(name[0] + "-STDDEV-" + name[1]);
-	stdev.ProcessingType(processing_type(kStandardDeviation, kHPMissingInt, kHPMissingInt, kHPMissingInt));
+	stdev.ProcessingType(processing_type(kStandardDeviation));
 
 	calculatedParams.push_back(stdev);
 

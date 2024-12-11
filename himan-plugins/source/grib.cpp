@@ -95,6 +95,14 @@ long DetermineProductDefinitionTemplateNumber(long agg, long proc, long ftype)
 			case kProbabilityEquals:
 			case kProbabilityNotEquals:
 			case kProbabilityEqualsIn:
+			case kAreaProbabilityGreaterThan:
+			case kAreaProbabilityLessThan:
+			case kAreaProbabilityGreaterThanOrEqual:
+			case kAreaProbabilityLessThanOrEqual:
+			case kAreaProbabilityBetween:
+			case kAreaProbabilityEquals:
+			case kAreaProbabilityNotEquals:
+			case kAreaProbabilityEqualsIn:
 				// probabilities
 				templateNumber =
 				    5;  // Probability forecasts at a horizontal level or in a horizontal layer at a point in time
@@ -142,6 +150,14 @@ long DetermineProductDefinitionTemplateNumber(long agg, long proc, long ftype)
 			case kProbabilityEquals:
 			case kProbabilityNotEquals:
 			case kProbabilityEqualsIn:
+			case kAreaProbabilityGreaterThan:
+			case kAreaProbabilityLessThan:
+			case kAreaProbabilityGreaterThanOrEqual:
+			case kAreaProbabilityLessThanOrEqual:
+			case kAreaProbabilityBetween:
+			case kAreaProbabilityEquals:
+			case kAreaProbabilityNotEquals:
+			case kAreaProbabilityEqualsIn:
 				// probabilities
 				templateNumber = 9;  //  Probability forecasts at a horizontal level or in a horizontal layer in a
 				                     //  continuous or non-continuous time interval
@@ -1088,65 +1104,82 @@ void WriteParameter(NFmiGribMessage& message, const param& par, const producer& 
 			return;
 		}
 
+		/*
+		 * Note: there is some signal that probabilites with area aggregation are making their
+		 * way into grib2 standard but as of 20241216 they are not the yet.
+		 *
+		 * https://www.nco.ncep.noaa.gov/pmb/docs/grib2/grib2_doc/grib2_table4-0.shtml
+		 * - number 121
+		 */
+
 		switch (procType)
 		{
 			default:
 				break;
 			case kProbabilityGreaterThan:  // Probability of event above upper limit
 			case kProbabilityGreaterThanOrEqual:
+			case kAreaProbabilityGreaterThan:
+			case kAreaProbabilityGreaterThanOrEqual:
 			{
 				message.SetLongKey("probabilityType", 1);
-				auto s = util::GetScaledValue(par.ProcessingType().Value());
+				auto s = util::GetScaledValue(par.ProcessingType().Value().value_or(MissingDouble()));
 				message.SetLongKey("scaledValueOfUpperLimit", s.first);
 				message.SetLongKey("scaleFactorOfUpperLimit", s.second);
 				break;
 			}
 			case kProbabilityLessThan:  // Probability of event below lower limit
 			case kProbabilityLessThanOrEqual:
+			case kAreaProbabilityLessThan:
+			case kAreaProbabilityLessThanOrEqual:
 			{
 				message.SetLongKey("probabilityType", 0);
-				auto s = util::GetScaledValue(par.ProcessingType().Value());
+				auto s = util::GetScaledValue(par.ProcessingType().Value().value_or(MissingDouble()));
 				message.SetLongKey("scaledValueOfLowerLimit", s.first);
 				message.SetLongKey("scaleFactorOfLowerLimit", s.second);
 				break;
 			}
 			case kProbabilityBetween:
+			case kAreaProbabilityBetween:
 			{
 				message.SetLongKey("probabilityType", 192);
-				auto s = util::GetScaledValue(par.ProcessingType().Value());
+				auto s = util::GetScaledValue(par.ProcessingType().Value().value_or(MissingDouble()));
 				message.SetLongKey("scaledValueOfLowerLimit", s.first);
 				message.SetLongKey("scaleFactorOfLowerLimit", s.second);
-				s = util::GetScaledValue(par.ProcessingType().Value2());
+				s = util::GetScaledValue(par.ProcessingType().Value2().value_or(MissingDouble()));
 				message.SetLongKey("scaledValueOfUpperLimit", s.first);
 				message.SetLongKey("scaleFactorOfUpperLimit", s.second);
 				break;
 			}
 			case kProbabilityEquals:
+			case kAreaProbabilityEquals:
 			{
 				message.SetLongKey("probabilityType", 193);
-				auto s = util::GetScaledValue(par.ProcessingType().Value());
+				auto s = util::GetScaledValue(par.ProcessingType().Value().value_or(MissingDouble()));
 				message.SetLongKey("scaledValueOfLowerLimit", s.first);
 				message.SetLongKey("scaleFactorOfLowerLimit", s.second);
 				break;
 			}
 			case kProbabilityNotEquals:
+			case kAreaProbabilityNotEquals:
 			{
 				message.SetLongKey("probabilityType", 193);
-				auto s = util::GetScaledValue(par.ProcessingType().Value());
+				auto s = util::GetScaledValue(par.ProcessingType().Value().value_or(MissingDouble()));
 				message.SetLongKey("scaledValueOfLowerLimit", s.first);
 				message.SetLongKey("scaleFactorOfLowerLimit", s.second);
 				break;
 			}
 			case kProbabilityEqualsIn:
+			case kAreaProbabilityEqualsIn:
 				message.SetLongKey("probabilityType", 194);
 				break;
 			case kProbability:
 				message.SetLongKey("probabilityType", 195);
 				break;
 			case kFractile:
-				message.SetLongKey("percentileValue", static_cast<long>(par.ProcessingType().Value()));
+				message.SetLongKey("percentileValue",
+				                   static_cast<long>(par.ProcessingType().Value().value_or(MissingDouble())));
 				break;
-			case kEnsembleMean:
+			case kMean:
 				message.SetLongKey("derivedForecast", 0);
 				message.SetLongKey("numberOfForecastsInEnsemble", num);
 				break;
@@ -2302,7 +2335,7 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 		{
 			case 0:  // Unweighted Mean of All Members
 			case 1:  // Weighted Mean of All Members
-				pt.Type(kEnsembleMean);
+				pt.Type(kMean);
 				break;
 			case 2:  // Standard Deviation with respect to Cluster Mean
 				pt.Type(kStandardDeviation);
@@ -2371,7 +2404,7 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 			{
 				switch (pt.Type())
 				{
-					case kEnsembleMean:
+					case kMean:
 						effective_tosp = 0;
 						break;
 					case kStandardDeviation:
