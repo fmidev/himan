@@ -4,6 +4,7 @@
  */
 
 #include "raw_time.h"
+#include "logger.h"
 #include <fmt/chrono.h>
 #include <mutex>
 
@@ -146,7 +147,8 @@ std::string raw_time::FormatTime(const std::string& theTimeMask) const
 	}
 	catch (const std::exception& e)
 	{
-		fmt::print("{}\n", e.what());
+		logger logr("raw_time");
+		logr.Fatal(fmt::format("{}, mask={}", e.what(), theTimeMask));
 		himan::Abort();
 	}
 }
@@ -215,7 +217,8 @@ std::string raw_time::ToDatabaseTime() const
 	}
 	catch (const std::exception& e)
 	{
-		fmt::print("{}\n", e.what());
+		logger logr("raw_time");
+		logr.Fatal(fmt::format("{}, mask={}", e.what(), "%Y%m%d%H%M"));
 		himan::Abort();
 	}
 }
@@ -241,7 +244,8 @@ std::string raw_time::ToSQLTime() const
 	}
 	catch (const std::exception& e)
 	{
-		fmt::print("{}\n", e.what());
+		logger logr("raw_time");
+		logr.Fatal(fmt::format("{},  mask={}", e.what(), "%Y-%m-%d %H:%M:%S"));
 		himan::Abort();
 	}
 }
@@ -255,7 +259,8 @@ std::string raw_time::ToDate() const
 	}
 	catch (const std::exception& e)
 	{
-		fmt::print("{}\n", e.what());
+		logger logr("raw_time");
+		logr.Fatal(fmt::format("{}, mask={}", e.what(), "%Y%m%d"));
 		himan::Abort();
 	}
 }
@@ -268,7 +273,8 @@ std::string raw_time::ToTime() const
 	}
 	catch (const std::exception& e)
 	{
-		fmt::print("{}\n", e.what());
+		logger logr("raw_time");
+		logr.Fatal(fmt::format("{}, mask={}", e.what(), "%H%M%S"));
 		himan::Abort();
 	}
 }
