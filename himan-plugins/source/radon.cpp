@@ -31,15 +31,7 @@ void radon::Init()
 			    oflag,
 			    [&]()
 			    {
-				    string radonHost = "vorlon";
-
-				    try
-				    {
-					    radonHost = util::GetEnv("RADON_HOSTNAME");
-				    }
-				    catch (...)
-				    {
-				    }
+				    string radonHost = util::GetEnv("RADON_HOSTNAME");
 
 				    string radonName = "radon";
 
