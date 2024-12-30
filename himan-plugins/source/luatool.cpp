@@ -339,11 +339,27 @@ void BindEnum(lua_State* L)
 				 value("kProbabilityNotEquals", kProbabilityNotEquals),
 				 value("kProbabilityEqualsIn", kProbabilityEqualsIn),
 				 value("kFractile", kFractile),
-				 value("kEnsembleMean", kEnsembleMean),
+				 value("kMean", kMean),
 				 value("kSpread", kSpread),
 				 value("kStandardDeviation", kStandardDeviation),
 				 value("kEFI", kEFI),
-				 value("kProbability", kProbability)],
+				 value("kProbability", kProbability),
+				 value("kAreaProbabilityGreaterThanOrEqual", kAreaProbabilityGreaterThanOrEqual),
+				 value("kAreaProbabilityGreaterThan", kAreaProbabilityGreaterThan),
+				 value("kAreaProbabilityLessThanOrEqual", kAreaProbabilityLessThanOrEqual),
+				 value("kAreaProbabilityLessThan", kAreaProbabilityLessThan),
+				 value("kAreaProbabilityBetween", kAreaProbabilityBetween),
+				 value("kAreaProbabilityEquals", kAreaProbabilityEquals),
+				 value("kAreaProbabilityNotEquals", kAreaProbabilityNotEquals),
+				 value("kAreaProbabilityEqualsIn", kAreaProbabilityEqualsIn),
+				 value("kBiasCorrection", kBiasCorrection),
+				 value("kFiltered", kFiltered),
+				 value("kDetrend", kDetrend),
+				 value("kAnomaly", kAnomaly),
+				 value("kNormalized", kNormalized),
+				 value("kClimatology", kClimatology),
+				 value("kCategorized", kCategorized),
+				 value("kPercentChange", kPercentChange)],
 	     class_<HPModifierType>("HPModifierType")
 	         .enum_("constants")
 	             [
@@ -1639,9 +1655,9 @@ void BindLib(lua_State* L)
 	              .def("ClassName", &processing_type::ClassName)
 	              .def("GetType", LUA_CMEMFN(HPProcessingType, processing_type, Type, void))
 	              .def("SetType", LUA_MEMFN(void, processing_type, Type, HPProcessingType))
-	              .def("GetValue", LUA_CMEMFN(double, processing_type, Value, void))
+	              .def("GetValue", LUA_CMEMFN(std::optional<double>, processing_type, Value, void))
 	              .def("SetValue", LUA_MEMFN(void, processing_type, Value, double))
-	              .def("GetValue2", LUA_CMEMFN(double, processing_type, Value2, void))
+	              .def("GetValue2", LUA_CMEMFN(std::optional<double>, processing_type, Value2, void))
 	              .def("SetValue2", LUA_MEMFN(void, processing_type, Value2, double))
 	              .def("GetNumberOfEnsembleMembers", LUA_CMEMFN(int, processing_type, NumberOfEnsembleMembers, void))
 	              .def("SetNumberOfEnsembleMembers", LUA_MEMFN(void, processing_type, NumberOfEnsembleMembers, int)),

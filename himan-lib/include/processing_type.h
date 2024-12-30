@@ -15,38 +15,70 @@ namespace himan
 enum HPProcessingType
 {
 	kUnknownProcessingType = 0,
-	kProbabilityGreaterThan,
 	kProbabilityGreaterThanOrEqual,
-	kProbabilityLessThan,
+	kProbabilityGreaterThan,
 	kProbabilityLessThanOrEqual,
-	kProbabilityBetween,
+	kProbabilityLessThan,
 	kProbabilityEquals,
-	kProbabilityNotEquals,
 	kProbabilityEqualsIn,
+	kProbabilityBetween,
+	kProbabilityNotEquals,
 	kFractile,
-	kEnsembleMean,  // to differ from aggregation 'average'
+	kMean,
 	kSpread,
 	kStandardDeviation,
 	kEFI,
-	kProbability  // a general 'probability', when the processing is more complicated than just checking a treshold
+	kProbability,  // a general 'probability', when the processing is more complicated than just checking a treshold
+	kAreaProbabilityGreaterThanOrEqual,
+	kAreaProbabilityGreaterThan,
+	kAreaProbabilityLessThanOrEqual,
+	kAreaProbabilityLessThan,
+	kAreaProbabilityBetween,
+	kAreaProbabilityEquals,
+	kAreaProbabilityNotEquals,
+	kAreaProbabilityEqualsIn,
+	kBiasCorrection,
+	kFiltered,
+	kDetrend,
+	kAnomaly,
+	kNormalized,
+	kClimatology,
+	kCategorized,
+	kPercentChange
 };
 
 const std::unordered_map<HPProcessingType, std::string> HPProcessingTypeToString = {
     {kUnknownProcessingType, "unknown"},
-    {kProbabilityGreaterThan, "probability greater than"},
     {kProbabilityGreaterThanOrEqual, "probability greater than or equal"},
-    {kProbabilityLessThan, "probability less than"},
+    {kProbabilityGreaterThan, "probability greater than"},
     {kProbabilityLessThanOrEqual, "probability less than or equal"},
-    {kProbabilityBetween, "probability between"},
+    {kProbabilityLessThan, "probability less than"},
     {kProbabilityEquals, "probability equals"},
-    {kProbabilityNotEquals, "probability not equals"},
+    {kProbabilityBetween, "probability between"},
     {kProbabilityEqualsIn, "probability equals in"},
+    {kProbabilityNotEquals, "probability not equals"},
     {kFractile, "fractile"},
-    {kEnsembleMean, "ensemble mean"},
+    {kMean, "mean"},
     {kSpread, "spread"},
     {kStandardDeviation, "standard deviation"},
     {kEFI, "efi"},
-    {kProbability, "probability"}};
+    {kProbability, "probability"},
+    {kAreaProbabilityGreaterThanOrEqual, "area probability greater than or equal"},
+    {kAreaProbabilityGreaterThan, "area probability greater than"},
+    {kAreaProbabilityLessThanOrEqual, "area probability less than or equal"},
+    {kAreaProbabilityLessThan, "area probability less than"},
+    {kAreaProbabilityEquals, "area probability equals"},
+    {kAreaProbabilityBetween, "area probability between"},
+    {kAreaProbabilityEqualsIn, "area probability equals in"},
+    {kAreaProbabilityNotEquals, "area probability not equals"},
+    {kBiasCorrection, "bias correction"},
+    {kFiltered, "filtered"},
+    {kDetrend, "detrend"},
+    {kAnomaly, "anomaly"},
+    {kNormalized, "normalized"},
+    {kClimatology, "climatology"},
+    {kCategorized, "categorized"},
+    {kPercentChange, "percent change"}};
 
 const std::unordered_map<std::string, HPProcessingType> HPStringToProcessingType = {
     {"unknown", kUnknownProcessingType},
@@ -59,11 +91,27 @@ const std::unordered_map<std::string, HPProcessingType> HPStringToProcessingType
     {"probability not equals", kProbabilityNotEquals},
     {"probability equals in", kProbabilityEqualsIn},
     {"fractile", kFractile},
-    {"ensemble mean", kEnsembleMean},
+    {"mean", kMean},
     {"spread", kSpread},
     {"standard deviation", kStandardDeviation},
     {"efi", kEFI},
-    {"probability", kProbability}};
+    {"probability", kProbability},
+    {"area probability greater than", kAreaProbabilityGreaterThan},
+    {"area probability greater than or equal", kAreaProbabilityGreaterThanOrEqual},
+    {"area probability less than", kAreaProbabilityLessThan},
+    {"area probability less than or equal", kAreaProbabilityLessThanOrEqual},
+    {"area probability between", kAreaProbabilityBetween},
+    {"area probability equals", kAreaProbabilityEquals},
+    {"area probability not equals", kAreaProbabilityNotEquals},
+    {"area probability equals in", kAreaProbabilityEqualsIn},
+    {"bias correction", kBiasCorrection},
+    {"filtered", kFiltered},
+    {"detrend", kDetrend},
+    {"anomaly", kAnomaly},
+    {"normalized", kNormalized},
+    {"climatology", kClimatology},
+    {"categorized", kCategorized},
+    {"percent change", kPercentChange}};
 
 class processing_type
 {
@@ -91,10 +139,10 @@ class processing_type
 	HPProcessingType Type() const;
 	void Type(HPProcessingType theType);
 
-	double Value() const;
+	std::optional<double> Value() const;
 	void Value(double theValue);
 
-	double Value2() const;
+	std::optional<double> Value2() const;
 	void Value2(double theValue2);
 
 	/**
@@ -108,8 +156,8 @@ class processing_type
 
    private:
 	HPProcessingType itsType = kUnknownProcessingType;
-	double itsValue = kHPMissingValue;
-	double itsValue2 = kHPMissingValue;
+	std::optional<double> itsValue;
+	std::optional<double> itsValue2;
 
 	int itsNumberOfEnsembleMembers = kHPMissingInt;
 

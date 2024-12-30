@@ -52,7 +52,7 @@ void AmendParamWithAggregationAndProcessingType(param& p, const forecast_time& f
 	{
 		p.ProcessingType(util::GetProcessingTypeFromParamName(p.Name()));
 	}
-	if (p.Aggregation().Type() == kUnknownAggregationType && p.ProcessingType().Type() != kEnsembleMean)
+	if (p.Aggregation().Type() == kUnknownAggregationType && p.ProcessingType().Type() != kMean)
 	{
 		p.Aggregation(util::GetAggregationFromParamName(p.Name(), ftime));
 	}
