@@ -9,6 +9,7 @@
 
 #include "himan_common.h"
 #include "serialization.h"
+#include <optional>
 
 namespace himan
 {
