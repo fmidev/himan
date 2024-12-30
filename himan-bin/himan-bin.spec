@@ -49,6 +49,12 @@ BuildRequires: cuda-nvcc-12-4
 BuildRequires: cuda-cudart-devel-12-4
 BuildRequires: make
 BuildRequires: python3-distro
+BuildRequires: libfmidb-devel
+BuildRequires: libfmigrib-devel
+BuildRequires: gdal38-devel
+BuildRequires: zlib-devel
+BuildRequires: bzip2-devel
+BuildRequires: himan-lib
 Provides: himan
 
 AutoReqProv:	no
