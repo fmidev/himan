@@ -114,7 +114,9 @@ jobs:
       if: needs.check-if-himan-bin-changed.outputs.changed == 'true'
       shell: bash
       run: |
-        cd himan-bin
+        cd himan-lib
+        yum-builddep -y himan-lib.spec --nobest
+        cd ../himan-bin
         yum-builddep -y himan-bin.spec
         make rpm
     - name: Build himan-plugins rpm

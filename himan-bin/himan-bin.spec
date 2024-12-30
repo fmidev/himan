@@ -54,7 +54,6 @@ BuildRequires: libfmigrib-devel
 BuildRequires: gdal38-devel
 BuildRequires: zlib-devel
 BuildRequires: bzip2-devel
-BuildRequires: himan-lib
 Provides: himan
 
 AutoReqProv:	no
