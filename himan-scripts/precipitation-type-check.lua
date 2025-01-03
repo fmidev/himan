@@ -1,40 +1,45 @@
-logger:Info("Precipitation type check for Vire data")
+-- Precipitation form check for Vire data
+--
+-- Changes the form value based on 2 meter temperature value
 
-par_prec = param('PRECFORM2-N')
-par_t = param('T-K')
+local par_prec = param('PRECFORM2-N')
+local par_t = param('T-K')
 
-ftype = forecast_type(HPForecastType.kDeterministic)
-l0 = level(HPLevelType.kHeight, 0)
-l2 = level(HPLevelType.kHeight, 2)
+local l0 = level(HPLevelType.kHeight, 0)
+local l2 = level(HPLevelType.kHeight, 2)
 
-prec = luatool:Fetch(current_time, l0, par_prec, ftype)
-t = luatool:Fetch(current_time, l2, par_t, ftype)
-
+local prec = luatool:Fetch(current_time, l0, par_prec, current_forecast_type)
+local t = luatool:Fetch(current_time, l2, par_t, current_forecast_type)
 
 for i=1, #prec do
     t[i] = t[i] - 273.15
+    -- freezing to rain
     if (prec[i] == 4 or prec[i] == 5) and t[i] > 0 then
         prec[i] = 1
     end
+    -- freezing to snow
     if (prec[i] == 4 or prec[i] == 5) and t[i] < -10 then
         prec[i] = 3
     end
-    if (prec[i] == 1 or prec[i] == 0 or prec[i] == 2) and t[i] < - 0.5 then
+    -- drizzle, rain, sleet to snow
+    if (prec[i] == 1 or prec[i] == 0 or prec[i] == 2) and t[i] < -0.5 then
         prec[i] = 3
     end
-    if (prec[i] == 1 or prec[i] == 0) and (t[i] > 0.5 and t[i] <= 1.5) then
+    -- drizzle, rain to sleet
+    if (prec[i] == 1 or prec[i] == 0) and (t[i] > -0.5 and t[i] <= 1.5) then
         prec[i] = 2
     end
+    -- snow to sleet
     if prec[i] == 3 and t[i] > 1 then
         prec[i] = 2
     end
+    -- snow, sleet to rain
     if (prec[i] == 2 or prec[i] == 3) and t[i] > 1.5 then
         prec[i] = 1
     end
 end
 
-
-result:SetParam(param("PRECFORM-N"))
+result:SetParam(param("PRECFORM2-N"))
 result:SetValues(prec)
 
 luatool:WriteToFile(result)
