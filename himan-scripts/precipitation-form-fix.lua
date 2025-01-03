@@ -11,6 +11,10 @@ local l2 = level(HPLevelType.kHeight, 2)
 local prec = luatool:Fetch(current_time, l0, par_prec, current_forecast_type)
 local t = luatool:Fetch(current_time, l2, par_t, current_forecast_type)
 
+if not prec or not t then
+    return
+end
+
 for i=1, #prec do
     t[i] = t[i] - 273.15
     -- freezing to rain
