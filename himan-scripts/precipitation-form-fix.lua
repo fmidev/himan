@@ -3,6 +3,11 @@
 -- Changes the form value based on 2 meter temperature value
 
 local par_prec = param('PRECFORM2-N')
+
+if configuration:Exists("param") then
+  par_prec = param(configuration:GetValue("param"))
+end
+
 local par_t = param('T-K')
 
 local l0 = level(HPLevelType.kHeight, 0)
