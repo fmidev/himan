@@ -48,7 +48,7 @@ for i=1, #prec do
     end
 end
 
-result:SetParam(param("PRECFORM2-N"))
+result:SetParam(par_prec)
 result:SetValues(prec)
 
 luatool:WriteToFile(result)
