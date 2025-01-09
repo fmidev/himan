@@ -104,8 +104,13 @@ std::ostream& configuration::Write(std::ostream& file) const
 {
 	file << "<" << ClassName() << ">" << std::endl;
 
+	file << "__itsTargetProducer__" << std::endl;
 	file << itsTargetProducer;
-
+	file << "__itsSourceProducers__ " << itsSourceProducers.size() << std::endl;
+	for (size_t i = 0; i < itsSourceProducers.size(); i++)
+	{
+		file << itsSourceProducers[i];
+	}
 	file << "__itsOutputFileType__ " << HPFileTypeToString.at(itsOutputFileType) << std::endl;
 	file << "__itsWriteMode__ " << HPWriteModeToString.at(itsWriteMode) << std::endl;
 	file << "__itsFileCompression__ " << HPFileCompressionToString.at(itsFileCompression) << std::endl;
