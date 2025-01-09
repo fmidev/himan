@@ -278,7 +278,8 @@ shared_ptr<info<T>> fetcher::Fetch(shared_ptr<const plugin_configuration> config
 				const auto uName = UniqueName(prod, requestedParam, requestedLevel);
 
 				lock_guard<mutex> lock(stickyMutex);
-				if (find(stickyParamCache.begin(), stickyParamCache.end(), uName) == stickyParamCache.end())
+				if (config->UseCacheForReads() &&
+				    find(stickyParamCache.begin(), stickyParamCache.end(), uName) == stickyParamCache.end())
 				{
 					itsLogger.Trace("Updating sticky param cache: " + UniqueName(opts.prod, opts.param, opts.level));
 					stickyParamCache.push_back(uName);
