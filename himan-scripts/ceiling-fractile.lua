@@ -54,16 +54,11 @@ function write_fractile(fractile, par)
   luatool:WriteToFile(result)
 end
 
-
+producer = configuration:GetTargetProducer()
 local ens = nil
-
-
-
-
-local producer = configuration:GetSourceProducer(0)
 local ensSize = nil
 
-if producer:GetId() == 243 then 
+if producer:GetId() == 242 then 
   ens = ensemble(param("CEIL-2-M"), 51, 250)
 else 
   ensSize = tonumber(radon:GetProducerMetaData(producer, "ensemble size"))
