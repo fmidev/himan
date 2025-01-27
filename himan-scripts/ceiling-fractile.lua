@@ -51,6 +51,8 @@ end
 function write_fractile(fractile, par)
   result:SetValues(fractile)
   result:SetParam(par)
+  result:SetForecastType(forecast_type(HPForecastType.kStatisticalProcessing))
+
   luatool:WriteToFile(result)
 end
 
