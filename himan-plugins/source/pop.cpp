@@ -13,33 +13,46 @@
 #include "fetcher.h"
 
 using namespace std;
+using namespace himan;
 using namespace himan::plugin;
 
-himan::raw_time RoundOriginTime(const himan::raw_time& start, int producerId)
+const static param p1_e("PROB-RR1-1", aggregation(kAccumulation, ONE_HOUR),
+                        processing_type(kProbabilityGreaterThan, 0.14));  // ECMWF(1h) RR>0.14mm
+const static param p1_m("PROB-RR-7", aggregation(kAccumulation, ONE_HOUR),
+                        processing_type(kProbabilityGreaterThan, 0.025));  // MEPS(1h) RR>0.025mm
+const static param p3("PROB-RR3-6", aggregation(kAccumulation, THREE_HOURS),
+                      processing_type(kProbabilityGreaterThan, 0.2));  // EC(3h) RR>0.2mm
+const static param p6("PROB-RR-4", aggregation(kAccumulation, SIX_HOURS),
+                      processing_type(kProbabilityGreaterThan, 0.4));  // EC(6h) RR>0.4mm
+
+const static producer MEPSprod(260, 86, 204, "MEPSMTA");
+const static producer ECprod(242, 86, 242, "ECGEPSMTA");
+
+raw_time RoundOriginTime(const raw_time& start, int producerId)
 {
-	himan::raw_time ret = start;
+	raw_time ret = start;
 	const int hour = stoi(start.String("%H"));
 	const int ostep = (producerId == 242) ? 12 : 3;  // origin time "step"
 	const int adjust = hour % ostep;
 
-	ret.Adjust(himan::kHourResolution, -adjust);
+	ret.Adjust(kHourResolution, -adjust);
 
 	return ret;
 }
 
-himan::raw_time GetOriginTime(const himan::raw_time& start, int producerId)
+raw_time GetOriginTime(const raw_time& start, int producerId)
 {
-	himan::raw_time ret = start;
+	raw_time ret = start;
 	const int adjust = (producerId == 242) ? 12 : 3;  // origin time "step"
 
-	ret.Adjust(himan::kHourResolution, -adjust);
+	ret.Adjust(kHourResolution, -adjust);
 	return ret;
 }
 
-himan::raw_time GetValidTime(const himan::raw_time& start)
+raw_time GetValidTime(const raw_time& start)
 {
-	himan::raw_time ret = start;
-	ret -= himan::ONE_HOUR;
+	raw_time ret = start;
+	ret -= ONE_HOUR;
 
 	return ret;
 }
@@ -77,11 +90,12 @@ void pop::Process(std::shared_ptr<const plugin_configuration> conf)
 	Start();
 }
 
-shared_ptr<himan::info<double>> pop::GetShortProbabilityData(const himan::forecast_time& forecastTime,
-                                                             const level& forecastLevel, logger& logr)
+shared_ptr<info<double>> pop::GetShortProbabilityData(const forecast_time& forecastTime, const level& forecastLevel,
+                                                      logger& logr)
 {
 	shared_ptr<info<double>> ret = nullptr;
 
+	forecast_type ft(kStatisticalProcessing);
 	if (itsUseMEPS)
 	{
 		logr.Info("Fetching MEPS");
@@ -91,17 +105,12 @@ shared_ptr<himan::info<double>> pop::GetShortProbabilityData(const himan::foreca
 		forecast_time curTime =
 		    forecast_time(RoundOriginTime(forecastTime.OriginDateTime(), 260), forecastTime.ValidDateTime());
 
-		const param p("PROB-RR-7", aggregation(kAccumulation, ONE_HOUR),
-		              processing_type(kProbabilityGreaterThan, 0.025));  // MEPS(1h) RR>0.025mm
-		const producer MEPSprod(260, 86, 204, "MEPSMTA");
 		do
 		{
-			ret =
-			    Fetch(curTime, forecastLevel, p, forecast_type(kStatisticalProcessing), {itsMEPSGeom}, MEPSprod, false);
-			tryNo++;
+			ret = Fetch(curTime, forecastLevel, p1_m, ft, {itsMEPSGeom}, MEPSprod, false);
 			curTime = forecast_time(GetOriginTime(curTime.OriginDateTime(), 260), curTime.ValidDateTime());
 
-		} while (tryNo < 3 && !ret);
+		} while (++tryNo < 3 && !ret);
 	}
 	else
 	{
@@ -112,25 +121,46 @@ shared_ptr<himan::info<double>> pop::GetShortProbabilityData(const himan::foreca
 		forecast_time curTime =
 		    forecast_time(RoundOriginTime(forecastTime.OriginDateTime(), 242), forecastTime.ValidDateTime());
 
-		const param p("PROB-RR1-1", aggregation(kAccumulation, ONE_HOUR),
-		              processing_type(kProbabilityGreaterThan, 0.14));  // ECMWF(1h) RR>0.14mm
-		const producer ECprod(242, 86, 242, "ECGEPSMTA");
+		do
+		{
+			ret = Fetch(curTime, forecastLevel, p1_e, ft, {itsECEPSGeom}, ECprod, false);
+			curTime = forecast_time(GetOriginTime(curTime.OriginDateTime(), 242), curTime.ValidDateTime());
+
+		} while (++tryNo < 2 && !ret);
+
+		// Backup solution: try to fetch 3h probability data if 1h data is not available.
+		// This is far from optimal, but better than nothing.
+
+		logr.Info("Fetching 3h probability data as backup solution");
+		tryNo = 0;
+		curTime = forecast_time(RoundOriginTime(forecastTime.OriginDateTime(), 242), forecastTime.ValidDateTime());
+		do
+		{
+			ret = Fetch(curTime, forecastLevel, p3, ft, {itsECEPSGeom}, ECprod, false);
+			curTime.ValidDateTime() -=
+			    ONE_HOUR;
+
+		} while (++tryNo < 3 && !ret);
+
+		// Did not find using the latest forecast time, try the previous one to be sure
+		tryNo = 0;
+
+		curTime = forecast_time(GetOriginTime(curTime.OriginDateTime(), 242), forecastTime.ValidDateTime());
 
 		do
 		{
-			ret =
-			    Fetch(curTime, forecastLevel, p, forecast_type(kStatisticalProcessing), {itsECEPSGeom}, ECprod, false);
-			tryNo++;
-			curTime = forecast_time(GetOriginTime(curTime.OriginDateTime(), 242), curTime.ValidDateTime());
+			ret = Fetch(curTime, forecastLevel, p3, ft, {itsECEPSGeom}, ECprod, false);
+			curTime.ValidDateTime() -=
+			    ONE_HOUR;
 
-		} while (tryNo < 2 && !ret);
+		} while (++tryNo < 3 && !ret);
 	}
 
 	return ret;
 }
 
-std::shared_ptr<himan::info<double>> pop::GetLongProbabilityData(const himan::forecast_time& forecastTime,
-                                                                 const level& forecastLevel, logger& logr)
+std::shared_ptr<info<double>> pop::GetLongProbabilityData(const forecast_time& forecastTime, const level& forecastLevel,
+                                                          logger& logr)
 
 {
 	// Fetch either 3h or 6h probability data, depending on the leadtime in question.
@@ -141,12 +171,6 @@ std::shared_ptr<himan::info<double>> pop::GetLongProbabilityData(const himan::fo
 	// 3h probability for leadtimes those are not available (> 144h). In this case we
 	// should continue with 6h probability.
 
-	const param p3("PROB-RR3-6", aggregation(kAccumulation, THREE_HOURS),
-	               processing_type(kProbabilityGreaterThan, 0.2));  // EC(3h) RR>0.2mm
-
-	const param p6("PROB-RR-4", aggregation(kAccumulation, SIX_HOURS),
-	               processing_type(kProbabilityGreaterThan, 0.4));  // EC(6h) RR>0.4mm
-
 	shared_ptr<info<double>> ret = nullptr;
 
 	// origin time counter
@@ -155,7 +179,6 @@ std::shared_ptr<himan::info<double>> pop::GetLongProbabilityData(const himan::fo
 	forecast_time curTime =
 	    forecast_time(RoundOriginTime(forecastTime.OriginDateTime(), 242), forecastTime.ValidDateTime());
 
-	const producer ECprod(242, 86, 242, "ECGEPSMTA");
 	const forecast_type ftype(kStatisticalProcessing);
 
 	auto f = GET_PLUGIN(fetcher);
@@ -174,10 +197,9 @@ std::shared_ptr<himan::info<double>> pop::GetLongProbabilityData(const himan::fo
 		const param& p = (step <= 144) ? p3 : p6;
 		ret = f->Fetch<double>(cnf, curTime, forecastLevel, p, ftype, false, true, false, true);
 
-		otryNo++;
 		curTime = forecast_time(GetOriginTime(curTime.OriginDateTime(), 242), forecastTime.ValidDateTime());
 
-	} while (otryNo < 2 && !ret);
+	} while (++otryNo < 2 && !ret);
 
 	return ret;
 }
@@ -312,7 +334,7 @@ void pop::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 	// x x x x x
 	// x x x x x
 
-	const himan::matrix<double> filter_kernel(5, 5, 1, MissingDouble(), 1 / 25.);
+	const matrix<double> filter_kernel(5, 5, 1, MissingDouble(), 1 / 25.);
 
 	const auto smoothened =
 	    numerical_functions::Filter2D<double>(myTargetInfo->Data(), filter_kernel, itsConfiguration->UseCuda());
