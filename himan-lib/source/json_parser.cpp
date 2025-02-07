@@ -18,6 +18,7 @@
 #include <boost/property_tree/json_parser.hpp>
 #include <map>
 #include <ogr_spatialref.h>
+#include <regex>
 #include <set>
 #include <stdexcept>
 #include <utility>
@@ -487,6 +488,19 @@ void CheckCommonOptions(const boost::property_tree::ptree& pt, shared_ptr<config
 	CheckConsistency(conf);
 }
 
+string ReadValue(const string& value)
+{
+	const regex pattern(R"(\{env:([A-Za-z0-9_]+)\})");
+	smatch match;
+
+	if (regex_search(value, match, pattern))
+	{
+		return util::GetEnv(match[1]);
+	}
+
+	return value;
+}
+
 vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(shared_ptr<configuration> conf)
 {
 	itsLogger.Trace("Parsing configuration file '" + conf->ConfigurationFileName() + "'");
@@ -582,7 +596,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 				try
 				{
-					value = kv.second.get<string>("");
+					value = ReadValue(kv.second.get<string>(""));
 				}
 				catch (...)
 				{

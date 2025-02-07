@@ -363,6 +363,13 @@ Example:
       { "name" : "windvector", "for_air" : true } 
     ]
 
+Some plugins support additional configuration options, like windvector in the example above takes `"for_air": true`. The plugin documentation should be consulted for the available options.
+
+An environment variable value can be passed to a plugin configuration like so (using the same example):
+
+    { "name": "windvector", "for_air": "{env:ENVIRONMENT_VARIABLE_NAME}" }
+
+
 <a name="Processqueue"/>
 
 # Processqueue
