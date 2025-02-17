@@ -109,9 +109,18 @@ void fractile::Calculate(std::shared_ptr<info<float>> myTargetInfo, uint16_t thr
 	const std::string deviceType = "CPU";
 	auto ens = util::CreateEnsembleFromConfiguration(itsConfiguration);
 
-	if (!ens)
+	HPMissingValueTreatment treatMissing = kRemove;
+	if (itsConfiguration->GetValue("missing_value_treatment") != "")
 	{
-		return;
+		try
+                {
+                        treatMissing = HPStringToMissingValueTreatment.at(itsConfiguration->GetValue("missing_value_treatment"));
+                }
+                catch (const std::out_of_range& e)
+                {
+                        itsLogger.Fatal("Invalid configuration value of missing_value_treatment.");
+			himan::Abort();
+                }
 	}
 
 	auto threadedLogger = logger("fractileThread # " + std::to_string(threadIndex));
@@ -140,9 +149,8 @@ void fractile::Calculate(std::shared_ptr<info<float>> myTargetInfo, uint16_t thr
 
 	while (myTargetInfo->NextLocation() && ens->NextLocation())
 	{
-		auto sortedValues = ens->SortedValues();
+		auto sortedValues = ens->SortedValues(treatMissing);
 		const size_t ensembleSize = sortedValues.size();
-
 		// Skip this step if we didn't get any valid fields
 		if (ensembleSize == 0)
 		{
