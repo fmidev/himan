@@ -189,9 +189,47 @@ std::vector<float> ensemble::Values() const
 
 std::vector<float> ensemble::SortedValues() const
 {
-	std::vector<float> v = RemoveMissingValues(Values());
-	std::sort(v.begin(), v.end());
-	return v;
+	return SortedValues(kRemove);
+}
+
+std::vector<float> ensemble::SortedValues(const HPMissingValueTreatment treatMissing) const
+{
+	std::vector<float> res;
+	switch (treatMissing)
+	{
+		case kRemove:
+			{
+				res = RemoveMissingValues(Values());
+				std::sort(res.begin(), res.end());
+				break;
+			}
+		case kLast:
+			{
+				std::vector<float> val = Values();
+				std::vector<float> v = RemoveMissingValues(val);
+				std::sort(v.begin(), v.end());
+
+				res = std::vector<float>(val.size(), himan::MissingFloat());
+				std::copy(v.begin(), v.end(), res.begin());
+				break;
+			}
+		case kFirst:
+			{
+				std::vector<float> val = Values();
+				std::vector<float> v = RemoveMissingValues(val);
+				std::sort(v.begin(), v.end());
+
+				res = std::vector<float>(val.size(), himan::MissingFloat());
+				std::copy(v.begin(), v.end(), std::back_inserter(res));
+				break;
+			}
+		default:
+			{
+				itsLogger.Fatal("Undefined behaviour for missing value treatment");
+                                himan::Abort();
+			}
+	}
+	return res;
 }
 
 float ensemble::Mean() const
