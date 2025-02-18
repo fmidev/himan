@@ -10,14 +10,20 @@
 --   par915 (Cb/TCu top FL)
 --
 -- partio 20121104, original smarttool macro by simo n
+-- Tack 20250218, rewrite to fix error due to use of wrong definition of flight level 
 --
+-- original macro
 -- https://wiki.fmi.fi/pages/viewpage.action?pageId=123387126
 
 logger:Info("Calculating low level forecast cloud top height")
 local MISS = missing
 local NParam = param("N-0TO1")
 
-function GetBase(lowlimitdata, highlimitdata, thresholddata, zFL125data)
+-- We set the vertical search function to work with pressure based vertical coordinate
+-- The reasoning is that the pressures can be directly converted into flight levels (FL)
+hitool:SetHeightUnit(HPParameterUnit.kHPa)
+
+function GetBase(lowlimitdata, highlimitdata, thresholddata, pFL125data)
   local basedata = hitool:VerticalHeightGreaterThanGrid(NParam, lowlimitdata, highlimitdata, thresholddata, 1)
 
   if not basedata then
@@ -26,7 +32,7 @@ function GetBase(lowlimitdata, highlimitdata, thresholddata, zFL125data)
   end
 
   for i=1,#basedata do
-    if basedata[i] > zFL125data[i] then
+    if basedata[i] < pFL125data[i] then
       basedata[i] = MISS
     end
   end
@@ -34,11 +40,11 @@ function GetBase(lowlimitdata, highlimitdata, thresholddata, zFL125data)
   return basedata
 end
 
-function GetTop(lowlimitdata, highlimitdata, thresholddata, zFL125data)
+function GetTop(lowlimitdata, highlimitdata, thresholddata, pFL125data)
   local topdata = hitool:VerticalHeightLessThanGrid(NParam, lowlimitdata, highlimitdata, thresholddata, 1)
 
   for i=1,#topdata do
-    topdata[i] = math.min(topdata[i], zFL125data[i])
+    topdata[i] = math.max(topdata[i], pFL125data[i])
   end
 
   return topdata
@@ -57,95 +63,107 @@ function Top()
   -- Cloud amount threshold to consider a cloud (base and) top [0..1]
   local threshold = 0.55
 
-  -- Max height to check for cloud top [m] (4500m ~ FL150)
-  local maxH = 4500
-
-  -- station pressure
-  local qfedata = luatool:Fetch(current_time, level(HPLevelType.kHeight, 0), param("P-PA"), current_forecast_type)
+  -- Max height (Min pressure) to check for cloud top [hPa] (572 ~ FL150)
+  local minP = 572
 
   -- cb/tcu
   local cbtcudata = luatool:Fetch(current_time, level(HPLevelType.kHeight, 0), param("CBTCU-FL"), current_forecast_type)
+  local p = luatool:Fetch(current_time, level(HPLevelType.kHeight, 0), param("P-PA"), current_forecast_type)
 
-  if not qfedata or not cbtcudata then
+  if not cbtcudata then
     return
   end
 
-  local sfcFLmdata = {}
-  local zFL050data = {}
-  local zFL125data = {}
+  local pFL050data = {}
+  local pFL125data = {}
 
   local zerodata = {}
-  local maxHdata = {}
+  local minPdata = {}
   local thresholddata = {}
 
-  for i = 1, #qfedata do
-     zerodata[i] = 0
-     maxHdata[i] = maxH
+  for i = 1, #p do
+     zerodata[i] = p[i] / 100
+     minPdata[i] = minP
      thresholddata[i] = threshold
 
-     -- surface light level in meters (can be negative)
-     -- use pressure in hPa
-     sfcFLmdata[i] = (3.7314 - (0.01 * qfedata[i]) ^ (1.0 / 5.2559)) / 0.0000256 * 0.3048
+     -- FL050 (5000ft=843hPa)
+     pFL050data[i] = 843
 
-     -- FL050 (5000ft=1524m) height in meters above the surface
-     zFL050data[i] = 1524 - sfcFLmdata[i]
-
-     -- FL125 (12500ft=3810m) height in meters above the surface
-     zFL125data[i] = 3810 - sfcFLmdata[i]
+     -- FL125 (12500ft=632hPa)
+     pFL125data[i] = 632
   end
 
-  local base1data = GetBase(zerodata, maxHdata, thresholddata, zFL125data)
-  local top1data = GetTop(AddScalar(base1data, 1), maxHdata, thresholddata, zFL125data)
+  local base1data = GetBase(zerodata, minPdata, thresholddata, pFL125data)
+  local top1data = GetTop(AddScalar(base1data, -1), minPdata, thresholddata, pFL125data)
 
-  local base2data = GetBase(AddScalar(top1data, 1), maxHdata, thresholddata, zFL125data)
-  local top2data = GetTop(AddScalar(base2data, 1), maxHdata, thresholddata, zFL125data)
+  local base2data = GetBase(AddScalar(top1data, -1), minPdata, thresholddata, pFL125data)
+  local top2data = GetTop(AddScalar(base2data, -1), minPdata, thresholddata, pFL125data)
 
-  local base3data = GetBase(AddScalar(top2data, 1), maxHdata, thresholddata, zFL125data)
-  local top3data = GetTop(AddScalar(base3data, 1), maxHdata, thresholddata, zFL125data)
+  local base3data = GetBase(AddScalar(top2data, -.1), minPdata, thresholddata, pFL125data)
+  local top3data = GetTop(AddScalar(base3data, -1), minPdata, thresholddata, pFL125data)
 
-  local base4data = GetBase(AddScalar(top3data, 1), maxHdata, thresholddata, zFL125data)
-  local top4data = GetTop(AddScalar(base4data, 1), maxHdata, thresholddata, zFL125data)
+  local base4data = GetBase(AddScalar(top3data, -1), minPdata, thresholddata, pFL125data)
+  local top4data = GetTop(AddScalar(base4data, -1), minPdata, thresholddata, pFL125data)
 
   local ret = {}
-
+  local top = {}
   for i=1,#top1data do
-    -- Base found, but top extends above FL125 (>maxH in the calculation)
-    if base1data[i] < zFL125data[i] and IsMissing(top1data[i]) then
-      top1data[i] = zFL125data[i]
+    -- Base found, but top extends above FL125 (<minP in the calculation)
+    if base1data[i] > pFL125data[i] and IsMissing(top1data[i]) then
+      top1data[i] = pFL125data[i]
     end
-    if base2data[i] < zFL125data[i] and IsMissing(top2data[i]) then
-      top2data[i] = zFL125data[i]
+    if base2data[i] > pFL125data[i] and IsMissing(top2data[i]) then
+      top2data[i] = pFL125data[i]
     end
-    if base3data[i] < zFL125data[i] and IsMissing(top3data[i]) then
-      top3data[i] = zFL125data[i]
+    if base3data[i] > pFL125data[i] and IsMissing(top3data[i]) then
+      top3data[i] = pFL125data[i]
     end
-    if base4data[i] < zFL125data[i] and IsMissing(top4data[i]) then
-      top4data[i] = zFL125data[i]
+    if base4data[i] > pFL125data[i] and IsMissing(top4data[i]) then
+      top4data[i] = pFL125data[i]
     end
 
     -- highest top
-    local top = math.max(top1data[i], top2data[i], top3data[i], top4data[i])
-    local topFLm = top + sfcFLmdata[i]
+    top[i] = math.min(top1data[i], top2data[i], top3data[i], top4data[i])
+  end
 
-    -- Convert top [m] to hft/FL, rounding based on altitude (1hft = 30.48m)
+  -- Convert top [hPa] to FL
+  local topFL = {}
+  for i=1, #top do
+    topFL[i] = FlightLevel_(top[i] * 100)
+  end
 
-    if top < zFL050data[i] then
-      top = math.floor(0.5 + top / 30.48)
-    elseif top >= zFL050data[i] then
-      top = math.floor(0.5 + topFLm / 30.48 / 5) * 5
+  -- We set the vertical search function to work with height based vertical coordinate
+  -- The reasoning is that below transition altitude (TA) cloud top is reported in height above ground
+  hitool:SetHeightUnit(HPParameterUnit.kM)
+
+  local zerodata = {}
+  local maxHdata = {}
+
+  for i = 1, #p do
+     zerodata[i] = 0
+     maxHdata[i] = 5000
+  end
+
+  -- We search for the metric height of cloud top so we have it in the coordinate system applied below TA
+  local topheight = hitool:VerticalHeightGrid(param("P-HPA"), zerodata, maxHdata, top, 1)
+
+  for i=1, #topFL do
+    if topFL[i] < 50 then
+      -- Convert top [hPa] to hft
+      ret[i] = math.floor(0.5 + topheight[i] / 30.48)
+    else
+      ret[i] = topFL[i]
     end
+  
 
     -- Possible TCu/Cb tops (par915 [FL])
-
     local cbtcu = math.abs(cbtcudata[i])
 
-    if IsMissing(top) or top < cbtcu then
-      top = math.min(cbtcu, 125)
+    if IsMissing(ret[i]) or ret[i] < cbtcu then
+      ret[i] = math.min(cbtcu, 125)
     end
-
-    ret[i] = top
-
   end
+  
 
   result:SetParam(param("LLF-TOP-FL"))
   result:SetValues(ret)
