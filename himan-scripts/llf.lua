@@ -12,6 +12,7 @@
 -- partio 20121104, original smarttool macro by simo n
 -- Tack 20250218, rewrite to fix error due to use of wrong definition of flight level 
 --
+-- original macro
 -- https://wiki.fmi.fi/pages/viewpage.action?pageId=123387126
 
 logger:Info("Calculating low level forecast cloud top height")
@@ -62,7 +63,7 @@ function Top()
   -- Cloud amount threshold to consider a cloud (base and) top [0..1]
   local threshold = 0.55
 
-  -- Max height to check for cloud top [hPa] (572 ~ FL150)
+  -- Max height (Min pressure) to check for cloud top [hPa] (572 ~ FL150)
   local minP = 572
 
   -- cb/tcu
@@ -85,10 +86,10 @@ function Top()
      minPdata[i] = minP
      thresholddata[i] = threshold
 
-     -- FL050 (5000ft=843hPa) height in meters above the surface
+     -- FL050 (5000ft=843hPa)
      pFL050data[i] = 843
 
-     -- FL125 (12500ft=632hPa) height in meters above the surface
+     -- FL125 (12500ft=632hPa)
      pFL125data[i] = 632
   end
 
@@ -98,7 +99,7 @@ function Top()
   local base2data = GetBase(AddScalar(top1data, -1), minPdata, thresholddata, pFL125data)
   local top2data = GetTop(AddScalar(base2data, -1), minPdata, thresholddata, pFL125data)
 
-  local base3data = GetBase(AddScalar(top2data, -1), minPdata, thresholddata, pFL125data)
+  local base3data = GetBase(AddScalar(top2data, -.1), minPdata, thresholddata, pFL125data)
   local top3data = GetTop(AddScalar(base3data, -1), minPdata, thresholddata, pFL125data)
 
   local base4data = GetBase(AddScalar(top3data, -1), minPdata, thresholddata, pFL125data)
@@ -107,7 +108,7 @@ function Top()
   local ret = {}
   local top = {}
   for i=1,#top1data do
-    -- Base found, but top extends above FL125 (>maxH in the calculation)
+    -- Base found, but top extends above FL125 (<minP in the calculation)
     if base1data[i] < pFL125data[i] and IsMissing(top1data[i]) then
       top1data[i] = pFL125data[i]
     end
@@ -131,9 +132,8 @@ function Top()
     topFL[i] = FlightLevel_(top[i] * 100)
   end
 
-  -- Convert top [hPa] to hft
   -- We set the vertical search function to work with height based vertical coordinate
-  -- The reasoning is that below transition altitude top is reported in height above ground
+  -- The reasoning is that below transition altitude (TA) cloud top is reported in height above ground
   hitool:SetHeightUnit(HPParameterUnit.kM)
 
   local zerodata = {}
@@ -144,10 +144,12 @@ function Top()
      maxHdata[i] = 5000
   end
 
+  -- We search for the metric height of cloud top so we have it in the coordinate system applied below TA
   local topheight = hitool:VerticalHeightGrid(param("P-HPA"), zerodata, maxHdata, top, 1)
 
   for i=1, #topFL do
     if topFL[i] < 50 then
+      -- Convert top [hPa] to hft
       ret[i] = math.floor(0.5 + topheight[i] / 30.48)
     else
       ret[i] = topFL[i]
