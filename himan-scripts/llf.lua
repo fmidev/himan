@@ -109,16 +109,16 @@ function Top()
   local top = {}
   for i=1,#top1data do
     -- Base found, but top extends above FL125 (<minP in the calculation)
-    if base1data[i] < pFL125data[i] and IsMissing(top1data[i]) then
+    if base1data[i] > pFL125data[i] and IsMissing(top1data[i]) then
       top1data[i] = pFL125data[i]
     end
-    if base2data[i] < pFL125data[i] and IsMissing(top2data[i]) then
+    if base2data[i] > pFL125data[i] and IsMissing(top2data[i]) then
       top2data[i] = pFL125data[i]
     end
-    if base3data[i] < pFL125data[i] and IsMissing(top3data[i]) then
+    if base3data[i] > pFL125data[i] and IsMissing(top3data[i]) then
       top3data[i] = pFL125data[i]
     end
-    if base4data[i] < pFL125data[i] and IsMissing(top4data[i]) then
+    if base4data[i] > pFL125data[i] and IsMissing(top4data[i]) then
       top4data[i] = pFL125data[i]
     end
 
