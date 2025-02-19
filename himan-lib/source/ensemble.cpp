@@ -197,9 +197,9 @@ std::vector<float> ensemble::SortedValues(const HPMissingValueTreatment treatMis
 	std::vector<float> res;
 	switch (treatMissing)
 	{
-		// The base case covers data where there usually are no missing values expected to be in the data
-		// or where they are not meaningful for example in temperature fields where missing values should
-		// be ignored and products like fractiles be computed from a reduced ensemble
+		// The base case covers data where there usually are no missing values expected to be found in the 
+		// data or where they are not meaningful, e.g. in temperature fields where missing values should
+		// be ignored and products like fractiles be computed from a reduced ensemble.
 		case kRemove:
 			{
 				res = RemoveMissingValues(Values());
@@ -208,10 +208,10 @@ std::vector<float> ensemble::SortedValues(const HPMissingValueTreatment treatMis
 			}
 		// For some parameters missing values are used to indicate absence of the parameter, e.g. cloud
 		// base height that is only meaningful when there are clouds. Cloud free cases are marked as
-		// missing value. If we want remove missing values in this case the fractiles would always indicate
-		// high probabilities for cloud base so we don't want to reduce the ensemble here. Instead we move
-		// the missing values to the end of the sorted ensemble so they would resemble infinite cloude base
-		// height
+		// missing value. If we would remove missing values in this case the fractiles would always indicate
+		// high probabilities for cloud base so we don't want to reduce the ensemble size here. Instead 
+		// we move the missing values to the end of the sorted ensemble so they would resemble infinite 
+		// cloude base height.
 		case kLast:
 			{
 				std::vector<float> val = Values();
