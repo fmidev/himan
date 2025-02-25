@@ -129,8 +129,8 @@ void ensemble::VerifyValidForecastCount(int numMissingForecasts)
 			throw kFileDataNotFound;
 		}
 	}
-	// Normally, we don't except any of the fields to be missing, but at this point
-	// we've already catched the exceptions
+	// Normally, we don't expect any of the fields to be missing, but at this point
+	// we've already caught the exceptions
 	else
 	{
 		if (numMissingForecasts > 0)
@@ -189,9 +189,58 @@ std::vector<float> ensemble::Values() const
 
 std::vector<float> ensemble::SortedValues() const
 {
-	std::vector<float> v = RemoveMissingValues(Values());
-	std::sort(v.begin(), v.end());
-	return v;
+	return SortedValues(kRemove);
+}
+
+std::vector<float> ensemble::SortedValues(const HPMissingValueTreatment treatMissing) const
+{
+	std::vector<float> res;
+	switch (treatMissing)
+	{
+		// The base case covers data where there usually are no missing values expected to be found in the 
+		// data or where they are not meaningful, e.g. in temperature fields where missing values should
+		// be ignored and products like fractiles be computed from a reduced ensemble.
+		case kRemove:
+			{
+				res = RemoveMissingValues(Values());
+				std::sort(res.begin(), res.end());
+				break;
+			}
+		// For some parameters missing values are used to indicate absence of the parameter, e.g. cloud
+		// base height that is only meaningful when there are clouds. Cloud free cases are marked as
+		// missing value. If we would remove missing values in this case the fractiles would always indicate
+		// high probabilities for cloud base so we don't want to reduce the ensemble size here. Instead 
+		// we move the missing values to the end of the sorted ensemble so they would resemble infinite 
+		// cloude base height.
+		case kLast:
+			{
+				std::vector<float> val = Values();
+				std::vector<float> v = RemoveMissingValues(val);
+				std::sort(v.begin(), v.end());
+
+				res = std::vector<float>(val.size(), himan::MissingFloat());
+				std::copy(v.begin(), v.end(), res.begin());
+				break;
+			}
+		// This might be useful for similar reasons than kLast except that the missing value would be
+		// representing infinite negative numbers in the sorting.
+		case kFirst:
+			{
+				std::vector<float> val = Values();
+				std::vector<float> v = RemoveMissingValues(val);
+				std::sort(v.begin(), v.end());
+
+				res = std::vector<float>(val.size(), himan::MissingFloat());
+				std::copy(v.begin(), v.end(), std::back_inserter(res));
+				break;
+			}
+		default:
+			{
+				itsLogger.Fatal("Undefined behaviour for missing value treatment");
+                                himan::Abort();
+			}
+	}
+	return res;
 }
 
 float ensemble::Mean() const

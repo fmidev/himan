@@ -54,6 +54,10 @@ fractiles: which set of fractiles to calculate.
 
     "fractiles" : "100,90,75,50,25,20,10,0"
 
+missing_value_treatment: how to deal with missing values in the ensemble. Options are "remove" (default), "first" or "last".
+
+    "missing_value_treatment" : "last"
+
 ensemble_type: define the type of ensemble. Currently supported are:
 
 * the traditional ensemble with multiple perturbed forecasts
