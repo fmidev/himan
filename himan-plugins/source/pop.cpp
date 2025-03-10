@@ -85,6 +85,11 @@ void pop::Process(std::shared_ptr<const plugin_configuration> conf)
 	if (itsConfiguration->Exists("disable_meps"))
 	{
 		itsUseMEPS = !util::ParseBoolean(itsConfiguration->GetValue("disable_meps"));
+
+		if (itsUseMEPS == false)
+		{
+			itsLogger.Info("MEPS usage disabled");
+		}
 	}
 
 	Start();
