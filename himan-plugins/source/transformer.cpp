@@ -414,7 +414,8 @@ void transformer::SetAdditionalParameters()
 		}
 		catch (const invalid_argument& e)
 		{
-			throw runtime_error("Unable to convert " + itsConfiguration->GetValue("decimal_precision") + " to int");
+			throw runtime_error(
+			    fmt::format("Unable to convert {} to int", itsConfiguration->GetValue("decimal_precision")));
 		}
 	}
 
@@ -780,8 +781,7 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 		forecastType = myTargetInfo->ForecastType();
 	}
 
-	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-	                      static_cast<string>(forecastLevel));
+	myThreadedLogger.Info(fmt::format("Calculating time {} level {}", forecastTime.ValidDateTime(), forecastLevel));
 
 	if (itsRotateVectorComponents)
 	{
@@ -809,8 +809,7 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 
 	if (!sourceInfo)
 	{
-		myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
-		                         static_cast<string>(forecastLevel));
+		myThreadedLogger.Warning(fmt::format("Skipping step {}, level {}", forecastTime.Step(), forecastLevel));
 		return;
 	}
 
