@@ -1,10 +1,3 @@
-
-print("origin time: " .. current_time:GetOriginDateTime():String("%Y-%m-%d %H:%M:%S"))
-
-function is_nan(value)
-  return value ~= value
-end
-
 function compute_std_mean_ec(N_EC, N_MEAN_EC, N_STD_EC, wt_ec, wt_ens_ec, wt_sum)
   local mean = (N_EC * wt_ec + N_MEAN_EC * wt_ens_ec) / wt_sum
   local stDev = math.sqrt(math.max(((wt_ens_ec * (N_STD_EC^2 + N_MEAN_EC^2) + wt_ec * N_EC^2) / wt_sum) - mean^2, 0))
@@ -14,7 +7,6 @@ end
 function compute_std_mean_all(N_EC, N_MEPS, N_MEAN_EC, N_MEAN_MEPS, N_STD_EC, N_STD_MEPS, wt_ec, wt_ens_ec, wt_meps, wt_ens_meps, wt_sum)
   local mean = (N_EC * wt_ec + N_MEAN_EC * wt_ens_ec + N_MEPS * wt_meps + N_MEAN_MEPS * wt_ens_meps) / wt_sum
   local stDev = math.sqrt(math.max(((wt_ens_ec * (N_STD_EC^2 + N_MEAN_EC^2) + wt_ec * N_EC^2 + wt_meps * N_MEPS^2 + wt_ens_meps * (N_STD_MEPS^2 + N_MEAN_MEPS^2)) / wt_sum) - mean^2, 0))
-  -- local stDev = math.sqrt(root1)  
   return mean, stDev
 end
 
@@ -36,7 +28,7 @@ function process_params(producer, ftype, ...)
       results[i] = convert_to_100(results[i])
   end
   
-  return table.unpack(results)  -- Return multiple processed values
+  return table.unpack(results)  
 end
 
 function get_data(producer1, producer2, ftype)
@@ -67,10 +59,14 @@ end
 
 
 function get_param(producer, ftype, param1, param2, param3)
+  --ftime = forecast_time(raw_time(radon:GetLatestTime(producer, "",0)), current_time:GetValidDateTime())
+  
   local o = {forecast_time = current_time,
   level = level(HPLevelType.kHeight, 0),
   param = param1,
   forecast_type = ftype,
+  time_interpolation = true,
+  time_interpolation_search_step = time_duration("01:00:00"),
   producer = producer}
   local param1 = luatool:FetchWithArgs(o)
 
