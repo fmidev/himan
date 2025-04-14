@@ -119,8 +119,6 @@ local t0 = 37.0 -- wind chill is horizontal at this T
 local absorption = 0.07
 
 for i=1, #t_arr do
-    local t = t_arr[i] - kKelvin
-    local rh = rh_arr[i]
     local ws = ws_arr[i]
     local rad = rad_arr[i]
 
