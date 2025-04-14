@@ -100,6 +100,18 @@ function FetchRadiation(rad_prod, rad_arr_len)
 end
 
 local rh_arr = luatool:Fetch(current_time, l2, param('RH-PRCNT'), current_forecast_type)
+
+if not rh_arr then
+  rh_arr = luatool:Fetch(current_time, l2, param('RH-0TO1'), current_forecast_type)
+
+  if rh_arr then
+    -- convert to percent
+    for i=1, #rh_arr do
+      rh_arr[i] = rh_arr[i] * 100
+    end
+  end
+end
+
 local t_arr = luatool:Fetch(current_time, l2, param('T-K'), current_forecast_type)
 local ws_arr = luatool:Fetch(current_time, l10, param('FF-MS'), current_forecast_type)
 
@@ -121,6 +133,7 @@ local absorption = 0.07
 for i=1, #t_arr do
     local ws = ws_arr[i]
     local rad = rad_arr[i]
+    local t = t_arr[i] - kKelvin
 
     -- summer simmer index, called 'heat' in the c++ code
 
