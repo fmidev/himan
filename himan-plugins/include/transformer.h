@@ -64,7 +64,7 @@ class transformer : public compiled_plugin, private compiled_plugin_base
 	bool itsRotateVectorComponents;
 	bool itsDoTimeInterpolation;
 	bool itsDoLevelInterpolation;
-	double itsChangeMissingTo;
+	std::string itsChangeMissingTo;
 	bool itsWriteEmptyGrid;
 	int itsDecimalPrecision;
 	bool itsParamDefinitionFromConfig;
