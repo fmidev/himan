@@ -57,11 +57,55 @@ function get_data(producer1, producer2, ftype)
   return NL, NM, NH, NL_MEAN, NM_MEAN, NH_MEAN, NL_STD, NM_STD, NH_STD
 end
 
+-- Gets data with origin times adjusted to get the latest forecast with all steps ready
+function get_time(producer)
+  
+  local test = configuration:Exists("origin_time_test")
+
+  if test then
+    local test_time = configuration:GetValue("origin_time_test")
+    ftime = forecast_time(raw_time(test_time), raw_time("2025-04-04 06:00:00"))
+    return ftime
+  end
+
+  local vire_hour = current_time:GetOriginDateTime():String('%H')
+  local producer_id = producer:GetId()
+
+  local hour_adjustments = {
+    ["07"] = { [131] = -7, [242] = -7 },
+    ["13"] = { [131] = -7, [242] = -13 },
+    ["19"] = { [131] = -7, [242] = -7 },
+    ["01"] = { [131] = -7, [242] = -13 }
+  }
+  
+  -- MEPS data producers
+  local meps_producers = { [4] = true, [260] = true }
+
+  local adjust_hours = nil
+  
+  if meps_producers[producer_id] then
+    adjust_hours = -2
+  elseif hour_adjustments[vire_hour] and hour_adjustments[vire_hour][producer_id] then
+    adjust_hours = hour_adjustments[vire_hour][producer_id]
+  end
+  
+  if adjust_hours then
+    current_time:GetOriginDateTime():Adjust(HPTimeResolution.kHourResolution, adjust_hours)
+  end
+  
+  ftime = forecast_time(current_time:GetOriginDateTime(), current_time:GetValidDateTime())
+  current_time:GetOriginDateTime():Adjust(HPTimeResolution.kHourResolution, -adjust_hours)
+  return ftime
+end
+
+
 
 function get_param(producer, ftype, param1, param2, param3)
-  --ftime = forecast_time(raw_time(radon:GetLatestTime(producer, "",0)), current_time:GetValidDateTime())
+
+  local ftime = get_time(producer)
+
   
-  local o = {forecast_time = current_time,
+  local o = {forecast_time = ftime,
   level = level(HPLevelType.kHeight, 0),
   param = param1,
   forecast_type = ftype,
@@ -104,36 +148,28 @@ local mid_level, dev_factor_low, dev_factor_mid, dev_factor_high = compute_level
 local mean, stDev = nil, nil
 local cl, cm, ch = {}, {}, {} 
 
-if configuration:GetValue("disable_meps") == "false" then
-  print("MEPS is enabled")
-  
-  local prod1 = producer(131, "ECG")
-  local prod2 = producer(242, "ECM_PROB")
-  local prod3 = producer(4,"MEPS")
-  local prod4 = producer(260, "MEPSMTA")
 
-  NL_EC, NM_EC, NH_EC, NL_MEAN_EC, NM_MEAN_EC, NH_MEAN_EC, NL_STD_EC, NM_STD_EC, NH_STD_EC = get_data(prod1, prod2, forecast_type(HPForecastType.kDeterministic))
-  NL_MEPS, NM_MEPS, NH_MEPS, NL_MEAN_MEPS, NM_MEAN_MEPS, NH_MEAN_MEPS, NL_STD_MEPS, NM_STD_MEPS, NH_STD_MEPS = get_data(prod3, prod4,forecast_type(HPForecastType.kEpsControl, 0))
-  print("EC and MEPS data fetched")
-
-  local wt_sum = wt_ens_ec + wt_ec + wt_meps + wt_ens_meps
-  for i = 1, #NL_EC do
-
-    mean, stDev = compute_std_mean_all(NL_EC[i], NL_MEPS[i], NL_MEAN_EC[i], NL_MEAN_MEPS[i], NL_STD_EC[i], NL_STD_MEPS[i], wt_ec, wt_ens_ec, wt_meps, wt_ens_meps, wt_sum)
-    cl[i] = mean + stDev ^ dev_factor_low * (mean - mid_level) / 50
-
-    mean, stDev = compute_std_mean_all(NM_EC[i], NM_MEPS[i], NM_MEAN_EC[i], NM_MEAN_MEPS[i], NM_STD_EC[i], NM_STD_MEPS[i], wt_ec, wt_ens_ec, wt_meps, wt_ens_meps, wt_sum)
-    cm[i] = mean + stDev ^ dev_factor_mid * (mean - mid_level) / 50
-
-    mean, stDev = compute_std_mean_all(NH_EC[i], NH_MEPS[i], NH_MEAN_EC[i], NH_MEAN_MEPS[i], NH_STD_EC[i], NH_STD_MEPS[i], wt_ec, wt_ens_ec, wt_meps, wt_ens_meps, wt_sum)
-    ch[i] = mean + stDev ^ dev_factor_high * (mean - mid_level) / 50
+local disable_meps = nil
+if configuration:Exists("disable_meps") then 
+  disable_meps = configuration:GetValue("disable_meps")
+  if disable_meps == "true" then
+    disable_meps = true
+  else
+    disable_meps = false
   end
+end
 
-else
-  print("MEPS is disabled")
+
+if disable_meps or step > 66 then
+  logger:Info("Only using EC data")
   
   NL_EC, NM_EC, NH_EC, NL_MEAN_EC, NM_MEAN_EC, NH_MEAN_EC, NL_STD_EC, NM_STD_EC, NH_STD_EC = get_data(producer(131, "ECG"), producer(242, "ECM_PROB"), forecast_type(HPForecastType.kDeterministic))
-  print("EC data fetched")
+  
+  if not NL_EC or not NM_EC or not NH_EC then
+    logger:Warning("Some data not found")
+  else
+    logger:Info("EC Data fetched")
+  end
 
   local wt_sum = wt_ens_ec + wt_ec
   for i = 1, #NL_EC do
@@ -145,6 +181,35 @@ else
     cm[i] = mean + stDev ^ dev_factor_mid * (mean - mid_level) / 50
 
     mean, stDev = compute_std_mean_ec(NH_EC[i], NH_MEAN_EC[i], NH_STD_EC[i], wt_ec, wt_ens_ec, wt_sum)
+    ch[i] = mean + stDev ^ dev_factor_high * (mean - mid_level) / 50
+  end
+else
+  logger:Info("Using MEPS and EC data")
+  
+  local prod1 = producer(131, "ECG")
+  local prod2 = producer(242, "ECM_PROB")
+  local prod3 = producer(4,"MEPS")
+  local prod4 = producer(260, "MEPSMTA")
+
+  NL_EC, NM_EC, NH_EC, NL_MEAN_EC, NM_MEAN_EC, NH_MEAN_EC, NL_STD_EC, NM_STD_EC, NH_STD_EC = get_data(prod1, prod2, forecast_type(HPForecastType.kDeterministic))
+  NL_MEPS, NM_MEPS, NH_MEPS, NL_MEAN_MEPS, NM_MEAN_MEPS, NH_MEAN_MEPS, NL_STD_MEPS, NM_STD_MEPS, NH_STD_MEPS = get_data(prod3, prod4,forecast_type(HPForecastType.kEpsControl, 0))
+  
+  if not NL_EC or not NM_EC or not NH_EC or not NL_MEPS or not NM_MEPS or not NH_MEPS then
+    logger:Warning("Some data not found")
+  else
+    logger:Info("EC and MEPS Data fetched")
+  end
+
+  local wt_sum = wt_ens_ec + wt_ec + wt_meps + wt_ens_meps
+  for i = 1, #NL_EC do
+
+    mean, stDev = compute_std_mean_all(NL_EC[i], NL_MEPS[i], NL_MEAN_EC[i], NL_MEAN_MEPS[i], NL_STD_EC[i], NL_STD_MEPS[i], wt_ec, wt_ens_ec, wt_meps, wt_ens_meps, wt_sum)
+    cl[i] = mean + stDev ^ dev_factor_low * (mean - mid_level) / 50
+
+    mean, stDev = compute_std_mean_all(NM_EC[i], NM_MEPS[i], NM_MEAN_EC[i], NM_MEAN_MEPS[i], NM_STD_EC[i], NM_STD_MEPS[i], wt_ec, wt_ens_ec, wt_meps, wt_ens_meps, wt_sum)
+    cm[i] = mean + stDev ^ dev_factor_mid * (mean - mid_level) / 50
+
+    mean, stDev = compute_std_mean_all(NH_EC[i], NH_MEPS[i], NH_MEAN_EC[i], NH_MEAN_MEPS[i], NH_STD_EC[i], NH_STD_MEPS[i], wt_ec, wt_ens_ec, wt_meps, wt_ens_meps, wt_sum)
     ch[i] = mean + stDev ^ dev_factor_high * (mean - mid_level) / 50
   end
 end
@@ -159,6 +224,7 @@ for i=1, #cl do
   n[i] = 100 - (1 - cl[i] * 1/100) * (1 - cm[i] * 0.75/100) * (1 - ch[i] * 0.25/100) * (1 - cl[i] * cm[i] * (1/3 - (1 - ((50 - cl[i]) ^2 + (50 - cm[i]) ^2) / 5000))/10000) * (1 - cm[i] * ch[i] * (2/3 - (1 - ((50 - cm[i]) ^2 + (50 - ch[i]) ^2) / 5000))/10000) * 100
   n[i] = n[i] * 0.01
 end
+
 
 result:SetParam(param('N-0TO1'))
 result:SetValues(n)
