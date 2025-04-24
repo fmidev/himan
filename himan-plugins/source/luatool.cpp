@@ -8,6 +8,7 @@
 #include "lift.h"
 #include "logger.h"
 #include "metutil.h"
+#include "util.h"
 #include "numerical_functions.h"
 #include "plugin_factory.h"
 #include "radon.h"
@@ -1805,6 +1806,8 @@ void BindLib(lua_State* L)
 	          def("DryLift_", &metutil::DryLift_<double>),
 		  def("FlightLevel_", &metutil::FlightLevel_),
 		  def("ElevationAngle_", &metutil::ElevationAngle_),
+		  // util namespace
+		  def("ParseBoolean", &util::ParseBoolean),
 		  // himan namespace
 		  def("IsMissing", static_cast<bool(*)(double)>(&::IsMissing)),
 		  def("IsValid", static_cast<bool(*)(double)>(&::IsValid))];
