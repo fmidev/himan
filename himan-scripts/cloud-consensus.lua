@@ -57,7 +57,7 @@ function get_data(producer1, producer2, ftype)
   return NL, NM, NH, NL_MEAN, NM_MEAN, NH_MEAN, NL_STD, NM_STD, NH_STD
 end
 
--- Gets data with origin times adjusted to get the latest forecast with all steps ready
+-- Get origin times for MEPS and EC
 function get_time(producer)
   
   local test = configuration:Exists("origin_time_test")
@@ -71,30 +71,20 @@ function get_time(producer)
   local vire_hour = current_time:GetOriginDateTime():String('%H')
   local producer_id = producer:GetId()
 
-  local hour_adjustments = {
-    ["07"] = { [131] = -7, [242] = -7 },
-    ["13"] = { [131] = -7, [242] = -13 },
-    ["19"] = { [131] = -7, [242] = -7 },
-    ["01"] = { [131] = -7, [242] = -13 }
-  }
-  
-  -- MEPS data producers
-  local meps_producers = { [4] = true, [260] = true }
-
-  local adjust_hours = nil
-  
-  if meps_producers[producer_id] then
-    adjust_hours = -2
-  elseif hour_adjustments[vire_hour] and hour_adjustments[vire_hour][producer_id] then
-    adjust_hours = hour_adjustments[vire_hour][producer_id]
+  if producer_id == 4 or producer_id == 260 then
+    adjust_hours = -4
+  elseif (vire_hour == '07' or vire_hour == '19') and (producer_id == 131 or producer_id == 242) then
+      adjust_hours = -7
+  elseif (vire_hour == '13' or vire_hour == '01') and (producer_id == 131 or producer_id == 242) then
+      adjust_hours = -13
   end
-  
+
   if adjust_hours then
     current_time:GetOriginDateTime():Adjust(HPTimeResolution.kHourResolution, adjust_hours)
   end
   
   ftime = forecast_time(current_time:GetOriginDateTime(), current_time:GetValidDateTime())
-  current_time:GetOriginDateTime():Adjust(HPTimeResolution.kHourResolution, -adjust_hours)
+  current_time:GetOriginDateTime():Adjust(HPTimeResolution.kHourResolution, -adjust_hours) -- reset to original time
   return ftime
 end
 
@@ -151,16 +141,13 @@ local cl, cm, ch = {}, {}, {}
 
 local disable_meps = nil
 if configuration:Exists("disable_meps") then 
-  disable_meps = configuration:GetValue("disable_meps")
-  if disable_meps == "true" then
-    disable_meps = true
-  else
-    disable_meps = false
-  end
+  disable_meps = ParseBoolean(configuration:GetValue("disable_meps"))
 end
 
+meps_time = get_time(producer(4, "MEPS"))
+meps_step = tonumber(meps_time:GetStep():Hours())
 
-if disable_meps or step > 66 then
+if disable_meps or meps_step > 66 then
   logger:Info("Only using EC data")
   
   NL_EC, NM_EC, NH_EC, NL_MEAN_EC, NM_MEAN_EC, NH_MEAN_EC, NL_STD_EC, NM_STD_EC, NH_STD_EC = get_data(producer(131, "ECG"), producer(242, "ECM_PROB"), forecast_type(HPForecastType.kDeterministic))
@@ -223,6 +210,10 @@ for i=1, #cl do
 
   n[i] = 100 - (1 - cl[i] * 1/100) * (1 - cm[i] * 0.75/100) * (1 - ch[i] * 0.25/100) * (1 - cl[i] * cm[i] * (1/3 - (1 - ((50 - cl[i]) ^2 + (50 - cm[i]) ^2) / 5000))/10000) * (1 - cm[i] * ch[i] * (2/3 - (1 - ((50 - cm[i]) ^2 + (50 - ch[i]) ^2) / 5000))/10000) * 100
   n[i] = n[i] * 0.01
+  
+  if n[i] > 1 then
+    n[i] = 1
+  end
 end
 
 
