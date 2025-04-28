@@ -700,6 +700,13 @@ local time = current_time:GetValidDateTime()
 print(ElevationAngle_(point, time))
 ```
 
+## ParseBoolean
+
+Parse a string to boolean.
+
+```
+local value = ParseBoolean("true")
+```
 
 # Examples
 

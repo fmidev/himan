@@ -1421,3 +1421,21 @@ level util::CreateHybridLevel(const producer& prod, const std::string& first_las
 			return level(hybType, val, val + 1);
 	}
 }
+
+template <typename T>
+std::vector<T> util::RemoveMissingValues(const std::vector<T>& vec)
+{
+	std::vector<T> ret;
+	ret.reserve(vec.size());
+
+	for (const auto& v : vec)
+	{
+		if (himan::IsValid(v))
+		{
+			ret.emplace_back(v);
+		}
+	}
+	return ret;
+}
+template std::vector<double> util::RemoveMissingValues(const std::vector<double>&);
+template std::vector<float> util::RemoveMissingValues(const std::vector<float>&);

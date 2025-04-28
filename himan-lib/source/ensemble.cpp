@@ -5,28 +5,11 @@
 #include <numeric>
 #include <stddef.h>
 #include <stdint.h>
+#include <util.h>
 
 #define HIMAN_AUXILIARY_INCLUDE
 #include "fetcher.h"
 #undef HIMAN_AUXILIARY_INCLUDE
-
-namespace
-{
-std::vector<float> RemoveMissingValues(const std::vector<float>& vec)
-{
-	std::vector<float> ret;
-	ret.reserve(vec.size());
-
-	for (const auto& v : vec)
-	{
-		if (himan::IsValid(v))
-		{
-			ret.emplace_back(v);
-		}
-	}
-	return ret;
-}
-}  // namespace
 
 namespace himan
 {
@@ -197,65 +180,65 @@ std::vector<float> ensemble::SortedValues(const HPMissingValueTreatment treatMis
 	std::vector<float> res;
 	switch (treatMissing)
 	{
-		// The base case covers data where there usually are no missing values expected to be found in the 
+		// The base case covers data where there usually are no missing values expected to be found in the
 		// data or where they are not meaningful, e.g. in temperature fields where missing values should
 		// be ignored and products like fractiles be computed from a reduced ensemble.
 		case kRemove:
-			{
-				res = RemoveMissingValues(Values());
-				std::sort(res.begin(), res.end());
-				break;
-			}
+		{
+			res = util::RemoveMissingValues(Values());
+			std::sort(res.begin(), res.end());
+			break;
+		}
 		// For some parameters missing values are used to indicate absence of the parameter, e.g. cloud
 		// base height that is only meaningful when there are clouds. Cloud free cases are marked as
 		// missing value. If we would remove missing values in this case the fractiles would always indicate
-		// high probabilities for cloud base so we don't want to reduce the ensemble size here. Instead 
-		// we move the missing values to the end of the sorted ensemble so they would resemble infinite 
+		// high probabilities for cloud base so we don't want to reduce the ensemble size here. Instead
+		// we move the missing values to the end of the sorted ensemble so they would resemble infinite
 		// cloude base height.
 		case kLast:
-			{
-				std::vector<float> val = Values();
-				std::vector<float> v = RemoveMissingValues(val);
-				std::sort(v.begin(), v.end());
+		{
+			std::vector<float> val = Values();
+			std::vector<float> v = util::RemoveMissingValues(val);
+			std::sort(v.begin(), v.end());
 
-				res = std::vector<float>(val.size(), himan::MissingFloat());
-				std::copy(v.begin(), v.end(), res.begin());
-				break;
-			}
+			res = std::vector<float>(val.size(), himan::MissingFloat());
+			std::copy(v.begin(), v.end(), res.begin());
+			break;
+		}
 		// This might be useful for similar reasons than kLast except that the missing value would be
 		// representing infinite negative numbers in the sorting.
 		case kFirst:
-			{
-				std::vector<float> val = Values();
-				std::vector<float> v = RemoveMissingValues(val);
-				std::sort(v.begin(), v.end());
+		{
+			std::vector<float> val = Values();
+			std::vector<float> v = util::RemoveMissingValues(val);
+			std::sort(v.begin(), v.end());
 
-				res = std::vector<float>(val.size(), himan::MissingFloat());
-				std::copy(v.begin(), v.end(), std::back_inserter(res));
-				break;
-			}
+			res = std::vector<float>(val.size(), himan::MissingFloat());
+			std::copy(v.begin(), v.end(), std::back_inserter(res));
+			break;
+		}
 		default:
-			{
-				itsLogger.Fatal("Undefined behaviour for missing value treatment");
-                                himan::Abort();
-			}
+		{
+			itsLogger.Fatal("Undefined behaviour for missing value treatment");
+			himan::Abort();
+		}
 	}
 	return res;
 }
 
 float ensemble::Mean() const
 {
-	return numerical_functions::Mean<float>(RemoveMissingValues(Values()));
+	return numerical_functions::Mean<float>(util::RemoveMissingValues(Values()));
 }
 
 float ensemble::Variance() const
 {
-	return numerical_functions::Variance<float>(RemoveMissingValues(Values()));
+	return numerical_functions::Variance<float>(util::RemoveMissingValues(Values()));
 }
 
 float ensemble::CentralMoment(int N) const
 {
-	std::vector<float> v = RemoveMissingValues(Values());
+	std::vector<float> v = util::RemoveMissingValues(Values());
 	float mu = Mean();
 	std::for_each(v.begin(), v.end(), [=](float& d) { d = powf(d - mu, static_cast<float>(N)); });
 	return numerical_functions::Mean<float>(v);

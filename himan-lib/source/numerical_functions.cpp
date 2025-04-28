@@ -144,6 +144,31 @@ template std::pair<std::vector<float>, std::vector<float>> numerical_functions::
 template std::pair<std::vector<double>, std::vector<double>> numerical_functions::LegGauss(size_t, bool);
 
 template <typename T>
+T numerical_functions::Median(const std::vector<T>& data)
+{
+	// Need to mutate (sort) the vector
+	auto vec = data;
+	size_t n = vec.size();
+	size_t mid = n / 2;
+
+	// Use nth_element to partially sort
+	std::nth_element(vec.begin(), vec.begin() + mid, vec.end());
+	T median = vec[mid];
+
+	if (n % 2 == 0)
+	{
+		// For even number of elements, need the lower middle too
+		std::nth_element(vec.begin(), vec.begin() + mid - 1, vec.end());
+		median = (median + vec[mid - 1]) / static_cast<T>(2.0);
+	}
+
+	return median;
+}
+
+template double numerical_functions::Median(const std::vector<double>&);
+template float numerical_functions::Median(const std::vector<float>&);
+
+template <typename T>
 T numerical_functions::Mean(const std::vector<T>& data)
 {
 	if (data.size() == 0)

@@ -6,6 +6,7 @@ RUN rpm -ivh https://download.fmi.fi/smartmet-open/rhel/8/x86_64/smartmet-open-r
     dnf config-manager --set-enabled powertools && \
     dnf -y module disable postgresql && \
     dnf config-manager --setopt="epel.exclude=eccodes*" --save && \
+    dnf config-manager --setopt="smartmet-open-ext.exclude=curl*" --save && \
     dnf -y update && \
     dnf -y install \
 	himan-bin \

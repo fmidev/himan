@@ -324,6 +324,9 @@ std::unique_ptr<ensemble> CreateEnsembleFromConfiguration(const std::shared_ptr<
 
 level CreateHybridLevel(const producer& prod, const std::string& first_last);
 
+template <typename T>
+std::vector<T> RemoveMissingValues(const std::vector<T>& vec);
+
 template <class... Conts>
 inline auto zip_range(Conts&... conts)
     -> decltype(boost::make_iterator_range(boost::make_zip_iterator(boost::make_tuple(conts.begin()...)),

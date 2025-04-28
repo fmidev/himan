@@ -215,6 +215,16 @@ void fractile::Calculate(std::shared_ptr<info<float>> myTargetInfo, uint16_t thr
 		myTargetInfo->Value(var);
 	}
 
+	// Set ensemble size to parameter metadata
+	const int num = static_cast<int>(ens->Size());
+
+	for (size_t i = 0; i < itsFractiles.size() + 2; i++)
+	{
+		myTargetInfo->Index<param>(i);
+		auto& pt = myTargetInfo->Param().ProcessingType();
+		pt.NumberOfEnsembleMembers(num);
+	}
+
 	threadedLogger.Info("[" + deviceType + "] Missing values: " + std::to_string(myTargetInfo->Data().MissingCount()) +
 	                    "/" + std::to_string(myTargetInfo->Data().Size()));
 }

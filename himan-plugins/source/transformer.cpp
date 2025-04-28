@@ -40,7 +40,7 @@ transformer::transformer()
       itsRotateVectorComponents(false),
       itsDoTimeInterpolation(false),
       itsDoLevelInterpolation(false),
-      itsChangeMissingTo(himan::MissingDouble()),
+      itsChangeMissingTo(""),
       itsWriteEmptyGrid(true),
       itsDecimalPrecision(kHPMissingInt),
       itsParamDefinitionFromConfig(false),
@@ -392,7 +392,7 @@ void transformer::SetAdditionalParameters()
 	{
 		try
 		{
-			itsChangeMissingTo = stod(itsConfiguration->GetValue("change_missing_value_to"));
+			itsChangeMissingTo = itsConfiguration->GetValue("change_missing_value_to");
 		}
 		catch (const invalid_argument& e)
 		{
@@ -414,7 +414,8 @@ void transformer::SetAdditionalParameters()
 		}
 		catch (const invalid_argument& e)
 		{
-			throw runtime_error("Unable to convert " + itsConfiguration->GetValue("decimal_precision") + " to int");
+			throw runtime_error(
+			    fmt::format("Unable to convert {} to int", itsConfiguration->GetValue("decimal_precision")));
 		}
 	}
 
@@ -702,11 +703,25 @@ void transformer::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short
 				         });
 			}
 		}
-		if (!IsMissing(itsChangeMissingTo))
+		if (itsChangeMissingTo.empty() == false)
 		{
+			float newMissing = MissingValue<float>();
+			if (itsChangeMissingTo == "mean")
+			{
+				newMissing = numerical_functions::Mean(util::RemoveMissingValues(VEC(myTargetInfo)));
+			}
+			else if (itsChangeMissingTo == "median")
+			{
+				newMissing = numerical_functions::Median(util::RemoveMissingValues(VEC(myTargetInfo)));
+			}
+			else
+			{
+				newMissing = stof(itsChangeMissingTo);
+			}
+
 			auto& vec = VEC(myTargetInfo);
 			replace_if(
-			    vec.begin(), vec.end(), [=](float d) { return IsMissing(d); }, itsChangeMissingTo);
+			    vec.begin(), vec.end(), [=](float d) { return IsMissing(d); }, newMissing);
 		}
 
 		myThreadedLogger.Info(fmt::format("[{}] Missing values: {}/{}", deviceType, myTargetInfo->Data().MissingCount(),
@@ -780,8 +795,7 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 		forecastType = myTargetInfo->ForecastType();
 	}
 
-	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
-	                      static_cast<string>(forecastLevel));
+	myThreadedLogger.Info(fmt::format("Calculating time {} level {}", forecastTime.ValidDateTime(), forecastLevel));
 
 	if (itsRotateVectorComponents)
 	{
@@ -809,8 +823,7 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 
 	if (!sourceInfo)
 	{
-		myThreadedLogger.Warning("Skipping step " + static_cast<string>(forecastTime.Step()) + ", level " +
-		                         static_cast<string>(forecastLevel));
+		myThreadedLogger.Warning(fmt::format("Skipping step {}, level {}", forecastTime.Step(), forecastLevel));
 		return;
 	}
 
@@ -853,11 +866,25 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 		}
 	}
 
-	if (!IsMissing(itsChangeMissingTo))
+	if (itsChangeMissingTo.empty() == false)
 	{
+		double newMissing = MissingValue<double>();
+		if (itsChangeMissingTo == "mean")
+		{
+			newMissing = numerical_functions::Mean(util::RemoveMissingValues(VEC(myTargetInfo)));
+		}
+		else if (itsChangeMissingTo == "median")
+		{
+			newMissing = numerical_functions::Median(util::RemoveMissingValues(VEC(myTargetInfo)));
+		}
+		else
+		{
+			newMissing = stod(itsChangeMissingTo);
+		}
+
 		auto& vec = VEC(myTargetInfo);
 		replace_if(
-		    vec.begin(), vec.end(), [=](double d) { return IsMissing(d); }, itsChangeMissingTo);
+		    vec.begin(), vec.end(), [=](double d) { return IsMissing(d); }, newMissing);
 	}
 
 	myThreadedLogger.Info(fmt::format("[{}] Missing values: {}/{}", deviceType, myTargetInfo->Data().MissingCount(),

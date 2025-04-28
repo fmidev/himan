@@ -112,7 +112,7 @@ vertical_interpolation: define if Himan should do vertical interpolation, if dat
 
     "vertical_interpolation" : true
 
-change_missing_value_to: define if missing value should be changed to some normal floating point value (note: this is not the same as defining a different missing value: the resulting grib will have no missing values defined!)
+change_missing_value_to: define if missing value should be changed to some normal floating point value (note: this is not the same as defining a different missing value: the resulting grib will have no missing values defined!). Two special values for this option are: mean and median. If mean or median is used, the missing value is replaced with the mean or median of the data.
 
     "change_missing_value_to" : 0
 
