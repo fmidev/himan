@@ -1,3 +1,8 @@
+-- Cloud consensus for cloud fraction from MEPS and ECMWF deterministic and ensemble forecasts.
+-- Original algrirhtm by Jani Sorsa.
+-- Comments copied and translated from original SmartTool code.
+
+-- Weighted mean and standard deviation are calculated.
 function compute_std_mean_ec(N_EC, N_MEAN_EC, N_STD_EC, wt_ec, wt_ens_ec, wt_sum)
   local mean = (N_EC * wt_ec + N_MEAN_EC * wt_ens_ec) / wt_sum
   local stDev = math.sqrt(math.max(((wt_ens_ec * (N_STD_EC^2 + N_MEAN_EC^2) + wt_ec * N_EC^2) / wt_sum) - mean^2, 0))
@@ -74,17 +79,14 @@ function get_time(producer)
   if producer_id == 4 or producer_id == 260 then
     adjust_hours = -4
   elseif (vire_hour == '07' or vire_hour == '19') and (producer_id == 131 or producer_id == 242) then
-      adjust_hours = -7
+    adjust_hours = -7
   elseif (vire_hour == '13' or vire_hour == '01') and (producer_id == 131 or producer_id == 242) then
-      adjust_hours = -13
+    adjust_hours = -13
   end
 
-  if adjust_hours then
-    current_time:GetOriginDateTime():Adjust(HPTimeResolution.kHourResolution, adjust_hours)
-  end
-  
-  ftime = forecast_time(current_time:GetOriginDateTime(), current_time:GetValidDateTime())
-  current_time:GetOriginDateTime():Adjust(HPTimeResolution.kHourResolution, -adjust_hours) -- reset to original time
+  local ftime = forecast_time(current_time:GetOriginDateTime(), current_time:GetValidDateTime())
+  ftime:GetOriginDateTime():Adjust(HPTimeResolution.kHourResolution, adjust_hours)
+
   return ftime
 end
 
@@ -112,6 +114,12 @@ function get_param(producer, ftype, param1, param2, param3)
   return param1, param2, param3
 end
 
+
+-- Other weights:
+-- mid_level: determines the cloud cover midpoint threshold above which cloudiness is increased and below which it is decreased.
+-- Values below 50 increase cloud cover, values above 50 decrease it. The effect increases with forecast lead time, i.e. cloudiness is reduced more for later forecast days than for near-term ones.
+-- dev_factor_low, dev_factor_mid, dev_factor_high: control the strength of extremization. The goal is to reduce mid-range values, which are common in averaging. 
+-- Each cloud layer has its own adjustment. Low clouds are pushed more aggressively toward 0% or 100%, while mid/high clouds are allowed to stay in the 30–70% range more often.
 function compute_levels(step)
   local mid_level = 50 + step^(1.5) / 500
   local dev_factor_low = 1.2 + step ^(1.5) / 10000
@@ -120,6 +128,9 @@ function compute_levels(step)
   return mid_level, dev_factor_low, dev_factor_mid, dev_factor_high
 end
 
+-- Model and ensemble weights:
+-- Calculate the ratio of EC to MEPS. EC's share increases with forecast lead time from 35% to 100%.
+-- Calculate the ratio between the ensemble and deterministic runs. MEPS ratio is a fixed 3:1, while for EC the ensemble share increases with forecast lead time.
 function compute_weights(step)
   local ratio = math.min(0.0001175 * step ^ 2 + 0.35, 1) 
   local wt_meps = (1 - ratio) * (1/4)
@@ -144,16 +155,23 @@ if configuration:Exists("disable_meps") then
   disable_meps = ParseBoolean(configuration:GetValue("disable_meps"))
 end
 
-meps_time = get_time(producer(4, "MEPS"))
+local ec = producer(131, "ECG")
+local ec_prob = producer(242, "ECM_PROB")
+local meps = producer(4,"MEPS")
+local meps_mta = producer(260, "MEPSMTA")
+
+meps_time = get_time(meps)
 meps_step = tonumber(meps_time:GetStep():Hours())
 
+-- By default uses MEPS and EC data before time step 66. After that, only EC data is used. MEPS can be disabled by setting the configuration parameter "disable_meps" to true.
 if disable_meps or meps_step > 66 then
   logger:Info("Only using EC data")
   
-  NL_EC, NM_EC, NH_EC, NL_MEAN_EC, NM_MEAN_EC, NH_MEAN_EC, NL_STD_EC, NM_STD_EC, NH_STD_EC = get_data(producer(131, "ECG"), producer(242, "ECM_PROB"), forecast_type(HPForecastType.kDeterministic))
+  local NL_EC, NM_EC, NH_EC, NL_MEAN_EC, NM_MEAN_EC, NH_MEAN_EC, NL_STD_EC, NM_STD_EC, NH_STD_EC = get_data(ec, ec_prob, forecast_type(HPForecastType.kDeterministic))
   
-  if not NL_EC or not NM_EC or not NH_EC then
-    logger:Warning("Some data not found")
+  if not NL_EC or not NM_EC or not NH_EC or not NL_MEAN_EC or not NM_MEAN_EC or not NH_MEAN_EC or not NL_STD_EC or not NM_STD_EC or not NH_STD_EC then
+    logger:Error("Some EC data not found, aborting")
+    return
   else
     logger:Info("EC Data fetched")
   end
@@ -162,7 +180,7 @@ if disable_meps or meps_step > 66 then
   for i = 1, #NL_EC do
 
     mean, stDev = compute_std_mean_ec(NL_EC[i], NL_MEAN_EC[i], NL_STD_EC[i], wt_ec, wt_ens_ec, wt_sum)
-    cl[i] = mean + stDev ^ dev_factor_low * (mean - mid_level) / 50
+    cl[i] = mean + stDev ^ dev_factor_low * (mean - mid_level) / 50  -- start from the weighted mean and push values away from the midpoint based on the standard deviation. dev_factor controls the volume of the push.
 
     mean, stDev = compute_std_mean_ec(NM_EC[i], NM_MEAN_EC[i], NM_STD_EC[i], wt_ec, wt_ens_ec, wt_sum)
     cm[i] = mean + stDev ^ dev_factor_mid * (mean - mid_level) / 50
@@ -172,16 +190,11 @@ if disable_meps or meps_step > 66 then
   end
 else
   logger:Info("Using MEPS and EC data")
-  
-  local prod1 = producer(131, "ECG")
-  local prod2 = producer(242, "ECM_PROB")
-  local prod3 = producer(4,"MEPS")
-  local prod4 = producer(260, "MEPSMTA")
 
-  NL_EC, NM_EC, NH_EC, NL_MEAN_EC, NM_MEAN_EC, NH_MEAN_EC, NL_STD_EC, NM_STD_EC, NH_STD_EC = get_data(prod1, prod2, forecast_type(HPForecastType.kDeterministic))
-  NL_MEPS, NM_MEPS, NH_MEPS, NL_MEAN_MEPS, NM_MEAN_MEPS, NH_MEAN_MEPS, NL_STD_MEPS, NM_STD_MEPS, NH_STD_MEPS = get_data(prod3, prod4,forecast_type(HPForecastType.kEpsControl, 0))
+  local NL_EC, NM_EC, NH_EC, NL_MEAN_EC, NM_MEAN_EC, NH_MEAN_EC, NL_STD_EC, NM_STD_EC, NH_STD_EC = get_data(ec, ec_prob, forecast_type(HPForecastType.kDeterministic))
+  local NL_MEPS, NM_MEPS, NH_MEPS, NL_MEAN_MEPS, NM_MEAN_MEPS, NH_MEAN_MEPS, NL_STD_MEPS, NM_STD_MEPS, NH_STD_MEPS = get_data(meps, meps_mta,forecast_type(HPForecastType.kEpsControl, 0))
   
-  if not NL_EC or not NM_EC or not NH_EC or not NL_MEPS or not NM_MEPS or not NH_MEPS then
+  if not NL_EC or not NM_EC or not NH_EC or not NL_MEPS or not NM_MEPS or not NH_MEPS or not NL_MEAN_EC or not NM_MEAN_EC or not NH_MEAN_EC or not NL_MEAN_MEPS or not NM_MEAN_MEPS or not NH_MEAN_MEPS or not NL_STD_EC or not NM_STD_EC or not NH_STD_EC or not NL_STD_MEPS or not NM_STD_MEPS or not NH_STD_MEPS then
     logger:Warning("Some data not found")
   else
     logger:Info("EC and MEPS Data fetched")
@@ -201,23 +214,27 @@ else
   end
 end
 
-local n = {}
+-- Limit cloud layers are between 0 and 100.
+-- Harmonize cloud layers with total cloud cover. The idea is that at each grid point, total cloudiness can be directly computed as a function of the cl, cm, and ch parameters.
+if cl and cm and ch then
+  local n = {}
 
-for i=1, #cl do 
-  cl[i] = 0.5 * math.sqrt(cl[i] ^2) - 0.5 * math.sqrt((cl[i] - 100) ^2) + 50
-  cm[i] = 0.5 * math.sqrt(cm[i] ^2) - 0.5 * math.sqrt((cm[i] - 100) ^2) + 50
-  ch[i] = 0.5 * math.sqrt(ch[i] ^2) - 0.5 * math.sqrt((ch[i] - 100) ^2) + 50
+  for i=1, #cl do 
+    cl[i] = 0.5 * math.sqrt(cl[i] ^2) - 0.5 * math.sqrt((cl[i] - 100) ^2) + 50
+    cm[i] = 0.5 * math.sqrt(cm[i] ^2) - 0.5 * math.sqrt((cm[i] - 100) ^2) + 50
+    ch[i] = 0.5 * math.sqrt(ch[i] ^2) - 0.5 * math.sqrt((ch[i] - 100) ^2) + 50
 
-  n[i] = 100 - (1 - cl[i] * 1/100) * (1 - cm[i] * 0.75/100) * (1 - ch[i] * 0.25/100) * (1 - cl[i] * cm[i] * (1/3 - (1 - ((50 - cl[i]) ^2 + (50 - cm[i]) ^2) / 5000))/10000) * (1 - cm[i] * ch[i] * (2/3 - (1 - ((50 - cm[i]) ^2 + (50 - ch[i]) ^2) / 5000))/10000) * 100
-  n[i] = n[i] * 0.01
-  
-  if n[i] > 1 then
-    n[i] = 1
+    n[i] = 100 - (1 - cl[i] * 1/100) * (1 - cm[i] * 0.75/100) * (1 - ch[i] * 0.25/100) * (1 - cl[i] * cm[i] * (1/3 - (1 - ((50 - cl[i]) ^2 + (50 - cm[i]) ^2) / 5000))/10000) * (1 - cm[i] * ch[i] * (2/3 - (1 - ((50 - cm[i]) ^2 + (50 - ch[i]) ^2) / 5000))/10000) * 100
+    n[i] = n[i] * 0.01
+    
+    if n[i] > 1 then
+      n[i] = 1
+    end
   end
+
+  result:SetParam(param('N-0TO1'))
+  result:SetValues(n)
+
+  luatool:WriteToFile(result)
 end
 
-
-result:SetParam(param('N-0TO1'))
-result:SetValues(n)
-
-luatool:WriteToFile(result)
