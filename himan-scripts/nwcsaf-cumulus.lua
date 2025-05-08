@@ -58,7 +58,7 @@ function CumulusFix()
 
   o = {forecast_time = ecg_time,
      level = current_level,
-     param = param("RADGLO-WM2"),
+     param = param("RADGLO-WM2", aggregation(HPAggregationType.kAverage, time_duration("01:00")), processing_type()),
      forecast_type = current_forecast_type,
      producer = ecg_prod,
      geom_name = "",
@@ -67,7 +67,7 @@ function CumulusFix()
 
   local swr = luatool:FetchWithArgs(o)
 
-  o["param"] = param("RADGLOC-WM2")
+  o["param"] = param("RADGLOC-WM2", aggregation(HPAggregationType.kAverage, time_duration("01:00")), processing_type())
   local swrc = luatool:FetchWithArgs(o)
 
   if not effc or not nh or not nm or not nl or not swr or not swrc then
