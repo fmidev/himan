@@ -99,13 +99,13 @@ function MissingCloudFixWithRH(effc)
 
   local cmqc = luatool:Fetch(current_time, current_level, param("NWCSAF_CLDMASK_QC-N"), current_forecast_type)
 
-  local snwc_prod = producer(281, "SMARTMETNWC")
+  local snwc_prod = producer(286, "VIRENWC")
   snwc_prod:SetCentre(86)
-  snwc_prod:SetProcess(207)
+  snwc_prod:SetProcess(217)
 
   local latest_origintime = raw_time(radon:GetLatestTime(snwc_prod, "", 0))
   local ftime = forecast_time(latest_origintime, current_time:GetValidDateTime())
-  logger:Info(string.format("SmartMet NWC origintime: %s validtime: %s", ftime:GetOriginDateTime():String("%Y-%m-%d %H:%M:%S"), ftime:GetValidDateTime():String("%Y-%m-%d %H:%M:%S")))
+  logger:Info(string.format("VIRE NWC origintime: %s validtime: %s", ftime:GetOriginDateTime():String("%Y-%m-%d %H:%M:%S"), ftime:GetValidDateTime():String("%Y-%m-%d %H:%M:%S")))
 
   local o = {forecast_time = ftime,
        level = level(HPLevelType.kHeight, 2),
@@ -118,7 +118,7 @@ function MissingCloudFixWithRH(effc)
        time_interpolation_search_step = time_duration("00:15:00")
   }
 
-  local snwc_rh = luatool:FetchWithArgs(o)
+  local vire_rh = luatool:FetchWithArgs(o)
 
   local mnwc_prod = producer(7, "MNWC")
   mnwc_prod:SetCentre(251)
@@ -140,7 +140,7 @@ function MissingCloudFixWithRH(effc)
 
   local mnwc_cl = luatool:FetchWithArgs(o)
 
-  if not cmqc or not snwc_rh or not mnwc_cl then
+  if not cmqc or not vire_rh or not mnwc_cl then
     logger:Warning("Unable to perform RH based fix")
     return effc
   end
@@ -148,13 +148,13 @@ function MissingCloudFixWithRH(effc)
   local num_changed = 0
   local changesum = 0
 
-  for i=1,#snwc_rh do
+  for i=1,#vire_rh do
     local old_effc = effc[i]
 
-    if effc[i] < 0.1 and snwc_rh[i] >= 86 and (mnwc_cl[i] > 0.8 or cmqc[i] == 24) then
+    if effc[i] < 0.1 and vire_rh[i] >= 86 and (mnwc_cl[i] > 0.8 or cmqc[i] == 24) then
       effc[i] = 0.6
     end
-    if effc[i] <= 0.6 and snwc_rh[i] >= 98 and (mnwc_cl[i] > 0.2 or cmqc[i] == 24) then
+    if effc[i] <= 0.6 and vire_rh[i] >= 98 and (mnwc_cl[i] > 0.2 or cmqc[i] == 24) then
       effc[i] = 0.8
     end
 
@@ -163,7 +163,7 @@ function MissingCloudFixWithRH(effc)
       changesum = changesum + (effc[i] - old_effc)
     end
   end
-  logger:Info(string.format("Changed %d values (%.1f%% of grid values), average change was %.3f", num_changed, 100*num_changed/#snwc_rh, changesum / num_changed))
+  logger:Info(string.format("Changed %d values (%.1f%% of grid values), average change was %.3f", num_changed, 100*num_changed/#vire_rh, changesum / num_changed))
   return effc
 end
 
