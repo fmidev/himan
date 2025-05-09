@@ -287,7 +287,7 @@ void raw_time::FromSQLTime(const std::string& SQLTime)
 	}
 	catch (const std::out_of_range& e)
 	{
-		fmt::print("Invalid datemask given for FromSQLTime(): {}\n", e.what());
+		fmt::print("Invalid datestring given for FromSQLTime(): '{}', error: {}\n", SQLTime, e.what());
 		himan::Abort();
 	}
 }
