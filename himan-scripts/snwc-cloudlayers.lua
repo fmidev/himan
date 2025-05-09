@@ -6,13 +6,6 @@
 -- 
 
 local MISS = missing
-local editor_prod = producer(181, "SMARTMET")
-
-editor_prod:SetCentre(86)
-editor_prod:SetProcess(181)
-
-local editor_origintime = raw_time(radon:GetLatestTime(editor_prod, "", 0))
-local editor_time = forecast_time(editor_origintime, current_time:GetValidDateTime())
 
 local H0 = level(HPLevelType.kHeight, 0)
 local CC = luatool:Fetch(current_time, H0, param("N-0TO1"), current_forecast_type)
