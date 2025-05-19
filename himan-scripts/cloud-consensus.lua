@@ -103,10 +103,6 @@ end
 
 
 function get_data(producer1, producer2, ftype)
-  local rain_param = {
-      param("RRR-KGM2", aggregation(HPAggregationType.kAccumulation, time_duration("01:00")), processing_type())
-  }
-
   local mean_params = {
       param("NL-MEAN-0TO1", aggregation(), processing_type(HPProcessingType.kMean)),
       param("NM-MEAN-0TO1", aggregation(), processing_type(HPProcessingType.kMean)),
@@ -120,7 +116,6 @@ function get_data(producer1, producer2, ftype)
   }
 
   local main_params = {
-      param("N-0TO1"),
       param("NL-0TO1"),
       param("NM-0TO1"),
       param("NH-0TO1")
@@ -129,9 +124,9 @@ function get_data(producer1, producer2, ftype)
   --local RR = process_params(producer2, forecast_type(HPForecastType.kEpsControl, 0), table.unpack(rain_param))
   local NL_MEAN, NM_MEAN, NH_MEAN = process_params(producer2, forecast_type(HPForecastType.kStatisticalProcessing), table.unpack(mean_params))
   local NL_STD, NM_STD, NH_STD = process_params(producer2, forecast_type(HPForecastType.kStatisticalProcessing), table.unpack(std_params))
-  local N, NL, NM, NH = process_params(producer1, ftype, table.unpack(main_params))
+  local NL, NM, NH = process_params(producer1, ftype, table.unpack(main_params))
 
-  return N, NL, NM, NH, NL_MEAN, NM_MEAN, NH_MEAN, NL_STD, NM_STD, NH_STD
+  return NL, NM, NH, NL_MEAN, NM_MEAN, NH_MEAN, NL_STD, NM_STD, NH_STD
 end
 
 -- Get origin times for MEPS and EC
@@ -141,7 +136,7 @@ function get_time(producer)
 
   if test then
     local test_time = configuration:GetValue("origin_time_test")
-    ftime = forecast_time(raw_time(test_time), raw_time("2025-04-04 06:00:00"))
+    ftime = forecast_time(raw_time(test_time), raw_time("2025-05-16 13:00:00"))
     return ftime
   end
 
@@ -244,13 +239,15 @@ local meps_time = get_time(meps)
 local meps_step = tonumber(meps_time:GetStep():Hours())
 
 -- Get all cloud data from MEPS and EC
-local N_EC, NL_EC, NM_EC, NH_EC, NL_MEAN_EC, NM_MEAN_EC, NH_MEAN_EC, NL_STD_EC, NM_STD_EC, NH_STD_EC = get_data(ec, ec_prob, forecast_type(HPForecastType.kDeterministic))
-local N_MEPS, NL_MEPS, NM_MEPS, NH_MEPS, NL_MEAN_MEPS, NM_MEAN_MEPS, NH_MEAN_MEPS, NL_STD_MEPS, NM_STD_MEPS, NH_STD_MEPS = get_data(meps, meps_mta,forecast_type(HPForecastType.kEpsControl, 0))
+local NL_EC, NM_EC, NH_EC, NL_MEAN_EC, NM_MEAN_EC, NH_MEAN_EC, NL_STD_EC, NM_STD_EC, NH_STD_EC = get_data(ec, ec_prob, forecast_type(HPForecastType.kDeterministic))
+local NL_MEPS, NM_MEPS, NH_MEPS, NL_MEAN_MEPS, NM_MEAN_MEPS, NH_MEAN_MEPS, NL_STD_MEPS, NM_STD_MEPS, NH_STD_MEPS = get_data(meps, meps_mta,forecast_type(HPForecastType.kEpsControl, 0))
 
--- Get rain data from MEPS and EC
+-- Get cloud data from VIRE
+local N_VIRE = luatool:Fetch(current_time, current_level, param("N-0TO1"), current_forecast_type)
+
+-- Get rain data from VIRE
 rr_param = param("RRR-KGM2", aggregation(HPAggregationType.kAccumulation, time_duration("01:00")), processing_type())
-local RR_EC = luatool:FetchWithProducer(get_time(ec_mta), current_level, rr_param, forecast_type(HPForecastType.kDeterministic), ec_mta, "")
-local RR_MEPS = luatool:FetchWithProducer(get_time(meps_mta), current_level, rr_param, forecast_type(HPForecastType.kEpsControl, 0), meps_mta, "")
+local RR_VIRE = luatool:Fetch(current_time, current_level, rr_param, current_forecast_type)
 
 -- By default uses MEPS and EC data before time step 66. After that, only EC data is used. MEPS can be disabled by setting the configuration parameter "disable_meps" to true.
 if disable_meps or meps_step > 66 then
@@ -263,8 +260,8 @@ if disable_meps or meps_step > 66 then
     logger:Info("EC Data fetched")
   end
 
-  NL_EC, NM_EC, NH_EC = correct_cloudlayers(N_EC, NL_EC, NM_EC, NH_EC)
-  RR_EC, N_EC = rain_correction(RR_EC, N_EC)
+  NL_EC, NM_EC, NH_EC = correct_cloudlayers(N_VIRE, NL_EC, NM_EC, NH_EC)
+  RR_VIRE, N_VIRE = rain_correction(RR_VIRE, N_VIRE)
 
   local wt_sum = wt_ens_ec + wt_ec
   for i = 1, #NL_EC do
@@ -287,11 +284,10 @@ else
     logger:Info("EC and MEPS Data fetched")
   end
 
-  NL_MEPS, NM_MEPS, NH_MEPS = correct_cloudlayers(N_MEPS, NL_MEPS, NM_MEPS, NH_MEPS)
-  NL_EC, NM_EC, NH_EC = correct_cloudlayers(N_EC, NL_EC, NM_EC, NH_EC)
+  NL_MEPS, NM_MEPS, NH_MEPS = correct_cloudlayers(N_VIRE, NL_MEPS, NM_MEPS, NH_MEPS)
+  NL_EC, NM_EC, NH_EC = correct_cloudlayers(N_VIRE, NL_EC, NM_EC, NH_EC)
 
-  RR_EC, N_EC = rain_correction(RR_EC, N_EC)
-  RR_MEPS, N_MEPS = rain_correction(RR_MEPS, N_MEPS)
+  RR_VIRE, N_VIRE = rain_correction(RR_VIRE, N_VIRE)
 
   local wt_sum = wt_ens_ec + wt_ec + wt_meps + wt_ens_meps
   for i = 1, #NL_EC do
