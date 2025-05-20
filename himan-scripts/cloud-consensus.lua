@@ -136,7 +136,7 @@ function get_time(producer)
 
   if test then
     local test_time = configuration:GetValue("origin_time_test")
-    ftime = forecast_time(raw_time(test_time), raw_time("2025-05-16 13:00:00"))
+    ftime = forecast_time(raw_time(test_time), raw_time("2025-05-20 15:00:00"))
     return ftime
   end
 
@@ -238,12 +238,16 @@ local meps_mta = producer(260, "MEPSMTA")
 local meps_time = get_time(meps)
 local meps_step = tonumber(meps_time:GetStep():Hours())
 
+
 -- Get all cloud data from MEPS and EC
 local NL_EC, NM_EC, NH_EC, NL_MEAN_EC, NM_MEAN_EC, NH_MEAN_EC, NL_STD_EC, NM_STD_EC, NH_STD_EC = get_data(ec, ec_prob, forecast_type(HPForecastType.kDeterministic))
 local NL_MEPS, NM_MEPS, NH_MEPS, NL_MEAN_MEPS, NM_MEAN_MEPS, NH_MEAN_MEPS, NL_STD_MEPS, NM_STD_MEPS, NH_STD_MEPS = get_data(meps, meps_mta,forecast_type(HPForecastType.kEpsControl, 0))
 
 -- Get cloud data from VIRE
 local N_VIRE = luatool:Fetch(current_time, current_level, param("N-0TO1"), current_forecast_type)
+local NL_VIRE = luatool:Fetch(current_time, current_level, param("NL-0TO1"), current_forecast_type)
+local NM_VIRE = luatool:Fetch(current_time, current_level, param("NM-0TO1"), current_forecast_type)
+local NH_VIRE = luatool:Fetch(current_time, current_level, param("NH-0TO1"), current_forecast_type)
 
 -- Get rain data from VIRE
 rr_param = param("RRR-KGM2", aggregation(HPAggregationType.kAccumulation, time_duration("01:00")), processing_type())
@@ -259,9 +263,6 @@ if disable_meps or meps_step > 66 then
   else
     logger:Info("EC Data fetched")
   end
-
-  NL_EC, NM_EC, NH_EC = correct_cloudlayers(N_VIRE, NL_EC, NM_EC, NH_EC)
-  RR_VIRE, N_VIRE = rain_correction(RR_VIRE, N_VIRE)
 
   local wt_sum = wt_ens_ec + wt_ec
   for i = 1, #NL_EC do
@@ -283,11 +284,6 @@ else
   else
     logger:Info("EC and MEPS Data fetched")
   end
-
-  NL_MEPS, NM_MEPS, NH_MEPS = correct_cloudlayers(N_VIRE, NL_MEPS, NM_MEPS, NH_MEPS)
-  NL_EC, NM_EC, NH_EC = correct_cloudlayers(N_VIRE, NL_EC, NM_EC, NH_EC)
-
-  RR_VIRE, N_VIRE = rain_correction(RR_VIRE, N_VIRE)
 
   local wt_sum = wt_ens_ec + wt_ec + wt_meps + wt_ens_meps
   for i = 1, #NL_EC do
@@ -321,15 +317,19 @@ if cl and cm and ch then
     end
   end
 
+  -- Correction using the cloud consensus data
+  NL_VIRE, NM_VIRE, NH_VIRE = correct_cloudlayers(n, NL_VIRE, NM_VIRE, NH_VIRE)
+  RR_VIRE, N_VIRE = rain_correction(RR_VIRE, n)
+
   -- Write all parameters to file
   rr_param = param("RRR-KGM2")
   rr_param:SetAggregation(aggregation(HPAggregationType.kAccumulation, time_duration("01:00")))
-  write_results_to_file(rr_param, RR_EC)
+  write_results_to_file(rr_param, RR_VIRE)
   
-  write_results_to_file(param("NL-0TO1"), NL_EC)
-  write_results_to_file(param("NM-0TO1"), NM_EC)
-  write_results_to_file(param("NH-0TO1"), NH_EC)
+  write_results_to_file(param("NL-0TO1"), NL_VIRE)
+  write_results_to_file(param("NM-0TO1"), NM_VIRE)
+  write_results_to_file(param("NH-0TO1"), NH_VIRE)
   
-  write_results_to_file(param("N-0TO1"), n)
+  write_results_to_file(param("N-0TO1"), N_VIRE)
 end
 
