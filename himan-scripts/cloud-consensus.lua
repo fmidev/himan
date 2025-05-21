@@ -343,8 +343,9 @@ if cl and cm and ch then
   -- Write all parameters to file
   rr_param = param("RRR-KGM2")
   rr_param:SetAggregation(aggregation(HPAggregationType.kAccumulation, time_duration("01:00")))
+  write_options.replace_cache = true
   write_results_to_file(rr_param, RR_VIRE)
-  
+
   write_results_to_file(param("NL-0TO1"), NL_VIRE)
   write_results_to_file(param("NM-0TO1"), NM_VIRE)
   write_results_to_file(param("NH-0TO1"), NH_VIRE)
