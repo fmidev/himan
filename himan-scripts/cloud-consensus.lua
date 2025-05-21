@@ -39,7 +39,7 @@ function rain_correction(RR, N)
     _N[i] = N[i]
     _RR[i] = RR[i]
   
-    if mon >= 5 and mon <= 8 and RR[i] <= 0.09 then
+    if mon >= 5 and mon <= 8 and RR[i] > 0 and RR[i] <= 0.09 then
       _RR[i] = 0
     end
   
