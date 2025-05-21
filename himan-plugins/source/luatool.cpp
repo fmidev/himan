@@ -8,12 +8,12 @@
 #include "lift.h"
 #include "logger.h"
 #include "metutil.h"
-#include "util.h"
 #include "numerical_functions.h"
 #include "plugin_factory.h"
 #include "radon.h"
 #include "statistics.h"
 #include "stereographic_grid.h"
+#include "util.h"
 #include <filesystem>
 #include <fmt/format.h>
 #include <ogr_spatialref.h>
@@ -1685,7 +1685,8 @@ void BindLib(lua_State* L)
 	              .def_readwrite("Q", &himan::metutil::lcl_t<double>::Q),
 	          class_<write_options>("write_options")
 	              .def(constructor<>())
-	              .def_readwrite("use_bitmap", &write_options::use_bitmap),
+	              .def_readwrite("use_bitmap", &write_options::use_bitmap)
+		      .def_readwrite("replace_cache", &write_options::replace_cache),
 		  class_<himan::ensemble, std::shared_ptr<himan::ensemble>>("ensemble")
 		      .def(constructor<param, int>())
 		      .def(constructor<param, int, int>())

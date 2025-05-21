@@ -251,8 +251,16 @@ himan::HPWriteStatus writer::ToFile(std::shared_ptr<info<T>> theInfo, std::share
 		// * are written in s3 at the end of the execution
 		//
 		// so they can't be removed from cache if cache size is limited
-		auto ret = c->Insert<T>(
-		    theInfo, (conf->WriteMode() == kNoFileWrite) || (conf->WriteStorageType() == kS3ObjectStorageSystem));
+
+		const bool pin = (conf->WriteMode() == kNoFileWrite) || (conf->WriteStorageType() == kS3ObjectStorageSystem);
+
+		himan::HPWriteStatus ret = c->Insert<T>(theInfo, pin);
+
+		if (ret == HPWriteStatus::kDuplicated && itsWriteOptions.replace_cache)
+		{
+			c->Replace<T>(theInfo, pin);
+			ret = HPWriteStatus::kFinished;
+		}
 #ifdef HAVE_CEREAL
 		if (ret == HPWriteStatus::kFailed)
 		{
@@ -261,7 +269,11 @@ himan::HPWriteStatus writer::ToFile(std::shared_ptr<info<T>> theInfo, std::share
 			itsLogger.Debug(fmt::format("Cache is full, spilling {} to file {}", util::UniqueName(*theInfo), wsName));
 		}
 #else
-		if (ret != HPWriteStatus::kFinished)
+		if (ret == HPWriteStatus::kDuplicated)
+		{
+			itsLogger.Info(fmt::format("Cache already contains {}, not writing it again.", wsName));
+		}
+		else if (ret != HPWriteStatus::kFinished)
 		{
 			itsLogger.Error(fmt::format("Unexpected return value from cache: {}", HPWriteStatusToString.at(ret)));
 		}

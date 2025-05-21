@@ -69,7 +69,7 @@ himan::HPWriteStatus cache::Insert(shared_ptr<info<T>> anInfo, bool pin)
 
 		// Update timestamp of this cache item
 		cache_pool::Instance()->UpdateTime(uniqueName);
-		return himan::HPWriteStatus::kFinished;
+		return himan::HPWriteStatus::kDuplicated;
 	}
 
 #ifdef HAVE_CUDA
