@@ -258,7 +258,6 @@ local NL_EC, NM_EC, NH_EC, NL_MEAN_EC, NM_MEAN_EC, NH_MEAN_EC, NL_STD_EC, NM_STD
 local NL_MEPS, NM_MEPS, NH_MEPS, NL_MEAN_MEPS, NM_MEAN_MEPS, NH_MEAN_MEPS, NL_STD_MEPS, NM_STD_MEPS, NH_STD_MEPS = get_data(meps, meps_mta,forecast_type(HPForecastType.kEpsControl, 0))
 
 -- Get cloud data from VIRE
-local N_VIRE = luatool:Fetch(current_time, current_level, param("N-0TO1"), current_forecast_type)
 local NL_VIRE = luatool:Fetch(current_time, current_level, param("NL-0TO1"), current_forecast_type)
 local NM_VIRE = luatool:Fetch(current_time, current_level, param("NM-0TO1"), current_forecast_type)
 local NH_VIRE = luatool:Fetch(current_time, current_level, param("NH-0TO1"), current_forecast_type)
