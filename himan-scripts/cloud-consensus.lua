@@ -84,6 +84,7 @@ function correct_cloudlayers(N, NL, NM, NH)
 
     _NL[i] = math.min(cl, cc)
     _NM[i] = math.min(cm, cc)
+
   end
 
   return _NL, _NM, _NH
@@ -207,6 +208,19 @@ function compute_weights(step)
   return wt_meps, wt_ens_meps, wt_ec, wt_ens_ec
 end
 
+function limit_values(array)
+  
+  for i=1, #array do
+    if array[i] < 0 then
+      array[i] = 0
+    elseif array[i] > 1 then
+      array[i] = 1
+    end
+  end
+
+  return array
+end 
+
 function write_results_to_file(param, data)
   result:SetParam(param)
   result:SetValues(data)
@@ -320,6 +334,12 @@ if cl and cm and ch then
   -- Correction using the cloud consensus data
   NL_VIRE, NM_VIRE, NH_VIRE = correct_cloudlayers(n, NL_VIRE, NM_VIRE, NH_VIRE)
   RR_VIRE, N_VIRE = rain_correction(RR_VIRE, n)
+
+  -- Limit cloud values to 0-1
+  NL_VIRE = limit_values(NL_VIRE)
+  NM_VIRE = limit_values(NM_VIRE)
+  NH_VIRE = limit_values(NH_VIRE)
+  N_VIRE = limit_values(N_VIRE)
 
   -- Write all parameters to file
   rr_param = param("RRR-KGM2")
