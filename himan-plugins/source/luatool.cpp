@@ -1934,7 +1934,7 @@ std::shared_ptr<info<double>> luatool::FetchInfoWithArgs(const luabind::object& 
 			cnf->SourceGeomNames({gn});
 		}
 
-		const bool sl = false;  // suppress logging
+		bool suppress_logging = tintrp;
 
 		auto f = GET_PLUGIN(fetcher);
 
@@ -1953,7 +1953,7 @@ std::shared_ptr<info<double>> luatool::FetchInfoWithArgs(const luabind::object& 
 		{
 			try
 			{
-				return f->Fetch<double>(cnf, ftime, lvl, par_, ftype, rpacked, sl, rprev, tintrp);
+				return f->Fetch<double>(cnf, ftime, lvl, par_, ftype, rpacked, suppress_logging, rprev, tintrp);
 			}
 			catch (const HPExceptionType& e)
 			{

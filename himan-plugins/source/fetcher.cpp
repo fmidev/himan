@@ -149,7 +149,7 @@ shared_ptr<info<T>> fetcher::Fetch(shared_ptr<const plugin_configuration> config
 			itsLogger.Warning("Not reading from previous forecast as time interpolation is enabled");
 		}
 
-		return InterpolateTime<T>(config, requestedTime, requestedLevel, requestedParams, requestedType, false);
+		return InterpolateTime<T>(config, requestedTime, requestedLevel, requestedParams, requestedType, true);
 	}
 
 	shared_ptr<info<T>> ret;
@@ -1213,8 +1213,22 @@ shared_ptr<himan::info<T>> fetcher::InterpolateTime(const shared_ptr<const plugi
 
 		if (curtime == ftime)
 		{
-			itsLogger.Info("No time interpolation needed");
+			itsLogger.Trace("No time interpolation needed");
 			return prev;
+		}
+
+		if (!prev)
+		{
+			std::string sourceProducers = config->SourceProducer(0).Name();
+			for (size_t i = 1; i < config->SourceProducers().size(); i++)
+			{
+				sourceProducers += ", " + config->SourceProducer(i).Name();
+			}
+
+			itsLogger.Error(fmt::format(
+			    "Time interpolation failed for producer(s) {}, param {}, time {}: unable to find previous data up to -6h",
+			    sourceProducers, par.Name(), ftime));
+			continue;
 		}
 
 		// fetch next data, max 6 hours to future
@@ -1241,10 +1255,16 @@ shared_ptr<himan::info<T>> fetcher::InterpolateTime(const shared_ptr<const plugi
 
 		} while (++count < max);
 
-		if (!prev || !next)
+		if (!next)
 		{
+			std::string sourceProducers = config->SourceProducer(0).Name();
+			for (size_t i = 1; i < config->SourceProducers().size(); i++)
+			{
+				sourceProducers += ", " + config->SourceProducer(i).Name();
+			}
 			itsLogger.Error(
-			    fmt::format("Time interpolation failed for {}: unable to find previous or next data", par.Name()));
+			    fmt::format("Time interpolation failed for producer(s) {}, param {}, time {}: unable to find next data up to +6h",
+			                sourceProducers, par.Name(), ftime));
 			continue;
 		}
 
