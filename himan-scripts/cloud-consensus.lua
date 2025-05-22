@@ -28,28 +28,18 @@ end
 
 -- Rain correction:
 -- Check consistency between total cloudiness and precipitation; first one is modified accordingly.
--- Also remove light precipitation during summer time, as sometime insects and birds show up as precipitation in weather radar images (PDTK-74).
 function rain_correction(RR, N)
-  local mon = tonumber(current_time:GetValidDateTime():String("%m"))
-
   local _N = {}
-  local _RR = {}
 
   for i=1,#N do
     _N[i] = N[i]
-    _RR[i] = RR[i]
-  
-    if mon >= 5 and mon <= 8 and RR[i] > 0 and RR[i] <= 0.09 then
-      _RR[i] = 0
-    end
-  
     -- If there is even light precipitation, there should also be clouds
-    if _RR[i] > 0.01 then
+    if RR[i] > 0.01 then
       _N[i] = math.max(_N[i], 0.5)
     end
   end
 
-  return _RR, _N
+  return _N
 end
 
 -- Cloud layers are corrected:
@@ -332,7 +322,7 @@ if cl and cm and ch then
 
   -- Correction using the cloud consensus data
   NL_VIRE, NM_VIRE, NH_VIRE = correct_cloudlayers(n, NL_VIRE, NM_VIRE, NH_VIRE)
-  RR_VIRE, N_VIRE = rain_correction(RR_VIRE, n)
+  N_VIRE = rain_correction(RR_VIRE, n)
 
   -- Limit cloud values to 0-1
   NL_VIRE = limit_values(NL_VIRE)
@@ -341,11 +331,7 @@ if cl and cm and ch then
   N_VIRE = limit_values(N_VIRE)
 
   -- Write all parameters to file
-  rr_param = param("RRR-KGM2")
-  rr_param:SetAggregation(aggregation(HPAggregationType.kAccumulation, time_duration("01:00")))
   write_options.replace_cache = true
-  write_results_to_file(rr_param, RR_VIRE)
-
   write_results_to_file(param("NL-0TO1"), NL_VIRE)
   write_results_to_file(param("NM-0TO1"), NM_VIRE)
   write_results_to_file(param("NH-0TO1"), NH_VIRE)
