@@ -72,6 +72,10 @@ source_param_aggregation: define source parameter (time) aggregation type
 
     "source_param_aggregation" : "average"
 
+source_param_aggregation: define source parameter (time) aggregation type and aggregation period
+
+    "source_param_aggregation" : "average,01:00:00"
+    
 source_param_processing_type: define source parameter processing type
 
     "source_param_processing_type" : "standard deviation"
