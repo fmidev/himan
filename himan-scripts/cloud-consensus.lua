@@ -121,7 +121,7 @@ function get_data(producer1, producer2, ftype)
 end
 
 -- Get origin times for MEPS and EC
-function get_time(producer)
+function get_time(producer, get_earlier)
   
   local test = configuration:Exists("origin_time_test")
 
@@ -142,6 +142,10 @@ function get_time(producer)
     adjust_hours = -13
   end
 
+  if get_earlier and producer_id == 242 then
+    adjust_hours = -19
+  end
+
   local ftime = forecast_time(current_time:GetOriginDateTime(), current_time:GetValidDateTime())
   ftime:GetOriginDateTime():Adjust(HPTimeResolution.kHourResolution, adjust_hours)
 
@@ -152,7 +156,7 @@ end
 
 function get_param(producer, ftype, ...)
   local param_list = { ... }
-  local ftime = get_time(producer)
+  local ftime = get_time(producer, false)
   local results = {}
 
   local o = {
@@ -167,6 +171,12 @@ function get_param(producer, ftype, ...)
   for i, param in ipairs(param_list) do
     o.param = param
     results[i] = luatool:FetchWithArgs(o)
+
+    if not results[i] then
+      ftime = get_time(producer, true)
+      o.forecast_time = ftime
+      results[i] = luatool:FetchWithArgs(o)
+    end
   end
 
   return table.unpack(results)
@@ -239,7 +249,7 @@ local ec_mta = producer(240, "ECMMTA")
 local meps = producer(4,"MEPS")
 local meps_mta = producer(260, "MEPSMTA")
 
-local meps_time = get_time(meps)
+local meps_time = get_time(meps, false)
 local meps_step = tonumber(meps_time:GetStep():Hours())
 
 
@@ -255,6 +265,7 @@ local NH_VIRE = luatool:Fetch(current_time, current_level, param("NH-0TO1"), cur
 -- Get rain data from VIRE
 rr_param = param("RRR-KGM2", aggregation(HPAggregationType.kAccumulation, time_duration("01:00")), processing_type())
 local RR_VIRE = luatool:Fetch(current_time, current_level, rr_param, current_forecast_type)
+
 
 -- By default uses MEPS and EC data before time step 66. After that, only EC data is used. MEPS can be disabled by setting the configuration parameter "disable_meps" to true.
 if disable_meps or meps_step > 66 then
