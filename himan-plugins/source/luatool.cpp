@@ -1913,7 +1913,7 @@ std::shared_ptr<info<double>> luatool::FetchInfoWithArgs(const luabind::object& 
 		const auto rpacked = GetOptional(o, "return_packed_data", false);
 		const auto rprev = GetOptional(o, "read_previous_forecast_if_not_found", false);
 		const auto gn = GetOptional<std::string>(o, "geom_name", "");
-		const auto prod = GetOptional(o, "producer", producer());
+		auto prod = GetOptional(o, "producer", producer());
 		const auto lsm_thr = GetOptional(o, "lsm_threshold", MissingDouble());
 		const auto do_interp = GetOptional(o, "do_interpolation", true);
 		const auto do_levelx = GetOptional(o, "do_level_transform", true);
@@ -1926,6 +1926,20 @@ std::shared_ptr<info<double>> luatool::FetchInfoWithArgs(const luabind::object& 
 
 		if (prod.Id() != kHPMissingInt)
 		{
+			if (prod.Process() == kHPMissingInt)
+			{
+				auto r = GET_PLUGIN(radon);
+				auto meta = r->RadonDB().GetProducerDefinition(prod.Id());
+				try
+				{
+					prod.Process(std::stoi(meta["model_id"]));
+					prod.Centre(std::stoi(meta["ident_id"]));
+				}
+				catch (const std::exception& e)
+				{
+					itsLogger.Warning("Failed to set producer ident: " + std::string(e.what()));
+				}
+			}
 			cnf->SourceProducers({prod});
 		}
 
