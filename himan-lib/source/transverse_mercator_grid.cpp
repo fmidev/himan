@@ -173,3 +173,13 @@ double transverse_mercator_grid::Scale() const
 {
 	return itsSpatialReference->GetProjParm(SRS_PP_SCALE_FACTOR, MissingDouble());
 }
+
+double transverse_mercator_grid::FalseEasting() const
+{
+	return itsSpatialReference->GetProjParm(SRS_PP_FALSE_EASTING, MissingDouble());
+}
+
+double transverse_mercator_grid::FalseNorthing() const
+{
+	return itsSpatialReference->GetProjParm(SRS_PP_FALSE_NORTHING, MissingDouble());
+}
