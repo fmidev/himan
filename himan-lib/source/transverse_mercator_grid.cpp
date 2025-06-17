@@ -34,7 +34,7 @@ transverse_mercator_grid::transverse_mercator_grid(HPScanningMode scanningMode, 
 	itsLogger = logger("transverse_mercator_grid");
 
 	const std::string ref =
-	    fmt::format("+proj=tmerc +lat_0={} +lon_0={} +k_0={} +x_0={} +y_0={} {} +units=m +no_defs +wktext",
+	    fmt::format("+proj=tmerc +lat_0={} +lon_0={} +k_0={:.4f} +x_0={} +y_0={} {} +units=m +no_defs +wktext",
 	                standardParallel, orientation, scale, falseEasting, falseNorthing, earthShape.Proj4String());
 
 	itsSpatialReference = std::unique_ptr<OGRSpatialReference>(new OGRSpatialReference());
@@ -68,8 +68,8 @@ void transverse_mercator_grid::CreateCoordinateTransformations(const point& firs
 	itsXYToLatLonTransformer = std::unique_ptr<OGRCoordinateTransformation>(
 	    OGRCreateCoordinateTransformation(itsSpatialReference.get(), geogCS.get()));
 
-	const auto [fe, fn] = regular_grid::FalseEastingAndNorthing(
-	    itsSpatialReference.get(), itsLatLonToXYTransformer.get(), firstPoint, firstPointIsProjected);
+	auto [fe, fn] = regular_grid::FalseEastingAndNorthing(itsSpatialReference.get(), itsLatLonToXYTransformer.get(),
+	                                                      firstPoint, firstPointIsProjected);
 
 	if (fabs(fe) < 1e-4 && fabs(fn) < 1e-4)
 	{
@@ -79,6 +79,8 @@ void transverse_mercator_grid::CreateCoordinateTransformations(const point& firs
 	const double orientation = Orientation();
 	const double parallel = StandardParallel();
 	const double scale = Scale();
+	fe = round(fe * 100) / 100;  // Round to centimeters
+	fn = round(fn * 100) / 100;
 
 	itsSpatialReference = std::unique_ptr<OGRSpatialReference>(itsSpatialReference->CloneGeogCS());
 	if (itsSpatialReference->SetTM(parallel, orientation, scale, fe, fn) != OGRERR_NONE)
@@ -137,6 +139,8 @@ bool transverse_mercator_grid::EqualsTo(const transverse_mercator_grid& other) c
 	if (!itsSpatialReference->IsSame(other.itsSpatialReference.get()))
 	{
 		itsLogger.Trace("Areas are not equal");
+		itsLogger.Trace("This: " + Proj4String());
+		itsLogger.Trace("Other: " + other.Proj4String());
 		return false;
 	}
 
