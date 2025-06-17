@@ -1986,6 +1986,12 @@ himan::earth_shape<double> ReadEarthShape(const NFmiGribMessage& msg)
 				scale = static_cast<double>(msg.GetLongKey("scaleFactorOfEarthMinorAxis"));
 				val = static_cast<double>(msg.GetLongKey("scaledValueOfEarthMinorAxis"));
 				b = 1000. * pow(10., scale) * val;
+
+				if (a == 6378388 && (b == 6356911.946 || b == 6356911 || b == 6356912))
+				{
+					b = 6356911.946;
+					name = "Hayford";
+				}
 				break;
 			}
 			case 4:
@@ -2015,6 +2021,13 @@ himan::earth_shape<double> ReadEarthShape(const NFmiGribMessage& msg)
 				scale = static_cast<double>(msg.GetLongKey("scaleFactorOfEarthMinorAxis"));
 				val = static_cast<double>(msg.GetLongKey("scaledValueOfEarthMinorAxis"));
 				b = pow(10., scale) * val;
+
+				if (a == 6378388 && (b == 6356911.946 || b == 6356911 || b == 6356912))
+				{
+					b = 6356911.946;
+					name = "Hayford";
+				}
+
 				break;
 			}
 			case 8:
