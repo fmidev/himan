@@ -100,7 +100,6 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root,0644)
 %{_libdir}/himan-plugins/libabsolute_humidity.so
 %{_libdir}/himan-plugins/libauto_taf.so
-%{_libdir}/himan-plugins/libblend.so
 %{_libdir}/himan-plugins/libcache.so
 %{_libdir}/himan-plugins/libcape.so
 %{_libdir}/himan-plugins/libcloud_code.so
