@@ -39,13 +39,13 @@ Requires: %{boost}-iostreams
 Requires: libs3 >= 4.1
 Requires: jasper-libs
 Requires: eccodes
-Requires: gdal38-libs
+Requires: gdal310-libs
 Requires: libpqxx >= 7.7.0
 BuildRequires: python3-scons
 BuildRequires: eigen3-devel >= 3.3.4
 BuildRequires: libpqxx-devel >= 7.7.0
 BuildRequires: make
-BuildRequires: gdal38-devel
+BuildRequires: gdal310-devel
 BuildRequires: gcc-c++ >= 8.2.1
 BuildRequires: cuda-nvcc-12-4
 BuildRequires: cuda-cudart-devel-12-4

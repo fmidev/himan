@@ -39,8 +39,8 @@ BuildRequires: bzip2-devel
 BuildRequires: redhat-rpm-config
 BuildRequires: cuda-nvcc-12-4
 BuildRequires: cuda-cudart-devel-12-4
-BuildRequires: geos312-devel
-BuildRequires: gdal38-devel
+BuildRequires: geos313-devel
+BuildRequires: gdal310-devel
 BuildRequires: libfmidb-devel >= 24.4.18
 BuildRequires: libfmigrib-devel >= 24.4.19
 BuildRequires: zlib-devel
@@ -50,8 +50,8 @@ BuildRequires: fmt-devel >= 11
 BuildRequires: eccodes
 BuildRequires: make
 BuildRequires: python3-distro
-Requires: geos312
-Requires: gdal38-libs
+Requires: geos313
+Requires: gdal310-libs
 Requires: eccodes
 Requires: %{boost}-iostreams
 Requires: libs3 >= 4.1-0.6.20190408git287e4be.1.el8.fmi
