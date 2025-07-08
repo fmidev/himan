@@ -32,9 +32,8 @@ Requires: lua >= 5.3.0
 Requires: unixODBC
 Requires: libfmigrib >= 25.6.17
 Requires: libfmidb >= 24.5.6
-Requires: smartmet-library-newbase >= 24.8.21
-Requires: smartmet-library-gis
-Requires: smartmet-library-macgyver >= 24.8.7
+Requires: smartmet-library-newbase >= 25.3.20
+Requires: smartmet-library-macgyver >= 25.1.9
 Requires: %{boost}-iostreams
 Requires: libs3 >= 4.1
 Requires: jasper-libs
@@ -58,8 +57,7 @@ BuildRequires: libs3-devel >= 4.1
 BuildRequires: libfmigrib >= 25.6.17
 BuildRequires: libfmigrib-devel >= 25.6.17
 BuildRequires: libfmidb-devel >= 24.5.6
-BuildRequires: smartmet-library-newbase-devel = 24.8.21
-BuildRequires: smartmet-library-gis-devel = 24.8.7
+BuildRequires: smartmet-library-newbase-devel = 25.3.20
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: %{boost}-devel
 BuildRequires: fmt-devel >= 11
