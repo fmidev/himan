@@ -70,12 +70,19 @@ void fractile::SetParams()
 
 	auto name = util::Split(paramName, "-");
 
-	param mean(name[0] + "-MEAN-" + name[1]);
+	std::string suffix;
+
+	for (size_t i = 0; i < name.size() - 1; i++)
+	{
+		suffix += name[i] + "-";
+	}
+
+	param mean(fmt::format("{}MEAN-{}", suffix, name.back()));
 	mean.ProcessingType(processing_type(kMean));
 
 	calculatedParams.push_back(mean);
 
-	param stdev(name[0] + "-STDDEV-" + name[1]);
+	param stdev(fmt::format("{}STDDEV-{}", suffix, name.back()));
 	stdev.ProcessingType(processing_type(kStandardDeviation));
 
 	calculatedParams.push_back(stdev);
@@ -113,14 +120,14 @@ void fractile::Calculate(std::shared_ptr<info<float>> myTargetInfo, uint16_t thr
 	if (itsConfiguration->GetValue("missing_value_treatment") != "")
 	{
 		try
-                {
-                        treatMissing = HPStringToMissingValueTreatment.at(itsConfiguration->GetValue("missing_value_treatment"));
-                }
-                catch (const std::out_of_range& e)
-                {
-                        itsLogger.Fatal("Invalid configuration value of missing_value_treatment.");
+		{
+			treatMissing = HPStringToMissingValueTreatment.at(itsConfiguration->GetValue("missing_value_treatment"));
+		}
+		catch (const std::out_of_range& e)
+		{
+			itsLogger.Fatal("Invalid configuration value of missing_value_treatment.");
 			himan::Abort();
-                }
+		}
 	}
 
 	auto threadedLogger = logger("fractileThread # " + std::to_string(threadIndex));
