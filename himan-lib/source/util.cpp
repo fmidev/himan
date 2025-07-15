@@ -1140,6 +1140,24 @@ vector<forecast_type> util::ForecastTypesFromString(const string& types)
 	return forecastTypes;
 }
 
+HPEnsembleType TypeFromName(const std::string& name)
+{
+	// TODO: figure out a better way to handle this
+	if (name == "ECMWF50" || name == "ECMWF51")
+	{
+		return kPerturbedEnsemble;
+	}
+
+	if (name == "MEPS_SINGLE_ENSEMBLE" || name == "MEPS_LAGGED_ENSEMBLE")
+	{
+		return kLaggedEnsemble;
+	}
+
+	logger logr("util");
+	logr.Fatal(fmt::format("Unknown named ensemble: '{}'", name));
+	himan::Abort();
+}
+
 std::unique_ptr<ensemble> util::CreateEnsembleFromConfiguration(const std::shared_ptr<const plugin_configuration>& conf)
 {
 	std::unique_ptr<ensemble> ens;
@@ -1165,8 +1183,12 @@ std::unique_ptr<ensemble> util::CreateEnsembleFromConfiguration(const std::share
 	{
 		ensType = HPStringToEnsembleType.at(conf->GetValue("ensemble_type"));
 	}
-	else if (conf->GetValue("lag").empty() == false || conf->GetValue("lagged_members").empty() == false ||
-	         conf->GetValue("named_ensemble").empty() == false)
+	else if (conf->GetValue("named_ensemble").empty() == false)
+	{
+		// If user has specified named ensemble, use that
+		ensType = TypeFromName(conf->GetValue("named_ensemble"));
+	}
+	else if (conf->GetValue("lag").empty() == false || conf->GetValue("lagged_members").empty() == false)
 	{
 		ensType = kLaggedEnsemble;
 	}
@@ -1212,7 +1234,13 @@ std::unique_ptr<ensemble> util::CreateEnsembleFromConfiguration(const std::share
 	{
 		case kPerturbedEnsemble:
 		{
-			if (conf->GetValue("members").empty() == false)
+			const auto name = conf->GetValue("named_ensemble");
+
+			if (name.empty() == false)
+			{
+				ens = make_unique<ensemble>(par, name, maximumMissing);
+			}
+			else if (conf->GetValue("members").empty() == false)
 			{
 				const std::vector<forecast_type> members = util::ForecastTypesFromString(conf->GetValue("members"));
 

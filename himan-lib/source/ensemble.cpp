@@ -41,6 +41,42 @@ ensemble::ensemble(const param& parameter, const std::vector<forecast_type>& des
 {
 }
 
+ensemble::ensemble(const param& parameter, const std::string& name, int maximumMissingForecasts)
+    : itsParam(parameter),
+      itsExpectedEnsembleSize(),
+      itsForecasts(),
+      itsEnsembleType(kPerturbedEnsemble),
+      itsLogger(logger("ensemble")),
+      itsMaximumMissingForecasts(maximumMissingForecasts)
+{
+	if (name == "ECMWF50")
+	{
+		itsExpectedEnsembleSize = 50;
+		itsDesiredForecasts.reserve(itsExpectedEnsembleSize);
+
+		for (size_t i = 1; i <= itsExpectedEnsembleSize; i++)
+		{
+			itsDesiredForecasts.push_back(forecast_type(kEpsPerturbation, static_cast<float>(i)));
+		}
+	}
+	else if (name == "ECMWF51")
+	{
+		itsExpectedEnsembleSize = 51;
+		itsDesiredForecasts.reserve(itsExpectedEnsembleSize);
+
+		itsDesiredForecasts.push_back(forecast_type(kEpsControl, 0));
+		for (size_t i = 1; i < itsExpectedEnsembleSize; i++)
+		{
+			itsDesiredForecasts.push_back(forecast_type(kEpsPerturbation, static_cast<float>(i)));
+		}
+	}
+	else
+	{
+		itsLogger.Fatal(
+		    fmt::format("Unable to create named ensemble for {}, allowed values are: ECMWF50,ECMWF51", name));
+		himan::Abort();
+	}
+}
 ensemble::ensemble(const ensemble& other)
     : itsParam(other.itsParam),
       itsExpectedEnsembleSize(other.itsExpectedEnsembleSize),

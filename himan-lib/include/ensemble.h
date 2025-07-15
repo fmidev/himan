@@ -44,9 +44,7 @@ const std::unordered_map<std::string, HPEnsembleType> HPStringToEnsembleType = {
     {"lagged ensemble", kLaggedEnsemble}};
 
 const std::unordered_map<std::string, HPMissingValueTreatment> HPStringToMissingValueTreatment = {
-    {"remove", kRemove},
-    {"first", kFirst},
-    {"last", kLast}};
+    {"remove", kRemove}, {"first", kFirst}, {"last", kLast}};
 
 // ensemble is a thin layer on top of the usual himan data utilities.
 // It is used to make working with ensemble forecasts a bit nicer and
@@ -62,6 +60,9 @@ class ensemble
 	/// expectedEnsembleSize - controlForecasts.size() perturbations
 	ensemble(const param& parameter, const std::vector<forecast_type>& desiredForecasts,
 	         int maximumMissingForecasts = 0);
+
+	/// @brief Constructs a named ensemble
+	ensemble(const param& parameter, const std::string& namedEnsemble, int maximumMissingForecasts = 0);
 
 	virtual ~ensemble() = default;
 
@@ -93,7 +94,7 @@ class ensemble
 	std::vector<float> Values() const;
 
 	/// @brief Returns the current values of the ensemble sorted in increasing order, missing values are removed
-        std::vector<float> SortedValues() const;
+	std::vector<float> SortedValues() const;
 
 	/// @brief Returns the current values of the ensemble sorted in increasing order, missing values are removed
 	std::vector<float> SortedValues(const HPMissingValueTreatment) const;
