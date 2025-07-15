@@ -26,6 +26,7 @@ function BaseHPa(threshold)
   local thresholddata = {}
 
   for i = 1, #p do
+     -- convert surface pressure to hPa
      zerodata[i] = p[i] / 100
      thresholddata[i] = threshold
 
@@ -34,27 +35,6 @@ function BaseHPa(threshold)
   end
 
   local basedata = hitool:VerticalHeightGreaterThanGrid(IceParam, zerodata, pFL300data, thresholddata, 1)
-
-  return basedata
-end
-
-function BaseM(threshold)
-  -- Find the base of icing define as the lowest height / highest pressure at which icing index crosses the threshold value
-  -- returns the height as metric distance above ground
-
-  local zerodata = {}
-  local hFL300data = {}
-  local thresholddata = {}
-
-  for i = 1, #p do
-     zerodata[i] = 0
-     thresholddata[i] = threshold
-
-     -- FL300 (9144m)
-     hFL300data[i] = 9144
-  end
-
-  local basedata = hitool:VerticalHeightGreaterThanGrid(IceParam, zerodata, hFL300data, thresholddata, 1)
 
   return basedata
 end
@@ -78,25 +58,6 @@ function TopHPa(threshold,basedata)
   return topdata
 end
 
-function TopM(threshold,basedata)
-  -- Find the next top above the base of icing define as the height / pressure at which icing index crosses the threshold value
-  -- returns the height as metric distance above ground
-
-  local hFL300data = {}
-  local thresholddata = {}
-
-  for i = 1, #basedata do
-     thresholddata[i] = threshold
-
-     -- FL300 (9144m)
-     hFL300data[i] = 9144
-  end
-
-  local topdata = hitool:VerticalHeightLessThanGrid(IceParam, basedata, hFL300data, thresholddata, 1)
-
-  return topdata
-end
-
 function AddScalar(arr, scalar)
   local ret = {}
   for i=1,#arr do
@@ -116,10 +77,9 @@ for i=1, #topHPa do
   baseFL[i] = FlightLevel_(baseHPa[i] * 100)
 end
 
-hitool:SetHeightUnit(HPParameterUnit.kM)
-
-local baseM = BaseM(4)
-local topM = TopM(4,AddScalar(baseM,1))
+-- Fetch metric heights of base and top to convert them to hFt
+local baseM = hitool:VerticalValueGrid(param("HL-M"), baseHPa)
+local topM = hitool:VerticalValueGrid(param("HL-M"), topHPa)
 
 -- Convert top [M] to hFt
 local topHFt = {}
