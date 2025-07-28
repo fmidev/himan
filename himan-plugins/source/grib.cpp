@@ -615,6 +615,37 @@ void WriteAreaAndGrid(NFmiGribMessage& message, const shared_ptr<himan::grid>& g
 			break;
 		}
 
+		case kLambertEqualArea:
+		{
+			auto leag = dynamic_pointer_cast<lambert_equal_area_grid>(grid);
+
+			if (edition == 1)
+			{
+				logr.Fatal("lambert equal area only supported with grib2");
+				himan::Abort();
+			}
+
+			long gridType = 140;  // Grib 2
+
+			message.GridType(gridType);
+
+			message.X0(firstGridPoint.X());
+			message.Y0(firstGridPoint.Y());
+
+			message.XLengthInMeters(leag->Di());
+			message.YLengthInMeters(leag->Dj());
+
+			message.SizeX(static_cast<long>(leag->Ni()));
+			message.SizeY(static_cast<long>(leag->Nj()));
+
+			message.SetDoubleKey("centralLongitudeInDegrees", leag->Orientation());
+			message.SetDoubleKey("standardParallelInDegrees", leag->StandardParallel());
+
+			scmode = leag->ScanningMode();
+
+			break;
+		}
+
 		case kTransverseMercator:
 		{
 			auto tmg = dynamic_pointer_cast<transverse_mercator_grid>(grid);
@@ -2113,7 +2144,18 @@ unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message, const pr
 
 	auto earth = ReadEarthShape(message);
 
-	switch (message.NormalizedGridType())
+	long grid_type;
+
+	if (message.Edition() == 2 && message.GridType() == 140)
+	{
+		grid_type = 140;
+	}
+	else
+	{
+		grid_type = message.NormalizedGridType();
+	}
+
+	switch (grid_type)
 	{
 		case 0:
 		{
@@ -2183,6 +2225,16 @@ unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message, const pr
 			newGrid = grid_cache::Instance().Get<transverse_mercator_grid>(
 			    m, point(X0, Y0), message.SizeX(), message.SizeY(), di, dj, ori, sp, scale, fe, fn, earth, true);
 
+			break;
+		}
+		case 140:
+		{
+			double centralLongitude = static_cast<double>(message.GetDoubleKey("centralLongitudeInDegrees"));
+			double standardParallel = static_cast<double>(message.GetDoubleKey("standardParallelInDegrees"));
+
+			newGrid = grid_cache::Instance().Get<lambert_equal_area_grid>(
+			    m, firstPoint, message.SizeX(), message.SizeY(), message.XLengthInMeters(), message.YLengthInMeters(),
+			    centralLongitude, standardParallel, earth, false);
 			break;
 		}
 		default:
