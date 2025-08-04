@@ -51,7 +51,7 @@ BuildRequires: eccodes
 BuildRequires: make
 BuildRequires: python3-distro
 Requires: geos313
-Requires: gdal310-libs
+Requires: gdal310-libs >= 3.10.3
 Requires: eccodes
 Requires: %{boost}-iostreams
 Requires: libs3 >= 4.1-0.6.20190408git287e4be.1.el8.fmi
