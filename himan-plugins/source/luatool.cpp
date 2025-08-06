@@ -18,6 +18,7 @@
 #include <fmt/format.h>
 #include <ogr_spatialref.h>
 #include <thread>
+#include "lambert_equal_area_grid.h"
 
 #ifndef __clang_analyzer__
 
@@ -1504,6 +1505,18 @@ void BindLib(lua_State* L)
 	              .def("GetNj", LUA_CMEMFN(size_t, lambert_conformal_grid, Nj, void))
 	              .def("GetDi", LUA_CMEMFN(double, lambert_conformal_grid, Di, void))
 	              .def("GetDj", LUA_CMEMFN(double, lambert_conformal_grid, Dj, void)),
+	          class_<lambert_equal_area_grid, grid, std::shared_ptr<lambert_equal_area_grid>>("lambert_equal_area_grid")
+	              .def("ClassName", &lambert_equal_area_grid::ClassName)
+	              .def("GetBottomLeft", LUA_CMEMFN(point, lambert_equal_area_grid, BottomLeft, void))
+	              .def("GetTopRight", LUA_CMEMFN(point, lambert_equal_area_grid, TopRight, void))
+	              .def("GetFirstPoint", LUA_CMEMFN(point, lambert_equal_area_grid, FirstPoint, void))
+	              .def("GetLastPoint", LUA_CMEMFN(point, lambert_equal_area_grid, LastPoint, void))
+	              .def("GetOrientation", LUA_CMEMFN(double, lambert_equal_area_grid, Orientation, void))
+	              .def("GetStandradParallel", LUA_CMEMFN(double, lambert_equal_area_grid, StandardParallel, void))
+	              .def("GetNi", LUA_CMEMFN(size_t, lambert_equal_area_grid, Ni, void))
+	              .def("GetNj", LUA_CMEMFN(size_t, lambert_equal_area_grid, Nj, void))
+	              .def("GetDi", LUA_CMEMFN(double, lambert_equal_area_grid, Di, void))
+	              .def("GetDj", LUA_CMEMFN(double, lambert_equal_area_grid, Dj, void)),
 #if 0
 	          class_<reduced_gaussian_grid, grid, std::shared_ptr<reduced_gaussian_grid>>("reduced_gaussian_grid")
 	              .def(constructor<>())
