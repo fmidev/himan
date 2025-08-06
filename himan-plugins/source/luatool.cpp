@@ -292,7 +292,8 @@ void BindEnum(lua_State* L)
 				 value("kEntireAtmosphere", kEntireAtmosphere),
 				 value("kEntireOcean", kEntireOcean),
 				 value("kMaximumThetaE", kMaximumThetaE),
-				 value("kTropopause", kTropopause)
+				 value("kTropopause", kTropopause),
+				 value("kMUDL", kMUDL)
 			],
 	     class_<HPTimeResolution>("HPTimeResolution")
 	         .enum_("constants")[
