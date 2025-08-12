@@ -1,9 +1,8 @@
-FROM docker.io/rockylinux/rockylinux:8
+FROM docker.io/rockylinux/rockylinux:9
 
-RUN rpm -ivh https://download.fmi.fi/smartmet-open/rhel/8/x86_64/smartmet-open-release-latest-8.noarch.rpm \
-             https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && \
-    dnf -y install dnf-plugins-core && \
-    dnf config-manager --set-enabled powertools && \
+RUN rpm -ivh https://download.fmi.fi/smartmet-open/rhel/9/x86_64/smartmet-open-release-latest-9.noarch.rpm && \
+    dnf -y install epel-release dnf-plugins-core && \
+    dnf config-manager  --enable crb && \
     dnf -y module disable postgresql && \
     dnf config-manager --setopt="epel.exclude=eccodes*" --save && \
     dnf config-manager --setopt="smartmet-open-ext.exclude=curl*" --save && \

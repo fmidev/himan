@@ -41,6 +41,7 @@ HPLevelType
     kMixingLayer = 166
     kEntireAtmosphere = 200
     kEntireOcean = 201
+    kMUDL = 211
     kMaximumThetaE = 246
 
 HPParameterUnit

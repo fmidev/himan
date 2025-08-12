@@ -32,7 +32,7 @@ Requires: zlib
 Requires: libfmidb
 Requires: xerces-c
 Requires: libpqxx >= 7.7.0
-Requires: gdal38-libs
+Requires: gdal310-libs
 Requires: jasper-libs
 Requires: %{boost}-program-options
 Requires: %{boost}-system
@@ -51,7 +51,7 @@ BuildRequires: make
 BuildRequires: python3-distro
 BuildRequires: libfmidb-devel
 BuildRequires: libfmigrib-devel
-BuildRequires: gdal38-devel
+BuildRequires: gdal310-devel
 BuildRequires: zlib-devel
 BuildRequires: bzip2-devel
 Provides: himan

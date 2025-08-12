@@ -18,6 +18,7 @@
 #include <fmt/format.h>
 #include <ogr_spatialref.h>
 #include <thread>
+#include "lambert_equal_area_grid.h"
 
 #ifndef __clang_analyzer__
 
@@ -292,7 +293,8 @@ void BindEnum(lua_State* L)
 				 value("kEntireAtmosphere", kEntireAtmosphere),
 				 value("kEntireOcean", kEntireOcean),
 				 value("kMaximumThetaE", kMaximumThetaE),
-				 value("kTropopause", kTropopause)
+				 value("kTropopause", kTropopause),
+				 value("kMUDL", kMUDL)
 			],
 	     class_<HPTimeResolution>("HPTimeResolution")
 	         .enum_("constants")[
@@ -1503,6 +1505,18 @@ void BindLib(lua_State* L)
 	              .def("GetNj", LUA_CMEMFN(size_t, lambert_conformal_grid, Nj, void))
 	              .def("GetDi", LUA_CMEMFN(double, lambert_conformal_grid, Di, void))
 	              .def("GetDj", LUA_CMEMFN(double, lambert_conformal_grid, Dj, void)),
+	          class_<lambert_equal_area_grid, grid, std::shared_ptr<lambert_equal_area_grid>>("lambert_equal_area_grid")
+	              .def("ClassName", &lambert_equal_area_grid::ClassName)
+	              .def("GetBottomLeft", LUA_CMEMFN(point, lambert_equal_area_grid, BottomLeft, void))
+	              .def("GetTopRight", LUA_CMEMFN(point, lambert_equal_area_grid, TopRight, void))
+	              .def("GetFirstPoint", LUA_CMEMFN(point, lambert_equal_area_grid, FirstPoint, void))
+	              .def("GetLastPoint", LUA_CMEMFN(point, lambert_equal_area_grid, LastPoint, void))
+	              .def("GetOrientation", LUA_CMEMFN(double, lambert_equal_area_grid, Orientation, void))
+	              .def("GetStandradParallel", LUA_CMEMFN(double, lambert_equal_area_grid, StandardParallel, void))
+	              .def("GetNi", LUA_CMEMFN(size_t, lambert_equal_area_grid, Ni, void))
+	              .def("GetNj", LUA_CMEMFN(size_t, lambert_equal_area_grid, Nj, void))
+	              .def("GetDi", LUA_CMEMFN(double, lambert_equal_area_grid, Di, void))
+	              .def("GetDj", LUA_CMEMFN(double, lambert_equal_area_grid, Dj, void)),
 #if 0
 	          class_<reduced_gaussian_grid, grid, std::shared_ptr<reduced_gaussian_grid>>("reduced_gaussian_grid")
 	              .def(constructor<>())
@@ -1913,7 +1927,7 @@ std::shared_ptr<info<double>> luatool::FetchInfoWithArgs(const luabind::object& 
 		const auto rpacked = GetOptional(o, "return_packed_data", false);
 		const auto rprev = GetOptional(o, "read_previous_forecast_if_not_found", false);
 		const auto gn = GetOptional<std::string>(o, "geom_name", "");
-		const auto prod = GetOptional(o, "producer", producer());
+		auto prod = GetOptional(o, "producer", producer());
 		const auto lsm_thr = GetOptional(o, "lsm_threshold", MissingDouble());
 		const auto do_interp = GetOptional(o, "do_interpolation", true);
 		const auto do_levelx = GetOptional(o, "do_level_transform", true);
@@ -1926,6 +1940,20 @@ std::shared_ptr<info<double>> luatool::FetchInfoWithArgs(const luabind::object& 
 
 		if (prod.Id() != kHPMissingInt)
 		{
+			if (prod.Process() == kHPMissingInt)
+			{
+				auto r = GET_PLUGIN(radon);
+				auto meta = r->RadonDB().GetProducerDefinition(prod.Id());
+				try
+				{
+					prod.Process(std::stoi(meta["model_id"]));
+					prod.Centre(std::stoi(meta["ident_id"]));
+				}
+				catch (const std::exception& e)
+				{
+					itsLogger.Warning("Failed to set producer ident: " + std::string(e.what()));
+				}
+			}
 			cnf->SourceProducers({prod});
 		}
 

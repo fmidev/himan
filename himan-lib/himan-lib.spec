@@ -10,8 +10,10 @@
 
 %if %{distnum} == 8
 %define boost boost169
+%define pqxx_ver 7.7.0
 %else
 %define boost boost
+%define pqxx_ver 7.9.0
 %endif
 
 %define LIBNAME himan-lib
@@ -27,21 +29,21 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot-%(%{__id_u} -n)
 Requires: glibc
 Requires: libgcc
 Requires: libstdc++
-Requires: libfmidb >= 24.4.18
+Requires: libfmidb >= 25.8.7
 Requires: libfmigrib >= 24.4.19
 Requires: fmt-libs >= 11
-Requires: libpqxx >= 7.7.0
+Requires: libpqxx >= %{pqxx_ver}
 BuildRequires: python3-scons
 BuildRequires: gcc-c++ >= 8.2.1
 BuildRequires: eigen3-devel
-BuildRequires: libpqxx-devel >= 7.7.0
+BuildRequires: libpqxx-devel >= %{pqxx_ver}
 BuildRequires: bzip2-devel
 BuildRequires: redhat-rpm-config
 BuildRequires: cuda-nvcc-12-4
 BuildRequires: cuda-cudart-devel-12-4
-BuildRequires: geos312-devel
-BuildRequires: gdal38-devel
-BuildRequires: libfmidb-devel >= 24.4.18
+BuildRequires: geos313-devel
+BuildRequires: gdal310-devel
+BuildRequires: libfmidb-devel >= 25.8.7
 BuildRequires: libfmigrib-devel >= 24.4.19
 BuildRequires: zlib-devel
 BuildRequires: %{boost}-devel
@@ -50,8 +52,8 @@ BuildRequires: fmt-devel >= 11
 BuildRequires: eccodes
 BuildRequires: make
 BuildRequires: python3-distro
-Requires: geos312
-Requires: gdal38-libs
+Requires: geos313
+Requires: gdal310-libs >= 3.10.3
 Requires: eccodes
 Requires: %{boost}-iostreams
 Requires: libs3 >= 4.1-0.6.20190408git287e4be.1.el8.fmi

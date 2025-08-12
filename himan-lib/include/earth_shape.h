@@ -165,6 +165,10 @@ std::string earth_shape<T>::Proj4String() const
 	{
 		return fmt::format("+ellps={}", itsName);
 	}
+	else if (itsName == "Hayford")
+	{
+		return "+ellps=intl";
+	}
 
 	if (IsValid<T>(itsA) && IsValid<T>(itsB))
 	{

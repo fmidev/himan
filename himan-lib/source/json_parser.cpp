@@ -22,6 +22,7 @@
 #include <set>
 #include <stdexcept>
 #include <utility>
+#include <boost/property_tree/ptree.hpp>
 
 #define HIMAN_AUXILIARY_INCLUDE
 

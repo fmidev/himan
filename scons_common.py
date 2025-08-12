@@ -119,7 +119,7 @@ except:
 if env['OS_VERSION'] < 9:
     librarypaths.append('/usr/lib64/boost169')
 
-librarypaths.append('/usr/gdal38/lib')
+librarypaths.append('/usr/gdal310/lib')
 env.Append(LIBPATH = librarypaths)
 
 # Libraries
@@ -185,7 +185,7 @@ env.Append(CCFLAGS = cflags_extra)
 if env['OS_VERSION'] < 9:
     env.AppendUnique(CCFLAGS=('-isystem', '/usr/include/boost169'))
 
-env.AppendUnique(CCFLAGS=('-isystem', '/usr/gdal38/include'))
+env.AppendUnique(CCFLAGS=('-isystem', '/usr/gdal310/include'))
 env.AppendUnique(CCFLAGS=('-isystem', '/usr/include/eigen3'))
 
 if IS_CLANG:
@@ -228,7 +228,7 @@ env.AppendUnique(NVCCFLAGS = ['-std=' + cpp_standard])
 if env['OS_VERSION'] < 9:
     env.AppendUnique(NVCCFLAGS = ('-isystem', '/usr/include/boost169'))
 
-env.AppendUnique(NVCCFLAGS = ('-isystem', '/usr/gdal38/include'))
+env.AppendUnique(NVCCFLAGS = ('-isystem', '/usr/gdal310/include'))
 
 for flag in cflags_normal:
 	if flag == '-Wcast-qual':

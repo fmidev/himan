@@ -7,7 +7,6 @@
 #define JSON_PARSER_H
 
 #include "plugin_configuration.h"
-#include <boost/property_tree/ptree.hpp>
 #include <vector>
 
 namespace himan

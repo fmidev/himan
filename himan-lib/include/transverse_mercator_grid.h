@@ -46,6 +46,9 @@ class transverse_mercator_grid : public regular_grid
 	double StandardParallel() const;
 	double Scale() const;
 
+	double FalseEasting() const;
+	double FalseNorthing() const;
+
    private:
 	bool EqualsTo(const transverse_mercator_grid& other) const;
 	void CreateCoordinateTransformations(const point& firstPoint, bool isProjected);

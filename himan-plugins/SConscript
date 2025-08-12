@@ -30,7 +30,7 @@ auxiliary_plugins = ['cache','csv','fetcher','grib','hitool','querydata','writer
 compiled_plugins = ['icing', 'split_sum', 'seaicing', 'hybrid_pressure', 'hybrid_height',
 'cloud_code', 'ncl', 'preform_pressure', 'preform_hybrid', 'density', 'precipitation_rate', 'absolute_humidity',
 'weather_code_2', 'gust', 'monin_obukhov', 'fog', 'qnh', 'luatool',
-'pot','pot_gfs','tke','visibility','fractile','pop','probability','blend','auto_taf','stability_simple','tropopause','snow_drift','frost']
+'pot','pot_gfs','tke','visibility','fractile','pop','probability','auto_taf','stability_simple','tropopause','snow_drift','frost']
 
 # List all compiled plugins that have both CPU and GPU implementation here
 

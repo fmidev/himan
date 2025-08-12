@@ -10,8 +10,10 @@
 
 %if %{distnum} == 8
 %define boost boost169
+%define pqxx_ver 7.7.0
 %else
 %define boost boost
+%define pqxx_ver 7.9.0
 %endif
 
 %define LIBNAME himan-plugins
@@ -30,22 +32,21 @@ Requires: libstdc++
 Requires: himan-lib >= 24.12.30
 Requires: lua >= 5.3.0
 Requires: unixODBC
-Requires: libfmigrib >= 24.9.24
-Requires: libfmidb >= 24.5.6
-Requires: smartmet-library-newbase >= 24.8.21
-Requires: smartmet-library-gis
-Requires: smartmet-library-macgyver >= 24.8.7
+Requires: libfmigrib >= 25.6.17
+Requires: libfmidb >= 25.8.7
+Requires: smartmet-library-newbase >= 25.3.20
+Requires: smartmet-library-macgyver >= 25.1.9
 Requires: %{boost}-iostreams
 Requires: libs3 >= 4.1
 Requires: jasper-libs
 Requires: eccodes
-Requires: gdal38-libs
-Requires: libpqxx >= 7.7.0
+Requires: gdal310-libs
+Requires: libpqxx >= %{pqxx_ver}
 BuildRequires: python3-scons
 BuildRequires: eigen3-devel >= 3.3.4
-BuildRequires: libpqxx-devel >= 7.7.0
+BuildRequires: libpqxx-devel >= %{pqxx_ver}
 BuildRequires: make
-BuildRequires: gdal38-devel
+BuildRequires: gdal310-devel
 BuildRequires: gcc-c++ >= 8.2.1
 BuildRequires: cuda-nvcc-12-4
 BuildRequires: cuda-cudart-devel-12-4
@@ -55,11 +56,10 @@ BuildRequires: eccodes
 BuildRequires: redhat-rpm-config
 BuildRequires: cuda-cusp-12-4 >= 0.5.1
 BuildRequires: libs3-devel >= 4.1
-BuildRequires: libfmigrib >= 24.9.24
-BuildRequires: libfmigrib-devel >= 24.9.24
-BuildRequires: libfmidb-devel >= 24.5.6
-BuildRequires: smartmet-library-newbase-devel = 24.8.21
-BuildRequires: smartmet-library-gis-devel = 24.8.7
+BuildRequires: libfmigrib >= 25.6.17
+BuildRequires: libfmigrib-devel >= 25.6.17
+BuildRequires: libfmidb-devel >= 25.8.7
+BuildRequires: smartmet-library-newbase-devel = 25.3.20
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: %{boost}-devel
 BuildRequires: fmt-devel >= 11
@@ -100,7 +100,6 @@ rm -rf $RPM_BUILD_ROOT
 %defattr(-,root,root,0644)
 %{_libdir}/himan-plugins/libabsolute_humidity.so
 %{_libdir}/himan-plugins/libauto_taf.so
-%{_libdir}/himan-plugins/libblend.so
 %{_libdir}/himan-plugins/libcache.so
 %{_libdir}/himan-plugins/libcape.so
 %{_libdir}/himan-plugins/libcloud_code.so

@@ -262,6 +262,11 @@ local NL_VIRE = luatool:Fetch(current_time, current_level, param("NL-0TO1"), cur
 local NM_VIRE = luatool:Fetch(current_time, current_level, param("NM-0TO1"), current_forecast_type)
 local NH_VIRE = luatool:Fetch(current_time, current_level, param("NH-0TO1"), current_forecast_type)
 
+if not NL_VIRE or not NM_VIRE or not NH_VIRE then
+  logger:Error("VIRE cloud layer data not found, aborting")
+  return
+end
+
 -- Get rain data from VIRE
 rr_param = param("RRR-KGM2", aggregation(HPAggregationType.kAccumulation, time_duration("01:00")), processing_type())
 local RR_VIRE = luatool:Fetch(current_time, current_level, rr_param, current_forecast_type)

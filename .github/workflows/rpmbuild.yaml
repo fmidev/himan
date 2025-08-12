@@ -107,7 +107,7 @@ jobs:
       shell: bash
       run: |
         cd himan-lib
-        yum-builddep -y himan-lib.spec --nobest
+        yum-builddep -y himan-lib.spec --nobest --allowerasing
         make rpm
     - name: Build himan-bin rpm
       id: build-himan-bin
@@ -115,7 +115,7 @@ jobs:
       shell: bash
       run: |
         cd himan-lib
-        yum-builddep -y himan-lib.spec --nobest
+        yum-builddep -y himan-lib.spec --nobest --allowerasing
         cd ../himan-bin
         yum-builddep -y himan-bin.spec
         make rpm
@@ -125,7 +125,7 @@ jobs:
       shell: bash
       run: |
         cd himan-plugins
-        yum-builddep -y himan-plugins.spec --nobest
+        yum-builddep -y himan-plugins.spec --nobest --allowerasing
         make rpm
     - name: Build himan-scripts rpm
       id: build-himan-scripts
@@ -367,7 +367,7 @@ jobs:
       shell: bash
       run: |
         cd himan-lib
-        yum-builddep -y himan-lib.spec --nobest
+        yum-builddep -y himan-lib.spec --nobest --allowerasing
         make rpm
     - name: Build himan-bin rpm
       id: build-himan-bin
@@ -375,9 +375,9 @@ jobs:
       shell: bash
       run: |
         cd himan-lib
-        yum-builddep -y himan-lib.spec --nobest
+        yum-builddep -y himan-lib.spec --nobest --allowerasing
         cd ../himan-bin
-        yum-builddep -y himan-bin.spec
+        yum-builddep -y himan-bin.spec --allowerasing
         make rpm
     - name: Build himan-plugins rpm
       id: build-himan-plugins
@@ -385,7 +385,7 @@ jobs:
       shell: bash
       run: |
         cd himan-plugins
-        yum-builddep -y himan-plugins.spec --nobest
+        yum-builddep -y himan-plugins.spec --nobest --allowerasing
         make rpm
     - name: Build himan-scripts rpm
       id: build-himan-scripts
@@ -443,3 +443,34 @@ jobs:
         HOST: ${{ secrets.RPM_API_HOST_RHEL9 }}
       run: |
            find ${{ github.workspace }} -type f -name "*.rpm" -not -name "*debug*" -exec curl --show-error --fail -u $USER:$PASS -F file=@{} $HOST/api/upload \;
+
+  build-image-rhel9:
+    name: build-image-and-push-to-quay.io-rhel9
+    runs-on: ubuntu-latest
+    needs: sync-to-release-repo-rhel9
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Build image
+      id: build-image
+      uses: redhat-actions/buildah-build@v2
+      with:
+        image: himan
+        tags: latest-rhel9
+        containerfiles: Containerfile.rhel9
+    - name: Test image
+      uses: fmidev/podman-run-action@v1
+      with:
+        image: ${{ steps.build-image.outputs.image-with-tag }}
+        run: himan -d 5 -l
+    - name: Push to quay.io
+      id: push-to-quay
+      uses: redhat-actions/push-to-registry@v2
+      with:
+        image: ${{ steps.build-image.outputs.image }}
+        tags: ${{ steps.build-image.outputs.tags }}
+        registry: quay.io/fmi
+        username: ${{ secrets.QUAY_USER }}
+        password: ${{ secrets.QUAY_TOKEN }}
+    - name: Print image url
+      run: echo "Image pushed to ${{ steps.push-to-quay.outputs.registry-paths }}"

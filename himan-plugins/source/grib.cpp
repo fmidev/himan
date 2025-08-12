@@ -615,6 +615,37 @@ void WriteAreaAndGrid(NFmiGribMessage& message, const shared_ptr<himan::grid>& g
 			break;
 		}
 
+		case kLambertEqualArea:
+		{
+			auto leag = dynamic_pointer_cast<lambert_equal_area_grid>(grid);
+
+			if (edition == 1)
+			{
+				logr.Fatal("lambert equal area only supported with grib2");
+				himan::Abort();
+			}
+
+			long gridType = 140;  // Grib 2
+
+			message.GridType(gridType);
+
+			message.X0(firstGridPoint.X());
+			message.Y0(firstGridPoint.Y());
+
+			message.XLengthInMeters(leag->Di());
+			message.YLengthInMeters(leag->Dj());
+
+			message.SizeX(static_cast<long>(leag->Ni()));
+			message.SizeY(static_cast<long>(leag->Nj()));
+
+			message.SetDoubleKey("centralLongitudeInDegrees", leag->Orientation());
+			message.SetDoubleKey("standardParallelInDegrees", leag->StandardParallel());
+
+			scmode = leag->ScanningMode();
+
+			break;
+		}
+
 		case kTransverseMercator:
 		{
 			auto tmg = dynamic_pointer_cast<transverse_mercator_grid>(grid);
@@ -633,15 +664,15 @@ void WriteAreaAndGrid(NFmiGribMessage& message, const shared_ptr<himan::grid>& g
 			message.SetLongKey("longitudeOfReferencePoint", static_cast<long>(tmg->Orientation() * 1000000));
 			message.SetLongKey("latitudeOfReferencePoint", static_cast<long>(tmg->StandardParallel() * 1000000));
 
-			message.SetLongKey("XR", 100 * static_cast<long>(0));  // TODO
-			message.SetLongKey("YR", 100 * static_cast<long>(0));
+			message.SetLongKey("XRInMetres", static_cast<long>(-tmg->FalseEasting()));
+			message.SetLongKey("YRInMetres", static_cast<long>(-tmg->FalseNorthing()));
 			message.SetLongKey("scaleFactorAtReferencePoint", static_cast<long>(tmg->Scale()));
-			message.SetLongKey("X1", 0);  // TODO
-			message.SetLongKey("X2", 0);
-			message.SetLongKey("Y1", 0);
-			message.SetLongKey("Y2", 0);
-			message.SetLongKey("Di", static_cast<long>(tmg->Di() * 100));
-			message.SetLongKey("Dj", static_cast<long>(tmg->Dj() * 100));
+			const auto fp = tmg->Projected(tmg->FirstPoint());
+			const auto lp = tmg->Projected(tmg->LastPoint());
+			message.SetLongKey("X1InGridLengths", static_cast<long>(fp.X()));
+			message.SetLongKey("Y1InGridLengths", static_cast<long>(fp.Y()));
+			message.SetLongKey("X2InGridLengths", static_cast<long>(lp.X()));
+			message.SetLongKey("Y2InGridLengths", static_cast<long>(lp.Y()));
 
 			scmode = tmg->ScanningMode();
 
@@ -1986,6 +2017,12 @@ himan::earth_shape<double> ReadEarthShape(const NFmiGribMessage& msg)
 				scale = static_cast<double>(msg.GetLongKey("scaleFactorOfEarthMinorAxis"));
 				val = static_cast<double>(msg.GetLongKey("scaledValueOfEarthMinorAxis"));
 				b = 1000. * pow(10., scale) * val;
+
+				if (a == 6378388 && (b == 6356911.946 || b == 6356911 || b == 6356912))
+				{
+					b = 6356911.946;
+					name = "Hayford";
+				}
 				break;
 			}
 			case 4:
@@ -2015,6 +2052,13 @@ himan::earth_shape<double> ReadEarthShape(const NFmiGribMessage& msg)
 				scale = static_cast<double>(msg.GetLongKey("scaleFactorOfEarthMinorAxis"));
 				val = static_cast<double>(msg.GetLongKey("scaledValueOfEarthMinorAxis"));
 				b = pow(10., scale) * val;
+
+				if (a == 6378388 && (b == 6356911.946 || b == 6356911 || b == 6356912))
+				{
+					b = 6356911.946;
+					name = "Hayford";
+				}
+
 				break;
 			}
 			case 8:
@@ -2081,7 +2125,7 @@ unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message, const pr
 	}
 
 	double X0 = message.X0();
-	const double Y0 = message.Y0();
+	double Y0 = message.Y0();
 
 	// GRIB2 has longitude 0 .. 360, but in Himan we internally normalize it to -180 .. 180
 	//
@@ -2090,14 +2134,28 @@ unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message, const pr
 	// can have coordinates in both ways!)
 
 	if (X0 > 180)
+	{
 		X0 -= 360.;
+	}
+
 	const himan::point firstPoint(X0, Y0);
 
 	unique_ptr<grid> newGrid;
 
 	auto earth = ReadEarthShape(message);
 
-	switch (message.NormalizedGridType())
+	long grid_type;
+
+	if (message.Edition() == 2 && message.GridType() == 140)
+	{
+		grid_type = 140;
+	}
+	else
+	{
+		grid_type = message.NormalizedGridType();
+	}
+
+	switch (grid_type)
 	{
 		case 0:
 		{
@@ -2147,6 +2205,36 @@ unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message, const pr
 			    m, firstPoint, static_cast<size_t>(message.SizeX()), static_cast<size_t>(message.SizeY()),
 			    message.iDirectionIncrement(), message.jDirectionIncrement(), earth,
 			    point(message.SouthPoleX(), message.SouthPoleY()));
+			break;
+		}
+		case 6:
+		{
+			// For some reason tm has DiInMetres and DjInMetres, whereas other
+			// projections have DxInMetres and DyInMetres
+			const auto di = message.GetDoubleKey("DiInMetres");
+			const auto dj = message.GetDoubleKey("DjInMetres");
+			const auto fe = message.GetDoubleKey("XRInMetres");
+			const auto fn = message.GetDoubleKey("YRInMetres");
+			const auto sp = message.GetDoubleKey("latitudeOfReferencePointInDegrees");
+			const auto scale = message.GetDoubleKey("scaleFactorAtReferencePoint");
+			const auto ori = message.GetDoubleKey("longitudeOfReferencePointInDegrees");
+			// tm gives first point as projected
+			X0 = message.GetDoubleKey("X1InGridLengths");
+			Y0 = message.GetDoubleKey("Y1InGridLengths");
+
+			newGrid = grid_cache::Instance().Get<transverse_mercator_grid>(
+			    m, point(X0, Y0), message.SizeX(), message.SizeY(), di, dj, ori, sp, scale, fe, fn, earth, true);
+
+			break;
+		}
+		case 140:
+		{
+			double centralLongitude = static_cast<double>(message.GetDoubleKey("centralLongitudeInDegrees"));
+			double standardParallel = static_cast<double>(message.GetDoubleKey("standardParallelInDegrees"));
+
+			newGrid = grid_cache::Instance().Get<lambert_equal_area_grid>(
+			    m, firstPoint, message.SizeX(), message.SizeY(), message.XLengthInMeters(), message.YLengthInMeters(),
+			    centralLongitude, standardParallel, earth, false);
 			break;
 		}
 		default:
