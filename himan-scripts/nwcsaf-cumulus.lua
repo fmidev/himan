@@ -34,8 +34,6 @@ function CumulusFix()
   end
 
   mnwc_origintime = raw_time(mnwc_origintime)
-
-  print("MNWC origintime: " .. mnwc_origintime)
   local mnwc_time = forecast_time(mnwc_origintime, current_time:GetValidDateTime())
 
   local o = {forecast_time = mnwc_time,
