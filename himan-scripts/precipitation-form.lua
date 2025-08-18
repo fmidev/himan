@@ -3,10 +3,10 @@ function adjust_precip(prec_value, t_value)
         if t_value > 0 then return 3 end
     elseif prec_value == 4 then
         if t_value > 0 then return 0 end
-        if t_value <= -10 then return 3 end
+        if t_value < -10 then return 3 end
     elseif prec_value == 5 then
         if t_value > 0 then return 1 end
-        if t_value <= -10 then return 3 end
+        if t_value < -10 then return 3 end
     end
     return prec_value
 end
@@ -148,7 +148,7 @@ end
 meps_time = get_time(meps)
 meps_step = tonumber(meps_time:GetStep():Hours())
 
-local use_meps = (disable_meps == false or meps_step < 66)
+local use_meps = (disable_meps == false and meps_step < 66)
 
 for i = 1, #t do
 
