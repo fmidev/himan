@@ -22,8 +22,11 @@ for key, value in pairs(params) do
   -- For MEPS we use lagged ensemble
   if currentProducerName == "MEPS" then
     ens = lagged_ensemble(param(key), "MEPS_LAGGED_ENSEMBLE", 250)
+  elseif currentProducerName == "ECGEPS" then
+    ens = ensemble(param(key), "ECMWF50", 250)
   else
-    ens = ensemble(param(key), ensemble_size, 250)
+    logger:Error("Unsupported producer: " .. currentProducerName)
+    return
   end
 
   ens:Fetch(configuration, current_time, value[1])
