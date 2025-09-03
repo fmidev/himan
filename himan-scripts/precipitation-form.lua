@@ -1,3 +1,24 @@
+-- Adjustments for origin times
+local HOUR_TO_ADJUST = {
+    MEPS = {  -- hours 0..23
+        [0]=-3,[1]=-4,[2]=-2,[3]=-3,[4]=-4,[5]=-2,[6]=-3,[7]=-4,[8]=-2,[9]=-3,[10]=-4,[11]=-2,
+        [12]=-3,[13]=-4,[14]=-2,[15]=-3,[16]=-4,[17]=-2,[18]=-3,[19]=-4,[20]=-2,[21]=-3,[22]=-4,[23]=-2,
+    },
+    EC = {
+        [0]  = -12, [1]  = -13, [2]  = -14, [3]  = -15, [4]  = -16, [5]  = -17,
+        [6]  = -18, [7]  = -7,  [8]  = -8,  [9]  = -9,  [10] = -10, [11] = -11,
+        [12] = -12, [13] = -13, [14] = -14, [15] = -15, [16] = -16, [17] = -17,
+        [18] = -18, [19] = -7,  [20] = -8,  [21] = -9,  [22] = -10, [23] = -11,
+    }    
+}
+
+local PRODUCER_GROUP = {
+    [4]   = "MEPS",
+    [260] = "MEPS",
+    [131] = "EC",
+    [240] = "EC",
+}
+
 function adjust_precip(prec_value, t_value)
     if prec_value == 0 then
         if t_value > 0 then return 3 end
@@ -12,22 +33,11 @@ function adjust_precip(prec_value, t_value)
 end
 
 function compute_tw(temp, rh)
-    local rad = math.pi / 180
-    return temp * math.atan(0.151977 * math.sqrt(rh + 8.313659)) * rad
-         + math.atan(temp + rh) * rad
-         - math.atan(rh - 1.676331) * rad
-         + 0.00391838 * (rh^(3/2)) * math.atan(0.023101 * rh) * rad
+    return temp * math.atan(0.151977 * math.sqrt(rh + 8.313659))
+         + math.atan(temp + rh)
+         - math.atan(rh - 1.676331)
+         + 0.00391838 * (rh^(3/2)) * math.atan(0.023101 * rh)
          - 4.686035
-end
-
-function ramp_up(value, lower, upper)
-    if value < lower then
-        return 0
-    elseif value > upper then
-        return 1
-    else
-        return 1 - (value - lower) / (upper - lower)
-    end
 end
 
 function convert_to_100(array)
@@ -48,39 +58,36 @@ function convert_to_celsius(array)
     return t
 end
 
-function get_time(producer)  
-
-      
-    local test = configuration:Exists("origin_time_test")
-
-    if test then
-        local test_time = configuration:GetValue("origin_time_test")
-        ftime = forecast_time(raw_time(test_time), raw_time("2025-06-16 22:00:00"))
-        return ftime
-    end
-    
-    local vire_hour = current_time:GetOriginDateTime():String('%H')
-    local producer_id = producer:GetId()
-  
-    if producer_id == 4 or producer_id == 260 then
-      adjust_hours = -4
-    elseif (vire_hour == '07' or vire_hour == '19') and (producer_id == 131 or producer_id == 240) then
-        adjust_hours = -7
-    elseif (vire_hour == '13' or vire_hour == '01') and (producer_id == 131 or producer_id == 240) then
-        adjust_hours = -13
-    end
-  
-    if adjust_hours then
-      current_time:GetOriginDateTime():Adjust(HPTimeResolution.kHourResolution, adjust_hours)
-    end
-    
-    ftime = forecast_time(current_time:GetOriginDateTime(), current_time:GetValidDateTime())
-    current_time:GetOriginDateTime():Adjust(HPTimeResolution.kHourResolution, -adjust_hours) 
+function get_test_time()
+    local test_time = configuration:GetValue("origin_time_test")
+    local step_time = configuration:GetValue("step_time_test")
+    ftime = forecast_time(raw_time(test_time), raw_time("2025-06-16 22:00:00"))
     return ftime
-  end
+end
+
+function get_time(producer) 
+    test = configuration:Exists("origin_time_test")
+    if test then
+        return get_test_time()
+    end
+
+    local origin_dt = current_time:GetOriginDateTime()
+    local hour      = tonumber(origin_dt:String('%H'))
+    local pid       = producer:GetId()
+
+    local group = PRODUCER_GROUP[pid]
+    if not group then return end
+
+    local adjust_hours = HOUR_TO_ADJUST[group][hour]
+    if not adjust_hours then return end
+
+    local ftime = forecast_time(origin_dt, current_time:GetValidDateTime())
+    ftime:GetOriginDateTime():Adjust(HPTimeResolution.kHourResolution, adjust_hours)
+    return ftime
+end
 
 function get_param(producer, ftype, param, level)
-
+    
     local ftime = get_time(producer)
   
     local o = {forecast_time = ftime,
@@ -101,6 +108,7 @@ local par_prec = param('PRECFORM2-N')
 
 local l2 = level(HPLevelType.kHeight, 2)
 local l0 = level(HPLevelType.kHeight, 0)
+
 
 local t = luatool:Fetch(current_time, l2, par_t, current_forecast_type)
 local rh = luatool:Fetch(current_time, l2, par_rh, current_forecast_type)
@@ -181,7 +189,7 @@ for i = 1, #t do
         local diff = use_meps and meps_diff[i] or ec_diff[i]
         local prec_ref = use_meps and prec_meps[i] or prec_ec[i]
     
-        if math.random() < ramp_up(diff, 0.25, 0.5) then
+        if math.random() < RampUp(0.25, 0.5, diff) then
             prec[i] = tw_pref[i]
         else
             if (tw_pref[i] == 3 and prec_ref == 1) or (tw_pref[i] == 1 and prec_ref == 3) then
