@@ -25,7 +25,15 @@ function CumulusFix()
   mnwc_prod:SetCentre(251)
   mnwc_prod:SetProcess(7)
 
-  local mnwc_origintime = raw_time(radon:GetLatestTime(mnwc_prod, "", 0))
+  local mnwc_origintime = radon:GetLatestTime(mnwc_prod, "", 0)
+
+  if mnwc_origintime == "" then
+    logger:Error("MNWC origintime not found")
+    Write(effc)
+    return
+  end
+
+  mnwc_origintime = raw_time(mnwc_origintime)
   local mnwc_time = forecast_time(mnwc_origintime, current_time:GetValidDateTime())
 
   local o = {forecast_time = mnwc_time,

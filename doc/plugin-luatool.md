@@ -487,6 +487,7 @@ forecast.
 
 	local e = ensemble(param("T-K"), ensemble_size)
 	local e = ensemble(param("T-K"), ensemble_size, maximum_missing_forecasts)
+	local e = ensemble(param("T-K"), "ECMWF50", maximum_missing_forecasts)
 
 
 | Return value | Name | Arguments | Description |

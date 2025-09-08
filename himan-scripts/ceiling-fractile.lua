@@ -61,7 +61,7 @@ local ens = nil
 local ensSize = nil
 
 if producer:GetId() == 242 then 
-  ens = ensemble(param("CEIL-2-M"), 51, 250)
+  ens = ensemble(param("CEIL-2-M"), "ECMWF50", 250)
 else 
   ensSize = tonumber(radon:GetProducerMetaData(producer, "ensemble size"))
 
