@@ -245,6 +245,47 @@ CUDA_DEVICE Type Tw_(Type thetaE, Type P)
 }
 
 /**
+ * @brief Approximate wet-bulb temperature from air temperature and relative humidity.
+ *
+ * Formula derived from Stull in:
+ * 
+ * Wet-Bulb Temperature from Relative Humidity and Air Temperature (2011)
+ *
+ * @param T Air temperature in Kelvin
+ * @param RH Relative humidity in percent [0..100]
+ * @return Wet-bulb temperature in Kelvin
+ */
+
+template <typename Type>
+CUDA_DEVICE Type TwStull_(Type T, Type RH)
+{
+    ASSERT((T > 100 && T < 350) || IsMissing(T));    // Kelvin range
+    ASSERT((RH >= 0 && RH <= 100) || IsMissing(RH)); // RH in %
+	
+	if (IsMissing(T) || IsMissing(RH))
+    {
+        return himan::MissingValue<Type>();
+    }
+
+    using namespace himan::constants;
+
+    // Convert to Celsius
+    const Type Tc = T - static_cast<Type>(kKelvin);
+    const Type rh = RH;
+
+    // Stull (2011) closed-form approximation (all angles in radians)
+    const Type term1 = Tc * atan(static_cast<Type>(0.151977) * sqrt(rh + static_cast<Type>(8.313659)));
+    const Type term2 = atan(Tc + rh);
+    const Type term3 = -atan(rh - static_cast<Type>(1.676331));
+    const Type term4 = static_cast<Type>(0.00391838) * pow(rh, static_cast<Type>(1.5)) * atan(static_cast<Type>(0.023101) * rh);
+
+    const Type TwC = term1 + term2 + term3 + term4 - static_cast<Type>(4.686035);
+
+    // Return Kelvin
+    return TwC + static_cast<Type>(kKelvin);
+}
+
+/**
  * @brief Calculate "dry" potential temperature with poissons equation.
  *
  * http://san.hufs.ac.kr/~gwlee/session3/potential.html

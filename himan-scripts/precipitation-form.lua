@@ -32,14 +32,6 @@ function adjust_precip(prec_value, t_value)
     return prec_value
 end
 
-function compute_tw(temp, rh)
-    return temp * math.atan(0.151977 * math.sqrt(rh + 8.313659))
-         + math.atan(temp + rh)
-         - math.atan(rh - 1.676331)
-         + 0.00391838 * (rh^(3/2)) * math.atan(0.023101 * rh)
-         - 4.686035
-end
-
 function convert_to_100(array)
     if not array then return nil end 
     local t = {}
@@ -48,15 +40,6 @@ function convert_to_100(array)
     end
     return t
   end
-
-function convert_to_celsius(array)
-    if not array then return nil end 
-    local t = {}
-    for i = 1, #array do
-        t[i] = array[i] - 273.15
-    end
-    return t
-end
 
 function get_test_time()
     local test_time = configuration:GetValue("origin_time_test")
@@ -109,7 +92,6 @@ local par_prec = param('PRECFORM2-N')
 local l2 = level(HPLevelType.kHeight, 2)
 local l0 = level(HPLevelType.kHeight, 0)
 
-
 local t = luatool:Fetch(current_time, l2, par_t, current_forecast_type)
 local rh = luatool:Fetch(current_time, l2, par_rh, current_forecast_type)
 local prec = luatool:Fetch(current_time, l0, par_prec, current_forecast_type)
@@ -129,10 +111,6 @@ local ec_ftype = forecast_type(HPForecastType.kDeterministic)
 local t_ec = get_param(ec, ec_ftype, par_t, l2)
 local rh_ec = get_param(ec_mta, ec_ftype, par_rh, l2)
 local prec_ec = get_param(ec_mta, ec_ftype, par_prec, l0)
-
-t = convert_to_celsius(t)
-t_meps = convert_to_celsius(t_meps)
-t_ec = convert_to_celsius(t_ec)
 
 rh_meps = convert_to_100(rh_meps) --variable RH-PRCNT not found, using RH-0TO1
 
@@ -160,11 +138,15 @@ local use_meps = (disable_meps == false and meps_step < 66)
 
 for i = 1, #t do
 
-    tw[i] = compute_tw(t[i], rh[i])
-    tw_ec[i] = compute_tw(t_ec[i], rh_ec[i])
-    
+    tw[i] = TwStull_(t[i], rh[i])
+    tw[i] = tw[i] - 273.15
+
+    tw_ec[i] = TwStull_(t_ec[i], rh_ec[i])
+    tw_ec[i] = tw_ec[i] - 273.15
+
     if use_meps then
-        tw_meps[i] = compute_tw(t_meps[i], rh_meps[i])
+        tw_meps[i] = TwStull_(t_meps[i], rh_meps[i])
+        tw_meps[i] = tw_meps[i] - 273.15
     end
 
     ec_diff[i] = math.abs(tw_ec[i] - tw[i])

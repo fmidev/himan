@@ -1820,6 +1820,7 @@ void BindLib(lua_State* L)
 	          def("MixingRatio_", &metutil::MixingRatio_<double>),
 	          def("MoistLift_", &metutil::MoistLift_<double>), 
 	          def("DryLift_", &metutil::DryLift_<double>),
+			  def("TwStull_", &metutil::TwStull_<double>),
 		  def("FlightLevel_", &metutil::FlightLevel_),
 		  def("ElevationAngle_", &metutil::ElevationAngle_),
 		  // util namespace
