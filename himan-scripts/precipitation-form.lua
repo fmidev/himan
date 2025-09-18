@@ -1,3 +1,12 @@
+-- Precipitation form determination, that takes the Vire temperature better into consideration.
+-- Using the 2 meter wet bulb temperature, which already a good approximation for determining precipitation form, 
+-- but this script combines it with model level based determination.
+--
+-- Original code from SmartTool by Jani Sorsa and Sini Jääskeläinen.
+-- Some comments copied and translated from original SmartTool code.
+
+
+
 -- Adjustments for origin times
 local HOUR_TO_ADJUST = {
     MEPS = {  -- hours 0..23
@@ -20,11 +29,17 @@ local PRODUCER_GROUP = {
 }
 
 function adjust_precip(prec_value, t_value)
+    -- Drizzle is left as determined by the model, except when the temperature is below freezing 
+    -- (in which case it is snowfall).
     if prec_value == 0 then
         if t_value > 0 then return 3 end
+    -- Freezing drizzle is left as determined by the model, except if the temperature is above freezing 
+    -- (in which case it is liquid drizzle) or below –10 °C (in which case it is snowfall)
     elseif prec_value == 4 then
         if t_value > 0 then return 0 end
         if t_value < -10 then return 3 end
+    --Freezing rain is left as determined by the model, except if the temperature is above freezing 
+    -- (in which case it is rain) or below –10 °C (in which case it is snowfall).
     elseif prec_value == 5 then
         if t_value > 0 then return 1 end
         if t_value < -10 then return 3 end
@@ -121,8 +136,11 @@ local tw_ec = {}
 local ec_diff = {}
 local meps_diff = {}
 
+-- A variable for temperature determination based on the wet bulb temperature.
 local tw_pref = {}
 
+-- Computational temperature thresholds used by the wet bulb–based form determination.
+-- The values are in principle adjustable, but these have seemed to work reasonably well.
 local rainbound = 0.4
 local snowbound = 0.1
 
@@ -138,6 +156,9 @@ local use_meps = (disable_meps == false and meps_step < 66)
 
 for i = 1, #t do
 
+    -- Wet bulb temperatures according to the empirical formula (Stull) for VIRE data, EC, and MEPS. 
+    -- The calculation requires T and RH. The Stull formula combines computational simplicity
+    -- with relatively good accuracy under natural temperature conditions
     tw[i] = TwStull_(t[i], rh[i])
     tw[i] = tw[i] - 273.15
 
@@ -149,6 +170,8 @@ for i = 1, #t do
         tw_meps[i] = tw_meps[i] - 273.15
     end
 
+    -- The absolute difference between the VIRE temperature and the raw temperature (EC, MEPS) is calculated. 
+    -- This difference is later used to determine which form determination will be applied.
     ec_diff[i] = math.abs(tw_ec[i] - tw[i])
 
     if use_meps then
@@ -157,6 +180,8 @@ for i = 1, #t do
 
     tw_pref[i] = missing
 
+    -- Above the rainbound, the form according to wet bulb determination is rain;
+    -- below the snowbound, it is snow; and between the two, it is sleet.
     if tw[i] > rainbound then
         tw_pref[i] = 1
     end
@@ -167,6 +192,12 @@ for i = 1, #t do
         tw_pref[i] = 3
     end
 
+    -- The actual logic of the form determination (rain, sleet, snow) is implemented here.
+    -- Uses MEPS, if available and not disabled, otherwise EC.
+    -- The wet bulb–based form is chosen when the model’s TW deviates significantly from the Vire data TW.
+    -- With a difference greater than 0.5 °C, the TW based form is always chosen;
+    -- with a difference smaller than 0.25 °C, the model’s form is chosen. Between these, a (gradually) random form is selected.
+    -- If the model’s form and TW based form are contradictory (rain and snow), sleet is chosen.
     if prec[i] > 0 and prec[i] < 4 then
         local diff = use_meps and meps_diff[i] or ec_diff[i]
         local prec_ref = use_meps and prec_meps[i] or prec_ec[i]
