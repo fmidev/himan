@@ -40,4 +40,6 @@ When solving the hypsometric equation, the calculation is started from the lowes
 
 # Per-plugin configuration options
 
-None
+    "method": "geopotential" | "hypsometric"
+
+Defines which method to use for calculating hybrid height. Default is "geopotential".

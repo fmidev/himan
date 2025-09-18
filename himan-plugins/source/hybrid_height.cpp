@@ -36,8 +36,20 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 		    stoi(r->RadonDB().GetProducerMetaData(itsConfiguration->TargetProducer().Id(), "last hybrid level number"));
 	}
 
-	if ((itsConfiguration->TargetProducer().Id() == 240 || itsConfiguration->TargetProducer().Id() == 243) ||
-	    (itsConfiguration->TargetProducer().Id() >= 270 && itsConfiguration->TargetProducer().Id() <= 272))
+	const auto method = itsConfiguration->GetValue("method");
+
+	if (method == "hypsometric")
+	{
+		itsUseGeopotential = false;
+		itsThreadDistribution = ThreadDistribution::kThreadForForecastTypeAndTime;
+	}
+	else if (method == "geopotential")
+	{
+		// It's the default, but let's be explicit
+		itsUseGeopotential = true;
+	}
+	else if ((itsConfiguration->TargetProducer().Id() == 240 || itsConfiguration->TargetProducer().Id() == 243) ||
+	         (itsConfiguration->TargetProducer().Id() >= 270 && itsConfiguration->TargetProducer().Id() <= 272))
 	{
 		// Workaround for MNWC which doesn't have geopotential for sub-hour data (as of 2019-06-12)
 		itsUseGeopotential = false;
