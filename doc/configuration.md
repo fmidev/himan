@@ -517,11 +517,11 @@ Default formatters for different keys are:
 ```
 
 
-Himan can pack data with a few different methods. Packing is controlled with key `packing_type`.
+Himan can pack data with a few different methods. Packing is controlled with key `file_packing_type`.
 
-    "file_packing_type" : "simple_packing" | "jpeg_packing" | "ccsds_packing"
+    "file_packing_type" : "simple packing" | "jpeg packing" | "ccsds packing"
 
-Note! Only GRIB2 files support all three packing types. Default value is `simple_packing`.
+Note! Only GRIB2 files support all three packing types. Default value is `simple packing`.
 
 <a name="Database_access"/>
 
