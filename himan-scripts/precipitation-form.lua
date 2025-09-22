@@ -104,6 +104,11 @@ local par_t = param('T-K')
 local par_rh = param('RH-PRCNT')
 local par_prec = param('PRECFORM2-N')
 
+if configuration:Exists("param") then
+    par_prec = param(configuration:GetValue("param"))
+end
+  
+
 local l2 = level(HPLevelType.kHeight, 2)
 local l0 = level(HPLevelType.kHeight, 0)
 
@@ -216,7 +221,7 @@ for i = 1, #t do
     prec[i] = adjust_precip(prec[i], t[i])
 end
 
-result:SetParam(param('PRECFORM2-N'))
+result:SetParam(par_prec)
 result:SetValues(prec)
 
 luatool:WriteToFile(result)
