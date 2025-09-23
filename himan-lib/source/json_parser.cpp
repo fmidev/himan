@@ -16,13 +16,13 @@
 #include "util.h"
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/property_tree/json_parser.hpp>
+#include <boost/property_tree/ptree.hpp>
 #include <map>
 #include <ogr_spatialref.h>
 #include <regex>
 #include <set>
 #include <stdexcept>
 #include <utility>
-#include <boost/property_tree/ptree.hpp>
 
 #define HIMAN_AUXILIARY_INCLUDE
 
@@ -208,10 +208,13 @@ void ReadDataFromDatabase(const boost::property_tree::ptree& pt, std::shared_ptr
 {
 	if (auto readFromDatabase = ReadElement<bool>(pt, "read_data_from_database"))
 	{
-		if (readFromDatabase.get() == false || conf->DatabaseType() == kNoDatabase)
+		bool r = readFromDatabase.get();
+		if (conf->DatabaseType() == kNoDatabase)
 		{
-			conf->ReadFromDatabase(false);
+			r = false;
 		}
+
+		conf->ReadFromDatabase(r);
 	}
 }
 
@@ -219,10 +222,13 @@ void ReadFromDatabase(const boost::property_tree::ptree& pt, std::shared_ptr<con
 {
 	if (auto readFromDatabase = ReadElement<bool>(pt, "read_from_database"))
 	{
-		if (readFromDatabase.get() == false || conf->DatabaseType() == kNoDatabase)
+		bool r = readFromDatabase.get();
+		if (conf->DatabaseType() == kNoDatabase)
 		{
-			conf->ReadFromDatabase(false);
+			r = false;
 		}
+
+		conf->ReadFromDatabase(r);
 	}
 }
 
