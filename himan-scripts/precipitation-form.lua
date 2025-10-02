@@ -32,7 +32,7 @@ function adjust_precip(prec_value, t_value)
     -- Drizzle is left as determined by the model, except when the temperature is below freezing 
     -- (in which case it is snowfall).
     if prec_value == 0 then
-        if t_value > 0 then return 3 end
+        if t_value < 0 then return 3 end
     -- Freezing drizzle is left as determined by the model, except if the temperature is above freezing 
     -- (in which case it is liquid drizzle) or below –10 °C (in which case it is snowfall)
     elseif prec_value == 4 then
