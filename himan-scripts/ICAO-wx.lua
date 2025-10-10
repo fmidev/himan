@@ -39,7 +39,7 @@ local t0m = param("SKT-K")
 local ws = param("FF-MS")
 
 -- wind gust
-local wg = param("FFG-MS")
+local wg = param("FFG-MS", aggregation(HPAggregationType.kMaximum, time_duration(HPTimeResolution.kHourResolution, 1)), processing_type())
 
 -- fetch input params
 local PreIntdata = luatool:Fetch(current_time, current_level, PreInt, current_forecast_type)
@@ -96,11 +96,24 @@ Nmat:SetValues(cbdata)
 local areaMaxCB = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
 
 -- set constants
+-- rr limit for MEPS (which has large areas of near zero hourly precipitation)
 local rrLim = 0
+
+-- Threshold for showery precipitation (may need tweaking) [J/kg]
 local shCAPE = 10
+
+-- Minimum required thunderstorm index (POT) value for TS
 local TSlim = 60
+
+-- Minimum required CbTCuTop for thunderstorms [FL]
 local CbTSlim = 150
+
+-- CAPE limit for hail [J/kg]
+-- Tweak this and/or add more hail criteria
 local HailCAPE = 500
+
+-- Bulk Shear 0-6km limit for hail [m/s]
+-- Tweak this and/or add more hail criteria
 local HailBS = 9
 
 -- Limit for moderate/heavy drizzle [mm/h]
@@ -341,7 +354,7 @@ for i=1, #PreIntdata do
           wx[i] = 89
         end
         -- Thunderstorm and snowy sleet
-        if (POTdata[i] > TSlim and cbdata[i] > CbSlim) then
+        if (POTdata[i] > TSlim and cbdata[i] > CbTSlim) then
           -- -TSSNRA
           wx[i] = 36
           -- TSSNRA
@@ -382,7 +395,7 @@ for i=1, #PreIntdata do
         wx[i] = 73
       end
       -- +SN
-      if (PreIntdata[i] > ModSnLim) then
+      if (PreIntdata[i] > HvySnLim) then
         wx[i] = 74
       end
     end
