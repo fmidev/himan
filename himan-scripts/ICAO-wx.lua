@@ -81,7 +81,7 @@ else
   Snaccdata = luatool:Fetch(current_time,current_level,Snacc,current_forecast_type)
 end
 
--- calculate area_max fields with 15km box
+-- calculate area_max fields with ~30km box
 local filter
 if (configuration:GetTargetProducer():GetId() == 260) then
   filter = matrixf(12, 12, 1, 1)
@@ -234,7 +234,7 @@ for i=1, #PreIntdata do
       end
       -- +SHRA
       if (PreIntdata[i] > HvyRaLim) then
-	wx[i] = 83
+        wx[i] = 83
       end
       -- Thunderstorm check also for contiuous rain
       if ((POTdata[i] > TSlim) and (cbdata[i] > CbTSlim)) then
@@ -278,81 +278,81 @@ for i=1, #PreIntdata do
       -- wet sleet
       if (Snowdata[i]/PreIntdata[i] <= SnSleet) then
         -- -RASN
-	wx[i] = 66
-	-- RASN
-	if (PreIntdata[i] > ModSleetLim) then
+        wx[i] = 66
+        -- RASN
+        if (PreIntdata[i] > ModSleetLim) then
           wx[i] = 67
-	end
-	-- +RASN
-	if (PreIntdata[i] > HvySleetLim) then
+        end
+        -- +RASN
+        if (PreIntdata[i] > HvySleetLim) then
           wx[i] = 68
-	end
+        end
 
       -- snowy sleet
       else
-	-- -SNRA
-	wx[i] = 69
-	-- SNRA
-	if (PreIntdata[i] > ModSleetLim) then
-	  wx[i] = 70
-	end
+        -- -SNRA
+        wx[i] = 69
+        -- SNRA
+        if (PreIntdata[i] > ModSleetLim) then
+          wx[i] = 70
+        end
         -- +SNRA
-	if (PreIntdata[i] > HvySleetLim) then
-	  wx[i] = 71
-	end
+        if (PreIntdata[i] > HvySleetLim) then
+          wx[i] = 71
+        end
       end
     end
     if (PreType == 2) then
       -- wet sleet shower
       if (Snowdata[i] / PreIntdata[i] <= SnSleet) then
-	-- -SHRASN
-	wx[i] = 84
-	-- SHRASN
-	if (PreIntdata[i] > ModSleetLim) then
+        -- -SHRASN
+        wx[i] = 84
+        -- SHRASN
+        if (PreIntdata[i] > ModSleetLim) then
           wx[i] = 85
-	end
-	-- +SHRASN
-	if (PreIntdata[i] > HvySleetLim) then
+        end
+        -- +SHRASN
+        if (PreIntdata[i] > HvySleetLim) then
           wx[i] = 86
-	end
-	-- Thunderstorm and wet sleet
-	if (POTdata[i] > TSlim and cbdata > CbTSlim) then
-	  -- -TSRASN
-	  wx[i] = 33
-	  -- TSRASN
-	  if (PreIntdata[i] > ModSleetLim) then
+        end
+        -- Thunderstorm and wet sleet
+        if (POTdata[i] > TSlim and cbdata > CbTSlim) then
+          -- -TSRASN
+          wx[i] = 33
+          -- TSRASN
+          if (PreIntdata[i] > ModSleetLim) then
             wx[i] = 34
-	  end
-	  -- +TSRASN
-	  if (PreIntdata[i] > HvySleetLim) then
-	    wx[i] = 35
-	  end
-	end
+          end
+          -- +TSRASN
+          if (PreIntdata[i] > HvySleetLim) then
+            wx[i] = 35
+          end
+        end
       -- Snowy sleet shower
       else
-	-- -SHSNRA
-	wx[i] = 87
-	-- SHSNRA
-	if (PreIntdata[i] > ModSleetLim) then
-	  wx[i] = 88
-	end
-	-- +SHSNRA
-	if (PreIntdata[i] > HvySleetLim) then
-	  wx[i] = 89
-	end
-	-- Thunderstorm and snowy sleet
-	if (POTdata[i] > TSlim and cbdata[i] > CbSlim) then
-	  -- -TSSNRA
-	  wx[i] = 36
-	  -- TSSNRA
-	  if(PreIntdata[i] > ModSleetLim) then
-	    wx[i] = 37
-	  end
-	  -- +TSSNRA
-	  if(PreIntdata[i] > HvySleetLim) then
-	    wx[i] = 38
-	  end
-	end
+        -- -SHSNRA
+        wx[i] = 87
+        -- SHSNRA
+        if (PreIntdata[i] > ModSleetLim) then
+          wx[i] = 88
+        end
+        -- +SHSNRA
+        if (PreIntdata[i] > HvySleetLim) then
+          wx[i] = 89
+        end
+        -- Thunderstorm and snowy sleet
+        if (POTdata[i] > TSlim and cbdata[i] > CbSlim) then
+          -- -TSSNRA
+          wx[i] = 36
+          -- TSSNRA
+          if(PreIntdata[i] > ModSleetLim) then
+            wx[i] = 37
+          end
+          -- +TSSNRA
+          if(PreIntdata[i] > HvySleetLim) then
+            wx[i] = 38
+          end
+        end
       end
     end
   end
@@ -392,11 +392,11 @@ for i=1, #PreIntdata do
       wx[i] = 90
       -- SHSN
       if (PreIntdata[i] > ModSnLim) then
-	wx[i] = 91
+        wx[i] = 91
       end
       -- +SHSN
       if (PreIntdata[i] > HvySnLim) then
-	wx[i] = 92
+        wx[i] = 92
       end
     end
     -- Thunderstorm and snowfall
@@ -409,7 +409,7 @@ for i=1, #PreIntdata do
       end
       -- +TSSN
       if (PreIntdata[i] > HvySnLim) then
-	wx[i] = 28
+        wx[i] = 28
       end
     end
   end
@@ -472,7 +472,7 @@ for i=1, #PreIntdata do
 end
 
 -- write output
-p = param("ICAOwx-N")
+p = param("ICAOWX-N")
 result:SetValues(wx)
 result:SetParam(p)
 luatool:WriteToFile(result)
