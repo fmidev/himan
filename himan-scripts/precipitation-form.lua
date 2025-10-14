@@ -49,11 +49,11 @@ end
 
 function convert_to_100(array)
     if not array then return nil end 
-    local t = {}
+    local r = {}
     for i = 1, #array do
-        t[i] = array[i] * 100
+        r[i] = array[i] * 100
     end
-    return t
+    return r
   end
 
 function get_test_time()
@@ -166,6 +166,7 @@ for i = 1, #t do
     -- with relatively good accuracy under natural temperature conditions
     tw[i] = TwStull_(t[i], rh[i])
     tw[i] = tw[i] - 273.15
+    t[i] = t[i] - 273.15
 
     tw_ec[i] = TwStull_(t_ec[i], rh_ec[i])
     tw_ec[i] = tw_ec[i] - 273.15
