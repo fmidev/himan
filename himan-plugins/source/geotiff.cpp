@@ -514,6 +514,24 @@ param ReadParam(const std::map<std::string, std::string>& meta, const producer& 
 	p.Id(std::stoi(parameter["id"]));
 	p.InterpolationMethod(par.InterpolationMethod());
 
+	// Aggregation
+	if (meta.find("aggregation") != meta.end())
+	{
+		p.Aggregation(aggregation(meta.at("aggregation")));
+	}
+	else if (meta.find("aggregation_type") != meta.end())
+	{
+		const auto& type = meta.at("aggregation_type");
+		const auto& period = meta.at("aggregation_period");
+		p.Aggregation(aggregation(HPStringToAggregationType.at(type), time_duration(period)));
+	}
+
+	// Processing type
+	if (meta.find("processing_type") != meta.end())
+	{
+		p.ProcessingType(processing_type(meta.at("processing_type")));
+	}
+
 	return p;
 }
 
@@ -642,7 +660,7 @@ std::map<std::string, std::string> ParseMetadata(char** mdata, const producer& p
 	}
 
 	// First check keys with Himan-known 'standard' names
-	const std::vector<std::string> standardNames{"forecast_type", "level", "param_name", "origin_time", "valid_time"};
+	const std::vector<std::string> standardNames{"forecast_type", "level", "param_name", "origin_time", "valid_time", "aggregation", "forecast_type"};
 
 	for (const auto& keyName : standardNames)
 	{
