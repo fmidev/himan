@@ -83,8 +83,18 @@ bool processing_type::operator!=(const processing_type& other) const
 
 processing_type::operator std::string() const
 {
-	return fmt::format("{}/{}/{}/{}", HPProcessingTypeToString.at(itsType), itsValue.value_or(MissingDouble()),
-	                   itsValue2.value_or(MissingDouble()), itsNumberOfEnsembleMembers);
+	auto str = fmt::format("{}", HPProcessingTypeToString.at(itsType));
+
+	if (itsValue)
+	{
+		str = fmt::format("{}/{}", str, itsValue.value());
+	}
+	if (itsValue2)
+	{
+		str = fmt::format("{}/{}", str, itsValue2.value());
+	}
+
+	return str;
 }
 
 HPProcessingType processing_type::Type() const
