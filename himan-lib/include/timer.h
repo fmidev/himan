@@ -15,10 +15,10 @@ namespace himan
 class timer
 {
    public:
-	timer()
+	timer() : start_ts{}, stop_ts{}
 	{
 	}
-	timer(bool start)
+	timer(bool start) : start_ts{}, stop_ts{}
 	{
 		if (start)
 			Start();
