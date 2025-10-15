@@ -88,7 +88,7 @@ aggregation::operator std::string() const
 	{
 		str = fmt::format("{}/{}", str, itsTimeDuration.String("%h:%02M:%02S"));
 	}
-	if (itsTimeOffset.Empty() == false)
+	if (itsTimeOffset.Empty() == false && itsTimeOffset != itsTimeDuration * -1)
 	{
 		str = fmt::format("{}/{}", str, itsTimeOffset.String("%h:%02M:%02S"));
 	}
