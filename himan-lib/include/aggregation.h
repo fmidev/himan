@@ -95,4 +95,20 @@ inline std::ostream& operator<<(std::ostream& file, const aggregation& ob)
 }
 }  // namespace himan
 
+template <>
+struct fmt::formatter<himan::aggregation>
+{
+	template <typename ParseContext>
+	constexpr auto parse(ParseContext& ctx)
+	{
+		return ctx.begin();
+	}
+
+	template <typename FormatContext>
+	auto format(const himan::aggregation& a, FormatContext& ctx) const -> decltype(ctx.out())
+	{
+		return fmt::format_to(ctx.out(), "{}", static_cast<std::string>(a));
+	}
+};
+
 #endif /* AGGREGATION_H */

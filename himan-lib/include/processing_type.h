@@ -9,6 +9,7 @@
 
 #include "himan_common.h"
 #include "serialization.h"
+#include <fmt/format.h>
 #include <optional>
 
 namespace himan
@@ -177,4 +178,21 @@ inline std::ostream& operator<<(std::ostream& file, const processing_type& ob)
 {
 	return ob.Write(file);
 }
+
 }  // namespace himan
+
+template <>
+struct fmt::formatter<himan::processing_type>
+{
+	template <typename ParseContext>
+	constexpr auto parse(ParseContext& ctx)
+	{
+		return ctx.begin();
+	}
+
+	template <typename FormatContext>
+	auto format(const himan::processing_type& pt, FormatContext& ctx) const -> decltype(ctx.out())
+	{
+		return fmt::format_to(ctx.out(), "{}", static_cast<std::string>(pt));
+	}
+};
