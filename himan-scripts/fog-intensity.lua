@@ -2,6 +2,13 @@
 fog-intensity.lua
 
 aaltom/2017-03-31
+
+Values are:
+
+0 = no fog
+1 = fog
+2 = dense fog
+
 ]]
 
 local Missing = missing

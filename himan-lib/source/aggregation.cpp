@@ -82,8 +82,17 @@ bool aggregation::operator!=(const aggregation& other) const
 
 aggregation::operator std::string() const
 {
-	return HPAggregationTypeToString.at(itsType) + "/" + static_cast<std::string>(itsTimeDuration) + "/" +
-	       static_cast<std::string>(itsTimeOffset);
+	auto str = HPAggregationTypeToString.at(itsType);
+
+	if (itsTimeDuration.Empty() == false)
+	{
+		str = fmt::format("{}/{}", str, itsTimeDuration.String("%h:%02M:%02S"));
+	}
+	if (itsTimeOffset.Empty() == false)
+	{
+		str = fmt::format("{}/{}", str, itsTimeOffset.String("%h:%02M:%02S"));
+	}
+	return str;
 }
 
 HPAggregationType aggregation::Type() const
