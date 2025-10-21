@@ -6,10 +6,22 @@ local MISS = missing
 local PreInt = param("RRR-KGM2")
 
 -- snowfall intensity mm/h
-local Snow = param("SNR-KGM2")
+-- use solid precipitation rate for MEPS
+local Snow
+if (configuration:GetTargetProducer():GetId() == 260) then
+  Snow = param("RRRS-KGM2")
+else
+  Snow = param("SNR-KGM2")
+end
 
 -- snow accumulation
-local Snacc = param("SN-12-MM")
+-- use solid precipitation rate for MEPS
+local Snacc
+if (configuration:GetTargetProducer():GetId() == 260) then
+  Snacc = param("RRS-12-MM")
+else
+  Snacc = param("SN-12-MM")
+end
 
 -- precipitation form FMI
 local PreForm = param("PRECFORM2-N")
