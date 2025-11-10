@@ -30,7 +30,6 @@ for i = 1, #ceiling do
   dzdata[i] = dz
 end
 
---// 1st cloud height: few-sct
 local base1 = hitool:VerticalHeightGreaterThan(N, 0, maxH, few,1)
 local top1 = hitool:VerticalHeightLessThanGrid(N, base1, maxHdata, fewdata,1)
 local top1_sct = hitool:VerticalHeightLessThanGrid(N, base1, maxHdata, sctdata,1)
@@ -43,19 +42,24 @@ local Ntmp = Nbase1
 local Ntmp1 = hitool:VerticalMaximumGrid(N, base1, tmp1)
 
 for i = 1, #base1 do
+  --// 1st bkn base cannot be lower than ceiling
+  if Ntmp[i] >= bkn and tmp1[i] < ceiling[i] then
+    tmp1[i] = ceiling[i]
+  end
+  --// 1st cloud height: few-sct
   if Ntmp[i] < bkn then 
-    if base1[i] < tmp1[i] and tmp1[i] < tmp2[i] then
+    if base1[i] < tmp1[i] and tmp1[i] <= tmp2[i] then
       top1[i] = base1[i]
     end
     if base1[i] < tmp1[i] and IsMissing(tmp2[i]) then
       top1[i] = base1[i]
     end
-    if Ntmp1[i] < sct and IsMissing(tmp2[i]) then
+    if Ntmp1[i] >= sct and IsMissing(tmp2[i]) then
       top1[i] = top1_sct[i]
     end
   else
     if base1[i] < ceiling[i] then
-      base1[i] = ceiling[1]
+      base1[i] = ceiling[i]
     end
     top1[i] = top1_sct[i]
   end    
@@ -205,7 +209,7 @@ for i = 1, #base1 do
       end
       if cov4[i] >= bkn then
         base3[i] = base4[i]
-	top3[i] = top4[i]
+        top3[i] = top4[i]
 	cov3[i] = cov4[i]
       end
       changed[i] = 3
@@ -262,7 +266,7 @@ for i = 1, #base1 do
       --// 1st and 3rd not too close, discard 2nd
       if base3[i] - base1[i] >= dz then
         base2[i] = base3[i]
-	top2[i] = top3[i]
+        top2[i] = top3[i]
 	cov2[i] = cov3[i]
 
 	--// choose new 3rd based on cover
@@ -322,7 +326,7 @@ for i = 1, #base1 do
       cov2[i] = cov4[i]
       base3[i] = base5[i]
       top3[i] = top5[i]
-      cov4[i] = cov5[i]
+      cov3[i] = cov5[i]
       changed[i] = 9
   
     --// 1st not too close to 3rd
