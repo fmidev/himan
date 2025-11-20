@@ -176,6 +176,7 @@ function FetchInfoFromENS(param, level)
 end
 
 function Write(temperature, dewpoint)
+  write_options.replace_cache = true
   result:SetParam(param("T-K"))
   result:SetValues(temperature)
   luatool:WriteToFile(result)
@@ -183,7 +184,6 @@ function Write(temperature, dewpoint)
   result:SetValues(dewpoint)
   luatool:WriteToFile(result)
 end
-
 
 function AdjustTemperatures()
   local temp = luatool:Fetch(current_time, level(HPLevelType.kHeight, 2), param("T-K"), current_forecast_type)
