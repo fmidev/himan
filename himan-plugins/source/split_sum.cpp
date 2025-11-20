@@ -74,6 +74,7 @@ split_sum::split_sum()
 	// Solid (snow + graupel + hail)
 	sourceParameters["RRRS-KGM2"] = {param("RRS-KGM2")};
 	sourceParameters["RRS-3-MM"] = {param("RRS-KGM2")};
+	sourceParameters["RRS-12-MM"] = {param("RRS-KGM2")};
 	sourceParameters["RRS-24-MM"] = {param("RRS-KGM2")};
 
 	// Radiation
@@ -208,6 +209,11 @@ void SetupParameters(std::shared_ptr<const plugin_configuration> conf)
 	{
 		targetParameters.emplace_back(param("RRS-3-MM", aggregation(kAccumulation, THREE_HOURS), processing_type()));
 	}
+
+        if (conf->Exists("rrs12h") && conf->GetValue("rrs12h") == "true")
+        {
+                targetParameters.emplace_back(param("RRS-12-MM", aggregation(kAccumulation, TWELVE_HOURS), processing_type()));
+        }
 
 	if (conf->Exists("rrs24h") && conf->GetValue("rrs24h") == "true")
 	{
