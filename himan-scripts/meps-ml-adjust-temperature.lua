@@ -175,6 +175,16 @@ function FetchInfoFromENS(param, level)
   return luatool:FetchInfoWithArgs(o)
 end
 
+function Write(temperature, dewpoint)
+  result:SetParam(param("T-K"))
+  result:SetValues(temperature)
+  luatool:WriteToFile(result)
+  result:SetParam(param("TD-K"))
+  result:SetValues(dewpoint)
+  luatool:WriteToFile(result)
+end
+
+
 function AdjustTemperatures()
   local temp = luatool:Fetch(current_time, level(HPLevelType.kHeight, 2), param("T-K"), current_forecast_type)
   local dewp = luatool:Fetch(current_time, level(HPLevelType.kHeight, 2), param("TD-K"), current_forecast_type)
@@ -242,14 +252,7 @@ function AdjustTemperatures()
 
   summarize_changes(temp, adjusted_temp, dewp, adjusted_dewp, MISSING, 10)
 
-  result:SetParam(param("T-K"))
-  result:SetValues(adjusted_temp)
-  luatool:WriteToFile(result)
-  logger:Info("Wrote adjusted temperature field")
-  result:SetParam(param("TD-K"))
-  result:SetValues(adjusted_dewp)
-  luatool:WriteToFile(result)
-  logger:Info("Wrote adjusted dewpoint field")
+  Write(adjusted_temp, adjusted_dewp)
 --  result:SetParam(param("TDIFF-K"))
 --  result:SetValues(adjustment_smooth)
 --  luatool:WriteToFile(result)
@@ -257,14 +260,18 @@ function AdjustTemperatures()
 
 end
 
-local disable_temperature_adjustment = true
-if configuration:Exists("disable_temperature_adjustment") then 
-  disable_temperature_adjustment = ParseBoolean(configuration:GetValue("disable_temperature_adjustment"))
+local enable_temperature_adjustment = false
+if configuration:Exists("enable_temperature_adjustment") then
+  enable_temperature_adjustment = ParseBoolean(configuration:GetValue("enable_temperature_adjustment"))
 end
 
-if disable_temperature_adjustment then
-  logger:Info("Temperature adjustment is disabled")
-else
+if enable_temperature_adjustment then
   logger:Info("Adjusting temperatures based on ECMWF ensemble minimum")
   AdjustTemperatures()
+else
+  logger:Info("Temperature adjustment is disabled")
+  -- Write original values without adjustment
+  local temp = luatool:Fetch(current_time, level(HPLevelType.kHeight, 2), param("T-K"), current_forecast_type)
+  local dewp = luatool:Fetch(current_time, level(HPLevelType.kHeight, 2), param("TD-K"), current_forecast_type)
+  Write(temp, dewp)
 end
