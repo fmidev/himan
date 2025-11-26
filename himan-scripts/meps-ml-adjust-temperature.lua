@@ -153,9 +153,12 @@ function FetchInfoFromENS(param, level)
   -- 18 00
   -- 21 12
 
-  if (meps_hour >= 0 and meps_hour <= 6) or meps_hour == 21 then  
+  if meps_hour >= 0 and meps_hour <= 6 then
     -- use previous 12 UTC analysis
-    adjust_hours = -12 - meps_hour                                          
+    adjust_hours = -12 - meps_hour
+  elseif meps_hour == 21 then
+    -- use current day 12 UTC analysis
+    adjust_hours = 12 - meps_hour
   else                
     -- use current day 00 UTC analysis
     adjust_hours = -meps_hour  
