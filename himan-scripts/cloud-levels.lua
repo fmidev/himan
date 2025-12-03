@@ -354,32 +354,32 @@ for i = 1, #base1 do
 end
 
 -- write output
-p = param("CLOUDBASE1-FT")
+p = param("CL1-FT")
 result:SetValues(base1)
 result:SetParam(p)
 luatool:WriteToFile(result)
 
-p = param("CLOUDBASE2-FT")
+p = param("CL2-FT")
 result:SetValues(base2)
 result:SetParam(p)
 luatool:WriteToFile(result)
 
-p = param("CLOUDBASE3-FT")
+p = param("CL3-FT")
 result:SetValues(base3)
 result:SetParam(p)
 luatool:WriteToFile(result)
 
-p = param("CLOUDCOV1-0TO1")
+p = param("CLCOV1-0TO1")
 result:SetValues(cov1)
 result:SetParam(p)
 luatool:WriteToFile(result)
 
-p = param("CLOUDCOV2-0TO1")
+p = param("CLCOV2-0TO1")
 result:SetValues(cov2)
 result:SetParam(p)
 luatool:WriteToFile(result)
 
-p = param("CLOUDCOV3-0TO1")
+p = param("CLCOV3-0TO1")
 result:SetValues(cov3)
 result:SetParam(p)
 luatool:WriteToFile(result)
