@@ -5,7 +5,7 @@
 -- Original code for corrections from snwc-cloudiness-and-precipitation.lua and snwc-cloudlayers.lua.
 
 
--- Get julian date in radians for the valid time
+-- Get julian date in radians from the valid time
 function julian_day_radians()
   local year = tonumber(current_time:GetValidDateTime():String('%Y'))
   local month = tonumber(current_time:GetValidDateTime():String('%m'))
