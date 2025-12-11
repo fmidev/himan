@@ -4,33 +4,6 @@
 -- Rain and cloud layer corrections are also included. 
 -- Original code for corrections from snwc-cloudiness-and-precipitation.lua and snwc-cloudlayers.lua.
 
-
--- Get julian date in radians from the valid time
-function julian_day_radians()
-  local year = tonumber(current_time:GetValidDateTime():String('%Y'))
-  local month = tonumber(current_time:GetValidDateTime():String('%m'))
-  local day = tonumber(current_time:GetValidDateTime():String('%d'))
-
-  local days_in_month = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
-  local days_in_year = 365
-
-  local function is_leap(y)
-    return (y % 4 == 0 and y % 100 ~= 0) or (y % 400 == 0)
-  end
-
-  if is_leap(year) then
-      days_in_month[2] = 29
-      days_in_year = 366
-  end
-
-  local doy = day
-  for m = 1, month - 1 do
-      doy = doy + days_in_month[m]
-  end
-
-  return 2 * math.pi * (doy / days_in_year)
-end
-
 -- Weighted mean and standard deviation are calculated.
 function compute_std_mean_ec(N_EC, N_MEAN_EC, N_STD_EC, wt_ec, wt_ens_ec, wt_sum)
   local mean = (N_EC * wt_ec + N_MEAN_EC * wt_ens_ec) / wt_sum
@@ -216,9 +189,7 @@ end
 -- dev_factor_low, dev_factor_mid, dev_factor_high: control the strength of extremization. The goal is to reduce mid-range values, which are common in averaging. 
 -- Each cloud layer has its own adjustment. Low clouds are pushed more aggressively toward 0% or 100%, while mid/high clouds are allowed to stay in the 30–70% range more often.
 function compute_levels(step)
-  local jday_rad = julian_day_radians()
-
-  local mid_level = 49.5 + 1.5 * math.cos(jday_rad) + step^(1.5) / 1000
+  local mid_level = 50 + step^(1.5) / 500
   local dev_factor_low = 1.2 + step ^(1.5) / 10000
   local dev_factor_mid = 1.1 + step^ (1.5) / 12500
   local dev_factor_high = 1 + step^ (1.5) / 15000
@@ -383,4 +354,3 @@ if cl and cm and ch then
   
   write_results_to_file(param("N-0TO1"), N_VIRE)
 end
-
