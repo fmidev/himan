@@ -20,7 +20,7 @@ Hybrid levels (up to 5000m)
 
 # Output parameters
 
-PRECFORM2-N and POTPRECFORM-N.
+## PRECFORM2-N 
 
 Unit of resulting parameter is a code table.
 
@@ -35,6 +35,22 @@ The output values are dependend on output file type.
 | freezing drizzle | 4 | 4 | 12 | 
 | freezing rain | 5 | 5 | 3 | 
 
+GRIB2 numbering scheme follows the [WMO standard](https://codes.ecmwf.int/grib/param-db/260015). 
+
+## POTPRECFORM-N
+
+Unit of resulting parameter is a code table.
+
+The output values are:
+
+| Potential Precipitation Form | Value |
+|---|---|
+| drizzle | 0 | 
+| rain  | 1 |
+| sleet  | 2 | 
+| snow | 3 | 
+| freezing drizzle | 4 | 
+| freezing rain | 5 |
 
 # Method of calculation
 
