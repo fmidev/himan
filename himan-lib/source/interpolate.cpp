@@ -865,17 +865,8 @@ area_interpolation<T>::area_interpolation(grid& source, grid& target, HPInterpol
 {
 	std::vector<Triplet<T>> coefficients;
 
-	std::string useOldMethod = "no";
-	try
-	{
-		useOldMethod = util::GetEnv("HIMAN_USE_OLD_PROJECTION_METHOD");
-	}
-	catch (...)
-	{
-	}
-
 	// default to using new 'bulk' method
-	if (source.Class() == target.Class() && source.Class() == kRegularGrid && useOldMethod == "no")
+	if (source.Class() == target.Class() && source.Class() == kRegularGrid)
 	{
 		const regular_grid& sg = dynamic_cast<regular_grid&>(source);
 		const regular_grid& tg = dynamic_cast<regular_grid&>(target);
@@ -907,65 +898,6 @@ area_interpolation<T>::area_interpolation(grid& source, grid& target, HPInterpol
 		for (size_t i = 0; i < ws.size(); i++)
 		{
 			const auto& w = ws[i];
-			for (size_t j = 0; j < w.first.size(); ++j)
-			{
-				coefficients.push_back(Triplet<T>(static_cast<int>(i), static_cast<int>(w.first[j]), w.second[j]));
-			}
-		}
-	}
-	else
-	{
-		// compute weights in the interpolation matrix line by line, i.e. point by point on target grid
-		for (size_t i = 0; i < target.Size(); ++i)
-		{
-			std::pair<std::vector<size_t>, std::vector<T>> w;
-			switch (source.Type())
-			{
-				case kLatitudeLongitude:
-				case kRotatedLatitudeLongitude:
-				case kStereographic:
-				case kLambertConformalConic:
-				case kLambertEqualArea:
-				case kTransverseMercator:
-					if (method == kBiLinear)
-					{
-						w = InterpolationWeights<T>(dynamic_cast<regular_grid&>(source),
-						                            dynamic_cast<regular_grid&>(source).XY(target.LatLon(i)));
-					}
-					else if (method == kNearestPoint)
-					{
-						auto np = NearestPoint<T>(dynamic_cast<regular_grid&>(source),
-						                          dynamic_cast<regular_grid&>(source).XY(target.LatLon(i)));
-						w.first.push_back(np.first);
-						w.second.push_back(np.second);
-					}
-					else
-					{
-						throw std::bad_typeid();
-					}
-					break;
-				case kReducedGaussian:
-					if (method == kBiLinear)
-					{
-						w = InterpolationWeights<T>(dynamic_cast<reduced_gaussian_grid&>(source), target.LatLon(i));
-					}
-					else if (method == kNearestPoint)
-					{
-						auto np = NearestPoint<T>(dynamic_cast<reduced_gaussian_grid&>(source), target.LatLon(i));
-						w.first.push_back(np.first);
-						w.second.push_back(np.second);
-					}
-					else
-					{
-						throw std::bad_typeid();
-					}
-					break;
-				default:
-					// what to throw?
-					throw std::bad_typeid();
-					break;
-			}
-
 			for (size_t j = 0; j < w.first.size(); ++j)
 			{
 				coefficients.push_back(Triplet<T>(static_cast<int>(i), static_cast<int>(w.first[j]), w.second[j]));
