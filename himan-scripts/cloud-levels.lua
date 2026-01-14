@@ -9,7 +9,7 @@ local maxH = 15000
 local few = 0.05
 local sct = 0.35
 local bkn = 0.55
-local dz = 300
+local dz = 300 
 
 local ceiling = luatool:Fetch(current_time, current_level, ceil, current_forecast_type)
 
@@ -18,7 +18,6 @@ zerodata= {}
 fewdata= {}
 sctdata= {}
 bkndata= {}
-dzdata= {}
 
 for i = 1, #ceiling do
   maxHdata[i] = maxH
@@ -27,7 +26,6 @@ for i = 1, #ceiling do
   fewdata[i] = few
   sctdata[i] = sct
   bkndata[i] = bkn
-  dzdata[i] = dz
 end
 
 local base1 = hitool:VerticalHeightGreaterThan(N, 0, maxH, few,1)
@@ -54,7 +52,7 @@ for i = 1, #base1 do
     if base1[i] < tmp1[i] and IsMissing(tmp2[i]) then
       top1[i] = base1[i]
     end
-    if Ntmp1[i] >= sct and IsMissing(tmp2[i]) then
+    if Ntmp[i] >= sct and IsMissing(tmp2[i]) then
       top1[i] = top1_sct[i]
     end
   else
@@ -62,11 +60,19 @@ for i = 1, #base1 do
       base1[i] = ceiling[i]
     end
     top1[i] = top1_sct[i]
-  end    
+  end
 end
 
 --// cloud layer cover/amount (%)
 local cov1 = hitool:VerticalMaximumGrid(N, base1, top1)
+
+for i = 1, #base1 do
+  --// celing2 parameter may remove very thin bkn+ cloud at surface
+  --// set such a 1st layer as sct (49%)
+  if Ntmp[i] >= bkn and (IsMissing(ceiling[i]) or (base1[i] < tmp2[i] and tmp2[i] < ceiling[i])) then
+    cov1[i] = 0.49
+  end
+end
 
 --// *** 2nd layer, at least SCT
 local base2 = hitool:VerticalHeightGreaterThanGrid(N, top1, maxHdata, sctdata,1)
@@ -77,10 +83,7 @@ tmp2 = hitool:VerticalHeightGreaterThanGrid(N, base2, top2, bkndata,1)
 Ntmp = hitool:VerticalMaximumGrid(N, top1, base2)
 
 for i = 1, #base2 do
-  if Ntmp[i] >= bkn and (IsMissing(ceiling[i]) or (base1[i] < tmp2[i] and tmp2 < ceiling)) then
-    cov1[i] = 49
-  end
-  if Ntmp[i] >= bkn and base2 < ceiling then
+  if Ntmp[i] >= bkn and base2[i] < ceiling[i] then
     base2[i] = ceiling[i]
   end
   if base2[i] < tmp2[i] and base2[i] < ceiling[i] then
@@ -130,7 +133,7 @@ for i = 1, #base5 do
   end
 end
 
-local top5 = hitool:VerticalHeightLessThanGrid(N, base4, maxHdata, sctdata,1)
+local top5 = hitool:VerticalHeightLessThanGrid(N, base5, maxHdata, sctdata,1)
 local cov5 = hitool:VerticalMaximumGrid(N, base5, top5)
 
 for i = 1, #base1 do
@@ -223,45 +226,45 @@ for i = 1, #base1 do
       base2[i] = base3[i]
       top2[i] = top3[i]
       cov2[i] = cov3[i]
+    
+      --// choose new 3rd based on cover
+      --// (cov4 = sct+, i.e. don't accept possibly sct as 3rd layer)
+      --// assume that always base4-base3 and base5-base4 >=dz (i.e not checked)
+      if cov4[i] < bkn then
+        base3[i] = base5[i]
+        top3[i] = top5[i]
+        cov3[i] = cov5[i]
+      end
+      if cov4[i] >= bkn then
+        base3[i] = base4[i]
+        top3[i] = top4[i]
+        cov3[i] = cov4[i]
+      end
+      changed[i] = 4
     end
-    --// choose new 3rd based on cover
-    --// (cov4 = sct+, i.e. don't accept possibly sct as 3rd layer)
-    --// assume that always base4-base3 and base5-base4 >=dz (i.e not checked)
-    if cov4[i] < bkn then
-      base3[i] = base5[i]
-      top3[i] = top5[i]
-      cov3[i] = cov5[i]
-    end
-    if cov4[i] >= bkn then
-      base3[i] = base4[i]
-      top3[i] = top4[i]
-      cov3[i] = cov4[i]
-    end
-    changed[i] = 4
-  end
 
-  --// 1st FEW-BKN+, 2nd BKN+ too close to 3rd BKN+
-  if cov2[i] >= bkn and changed[i] == 0 then
-    --// discard 3rd
-    --// choose new 3rd based on cover
-    --// (cov4 = sct+, i.e. don't accept possibly sct as 3rd layer)
-    --// assume that always base4-base3 and base5-base4 >=dz (i.e not checked)
-    if cov4[i] < bkn then
-      base3[i] = base5[i]
-      top3[i] = top5[i]
-      cov3[i] = cov5[i]
+    --// 1st FEW-BKN+, 2nd BKN+ too close to 3rd BKN+
+    if cov2[i] >= bkn and changed[i] == 0 then
+      --// discard 3rd
+      --// choose new 3rd based on cover
+      --// (cov4 = sct+, i.e. don't accept possibly sct as 3rd layer)
+      --// assume that always base4-base3 and base5-base4 >=dz (i.e not checked)
+      if cov4[i] < bkn then
+        base3[i] = base5[i]
+        top3[i] = top5[i]
+        cov3[i] = cov5[i]
+      end
+      if cov4[i] >= bkn then
+        base3[i] = base4[i]
+        top3[i] = top4[i]
+        cov3[i] = cov4[i]
+      end
+      changed[i] = 5
     end
-    if cov4[i] >= bkn then
-      base3[i] = base4[i]
-      top3[i] = top4[i]
-      cov3[i] = cov4[i]
-    end
-    changed[i] = 5
   end
-
   --// case 2c: 3 or more layers found, 1st too close to 2nd and 2nd too close to 3rd
   if base2[i] - base1[i] < dz and base3[i] - base2[i] < dz and changed[i] == 0 then
-    --// 1st and 2nd FEW-SCT, 3rd BKN+ (1st-2nd and 2nd-3rd too close)
+  --// 1st and 2nd FEW-SCT, 3rd BKN+ (1st-2nd and 2nd-3rd too close)
     if cov1[i] < bkn and cov2[i] < bkn then
       --// 1st and 3rd not too close, discard 2nd
       if base3[i] - base1[i] >= dz then
@@ -269,7 +272,7 @@ for i = 1, #base1 do
         top2[i] = top3[i]
 	cov2[i] = cov3[i]
 
-	--// choose new 3rd based on cover
+        --// choose new 3rd based on cover
         --// (cov4 = sct+, i.e. don't accept possibly sct as 3rd layer)
         --// assume that always base4-base3 and base5-base4 >=dz (i.e not checked)
 	if cov4[i] < bkn then
