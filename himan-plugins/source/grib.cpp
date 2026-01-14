@@ -2844,6 +2844,14 @@ himan::producer ReadProducer(const search_options& options, const NFmiGribMessag
 			// future goal: forecast type is not a producer property
 			long typeId = 1;  // deterministic forecast, default
 			long msgType = message.ForecastType();
+			long pdtn = message.ProductDefinitionTemplateNumber();  // returns -999 for grib1
+
+			if ((pdtn >= 2 && pdtn <= 4) || (pdtn >= 12 && pdtn <= 14))
+			{
+				// "Derived forecasts based on all ensemble members ..."
+				// We store these to ENS producer
+				msgType = 3;
+			}
 
 			if (msgType == 2)
 			{
