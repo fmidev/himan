@@ -41,7 +41,7 @@ Requires: %{boost}-iostreams
 Requires: %{boost}-thread
 Requires: bzip2-libs
 BuildRequires: %{boost}-devel
-BuildRequires: fmt-devel >= 11
+BuildRequires: fmt-devel >= 11.2
 BuildRequires: python3-scons
 BuildRequires: redhat-rpm-config
 BuildRequires: gcc-c++ >= 8.2.1
