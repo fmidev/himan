@@ -59,7 +59,7 @@ function convert_to_100(array)
 function get_test_time()
     local test_time = configuration:GetValue("origin_time_test")
     local step_time = configuration:GetValue("step_time_test")
-    ftime = forecast_time(raw_time(test_time), raw_time("2025-06-16 22:00:00"))
+    ftime = forecast_time(raw_time(test_time), raw_time("2026-01-15 04:00:00"))
     return ftime
 end
 
@@ -103,6 +103,7 @@ function get_param(producer, ftype, param, level)
 local par_t = param('T-K')
 local par_rh = param('RH-PRCNT')
 local par_prec = param('PRECFORM2-N')
+local par_rr = param("RRR-KGM2", aggregation(HPAggregationType.kAccumulation, time_duration("01:00")), processing_type())
 
 if configuration:Exists("param") then
     par_prec = param(configuration:GetValue("param"))
@@ -115,6 +116,7 @@ local l0 = level(HPLevelType.kHeight, 0)
 local t = luatool:Fetch(current_time, l2, par_t, current_forecast_type)
 local rh = luatool:Fetch(current_time, l2, par_rh, current_forecast_type)
 local prec = luatool:Fetch(current_time, l0, par_prec, current_forecast_type)
+local rr = luatool:Fetch(current_time, l0, par_rr, current_forecast_type)
 
 local meps = producer(4, "MEPS")
 local meps_mta = producer(260, "MEPSMTA")
@@ -144,10 +146,6 @@ local meps_diff = {}
 -- A variable for temperature determination based on the wet bulb temperature.
 local tw_pref = {}
 
--- Computational temperature thresholds used by the wet bulb–based form determination.
--- The values are in principle adjustable, but these have seemed to work reasonably well.
-local rainbound = 0.4
-local snowbound = 0.1
 
 local disable_meps = nil
 if configuration:Exists("disable_meps") then 
@@ -160,6 +158,13 @@ meps_step = tonumber(meps_time:GetStep():Hours())
 local use_meps = (disable_meps == false and meps_step < 66)
 
 for i = 1, #t do
+
+
+    -- Computational temperature thresholds used by the wet bulb–based form determination.
+    -- Rain intesity is taken into account in the determination with higher intensity raising the probability for snow.
+    -- Snowboud raised nonlinearly with log10.
+    local snowbound = 0.0 + math.log10(rr[i] + 1)
+    local rainbound = snowbound + 0.3
 
     -- Wet bulb temperatures according to the empirical formula (Stull) for VIRE data, EC, and MEPS. 
     -- The calculation requires T and RH. The Stull formula combines computational simplicity
