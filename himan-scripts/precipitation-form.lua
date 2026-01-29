@@ -97,8 +97,23 @@ function get_param(producer, ftype, param, level)
     local param1 = luatool:FetchWithArgs(o)
 
     return param1
-  end
+end
 
+function get_meps_forecast_type()
+    local meps_ftype = forecast_type(HPForecastType.kEpsControl, 0)
+    local meps_control_forecast = configuration:GetValue("meps_control_forecast")
+
+    if meps_control_forecast ~= "" then
+        meps_ftype = ForecastTypesFromString(meps_control_forecast)
+        if #meps_ftype ~= 1 then
+            logger:Error("Expecting MEPS_CONTROL_FORECAST to have a single forecast_type, got: " .. tostring(#meps_ftype))
+        end
+
+        meps_ftype = meps_ftype[1]
+    end
+
+    return meps_ftype
+end
 
 local par_t = param('T-K')
 local par_rh = param('RH-PRCNT')
@@ -118,7 +133,7 @@ local prec = luatool:Fetch(current_time, l0, par_prec, current_forecast_type)
 
 local meps = producer(4, "MEPS")
 local meps_mta = producer(260, "MEPSMTA")
-local meps_ftype = forecast_type(HPForecastType.kEpsControl, 0)
+local meps_ftype = get_meps_forecast_type()
 
 local t_meps = get_param(meps, meps_ftype, par_t, l2)
 local rh_meps = get_param(meps, meps_ftype, param("RH-0TO1"), l2)
