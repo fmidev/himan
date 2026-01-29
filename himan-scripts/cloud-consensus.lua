@@ -259,6 +259,22 @@ function write_results_to_file(param, data)
   luatool:WriteToFile(result)
 end
 
+function get_meps_forecast_type()
+  local meps_ftype = forecast_type(HPForecastType.kEpsControl, 0)
+  local meps_control_forecast = configuration:GetValue("meps_control_forecast")
+
+  if meps_control_forecast ~= "" then
+    meps_ftype = ForecastTypesFromString(meps_control_forecast)
+    if #meps_ftype ~= 1 then
+      logger:Error("Expecting MEPS_CONTROL_FORECAST to have a single forecast_type, got: " .. tostring(#meps_ftype))
+    end
+
+    meps_ftype = meps_ftype[1]
+  end
+
+  return meps_ftype
+end
+
 
 local step = current_time:GetStep():Hours()
 
@@ -286,7 +302,7 @@ local meps_step = tonumber(meps_time:GetStep():Hours())
 
 -- Get all cloud data from MEPS and EC
 local NL_EC, NM_EC, NH_EC, NL_MEAN_EC, NM_MEAN_EC, NH_MEAN_EC, NL_STD_EC, NM_STD_EC, NH_STD_EC = get_data(ec, ec_prob, forecast_type(HPForecastType.kDeterministic))
-local NL_MEPS, NM_MEPS, NH_MEPS, NL_MEAN_MEPS, NM_MEAN_MEPS, NH_MEAN_MEPS, NL_STD_MEPS, NM_STD_MEPS, NH_STD_MEPS = get_data(meps, meps_mta,forecast_type(HPForecastType.kEpsControl, 0))
+local NL_MEPS, NM_MEPS, NH_MEPS, NL_MEAN_MEPS, NM_MEAN_MEPS, NH_MEAN_MEPS, NL_STD_MEPS, NM_STD_MEPS, NH_STD_MEPS = get_data(meps, meps_mta, get_meps_forecast_type())
 
 -- Get cloud data from VIRE
 local NL_VIRE = luatool:Fetch(current_time, current_level, param("NL-0TO1"), current_forecast_type)
