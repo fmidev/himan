@@ -84,14 +84,30 @@ function summarize_changes(temp, adjusted_temp, dewp, adjusted_dewp, MISSING, nb
   end
 end
 
+function get_meps_forecast_type()
+  local meps_ftype = forecast_type(HPForecastType.kEpsControl, 0)
+  local meps_control_forecast = configuration:GetValue("meps_control_forecast")
+
+  if meps_control_forecast ~= "" then
+    meps_ftype = ForecastTypesFromString(meps_control_forecast)
+    if #meps_ftype ~= 1 then
+      logger:Error("Expecting MEPS_CONTROL_FORECAST to have a single forecast_type, got: " .. tostring(#meps_ftype))
+    end
+
+    meps_ftype = meps_ftype[1]
+  end
+
+  return meps_ftype
+end
 
 function FetchFromMEPS(param, level)
   local meps_prod = producer(4, "MEPS")
+  local meps_forecast_type = get_meps_forecast_type()
 
   local o = {forecast_time = current_time,
            level = level,
            param = param,
-           forecast_type = forecast_type(HPForecastType.kEpsControl, 0),
+           forecast_type = meps_forecast_type,
            producer = meps_prod,
            geom_name = "",
            read_previous_forecast_if_not_found = false
