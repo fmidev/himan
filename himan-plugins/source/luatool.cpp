@@ -4,6 +4,7 @@
 #include "forecast_time.h"
 #include "hitool.h"
 #include "lagged_ensemble.h"
+#include "lambert_equal_area_grid.h"
 #include "latitude_longitude_grid.h"
 #include "lift.h"
 #include "logger.h"
@@ -18,7 +19,6 @@
 #include <fmt/format.h>
 #include <ogr_spatialref.h>
 #include <thread>
-#include "lambert_equal_area_grid.h"
 
 #ifndef __clang_analyzer__
 
@@ -1350,6 +1350,16 @@ void set(params& ps, size_t num, const param& p)
 	ps.at(num - 1) = p;
 }
 }  // namespace params_wrapper
+
+namespace util_wrapper
+{
+object ForecastTypesFromString(const std::string& type)
+{
+	auto vec = util::ForecastTypesFromString(type);
+	return VectorToTable<forecast_type>(vec);
+}
+
+}  // namespace util_wrapper
 // clang-format off
 
 #pragma GCC diagnostic push
@@ -1825,6 +1835,7 @@ void BindLib(lua_State* L)
 		  def("ElevationAngle_", &metutil::ElevationAngle_),
 		  // util namespace
 		  def("ParseBoolean", &util::ParseBoolean),
+		  def("ForecastTypesFromString", &util_wrapper::ForecastTypesFromString),
 		  // himan namespace
 		  def("IsMissing", static_cast<bool(*)(double)>(&::IsMissing)),
 		  def("IsValid", static_cast<bool(*)(double)>(&::IsValid))];
