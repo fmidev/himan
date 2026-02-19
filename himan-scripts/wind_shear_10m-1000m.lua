@@ -16,6 +16,6 @@ for i = 1,#ws do
 	shear[i] = (above_ws[i] - ws[i]) / (above_height[i] - height[i]) * 59.25
 end
 
-result:SetParam(param("W-SHEAR-KTFT"))
+result:SetParam(param("WSHR-KTHFT"))
 result:SetValues(shear)
 luatool:WriteToFile(result)
