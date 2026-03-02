@@ -20,22 +20,19 @@ local above_height = luatool:Fetch(current_time,above_level,heightParam,current_
 
 -- Output and intermediate arrays
 local shear = {}
-local du = {}
-local dv = {}
-local dz = {}
 
 -- Calculate wind shear only if U and V grids have matching size
 if #u == #v then
 
 	for i = 1,#u do
 	
-		du[i] = above_u[i] - u[i]
-        	dv[i] = above_v[i] - v[i]
-		dz[i] = above_height[i] - height[i]
+		local du = above_u[i] - u[i]
+        	local dv = above_v[i] - v[i]
+		local dz = above_height[i] - height[i]
 		
 		-- Wind shear magnitude: vector shear per unit height, converted from (m/s)/m to kt/100ft
 		-- math based on: https://wiki.fmi.fi/x/46N7Dw
-		shear[i] = (math.sqrt((math.pow(du[i]/dz[i],2) + math.pow(dv[i]/dz[i],2)))) * (30.48 / 0.514)
+		shear[i] = (math.sqrt((math.pow(du/dz,2) + math.pow(dv/dz,2)))) * (30.48 / 0.514)
 	
 	end
 
