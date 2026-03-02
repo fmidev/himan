@@ -1,19 +1,21 @@
-logger:Info("Calculating Maximum wind shear in 100ft-1600ft level")
+-- STU-29741
+-- Calculating maximum wind shear in 100ft-1600ft level
+logger:Info("Calculating maximum wind shear in 100ft-1600ft level")
 
-local MISS = missing
-local windShear = param("WSHR-KTHFT")  -- Wind shear
+local MISS = missing                   -- Missing value placeholder
+local windShear = param("WSHR-KTHFT")  -- Wind shear parameter
 
--- units to meters (this is also a default)
+-- Set height unit to meters (default)
 hitool:SetHeightUnit(HPParameterUnit.kM)
 
--- hight in meters
+-- Height limits in meters corresponding to ~100ft and ~1600ft
 local lowlimit = 30     -- ~100ft
 local highlimit = 500   -- ~1600ft
 
--- Maximum wind shear
+-- Calculate maximum wind shear within the defined height layer
 local maxShearData = hitool:VerticalMaximum(windShear, lowlimit, highlimit)
 
--- write 
+-- Set output parameter and values, then write result to file
 result:SetParam(param("WSHR-MAX-KTHFT"))
 result:SetValues(maxShearData)
 luatool:WriteToFile(result)
