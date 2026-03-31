@@ -204,7 +204,7 @@ vec CalculateStormRelativeHelicity(shared_ptr<const plugin_configuration> conf, 
 	}
 	level curLevel = itsBottomLevel;
 
-	while (curLevel.Value() > 0)
+	while (curLevel.Value() > 1)
 	{
 		level::EqualAdjustment(curLevel, -1.);
 

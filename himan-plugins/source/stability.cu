@@ -475,7 +475,7 @@ void StormRelativeHelicity(std::shared_ptr<const plugin_configuration> conf, std
 
 		level curLevel = itsBottomLevel;
 
-		while (curLevel.Value() > 0)
+		while (curLevel.Value() > 1)
 		{
 			level::EqualAdjustment(curLevel, -1.);
 
