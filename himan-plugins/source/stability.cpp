@@ -193,7 +193,15 @@ vec CalculateStormRelativeHelicity(shared_ptr<const plugin_configuration> conf, 
 	auto prevZInfo = STABILITY::Fetch(conf, myTargetInfo, itsBottomLevel, HLParam);
 
 	vector<bool> found(SRH.size(), false);
+	const auto& prevZBottom = VEC(prevZInfo);
 
+	for (size_t i = 0; i < found.size(); i++)
+	{
+		if (IsMissing(prevZBottom[i]))
+		{
+			found[i] = true;
+		}
+	}
 	level curLevel = itsBottomLevel;
 
 	while (curLevel.Value() > 0)

@@ -182,6 +182,16 @@ __global__ void StormRelativeHelicityKernel(darr_t d_srh, cdarr_t d_u, cdarr_t d
 	}
 }
 
+__global__ void InitializeFoundFromMissingZKernel(unsigned char* __restrict__ d_found, cdarr_t d_z, size_t N)
+{
+	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if (idx < N)
+	{
+		d_found[idx] = himan::IsMissingDouble(d_z[idx]) ? 1 : 0;
+	}
+}
+
 __global__ void UVIdVectorKernel(darr_t d_uid, darr_t d_vid, cdarr_t d_uavg, cdarr_t d_vavg, cdarr_t d_ushr,
                                  cdarr_t d_vshr, size_t N)
 {
@@ -443,8 +453,6 @@ void StormRelativeHelicity(std::shared_ptr<const plugin_configuration> conf, std
 		CUDA_CHECK(cudaMalloc((void**)&d_z, memsize));
 		CUDA_CHECK(cudaMalloc((void**)&d_found, N * sizeof(unsigned char)));
 
-		InitializeArray<unsigned char>(d_found, 0, N, stream);
-
 		auto prevUInfo =
 		    hc::Fetch<double>(conf, myTargetInfo->Time(), itsBottomLevel, UParam, myTargetInfo->ForecastType());
 		auto prevVInfo =
@@ -460,6 +468,8 @@ void StormRelativeHelicity(std::shared_ptr<const plugin_configuration> conf, std
 		hc::PrepareInfo(prevUInfo, d_pu, stream, conf->UseCacheForReads());
 		hc::PrepareInfo(prevVInfo, d_pv, stream, conf->UseCacheForReads());
 		hc::PrepareInfo(prevZInfo, d_pz, stream, conf->UseCacheForReads());
+
+		InitializeFoundFromMissingZKernel<<<gridSize, blockSize, 0, stream>>>(d_found, d_pz, N);
 
 		thrust::device_ptr<unsigned char> dt_found = thrust::device_pointer_cast(d_found);
 
