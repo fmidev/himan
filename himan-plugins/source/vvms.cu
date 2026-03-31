@@ -95,6 +95,7 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 
 	if (!TInfo || !VVInfo)
 	{
+		CUDA_CHECK(cudaStreamDestroy(stream));
 		return;
 	}
 
@@ -135,6 +136,11 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 
 		if (!PInfo)
 		{
+			CUDA_CHECK(cudaFree(d_t));
+			CUDA_CHECK(cudaFree(d_vv));
+			CUDA_CHECK(cudaFree(d_vv_ms));
+			CUDA_CHECK(cudaFree(d_p));
+			CUDA_CHECK(cudaStreamDestroy(stream));
 			return;
 		}
 		cuda::PrepareInfo(PInfo, d_p, stream, conf->UseCacheForReads());

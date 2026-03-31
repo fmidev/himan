@@ -162,6 +162,7 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 
 	if (!prevUInfo || !UInfo || !nextUInfo || !prevVInfo || !VInfo || !nextVInfo || !prevHInfo || !nextHInfo)
 	{
+		CUDA_CHECK(cudaStreamDestroy(stream));
 		return;
 	}
 

@@ -75,6 +75,7 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 
 	if (!TInfo)
 	{
+		CUDA_CHECK(cudaStreamDestroy(stream));
 		return;
 	}
 
@@ -85,6 +86,7 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 
 		if (!TDInfo)
 		{
+			CUDA_CHECK(cudaStreamDestroy(stream));
 			return;
 		}
 	}
@@ -96,6 +98,7 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 
 		if (!PInfo)
 		{
+			CUDA_CHECK(cudaStreamDestroy(stream));
 			return;
 		}
 

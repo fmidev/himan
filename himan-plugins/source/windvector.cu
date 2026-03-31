@@ -97,6 +97,7 @@ void himan::plugin::windvector_cuda::RunCuda(std::shared_ptr<const plugin_config
 
 	if (!UInfo || !VInfo)
 	{
+		CUDA_CHECK(cudaStreamDestroy(stream));
 		return;
 	}
 

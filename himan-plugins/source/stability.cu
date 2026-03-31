@@ -517,6 +517,7 @@ void StormRelativeHelicity(std::shared_ptr<const plugin_configuration> conf, std
 		CUDA_CHECK(cudaFree(d_u));
 		CUDA_CHECK(cudaFree(d_v));
 		CUDA_CHECK(cudaFree(d_z));
+		CUDA_CHECK(cudaFree(d_found));
 	}
 	catch (const himan::HPExceptionType& e)
 	{
@@ -531,6 +532,7 @@ void StormRelativeHelicity(std::shared_ptr<const plugin_configuration> conf, std
 			CUDA_CHECK(cudaFree(d_u));
 			CUDA_CHECK(cudaFree(d_v));
 			CUDA_CHECK(cudaFree(d_z));
+			CUDA_CHECK(cudaFree(d_found));
 		}
 		else
 		{
@@ -569,6 +571,10 @@ void EnergyHelicityIndex(std::shared_ptr<const plugin_configuration> conf, std::
 	{
 		if (e == himan::kFileDataNotFound)
 		{
+			if (d_cape)
+			{
+				CUDA_CHECK(cudaFree(d_cape));
+			}
 		}
 	}
 }
@@ -664,6 +670,8 @@ void CalculateBulkRichardsonNumber(std::shared_ptr<const plugin_configuration> c
 	{
 		if (e == himan::kFileDataNotFound)
 		{
+			if (d_brn)
+				CUDA_CHECK(cudaFree(d_brn));
 			if (d_cape)
 				CUDA_CHECK(cudaFree(d_cape));
 			if (d_u6)
@@ -747,6 +755,14 @@ void CalculateLiftedIndices(std::shared_ptr<const plugin_configuration> conf,
 			{
 				if (e == himan::kFileDataNotFound)
 				{
+					CUDA_CHECK(cudaFree(d_t850));
+					CUDA_CHECK(cudaFree(d_t500));
+					CUDA_CHECK(cudaFree(d_td850));
+					CUDA_CHECK(cudaFree(d_li));
+					CUDA_CHECK(cudaFree(d_si));
+					CUDA_CHECK(cudaFree(d_t500m));
+					CUDA_CHECK(cudaFree(d_td500m));
+					CUDA_CHECK(cudaFree(d_p500m));
 					return;
 				}
 			}
@@ -840,6 +856,20 @@ void CalculateThetaEIndices(std::shared_ptr<info<double>> myTargetInfo, std::sha
 	{
 		if (e == himan::kFileDataNotFound)
 		{
+			if (d_tstart)
+				CUDA_CHECK(cudaFree(d_tstart));
+			if (d_rhstart)
+				CUDA_CHECK(cudaFree(d_rhstart));
+			if (d_pstart)
+				CUDA_CHECK(cudaFree(d_pstart));
+			if (d_tstop)
+				CUDA_CHECK(cudaFree(d_tstop));
+			if (d_rhstop)
+				CUDA_CHECK(cudaFree(d_rhstop));
+			if (d_pstop)
+				CUDA_CHECK(cudaFree(d_pstop));
+			if (d_thetaediff)
+				CUDA_CHECK(cudaFree(d_thetaediff));
 			return;
 		}
 	}
@@ -929,6 +959,18 @@ void CalculateConvectiveSeverityIndex(std::shared_ptr<const plugin_configuration
 	{
 		if (e == himan::kFileDataNotFound)
 		{
+			if (d_mucape)
+				CUDA_CHECK(cudaFree(d_mucape));
+			if (d_mlcape)
+				CUDA_CHECK(cudaFree(d_mlcape));
+			if (d_mulpl)
+				CUDA_CHECK(cudaFree(d_mulpl));
+			if (d_muebs)
+				CUDA_CHECK(cudaFree(d_muebs));
+			if (d_mlebs)
+				CUDA_CHECK(cudaFree(d_mlebs));
+			if (d_csi)
+				CUDA_CHECK(cudaFree(d_csi));
 			return;
 		}
 	}

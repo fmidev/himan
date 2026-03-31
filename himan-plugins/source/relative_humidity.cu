@@ -98,6 +98,7 @@ void ProcessHumidityGPU(std::shared_ptr<const plugin_configuration> conf, std::s
 
 	if (!TInfo)
 	{
+		CUDA_CHECK(cudaStreamDestroy(stream));
 		return;
 	}
 
@@ -129,6 +130,10 @@ void ProcessHumidityGPU(std::shared_ptr<const plugin_configuration> conf, std::s
 
 		if (!TDInfo)
 		{
+			CUDA_CHECK(cudaFree(d_TD));
+			CUDA_CHECK(cudaFree(d_T));
+			CUDA_CHECK(cudaFree(d_RH));
+			CUDA_CHECK(cudaStreamDestroy(stream));
 			return;
 		}
 
@@ -155,6 +160,7 @@ void ProcessHumidityGPU(std::shared_ptr<const plugin_configuration> conf, std::s
 		{
 			CUDA_CHECK(cudaFree(d_T));
 			CUDA_CHECK(cudaFree(d_RH));
+			CUDA_CHECK(cudaStreamDestroy(stream));
 			return;
 		}
 
@@ -218,7 +224,7 @@ void ProcessHumidityGPU(std::shared_ptr<const plugin_configuration> conf, std::s
 	CUDA_CHECK(cudaFree(d_T));
 	CUDA_CHECK(cudaFree(d_RH));
 
-	cudaStreamDestroy(stream);
+	CUDA_CHECK(cudaStreamDestroy(stream));
 
 	if (myTargetInfo->Level().Type() == kHybrid)
 	{
