@@ -66,8 +66,8 @@ function AddScalar(arr, scalar)
   return ret
 end
 
-local baseHPa = BaseHPa(4)
-local topHPa = TopHPa(4,AddScalar(baseHPa,-1))
+local baseHPa = BaseHPa(3)
+local topHPa = TopHPa(5,AddScalar(baseHPa,-1))
 
 -- Convert top [hPa] to FL
 local topFL = {}
