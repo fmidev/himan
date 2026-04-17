@@ -40,13 +40,13 @@ Requires: %{boost}-iostreams
 Requires: libs3 >= 4.1
 Requires: jasper-libs
 Requires: eccodes
-Requires: gdal310-libs
+Requires: gdal312-libs
 Requires: libpqxx >= %{pqxx_ver}
 BuildRequires: python3-scons
 BuildRequires: eigen3-devel >= 3.3.4
 BuildRequires: libpqxx-devel >= %{pqxx_ver}
 BuildRequires: make
-BuildRequires: gdal310-devel
+BuildRequires: gdal312-devel
 BuildRequires: gcc-c++ >= 8.2.1
 BuildRequires: cuda-nvcc-12-4
 BuildRequires: cuda-cudart-devel-12-4
@@ -62,7 +62,7 @@ BuildRequires: libfmidb-devel >= 25.8.7
 BuildRequires: smartmet-library-newbase-devel = 25.3.20
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: %{boost}-devel
-BuildRequires: fmt-devel >= 11.2
+BuildRequires: fmt-devel >= 12.1
 BuildRequires: lua-devel
 BuildRequires: zlib-devel
 BuildRequires: bzip2-devel

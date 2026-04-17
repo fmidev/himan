@@ -32,7 +32,7 @@ Requires: zlib
 Requires: libfmidb
 Requires: xerces-c
 Requires: libpqxx >= 7.7.0
-Requires: gdal310-libs
+Requires: gdal312-libs
 Requires: jasper-libs
 Requires: %{boost}-program-options
 Requires: %{boost}-system
@@ -41,7 +41,7 @@ Requires: %{boost}-iostreams
 Requires: %{boost}-thread
 Requires: bzip2-libs
 BuildRequires: %{boost}-devel
-BuildRequires: fmt-devel >= 11.2
+BuildRequires: fmt-devel >= 12.1
 BuildRequires: python3-scons
 BuildRequires: redhat-rpm-config
 BuildRequires: gcc-c++ >= 8.2.1
@@ -51,7 +51,7 @@ BuildRequires: make
 BuildRequires: python3-distro
 BuildRequires: libfmidb-devel
 BuildRequires: libfmigrib-devel
-BuildRequires: gdal310-devel
+BuildRequires: gdal312-devel
 BuildRequires: zlib-devel
 BuildRequires: bzip2-devel
 Provides: himan
