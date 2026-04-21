@@ -229,6 +229,23 @@ void preform_hybrid::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned s
 	const int FREEZING_DRIZZLE = 4;
 	const int FREEZING_RAIN = 5;
 
+	struct Cutoff { bool enabled=false; double min=0.0; };
+	std::array<Cutoff, 6> rrCut;
+
+	auto LoadCut = [&](int form, const std::string& key)
+	{
+		if (!itsConfiguration->Exists(key)) return;
+		rrCut[form] = {true, std::stod(itsConfiguration->GetValue(key))};
+	};
+
+	LoadCut(DRIZZLE, "rr_min_pref_0");
+	LoadCut(RAIN, "rr_min_pref_1");
+	LoadCut(SLEET, "rr_min_pref_2");
+	LoadCut(SNOW, "rr_min_pref_3");
+	LoadCut(FREEZING_DRIZZLE, "rr_min_pref_4");
+	LoadCut(FREEZING_RAIN, "rr_min_pref_5");
+
+
 	LOCKSTEP(myTargetInfo, stratus, freezingArea, TInfo, RRInfo)
 	{
 		stratus->Find<param>(stratusBaseParam);
@@ -398,6 +415,20 @@ void preform_hybrid::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned s
 		}
 
 		// FINISHED
+
+		if (!IsMissing(RR) && !IsMissing(PreForm))
+		{
+			const int pf = static_cast<int>(PreForm);
+
+			if (pf >= 0 && pf < static_cast<int>(rrCut.size()) &&
+				rrCut[pf].enabled && RR < rrCut[pf].min)
+			{
+				RR = 0;
+				if (noPotentialPrecipitationForm) continue;
+			}
+		}
+
+
 
 		if (RR == 0 || IsMissing(RR))
 		{
