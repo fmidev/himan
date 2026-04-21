@@ -48,10 +48,9 @@ void hybrid_height::Process(std::shared_ptr<const plugin_configuration> conf)
 		// It's the default, but let's be explicit
 		itsUseGeopotential = true;
 	}
-	else if ((itsConfiguration->TargetProducer().Id() == 240 || itsConfiguration->TargetProducer().Id() == 243) ||
-	         (itsConfiguration->TargetProducer().Id() >= 270 && itsConfiguration->TargetProducer().Id() <= 272))
+	else if (itsConfiguration->TargetProducer().Id() == 240 || itsConfiguration->TargetProducer().Id() == 243)
 	{
-		// Workaround for MNWC which doesn't have geopotential for sub-hour data (as of 2019-06-12)
+		// ECMWF does not have geopotential
 		itsUseGeopotential = false;
 
 		itsThreadDistribution = ThreadDistribution::kThreadForForecastTypeAndTime;
