@@ -366,23 +366,21 @@ void CalculateBulkShear(std::shared_ptr<const plugin_configuration> conf, std::s
 		CUDA_CHECK(cudaFree(d_v));
 }
 
+// Single-pass computation of SRH for both 3km (d_srh03) and 1km (d_srh01).
+// d_uid/d_vid are caller-owned. The loop runs until all 3km heights are found;
+// since 1km < 3km, all 1km points are guaranteed done at that point too.
 void StormRelativeHelicity(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info<double>> myTargetInfo,
-                           std::shared_ptr<himan::plugin::hitool> h, double* d_srh, double stopHeight,
-                           cudaStream_t& stream)
+                           std::shared_ptr<himan::plugin::hitool> h, double* d_srh03, double* d_srh01,
+                           const double* d_uid, const double* d_vid, cudaStream_t& stream)
 {
 	using namespace himan;
 	using himan::plugin::stability_cuda::itsBottomLevel;
 
 	const size_t N = myTargetInfo->SizeLocations();
 
-	InitializeArray<double>(d_srh, 0, N, stream);
+	InitializeArray<double>(d_srh03, 0, N, stream);
+	InitializeArray<double>(d_srh01, 0, N, stream);
 
-	double* d_uid = 0;
-	double* d_vid = 0;
-	double* d_uavg = 0;
-	double* d_vavg = 0;
-	double* d_ushr = 0;
-	double* d_vshr = 0;
 	double* d_pu = 0;
 	double* d_pv = 0;
 	double* d_pt = 0;
@@ -390,57 +388,8 @@ void StormRelativeHelicity(std::shared_ptr<const plugin_configuration> conf, std
 	double* d_u = 0;
 	double* d_v = 0;
 	double* d_z = 0;
-	unsigned char* d_found = 0;
-
-	// First fetch U and V identity vectors, the same are used for both 1km and 3km
-	// helicity.
-
-	try
-	{
-		CUDA_CHECK(cudaMalloc((void**)&d_uid, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_vid, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_uavg, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_vavg, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_ushr, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_vshr, memsize));
-
-		// average wind
-		auto Uavg = h->VerticalAverage<double>(UParam, 10, 6000);
-		CUDA_CHECK(cudaMemcpyAsync((void*)d_uavg, (const void*)Uavg.data(), memsize, cudaMemcpyHostToDevice, stream));
-
-		auto Vavg = h->VerticalAverage<double>(VParam, 10, 6000);
-		CUDA_CHECK(cudaMemcpyAsync((void*)d_vavg, (const void*)Vavg.data(), memsize, cudaMemcpyHostToDevice, stream));
-
-		// shear
-		auto Ushear = STABILITY::Shear(h, UParam, 10, 6000, Uavg.size());
-		CUDA_CHECK(cudaMemcpyAsync((void*)d_ushr, (const void*)Ushear.data(), memsize, cudaMemcpyHostToDevice, stream));
-
-		auto Vshear = STABILITY::Shear(h, VParam, 10, 6000, Uavg.size());
-		CUDA_CHECK(cudaMemcpyAsync((void*)d_vshr, (const void*)Vshear.data(), memsize, cudaMemcpyHostToDevice, stream));
-
-		UVIdVectorKernel<<<gridSize, blockSize, 0, stream>>>(d_uid, d_vid, d_uavg, d_vavg, d_ushr, d_vshr, N);
-
-		CUDA_CHECK(cudaStreamSynchronize(stream));
-
-		// U&V id vector source data is not needed anymore
-		CUDA_CHECK(cudaFree(d_uavg));
-		CUDA_CHECK(cudaFree(d_vavg));
-		CUDA_CHECK(cudaFree(d_ushr));
-		CUDA_CHECK(cudaFree(d_vshr));
-	}
-	catch (const himan::HPExceptionType& e)
-	{
-		if (e == himan::kFileDataNotFound)
-		{
-			CUDA_CHECK(cudaFree(d_uid));
-			CUDA_CHECK(cudaFree(d_vid));
-			CUDA_CHECK(cudaFree(d_uavg));
-			CUDA_CHECK(cudaFree(d_vavg));
-			CUDA_CHECK(cudaFree(d_ushr));
-			CUDA_CHECK(cudaFree(d_vshr));
-			return;
-		}
-	}
+	unsigned char* d_found03 = 0;
+	unsigned char* d_found01 = 0;
 
 	try
 	{
@@ -451,7 +400,8 @@ void StormRelativeHelicity(std::shared_ptr<const plugin_configuration> conf, std
 		CUDA_CHECK(cudaMalloc((void**)&d_u, memsize));
 		CUDA_CHECK(cudaMalloc((void**)&d_v, memsize));
 		CUDA_CHECK(cudaMalloc((void**)&d_z, memsize));
-		CUDA_CHECK(cudaMalloc((void**)&d_found, N * sizeof(unsigned char)));
+		CUDA_CHECK(cudaMalloc((void**)&d_found03, N * sizeof(unsigned char)));
+		CUDA_CHECK(cudaMalloc((void**)&d_found01, N * sizeof(unsigned char)));
 
 		auto prevUInfo =
 		    hc::Fetch<double>(conf, myTargetInfo->Time(), itsBottomLevel, UParam, myTargetInfo->ForecastType());
@@ -469,11 +419,14 @@ void StormRelativeHelicity(std::shared_ptr<const plugin_configuration> conf, std
 		hc::PrepareInfo(prevVInfo, d_pv, stream, conf->UseCacheForReads());
 		hc::PrepareInfo(prevZInfo, d_pz, stream, conf->UseCacheForReads());
 
-		InitializeFoundFromMissingZKernel<<<gridSize, blockSize, 0, stream>>>(d_found, d_pz, N);
+		InitializeFoundFromMissingZKernel<<<gridSize, blockSize, 0, stream>>>(d_found03, d_pz, N);
+		InitializeFoundFromMissingZKernel<<<gridSize, blockSize, 0, stream>>>(d_found01, d_pz, N);
 
-		thrust::device_ptr<unsigned char> dt_found = thrust::device_pointer_cast(d_found);
+		thrust::device_ptr<unsigned char> dt_found03 = thrust::device_pointer_cast(d_found03);
 
 		level curLevel = itsBottomLevel;
+		int levelCount = 0;
+		const int syncInterval = 5;
 
 		while (curLevel.Value() > 1)
 		{
@@ -492,15 +445,19 @@ void StormRelativeHelicity(std::shared_ptr<const plugin_configuration> conf, std
 			hc::PrepareInfo(VInfo, d_v, stream, conf->UseCacheForReads());
 			hc::PrepareInfo(ZInfo, d_z, stream, conf->UseCacheForReads());
 
-			StormRelativeHelicityKernel<<<gridSize, blockSize, 0, stream>>>(d_srh, d_u, d_v, d_pu, d_pv, d_uid, d_vid,
-			                                                                d_z, d_pz, d_found, stopHeight, N);
+			StormRelativeHelicityKernel<<<gridSize, blockSize, 0, stream>>>(d_srh03, d_u, d_v, d_pu, d_pv, d_uid,
+			                                                                d_vid, d_z, d_pz, d_found03, 3000., N);
+			StormRelativeHelicityKernel<<<gridSize, blockSize, 0, stream>>>(d_srh01, d_u, d_v, d_pu, d_pv, d_uid,
+			                                                                d_vid, d_z, d_pz, d_found01, 1000., N);
 
-			size_t foundCount = thrust::count(thrust::cuda::par.on(stream), dt_found, dt_found + N, 1);
-			CUDA_CHECK(cudaStreamSynchronize(stream));
-
-			if (foundCount == N)
+			if (++levelCount % syncInterval == 0)
 			{
-				break;
+				CUDA_CHECK(cudaStreamSynchronize(stream));
+				size_t foundCount03 = thrust::count(thrust::cuda::par.on(stream), dt_found03, dt_found03 + N, 1);
+				if (foundCount03 == N)
+				{
+					break;
+				}
 			}
 
 			CUDA_CHECK(cudaMemcpyAsync(d_pu, d_u, memsize, cudaMemcpyDeviceToDevice, stream));
@@ -508,8 +465,6 @@ void StormRelativeHelicity(std::shared_ptr<const plugin_configuration> conf, std
 			CUDA_CHECK(cudaMemcpyAsync(d_pz, d_z, memsize, cudaMemcpyDeviceToDevice, stream));
 		}
 
-		CUDA_CHECK(cudaFree(d_uid));
-		CUDA_CHECK(cudaFree(d_vid));
 		CUDA_CHECK(cudaFree(d_pu));
 		CUDA_CHECK(cudaFree(d_pv));
 		CUDA_CHECK(cudaFree(d_pt));
@@ -517,14 +472,13 @@ void StormRelativeHelicity(std::shared_ptr<const plugin_configuration> conf, std
 		CUDA_CHECK(cudaFree(d_u));
 		CUDA_CHECK(cudaFree(d_v));
 		CUDA_CHECK(cudaFree(d_z));
-		CUDA_CHECK(cudaFree(d_found));
+		CUDA_CHECK(cudaFree(d_found03));
+		CUDA_CHECK(cudaFree(d_found01));
 	}
 	catch (const himan::HPExceptionType& e)
 	{
 		if (e == himan::kFileDataNotFound)
 		{
-			CUDA_CHECK(cudaFree(d_uid));
-			CUDA_CHECK(cudaFree(d_vid));
 			CUDA_CHECK(cudaFree(d_pu));
 			CUDA_CHECK(cudaFree(d_pv));
 			CUDA_CHECK(cudaFree(d_pt));
@@ -532,7 +486,8 @@ void StormRelativeHelicity(std::shared_ptr<const plugin_configuration> conf, std
 			CUDA_CHECK(cudaFree(d_u));
 			CUDA_CHECK(cudaFree(d_v));
 			CUDA_CHECK(cudaFree(d_z));
-			CUDA_CHECK(cudaFree(d_found));
+			CUDA_CHECK(cudaFree(d_found03));
+			CUDA_CHECK(cudaFree(d_found01));
 		}
 		else
 		{
@@ -540,8 +495,11 @@ void StormRelativeHelicity(std::shared_ptr<const plugin_configuration> conf, std
 		}
 	}
 
-	thrust::device_ptr<double> dt_srh = thrust::device_pointer_cast(d_srh);
-	thrust::replace(dt_srh, dt_srh + N, 0., himan::MissingDouble());
+	thrust::device_ptr<double> dt_srh03 = thrust::device_pointer_cast(d_srh03);
+	thrust::replace(dt_srh03, dt_srh03 + N, 0., himan::MissingDouble());
+
+	thrust::device_ptr<double> dt_srh01 = thrust::device_pointer_cast(d_srh01);
+	thrust::replace(dt_srh01, dt_srh01 + N, 0., himan::MissingDouble());
 }
 
 void EnergyHelicityIndex(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info<double>> myTargetInfo,
@@ -580,36 +538,84 @@ void EnergyHelicityIndex(std::shared_ptr<const plugin_configuration> conf, std::
 }
 
 void CalculateHelicity(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info<double>> myTargetInfo,
-                       std::shared_ptr<himan::plugin::hitool> h, cudaStream_t& stream)
+                       std::shared_ptr<himan::plugin::hitool> h,
+                       const std::vector<double>& Uavg6km, const std::vector<double>& Vavg6km,
+                       cudaStream_t& stream)
 {
-	double* d_srh = 0;
+	double* d_srh03 = 0;
+	double* d_srh01 = 0;
 	double* d_ehi = 0;
+	double* d_uid = 0;
+	double* d_vid = 0;
 
-	CUDA_CHECK(cudaMalloc((void**)&d_srh, memsize));
+	CUDA_CHECK(cudaMalloc((void**)&d_srh03, memsize));
+	CUDA_CHECK(cudaMalloc((void**)&d_srh01, memsize));
 	CUDA_CHECK(cudaMalloc((void**)&d_ehi, memsize));
+	CUDA_CHECK(cudaMalloc((void**)&d_uid, memsize));
+	CUDA_CHECK(cudaMalloc((void**)&d_vid, memsize));
+
+	// Compute storm-motion ID vectors once; reused for both SRH 1km and 3km.
+	{
+		double* d_uavg = 0;
+		double* d_vavg = 0;
+		double* d_ushr = 0;
+		double* d_vshr = 0;
+
+		CUDA_CHECK(cudaMalloc((void**)&d_uavg, memsize));
+		CUDA_CHECK(cudaMalloc((void**)&d_vavg, memsize));
+		CUDA_CHECK(cudaMalloc((void**)&d_ushr, memsize));
+		CUDA_CHECK(cudaMalloc((void**)&d_vshr, memsize));
+
+		const size_t N = myTargetInfo->SizeLocations();
+
+		CUDA_CHECK(
+		    cudaMemcpyAsync((void*)d_uavg, (const void*)Uavg6km.data(), memsize, cudaMemcpyHostToDevice, stream));
+		CUDA_CHECK(
+		    cudaMemcpyAsync((void*)d_vavg, (const void*)Vavg6km.data(), memsize, cudaMemcpyHostToDevice, stream));
+
+		auto Ushear = STABILITY::Shear(h, UParam, 10, 6000, N);
+		CUDA_CHECK(
+		    cudaMemcpyAsync((void*)d_ushr, (const void*)Ushear.data(), memsize, cudaMemcpyHostToDevice, stream));
+
+		auto Vshear = STABILITY::Shear(h, VParam, 10, 6000, N);
+		CUDA_CHECK(
+		    cudaMemcpyAsync((void*)d_vshr, (const void*)Vshear.data(), memsize, cudaMemcpyHostToDevice, stream));
+
+		UVIdVectorKernel<<<gridSize, blockSize, 0, stream>>>(d_uid, d_vid, d_uavg, d_vavg, d_ushr, d_vshr, N);
+
+		CUDA_CHECK(cudaStreamSynchronize(stream));
+
+		CUDA_CHECK(cudaFree(d_uavg));
+		CUDA_CHECK(cudaFree(d_vavg));
+		CUDA_CHECK(cudaFree(d_ushr));
+		CUDA_CHECK(cudaFree(d_vshr));
+	}
 
 	myTargetInfo->Find<param>(SRHParam);
 	myTargetInfo->Find<level>(ThreeKMLevel);
 
-	StormRelativeHelicity(conf, myTargetInfo, h, d_srh, 3000, stream);
-	hc::ReleaseInfo(myTargetInfo, d_srh, stream);
+	StormRelativeHelicity(conf, myTargetInfo, h, d_srh03, d_srh01, d_uid, d_vid, stream);
+
+	hc::ReleaseInfo(myTargetInfo, d_srh03, stream);
 
 	myTargetInfo->Find<level>(OneKMLevel);
-
-	StormRelativeHelicity(conf, myTargetInfo, h, d_srh, 1000, stream);
-	hc::ReleaseInfo(myTargetInfo, d_srh, stream);
+	hc::ReleaseInfo(myTargetInfo, d_srh01, stream);
 
 	myTargetInfo->Find<param>(EHIParam);
 
-	EnergyHelicityIndex(conf, myTargetInfo, d_srh, d_ehi, stream);
+	EnergyHelicityIndex(conf, myTargetInfo, d_srh01, d_ehi, stream);
 	hc::ReleaseInfo(myTargetInfo, d_ehi, stream);
 
-	CUDA_CHECK(cudaFree(d_srh));
+	CUDA_CHECK(cudaFree(d_srh03));
+	CUDA_CHECK(cudaFree(d_srh01));
 	CUDA_CHECK(cudaFree(d_ehi));
+	CUDA_CHECK(cudaFree(d_uid));
+	CUDA_CHECK(cudaFree(d_vid));
 }
 
 void CalculateBulkRichardsonNumber(std::shared_ptr<const plugin_configuration> conf,
                                    std::shared_ptr<info<double>> myTargetInfo, std::shared_ptr<himan::plugin::hitool> h,
+                                   const std::vector<double>& Uavg6km, const std::vector<double>& Vavg6km,
                                    cudaStream_t& stream)
 {
 	double* d_brn = 0;
@@ -637,11 +643,10 @@ void CalculateBulkRichardsonNumber(std::shared_ptr<const plugin_configuration> c
 
 		hc::PrepareInfo(CAPEInfo, d_cape, stream, conf->UseCacheForReads());
 
-		auto U6 = h->VerticalAverage<double>(UParam, 10, 6000);
-		CUDA_CHECK(cudaMemcpyAsync((void*)d_u6, (const void*)U6.data(), memsize, cudaMemcpyHostToDevice, stream));
-
-		auto V6 = h->VerticalAverage<double>(VParam, 10, 6000);
-		CUDA_CHECK(cudaMemcpyAsync((void*)d_v6, (const void*)V6.data(), memsize, cudaMemcpyHostToDevice, stream));
+		CUDA_CHECK(
+		    cudaMemcpyAsync((void*)d_u6, (const void*)Uavg6km.data(), memsize, cudaMemcpyHostToDevice, stream));
+		CUDA_CHECK(
+		    cudaMemcpyAsync((void*)d_v6, (const void*)Vavg6km.data(), memsize, cudaMemcpyHostToDevice, stream));
 
 		auto U05 = h->VerticalAverage<double>(UParam, 10, 500);
 		CUDA_CHECK(cudaMemcpyAsync((void*)d_u05, (const void*)U05.data(), memsize, cudaMemcpyHostToDevice, stream));
@@ -994,6 +999,18 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 	h->Time(myTargetInfo->Time());
 	h->ForecastType(myTargetInfo->ForecastType());
 
+	// Pre-compute 0-6km wind averages once; shared by CalculateHelicity (UVId vectors)
+	// and CalculateBulkRichardsonNumber to avoid redundant full-column traversals.
+	std::vector<double> Uavg6km, Vavg6km;
+	try
+	{
+		Uavg6km = h->VerticalAverage<double>(UParam, 10., 6000.);
+		Vavg6km = h->VerticalAverage<double>(VParam, 10., 6000.);
+	}
+	catch (const himan::HPExceptionType&)
+	{
+	}
+
 	/* =====================================
 	 * |                                   |
 	 * |        LIFTED INDICES             |
@@ -1028,7 +1045,7 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 	 * =====================================
 	 */
 
-	CalculateHelicity(conf, myTargetInfo, h, stream);
+	CalculateHelicity(conf, myTargetInfo, h, Uavg6km, Vavg6km, stream);
 
 	/* =====================================
 	 * |                                   |
@@ -1037,7 +1054,7 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 	 * =====================================
 	 */
 
-	CalculateBulkRichardsonNumber(conf, myTargetInfo, h, stream);
+	CalculateBulkRichardsonNumber(conf, myTargetInfo, h, Uavg6km, Vavg6km, stream);
 
 	/* =====================================
 	 * |                                   |
