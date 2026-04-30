@@ -51,17 +51,12 @@ local cm = nil
 local ch = nil
 local t = nil
 
-if currentProducerName == "ECG" or currentProducerName == "ECGMTA" then
+if currentProducerName:sub(1, 3) == "ECG" then
   cl  = CheckedFetch("NL-0TO1", ground_level, current_time)
   cm  = CheckedFetch("NM-0TO1", ground_level, current_time)
   ch  = CheckedFetch("NH-0TO1", ground_level, current_time)
   t   = CheckedFetch("T-K", ground_level, current_time)
-elseif currentProducerName == "HL2" or currentProducerName == "HL2MTA" then
-  cl  = CheckedFetch("NL-0TO1", height_level, current_time)
-  cm  = CheckedFetch("NM-0TO1", height_level, current_time)
-  ch  = CheckedFetch("NH-0TO1", height_level, current_time)
-  t   = CheckedFetch("T-K", height_level, current_time)
-elseif currentProducerName == "MEPS" or currentProducerName == "MEPSMTA" then
+elseif currentProducerName:sub(1, 4) == "MEPS" or currentProducerName:sub(1, 4) == "MNWC" then
   cl = CheckedFetch("NL-0TO1", height_level, current_time)
   cm = CheckedFetch("NM-0TO1", height_level, current_time)
   ch = CheckedFetch("NH-0TO1", height_level, current_time)
@@ -71,25 +66,8 @@ else
 end
 
 local tcu = CheckedFetch("CBTCU-FL", height_level, current_time)
-
-local rr = nil
-if currentProducerName == "ECG" or currentProducerName == "ECGMTA" or
-  currentProducerName == "HL2" or currentProducerName == "HL2MTA" or
-  currentProducerName == "MEPS" or currentProducerName == "MEPSMTA" then
-  rr = CheckedFetch("RRR-KGM2", height_level, current_time)
-else
-  error("Unknown producer for cloud symbol!")
-end
-
--- total cloud cover
-local cloudcov_par = nil
-if currentProducerName == "ECG" or currentProducerName == "ECGMTA" or
-  currentProducerName == "HL2" or currentProducerName == "HL2MTA" or
-  currentProducerName == "MEPS" or currentProducerName == "MEPSMTA" then
-  cloudcov_par = param("N-0TO1")
-else
-  error("unknown producer")
-end
+local rr = CheckedFetch("RRR-KGM2", height_level, current_time)
+local cloudcov_par = param("N-0TO1")
 
 hitool:SetHeightUnit(HPParameterUnit.kM)
 local stratus = hitool:VerticalMaximum(cloudcov_par, 0, 305)
