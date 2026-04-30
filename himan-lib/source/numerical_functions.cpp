@@ -144,22 +144,23 @@ template std::pair<std::vector<float>, std::vector<float>> numerical_functions::
 template std::pair<std::vector<double>, std::vector<double>> numerical_functions::LegGauss(size_t, bool);
 
 template <typename T>
-T numerical_functions::Median(const std::vector<T>& data)
+T numerical_functions::Median(std::vector<T> data)
 {
-	// Need to mutate (sort) the vector
-	auto vec = data;
-	size_t n = vec.size();
+	if (data.empty())
+	{
+		return himan::MissingValue<T>();
+	}
+
+	size_t n = data.size();
 	size_t mid = n / 2;
 
-	// Use nth_element to partially sort
-	std::nth_element(vec.begin(), vec.begin() + mid, vec.end());
-	T median = vec[mid];
+	std::nth_element(data.begin(), data.begin() + mid, data.end());
+	T median = data[mid];
 
 	if (n % 2 == 0)
 	{
-		// For even number of elements, need the lower middle too
-		std::nth_element(vec.begin(), vec.begin() + mid - 1, vec.end());
-		median = (median + vec[mid - 1]) / static_cast<T>(2.0);
+		std::nth_element(data.begin(), data.begin() + mid - 1, data.end());
+		median = (median + data[mid - 1]) / static_cast<T>(2.0);
 	}
 
 	return median;
@@ -176,7 +177,7 @@ T numerical_functions::Mean(const std::vector<T>& data)
 		return himan::MissingValue<T>();
 	}
 
-	return std::accumulate(data.begin(), data.end(), 0.0f) / static_cast<T>(data.size());
+	return std::accumulate(data.begin(), data.end(), T(0)) / static_cast<T>(data.size());
 }
 
 template double numerical_functions::Mean(const std::vector<double>&);

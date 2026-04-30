@@ -103,7 +103,8 @@ inline packed_data::packed_data(const packed_data& other)
 
 	if (other.bitmapLength)
 	{
-		cudaHostAlloc(reinterpret_cast<void**>(&bitmap), bitmapLength * sizeof(int), cudaHostAllocMapped);
+		CUDA_CHECK(
+		    cudaHostAlloc(reinterpret_cast<void**>(&bitmap), bitmapLength * sizeof(int), cudaHostAllocMapped));
 
 		memcpy(bitmap, other.bitmap, bitmapLength * sizeof(int));
 	}

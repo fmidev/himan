@@ -130,8 +130,16 @@ bool ReorderPoints(const grid* baseGrid, std::shared_ptr<info<T>> info)
 
 	// Worst case: cartesian product ie O(n^2)
 
-	auto targetStations = dynamic_cast<const point_list*>(baseGrid)->Stations();
-	auto sourceStations = std::dynamic_pointer_cast<point_list>(info->Grid())->Stations();
+	const auto* targetList = dynamic_cast<const point_list*>(baseGrid);
+	const auto sourceList = std::dynamic_pointer_cast<point_list>(info->Grid());
+
+	if (!targetList || !sourceList)
+	{
+		return false;
+	}
+
+	auto targetStations = targetList->Stations();
+	auto sourceStations = sourceList->Stations();
 	const auto& sourceData = info->Data();
 	matrix<T> newData(targetStations.size(), 1, 1, MissingValue<T>());
 
@@ -168,7 +176,7 @@ bool ReorderPoints(const grid* baseGrid, std::shared_ptr<info<T>> info)
 		}
 	}
 
-	std::dynamic_pointer_cast<point_list>(info->Grid())->Stations(newStations);
+	sourceList->Stations(newStations);
 
 	auto b = info->Base();
 	b->data = std::move(newData);

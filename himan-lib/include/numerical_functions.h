@@ -261,7 +261,7 @@ std::pair<std::vector<T>, std::vector<T>> LegGauss(size_t N, bool computeWeights
  */
 
 template <typename T>
-T Median(const std::vector<T>& data);
+T Median(std::vector<T> data);
 
 /**
  * Return unweighted mean value of vector

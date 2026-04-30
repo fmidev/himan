@@ -46,6 +46,10 @@ void reduced_gaussian_grid::N(int theN)
 
 size_t reduced_gaussian_grid::Size() const
 {
+	if (itsAccumulatedPointsAlongParallels.empty())
+	{
+		return 0;
+	}
 	return itsAccumulatedPointsAlongParallels.back();
 }
 
