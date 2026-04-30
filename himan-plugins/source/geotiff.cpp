@@ -207,7 +207,8 @@ void WriteData(GDALDataset& ds, const info<T>& anInfo, int bandNo)
 
 	matrix<T> values = anInfo.Data();
 
-	if (dynamic_cast<regular_grid*>(anInfo.Grid().get())->ScanningMode() != kTopLeft)
+	const auto* rg = dynamic_cast<regular_grid*>(anInfo.Grid().get());
+	if (rg && rg->ScanningMode() != kTopLeft)
 	{
 		util::Flip<T>(values);
 	}
@@ -270,6 +271,13 @@ std::pair<HPWriteStatus, file_information> geotiff::ToFile(info<T>& anInfo)
 
 	const regular_grid* g = dynamic_cast<regular_grid*>(anInfo.Grid().get());
 
+	if (!g)
+	{
+		itsLogger.Error(fmt::format("Grid type {} cannot be written to GeoTIFF as a single file",
+		                            HPGridTypeToString.at(anInfo.Grid()->Type())));
+		throw kInvalidWriteOptions;
+	}
+
 	// Enable compression
 	char** opts = NULL;
 	opts = CSLSetNameValue(opts, "COMPRESS", "DEFLATE");
@@ -330,6 +338,13 @@ std::vector<std::pair<HPWriteStatus, file_information>> geotiff::ToFile(const st
 
 		const regular_grid* g = dynamic_cast<regular_grid*>(first.Grid().get());
 
+		if (!g)
+		{
+			itsLogger.Error(fmt::format("Grid type {} cannot be written to GeoTIFF",
+			                            HPGridTypeToString.at(first.Grid()->Type())));
+			throw kInvalidWriteOptions;
+		}
+
 		// Enable compression
 		char** opts = NULL;
 		opts = CSLSetNameValue(opts, "COMPRESS", "DEFLATE");
@@ -380,6 +395,12 @@ std::vector<std::pair<HPWriteStatus, file_information>> geotiff::ToFile(const st
 			itsLogger.Trace(fmt::format("In-mem file size is {} bytes", buff.length));
 
 			buff.data = static_cast<unsigned char*>(malloc(buff.length));
+
+			if (!buff.data)
+			{
+				VSIFCloseL(inmem);
+				throw std::runtime_error("Memory allocation failed reading in-memory GeoTIFF");
+			}
 
 			// Read contents
 			VSIFReadL(buff.data, buff.length, 1, inmem);

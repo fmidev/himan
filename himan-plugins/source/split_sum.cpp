@@ -407,7 +407,7 @@ void split_sum::Process(std::shared_ptr<const plugin_configuration> conf)
 
 void split_sum::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned short threadIndex)
 {
-	std::vector<std::thread*> threads;
+	std::vector<std::thread> threads;
 	std::vector<std::shared_ptr<info<double>>> infos;
 
 	int subThreadIndex = 0;
@@ -421,25 +421,26 @@ void split_sum::Calculate(std::shared_ptr<info<double>> myTargetInfo, unsigned s
 		// Pass param by reference to sub-thread: aggregation duration is only available there
 		// when data is actually fetched, and we need that information when writing data to disk
 
-		threads.push_back(new std::thread(&split_sum::DoParam, this, newInfo, std::ref(myTargetInfo->Param()),
-		                                  fmt::format("{}_{}", threadIndex, subThreadIndex)));
+		threads.emplace_back(&split_sum::DoParam, this, newInfo, std::ref(myTargetInfo->Param()),
+		                     fmt::format("{}_{}", threadIndex, subThreadIndex));
 
 		if (subThreadIndex % SUB_THREAD_COUNT == 0)
 		{
 			for (auto& thread : threads)
 			{
-				if (thread->joinable())
-					thread->join();
+				if (thread.joinable())
+					thread.join();
 			}
 
+			threads.clear();
 			infos.clear();
 		}
 	}
 
 	for (auto& thread : threads)
 	{
-		if (thread->joinable())
-			thread->join();
+		if (thread.joinable())
+			thread.join();
 	}
 }
 

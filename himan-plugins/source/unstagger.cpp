@@ -36,6 +36,10 @@ void unstagger::Process(std::shared_ptr<const plugin_configuration> conf)
 	if (itsConfiguration->UseCuda())
 	{
 		const auto* bg = dynamic_cast<const regular_grid*>(itsConfiguration->BaseGrid());
+		if (!bg)
+		{
+			throw std::runtime_error("unstagger CUDA requires a regular grid base");
+		}
 		unstagger_cuda::Init(bg->Ni(), bg->Nj());
 	}
 #endif

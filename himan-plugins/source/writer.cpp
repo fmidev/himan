@@ -355,7 +355,12 @@ std::vector<write_information> writer::WritePendingGribs(const std::vector<std::
 			std::lock_guard<std::mutex> lockb(m_);
 			himan::buffer& buff = list[finfo.file_location];
 			int& message_no = count[finfo.file_location];
-			buff.data = static_cast<unsigned char*>(realloc(buff.data, buff.length + griblength));
+			auto* new_data = static_cast<unsigned char*>(realloc(buff.data, buff.length + griblength));
+			if (!new_data)
+			{
+				throw std::runtime_error("Memory reallocation failed in writer");
+			}
+			buff.data = new_data;
 			msg.GetMessage(buff.data + buff.length, griblength);
 			finfo.offset = buff.length;
 			finfo.length = griblength;
