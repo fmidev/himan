@@ -166,8 +166,8 @@ T numerical_functions::Median(std::vector<T> data)
 	return median;
 }
 
-template double numerical_functions::Median(const std::vector<double>&);
-template float numerical_functions::Median(const std::vector<float>&);
+template double numerical_functions::Median(const std::vector<double>);
+template float numerical_functions::Median(const std::vector<float>);
 
 template <typename T>
 T numerical_functions::Mean(const std::vector<T>& data)
