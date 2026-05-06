@@ -150,7 +150,7 @@ function get_data(producer1, producer2, ftype)
 end
 
 -- Get origin times for MEPS and EC
-function get_time(producer, get_earlier)
+function get_time(producer)
   
   local test = configuration:Exists("origin_time_test")
 
@@ -171,10 +171,6 @@ function get_time(producer, get_earlier)
     adjust_hours = -13
   end
 
-  if get_earlier and producer_id == 242 then
-    adjust_hours = -19
-  end
-
   local ftime = forecast_time(current_time:GetOriginDateTime(), current_time:GetValidDateTime())
   ftime:GetOriginDateTime():Adjust(HPTimeResolution.kHourResolution, adjust_hours)
 
@@ -185,7 +181,7 @@ end
 
 function get_param(producer, ftype, ...)
   local param_list = { ... }
-  local ftime = get_time(producer, false)
+  local ftime = get_time(producer)
   local results = {}
 
   local o = {
@@ -200,12 +196,6 @@ function get_param(producer, ftype, ...)
   for i, param in ipairs(param_list) do
     o.param = param
     results[i] = luatool:FetchWithArgs(o)
-
-    if not results[i] then
-      ftime = get_time(producer, true)
-      o.forecast_time = ftime
-      results[i] = luatool:FetchWithArgs(o)
-    end
   end
 
   return table.unpack(results)
@@ -296,7 +286,7 @@ local ec_mta = producer(240, "ECMMTA")
 local meps = producer(4,"MEPS")
 local meps_mta = producer(260, "MEPSMTA")
 
-local meps_time = get_time(meps, false)
+local meps_time = get_time(meps)
 local meps_step = tonumber(meps_time:GetStep():Hours())
 
 
