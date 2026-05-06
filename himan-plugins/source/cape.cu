@@ -41,24 +41,9 @@ typedef std::vector<std::vector<float>> vec2d;
 extern float Max(const std::vector<float>& vec);
 
 template <typename T>
-__global__ void InitializeArrayKernel(T* d_arr, T val, size_t N)
-{
-	int idx = threadIdx.x + blockDim.x * blockIdx.x;
-	int stride = blockDim.x * gridDim.x;
-
-	for (; idx < N; idx += stride)
-	{
-		d_arr[idx] = val;
-	}
-}
-
-template <typename T>
 void InitializeArray(T* d_arr, T val, size_t N, cudaStream_t& stream)
 {
-	const int blockSize = 128;
-	const int gridSize = N / blockSize + (N % blockSize == 0 ? 0 : 1);
-
-	InitializeArrayKernel<T><<<gridSize, blockSize, 0, stream>>>(d_arr, val, N);
+	thrust::fill_n(thrust::cuda::par.on(stream), d_arr, N, val);
 }
 
 template <typename T>
@@ -514,7 +499,7 @@ __global__ void ThetaEKernel(float* __restrict__ d_T, const float* __restrict__ 
 __global__ void MixingRatioKernel(const __half* __restrict__ d_T, const float* __restrict__ d_Pstart,
                                   const float* __restrict__ d_Pstop, const __half* __restrict__ d_RH,
                                   const float* __restrict__ d_Tfirst, const float* __restrict__ d_RHfirst,
-                                  float* __restrict__ d_Tpot, float* __restrict__ d_MR, size_t k, size_t n, size_t N)
+                                  float* __restrict__ d_Tpot, float* __restrict__ d_MR, size_t k, size_t N)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -524,7 +509,7 @@ __global__ void MixingRatioKernel(const __half* __restrict__ d_T, const float* _
 
 	if (idx < N)
 	{
-		const float T = d_Tfirst[idx] - __half2float(d_T[idx * n + k]);
+		const float T = d_Tfirst[idx] - __half2float(d_T[k * N + idx]);
 		float P = d_Pstart[idx] - 1.f * k;
 
 		if (P < d_Pstop[idx])
@@ -532,7 +517,7 @@ __global__ void MixingRatioKernel(const __half* __restrict__ d_T, const float* _
 			P = himan::MissingFloat();
 		}
 
-		const float RH = d_RHfirst[idx] - __half2float(d_RH[idx * n + k]);
+		const float RH = d_RHfirst[idx] - __half2float(d_RH[k * N + idx]);
 
 		ASSERT((T > 150 && T < 350) || IsMissing(T));
 		ASSERT((P > 100 && P < 1500) || IsMissing(P));
@@ -742,13 +727,13 @@ __global__ void MeanFinalizeKernel(float* __restrict__ d_meanTpot, float* __rest
 }
 
 __global__ void CopyProfileValuesKernel(const float* __restrict__ d_first, __half* __restrict__ d_profile,
-                                        const float* __restrict__ d_arr, int i, size_t n, size_t N)
+                                        const float* __restrict__ d_arr, int i, size_t N)
 {
 	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if (idx < N)
 	{
-		d_profile[idx * n + i] = __float2half(d_first[idx] - d_arr[idx]);
+		d_profile[i * N + idx] = __float2half(d_first[idx] - d_arr[idx]);
 	}
 }
 
@@ -775,15 +760,14 @@ __global__ void SampleKernel(const __half* __restrict__ d_x, const __half* __res
 				sample = himan::MissingFloat();
 			}
 
-			d_sampled[idx * sampleCount + i] = __float2half(himan::MissingFloat());
+			d_sampled[i * N + idx] = __float2half(himan::MissingFloat());
 
 			for (int j = 1; j < levelCount; j++)
 			{
-				const int ii = idx * levelCount + j - 1;
-				const float x1 = d_x0[idx] - __half2float(d_x[ii]);
-				const float y1 = d_yfirst[idx] - __half2float(d_y[ii]);
-				const float x2 = d_x0[idx] - __half2float(d_x[ii + 1]);
-				const float y2 = d_yfirst[idx] - __half2float(d_y[ii + 1]);
+				const float x1 = d_x0[idx] - __half2float(d_x[(j - 1) * N + idx]);
+				const float y1 = d_yfirst[idx] - __half2float(d_y[(j - 1) * N + idx]);
+				const float x2 = d_x0[idx] - __half2float(d_x[j * N + idx]);
+				const float y2 = d_yfirst[idx] - __half2float(d_y[j * N + idx]);
 
 				if (x1 >= sample && x2 <= sample)
 				{
@@ -794,7 +778,7 @@ __global__ void SampleKernel(const __half* __restrict__ d_x, const __half* __res
 						d_first[idx] = val;
 					}
 
-					d_sampled[idx * sampleCount + h] = __float2half(d_first[idx] - val);
+					d_sampled[h * N + idx] = __float2half(d_first[idx] - val);
 					h++;
 					break;
 				}
@@ -1062,18 +1046,15 @@ void GetSampledSourceDataGPU(std::shared_ptr<const himan::plugin_configuration> 
 	{
 		auto TInfo = hc::Fetch<float>(conf, myTargetInfo->Time(), curLevel, TParam, myTargetInfo->ForecastType());
 		hc::PrepareInfo(TInfo, d_arr, stream, conf->UseCacheForReads());
-		CopyProfileValuesKernel<<<gridSize, blockSize, 0, stream>>>(d_Tsurface, d_temperatureProfile, d_arr, k,
-		                                                            levelCount, N);
+		CopyProfileValuesKernel<<<gridSize, blockSize, 0, stream>>>(d_Tsurface, d_temperatureProfile, d_arr, k, N);
 
 		auto PInfo = hc::Fetch<float>(conf, myTargetInfo->Time(), curLevel, PParam, myTargetInfo->ForecastType());
 		hc::PrepareInfo(PInfo, d_arr, stream, conf->UseCacheForReads());
-		CopyProfileValuesKernel<<<gridSize, blockSize, 0, stream>>>(d_Psurface, d_pressureProfile, d_arr, k, levelCount,
-		                                                            N);
+		CopyProfileValuesKernel<<<gridSize, blockSize, 0, stream>>>(d_Psurface, d_pressureProfile, d_arr, k, N);
 
 		auto RHInfo = hc::Fetch<float>(conf, myTargetInfo->Time(), curLevel, RHParam, myTargetInfo->ForecastType());
 		hc::PrepareInfo(RHInfo, d_arr, stream, conf->UseCacheForReads());
-		CopyProfileValuesKernel<<<gridSize, blockSize, 0, stream>>>(d_RHsurface, d_humidityProfile, d_arr, k,
-		                                                            levelCount, N);
+		CopyProfileValuesKernel<<<gridSize, blockSize, 0, stream>>>(d_RHsurface, d_humidityProfile, d_arr, k, N);
 
 		k++;
 		level::EqualAdjustment(curLevel, -1.);
@@ -1207,16 +1188,15 @@ cape_source cape_cuda::Get500mMixingRatioValuesGPU(std::shared_ptr<const plugin_
 	for (unsigned int k = 0; k < sampleCount; k++)
 	{
 		MixingRatioKernel<<<gridSize, blockSize, 0, stream>>>(d_temperatureSample, d_Psurface, d_P500m,
-		                                                      d_humiditySample, d_Tfirst, d_RHfirst, d_Tpot, d_MR, k,
-		                                                      sampleCount, N);
+		                                                      d_humiditySample, d_Tfirst, d_RHfirst, d_Tpot, d_MR, k, N);
 		if (k > 0)
 		{
 			MeanKernel<<<gridSize, blockSize, 0, stream>>>(d_Tpot, d_MR, d_prevTpot, d_prevMR, d_meanTpot, d_meanMR,
 			                                               d_range, N);
 		}
 
-		CUDA_CHECK(cudaMemcpyAsync(d_prevTpot, d_Tpot, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
-		CUDA_CHECK(cudaMemcpyAsync(d_prevMR, d_MR, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
+		std::swap(d_prevTpot, d_Tpot);
+		std::swap(d_prevMR, d_MR);
 	}
 
 	MeanFinalizeKernel<<<gridSize, blockSize, 0, stream>>>(d_meanTpot, d_meanMR, d_range, N);
@@ -1389,11 +1369,7 @@ std::vector<std::pair<std::vector<float>, std::vector<float>>> cape_cuda::GetLFC
 		                                              d_LCLT, d_LCLP, d_LFCT, d_LFCP, d_LastLFCT, d_LastLFCP, d_found,
 		                                              curLevel.Value(), hPa450.first.Value(), N);
 
-		CUDA_CHECK(cudaStreamSynchronize(stream));
-
 		size_t foundCount = thrust::count(thrust::cuda::par.on(stream), dt_found, dt_found + N, 1);
-
-		CUDA_CHECK(cudaStreamSynchronize(stream));
 
 		if (N == foundCount)
 		{
@@ -1562,8 +1538,6 @@ std::vector<float> cape_cuda::GetCINGPU(const std::shared_ptr<const plugin_confi
 		size_t foundCount = thrust::count(thrust::cuda::par.on(stream), dt_found, dt_found + N, 1);
 		CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, d_Tparcel, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
 
-		CUDA_CHECK(cudaStreamSynchronize(stream));
-
 		if (N == foundCount)
 		{
 			break;
@@ -1719,8 +1693,6 @@ CAPEdata cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>
 
 	CUDA_CHECK(cudaMemcpyAsync(d_prevTparcel, d_LFCT, sizeof(float) * N, cudaMemcpyDeviceToDevice, stream));
 
-	CUDA_CHECK(cudaMemcpyAsync(d_bitmap, bitmap.data(), sizeof(unsigned char) * NB, cudaMemcpyHostToDevice, stream));
-
 	auto bitmapHot = [] __device__(const unsigned char& u) { return u == 1; };
 
 	// https://thrust.github.io/doc/group__stream__compaction.html#ga36d9d6ed8e17b442c1fd8dc40bd515d5
@@ -1808,7 +1780,6 @@ CAPEdata cape_cuda::GetCAPEGPU(const std::shared_ptr<const plugin_configuration>
 		                                               d_found, curLevel.Value(), hPa450.first.Value(), N);
 
 		size_t foundCount = thrust::count(thrust::cuda::par.on(stream), dt_found, dt_found + N, 1);
-		CUDA_CHECK(cudaStreamSynchronize(stream));
 
 		if (foundCount == N)
 		{
