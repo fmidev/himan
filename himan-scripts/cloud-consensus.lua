@@ -164,11 +164,22 @@ function get_time(producer)
   local producer_id = producer:GetId()
 
   if producer_id == 4 or producer_id == 260 then
+    -- MEPS
     adjust_hours = -4
-  elseif (vire_hour == '07' or vire_hour == '19') and (producer_id == 131 or producer_id == 242 or producer_id == 240) then
-    adjust_hours = -7
-  elseif (vire_hour == '13' or vire_hour == '01') and (producer_id == 131 or producer_id == 242 or producer_id == 240) then
-    adjust_hours = -13
+  elseif producer_id == 131 or producer_id == 240 then
+    -- ECMWF deterministic
+    if (vire_hour == '07' or vire_hour == '19') then
+      adjust_hours = -7
+    elseif (vire_hour == '13' or vire_hour == '01') then
+      adjust_hours = -13
+    end
+  elseif producer_id == 242 then
+    -- ECMWF ensemble
+    if (vire_hour == '07' or vire_hour == '19') then
+      adjust_hours = -19
+    elseif (vire_hour == '13' or vire_hour == '01') then
+      adjust_hours = -13
+    end
   end
 
   local ftime = forecast_time(current_time:GetOriginDateTime(), current_time:GetValidDateTime())
@@ -292,7 +303,6 @@ local meps_step = tonumber(meps_time:GetStep():Hours())
 
 -- Get all cloud data from MEPS and EC
 local NL_EC, NM_EC, NH_EC, NL_MEAN_EC, NM_MEAN_EC, NH_MEAN_EC, NL_STD_EC, NM_STD_EC, NH_STD_EC = get_data(ec, ec_prob, forecast_type(HPForecastType.kDeterministic))
-local NL_MEPS, NM_MEPS, NH_MEPS, NL_MEAN_MEPS, NM_MEAN_MEPS, NH_MEAN_MEPS, NL_STD_MEPS, NM_STD_MEPS, NH_STD_MEPS = get_data(meps, meps_mta, get_meps_forecast_type())
 
 -- Get cloud data from VIRE
 local NL_VIRE = luatool:Fetch(current_time, current_level, param("NL-0TO1"), current_forecast_type)
@@ -308,21 +318,19 @@ end
 rr_param = param("RRR-KGM2", aggregation(HPAggregationType.kAccumulation, time_duration("01:00")), processing_type())
 local RR_VIRE = luatool:Fetch(current_time, current_level, rr_param, current_forecast_type)
 
+if not NL_EC or not NM_EC or not NH_EC or not NL_MEAN_EC or not NM_MEAN_EC or not NH_MEAN_EC or not NL_STD_EC or not NM_STD_EC or not NH_STD_EC then
+  logger:Error("Some EC data not found, aborting")
+  return
+else
+  logger:Info("EC Data fetched")
+end
 
 -- By default uses MEPS and EC data before time step 66. After that, only EC data is used. MEPS can be disabled by setting the configuration parameter "disable_meps" to true.
 if disable_meps or meps_step > 66 then
   logger:Info("Only using EC data")
   
-  if not NL_EC or not NM_EC or not NH_EC or not NL_MEAN_EC or not NM_MEAN_EC or not NH_MEAN_EC or not NL_STD_EC or not NM_STD_EC or not NH_STD_EC then
-    logger:Error("Some EC data not found, aborting")
-    return
-  else
-    logger:Info("EC Data fetched")
-  end
-
   local wt_sum = wt_ens_ec + wt_ec
   for i = 1, #NL_EC do
-
     mean, stDev = compute_std_mean_ec(NL_EC[i], NL_MEAN_EC[i], NL_STD_EC[i], wt_ec, wt_ens_ec, wt_sum)
     cl[i] = mean + stDev ^ dev_factor_low * (mean - mid_level) / 50  -- start from the weighted mean and push values away from the midpoint based on the standard deviation. dev_factor controls the volume of the push.
 
@@ -333,9 +341,11 @@ if disable_meps or meps_step > 66 then
     ch[i] = mean + stDev ^ dev_factor_high * (mean - mid_level) / 50
   end
 else
+  local NL_MEPS, NM_MEPS, NH_MEPS, NL_MEAN_MEPS, NM_MEAN_MEPS, NH_MEAN_MEPS, NL_STD_MEPS, NM_STD_MEPS, NH_STD_MEPS = get_data(meps, meps_mta, get_meps_forecast_type())
+
   logger:Info("Using MEPS and EC data")
 
-  if not NL_EC or not NM_EC or not NH_EC or not NL_MEPS or not NM_MEPS or not NH_MEPS or not NL_MEAN_EC or not NM_MEAN_EC or not NH_MEAN_EC or not NL_MEAN_MEPS or not NM_MEAN_MEPS or not NH_MEAN_MEPS or not NL_STD_EC or not NM_STD_EC or not NH_STD_EC or not NL_STD_MEPS or not NM_STD_MEPS or not NH_STD_MEPS then
+  if not NL_MEPS or not NM_MEPS or not NH_MEPS or not NL_MEAN_MEPS or not NM_MEAN_MEPS or not NH_MEAN_MEPS or not NL_STD_MEPS or not NM_STD_MEPS or not NH_STD_MEPS then
     logger:Warning("Some data not found")
   else
     logger:Info("EC and MEPS Data fetched")
