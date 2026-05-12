@@ -169,7 +169,7 @@ for i=1, #t do
   --
 
   -- Cu: few/sct low clouds, and less than bkn middle clouds
-  if _cl > 0.0 and _cl <= 0.5 and _cm <= 0.5 then
+  if _cl > 0.01 and _cl <= 0.5 and _cm <= 0.5 then
     Cloud[i] = 156
     CloudInfoIncr("156")
   end
