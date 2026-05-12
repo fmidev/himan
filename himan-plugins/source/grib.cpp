@@ -2870,7 +2870,7 @@ himan::producer ReadProducer(const search_options& options, const NFmiGribMessag
 				return prod;
 			}
 
-			if (process <= 154 && process >= 142)
+			if (process <= 160 && process >= 142)
 			{
 				if (message.ForecastType() <= 2)
 				{
