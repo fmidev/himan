@@ -406,7 +406,7 @@ shared_ptr<info<T>> fetcher::FetchFromProducerSingle(search_options& opts, bool 
 	 */
 
 	if (ret.first != HPDataFoundFrom::kCache && itsUseCache && opts.configuration->UseCacheForReads() &&
-	    !theInfos[0]->PackedData()->HasData())
+	    opts.configuration->WriteFetchedDataToCache() && !theInfos[0]->PackedData()->HasData())
 	{
 		auto c = GET_PLUGIN(cache);
 		c->Insert<T>(theInfos[0]);
@@ -838,7 +838,7 @@ pair<HPDataFoundFrom, vector<shared_ptr<info<double>>>> fetcher::FetchFromAuxili
 
 					    while (info->Next())
 					    {
-						    c->Insert(info);
+						    c->Insert(info, true);
 					    }
 				    }
 
@@ -1153,7 +1153,8 @@ void fetcher::RotateVectorComponents(vector<shared_ptr<info<T>>>& components, co
 			{
 				if (interpolate::Interpolate(target, list))
 				{
-					if (itsUseCache && config->UseCacheForReads() && !other->PackedData()->HasData())
+					if (itsUseCache && config->UseCacheForReads() && config->WriteFetchedDataToCache() &&
+					    !other->PackedData()->HasData())
 					{
 						auto c = GET_PLUGIN(cache);
 						c->Insert<T>(other);

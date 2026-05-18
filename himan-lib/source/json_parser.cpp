@@ -248,6 +248,14 @@ void UseCacheForReads(const boost::property_tree::ptree& pt, std::shared_ptr<con
 	}
 }
 
+void WriteFetchedDataToCache(const boost::property_tree::ptree& pt, std::shared_ptr<configuration>& conf)
+{
+	if (auto writeFetchedDataToCache = ReadElement<bool>(pt, "write_fetched_data_to_cache"))
+	{
+		conf->WriteFetchedDataToCache(writeFetchedDataToCache.get());
+	}
+}
+
 void UseCache(const boost::property_tree::ptree& pt, std::shared_ptr<configuration>& conf)
 {
 	if (auto useCache = ReadElement<bool>(pt, "use_cache"))
@@ -482,6 +490,7 @@ void CheckCommonOptions(const boost::property_tree::ptree& pt, shared_ptr<config
 	ReadFromDatabase(pt, conf);
 	UseCacheForWrites(pt, conf);
 	UseCacheForReads(pt, conf);
+	WriteFetchedDataToCache(pt, conf);
 	UseCache(pt, conf);
 	FileType(pt, conf);
 	WriteStorageType(pt, conf);

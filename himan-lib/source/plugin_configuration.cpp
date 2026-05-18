@@ -155,6 +155,7 @@ void plugin_configuration::WriteStatistics()
 
 	cout << setw(30) << left << "Plugin:" << itsName << endl
 	     << setw(30) << left << "Use cache for reads:" << (itsUseCacheForReads ? "true" : "false") << endl
+	     << setw(30) << left << "Write fetched data to cache:" << (itsWriteFetchedDataToCache ? "true" : "false") << endl
 	     << setw(30) << left << "Use cache for writes:" << (itsUseCacheForWrites ? "true" : "false") << endl
 	     << setw(30) << left << "Use cuda:" << (itsUseCuda ? "true" : "false") << endl
 	     << setw(30) << left << "Use cuda unpacking:" << (itsUseCudaForUnpacking ? "true" : "false") << endl

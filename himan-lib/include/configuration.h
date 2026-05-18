@@ -152,6 +152,9 @@ class configuration
 	bool UseCacheForReads() const;
 	void UseCacheForReads(bool theUseCacheForReads);
 
+	bool WriteFetchedDataToCache() const;
+	void WriteFetchedDataToCache(bool theWriteFetchedDataToCache);
+
 	bool UseCacheForWrites() const;
 	void UseCacheForWrites(bool theUseCacheForWrites);
 
@@ -288,6 +291,7 @@ class configuration
 	bool itsUseCudaForPacking;
 	bool itsUseCudaForUnpacking;
 	bool itsUseCacheForReads;
+	bool itsWriteFetchedDataToCache;
 	bool itsUseCacheForWrites;
 	bool itsUseDynamicMemoryAllocation;
 	bool itsReadAllAuxiliaryFilesToCache;

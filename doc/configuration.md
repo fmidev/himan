@@ -579,7 +579,7 @@ Example:
     "use_cache_for_writes" : false,
 
 The cache for reads can be turned off with key `use_cache_for_reads`. Default value is `true`.
-If set to false, no data read is inserted to cache.
+If set to false, the cache is not consulted when fetching data — every fetch goes directly to the source (file, database, etc.).
 
     "use_cache_for_reads" : "true | false",
 
@@ -590,6 +590,19 @@ Example:
     "use_cache_for_reads" : false,
 
 Note: this key was previously called `use_cache`, and that is still supported for backwards compatibility.
+
+Whether data fetched from a source (file or database) is stored into the cache for potential reuse by later plugins can be controlled with key `write_fetched_data_to_cache`. Default value is `true`.
+If set to false, fetched data is read from the cache if already present (`use_cache_for_reads` still applies), but newly fetched data is not added to the cache.
+
+This is useful when memory is limited and input data will not be reused: it keeps the cache free for data that must stay resident (e.g. output data written to S3, or auxiliary files read from the command line which are always pinned).
+
+    "write_fetched_data_to_cache" : "true | false",
+
+Key can be set in the global or processqueue scope.
+
+Example:
+
+    "write_fetched_data_to_cache" : false,
 
 Memory cache size can be controlled with key `cache_limit`. Minimum cache limit if 100Mi ie 104857600. Mi and Gi modifiers are supported. The value of the key specifies the maximum number of data bytes Himan will hold in memory. Note that this is not the overall total memory consumption.
 

@@ -27,6 +27,7 @@ configuration::configuration()
       itsUseCudaForPacking(true),
       itsUseCudaForUnpacking(true),
       itsUseCacheForReads(true),
+      itsWriteFetchedDataToCache(true),
       itsUseCacheForWrites(true),
       itsUseDynamicMemoryAllocation(false),
       itsReadAllAuxiliaryFilesToCache(true),
@@ -72,6 +73,7 @@ configuration::configuration(const configuration& o)
       itsUseCudaForPacking(o.itsUseCudaForPacking),
       itsUseCudaForUnpacking(o.itsUseCudaForUnpacking),
       itsUseCacheForReads(o.itsUseCacheForReads),
+      itsWriteFetchedDataToCache(o.itsWriteFetchedDataToCache),
       itsUseCacheForWrites(o.itsUseCacheForWrites),
       itsUseDynamicMemoryAllocation(o.itsUseDynamicMemoryAllocation),
       itsReadAllAuxiliaryFilesToCache(o.itsReadAllAuxiliaryFilesToCache),
@@ -135,6 +137,7 @@ std::ostream& configuration::Write(std::ostream& file) const
 	file << "__itsUseCudaForUnpacking__ " << itsUseCudaForUnpacking << std::endl;
 
 	file << "__itsUseCacheForReads__ " << itsUseCacheForReads << std::endl;
+	file << "__itsWriteFetchedDataToCache__ " << itsWriteFetchedDataToCache << std::endl;
 	file << "__itsUseCacheForWrites__ " << itsUseCacheForWrites << std::endl;
 
 	file << "__itsForecastStep__ " << itsForecastStep << std::endl;
@@ -313,6 +316,14 @@ bool configuration::UseCacheForReads() const
 void configuration::UseCacheForReads(bool theUseCacheForReads)
 {
 	itsUseCacheForReads = theUseCacheForReads;
+}
+bool configuration::WriteFetchedDataToCache() const
+{
+	return itsWriteFetchedDataToCache;
+}
+void configuration::WriteFetchedDataToCache(bool theWriteFetchedDataToCache)
+{
+	itsWriteFetchedDataToCache = theWriteFetchedDataToCache;
 }
 bool configuration::UseCacheForWrites() const
 {
