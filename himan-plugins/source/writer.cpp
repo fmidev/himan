@@ -585,6 +585,18 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 		auto ret = WritePendingGribs(infos);
 
 		WritePendingToRadon(ret);
+
+#ifndef HAVE_CEREAL
+		// HAVE_CEREAL path already clears the entire cache above; without it,
+		// written items remain pinned forever. Remove them now that S3 upload is done.
+		{
+			auto c = GET_PLUGIN(cache);
+			for (const auto& info : infos)
+			{
+				c->Remove(util::UniqueName(*info));
+			}
+		}
+#endif
 	}
 	else if (conf->OutputFileType() == kGeoTIFF)
 	{
