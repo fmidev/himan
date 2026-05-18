@@ -133,13 +133,29 @@ local rh = luatool:Fetch(current_time, l2, par_rh, current_forecast_type)
 local prec = luatool:Fetch(current_time, l0, par_prec, current_forecast_type)
 local rr = luatool:Fetch(current_time, l0, par_rr, current_forecast_type)
 
+if not t or not rh or not prec or not rr then
+    logger:Error("Missing required parameters from VIRE")
+    return
+end
+
 local meps = producer(4, "MEPS")
 local meps_mta = producer(260, "MEPSMTA")
 local meps_ftype = get_meps_forecast_type()
 
-local t_meps = get_param(meps, meps_ftype, par_t, l2)
-local rh_meps = get_param(meps, meps_ftype, param("RH-0TO1"), l2)
-local prec_meps = get_param(meps_mta, meps_ftype, par_prec, l0)
+local use_meps = (disable_meps == false and meps_step < 66)
+
+if use_meps then
+  local t_meps = get_param(meps, meps_ftype, par_t, l2)
+  local rh_meps = get_param(meps, meps_ftype, param("RH-0TO1"), l2)
+  local prec_meps = get_param(meps_mta, meps_ftype, par_prec, l0)
+
+  if not t_meps or not rh_meps or not prec_meps then
+    logger:Error("Missing required parameters from MEPS")
+    return
+  end
+
+  rh_meps = convert_to_100(rh_meps) --variable RH-PRCNT not found, using RH-0TO1
+end
 
 local ec_mta = producer(240, "ECGMTA")
 local ec = producer(131, "ECG")
@@ -149,7 +165,10 @@ local t_ec = get_param(ec, ec_ftype, par_t, l2)
 local rh_ec = get_param(ec_mta, ec_ftype, par_rh, l2)
 local prec_ec = get_param(ec_mta, ec_ftype, par_prec, l0)
 
-rh_meps = convert_to_100(rh_meps) --variable RH-PRCNT not found, using RH-0TO1
+if not t_ec or not rh_ec or not prec_ec then
+    logger:Error("Missing required parameters from EC")
+    return
+end
 
 local tw = {}
 local tw_meps = {}
@@ -169,8 +188,6 @@ end
 
 meps_time = get_time(meps)
 meps_step = tonumber(meps_time:GetStep():Hours())
-
-local use_meps = (disable_meps == false and meps_step < 66)
 
 for i = 1, #t do
 
