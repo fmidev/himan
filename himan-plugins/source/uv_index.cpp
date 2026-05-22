@@ -219,25 +219,33 @@ inline size_t TableIndex(int iAlt, int iSza, int iCtau, int iAssa, int iAtau, in
 	    iAlt);
 }
 
+// Lagrange interpolation stencil along one axis, precomputed once per axis
+// and reused for each (val, axis[first..first+pdeg]) sample. `first` is the
+// starting index, `pdeg` the polynomial degree (so `pdeg + 1` stencil points,
+// capped at 4 — `cieInterp.for` does the same). `denom[i]` is the precomputed
+// Lagrange denominator Π_{k ≠ i} (axis[first+i] − axis[first+k]).
+struct lagrange_stencil
+{
+	int first = 0;
+	int pdeg = 0;
+	std::array<double, 4> denom{};
+};
+
 // Pick a Lagrange interpolation stencil for `val` along the 1-D axis `axis`.
 //
-// On return, indices `first` .. `first + pdeg` are the table positions to
-// interpolate over (degree pdeg ≤ 3), and `denom[i]` holds the precomputed
-// Lagrange-polynomial denominator
-//   Π_{k ≠ i} (axis[first+i] − axis[first+k])
-// for each stencil point. Splitting denom out of the per-point loop in
-// `LagrangeCoeffs` is a small speedup when many queries reuse the same stencil.
+// The returned stencil covers `axis[first .. first + pdeg]` with `pdeg ≤ 3`.
+// When `val` falls outside the axis range, `pdeg` is reduced to 1 and `first`
+// shifted to the nearest edge — matching the legacy linear-extrapolation
+// behaviour of `cieInterp.for::int_range`. Splitting `denom` precomputation
+// from the per-query Lagrange coefficient evaluation in `LagrangeCoeffs`
+// saves the (axis-only) products there.
 //
-// Why a fixed array<double, 4>? cieInterp.for caps the interpolation degree at
-// 3 (4 stencil points), and we replicate that.
-//
-// Why this routine at all (vs. a stock bilinear/spline lib)? Because the
-// reference data is the legacy `cieInterp.for` table and we want bit-for-bit
-// reproducibility, including the same edge handling: linear extrapolation when
-// `val` falls outside the axis range.
-void IntRange(double val, const double* axis, int axisLen, int& first, int& pdeg, std::array<double, 4>& denom)
+// Templated on the axis length `N` so the caller passes a `std::array`
+// directly (no raw pointer / explicit length pair).
+template <size_t N>
+lagrange_stencil IntRange(double val, const std::array<double, N>& axis)
 {
-	const int lastel = axisLen - 1;
+	const int lastel = static_cast<int>(N) - 1;
 	int inrange = 0;
 
 	int f = 0;
@@ -269,20 +277,22 @@ void IntRange(double val, const double* axis, int axisLen, int& first, int& pdeg
 		p = p + 1;
 	}
 
-	first = f;
-	pdeg = p;
+	lagrange_stencil s{};
+	s.first = f;
+	s.pdeg = p;
 
-	for (int i = 0; i <= pdeg; ++i)
+	for (int i = 0; i <= p; ++i)
 	{
-		denom[i] = 1.0;
-		for (int k = 0; k <= pdeg; ++k)
+		s.denom[i] = 1.0;
+		for (int k = 0; k <= p; ++k)
 		{
 			if (k != i)
 			{
-				denom[i] *= (axis[first + i] - axis[first + k]);
+				s.denom[i] *= (axis[f + i] - axis[f + k]);
 			}
 		}
 	}
+	return s;
 }
 
 // Build the Lagrange coefficients for `val` against the stencil chosen by
@@ -292,25 +302,27 @@ void IntRange(double val, const double* axis, int axisLen, int& first, int& pdeg
 //   p[i] = (1 / denom[i]) · Π_{k ≠ i} (val − axis[first+k])
 // — `denom` was precomputed once by `IntRange` so this loop avoids redoing
 // the same axis-only products on every query.
-void LagrangeCoeffs(double val, const double* axis, int first, int pdeg, const std::array<double, 4>& denom,
-                    std::array<double, 4>& p)
+template <size_t N>
+std::array<double, 4> LagrangeCoeffs(double val, const std::array<double, N>& axis, const lagrange_stencil& s)
 {
-	std::array<double, 4> s{};
-	for (int i = 0; i <= pdeg; ++i)
+	std::array<double, 4> diff{};
+	for (int i = 0; i <= s.pdeg; ++i)
 	{
-		s[i] = val - axis[first + i];
+		diff[i] = val - axis[s.first + i];
 	}
-	for (int i = 0; i <= pdeg; ++i)
+	std::array<double, 4> p{};
+	for (int i = 0; i <= s.pdeg; ++i)
 	{
-		p[i] = 1.0 / denom[i];
-		for (int k = 0; k <= pdeg; ++k)
+		p[i] = 1.0 / s.denom[i];
+		for (int k = 0; k <= s.pdeg; ++k)
 		{
 			if (k != i)
 			{
-				p[i] *= s[k];
+				p[i] *= diff[k];
 			}
 		}
 	}
+	return p;
 }
 
 // Earth–Sun distance correction E0(jd) / E0(jd_ref), normalised to Julian day
@@ -490,52 +502,42 @@ double disort_table::Interpolate(double albedo, double ozone, double atau, doubl
 		altAxis[i] = i * kDAlt;
 	}
 
-	int firstAlbedo, degAlbedo;
-	int firstOzone, degOzone;
-	int firstAtau, degAtau;
-	int firstAssa, degAssa;
-	int firstCtau, degCtau;
-	int firstSza, degSza;
-	int firstAlt, degAlt;
-	std::array<double, 4> denAlbedo, denOzone, denAtau, denAssa, denCtau, denSza, denAlt;
+	const auto sAlbedo = IntRange(albedo, albedoAxis);
+	const auto sOzone = IntRange(ozone, ozoneAxis);
+	const auto sAtau = IntRange(atau, atauAxis);
+	const auto sAssa = IntRange(assa, assaAxis);
+	const auto sCtau = IntRange(ctau, ctauAxis);
+	const auto sSza = IntRange(sza, szaAxis);
+	const auto sAlt = IntRange(alt, altAxis);
 
-	IntRange(albedo, albedoAxis.data(), kNAlbedo, firstAlbedo, degAlbedo, denAlbedo);
-	IntRange(ozone, ozoneAxis.data(), kNOzone, firstOzone, degOzone, denOzone);
-	IntRange(atau, atauAxis.data(), kNAtau, firstAtau, degAtau, denAtau);
-	IntRange(assa, assaAxis.data(), kNAssa, firstAssa, degAssa, denAssa);
-	IntRange(ctau, ctauAxis.data(), kNCtau, firstCtau, degCtau, denCtau);
-	IntRange(sza, szaAxis.data(), kNSza, firstSza, degSza, denSza);
-	IntRange(alt, altAxis.data(), kNAlt, firstAlt, degAlt, denAlt);
-
-	std::array<double, 4> pAlbedo, pOzone, pAtau, pAssa, pCtau, pSza, pAlt;
-	LagrangeCoeffs(albedo, albedoAxis.data(), firstAlbedo, degAlbedo, denAlbedo, pAlbedo);
-	LagrangeCoeffs(ozone, ozoneAxis.data(), firstOzone, degOzone, denOzone, pOzone);
-	LagrangeCoeffs(atau, atauAxis.data(), firstAtau, degAtau, denAtau, pAtau);
-	LagrangeCoeffs(assa, assaAxis.data(), firstAssa, degAssa, denAssa, pAssa);
-	LagrangeCoeffs(ctau, ctauAxis.data(), firstCtau, degCtau, denCtau, pCtau);
-	LagrangeCoeffs(sza, szaAxis.data(), firstSza, degSza, denSza, pSza);
-	LagrangeCoeffs(alt, altAxis.data(), firstAlt, degAlt, denAlt, pAlt);
+	const auto pAlbedo = LagrangeCoeffs(albedo, albedoAxis, sAlbedo);
+	const auto pOzone = LagrangeCoeffs(ozone, ozoneAxis, sOzone);
+	const auto pAtau = LagrangeCoeffs(atau, atauAxis, sAtau);
+	const auto pAssa = LagrangeCoeffs(assa, assaAxis, sAssa);
+	const auto pCtau = LagrangeCoeffs(ctau, ctauAxis, sCtau);
+	const auto pSza = LagrangeCoeffs(sza, szaAxis, sSza);
+	const auto pAlt = LagrangeCoeffs(alt, altAxis, sAlt);
 
 	double sum = 0.0;
-	for (int iOzone = 0; iOzone <= degOzone; ++iOzone)
+	for (int iOzone = 0; iOzone <= sOzone.pdeg; ++iOzone)
 	{
-		for (int iAlbedo = 0; iAlbedo <= degAlbedo; ++iAlbedo)
+		for (int iAlbedo = 0; iAlbedo <= sAlbedo.pdeg; ++iAlbedo)
 		{
-			for (int iAtau = 0; iAtau <= degAtau; ++iAtau)
+			for (int iAtau = 0; iAtau <= sAtau.pdeg; ++iAtau)
 			{
-				for (int iAssa = 0; iAssa <= degAssa; ++iAssa)
+				for (int iAssa = 0; iAssa <= sAssa.pdeg; ++iAssa)
 				{
-					for (int iCtau = 0; iCtau <= degCtau; ++iCtau)
+					for (int iCtau = 0; iCtau <= sCtau.pdeg; ++iCtau)
 					{
-						for (int iSza = 0; iSza <= degSza; ++iSza)
+						for (int iSza = 0; iSza <= sSza.pdeg; ++iSza)
 						{
-							for (int iAlt = 0; iAlt <= degAlt; ++iAlt)
+							for (int iAlt = 0; iAlt <= sAlt.pdeg; ++iAlt)
 							{
 								sum += pAlbedo[iAlbedo] * pOzone[iOzone] * pAtau[iAtau] * pAssa[iAssa] * pCtau[iCtau] *
 								       pSza[iSza] * pAlt[iAlt] *
-								       itsCieRates[TableIndex(iAlt + firstAlt, iSza + firstSza, iCtau + firstCtau,
-								                              iAssa + firstAssa, iAtau + firstAtau,
-								                              iAlbedo + firstAlbedo, iOzone + firstOzone)];
+								       itsCieRates[TableIndex(iAlt + sAlt.first, iSza + sSza.first, iCtau + sCtau.first,
+								                              iAssa + sAssa.first, iAtau + sAtau.first,
+								                              iAlbedo + sAlbedo.first, iOzone + sOzone.first)];
 							}
 						}
 					}
