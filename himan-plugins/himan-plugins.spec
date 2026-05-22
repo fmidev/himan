@@ -142,6 +142,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/himan-plugins/libtropopause.so
 %{_libdir}/himan-plugins/libturbulence.so
 %{_libdir}/himan-plugins/libunstagger.so
+%{_libdir}/himan-plugins/libuv_index.so
 %{_libdir}/himan-plugins/libvisibility.so
 %{_libdir}/himan-plugins/libvvms.so
 %{_libdir}/himan-plugins/libweather_code_2.so
