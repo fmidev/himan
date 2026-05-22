@@ -368,8 +368,9 @@ double SolarNoonZenithAngle(double latDeg, int julianDay)
 	                     0.000907 * sin(2 * kappa);
 	const double latRad = latDeg * constants::kDeg;
 	const double argum = sin(latRad) * sin(delta) + cos(latRad) * cos(delta);  // H=0 → cos(H)=1
-	const double newargum = sqrt(1.0 - argum * argum);
-	return atan2(newargum, argum) * constants::kRad;
+	const double clampedArgum = max(-1.0, min(1.0, argum));
+	const double newargum = sqrt(1.0 - clampedArgum * clampedArgum);
+	return atan2(newargum, clampedArgum) * constants::kRad;
 }
 
 // Load a single-message grib file directly through the himan `grib` plugin
@@ -719,7 +720,8 @@ uv_index::uv_index()
 //                            UVI-N (instantaneous, SZA at valid time) in one
 //                            pass; loads disort table + 4 aerosol gribs.
 //   mode = "anomaly"       → O3ANOM-PRCNT (forecast vs. TOMS climatology);
-//                            loads only the total-ozone climatology ASCII.
+//                            loads only the total-ozone climatology GRIB
+//                            file (`o3_climatology`).
 //
 // All static data is loaded here (Process runs once on the main thread)
 // rather than in Calculate (which runs per worker thread), so the heavy I/O

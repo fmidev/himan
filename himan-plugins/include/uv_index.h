@@ -92,8 +92,7 @@ class uv_index : public compiled_plugin, private compiled_plugin_base
 	mode_t itsMode = mode_t::kUv;
 	disort_table itsDisortTable;
 	o3_climatology itsO3Clim;
-	// Aerosol climatology fields loaded once at startup, interpolated to the
-	// target grid lazily on the first Calculate() call (under itsAerosolReady).
+	// Aerosol climatology fields loaded once and stored for use in Calculate().
 	std::shared_ptr<info<double>> itsAtauSummer;
 	std::shared_ptr<info<double>> itsAtauWinter;
 	std::shared_ptr<info<double>> itsAssaSummer;
