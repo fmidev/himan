@@ -684,7 +684,7 @@ shared_ptr<info<T>> compiled_plugin_base::Fetch(const forecast_time& theTime, co
 	{
 		if (e != kFileDataNotFound)
 		{
-			itsBaseLogger.Fatal(fmt::format("Unable to proceed: {}", fmt::underlying(e)));
+			itsBaseLogger.Fatal(fmt::format("Caught exception: {}, unable to proceed", fmt::underlying(e)));
 			himan::Abort();
 		}
 	}
@@ -729,7 +729,8 @@ shared_ptr<info<T>> compiled_plugin_base::Fetch(const forecast_time& theTime, co
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw runtime_error(ClassName() + ": Unable to proceed");
+			itsBaseLogger.Fatal(fmt::format("Caught exception: {}, unable to proceed", fmt::underlying(e)));
+			himan::Abort();
 		}
 	}
 
@@ -771,7 +772,8 @@ shared_ptr<info<T>> compiled_plugin_base::Fetch(const forecast_time& theTime, co
 	{
 		if (e != kFileDataNotFound)
 		{
-			throw runtime_error(ClassName() + ": Unable to proceed");
+			itsBaseLogger.Fatal(fmt::format("Caught exception: {}, unable to proceed", fmt::underlying(e)));
+			himan::Abort();
 		}
 	}
 
