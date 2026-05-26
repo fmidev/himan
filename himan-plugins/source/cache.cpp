@@ -297,6 +297,10 @@ void cache_pool::Remove(const string& uniqueName)
 		Lock lock(itsAccessMutex);
 
 		const auto it = itsCache.find(uniqueName);
+		if (it == itsCache.end())
+		{
+			return;
+		}
 		itsCache.erase(it);
 	}
 	itsLogger.Trace(fmt::format("Cache item {} removed", uniqueName));
