@@ -9,12 +9,13 @@
  *  the himan plugin framework. Operates in one of two modes, selected by the JSON
  *  `mode` option:
  *
- *      mode = "uv"      → produces TWO output fields per run:
- *                          UVIMAX-N : clear-sky daily-max UV index
- *                          UVI-N    : clear-sky instantaneous UV index at valid time
- *
- *      mode = "anomaly" → produces ONE output field:
- *                          O3ANOM-PRCNT : 100 · (forecast_O3 − climatology_O3) / clim
+ *      mode = "uvimax"  → UVIMAX-N only (clear-sky daily-max UV index,
+ *                          solar-noon SZA).
+ *      mode = "uvi"     → UVI-N only (clear-sky instantaneous UV index,
+ *                          SZA at the forecast valid time).
+ *      mode = "uv"      → BOTH UVIMAX-N and UVI-N in one pass — shares the
+ *                          input fetches and per-point arithmetic.
+ *      mode = "o3anom"  → O3ANOM-PRCNT (100 · (forecast − clim) / clim).
  *
  *  How the UV mode works (the interesting math)
  *  --------------------------------------------
@@ -745,24 +746,35 @@ void uv_index::Process(shared_ptr<const plugin_configuration> conf)
 		return itsConfiguration->GetValue(key);
 	};
 
-	if (mode == "uv")
+	if (mode == "uvimax")
+	{
+		itsMode = mode_t::kUvimax;
+		SetParams({param("UVIMAX-N")});
+	}
+	else if (mode == "uvi")
+	{
+		itsMode = mode_t::kUvi;
+		SetParams({param("UVI-N")});
+	}
+	else if (mode == "uv")
 	{
 		itsMode = mode_t::kUv;
 		// UVIMAX-N first, UVI-N second — Calculate() relies on this ordering
 		// when navigating the target info via Find<param>().
 		SetParams({param("UVIMAX-N"), param("UVI-N")});
 	}
-	else if (mode == "anomaly")
+	else if (mode == "o3anom")
 	{
-		itsMode = mode_t::kAnomaly;
+		itsMode = mode_t::kO3anom;
 		SetParams({param("O3ANOM-PRCNT")});
 	}
 	else
 	{
-		throw runtime_error(fmt::format("uv_index: unknown mode '{}' (expected 'uv' or 'anomaly')", mode));
+		throw runtime_error(
+		    fmt::format("uv_index: unknown mode '{}' (expected 'uvimax', 'uvi', 'uv' or 'o3anom')", mode));
 	}
 
-	if (itsMode == mode_t::kAnomaly)
+	if (itsMode == mode_t::kO3anom)
 	{
 		itsO3Clim.Load(requireOpt("o3_climatology"), itsConfiguration);
 		itsLogger.Info("Loaded total-ozone climatology");
@@ -807,7 +819,7 @@ void uv_index::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short t
 
 	auto ozoneInfo = Fetch(forecastTime, surface, param("TOZONE-KGM2"), forecastType, false);
 
-	if (itsMode == mode_t::kAnomaly)
+	if (itsMode == mode_t::kO3anom)
 	{
 		if (!ozoneInfo)
 		{
@@ -881,14 +893,26 @@ void uv_index::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short t
 	const auto& snowVec = VEC(snowInfo);
 	const auto& topoVec = VEC(topoInfo);
 
-	// Both output params share grid, time, level — only the param axis differs.
-	// Pick UVIMAX-N first to obtain its value vector, then UVI-N.
-	myTargetInfo->Find<param>(param("UVIMAX-N"));
-	auto& uvMaxVec = VEC(myTargetInfo);
-	myTargetInfo->Find<param>(param("UVI-N"));
-	auto& uvInstVec = VEC(myTargetInfo);
+	const bool produceMax = (itsMode == mode_t::kUvimax || itsMode == mode_t::kUv);
+	const bool produceInst = (itsMode == mode_t::kUvi || itsMode == mode_t::kUv);
 
-	const size_t n = uvMaxVec.size();
+	// Bind one value vector per requested output param. Modes that don't
+	// produce a given param leave the corresponding pointer null and skip
+	// the per-point write.
+	std::vector<double>* uvMaxVec = nullptr;
+	std::vector<double>* uvInstVec = nullptr;
+	if (produceMax)
+	{
+		myTargetInfo->Find<param>(param("UVIMAX-N"));
+		uvMaxVec = &VEC(myTargetInfo);
+	}
+	if (produceInst)
+	{
+		myTargetInfo->Find<param>(param("UVI-N"));
+		uvInstVec = &VEC(myTargetInfo);
+	}
+
+	const size_t n = produceMax ? uvMaxVec->size() : uvInstVec->size();
 
 	// Local helper: run the disort lookup for a given SZA and produce the
 	// final UV-index value, or MissingDouble() if any guard fails.
@@ -915,8 +939,14 @@ void uv_index::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short t
 
 		if (IsMissing(ozoneRaw) || IsMissing(snowRaw) || IsMissing(geop) || IsMissing(atau) || IsMissing(assa))
 		{
-			uvMaxVec[i] = MissingDouble();
-			uvInstVec[i] = MissingDouble();
+			if (produceMax)
+			{
+				(*uvMaxVec)[i] = MissingDouble();
+			}
+			if (produceInst)
+			{
+				(*uvInstVec)[i] = MissingDouble();
+			}
 			continue;
 		}
 
@@ -931,21 +961,27 @@ void uv_index::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short t
 
 		const point latlon = myTargetInfo->Grid()->LatLon(i);
 
-		// UVIMAX-N: solar zenith at local solar noon (daily maximum).
-		const double szaMax = SolarNoonZenithAngle(latlon.Y(), julianDay);
-		uvMaxVec[i] = uvIndexAt(albedo, ozone, atau, assa, szaMax, alt);
+		if (produceMax)
+		{
+			// UVIMAX-N: solar zenith at local solar noon (daily maximum).
+			const double szaMax = SolarNoonZenithAngle(latlon.Y(), julianDay);
+			(*uvMaxVec)[i] = uvIndexAt(albedo, ozone, atau, assa, szaMax, alt);
+		}
 
-		// UVI-N: instantaneous SZA at the forecast valid time.
-		double szaInst = 90.0 - metutil::ElevationAngle_(latlon, forecastTime.ValidDateTime());
-		if (szaInst < kSzaMin)
+		if (produceInst)
 		{
-			szaInst = kSzaMin;
+			// UVI-N: instantaneous SZA at the forecast valid time.
+			double szaInst = 90.0 - metutil::ElevationAngle_(latlon, forecastTime.ValidDateTime());
+			if (szaInst < kSzaMin)
+			{
+				szaInst = kSzaMin;
+			}
+			if (szaInst > 90.0)
+			{
+				szaInst = 90.0;
+			}
+			(*uvInstVec)[i] = uvIndexAt(albedo, ozone, atau, assa, szaInst, alt);
 		}
-		if (szaInst > 90.0)
-		{
-			szaInst = 90.0;
-		}
-		uvInstVec[i] = uvIndexAt(albedo, ozone, atau, assa, szaInst, alt);
 	}
 
 	myThreadedLogger.Info(

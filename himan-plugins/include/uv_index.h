@@ -81,12 +81,16 @@ class uv_index : public compiled_plugin, private compiled_plugin_base
 
 	enum class mode_t
 	{
-		// UV-index mode: produces both UVIMAX-N (solar-noon SZA, daily max)
-		// and UVI-N (SZA at valid time, instantaneous) in a single pass —
-		// the two share all input fetches and most arithmetic.
+		// Daily-max UV-index only (UVIMAX-N, solar-noon SZA).
+		kUvimax,
+		// Instantaneous UV-index only (UVI-N, SZA at valid time).
+		kUvi,
+		// Both UVIMAX-N and UVI-N in a single pass — shares the input
+		// fetches and per-point arithmetic up to the SZA-dependent disort
+		// lookup. Useful when both fields are wanted at the same cadence.
 		kUv,
 		// Total-ozone anomaly vs climatology, output as O3ANOM-PRCNT.
-		kAnomaly
+		kO3anom
 	};
 
 	mode_t itsMode = mode_t::kUv;
