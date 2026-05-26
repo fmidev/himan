@@ -98,6 +98,11 @@ Precipitation form is determined in the following order:
 
 # Per-plugin configuration options
 
-potential precipitation form: calculate form even if no precipitation is forecasted
+potential precipitation form: calculate form even if no precipitation is forecasted; or calculate only potential form
+true: plugin produces both precipitation form and potential precipitation form
+explicit: plugin produces only potential precipitation form
 
-    "potential_precipitation_form" : "true"
+    "potential_precipitation_form" : "true | explicit"
+
+
+

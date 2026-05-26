@@ -125,12 +125,20 @@ void preform_hybrid::Process(std::shared_ptr<const plugin_configuration> conf)
 
 	Init(conf);
 
-	vector<param> params({param("PRECFORM2-N", 1206, 0, 1, 19)});
+	vector<param> params({param("PRECFORM2-N")});
 
-	if (itsConfiguration->Exists("potential_precipitation_form") &&
-	    itsConfiguration->GetValue("potential_precipitation_form") == "true")
+	const std::string ppf = itsConfiguration->GetValue("potential_precipitation_form");
+
+	if (ppf.empty() == false)
 	{
-		params.push_back(param("POTPRECF-N", 1226, 0, 1, 254));
+		if (ppf == "explicit")
+		{
+			params = {param("POTPRECF-N")};
+		}
+		else if (util::ParseBoolean(ppf))
+		{
+			params.push_back(param("POTPRECF-N"));
+		}
 	}
 
 	SetParams(params);
@@ -164,10 +172,37 @@ void preform_hybrid::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned s
 	myThreadedLogger.Info("Calculating time " + static_cast<string>(forecastTime.ValidDateTime()) + " level " +
 	                      static_cast<string>(forecastLevel));
 
+	bool calcPrecipitationForm = false, calcPotentialPrecipitationForm = false;
+
+	for (myTargetInfo->Reset<param>(); myTargetInfo->Next<param>();)
+	{
+		auto param = myTargetInfo->Param();
+		if (param.Name() == "PRECFORM2-N")
+		{
+			calcPrecipitationForm = true;
+		}
+		else if (param.Name() == "POTPRECF-N")
+		{
+			calcPotentialPrecipitationForm = true;
+		}
+	}
+
 	// Source infos
 
-	shared_ptr<info<double>> RRInfo = Fetch(forecastTime, surface0mLevel, RRParam, forecastType, false);
 	shared_ptr<info<double>> TInfo = Fetch(forecastTime, surface2mLevel, TParam, forecastType, false);
+	shared_ptr<info<double>> RRInfo = nullptr;
+
+	if (calcPrecipitationForm)
+	{
+		RRInfo = Fetch(forecastTime, surface0mLevel, RRParam, forecastType, false);
+	}
+	else
+	{
+		RRInfo = make_shared<info<double>>(*TInfo);
+		RRInfo->Create(TInfo->Base());
+		RRInfo->First();
+		RRInfo->Data().Fill(MissingDouble());
+	}
 
 	if (!RRInfo || !TInfo)
 	{
@@ -219,8 +254,6 @@ void preform_hybrid::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned s
 	ASSERT(myTargetInfo->SizeLocations() == RRInfo->SizeLocations());
 
 	myTargetInfo->First<param>();
-
-	const bool noPotentialPrecipitationForm = (myTargetInfo->Size<param>() == 1);
 
 	const int DRIZZLE = 0;
 	const int RAIN = 1;
@@ -281,7 +314,7 @@ void preform_hybrid::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned s
 			continue;
 		}
 
-		if ((RR == 0 || IsMissing(RR)) && noPotentialPrecipitationForm)
+		if ((RR == 0 || IsMissing(RR)) && calcPotentialPrecipitationForm == false)
 		{
 			continue;
 		}
@@ -295,7 +328,7 @@ void preform_hybrid::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned s
 		stTavg -= himan::constants::kKelvin;
 
 		ASSERT(T >= -80 && T < 80);
-		ASSERT(!noPotentialPrecipitationForm || RR > 0);
+		ASSERT(calcPotentialPrecipitationForm || RR > 0);
 
 		// Start algorithm
 		// Possible values for preform: 0 = tihku, 1 = vesi, 2 = räntä, 3 = lumi, 4 = jäätävä tihku, 5 = jäätävä sade
@@ -399,22 +432,17 @@ void preform_hybrid::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned s
 
 		// FINISHED
 
-		if (RR == 0 || IsMissing(RR))
+		for (myTargetInfo->Reset<param>(); myTargetInfo->Next<param>();)
 		{
-			// If RR is zero or missing, we can only have potential prec form
-			myTargetInfo->Index<param>(1);
-			myTargetInfo->Value(PreForm);
-		}
-		else
-		{
-			// If there is precipitation, we have at least regular prec form
-			myTargetInfo->Index<param>(0);
-			myTargetInfo->Value(PreForm);
+			const auto& param = myTargetInfo->Param();
 
-			if (!noPotentialPrecipitationForm)
+			if (param.Name() == "POTPRECF-N")
 			{
-				// Also potential prec form
-				myTargetInfo->Index<param>(1);
+				// Always have potential value, if we are producing the parameter
+				myTargetInfo->Value(PreForm);
+			}
+			else if (RR > 0)
+			{
 				myTargetInfo->Value(PreForm);
 			}
 		}
