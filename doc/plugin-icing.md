@@ -46,4 +46,7 @@ Pseudocode
 
 # Per-plugin configuration options
 
-None
+precipitation_param: select which precipitation parameter to use. Default: RRR-KGM2
+
+    "precipitation_param" : "<param name>"
+

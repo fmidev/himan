@@ -32,9 +32,12 @@ void icing::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short theTh
 	const params NParam({himan::param("N-PRCNT"), himan::param("N-0TO1")});
 	const params ClParam{param("CLDWAT-KGKG"), param("CLOUDMR-KGKG")};
 	const params PrecFormParam({himan::param("PRECFORM2-N"), himan::param("PRECFORM-N")});
-	const param PrecParam("RRR-KGM2");
 	const param ZeroLevelParam("H0C-M");
 	const param HeightParam("HL-M");  // Height of the current hybrid level
+
+	const auto precpar = itsConfiguration->GetValue("precipitation_param");
+
+	const param PrecParam = precpar.empty() ? param("RRR-KGM2") : param(precpar);
 
 	const level surface(himan::kHeight, 0, "HEIGHT");
 

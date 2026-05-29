@@ -20,4 +20,7 @@ c1040 is the primary CAPE parameter, c is a fallback. The plugin combines the at
 
 # Per-plugin configuration options
 
-None
+precipitation_param: select which precipitation parameter to use. Default: RRR-KGM2
+
+    "precipitation_param" : "<param name>"
+

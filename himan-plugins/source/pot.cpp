@@ -42,7 +42,11 @@ void pot::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short thread
 	const param CapeParamHiman("CAPE1040-JKG");
 	const level MU(kMaximumThetaE, 0);
 	const level ML(kHeightLayer, 500, 0);
-	const param RainParam("RRR-KGM2");
+
+	const auto precpar = itsConfiguration->GetValue("precipitation_param");
+
+	const param RainParam = precpar.empty() ? param("RRR-KGM2") : param(precpar);
+
 	const param ELHeight("EL-LAST-M");
 	const param LCLHeight("LCL-M");
 	const param LCLTemp("LCL-K");
