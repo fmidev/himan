@@ -87,3 +87,12 @@ TOMS total-ozone climatology grib (levels 0..4 carry the Fourier
 coefficients B0..B4).
 
     "o3_climatology": "O3clim.grib"
+
+`uvimax_valid_hour` (optional, applies to `uvimax` and `uv` modes):
+restricts UVIMAX-N output to forecast valid times whose UTC hour matches
+this value (0..23). UVI-N output in `uv` mode is unaffected. Lets one
+config drive both the 00 UTC and 12 UTC forecast cycles producing UVI
+hourly and UVIMAX-N only at, e.g. 12 UTC valid time. If omitted, UVIMAX-N
+is produced at every step.
+
+    "uvimax_valid_hour": 12

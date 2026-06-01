@@ -67,6 +67,12 @@ class uv_index : public compiled_plugin, private compiled_plugin_base
 
 	virtual void Process(std::shared_ptr<const plugin_configuration> conf) override;
 
+	// Skip writing all-missing grids. Together with `uvimax_valid_hour` this
+	// lets one config produce UVI-N at every step but only emit a UVIMAX-N
+	// grid file at the matching valid-time hour — no empty placeholder
+	// files at the other hours.
+	void WriteToFile(const std::shared_ptr<info<double>> targetInfo, write_options opts = write_options()) override;
+
 	virtual std::string ClassName() const override
 	{
 		return "himan::plugin::uv_index";
@@ -94,6 +100,11 @@ class uv_index : public compiled_plugin, private compiled_plugin_base
 	};
 
 	mode_t itsMode = mode_t::kUv;
+	// When set to 0..23, UVIMAX-N is only written at forecast valid times
+	// whose UTC hour equals this value (UVI-N is unaffected). -1 disables
+	// the filter (UVIMAX-N produced at every step). See JSON option
+	// `uvimax_valid_hour` in plugin-uv_index.md.
+	int itsUvimaxValidHour = -1;
 	disort_table itsDisortTable;
 	o3_climatology itsO3Clim;
 	// Aerosol climatology fields loaded once and stored for use in Calculate().

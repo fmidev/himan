@@ -17,6 +17,11 @@
  *                          input fetches and per-point arithmetic.
  *      mode = "o3anom"  → O3ANOM-PRCNT (100 · (forecast − clim) / clim).
  *
+ *  Optional `uvimax_valid_hour` (0..23) gates UVIMAX-N writes to a single
+ *  UTC hour of the valid time. UVI-N output is unaffected. Useful when one
+ *  config covers both 00 and 12 UTC forecast cycles but UVIMAX is only
+ *  wanted at one local time of day.
+ *
  *  How the UV mode works (the interesting math)
  *  --------------------------------------------
  *  The expensive part — full atmospheric radiative transfer — was solved OFFLINE
@@ -774,6 +779,15 @@ void uv_index::Process(shared_ptr<const plugin_configuration> conf)
 		    fmt::format("uv_index: unknown mode '{}' (expected 'uvimax', 'uvi', 'uv' or 'o3anom')", mode));
 	}
 
+	if (itsConfiguration->Exists("uvimax_valid_hour"))
+	{
+		itsUvimaxValidHour = stoi(itsConfiguration->GetValue("uvimax_valid_hour"));
+		if (itsUvimaxValidHour < 0 || itsUvimaxValidHour > 23)
+		{
+			throw runtime_error(fmt::format("uv_index: 'uvimax_valid_hour' must be 0..23, got {}", itsUvimaxValidHour));
+		}
+	}
+
 	if (itsMode == mode_t::kO3anom)
 	{
 		itsO3Clim.Load(requireOpt("o3_climatology"), itsConfiguration);
@@ -893,8 +907,21 @@ void uv_index::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short t
 	const auto& snowVec = VEC(snowInfo);
 	const auto& topoVec = VEC(topoInfo);
 
-	const bool produceMax = (itsMode == mode_t::kUvimax || itsMode == mode_t::kUv);
+	bool produceMax = (itsMode == mode_t::kUvimax || itsMode == mode_t::kUv);
 	const bool produceInst = (itsMode == mode_t::kUvi || itsMode == mode_t::kUv);
+
+	// Optional filter: only write UVIMAX-N when the forecast valid time's UTC
+	// hour matches `uvimax_valid_hour`. Lets a single config drive both the
+	// 00 and 12 UTC forecast cycles producing UVI hourly and UVIMAX-N only at
+	// 12 UTC valid time. UVI-N is unaffected.
+	if (produceMax && itsUvimaxValidHour >= 0)
+	{
+		const int validHour = stoi(forecastTime.ValidDateTime().String("%H"));
+		if (validHour != itsUvimaxValidHour)
+		{
+			produceMax = false;
+		}
+	}
 
 	// Bind one value vector per requested output param. Modes that don't
 	// produce a given param leave the corresponding pointer null and skip
@@ -986,4 +1013,15 @@ void uv_index::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short t
 
 	myThreadedLogger.Info(
 	    fmt::format("[CPU] Missing values: {}/{}", myTargetInfo->Data().MissingCount(), myTargetInfo->Data().Size()));
+}
+
+void uv_index::WriteToFile(const shared_ptr<info<double>> targetInfo, write_options opts)
+{
+	// Force the writer to drop all-missing grids. With `uvimax_valid_hour`
+	// set, UVIMAX-N at non-matching hours is fully missing and we don't
+	// want a placeholder grib file landing on disk / in radon. Other plugins
+	// can still produce all-missing fields and expect them to be written, so
+	// we only flip the default here, not framework-wide.
+	opts.write_empty_grid = false;
+	compiled_plugin_base::WriteToFile(targetInfo, opts);
 }
