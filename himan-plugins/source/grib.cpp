@@ -562,12 +562,14 @@ void WriteAreaAndGrid(NFmiGribMessage& message, const shared_ptr<himan::grid>& g
 			message.X1(lonMax);
 			message.Y1(latMin);
 
-			message.SetLongKey("iDirectionIncrement", 65535);
-			message.SetLongKey("numberOfPointsAlongAParallel", 65535);
-
 			message.SetLongKey("N", static_cast<long>(gg->N()));
-
 			message.PL(gg->NumberOfPointsAlongParallels());
+
+			if (edition == 1)
+			{
+				message.SetLongKey("iDirectionIncrement", 65535);
+				message.SetLongKey("numberOfPointsAlongAParallel", 65535);
+			}
 
 			scmode = kTopLeft;
 
@@ -1601,6 +1603,16 @@ pair<himan::file_information, NFmiGribMessage> grib::CreateGribMessage(info<T>& 
 	}
 
 	NFmiGribMessage message;
+
+	if (edition == 2 && anInfo.Grid()->Type() == kReducedGaussian)
+	{
+		// Due to eccodes inconsistencies, we have to initialize
+		// the message with reduced_gg template. Just setting the
+		// grid type to reduced_gg is not enough, because eccodes
+		// does not expost the correct grib keys.
+		message = NFmiGribMessage("reduced_gg_pl_32_grib2", 28);
+	}
+
 	message.Edition(edition);
 
 	if (anInfo.Producer().Centre() == kHPMissingInt)
