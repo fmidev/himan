@@ -923,6 +923,15 @@ void uv_index::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short t
 		}
 	}
 
+	// If the valid-hour filter just turned UVIMAX-N off and this is a
+	// uvimax-only run, there is nothing left to compute for this step
+	if (!produceMax && !produceInst)
+	{
+		myThreadedLogger.Info(
+		    fmt::format("Skipping step {}: uvimax_valid_hour filter", static_cast<string>(forecastTime.Step())));
+		return;
+	}
+
 	// Bind one value vector per requested output param. Modes that don't
 	// produce a given param leave the corresponding pointer null and skip
 	// the per-point write.
