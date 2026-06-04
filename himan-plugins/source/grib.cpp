@@ -2956,7 +2956,14 @@ void ReadData(shared_ptr<info<T>> newInfo, bool readPackedData, const NFmiGribMe
 
 	const std::regex pfRegex("^PRECFORM[0-9]*-N");
 
-	if (message.Edition() == 2 && std::regex_search(paramName, pfRegex))
+	// Decode GRIB2 precipitation type to match ours, except if producer is Metcoop: they use the
+	// same number but do not use the numbers defined by WMO.
+	//
+	// Metcoop numbering matches ours with two additional numbers:
+	// * graupel = 6
+	// * hail    = 7
+
+	if (message.Edition() == 2 && message.Centre() != 251 && std::regex_search(paramName, pfRegex))
 	{
 		decodePrecipitationForm = true;
 	}
