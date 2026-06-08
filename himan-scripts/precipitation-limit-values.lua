@@ -34,21 +34,27 @@ end
 for i = 1, #RR do
   if PREC_FORM[i] == 0 and RR[i] > 0 and RR[i] < 0.015 then
     RR[i] = 0
+    PREC_FORM[i] = missing
   end
   if PREC_FORM[i] == 1 and RR[i] > 0 and RR[i] < 0.1 then
     RR[i] = 0
+    PREC_FORM[i] = missing
   end
   if PREC_FORM[i] == 2 and RR[i] > 0 and RR[i] < 0.075 then
     RR[i] = 0
+    PREC_FORM[i] = missing
   end
   if PREC_FORM[i] == 3 and RR[i] > 0 and RR[i] < 0.05 then
     RR[i] = 0
+    PREC_FORM[i] = missing
   end
   if PREC_FORM[i] == 4 and RR[i] > 0 and RR[i] < 0.01 then
     RR[i] = 0
+    PREC_FORM[i] = missing
   end 
   if PREC_FORM[i] == 5 and RR[i] > 0 and RR[i] < 0.02 then
     RR[i] = 0
+    PREC_FORM[i] = missing
   end
 end
 
@@ -57,4 +63,8 @@ rrparam = param("RRR-KGM2")
 rrparam:SetAggregation(aggregation(HPAggregationType.kAccumulation, time_duration("01:00")))
 result:SetParam(rrparam)
 result:SetValues(RR)
+luatool:WriteToFile(result)
+
+precparam = param("PRECFORM2-N")
+result:SetValues(PREC_FORM)
 luatool:WriteToFile(result)
