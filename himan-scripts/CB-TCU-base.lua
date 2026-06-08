@@ -20,8 +20,6 @@ if not CBTCU_FL or not LCL500 or not LCLmu then
   return
 end
 
-
-
 -- Spatial averaging of LCL within ~10 km radius using circular 9x9 kernel
 -- (MEPS ~2.5 km resolution → radius ~4 grid cells ≈ 10 km)
 local kernel = {0,0,0,0,1,0,0,0,0,
@@ -50,14 +48,12 @@ LCL500 = Filter2D(Nmat, avg_filter, configuration:GetUseCuda()):GetValues()
 Nmat:SetValues(LCLmu)
 LCLmu = Filter2D(Nmat, avg_filter, configuration:GetUseCuda()):GetValues()
 
-
 -- Build per-grid-point base heights for vertical N lookup.
 local safe_base_heights = {}
 for i = 1, #CBTCU_FL do
   if IsMissing(CBTCU_FL[i]) then
-    -- Replace missing with dummy 1.0 m; results for those points are discarded below.
-    safe_base_heights[i] = 1.0
-  elseif IsMissing(LCLmu[i]) or LCLmu[i] < LCL500[i] then
+    safe_base_heights[i] = missing
+  elseif LCLmu[i] < LCL500[i] then
     -- surface based convection (500m mixed layer) Cb/TCu base (m)
     safe_base_heights[i] = LCL500[i]
   else
@@ -73,36 +69,20 @@ local covdef = 20  -- default Cb/TCu cover [%] when N at LCL < 1%
 
 local base_res = {}
 local cov_res  = {}
-local Missing  = missing
 
 for i = 1, #CBTCU_FL do
-  base_res[i] = Missing
-  cov_res[i]  = Missing
-
-  if not IsMissing(CBTCU_FL[i]) then
-    local base
-    if IsMissing(LCLmu[i]) or LCLmu[i] < LCL500[i] then
-      base = LCL500[i]   -- surface-based convection
-    else
-      base = LCLmu[i]    -- elevated convection
-    end
-
-    local cover = Missing
-    if not IsMissing(N_at_base[i]) then
-      cover = N_at_base[i] * 100  -- convert 0–1 to %
-    end
-    if IsMissing(cover) or cover < 1 then
-      cover = covdef
-    end
-
-    -- Tweak cover upward by Cb probability if available, silently skip otherwise
-    if ProbCb and not IsMissing(ProbCb[i]) and cover < ProbCb[i] then
-      cover = ProbCb[i]
-    end
-
-    base_res[i] = round(base / 0.3048 / 100) * 100  -- metres → feet, 100 ft resolution
-    cov_res[i]  = round(cover)
+  local cover = N_at_base[i] * 100  -- convert 0–1 to %
+  if cover < 1 then -- nan < 1 == false
+    cover = covdef
   end
+
+  -- Tweak cover upward by Cb probability if available, silently skip otherwise
+  if ProbCb and cover < ProbCb[i] then
+    cover = ProbCb[i]
+  end
+
+  base_res[i] = round(safe_base_heights[i] / 0.3048 / 100) * 100  -- metres → feet, 100 ft resolution
+  cov_res[i]  = round(cover)
 end
 
 result:SetParam(param("CBTCU-FT"))
