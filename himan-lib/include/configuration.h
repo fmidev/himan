@@ -327,7 +327,6 @@ class configuration
 
 	HPProgramName itsProgramName;
 	bool itsValidateMetadata;
-	s3::read_mode itsS3ReadMode;
 };
 
 inline std::ostream& operator<<(std::ostream& file, const configuration& ob)

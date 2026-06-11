@@ -50,8 +50,7 @@ configuration::configuration()
       itsBaseGrid(nullptr),
       itsSSStateTableName(),
       itsProgramName(kHiman),
-      itsValidateMetadata(true),
-      itsS3ReadMode(s3::read_mode::kSigned)
+      itsValidateMetadata(true)
 {
 }
 
@@ -99,8 +98,7 @@ configuration::configuration(const configuration& o)
       itsBaseGrid(o.itsBaseGrid ? std::unique_ptr<grid>(o.itsBaseGrid->Clone()) : nullptr),
       itsSSStateTableName(o.itsSSStateTableName),
       itsProgramName(o.itsProgramName),
-      itsValidateMetadata(o.itsValidateMetadata),
-      itsS3ReadMode(o.itsS3ReadMode)
+      itsValidateMetadata(o.itsValidateMetadata)
 {
 }
 
@@ -594,10 +592,10 @@ void configuration::ValidateMetadata(bool val)
 
 himan::s3::read_mode configuration::S3ReadMode() const
 {
-	return itsS3ReadMode;
+	return s3::GetReadMode();
 }
 
 void configuration::S3ReadMode(himan::s3::read_mode theMode)
 {
-	itsS3ReadMode = theMode;
+	s3::SetReadMode(theMode);
 }
