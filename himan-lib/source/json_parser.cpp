@@ -568,7 +568,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	// Only global scope
 	CacheLimit(pt, conf);
 	DynamicMemoryAllocation(pt, conf);
-        S3ReadMode(pt, conf);
+	S3ReadMode(pt, conf);
 
 	/*
 	 * Check processqueue.
