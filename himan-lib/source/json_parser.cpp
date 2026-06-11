@@ -465,6 +465,31 @@ void ValidateMetadata(const boost::property_tree::ptree& pt, shared_ptr<configur
 	}
 }
 
+void S3ReadMode(const boost::property_tree::ptree& pt, shared_ptr<configuration>& conf)
+{
+	if (auto s3Read = ReadElement<std::string>(pt, "s3_read"))
+	{
+		const std::string val = s3Read.get();
+		s3::read_mode mode = s3::read_mode::kSigned;
+		if (val == "signed")
+		{
+			mode = s3::read_mode::kSigned;
+		}
+		else if (val == "unsigned")
+		{
+			mode = s3::read_mode::kUnsigned;
+		}
+		else
+		{
+			itsLogger.Warning(fmt::format(
+			    "Unrecognized value for 's3_read': '{}' (allowed: signed, unsigned, try); using 'signed'", val));
+			return;
+		}
+		conf->S3ReadMode(mode);
+		s3::SetReadMode(mode);
+	}
+}
+
 void CheckConsistency(shared_ptr<configuration>& conf)
 {
 	if (conf->WriteStorageType() != kS3ObjectStorageSystem && conf->WriteToObjectStorageBetweenPluginCalls())
@@ -543,6 +568,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	// Only global scope
 	CacheLimit(pt, conf);
 	DynamicMemoryAllocation(pt, conf);
+	S3ReadMode(pt, conf);
 
 	/*
 	 * Check processqueue.

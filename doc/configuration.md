@@ -657,6 +657,25 @@ Example:
 
     "write_storage_type" : "local | s3",
 
+### Reading from S3
+
+When reading from S3, by default the request is signed using the credentials in environment variables `S3_ACCESS_KEY_ID`,
+`S3_SECRET_ACCESS_KEY` and (optionally) `S3_SESSION_TOKEN`. If those environment variables are unset, the request is
+unsigned.
+
+For reading from public buckets in a different account from the one whose credentials are set in the environment, the
+signed request can be rejected even though an unsigned request would succeed. Configuration key `s3_read` controls how
+read requests are signed:
+
+* `signed` (default) - always sign reads with environment credentials
+* `unsigned` - never sign reads (anonymous access only), even if credentials are set in the environment
+
+This option only affects reads. Writes are always signed.
+
+Example:
+
+    "s3_read" : "signed | unsigned",
+
 <a name="Allowed_missing_values"/>
 
 ## Allowed missing values
