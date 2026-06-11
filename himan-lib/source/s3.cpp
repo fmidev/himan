@@ -5,6 +5,7 @@ using namespace himan;
 #include "debug.h"
 #include "timer.h"
 #include "util.h"
+#include <atomic>
 #include <iostream>
 #include <libs3.h>
 #include <mutex>
@@ -19,6 +20,7 @@ const char* access_key = 0;
 const char* secret_key = 0;
 const char* security_token = 0;
 S3Protocol default_protocol = S3ProtocolHTTPS;
+std::atomic<himan::s3::read_mode> read_mode_g{himan::s3::read_mode::kSigned};
 thread_local S3Status statusG = S3StatusOK;
 
 void CheckS3Error(S3Status errarg, const char* file, const int line);
@@ -52,7 +54,9 @@ void HandleS3Error(himan::logger& logr, const std::string& host, const std::stri
 		case S3StatusHttpErrorBadRequest:
 			logr.Error(
 			    fmt::format("{}: make sure correct session credentials are used (access_key: {}..., secret_key: {}...",
-			                errorstr, std::string(access_key).substr(0, 10), std::string(secret_key).substr(0, 10)));
+			                errorstr,
+			                access_key ? std::string(access_key).substr(0, 10) : std::string("<not set>"),
+			                secret_key ? std::string(secret_key).substr(0, 10) : std::string("<not set>")));
 			throw himan::kFileDataNotFound;
 		default:
 			logr.Error(fmt::format("S3 error: {}", errorstr));
@@ -269,8 +273,13 @@ S3Protocol GetProtocol(const std::string& endpoint)
 	return protocol;
 }
 
-S3BucketContext GetBucketContext(const std::string& host, const std::string& bucket, const std::string& region)
+S3BucketContext GetBucketContext(const std::string& host, const std::string& bucket, const std::string& region,
+                                 bool anonymous = false)
 {
+	const char* ak = anonymous ? nullptr : access_key;
+	const char* sk = anonymous ? nullptr : secret_key;
+	const char* st = anonymous ? nullptr : security_token;
+
 	// clang-format off
 
 #ifdef S3_DEFAULT_REGION
@@ -281,9 +290,9 @@ S3BucketContext GetBucketContext(const std::string& host, const std::string& buc
                 bucket.c_str(),
                 GetProtocol(host),
                 S3UriStylePath,
-                access_key,
-                secret_key,
-                security_token,
+                ak,
+                sk,
+                st,
                 // check size, otherwise c_str() will return random garbage from some
                 // uninitialized memory location
                 region.size() == 0 ? nullptr : region.c_str()
@@ -296,9 +305,9 @@ S3BucketContext GetBucketContext(const std::string& host, const std::string& buc
 		bucket.c_str(),
 		GetProtocol(host),
 		S3UriStylePath,
-		access_key,
-		secret_key,
-		security_token
+		ak,
+		sk,
+		st
 	};
 #endif
 	// clang-format on
@@ -306,7 +315,32 @@ S3BucketContext GetBucketContext(const std::string& host, const std::string& buc
 	return bucketContext;
 }
 
+bool IsAuthError(S3Status s)
+{
+	switch (s)
+	{
+		case S3StatusErrorAccessDenied:
+		case S3StatusHttpErrorForbidden:
+		case S3StatusErrorInvalidAccessKeyId:
+		case S3StatusErrorSignatureDoesNotMatch:
+		case S3StatusHttpErrorBadRequest:
+			return true;
+		default:
+			return false;
+	}
+}
+
 }  // namespace
+
+void himan::s3::SetReadMode(himan::s3::read_mode mode)
+{
+	read_mode_g.store(mode);
+}
+
+himan::s3::read_mode himan::s3::GetReadMode()
+{
+	return read_mode_g.load();
+}
 
 buffer s3::ReadFile(const file_information& fileInformation)
 {
@@ -329,7 +363,10 @@ buffer s3::ReadFile(const file_information& fileInformation)
 	auto host = StripProtocol(fileInformation.file_server);
 	const auto region = ReadAWSRegionFromHostname(host);
 
-	S3BucketContext bucketContext = GetBucketContext(host, bucket, region);
+	const auto mode = s3::GetReadMode();
+	bool anonymous = (mode == s3::read_mode::kUnsigned) || (mode == s3::read_mode::kTry);
+
+	S3BucketContext bucketContext = GetBucketContext(host, bucket, region, anonymous);
 
 	const unsigned long length = fileInformation.length.value();
 
@@ -349,6 +386,41 @@ buffer s3::ReadFile(const file_information& fileInformation)
 #endif
 		count++;
 	} while (S3_status_is_retryable(statusG) && count < 3);
+
+	// In "try" mode, if the unsigned attempt failed with an authentication-class error,
+	// fall back to a signed attempt.
+	if (mode == s3::read_mode::kTry && statusG != S3StatusOK && IsAuthError(statusG))
+	{
+		logr.Info(fmt::format("Unsigned read failed with status '{}', retrying with signed credentials",
+		                      S3_get_status_name(statusG)));
+
+		// Reset accumulated data from the failed attempt
+		if (ret.data)
+		{
+			free(ret.data);
+			ret.data = nullptr;
+		}
+		ret.length = 0;
+
+		bucketContext = GetBucketContext(host, bucket, region, /*anonymous=*/false);
+
+		count = 0;
+		do
+		{
+			if (count > 0)
+			{
+				sleep(2 * count);
+			}
+			const unsigned long offset = fileInformation.offset.value();
+
+#ifdef S3_DEFAULT_REGION
+			S3_get_object(&bucketContext, key.c_str(), NULL, offset, length, NULL, 0, &getObjectHandler, &ret);
+#else
+			S3_get_object(&bucketContext, key.c_str(), NULL, offset, length, NULL, &getObjectHandler, &ret);
+#endif
+			count++;
+		} while (S3_status_is_retryable(statusG) && count < 3);
+	}
 
 	switch (statusG)
 	{
@@ -508,5 +580,17 @@ void s3::WriteObject(const std::string& objectName, const buffer& buff)
 bool s3::Exists(const std::string& objectName)
 {
 	throw std::runtime_error("S3 support not compiled");
+}
+namespace
+{
+himan::s3::read_mode read_mode_g = himan::s3::read_mode::kSigned;
+}
+void s3::SetReadMode(s3::read_mode mode)
+{
+	read_mode_g = mode;
+}
+s3::read_mode s3::GetReadMode()
+{
+	return read_mode_g;
 }
 #endif

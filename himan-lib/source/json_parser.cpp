@@ -465,6 +465,35 @@ void ValidateMetadata(const boost::property_tree::ptree& pt, shared_ptr<configur
 	}
 }
 
+void S3ReadMode(const boost::property_tree::ptree& pt, shared_ptr<configuration>& conf)
+{
+	if (auto s3Read = ReadElement<std::string>(pt, "s3_read"))
+	{
+		const std::string val = s3Read.get();
+		s3::read_mode mode = s3::read_mode::kSigned;
+		if (val == "signed")
+		{
+			mode = s3::read_mode::kSigned;
+		}
+		else if (val == "unsigned")
+		{
+			mode = s3::read_mode::kUnsigned;
+		}
+		else if (val == "try")
+		{
+			mode = s3::read_mode::kTry;
+		}
+		else
+		{
+			itsLogger.Warning(fmt::format(
+			    "Unrecognized value for 's3_read': '{}' (allowed: signed, unsigned, try); using 'signed'", val));
+			return;
+		}
+		conf->S3ReadMode(mode);
+		s3::SetReadMode(mode);
+	}
+}
+
 void CheckConsistency(shared_ptr<configuration>& conf)
 {
 	if (conf->WriteStorageType() != kS3ObjectStorageSystem && conf->WriteToObjectStorageBetweenPluginCalls())
@@ -500,6 +529,7 @@ void CheckCommonOptions(const boost::property_tree::ptree& pt, shared_ptr<config
 	WriteMode(conf, pt);
 	SSStateTableName(pt, conf);
 	ValidateMetadata(pt, conf);
+	S3ReadMode(pt, conf);
 
 	CheckConsistency(conf);
 }
