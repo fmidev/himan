@@ -669,14 +669,12 @@ read requests are signed:
 
 * `signed` (default) - always sign reads with environment credentials
 * `unsigned` - never sign reads (anonymous access only), even if credentials are set in the environment
-* `try` - try unsigned first; on an authentication-class failure (`AccessDenied`, `Forbidden`, `InvalidAccessKeyId`,
-  `SignatureDoesNotMatch`, HTTP 400), retry the request signed
 
 This option only affects reads. Writes are always signed.
 
 Example:
 
-    "s3_read" : "signed | unsigned | try",
+    "s3_read" : "signed | unsigned",
 
 <a name="Allowed_missing_values"/>
 

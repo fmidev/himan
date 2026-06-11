@@ -315,21 +315,6 @@ S3BucketContext GetBucketContext(const std::string& host, const std::string& buc
 	return bucketContext;
 }
 
-bool IsAuthError(S3Status s)
-{
-	switch (s)
-	{
-		case S3StatusErrorAccessDenied:
-		case S3StatusHttpErrorForbidden:
-		case S3StatusErrorInvalidAccessKeyId:
-		case S3StatusErrorSignatureDoesNotMatch:
-		case S3StatusHttpErrorBadRequest:
-			return true;
-		default:
-			return false;
-	}
-}
-
 }  // namespace
 
 void himan::s3::SetReadMode(himan::s3::read_mode mode)
@@ -364,7 +349,7 @@ buffer s3::ReadFile(const file_information& fileInformation)
 	const auto region = ReadAWSRegionFromHostname(host);
 
 	const auto mode = s3::GetReadMode();
-	bool anonymous = (mode == s3::read_mode::kUnsigned) || (mode == s3::read_mode::kTry);
+	bool anonymous = (mode == s3::read_mode::kUnsigned);
 
 	S3BucketContext bucketContext = GetBucketContext(host, bucket, region, anonymous);
 
@@ -386,41 +371,6 @@ buffer s3::ReadFile(const file_information& fileInformation)
 #endif
 		count++;
 	} while (S3_status_is_retryable(statusG) && count < 3);
-
-	// In "try" mode, if the unsigned attempt failed with an authentication-class error,
-	// fall back to a signed attempt.
-	if (mode == s3::read_mode::kTry && statusG != S3StatusOK && IsAuthError(statusG))
-	{
-		logr.Info(fmt::format("Unsigned read failed with status '{}', retrying with signed credentials",
-		                      S3_get_status_name(statusG)));
-
-		// Reset accumulated data from the failed attempt
-		if (ret.data)
-		{
-			free(ret.data);
-			ret.data = nullptr;
-		}
-		ret.length = 0;
-
-		bucketContext = GetBucketContext(host, bucket, region, /*anonymous=*/false);
-
-		count = 0;
-		do
-		{
-			if (count > 0)
-			{
-				sleep(2 * count);
-			}
-			const unsigned long offset = fileInformation.offset.value();
-
-#ifdef S3_DEFAULT_REGION
-			S3_get_object(&bucketContext, key.c_str(), NULL, offset, length, NULL, 0, &getObjectHandler, &ret);
-#else
-			S3_get_object(&bucketContext, key.c_str(), NULL, offset, length, NULL, &getObjectHandler, &ret);
-#endif
-			count++;
-		} while (S3_status_is_retryable(statusG) && count < 3);
-	}
 
 	switch (statusG)
 	{

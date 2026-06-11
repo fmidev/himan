@@ -594,10 +594,10 @@ void configuration::ValidateMetadata(bool val)
 
 himan::s3::read_mode configuration::S3ReadMode() const
 {
-return itsS3ReadMode;
+	return itsS3ReadMode;
 }
 
 void configuration::S3ReadMode(himan::s3::read_mode theMode)
 {
-itsS3ReadMode = theMode;
+	itsS3ReadMode = theMode;
 }

@@ -9,8 +9,7 @@ namespace s3
 enum class read_mode
 {
 	kSigned,    // always sign reads with credentials from environment
-	kUnsigned,  // never sign reads (anonymous access only)
-	kTry        // try unsigned first; on auth failure fall back to signed
+	kUnsigned  // never sign reads (anonymous access only)
 };
 
 buffer ReadFile(const file_information& fileInformation);

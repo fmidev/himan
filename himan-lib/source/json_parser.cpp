@@ -479,10 +479,6 @@ void S3ReadMode(const boost::property_tree::ptree& pt, shared_ptr<configuration>
 		{
 			mode = s3::read_mode::kUnsigned;
 		}
-		else if (val == "try")
-		{
-			mode = s3::read_mode::kTry;
-		}
 		else
 		{
 			itsLogger.Warning(fmt::format(
@@ -529,7 +525,6 @@ void CheckCommonOptions(const boost::property_tree::ptree& pt, shared_ptr<config
 	WriteMode(conf, pt);
 	SSStateTableName(pt, conf);
 	ValidateMetadata(pt, conf);
-	S3ReadMode(pt, conf);
 
 	CheckConsistency(conf);
 }
@@ -573,6 +568,7 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 	// Only global scope
 	CacheLimit(pt, conf);
 	DynamicMemoryAllocation(pt, conf);
+        S3ReadMode(pt, conf);
 
 	/*
 	 * Check processqueue.
