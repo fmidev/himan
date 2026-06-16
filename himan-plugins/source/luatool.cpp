@@ -146,14 +146,6 @@ void luatool::InitLua()
 
 	luaL_openlibs(L);
 
-	lua_getglobal(L, "package");
-	lua_getfield(L, -1, "path");
-	std::string newPath = std::string(lua_tostring(L, -1)) + ";/usr/share/himan-scripts/?.lua";
-	lua_pop(L, 1);
-	lua_pushstring(L, newPath.c_str());
-	lua_setfield(L, -2, "path");
-	lua_pop(L, 1);
-
 	open(L);
 
 	set_pcall_callback(&BindErrorHandler);
@@ -200,6 +192,21 @@ void luatool::ResetVariables(std::shared_ptr<info<double>> myTargetInfo)
 	globals(L)["radon"] = r;
 }
 
+static void AddScriptDirToPath(lua_State* L, const std::string& scriptPath)
+{
+	std::string scriptDir = scriptPath.substr(0, scriptPath.find_last_of("/\\") + 1);
+
+	lua_getglobal(L, "package");
+	lua_getfield(L, -1, "path");
+	std::string currentPath = lua_tostring(L, -1);
+	lua_pop(L, 1);
+
+	std::string newPath = scriptDir + "?.lua;" + currentPath;
+	lua_pushstring(L, newPath.c_str());
+	lua_setfield(L, -2, "path");
+	lua_pop(L, 1);
+}
+
 bool luatool::ReadFile(const std::string& luaFile)
 {
 	if (!std::filesystem::exists(luaFile))
@@ -212,6 +219,7 @@ bool luatool::ReadFile(const std::string& luaFile)
 	{
 		timer t(true);
 		ASSERT(myL);
+		AddScriptDirToPath(myL, luaFile);
 		if (luaL_dofile(myL, luaFile.c_str()))
 		{
 			itsLogger.Error(lua_tostring(myL, -1));
