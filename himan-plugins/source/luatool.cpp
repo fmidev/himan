@@ -146,6 +146,14 @@ void luatool::InitLua()
 
 	luaL_openlibs(L);
 
+	lua_getglobal(L, "package");
+	lua_getfield(L, -1, "path");
+	std::string newPath = std::string(lua_tostring(L, -1)) + ";/usr/share/himan-scripts/?.lua";
+	lua_pop(L, 1);
+	lua_pushstring(L, newPath.c_str());
+	lua_setfield(L, -2, "path");
+	lua_pop(L, 1);
+
 	open(L);
 
 	set_pcall_callback(&BindErrorHandler);

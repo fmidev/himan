@@ -1,9 +1,7 @@
 -- Cb or TCu cloud base (ft) and cover (%)
 -- Translated from https://wiki.fmi.fi/spaces/PROJEKTIT/pages/48558154/CbTCu_base_ft v1.2
 
-function round(n)
-  return n % 1 >= 0.5 and math.ceil(n) or math.floor(n)
-end
+require("utils")
 
 local MU = level(HPLevelType.kMaximumThetaE, 0)
 local HL = level(HPLevelType.kHeightLayer, 500, 0)
@@ -20,27 +18,8 @@ if not CBTCU_FL or not LCL500 or not LCLmu then
   return
 end
 
--- Spatial averaging of LCL within ~10 km radius using circular 9x9 kernel
--- (MEPS ~2.5 km resolution → radius ~4 grid cells ≈ 10 km)
-local kernel = {0,0,0,0,1,0,0,0,0,
-                0,0,1,1,1,1,1,0,0,
-                0,1,1,1,1,1,1,1,0,
-                0,1,1,1,1,1,1,1,0,
-                1,1,1,1,1,1,1,1,1,
-                0,1,1,1,1,1,1,1,0,
-                0,1,1,1,1,1,1,1,0,
-                0,0,1,1,1,1,1,0,0,
-                0,0,0,0,1,0,0,0,0}
-
-local avgkernel = {}
-for i = 1, #kernel do
-  avgkernel[i] = kernel[i] / 49
-end
-
-local avg_filter = matrixf(9, 9, 1, missing)
-avg_filter:SetValues(avgkernel)
-
 local Nmat = matrixf(result:GetGrid():GetNi(), result:GetGrid():GetNj(), 1, 0)
+local avg_filter = create_filter(2.5, 10, "avg", "round")
 
 Nmat:SetValues(LCL500)
 LCL500 = Filter2D(Nmat, avg_filter, configuration:GetUseCuda()):GetValues()
