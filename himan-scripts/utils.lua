@@ -1,4 +1,6 @@
-function round(n)
+local U = {}
+
+function U.round(n)
   return n % 1 >= 0.5 and math.ceil(n) or math.floor(n)
 end
 
@@ -7,7 +9,7 @@ end
 -- radius_km: smoothing radius in km
 -- style: "uniform" for mask of 1s, "avg" for averaging (1/count per active cell)
 -- shape: "square" or "round"
-function create_filter(resolution_km, radius_km, style, shape)
+function U.create_filter(resolution_km, radius_km, style, shape)
   if shape ~= "square" and shape ~= "round" then
     logger:Error("Invalid shape given to create_filter")
     return
@@ -47,3 +49,5 @@ function create_filter(resolution_km, radius_km, style, shape)
   f:SetValues(kernel)
   return f
 end
+
+return U

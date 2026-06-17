@@ -1,7 +1,7 @@
 -- Cb or TCu cloud base (ft) and cover (%)
 -- Translated from https://wiki.fmi.fi/spaces/PROJEKTIT/pages/48558154/CbTCu_base_ft v1.2
 
-require("utils")
+local utils = require("utils")
 
 local MU = level(HPLevelType.kMaximumThetaE, 0)
 local HL = level(HPLevelType.kHeightLayer, 500, 0)
@@ -19,7 +19,7 @@ if not CBTCU_FL or not LCL500 or not LCLmu then
 end
 
 local Nmat = matrixf(result:GetGrid():GetNi(), result:GetGrid():GetNj(), 1, 0)
-local avg_filter = create_filter(2.5, 10, "avg", "round")
+local avg_filter = utils.create_filter(2.5, 10, "avg", "round")
 
 Nmat:SetValues(LCL500)
 LCL500 = Filter2D(Nmat, avg_filter, configuration:GetUseCuda()):GetValues()
@@ -60,8 +60,8 @@ for i = 1, #CBTCU_FL do
     cover = ProbCb[i]
   end
 
-  base_res[i] = round(safe_base_heights[i] / 0.3048 / 100) * 100  -- metres → feet, 100 ft resolution
-  cov_res[i]  = round(cover)
+  base_res[i] = utils.round(safe_base_heights[i] / 0.3048 / 100) * 100  -- metres → feet, 100 ft resolution
+  cov_res[i]  = utils.round(cover)
 end
 
 result:SetParam(param("CBTCU-FT"))
