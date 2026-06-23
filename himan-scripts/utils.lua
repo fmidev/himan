@@ -1,7 +1,11 @@
 local U = {}
 
 function U.round(n)
-  return n % 1 >= 0.5 and math.ceil(n) or math.floor(n)
+  if n >= 0 then
+    return math.floor(n + 0.5)
+  else
+    return math.ceil(n - 0.5)
+  end
 end
 
 -- Returns a filter kernel as a matrixf.
