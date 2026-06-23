@@ -19,7 +19,7 @@ if not CBTCU_FL or not LCL500 or not LCLmu then
 end
 
 local Nmat = matrixf(result:GetGrid():GetNi(), result:GetGrid():GetNj(), 1, 0)
-local avg_filter = utils.create_filter(2.5, 10, "avg", "round")
+local avg_filter = utils.create_filter(result:GetGrid():GetDi()/1000, 10, "avg", "circle")
 
 Nmat:SetValues(LCL500)
 LCL500 = Filter2D(Nmat, avg_filter, configuration:GetUseCuda()):GetValues()
