@@ -17,7 +17,8 @@ function U.create_mask(resolution_km, radius_km, shape, normalize)
   local builtins = {
     square = function() return 1 end,
     circle = function(i, j, center, grid_radius)
-      return math.sqrt((i - center)^2 + (j - center)^2) <= grid_radius and 1 or 0
+      local dx, dy = i - center, j - center
+      return (dx * dx + dy * dy) <= (grid_radius * grid_radius) and 1 or 0
     end,
   }
 
