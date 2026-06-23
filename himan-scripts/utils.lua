@@ -61,6 +61,10 @@ function U.create_mask(resolution_km, radius_km, shape, normalize)
   end
 
   if normalize then
+    if weight_sum == 0 then
+      logger:Error("create_mask produced zero-sum kernel; cannot normalize")
+      return
+    end
     for i = 1, #kernel do
       kernel[i] = kernel[i] / weight_sum
     end
