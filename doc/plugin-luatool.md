@@ -710,6 +710,47 @@ Parse a string to boolean.
 local value = ParseBoolean("true")
 ```
 
+# Utility scripts
+
+Utility scripts are shared Lua modules available to all scripts. They must be loaded explicitly with `require`.
+
+```lua
+local utils = require("utils")
+```
+
+| Function | Arguments | Return value | Description |
+|---|---|---|---|
+| round | number | number | Rounds n to the nearest integer |
+| create_mask | resolution_km, radius_km, shape, normalize | matrixf | Returns a mask as a matrixf to be used with filtering or local maximum or minimum. shape: "square", "circle", or a custom function(i, j, center, grid_radius) returning a weight. normalize: if true, weights are divided by their sum so the kernel sums to 1 |
+
+## Masking
+
+Use `normalize = true` with `Filter2D` for smoothing — weights sum to 1 so values stay in range:
+
+```lua
+-- Smooth a field over a 10 km radius; GetDi() returns metres so divide by 1000
+local avg_mask = utils.create_mask(result:GetGrid():GetDi()/1000, 10, "circle", true)
+local smoothed = Filter2D(datamat, avg_mask, configuration:GetUseCuda()):GetValues()
+```
+
+Use `normalize = false` with `Max2D`/`Min2D` for neighbourhood statistics — weights are just 1s acting as a mask:
+
+```lua
+-- Find the maximum value within a 50 km square neighbourhood
+local mask = utils.create_mask(result:GetGrid():GetDi()/1000, 50, "square", false)
+local neighbourhood_max = Max2D(datamat, mask, configuration:GetUseCuda()):GetValues()
+```
+
+Custom shape functions enable kernels like Gaussian:
+
+```lua
+local sigma = 3  -- standard deviation in grid cells
+local gauss = utils.create_mask(result:GetGrid():GetDi()/1000, 10, function(i, j, center, grid_radius)
+  local dx, dy = i - center, j - center
+  return math.exp(-(dx*dx + dy*dy) / (2 * sigma * sigma))
+end, true)
+```
+
 # Examples
 
 To launch a lua script, we'll need the lua script itself and a himan configuration in json format.

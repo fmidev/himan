@@ -192,6 +192,33 @@ void luatool::ResetVariables(std::shared_ptr<info<double>> myTargetInfo)
 	globals(L)["radon"] = r;
 }
 
+static void AddScriptDirToPath(lua_State* L, const std::string& scriptPath)
+{
+	const auto scriptDir = std::filesystem::path(scriptPath).parent_path();
+	const std::string entry = (scriptDir / "?.lua").string();
+
+	lua_getglobal(L, "package");
+	if (!lua_istable(L, -1))
+	{
+		lua_pop(L, 1);
+		return;
+	}
+
+	lua_getfield(L, -1, "path");
+	const char* pathCStr = lua_tostring(L, -1);
+	std::string currentPath = pathCStr ? pathCStr : "";
+	lua_pop(L, 1);
+
+	if (currentPath.find(entry) == std::string::npos)
+	{
+		const std::string newPath = currentPath.empty() ? entry : (entry + ";" + currentPath);
+		lua_pushlstring(L, newPath.data(), newPath.size());
+		lua_setfield(L, -2, "path");
+	}
+
+	lua_pop(L, 1);
+}
+
 bool luatool::ReadFile(const std::string& luaFile)
 {
 	if (!std::filesystem::exists(luaFile))
@@ -204,6 +231,7 @@ bool luatool::ReadFile(const std::string& luaFile)
 	{
 		timer t(true);
 		ASSERT(myL);
+		AddScriptDirToPath(myL, luaFile);
 		if (luaL_dofile(myL, luaFile.c_str()))
 		{
 			itsLogger.Error(lua_tostring(myL, -1));
