@@ -745,7 +745,7 @@ Custom shape functions enable kernels like Gaussian:
 
 ```lua
 local sigma = 3  -- standard deviation in grid cells
-local gauss = create_mask(result:GetGrid():GetDi()/1000, 10, function(i, j, center, grid_radius)
+local gauss = utils.create_mask(result:GetGrid():GetDi()/1000, 10, function(i, j, center, grid_radius)
   local dx, dy = i - center, j - center
   return math.exp(-(dx*dx + dy*dy) / (2 * sigma * sigma))
 end, true)
