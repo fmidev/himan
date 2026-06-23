@@ -194,20 +194,29 @@ void luatool::ResetVariables(std::shared_ptr<info<double>> myTargetInfo)
 
 static void AddScriptDirToPath(lua_State* L, const std::string& scriptPath)
 {
-    std::string scriptDir = scriptPath.substr(0, scriptPath.find_last_of("/\\") + 1);
-    std::string entry = scriptDir + "?.lua";
+	const auto scriptDir = std::filesystem::path(scriptPath).parent_path();
+	const std::string entry = (scriptDir / "?.lua").string();
 
-    lua_getglobal(L, "package");
-    lua_getfield(L, -1, "path");
-    std::string currentPath = lua_tostring(L, -1);
-    lua_pop(L, 1);
+	lua_getglobal(L, "package");
+	if (!lua_istable(L, -1))
+	{
+		lua_pop(L, 1);
+		return;
+	}
 
-    if (currentPath.find(entry) == std::string::npos)
-    {
-        lua_pushstring(L, (entry + ";" + currentPath).c_str());
-        lua_setfield(L, -2, "path");
-    }
-    lua_pop(L, 1);
+	lua_getfield(L, -1, "path");
+	const char* pathCStr = lua_tostring(L, -1);
+	std::string currentPath = pathCStr ? pathCStr : "";
+	lua_pop(L, 1);
+
+	if (currentPath.find(entry) == std::string::npos)
+	{
+		const std::string newPath = currentPath.empty() ? entry : (entry + ";" + currentPath);
+		lua_pushlstring(L, newPath.data(), newPath.size());
+		lua_setfield(L, -2, "path");
+	}
+
+	lua_pop(L, 1);
 }
 
 bool luatool::ReadFile(const std::string& luaFile)
