@@ -19,13 +19,13 @@ if not CBTCU_FL or not LCL500 or not LCLmu then
 end
 
 local Nmat = matrixf(result:GetGrid():GetNi(), result:GetGrid():GetNj(), 1, 0)
-local avg_filter = utils.create_filter(result:GetGrid():GetDi()/1000, 10, "avg", "circle")
+local avg_mask = utils.create_mask(result:GetGrid():GetDi()/1000, 10, "circle", true)
 
 Nmat:SetValues(LCL500)
-LCL500 = Filter2D(Nmat, avg_filter, configuration:GetUseCuda()):GetValues()
+LCL500 = Filter2D(Nmat, avg_mask, configuration:GetUseCuda()):GetValues()
 
 Nmat:SetValues(LCLmu)
-LCLmu = Filter2D(Nmat, avg_filter, configuration:GetUseCuda()):GetValues()
+LCLmu = Filter2D(Nmat, avg_mask, configuration:GetUseCuda()):GetValues()
 
 -- Build per-grid-point base heights for vertical N lookup.
 local safe_base_heights = {}

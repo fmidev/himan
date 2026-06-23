@@ -7,23 +7,28 @@ end
 -- Returns a filter kernel as a matrixf.
 -- resolution_km: grid resolution in km
 -- radius_km: smoothing radius in km
--- style: "uniform" for mask of 1s, "avg" for averaging (1/count per active cell)
--- shape: "square" or "circle"
-function U.create_filter(resolution_km, radius_km, style, shape)
-  local shape_weights = {
-    square = function(i, j, center, grid_radius) return 1 end,
+-- normalize: if true, weights are divided by their sum so the kernel sums to 1
+-- shape: "square", "circle", or a function(i, j, center, grid_radius) returning a weight
+function U.create_mask(resolution_km, radius_km, shape, normalize)
+  local builtins = {
+    square = function() return 1 end,
     circle = function(i, j, center, grid_radius)
       return math.sqrt((i - center)^2 + (j - center)^2) <= grid_radius and 1 or 0
     end,
   }
 
-  if not shape_weights[shape] then
-    logger:Error("Invalid shape given to create_filter")
+  local weight_fn
+  if type(shape) == "function" then
+    weight_fn = shape
+  elseif builtins[shape] then
+    weight_fn = builtins[shape]
+  else
+    logger:Error("Invalid shape given to create_mask")
     return
   end
 
-  if style ~= "uniform" and style ~= "avg" then
-    logger:Error("Invalid style given to create_filter")
+  if type(normalize) ~= "boolean" then
+    logger:Error("normalize must be a boolean")
     return
   end
 
@@ -45,13 +50,13 @@ function U.create_filter(resolution_km, radius_km, style, shape)
 
   for i = 0, size - 1 do
     for j = 0, size - 1 do
-      local w = shape_weights[shape](i, j, center, grid_radius)
+      local w = weight_fn(i, j, center, grid_radius)
       kernel[i * size + j + 1] = w
       weight_sum = weight_sum + w
     end
   end
 
-  if style == "avg" then
+  if normalize then
     for i = 1, #kernel do
       kernel[i] = kernel[i] / weight_sum
     end
