@@ -39,8 +39,8 @@ BuildRequires: eigen3-devel
 BuildRequires: libpqxx-devel >= %{pqxx_ver}
 BuildRequires: bzip2-devel
 BuildRequires: redhat-rpm-config
-BuildRequires: cuda-nvcc-12-4
-BuildRequires: cuda-cudart-devel-12-4
+BuildRequires: cuda-nvcc-12-9
+BuildRequires: cuda-cudart-devel-12-9
 BuildRequires: geos313-devel
 BuildRequires: gdal312-devel
 BuildRequires: libfmidb-devel >= 25.8.7
