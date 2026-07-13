@@ -589,3 +589,13 @@ void configuration::ValidateMetadata(bool val)
 {
 	itsValidateMetadata = val;
 }
+
+himan::s3::read_mode configuration::S3ReadMode() const
+{
+	return s3::GetReadMode();
+}
+
+void configuration::S3ReadMode(himan::s3::read_mode theMode)
+{
+	s3::SetReadMode(theMode);
+}

@@ -1,9 +1,7 @@
 -- Cb or TCu cloud base (ft) and cover (%)
 -- Translated from https://wiki.fmi.fi/spaces/PROJEKTIT/pages/48558154/CbTCu_base_ft v1.2
 
-function round(n)
-  return n % 1 >= 0.5 and math.ceil(n) or math.floor(n)
-end
+local utils = require("utils")
 
 local MU = level(HPLevelType.kMaximumThetaE, 0)
 local HL = level(HPLevelType.kHeightLayer, 500, 0)
@@ -20,33 +18,14 @@ if not CBTCU_FL or not LCL500 or not LCLmu then
   return
 end
 
--- Spatial averaging of LCL within ~10 km radius using circular 9x9 kernel
--- (MEPS ~2.5 km resolution → radius ~4 grid cells ≈ 10 km)
-local kernel = {0,0,0,0,1,0,0,0,0,
-                0,0,1,1,1,1,1,0,0,
-                0,1,1,1,1,1,1,1,0,
-                0,1,1,1,1,1,1,1,0,
-                1,1,1,1,1,1,1,1,1,
-                0,1,1,1,1,1,1,1,0,
-                0,1,1,1,1,1,1,1,0,
-                0,0,1,1,1,1,1,0,0,
-                0,0,0,0,1,0,0,0,0}
-
-local avgkernel = {}
-for i = 1, #kernel do
-  avgkernel[i] = kernel[i] / 49
-end
-
-local avg_filter = matrixf(9, 9, 1, missing)
-avg_filter:SetValues(avgkernel)
-
 local Nmat = matrixf(result:GetGrid():GetNi(), result:GetGrid():GetNj(), 1, 0)
+local avg_mask = utils.create_mask(result:GetGrid():GetDi()/1000, 10, "circle", true)
 
 Nmat:SetValues(LCL500)
-LCL500 = Filter2D(Nmat, avg_filter, configuration:GetUseCuda()):GetValues()
+LCL500 = Filter2D(Nmat, avg_mask, configuration:GetUseCuda()):GetValues()
 
 Nmat:SetValues(LCLmu)
-LCLmu = Filter2D(Nmat, avg_filter, configuration:GetUseCuda()):GetValues()
+LCLmu = Filter2D(Nmat, avg_mask, configuration:GetUseCuda()):GetValues()
 
 -- Build per-grid-point base heights for vertical N lookup.
 local safe_base_heights = {}
@@ -81,8 +60,8 @@ for i = 1, #CBTCU_FL do
     cover = ProbCb[i]
   end
 
-  base_res[i] = round(safe_base_heights[i] / 0.3048 / 100) * 100  -- metres → feet, 100 ft resolution
-  cov_res[i]  = round(cover)
+  base_res[i] = utils.round(safe_base_heights[i] / 0.3048 / 100) * 100  -- metres → feet, 100 ft resolution
+  cov_res[i]  = utils.round(cover)
 end
 
 result:SetParam(param("CBTCU-FT"))

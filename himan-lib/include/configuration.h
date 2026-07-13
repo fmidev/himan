@@ -16,6 +16,7 @@
 #include "grid.h"
 #include "level.h"
 #include "producer.h"
+#include "s3.h"
 #include "time_duration.h"
 
 namespace himan
@@ -266,6 +267,9 @@ class configuration
 
 	bool ValidateMetadata() const;
 	void ValidateMetadata(bool val);
+
+	s3::read_mode S3ReadMode() const;
+	void S3ReadMode(s3::read_mode theMode);
 
    protected:
 	std::vector<producer> itsSourceProducers;
