@@ -33,9 +33,9 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 	double* d_rh = 0;
 	double* d_td = 0;
 
-	auto TInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("T-K"),
+	auto TInfo = cuda_util::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(), param("T-K"),
 	                                 myTargetInfo->ForecastType());
-	auto RHInfo = cuda::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(),
+	auto RHInfo = cuda_util::Fetch<double>(conf, myTargetInfo->Time(), myTargetInfo->Level(),
 	                                  {param("RH-PRCNT"), param("RH-0TO1")}, myTargetInfo->ForecastType());
 
 	if (!TInfo || !RHInfo)
@@ -50,8 +50,8 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 	CUDA_CHECK(cudaMalloc((void**)&d_rh, memsize));
 	CUDA_CHECK(cudaMalloc((void**)&d_td, memsize));
 
-	cuda::PrepareInfo<double>(TInfo, d_t, stream, conf->UseCacheForReads());
-	cuda::PrepareInfo<double>(RHInfo, d_rh, stream, conf->UseCacheForReads());
+	cuda_util::PrepareInfo<double>(TInfo, d_t, stream, conf->UseCacheForReads());
+	cuda_util::PrepareInfo<double>(RHInfo, d_rh, stream, conf->UseCacheForReads());
 
 	double RHScale = 1;
 
@@ -69,7 +69,7 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 
 	DewpointKernel<double><<<gridSize, blockSize, 0, stream>>>(d_t, d_rh, d_td, RHScale, N);
 
-	cuda::ReleaseInfo<double>(myTargetInfo, d_td, stream);
+	cuda_util::ReleaseInfo<double>(myTargetInfo, d_td, stream);
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));
 

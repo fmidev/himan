@@ -52,7 +52,7 @@ void Process(std::shared_ptr<const himan::plugin_configuration> conf, std::share
 
 	// Copy data to device
 
-	cuda::PrepareInfo(sourceInfo, d_source, stream, conf->UseCacheForReads());
+	cuda_util::PrepareInfo(sourceInfo, d_source, stream, conf->UseCacheForReads());
 
 	// dims
 
@@ -68,7 +68,7 @@ void Process(std::shared_ptr<const himan::plugin_configuration> conf, std::share
 		ClampKernel<T><<<gridSize, blockSize, 0, stream>>>(d_dest, min, max, N);
 	}
 
-	cuda::ReleaseInfo(myTargetInfo, d_dest, stream);
+	cuda_util::ReleaseInfo(myTargetInfo, d_dest, stream);
 
 	// block until the stream has completed
 	CUDA_CHECK(cudaStreamSynchronize(stream));

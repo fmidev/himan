@@ -142,23 +142,23 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 	nextLevel.Index(nextLevel.Index() + 1);
 
 	auto prevUInfo =
-	    cuda::Fetch<float>(conf, myTargetInfo->Time(), prevLevel, param("U-MS"), myTargetInfo->ForecastType());
+	    cuda_util::Fetch<float>(conf, myTargetInfo->Time(), prevLevel, param("U-MS"), myTargetInfo->ForecastType());
 	auto UInfo =
-	    cuda::Fetch<float>(conf, myTargetInfo->Time(), forecastLevel, param("U-MS"), myTargetInfo->ForecastType());
+	    cuda_util::Fetch<float>(conf, myTargetInfo->Time(), forecastLevel, param("U-MS"), myTargetInfo->ForecastType());
 	auto nextUInfo =
-	    cuda::Fetch<float>(conf, myTargetInfo->Time(), nextLevel, param("U-MS"), myTargetInfo->ForecastType());
+	    cuda_util::Fetch<float>(conf, myTargetInfo->Time(), nextLevel, param("U-MS"), myTargetInfo->ForecastType());
 
 	auto prevVInfo =
-	    cuda::Fetch<float>(conf, myTargetInfo->Time(), prevLevel, param("V-MS"), myTargetInfo->ForecastType());
+	    cuda_util::Fetch<float>(conf, myTargetInfo->Time(), prevLevel, param("V-MS"), myTargetInfo->ForecastType());
 	auto VInfo =
-	    cuda::Fetch<float>(conf, myTargetInfo->Time(), forecastLevel, param("V-MS"), myTargetInfo->ForecastType());
+	    cuda_util::Fetch<float>(conf, myTargetInfo->Time(), forecastLevel, param("V-MS"), myTargetInfo->ForecastType());
 	auto nextVInfo =
-	    cuda::Fetch<float>(conf, myTargetInfo->Time(), nextLevel, param("V-MS"), myTargetInfo->ForecastType());
+	    cuda_util::Fetch<float>(conf, myTargetInfo->Time(), nextLevel, param("V-MS"), myTargetInfo->ForecastType());
 
 	auto prevHInfo =
-	    cuda::Fetch<float>(conf, myTargetInfo->Time(), prevLevel, param("HL-M"), myTargetInfo->ForecastType());
+	    cuda_util::Fetch<float>(conf, myTargetInfo->Time(), prevLevel, param("HL-M"), myTargetInfo->ForecastType());
 	auto nextHInfo =
-	    cuda::Fetch<float>(conf, myTargetInfo->Time(), nextLevel, param("HL-M"), myTargetInfo->ForecastType());
+	    cuda_util::Fetch<float>(conf, myTargetInfo->Time(), nextLevel, param("HL-M"), myTargetInfo->ForecastType());
 
 	if (!prevUInfo || !UInfo || !nextUInfo || !prevVInfo || !VInfo || !nextVInfo || !prevHInfo || !nextHInfo)
 	{
@@ -182,16 +182,16 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 	CUDA_CHECK(cudaMalloc((void**)&d_TI, memsize));
 	CUDA_CHECK(cudaMalloc((void**)&d_TI2, memsize));
 
-	cuda::PrepareInfo<float>(prevUInfo, d_prevU, stream, conf->UseCacheForReads());
-	cuda::PrepareInfo<float>(UInfo, d_U, stream, conf->UseCacheForReads());
-	cuda::PrepareInfo<float>(nextUInfo, d_nextU, stream, conf->UseCacheForReads());
+	cuda_util::PrepareInfo<float>(prevUInfo, d_prevU, stream, conf->UseCacheForReads());
+	cuda_util::PrepareInfo<float>(UInfo, d_U, stream, conf->UseCacheForReads());
+	cuda_util::PrepareInfo<float>(nextUInfo, d_nextU, stream, conf->UseCacheForReads());
 
-	cuda::PrepareInfo<float>(prevVInfo, d_prevV, stream, conf->UseCacheForReads());
-	cuda::PrepareInfo<float>(VInfo, d_V, stream, conf->UseCacheForReads());
-	cuda::PrepareInfo<float>(nextVInfo, d_nextV, stream, conf->UseCacheForReads());
+	cuda_util::PrepareInfo<float>(prevVInfo, d_prevV, stream, conf->UseCacheForReads());
+	cuda_util::PrepareInfo<float>(VInfo, d_V, stream, conf->UseCacheForReads());
+	cuda_util::PrepareInfo<float>(nextVInfo, d_nextV, stream, conf->UseCacheForReads());
 
-	cuda::PrepareInfo<float>(prevHInfo, d_prevH, stream, conf->UseCacheForReads());
-	cuda::PrepareInfo<float>(nextHInfo, d_nextH, stream, conf->UseCacheForReads());
+	cuda_util::PrepareInfo<float>(prevHInfo, d_prevH, stream, conf->UseCacheForReads());
+	cuda_util::PrepareInfo<float>(nextHInfo, d_nextH, stream, conf->UseCacheForReads());
 
 	// calculate grid spacing
 	//-------------------------------------------------------------------------------
@@ -288,10 +288,10 @@ void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<i
 	//----------------------------------------------------------------------------
 
 	myTargetInfo->Index<param>(0);
-	cuda::ReleaseInfo<float>(myTargetInfo, d_TI, stream);
+	cuda_util::ReleaseInfo<float>(myTargetInfo, d_TI, stream);
 
 	myTargetInfo->Index<param>(1);
-	cuda::ReleaseInfo<float>(myTargetInfo, d_TI2, stream);
+	cuda_util::ReleaseInfo<float>(myTargetInfo, d_TI2, stream);
 
 	// "SetAB"
 

@@ -12,7 +12,7 @@
 
 using namespace himan;
 
-namespace hc = himan::cuda;
+namespace hc = himan::cuda_util;
 
 himan::level himan::plugin::stability_cuda::itsBottomLevel;
 

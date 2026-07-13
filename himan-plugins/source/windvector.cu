@@ -91,9 +91,9 @@ void himan::plugin::windvector_cuda::RunCuda(std::shared_ptr<const plugin_config
 	// Fetch U & V, unpack to device, do not copy to host
 
 	auto UInfo =
-	    cuda::Fetch<float>(conf, myTargetInfo->Time(), myTargetInfo->Level(), UParam, myTargetInfo->ForecastType());
+	    cuda_util::Fetch<float>(conf, myTargetInfo->Time(), myTargetInfo->Level(), UParam, myTargetInfo->ForecastType());
 	auto VInfo =
-	    cuda::Fetch<float>(conf, myTargetInfo->Time(), myTargetInfo->Level(), VParam, myTargetInfo->ForecastType());
+	    cuda_util::Fetch<float>(conf, myTargetInfo->Time(), myTargetInfo->Level(), VParam, myTargetInfo->ForecastType());
 
 	if (!UInfo || !VInfo)
 	{
@@ -110,8 +110,8 @@ void himan::plugin::windvector_cuda::RunCuda(std::shared_ptr<const plugin_config
 		CUDA_CHECK(cudaMalloc((void**)&d_dir, memsize));
 	}
 
-	cuda::Unpack(UInfo, stream, d_u);
-	cuda::Unpack(VInfo, stream, d_v);
+	cuda_util::Unpack(UInfo, stream, d_u);
+	cuda_util::Unpack(VInfo, stream, d_v);
 
 	// Rotate components; data already at device memory
 
@@ -173,12 +173,12 @@ void himan::plugin::windvector_cuda::RunCuda(std::shared_ptr<const plugin_config
 
 	myTargetInfo->Index<param>(0);
 
-	cuda::ReleaseInfo(myTargetInfo, d_speed, stream);
+	cuda_util::ReleaseInfo(myTargetInfo, d_speed, stream);
 
 	if (itsTargetType != kGust)
 	{
 		myTargetInfo->Index<param>(1);
-		cuda::ReleaseInfo(myTargetInfo, d_dir, stream);
+		cuda_util::ReleaseInfo(myTargetInfo, d_dir, stream);
 	}
 
 	CUDA_CHECK(cudaStreamSynchronize(stream));

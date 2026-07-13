@@ -48,7 +48,7 @@ namespace tpotgpu
 void Process(std::shared_ptr<const plugin_configuration> conf, std::shared_ptr<info<double>> myTargetInfo, bool theta,
              bool thetaw, bool thetae)
 {
-	namespace hc = himan::cuda;
+	namespace hc = himan::cuda_util;
 
 	cudaStream_t stream;
 	CUDA_CHECK(cudaStreamCreate(&stream));

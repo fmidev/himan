@@ -27,7 +27,7 @@ __global__ void Fill(T* devptr, size_t N, T fillValue)
 	}
 }
 
-namespace cuda
+namespace cuda_util
 {
 template <typename T>
 bool Unpack(std::shared_ptr<himan::info<T>> fullInfo, cudaStream_t& stream, T* d_arr);
@@ -51,7 +51,7 @@ std::shared_ptr<himan::info<T>> Fetch(const std::shared_ptr<const plugin_configu
                                       const himan::params& theParams, const himan::forecast_type& theType,
                                       bool returnPacked = true);
 
-}  // namespace cuda
+}  // namespace cuda_util
 
 #endif /* __NVCC__ */
 

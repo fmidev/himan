@@ -14,7 +14,7 @@
 
 namespace himan
 {
-namespace cuda
+namespace cuda_util
 {
 bool Unpack(std::shared_ptr<himan::info<double>> fullInfo, cudaStream_t& stream, double* d_arr)
 {
@@ -142,5 +142,5 @@ template std::shared_ptr<himan::info<float>> Fetch<float>(const std::shared_ptr<
                                                           const himan::forecast_time&, const himan::level&,
                                                           const himan::param&, const himan::forecast_type&, bool);
 
-}  // namespace cuda
+}  // namespace cuda_util
 }  // namespace himan

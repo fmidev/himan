@@ -31,7 +31,7 @@
 using namespace himan;
 using namespace himan::numerical_functions;
 using namespace himan::plugin;
-namespace hc = himan::cuda;
+namespace hc = himan::cuda_util;
 
 himan::level cape_cuda::itsBottomLevel;
 bool cape_cuda::itsUseVirtualTemperature;
