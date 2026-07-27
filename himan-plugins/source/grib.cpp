@@ -1541,8 +1541,7 @@ void WriteData(NFmiGribMessage& message, info<T>& anInfo, bool useBitmap, int pr
 		bitsPerValue = (bitsPerValue == kHPMissingInt) ? DetermineBitsPerValue(values, myprecision) : bitsPerValue;
 
 		// Change missing value 'nan' to a real fp value
-		replace_if(
-		    values.begin(), values.end(), [](const T& v) { return IsMissing(v); }, static_cast<T>(gribMissing));
+		replace_if(values.begin(), values.end(), [](const T& v) { return IsMissing(v); }, static_cast<T>(gribMissing));
 
 		message.BitsPerValue(bitsPerValue);
 		WriteDataValues<T>(values, message, gribMissing);
@@ -3272,6 +3271,12 @@ vector<shared_ptr<himan::info<T>>> grib::FromFile(const file_information& theInp
 		}
 	}
 
+	if (infos.empty())
+	{
+		itsLogger.Warning(fmt::format("No matching messages found from file '{}'", theInputFile.file_location));
+		return infos;
+	}
+
 	aTimer.Stop();
 
 	const long duration = aTimer.GetTime();
@@ -3282,16 +3287,21 @@ vector<shared_ptr<himan::info<T>>> grib::FromFile(const file_information& theInp
 	stringstream ss;
 	ss.precision((speed < 1.) ? 1 : 0);
 
-	ss << "Read '" << options.param.Name() << "' from file '" << theInputFile.file_location << "' ";
-
-	if (theInputFile.offset)
+	for (const auto& info : infos)
 	{
-		ss << "position " << theInputFile.offset.value() << ":" << bytes << " msg# " << theInputFile.message_no.value();
+		ss << "Read '" << info->Param().Name() << "' from file '" << theInputFile.file_location << "' ";
+
+		if (theInputFile.offset)
+		{
+			ss << "position " << theInputFile.offset.value() << ":" << bytes << " msg# "
+			   << theInputFile.message_no.value();
+		}
+
+		ss << " (" << fixed << speed << " MB/s)";
+
+		itsLogger.Debug(ss.str());
+		ss.str("");
 	}
-
-	ss << " (" << fixed << speed << " MB/s)";
-
-	itsLogger.Debug(ss.str());
 
 	return infos;
 }
