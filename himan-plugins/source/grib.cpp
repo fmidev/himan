@@ -30,7 +30,10 @@ using namespace himan::plugin;
 #include "packed_data.h"
 
 #define BitMask1(i) (1u << i)
-#define BitTest(n, i) !!((n)&BitMask1(i))
+
+#ifndef BitTest
+#define BitTest(n, i) !!((n) & BitMask1(i))
+#endif
 
 std::string GetParamNameFromGribShortName(const std::string& paramFileName, const std::string& shortName);
 void UnpackBitmap(const unsigned char* __restrict__ bitmap, int* __restrict__ unpacked, size_t len, size_t unpackedLen);
