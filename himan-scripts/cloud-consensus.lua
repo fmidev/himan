@@ -47,7 +47,7 @@ function compute_std_mean_all(N_EC, N_MEPS, N_MEAN_EC, N_MEAN_MEPS, N_STD_EC, N_
 end
 
 function convert_to_100(array)
-  if not array then return nil end 
+  if not array then return nil end
   local t = {}
   for i = 1, #array do
       t[i] = array[i] * 100
@@ -276,128 +276,166 @@ function get_meps_forecast_type()
   return meps_ftype
 end
 
+function cloud_consensus()
 
-local step = current_time:GetStep():Hours()
+  local step = current_time:GetStep():Hours()
 
-local wt_meps, wt_ens_meps, wt_ec, wt_ens_ec = compute_weights(step)
-local mid_level, dev_factor_low, dev_factor_mid, dev_factor_high = compute_levels(step)
+  local wt_meps, wt_ens_meps, wt_ec, wt_ens_ec = compute_weights(step)
+  local mid_level, dev_factor_low, dev_factor_mid, dev_factor_high = compute_levels(step)
 
-local mean, stDev = nil, nil
-local cl, cm, ch = {}, {}, {} 
-
-
-local disable_meps = nil
-if configuration:Exists("disable_meps") then 
-  disable_meps = ParseBoolean(configuration:GetValue("disable_meps"))
-end
-
-local ec = producer(131, "ECG")
-local ec_prob = producer(242, "ECM_PROB")
-local ec_mta = producer(240, "ECMMTA")
-local meps = producer(4,"MEPS")
-local meps_mta = producer(260, "MEPSMTA")
-
-local meps_time = get_time(meps)
-local meps_step = tonumber(meps_time:GetStep():Hours())
+  local mean, stDev = nil, nil
+  local cl, cm, ch = {}, {}, {}
 
 
--- Get all cloud data from MEPS and EC
-local NL_EC, NM_EC, NH_EC, NL_MEAN_EC, NM_MEAN_EC, NH_MEAN_EC, NL_STD_EC, NM_STD_EC, NH_STD_EC = get_data(ec, ec_prob, forecast_type(HPForecastType.kDeterministic))
-
--- Get cloud data from VIRE
-local NL_VIRE = luatool:Fetch(current_time, current_level, param("NL-0TO1"), current_forecast_type)
-local NM_VIRE = luatool:Fetch(current_time, current_level, param("NM-0TO1"), current_forecast_type)
-local NH_VIRE = luatool:Fetch(current_time, current_level, param("NH-0TO1"), current_forecast_type)
-
-if not NL_VIRE or not NM_VIRE or not NH_VIRE then
-  logger:Error("VIRE cloud layer data not found, aborting")
-  return
-end
-
--- Get rain data from VIRE
-rr_param = param("RRR-KGM2", aggregation(HPAggregationType.kAccumulation, time_duration("01:00")), processing_type())
-local RR_VIRE = luatool:Fetch(current_time, current_level, rr_param, current_forecast_type)
-
-if not NL_EC or not NM_EC or not NH_EC or not NL_MEAN_EC or not NM_MEAN_EC or not NH_MEAN_EC or not NL_STD_EC or not NM_STD_EC or not NH_STD_EC then
-  logger:Error("Some EC data not found, aborting")
-  return
-else
-  logger:Info("EC Data fetched")
-end
-
--- By default uses MEPS and EC data before time step 66. After that, only EC data is used. MEPS can be disabled by setting the configuration parameter "disable_meps" to true.
-if disable_meps or meps_step > 66 then
-  logger:Info("Only using EC data")
-  
-  local wt_sum = wt_ens_ec + wt_ec
-  for i = 1, #NL_EC do
-    mean, stDev = compute_std_mean_ec(NL_EC[i], NL_MEAN_EC[i], NL_STD_EC[i], wt_ec, wt_ens_ec, wt_sum)
-    cl[i] = mean + stDev ^ dev_factor_low * (mean - mid_level) / 50  -- start from the weighted mean and push values away from the midpoint based on the standard deviation. dev_factor controls the volume of the push.
-
-    mean, stDev = compute_std_mean_ec(NM_EC[i], NM_MEAN_EC[i], NM_STD_EC[i], wt_ec, wt_ens_ec, wt_sum)
-    cm[i] = mean + stDev ^ dev_factor_mid * (mean - mid_level) / 50
-
-    mean, stDev = compute_std_mean_ec(NH_EC[i], NH_MEAN_EC[i], NH_STD_EC[i], wt_ec, wt_ens_ec, wt_sum)
-    ch[i] = mean + stDev ^ dev_factor_high * (mean - mid_level) / 50
+  local disable_meps = nil
+  if configuration:Exists("disable_meps") then
+    disable_meps = ParseBoolean(configuration:GetValue("disable_meps"))
   end
-else
-  local NL_MEPS, NM_MEPS, NH_MEPS, NL_MEAN_MEPS, NM_MEAN_MEPS, NH_MEAN_MEPS, NL_STD_MEPS, NM_STD_MEPS, NH_STD_MEPS = get_data(meps, meps_mta, get_meps_forecast_type())
 
-  logger:Info("Using MEPS and EC data")
+  local ec = producer(131, "ECG")
+  local ec_prob = producer(242, "ECM_PROB")
+  local ec_mta = producer(240, "ECMMTA")
+  local meps = producer(4,"MEPS")
+  local meps_mta = producer(260, "MEPSMTA")
 
-  if not NL_MEPS or not NM_MEPS or not NH_MEPS or not NL_MEAN_MEPS or not NM_MEAN_MEPS or not NH_MEAN_MEPS or not NL_STD_MEPS or not NM_STD_MEPS or not NH_STD_MEPS then
-    logger:Warning("Some data not found")
+  local meps_time = get_time(meps)
+  local meps_step = tonumber(meps_time:GetStep():Hours())
+
+
+  -- Get all cloud data from MEPS and EC
+  local NL_EC, NM_EC, NH_EC, NL_MEAN_EC, NM_MEAN_EC, NH_MEAN_EC, NL_STD_EC, NM_STD_EC, NH_STD_EC = get_data(ec, ec_prob, forecast_type(HPForecastType.kDeterministic))
+
+  -- Get cloud data from VIRE
+  local NL_VIRE = luatool:Fetch(current_time, current_level, param("NL-0TO1"), current_forecast_type)
+  local NM_VIRE = luatool:Fetch(current_time, current_level, param("NM-0TO1"), current_forecast_type)
+  local NH_VIRE = luatool:Fetch(current_time, current_level, param("NH-0TO1"), current_forecast_type)
+
+  if not NL_VIRE or not NM_VIRE or not NH_VIRE then
+    logger:Error("VIRE cloud layer data not found, aborting")
+    return false
+  end
+
+  -- Get rain data from VIRE
+  rr_param = param("RRR-KGM2", aggregation(HPAggregationType.kAccumulation, time_duration("01:00")), processing_type())
+  local RR_VIRE = luatool:Fetch(current_time, current_level, rr_param, current_forecast_type)
+
+  if not NL_EC or not NM_EC or not NH_EC or not NL_MEAN_EC or not NM_MEAN_EC or not NH_MEAN_EC or not NL_STD_EC or not NM_STD_EC or not NH_STD_EC then
+    logger:Error("Some EC data not found, aborting")
+    return false
   else
-    logger:Info("EC and MEPS Data fetched")
+    logger:Info("EC Data fetched")
   end
 
-  local wt_sum = wt_ens_ec + wt_ec + wt_meps + wt_ens_meps
-  for i = 1, #NL_EC do
+  -- By default uses MEPS and EC data before time step 66. After that, only EC data is used. MEPS can be disabled by setting the configuration parameter "disable_meps" to true.
+  if disable_meps or meps_step > 66 then
+    logger:Info("Only using EC data")
+  
+    local wt_sum = wt_ens_ec + wt_ec
+    for i = 1, #NL_EC do
+      mean, stDev = compute_std_mean_ec(NL_EC[i], NL_MEAN_EC[i], NL_STD_EC[i], wt_ec, wt_ens_ec, wt_sum)
+      cl[i] = mean + stDev ^ dev_factor_low * (mean - mid_level) / 50  -- start from the weighted mean and push values away from the midpoint based on the standard deviation. dev_factor controls the volume of the push.
 
-    mean, stDev = compute_std_mean_all(NL_EC[i], NL_MEPS[i], NL_MEAN_EC[i], NL_MEAN_MEPS[i], NL_STD_EC[i], NL_STD_MEPS[i], wt_ec, wt_ens_ec, wt_meps, wt_ens_meps, wt_sum)
-    cl[i] = mean + stDev ^ dev_factor_low * (mean - mid_level) / 50
+      mean, stDev = compute_std_mean_ec(NM_EC[i], NM_MEAN_EC[i], NM_STD_EC[i], wt_ec, wt_ens_ec, wt_sum)
+      cm[i] = mean + stDev ^ dev_factor_mid * (mean - mid_level) / 50
 
-    mean, stDev = compute_std_mean_all(NM_EC[i], NM_MEPS[i], NM_MEAN_EC[i], NM_MEAN_MEPS[i], NM_STD_EC[i], NM_STD_MEPS[i], wt_ec, wt_ens_ec, wt_meps, wt_ens_meps, wt_sum)
-    cm[i] = mean + stDev ^ dev_factor_mid * (mean - mid_level) / 50
+      mean, stDev = compute_std_mean_ec(NH_EC[i], NH_MEAN_EC[i], NH_STD_EC[i], wt_ec, wt_ens_ec, wt_sum)
+      ch[i] = mean + stDev ^ dev_factor_high * (mean - mid_level) / 50
+    end
+  else
+    local NL_MEPS, NM_MEPS, NH_MEPS, NL_MEAN_MEPS, NM_MEAN_MEPS, NH_MEAN_MEPS, NL_STD_MEPS, NM_STD_MEPS, NH_STD_MEPS = get_data(meps, meps_mta, get_meps_forecast_type())
 
-    mean, stDev = compute_std_mean_all(NH_EC[i], NH_MEPS[i], NH_MEAN_EC[i], NH_MEAN_MEPS[i], NH_STD_EC[i], NH_STD_MEPS[i], wt_ec, wt_ens_ec, wt_meps, wt_ens_meps, wt_sum)
-    ch[i] = mean + stDev ^ dev_factor_high * (mean - mid_level) / 50
-  end
-end
+    logger:Info("Using MEPS and EC data")
 
--- Limit cloud layers are between 0 and 100.
--- Harmonize cloud layers with total cloud cover. The idea is that at each grid point, total cloudiness can be directly computed as a function of the cl, cm, and ch parameters.
-if cl and cm and ch then
-  local n = {}
+    if not NL_MEPS or not NM_MEPS or not NH_MEPS or not NL_MEAN_MEPS or not NM_MEAN_MEPS or not NH_MEAN_MEPS or not NL_STD_MEPS or not NM_STD_MEPS or not NH_STD_MEPS then
+      logger:Warning("Some MEPS data not found")
+      return false
+    else
+      logger:Info("EC and MEPS Data fetched")
+    end
 
-  for i=1, #cl do 
-    cl[i] = 0.5 * math.sqrt(cl[i] ^2) - 0.5 * math.sqrt((cl[i] - 100) ^2) + 50
-    cm[i] = 0.5 * math.sqrt(cm[i] ^2) - 0.5 * math.sqrt((cm[i] - 100) ^2) + 50
-    ch[i] = 0.5 * math.sqrt(ch[i] ^2) - 0.5 * math.sqrt((ch[i] - 100) ^2) + 50
+    local wt_sum = wt_ens_ec + wt_ec + wt_meps + wt_ens_meps
+    for i = 1, #NL_EC do
 
-    n[i] = 100 - (1 - cl[i] * 1/100) * (1 - cm[i] * 0.75/100) * (1 - ch[i] * 0.25/100) * (1 - cl[i] * cm[i] * (1/3 - (1 - ((50 - cl[i]) ^2 + (50 - cm[i]) ^2) / 5000))/10000) * (1 - cm[i] * ch[i] * (2/3 - (1 - ((50 - cm[i]) ^2 + (50 - ch[i]) ^2) / 5000))/10000) * 100
-    n[i] = n[i] * 0.01
-    
-    if n[i] > 1 then
-      n[i] = 1
+      mean, stDev = compute_std_mean_all(NL_EC[i], NL_MEPS[i], NL_MEAN_EC[i], NL_MEAN_MEPS[i], NL_STD_EC[i], NL_STD_MEPS[i], wt_ec, wt_ens_ec, wt_meps, wt_ens_meps, wt_sum)
+      cl[i] = mean + stDev ^ dev_factor_low * (mean - mid_level) / 50
+
+      mean, stDev = compute_std_mean_all(NM_EC[i], NM_MEPS[i], NM_MEAN_EC[i], NM_MEAN_MEPS[i], NM_STD_EC[i], NM_STD_MEPS[i], wt_ec, wt_ens_ec, wt_meps, wt_ens_meps, wt_sum)
+      cm[i] = mean + stDev ^ dev_factor_mid * (mean - mid_level) / 50
+
+      mean, stDev = compute_std_mean_all(NH_EC[i], NH_MEPS[i], NH_MEAN_EC[i], NH_MEAN_MEPS[i], NH_STD_EC[i], NH_STD_MEPS[i], wt_ec, wt_ens_ec, wt_meps, wt_ens_meps, wt_sum)
+      ch[i] = mean + stDev ^ dev_factor_high * (mean - mid_level) / 50
     end
   end
 
-  -- Correction using the cloud consensus data
-  NL_VIRE, NM_VIRE, NH_VIRE = correct_cloudlayers(n, NL_VIRE, NM_VIRE, NH_VIRE)
-  N_VIRE = rain_correction(RR_VIRE, n)
+  -- Limit cloud layers are between 0 and 100.
+  -- Harmonize cloud layers with total cloud cover. The idea is that at each grid point, total cloudiness can be directly computed as a function of the cl, cm, and ch parameters.
+  if cl and cm and ch then
+    local n = {}
 
-  -- Limit cloud values to 0-1
-  NL_VIRE = limit_values(NL_VIRE)
-  NM_VIRE = limit_values(NM_VIRE)
-  NH_VIRE = limit_values(NH_VIRE)
-  N_VIRE = limit_values(N_VIRE)
+    for i=1, #cl do
+      cl[i] = 0.5 * math.sqrt(cl[i] ^2) - 0.5 * math.sqrt((cl[i] - 100) ^2) + 50
+      cm[i] = 0.5 * math.sqrt(cm[i] ^2) - 0.5 * math.sqrt((cm[i] - 100) ^2) + 50
+      ch[i] = 0.5 * math.sqrt(ch[i] ^2) - 0.5 * math.sqrt((ch[i] - 100) ^2) + 50
 
-  -- Write all parameters to file
+      n[i] = 100 - (1 - cl[i] * 1/100) * (1 - cm[i] * 0.75/100) * (1 - ch[i] * 0.25/100) * (1 - cl[i] * cm[i] * (1/3 - (1 - ((50 - cl[i]) ^2 + (50 - cm[i]) ^2) / 5000))/10000) * (1 - cm[i] * ch[i] * (2/3 - (1 - ((50 - cm[i]) ^2 + (50 - ch[i]) ^2) / 5000))/10000) * 100
+      n[i] = n[i] * 0.01
+
+      if n[i] > 1 then
+        n[i] = 1
+      end
+    end
+
+    -- Correction using the cloud consensus data
+    NL_VIRE, NM_VIRE, NH_VIRE = correct_cloudlayers(n, NL_VIRE, NM_VIRE, NH_VIRE)
+    N_VIRE = rain_correction(RR_VIRE, n)
+
+    -- Limit cloud values to 0-1
+    NL_VIRE = limit_values(NL_VIRE)
+    NM_VIRE = limit_values(NM_VIRE)
+    NH_VIRE = limit_values(NH_VIRE)
+    N_VIRE = limit_values(N_VIRE)
+
+    -- Write all parameters to file
+    write_options.replace_cache = true
+    write_results_to_file(param("NL-0TO1"), NL_VIRE)
+    write_results_to_file(param("NM-0TO1"), NM_VIRE)
+    write_results_to_file(param("NH-0TO1"), NH_VIRE)
+    write_results_to_file(param("N-0TO1"), N_VIRE)
+
+    return true
+  end
+
+  return false
+end
+
+function model_cloudiness()
+
+  logger:Info("***** Starting cloud consensus backup processing *****")
+
+  -- Get cloud data from VIRE
+  local NL_VIRE = luatool:Fetch(current_time, current_level, param("NL-0TO1"), current_forecast_type)
+  local NM_VIRE = luatool:Fetch(current_time, current_level, param("NM-0TO1"), current_forecast_type)
+  local NH_VIRE = luatool:Fetch(current_time, current_level, param("NH-0TO1"), current_forecast_type)
+  local N_VIRE = luatool:Fetch(current_time, current_level, param("N-0TO1"), current_forecast_type)
+
+  if not NL_VIRE or not NM_VIRE or not NH_VIRE or not N_VIRE then
+    logger:Error("VIRE cloud layer data not found, aborting")
+    return false
+  end
+
   write_options.replace_cache = true
   write_results_to_file(param("NL-0TO1"), NL_VIRE)
   write_results_to_file(param("NM-0TO1"), NM_VIRE)
   write_results_to_file(param("NH-0TO1"), NH_VIRE)
-  
   write_results_to_file(param("N-0TO1"), N_VIRE)
+
+  return true
+end
+
+
+local success = cloud_consensus()
+
+if not success then
+  logger:Error("Cloud consensus processing failed, falling back to model cloudiness")
+  model_cloudiness()
 end
