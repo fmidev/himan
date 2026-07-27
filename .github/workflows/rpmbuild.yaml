@@ -242,7 +242,7 @@ jobs:
 
         with open(os.environ['GITHUB_OUTPUT'], 'a') as fh:
           print(f"status={status['status']}", file=fh)
-          print(f"logstream-name={status['attempts'][0]['container']['logStreamName']}", file=fh)
+          print(f"logstream-name={status['container']['logStreamName']}", file=fh)
 
         if status['status'] == 'FAILED':
           sys.exit(1)
