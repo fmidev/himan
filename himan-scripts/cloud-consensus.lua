@@ -416,18 +416,23 @@ function model_cloudiness()
   local NL_VIRE = luatool:Fetch(current_time, current_level, param("NL-0TO1"), current_forecast_type)
   local NM_VIRE = luatool:Fetch(current_time, current_level, param("NM-0TO1"), current_forecast_type)
   local NH_VIRE = luatool:Fetch(current_time, current_level, param("NH-0TO1"), current_forecast_type)
-  local N_VIRE = luatool:Fetch(current_time, current_level, param("N-0TO1"), current_forecast_type)
 
-  if not NL_VIRE or not NM_VIRE or not NH_VIRE or not N_VIRE then
+  if not NL_VIRE or not NM_VIRE or not NH_VIRE then
     logger:Error("VIRE cloud layer data not found, aborting")
     return false
+  end
+
+  local n = {}
+
+  for i=1,#NL_VIRE do
+    n[i] = math.max(NL_VIRE[i], NM_VIRE[i], NH_VIRE[i])
   end
 
   write_options.replace_cache = true
   write_results_to_file(param("NL-0TO1"), NL_VIRE)
   write_results_to_file(param("NM-0TO1"), NM_VIRE)
   write_results_to_file(param("NH-0TO1"), NH_VIRE)
-  write_results_to_file(param("N-0TO1"), N_VIRE)
+  write_results_to_file(param("N-0TO1"), n)
 
   return true
 end
