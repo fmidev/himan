@@ -1,4 +1,8 @@
 -- ICAO TAF/METAR weather code (WX) mapping to numbers from model data (to be used in ADF/AMFIS tool)
+--
+-- v2.0: may return a code for two WX phenomena (precipitation + fog/mist, or snow + drifting/blowing snow).
+-- Combined code = base code + 100 (FG) / 200 (FZFG) / 300 (BR) / 400 (DRSN) / 500 (BLSN).
+-- Ported from icao-smartool v2.0.
 
 local MISS = missing
 
@@ -29,7 +33,7 @@ local PreForm = param("PRECFORM2-N")
 -- visibility FMI (m)
 local visib = param("VV2-M")
 
--- POT FMI 
+-- POT FMI
 local POT = param("POT-PRCNT")
 
 -- CbTCu top FMI (FL)
@@ -47,11 +51,17 @@ local t = param("T-K")
 -- skin temperature
 local t0m = param("SKT-K")
 
+-- 2m relative humidity (%)
+local RH = param("RH-PRCNT")
+
 -- wind speed
 local ws = param("FF-MS")
 
 -- wind gust
 local wg = param("FFG-MS", aggregation(HPAggregationType.kMaximum, time_duration(HPTimeResolution.kHourResolution, 1)), processing_type())
+
+-- past 5 hours' average 2m temperature (dry-snow check for DRSN/BLSN)
+local Tavg = param("T-K", aggregation(HPAggregationType.kAverage, time_duration(HPTimeResolution.kHourResolution, 5)), processing_type())
 
 -- fetch input params
 local PreIntdata = luatool:Fetch(current_time, current_level, PreInt, current_forecast_type)
@@ -69,6 +79,8 @@ else
 end
 local BSdata = luatool:Fetch(current_time, level(HPLevelType.kHeightLayer,6000,0), BS, current_forecast_type)
 local Tdata = luatool:Fetch(current_time, level(HPLevelType.kHeight,2), t, current_forecast_type)
+local RHdata = luatool:Fetch(current_time, level(HPLevelType.kHeight,2), RH, current_forecast_type)
+local Tavgdata = luatool:Fetch(current_time, level(HPLevelType.kHeight,2), Tavg, current_forecast_type)
 
 local TGdata = luatool:Fetch(current_time, level(HPLevelType.kHeight,0), t, current_forecast_type)
 -- for EC fetch param skin temperature
@@ -115,7 +127,10 @@ local areaMaxCB = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
 
 -- set constants
 -- rr limit for MEPS (which has large areas of near zero hourly precipitation)
-local rrLim = 0
+local rrLim = 0.04
+
+-- Relative humidity threshold [%] for (freezing) misty/foggy conditions in precipitation
+local rhMoist = 95
 
 -- Threshold for showery precipitation (may need tweaking) [J/kg]
 local shCAPE = 10
@@ -142,7 +157,11 @@ local HvyDzLim = 0.2
 local ModRaLim = 1
 local HvyRaLim = 4
 
--- Limit for moderate/heavy sleet [mm/h]
+-- Limit for moderate/heavy "wet" sleet (RASN) [mm/h]
+local ModRaSleetLim = 1
+local HvyRaSleetLim = 2.5
+
+-- Limit for moderate/heavy "snowy" sleet (SNRA) [mm/h]
 local ModSleetLim = 0.7
 local HvySleetLim = 1.5
 
@@ -198,7 +217,7 @@ for i=1, #PreIntdata do
     wx[i] = 12
   end
 
-  -- Drizzle
+  -- Drizzle, possibly with mist/fog
   if (PreFormdata[i] == 0) then
     -- -DZ
     wx[i] = 50
@@ -210,9 +229,19 @@ for i=1, #PreIntdata do
     if (PreIntdata[i] > HvyDzLim) then
       wx[i] = 52
     end
+
+    -- -DZ BR (DZ/+DZ BR not included due to already misty visibility caused by drizzle)
+    if (wx[i] == 50 and visibdata[i] >= 1000 and visibdata[i] < 5000 and RHdata[i] > rhMoist) then
+      wx[i] = wx[i] + 300
+    end
+
+    -- -DZ/DZ/+DZ FG
+    if (wx[i] < 100 and visibdata[i] < 1000 and RHdata[i] > rhMoist) then
+      wx[i] = wx[i] + 100
+    end
   end
 
-  -- Rain
+  -- Rain, possibly with thunderstorm and/or fog/mist
   if ((PreFormdata[i] == 1) and (PreIntdata[i] > rrLim)) then
     -- continuous rain
     if (PreType == 1) then
@@ -295,14 +324,38 @@ for i=1, #PreIntdata do
         end
       end
     end
+
+    -- -RA/-SHRA/-TSRA/-TSGR BR (moderate/heavy rain not considered due to highly variable visibility in them)
+    if ((wx[i] == 20 or wx[i] == 23 or wx[i] == 60 or wx[i] == 81) and visibdata[i] >= 1000 and visibdata[i] < 5000 and RHdata[i] > rhMoist) then
+      wx[i] = wx[i] + 300
+    end
+
+    -- -RA/RA/+RA/-SHRA/SHRA/+SHRA/-TSRA/TSRA/+TSRA/-TSGR/TSGR/+TSGR FG
+    if (wx[i] < 100 and visibdata[i] < 1000 and RHdata[i] > rhMoist) then
+      wx[i] = wx[i] + 100
+    end
   end
 
-  -- TS (thunderstorm nearby within 8km of the airport, but no precipitation) = 32
+  -- TS (thunderstorm nearby within 8km of the airport, but no precipitation), possibly with mist/fog = 32
   if (PreIntdata[i] == 0 and areaMaxPOT[i] > TSlim and areaMaxCB[i] > CbTSlim) then
     wx[i] = 32
+
+    -- TS BR
+    if (visibdata[i] >= 1000 and visibdata[i] < 5000) then
+      wx[i] = wx[i] + 300
+    end
+
+    -- TS FG/FZFG
+    if (wx[i] < 100 and visibdata[i] < 1000) then
+      if (Tdata[i] >= 273.15) then
+        wx[i] = wx[i] + 100
+      else
+        wx[i] = wx[i] + 200
+      end
+    end
   end
 
-  -- Sleet (possibly with thunderstorms)
+  -- Sleet (possibly with thunderstorms and/or fog)
   if ((PreFormdata[i] == 2) and (PreIntdata[i] > rrLim)) then
     -- continuous
     if (PreType == 1) then
@@ -311,11 +364,11 @@ for i=1, #PreIntdata do
         -- -RASN
         wx[i] = 66
         -- RASN
-        if (PreIntdata[i] > ModSleetLim) then
+        if (PreIntdata[i] > ModRaSleetLim) then
           wx[i] = 67
         end
         -- +RASN
-        if (PreIntdata[i] > HvySleetLim) then
+        if (PreIntdata[i] > HvyRaSleetLim) then
           wx[i] = 68
         end
 
@@ -332,6 +385,11 @@ for i=1, #PreIntdata do
           wx[i] = 71
         end
       end
+
+      -- -RASN/-SNRA FG (RASN/+RASN/SNRA/+SNRA FG not allowed)
+      if ((wx[i] == 66 or wx[i] == 69) and visibdata[i] < 1000 and RHdata[i] > rhMoist) then
+        wx[i] = wx[i] + 100
+      end
     end
     if (PreType == 2) then
       -- wet sleet shower
@@ -339,11 +397,11 @@ for i=1, #PreIntdata do
         -- -SHRASN
         wx[i] = 84
         -- SHRASN
-        if (PreIntdata[i] > ModSleetLim) then
+        if (PreIntdata[i] > ModRaSleetLim) then
           wx[i] = 85
         end
         -- +SHRASN
-        if (PreIntdata[i] > HvySleetLim) then
+        if (PreIntdata[i] > HvyRaSleetLim) then
           wx[i] = 86
         end
         -- Thunderstorm and wet sleet
@@ -351,11 +409,11 @@ for i=1, #PreIntdata do
           -- -TSRASN
           wx[i] = 33
           -- TSRASN
-          if (PreIntdata[i] > ModSleetLim) then
+          if (PreIntdata[i] > ModRaSleetLim) then
             wx[i] = 34
           end
           -- +TSRASN
-          if (PreIntdata[i] > HvySleetLim) then
+          if (PreIntdata[i] > HvyRaSleetLim) then
             wx[i] = 35
           end
         end
@@ -385,24 +443,35 @@ for i=1, #PreIntdata do
           end
         end
       end
+
+      -- -SHRASN/-TSRASN/-SHSNRA/-TSSNRA FG (+ variants not allowed)
+      if ((wx[i] == 84 or wx[i] == 33 or wx[i] == 87 or wx[i] == 36) and visibdata[i] < 1000 and RHdata[i] > rhMoist) then
+        wx[i] = wx[i] + 100
+      end
     end
   end
 
+  
+  -- set when DRSN/BLSN applies, so Snow section can combine it with the precipitation code
+  local DRBL = missing
+
   -- Simplified guesses for DRSN/BLSN
-  -- Tsfc to discard open water areas (no ice)
+  -- Tsfc to discard open water areas (no ice), Tavg to discard wet-snow cases
   -- DRSN
   if (Snaccdata ~= nil) then
-    if (Snaccdata[i] > DRSNlim and wsdata[i] >= 6 and Tdata[i] < 273.15 and TGdata[i] < 273.15) then
-      wx[i] = 15
+    if (Snaccdata[i] > DRSNlim and wsdata[i] >= 6 and Tdata[i] < 273.15 and TGdata[i] < 273.15 and Tavgdata[i] < 273.15) then
+      DRBL = 15
+      wx[i] = DRBL
     end
 
     -- BLSN
-    if (Snaccdata[i] > DRSNlim and wsdata[i] >= BLSNwind and wgdata[i] >=BLSNgust and Tdata[i] < 273.15 and TGdata[i] < 273.15) then
-      wx[i] = 16
+    if (Snaccdata[i] > DRSNlim and wsdata[i] >= BLSNwind and wgdata[i] >=BLSNgust and Tdata[i] < 273.15 and TGdata[i] < 273.15 and Tavgdata[i] < 273.15) then
+      DRBL = 16
+      wx[i] = DRBL
     end
   end
 
-  --Snow (possibly with thunderstorms)
+  --Snow (possibly with thunderstorm and/or drifting/blowing snow or fog)
   if ((PreFormdata[i] == 3) and (PreIntdata[i] > rrLim)) then
     --continuous
     if (PreType == 1) then
@@ -443,9 +512,26 @@ for i=1, #PreIntdata do
         wx[i] = 28
       end
     end
+
+    -- add DRSN/BLSN when applicable
+    if (DRBL == 15) then
+      wx[i] = wx[i] + 400
+    end
+    if (DRBL == 16) then
+      wx[i] = wx[i] + 500
+    end
+
+    -- -SN/-SHSN/-TSSN FG/FZFG, only if DRSN/BLSN wasn't already added (+ variants not allowed)
+    if ((wx[i] == 72 or wx[i] == 90 or wx[i] == 26) and visibdata[i] < 1000 and RHdata[i] > rhMoist) then
+      if (Tdata[i] >= 273.15) then
+        wx[i] = wx[i] + 100
+      else
+        wx[i] = wx[i] + 200
+      end
+    end
   end
 
-  -- Freezing Drizzle
+  -- Freezing Drizzle, possibly with mist or freezing fog
   if (PreFormdata[i] == 4) then
     -- -FZDZ
     wx[i] = 53
@@ -457,9 +543,19 @@ for i=1, #PreIntdata do
     if (PreIntdata[i] > HvyFzdzLim) then
       wx[i] = 55
     end
+
+    -- -FZDZ BR (FZDZ/+FZDZ BR not included due to already misty visibility caused by drizzle)
+    if (wx[i] == 53 and visibdata[i] >= 1000 and visibdata[i] < 5000) then
+      wx[i] = wx[i] + 300
+    end
+
+    -- -FZDZ/FZDZ/+FZDZ FZFG
+    if (wx[i] < 100 and visibdata[i] < 1000) then
+      wx[i] = wx[i] + 200
+    end
   end
 
-  -- Freezing Rain
+  -- Freezing Rain, possibly with mist or freezing fog
   if (PreFormdata[i] == 5) then
     -- -FZRA
     wx[i] = 63
@@ -470,6 +566,16 @@ for i=1, #PreIntdata do
     -- +FZRA
     if (PreIntdata[i] > HvyFzraLim) then
       wx[i] = 65
+    end
+
+    -- -FZRA BR (FZRA/+FZRA not included due to highly variable visibility in them)
+    if (wx[i] == 63 and visibdata[i] >= 1000 and visibdata[i] < 5000) then
+      wx[i] = wx[i] + 300
+    end
+
+    -- -FZRA/FZRA/+FZRA FZFG
+    if (wx[i] < 100 and visibdata[i] < 1000) then
+      wx[i] = wx[i] + 200
     end
   end
 
