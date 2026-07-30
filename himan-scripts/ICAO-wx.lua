@@ -60,7 +60,13 @@ local PreFormdata = luatool:Fetch(current_time, current_level, PreForm, current_
 local visibdata = luatool:Fetch(current_time, current_level, visib, current_forecast_type)
 local POTdata = luatool:Fetch(current_time, current_level, POT, current_forecast_type)
 local cbdata = luatool:Fetch(current_time, current_level, cb, current_forecast_type)
-local CAPEmdata = luatool:Fetch(current_time, current_level, CAPEm, current_forecast_type)
+-- use most-unstable CAPE for EC, surface level for MEPS
+local CAPEmdata
+if (configuration:GetTargetProducer():GetId() == 240) then
+  CAPEmdata = luatool:Fetch(current_time, level(HPLevelType.kMaximumThetaE, 0), CAPEm, current_forecast_type)
+else
+  CAPEmdata = luatool:Fetch(current_time, current_level, CAPEm, current_forecast_type)
+end
 local BSdata = luatool:Fetch(current_time, level(HPLevelType.kHeightLayer,6000,0), BS, current_forecast_type)
 local Tdata = luatool:Fetch(current_time, level(HPLevelType.kHeight,2), t, current_forecast_type)
 
