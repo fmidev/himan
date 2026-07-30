@@ -347,7 +347,7 @@ for i=1, #PreIntdata do
           wx[i] = 86
         end
         -- Thunderstorm and wet sleet
-        if (POTdata[i] > TSlim and cbdata > CbTSlim) then
+        if (POTdata[i] > TSlim and cbdata[i] > CbTSlim) then
           -- -TSRASN
           wx[i] = 33
           -- TSRASN
@@ -478,11 +478,11 @@ for i=1, #PreIntdata do
     -- -SG
     wx[i] = 75
     -- SG
-    if (PreIntdata[i] > ModSGLim) then
+    if (PreIntdata[i] > ModSGlim) then
       wx[i] = 76
     end
     -- +SG
-    if (PreIntdata[i] > HvySGLim) then
+    if (PreIntdata[i] > HvySGlim) then
       wx[i] = 77
     end
   end
