@@ -7,6 +7,7 @@ Produce it in both flight level and hft coordinates
 ]]
 
 logger:Info("Calculating base and top for icing")
+local utils = require("utils")
 local MISS = missing
 local IceParam = param("ICING-N")
 
@@ -66,8 +67,8 @@ function AddScalar(arr, scalar)
   return ret
 end
 
-local baseHPa = BaseHPa(3)
-local topHPa = TopHPa(5,AddScalar(baseHPa,-1))
+local baseHPa = BaseHPa(3) -- icing index >=4
+local topHPa = TopHPa(4,AddScalar(baseHPa,-1)) -- icing index <4
 
 -- Convert top [hPa] to FL
 local topFL = {}
@@ -85,8 +86,8 @@ local topM = hitool:VerticalValueGrid(param("HL-M"), topHPa)
 local topHFt = {}
 local baseHFt = {}
 for i=1, #baseM do
-  topHFt[i] = 5 * math.floor(topM[i] / 152.4)
-  baseHFt[i] = 5 * math.floor(baseM[i] / 152.4)
+  topHFt[i] = utils.round(topM[i] / 0.3048 / 100)
+  baseHFt[i] = utils.round(baseM[i] / 0.3048 / 100)
 end
 
 result:SetParam(param("ICING-TOP-FL"))
