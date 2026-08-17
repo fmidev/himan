@@ -51,8 +51,8 @@ local t = param("T-K")
 -- skin temperature
 local t0m = param("SKT-K")
 
--- 2m relative humidity (%)
-local RH = param("RH-PRCNT")
+-- relative humidity (%)
+local RH = param("RH-0TO1")
 
 -- wind speed
 local ws = param("FF-MS")
