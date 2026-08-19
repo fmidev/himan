@@ -7,54 +7,52 @@ Produce it in both flight level and hft coordinates
 ]]
 
 logger:Info("Calculating base and top for severe icing")
-local utils = require("utils")
 
 local IceParam = param("ICING-N")
 
--- We set the vertical search function to work with pressure based vertical coordinate
--- The reasoning is that the pressures can be directly converted into flight levels (FL)
-hitool:SetHeightUnit(HPParameterUnit.kHPa)
+-- We set the vertical search function to work with height based vertical coordinate
+-- The reasoning is that the search range and the freezing rain/drizzle limit are given in meters
+hitool:SetHeightUnit(HPParameterUnit.kM)
+
+-- Highest searched height
+local maxH = 10000
 
 -- Get surface pressure
 local p = luatool:Fetch(current_time, level(HPLevelType.kHeight, 0), param("P-PA"), current_forecast_type)
 
-function BaseHPa(threshold)
-  -- Find the base of icing define as the lowest height / highest pressure at which icing index crosses the threshold value
-  -- returns the height as pressure based coordinate
+function BaseHeight(threshold)
+  -- Find the base of icing define as the lowest height at which icing index crosses the threshold value
+  -- returns the height in meters
 
   local zerodata = {}
-  local pFL300data = {}
+  local maxHdata = {}
   local thresholddata = {}
 
   for i = 1, #p do
-     -- convert surface pressure to hPa
-     zerodata[i] = p[i] / 100
+     zerodata[i] = 0
      thresholddata[i] = threshold
-
-     -- FL300 (30000ft=301hPa)
-     pFL300data[i] = 301
+     maxHdata[i] = maxH
   end
 
-  local basedata = hitool:VerticalHeightGreaterThanGrid(IceParam, zerodata, pFL300data, thresholddata, 1)
+  local basedata = hitool:VerticalHeightGreaterThanGrid(IceParam, zerodata, maxHdata, thresholddata, 1)
 
   return basedata
 end
 
-function TopHPa(threshold,basedata)
-  -- Find the next top above the base of icing define as the height / pressure at which icing index crosses the threshold value
-  -- returns the height as pressure
+function TopHeight(threshold,basedata)
+  -- Find the next top above the base of icing define as the height at which icing index crosses the threshold value
+  -- returns the height in meters
 
-  local pFL300data = {}
+  local maxHdata = {}
   local thresholddata = {}
 
   for i = 1, #basedata do
      thresholddata[i] = threshold
-
-     -- FL300 (30000ft=301hPa)
-     pFL300data[i] = 301
+     maxHdata[i] = maxH
   end
 
-  local topdata = hitool:VerticalHeightLessThanGrid(IceParam, basedata, pFL300data, thresholddata, 1)
+  -- Search is started slightly above the base, otherwise the base itself is returned as the top
+  local topdata = hitool:VerticalHeightLessThanGrid(IceParam, AddScalar(basedata,1), maxHdata, thresholddata, 1)
 
   return topdata
 end
@@ -67,32 +65,50 @@ function AddScalar(arr, scalar)
   return ret
 end
 
-local baseHPa = BaseHPa(6) -- severe icing index >= 7
-local topHPa = TopHPa(7,AddScalar(baseHPa,-1)) -- severe icing index < 7
+-- Base and top are the heights where the interpolated icing index reaches and leaves
+-- the value 7, so that the layer is not padded towards the neighbouring model levels.
+-- The base threshold is nudged just below 7 because the search is done with a strict
+-- comparison (>) and the index is commonly exactly 7 in freezing rain and drizzle.
+local baseM = BaseHeight(7 - 0.001) -- severe icing index >= 7
+local topM = TopHeight(7,baseM) -- severe icing index < 7
 
--- Convert pressure to FL
-local topFL = {}
-local baseFL = {}
-for i=1, #topHPa do
-  topFL[i] = FlightLevel_(topHPa[i] * 100)
-  baseFL[i] = FlightLevel_(baseHPa[i] * 100)
+-- Base and top are always given as a pair
+for i=1, #baseM do
+  if IsMissing(baseM[i]) then
+    topM[i] = missing
+  elseif IsMissing(topM[i]) then
+    -- Icing continues above the searched range
+    topM[i] = maxH
+  end
 end
 
--- Fetch metric heights of base and top to convert them to hFt
-local baseM = hitool:VerticalValueGrid(param("HL-M"), baseHPa)
-local topM = hitool:VerticalValueGrid(param("HL-M"), topHPa)
+-- Fetch pressures of base and top to convert them to FL
+local baseP = hitool:VerticalValueGrid(param("P-HPA"), baseM)
+local topP = hitool:VerticalValueGrid(param("P-HPA"), topM)
 
--- Convert top [M] to hFt
+-- Convert base and top to FL and hFt
+local topFL = {}
+local baseFL = {}
 local topHFt = {}
 local baseHFt = {}
 for i=1, #baseM do
-  -- If height < 15 m, icing should be classified as freezing rain/drizzle (0 m)
-  if baseM[i] < 15 then
-    topHFt[i] = 0
-    baseHFt[i] = 0
+  if IsMissing(baseM[i]) then
+    topFL[i] = missing
+    baseFL[i] = missing
+    topHFt[i] = missing
+    baseHFt[i] = missing
   else
-    topHFt[i] = utils.round(topM[i] / 0.3048 / 100)
-    baseHFt[i] = utils.round(baseM[i] / 0.3048 / 100)
+    topFL[i] = FlightLevel_(topP[i] * 100)
+    topHFt[i] = math.floor(topM[i] / 30.48)
+
+    -- If height < 15 m, icing should be classified as freezing rain/drizzle (0 m)
+    if baseM[i] < 15 then
+      baseFL[i] = FlightLevel_(p[i])
+      baseHFt[i] = 0
+    else
+      baseFL[i] = FlightLevel_(baseP[i] * 100)
+      baseHFt[i] = math.floor(baseM[i] / 30.48)
+    end
   end
 end
 
