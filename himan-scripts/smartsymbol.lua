@@ -425,7 +425,7 @@ function Daylight()
     end
   end
 
-  result:SetParam(param("DAYLIGHT-INDEX"))
+  result:SetParam(param("DAYLIGHT-0OR1"))
   result:SetValues(Daylight)
   luatool:WriteToFile(result)
 end
