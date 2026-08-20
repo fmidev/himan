@@ -96,7 +96,7 @@ for i=1, #baseM do
 
   -- If height < 15 m, icing should be classified as freezing rain/drizzle (0 m)
   if baseM[i] < 15 then
-    baseFL[i] = 0
+    baseFL[i] = FlightLevel_(p[i])
     baseHFt[i] = 0
   else
     baseFL[i] = FlightLevel_(baseP[i] * 100) -- hPa to Pa
