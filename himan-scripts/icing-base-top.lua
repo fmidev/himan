@@ -67,7 +67,11 @@ function AddScalar(arr, scalar)
   return ret
 end
 
-local baseHPa = BaseHPa(3) -- icing index >=4
+-- Base and top are the heights where the interpolated icing index reaches and leaves
+-- the value 4, so that the layer is not padded towards the neighbouring model levels.
+-- The base threshold is nudged just below 4 because the search is done with a strict
+-- comparison (>).
+local baseHPa = BaseHPa(3.999) -- icing index >=4
 local topHPa = TopHPa(4,AddScalar(baseHPa,-1)) -- icing index <4
 
 -- Convert top [hPa] to FL

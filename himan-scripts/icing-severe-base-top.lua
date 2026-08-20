@@ -10,9 +10,8 @@ logger:Info("Calculating base and top for severe icing")
 
 local IceParam = param("ICING-N")
 
--- We set the vertical search function to work with height based vertical coordinate
--- The reasoning is that the search range and the freezing rain/drizzle limit are given in meters
-hitool:SetHeightUnit(HPParameterUnit.kM)
+-- The vertical search is done in the default height based coordinate (HL-M),
+-- so the search range and the freezing rain/drizzle limit are given in meters
 
 -- Highest searched height
 local maxH = 10000
@@ -68,7 +67,7 @@ end
 -- Base and top are the heights where the interpolated icing index reaches and leaves
 -- the value 7, so that the layer is not padded towards the neighbouring model levels.
 -- The base threshold is nudged just below 7 because the search is done with a strict
--- comparison (>) and the index is commonly exactly 7 in freezing rain and drizzle.
+-- comparison (>).
 local baseM = BaseHeight(7 - 0.001) -- severe icing index >= 7
 local topM = TopHeight(7,baseM) -- severe icing index < 7
 
@@ -92,23 +91,16 @@ local baseFL = {}
 local topHFt = {}
 local baseHFt = {}
 for i=1, #baseM do
-  if IsMissing(baseM[i]) then
-    topFL[i] = missing
-    baseFL[i] = missing
-    topHFt[i] = missing
-    baseHFt[i] = missing
-  else
-    topFL[i] = FlightLevel_(topP[i] * 100)
-    topHFt[i] = math.floor(topM[i] / 30.48)
+  topFL[i] = FlightLevel_(topP[i] * 100) -- hPa to Pa
+  topHFt[i] = math.ceil(topM[i] / 30.48) -- 0.3048 / 100
 
-    -- If height < 15 m, icing should be classified as freezing rain/drizzle (0 m)
-    if baseM[i] < 15 then
-      baseFL[i] = FlightLevel_(p[i])
-      baseHFt[i] = 0
-    else
-      baseFL[i] = FlightLevel_(baseP[i] * 100)
-      baseHFt[i] = math.floor(baseM[i] / 30.48)
-    end
+  -- If height < 15 m, icing should be classified as freezing rain/drizzle (0 m)
+  if baseM[i] < 15 then
+    baseFL[i] = 0
+    baseHFt[i] = 0
+  else
+    baseFL[i] = FlightLevel_(baseP[i] * 100) -- hPa to Pa
+    baseHFt[i] = math.floor(baseM[i] / 30.48) -- 0.3048 / 100
   end
 end
 
