@@ -32,6 +32,13 @@
 --
 -- Hessaa:
 -- For backwards compatibility, we map WeatherNumber to Hessaa (also called WeatherSymbol3) 
+--
+-- Daylight:
+-- Binary parameter telling whether the sun is up (1) or down (0) at the valid time
+-- of the forecast. Client applications use this to pick between the day and night
+-- variant of a symbol. The limit is the same one that is used for sunrise and sunset
+-- in almanacs: the center of the sun is 50' (0.833 degrees) below the horizon, which
+-- accounts for atmospheric refraction (34') and the radius of the solar disk (16').
 
 local MISS = missing
 local SmartSymbolTable = {}
@@ -397,7 +404,34 @@ function Hessaa(WeatherNumber)
   luatool:WriteToFile(result)
 end
 
+function Daylight()
+  logger:Debug("Calculating Daylight")
+
+  -- Sun is considered to be up when the center of the disk is higher than
+  -- 50 arc minutes below the horizon (same definition as in almanacs).
+  local sunrise_elevation_angle = -0.833
+
+  local validtime = current_time:GetValidDateTime()
+  local Daylight = {}
+
+  for i=1,result:SizeLocations() do
+    -- Default is night; only points where the sun is up are flipped to daylight.
+    Daylight[i] = 0
+
+    local elevation_angle = ElevationAngle_(result:GetLatLon(i), validtime)
+
+    if elevation_angle > sunrise_elevation_angle then
+      Daylight[i] = 1
+    end
+  end
+
+  result:SetParam(param("DAYLIGHT-INDEX"))
+  result:SetValues(Daylight)
+  luatool:WriteToFile(result)
+end
+
 number = WeatherNumber()
+Daylight()
 
 if number then
   SmartSymbol(number)
