@@ -35,7 +35,7 @@ local reliability = {}
 for i = 1, #stddev do
   local sd = stddev[i]
 
-  if sd ~= sd then
+  if IsMissing(sd) then
     reliability[i] = missing
   elseif sd < good then
     reliability[i] = 3
