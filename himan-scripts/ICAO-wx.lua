@@ -130,7 +130,7 @@ local areaMaxCB = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
 local rrLim = 0.04
 
 -- Relative humidity threshold [%] for (freezing) misty/foggy conditions in precipitation
-local rhMoist = 95
+local rhMoist = 0.95
 
 -- Threshold for showery precipitation (may need tweaking) [J/kg]
 local shCAPE = 10
