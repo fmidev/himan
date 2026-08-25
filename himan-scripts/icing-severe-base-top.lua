@@ -1,13 +1,13 @@
 --[[
  
-icing-base-top 
+Severe icing computation for ILME 
 
-Find the base and top of icing index defined by some threshold
+Find the base and top of severe icing index defined by some threshold
 Produce it in both flight level and hft coordinates
 ]]
 
-logger:Info("Calculating base and top for icing")
-local MISS = missing
+logger:Info("Calculating base and top for severe icing")
+
 local IceParam = param("ICING-N")
 
 -- We set the vertical search function to work with pressure based vertical coordinate
@@ -68,16 +68,16 @@ function AddScalar(arr, scalar)
 end
 
 -- Base and top are the heights where the interpolated icing index reaches and leaves
--- the value 4, so that the layer is not padded towards the neighbouring model levels.
--- The base threshold is nudged just below 4 because the search is done with a strict
+-- the value 7, so that the layer is not padded towards the neighbouring model levels.
+-- The base threshold is nudged just below 7 because the search is done with a strict
 -- comparison (>).
-local baseHPa = BaseHPa(4 - 0.001) -- icing index >= 4
-local topHPa = TopHPa(4,baseHPa) -- icing index < 4
+local baseHPa = BaseHPa(7 - 0.001) -- severe icing index >= 7
+local topHPa = TopHPa(7,baseHPa) -- severe icing index < 7
 
 -- Base and top are always given as a pair
 for i=1, #baseHPa do
   if IsMissing(baseHPa[i]) then
-    topHPa[i] = MISS
+    topHPa[i] = missing
   elseif IsMissing(topHPa[i]) then
     -- Icing continues above the searched range
     topHPa[i] = maxP
@@ -97,7 +97,7 @@ for i=1, #baseHPa do
   topFL[i] = FlightLevel_(topHPa[i] * 100) -- hPa to Pa
   topHFt[i] = math.ceil(topM[i] / 30.48) -- 0.3048 / 100
 
-  -- If height < 15 m, icing reaches the ground (0 m)
+  -- If height < 15 m, icing should be classified as freezing rain/drizzle (0 m)
   if baseM[i] < 15 then
     baseFL[i] = FlightLevel_(p[i])
     baseHFt[i] = 0
@@ -108,25 +108,25 @@ for i=1, #baseHPa do
 end
 
 
-result:SetParam(param("ICING-TOP-FL"))
+result:SetParam(param("ICING-SEV-TOP-FL"))
 result:SetValues(topFL)
 
 logger:Info("Writing source data to file")
 luatool:WriteToFile(result)
 
-result:SetParam(param("ICING-BASE-FL"))
+result:SetParam(param("ICING-SEV-BASE-FL"))
 result:SetValues(baseFL)
 
 logger:Info("Writing source data to file")
 luatool:WriteToFile(result)
 
-result:SetParam(param("ICING-TOP-FT"))
+result:SetParam(param("ICING-SEV-TOP-FT"))
 result:SetValues(topHFt)
 
 logger:Info("Writing source data to file")
 luatool:WriteToFile(result)
 
-result:SetParam(param("ICING-BASE-FT"))
+result:SetParam(param("ICING-SEV-BASE-FT"))
 result:SetValues(baseHFt)
 
 logger:Info("Writing source data to file")
