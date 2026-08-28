@@ -6,13 +6,27 @@
 
 local MISS = missing
 
+-- producer ids
+local ECGMTA = 240
+local MEPSMTA = 260
+
+local producerId = configuration:GetTargetProducer():GetId()
+
+-- commonly used levels
+local level2m = level(HPLevelType.kHeight, 2)
+local level10m = level(HPLevelType.kHeight, 10)
+local levelGround = level(HPLevelType.kHeight, 0)
+
+-- freezing point [K]
+local T0 = 273.15
+
 -- precipitation intensity mm/h
 local PreInt = param("RRR-KGM2")
 
 -- snowfall intensity mm/h
 -- use solid precipitation rate for MEPS
 local Snow
-if (configuration:GetTargetProducer():GetId() == 260) then
+if (producerId == MEPSMTA) then
   Snow = param("RRRS-KGM2")
 else
   Snow = param("SNR-KGM2")
@@ -21,7 +35,7 @@ end
 -- snow accumulation
 -- use solid precipitation rate for MEPS
 local Snacc
-if (configuration:GetTargetProducer():GetId() == 260) then
+if (producerId == MEPSMTA) then
   Snacc = param("RRS-12-MM")
 else
   Snacc = param("SN-12-MM")
@@ -66,7 +80,7 @@ local TavgHours = 5
 -- analysis time interval of the producer [h], needed when the averaging window
 -- reaches over the analysis time and an older forecast has to be used
 local runInterval = 12
-if (configuration:GetTargetProducer():GetId() == 260) then
+if (producerId == MEPSMTA) then
   runInterval = 3
 end
 
@@ -79,14 +93,14 @@ local POTdata = luatool:Fetch(current_time, current_level, POT, current_forecast
 local cbdata = luatool:Fetch(current_time, current_level, cb, current_forecast_type)
 -- use most-unstable CAPE for EC, surface level for MEPS
 local CAPEmdata
-if (configuration:GetTargetProducer():GetId() == 240) then
+if (producerId == ECGMTA) then
   CAPEmdata = luatool:Fetch(current_time, level(HPLevelType.kMaximumThetaE, 0), CAPEm, current_forecast_type)
 else
   CAPEmdata = luatool:Fetch(current_time, current_level, CAPEm, current_forecast_type)
 end
 local BSdata = luatool:Fetch(current_time, level(HPLevelType.kHeightLayer,6000,0), BS, current_forecast_type)
-local Tdata = luatool:Fetch(current_time, level(HPLevelType.kHeight,2), t, current_forecast_type)
-local RHdata = luatool:Fetch(current_time, level(HPLevelType.kHeight,2), RH, current_forecast_type)
+local Tdata = luatool:Fetch(current_time, level2m, t, current_forecast_type)
+local RHdata = luatool:Fetch(current_time, level2m, RH, current_forecast_type)
 
 -- Mean 2m temperature of the past hours (dry-snow check for DRSN/BLSN).
 -- Radon has no time aggregated T-K -- and asking for one silently returns the
@@ -110,7 +124,7 @@ local function MeanTemperature(hours)
       ftime:GetOriginDateTime():Adjust(HPTimeResolution.kHourResolution, -adjustment)
     end
 
-    local data = luatool:Fetch(ftime, level(HPLevelType.kHeight,2), t, current_forecast_type)
+    local data = luatool:Fetch(ftime, level2m, t, current_forecast_type)
 
     if data then
       if (sum == nil) then
@@ -152,14 +166,14 @@ end
 
 local Tavgdata = MeanTemperature(TavgHours)
 
-local TGdata = luatool:Fetch(current_time, level(HPLevelType.kHeight,0), t, current_forecast_type)
+local TGdata = luatool:Fetch(current_time, levelGround, t, current_forecast_type)
 -- for EC fetch param skin temperature
-if (configuration:GetTargetProducer():GetId() == 240) then
+if (producerId == ECGMTA) then
     TGdata = luatool:Fetch(current_time, level(HPLevelType.kGround,0), t0m, current_forecast_type)
 end
 
-local wsdata = luatool:Fetch(current_time, level(HPLevelType.kHeight,10), ws, current_forecast_type)
-local wgdata = luatool:Fetch(current_time, level(HPLevelType.kHeight,10), wg, current_forecast_type)
+local wsdata = luatool:Fetch(current_time, level10m, ws, current_forecast_type)
+local wgdata = luatool:Fetch(current_time, level10m, wg, current_forecast_type)
 
 -- fetch snow accumulation
 -- Use older analysis time if not enough time steps are available for 12 accumulation period
@@ -167,12 +181,9 @@ local Snaccdata
 if (current_time:GetStep():Hours() < 12) then
   local new_time = forecast_time(current_time)
 
-  -- set origin time adjustment depending on producer, default -12h
-  -- for meps we adjust in steps of 3h
-  local adjustment = -12
-  if (configuration:GetTargetProducer():GetId() == 260) then
-    adjustment = math.floor(current_time:GetStep():Hours()/3) * 3 - 12
-  end
+  -- take the origin time back by the accumulation period, rounded to whole
+  -- analysis times of the producer (12h for EC, 3h for MEPS)
+  local adjustment = math.floor(current_time:GetStep():Hours()/runInterval) * runInterval - 12
 
   new_time:GetOriginDateTime():Adjust(HPTimeResolution.kHourResolution, adjustment)
   Snaccdata = luatool:Fetch(new_time,current_level,Snacc,current_forecast_type)
@@ -183,9 +194,9 @@ end
 
 -- calculate area_max fields with ~30km box
 local filter
-if (configuration:GetTargetProducer():GetId() == 260) then
+if (producerId == MEPSMTA) then
   filter = matrixf(12, 12, 1, 1)
-elseif (configuration:GetTargetProducer():GetId() == 240) then
+elseif (producerId == ECGMTA) then
   filter = matrixf(3, 3, 1, 1)
 end
 
@@ -283,7 +294,7 @@ for i=1, #PreIntdata do
   end
 
   -- Freezing fog FZFG
-  if ((visibdata[i] < 1000) and (Tdata[i] < 273.15)) then
+  if ((visibdata[i] < 1000) and (Tdata[i] < T0)) then
     wx[i] = 12
   end
 
@@ -417,7 +428,7 @@ for i=1, #PreIntdata do
 
     -- TS FG/FZFG
     if (wx[i] < 100 and visibdata[i] < 1000) then
-      if (Tdata[i] >= 273.15) then
+      if (Tdata[i] >= T0) then
         wx[i] = wx[i] + 100
       else
         wx[i] = wx[i] + 200
@@ -529,13 +540,13 @@ for i=1, #PreIntdata do
   -- Tsfc to discard open water areas (no ice), Tavg to discard wet-snow cases
   -- DRSN
   if (Snaccdata ~= nil) then
-    if (Snaccdata[i] > DRSNlim and wsdata[i] >= 6 and Tdata[i] < 273.15 and TGdata[i] < 273.15 and Tavgdata[i] < 273.15) then
+    if (Snaccdata[i] > DRSNlim and wsdata[i] >= 6 and Tdata[i] < T0 and TGdata[i] < T0 and Tavgdata[i] < T0) then
       DRBL = 15
       wx[i] = DRBL
     end
 
     -- BLSN
-    if (Snaccdata[i] > DRSNlim and wsdata[i] >= BLSNwind and wgdata[i] >=BLSNgust and Tdata[i] < 273.15 and TGdata[i] < 273.15 and Tavgdata[i] < 273.15) then
+    if (Snaccdata[i] > DRSNlim and wsdata[i] >= BLSNwind and wgdata[i] >=BLSNgust and Tdata[i] < T0 and TGdata[i] < T0 and Tavgdata[i] < T0) then
       DRBL = 16
       wx[i] = DRBL
     end
@@ -593,7 +604,7 @@ for i=1, #PreIntdata do
 
     -- -SN/-SHSN/-TSSN FG/FZFG, only if DRSN/BLSN wasn't already added (+ variants not allowed)
     if ((wx[i] == 72 or wx[i] == 90 or wx[i] == 26) and visibdata[i] < 1000 and RHdata[i] > rhMoist) then
-      if (Tdata[i] >= 273.15) then
+      if (Tdata[i] >= T0) then
         wx[i] = wx[i] + 100
       else
         wx[i] = wx[i] + 200
