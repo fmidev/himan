@@ -4,6 +4,69 @@
 -- Combined code = base code + 100 (FG) / 200 (FZFG) / 300 (BR) / 400 (DRSN) / 500 (BLSN).
 -- Ported from icao-smartool v2.0.
 
+
+-- Mean 2m temperature of the past hours (dry-snow check for DRSN/BLSN).
+-- Radon has no time aggregated T-K -- and asking for one silently returns the
+-- instantaneous field -- so the mean is calculated here from the instantaneous
+-- 2m temperatures of the current and the preceding hours. Hours that are before
+-- the analysis time are read from an older forecast, hours that are not found
+-- at all are left out of the mean.
+local function MeanTemperature(hours)
+  local sum = nil
+  local count = 0
+
+  for h=0, hours-1 do
+    local ftime = forecast_time(current_time)
+    ftime:GetValidDateTime():Adjust(HPTimeResolution.kHourResolution, -h)
+
+    -- valid time is before the analysis time: use an older analysis time
+    local step = ftime:GetStep():Hours()
+
+    if (step < 0) then
+      local adjustment = math.ceil(-step / runInterval) * runInterval
+      ftime:GetOriginDateTime():Adjust(HPTimeResolution.kHourResolution, -adjustment)
+    end
+
+    local data = luatool:Fetch(ftime, level2m, t, current_forecast_type)
+
+    if data then
+      if (sum == nil) then
+        sum = {}
+        for i=1, #data do
+          sum[i] = 0
+        end
+      end
+
+      for i=1, #data do
+        sum[i] = sum[i] + data[i]
+      end
+
+      count = count + 1
+    else
+      logger:Warning(string.format("2m temperature not found for -%dh, leaving it out of the %dh mean", h, hours))
+    end
+  end
+
+  if (count == 0) then
+    logger:Error(string.format("No 2m temperature found for the %dh mean", hours))
+    error("luatool:Fetch failed")
+  end
+
+  -- with a single hour the "mean" is the instantaneous temperature, which makes
+  -- the dry-snow check weaker but still produces data for the time step
+  if (count == 1) then
+    logger:Warning(string.format("Only 1 of %d hours found, using the instantaneous 2m temperature", hours))
+  end
+
+  local mean = {}
+
+  for i=1, #sum do
+    mean[i] = sum[i] / count
+  end
+
+  return mean
+end
+
 local MISS = missing
 
 -- producer ids
@@ -101,68 +164,6 @@ end
 local BSdata = luatool:Fetch(current_time, level(HPLevelType.kHeightLayer,6000,0), BS, current_forecast_type)
 local Tdata = luatool:Fetch(current_time, level2m, t, current_forecast_type)
 local RHdata = luatool:Fetch(current_time, level2m, RH, current_forecast_type)
-
--- Mean 2m temperature of the past hours (dry-snow check for DRSN/BLSN).
--- Radon has no time aggregated T-K -- and asking for one silently returns the
--- instantaneous field -- so the mean is calculated here from the instantaneous
--- 2m temperatures of the current and the preceding hours. Hours that are before
--- the analysis time are read from an older forecast, hours that are not found
--- at all are left out of the mean.
-local function MeanTemperature(hours)
-  local sum = nil
-  local count = 0
-
-  for h=0, hours-1 do
-    local ftime = forecast_time(current_time)
-    ftime:GetValidDateTime():Adjust(HPTimeResolution.kHourResolution, -h)
-
-    -- valid time is before the analysis time: use an older analysis time
-    local step = ftime:GetStep():Hours()
-
-    if (step < 0) then
-      local adjustment = math.ceil(-step / runInterval) * runInterval
-      ftime:GetOriginDateTime():Adjust(HPTimeResolution.kHourResolution, -adjustment)
-    end
-
-    local data = luatool:Fetch(ftime, level2m, t, current_forecast_type)
-
-    if data then
-      if (sum == nil) then
-        sum = {}
-        for i=1, #data do
-          sum[i] = 0
-        end
-      end
-
-      for i=1, #data do
-        sum[i] = sum[i] + data[i]
-      end
-
-      count = count + 1
-    else
-      logger:Warning(string.format("2m temperature not found for -%dh, leaving it out of the %dh mean", h, hours))
-    end
-  end
-
-  if (count == 0) then
-    logger:Error(string.format("No 2m temperature found for the %dh mean", hours))
-    error("luatool:Fetch failed")
-  end
-
-  -- with a single hour the "mean" is the instantaneous temperature, which makes
-  -- the dry-snow check weaker but still produces data for the time step
-  if (count == 1) then
-    logger:Warning(string.format("Only 1 of %d hours found, using the instantaneous 2m temperature", hours))
-  end
-
-  local mean = {}
-
-  for i=1, #sum do
-    mean[i] = sum[i] / count
-  end
-
-  return mean
-end
 
 local Tavgdata = MeanTemperature(TavgHours)
 
