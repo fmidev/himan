@@ -2262,7 +2262,8 @@ unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message, const pr
 	return newGrid;
 }
 
-himan::param ReadParam(const search_options& options, const producer& prod, const NFmiGribMessage& message)
+himan::param ReadParam(const search_options& options, const producer& prod, const NFmiGribMessage& message,
+                       bool trustMetadata)
 {
 	param p;
 
@@ -2273,7 +2274,27 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 	auto dbtype = options.configuration->DatabaseType();
 	logger logr("grib");
 
-	if (message.Edition() == 1)
+	if (trustMetadata)
+	{
+		// Metadata validation is disabled and the location of this message is known
+		// (file, offset and message number). Trust that the message contains the parameter
+		// that was requested and skip the database lookup.
+
+		p = options.param;
+
+		p.GribParameter(number);
+
+		if (message.Edition() == 1)
+		{
+			p.GribTableVersion(message.Table2Version());
+		}
+		else
+		{
+			p.GribDiscipline(message.ParameterDiscipline());
+			p.GribCategory(message.ParameterCategory());
+		}
+	}
+	else if (message.Edition() == 1)
 	{
 		long no_vers = message.Table2Version();
 
@@ -2301,6 +2322,7 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 		{
 			parmName =
 			    GetParamNameFromGribShortName(options.configuration->ParamFile(), message.GetStringKey("shortName"));
+
 			if (parmName.empty())
 			{
 				logr.Warning(fmt::format("Parameter mapping for shortName '{}' not found in '{}'",
@@ -2310,11 +2332,18 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 
 		if (parmName.empty())
 		{
-			logr.Warning(
-			    fmt::format("Parameter name not found from {} for producer: {} table version: {} number: {} "
-			                "timeRangeIndicator: {}",
-			                HPDatabaseTypeToString.at(dbtype), prod.Id(), no_vers, number, timeRangeIndicator));
-			throw kFileMetaDataNotFound;
+			if (dbtype != kNoDatabase)
+			{
+				logr.Warning(
+				    fmt::format("Parameter name not found from {} for producer: {} table version: {} number: {} "
+				                "timeRangeIndicator: {}",
+				                HPDatabaseTypeToString.at(dbtype), prod.Id(), no_vers, number, timeRangeIndicator));
+
+				if (options.configuration->ValidateMetadata())
+				{
+					throw kFileMetaDataNotFound;
+				}
+			}
 		}
 		else
 		{
@@ -2550,11 +2579,18 @@ himan::param ReadParam(const search_options& options, const producer& prod, cons
 
 		if (parmName.empty())
 		{
-			logr.Warning(
-			    fmt::format("Parameter name not found from database for producer: {} discipline: {}, category: {}, "
-			                "number: {}, statistical processing: {}",
-			                prod.Id(), discipline, category, number, tosp));
-			throw kFileMetaDataNotFound;
+			if (dbtype != kNoDatabase)
+			{
+				logr.Warning(
+				    fmt::format("Parameter name not found from database for producer: {} discipline: {}, category: {}, "
+				                "number: {}, statistical processing: {}",
+				                prod.Id(), discipline, category, number, tosp));
+
+				if (options.configuration->ValidateMetadata())
+				{
+					throw kFileMetaDataNotFound;
+				}
+			}
 		}
 		else
 		{
@@ -3045,11 +3081,17 @@ void ReadData(shared_ptr<info<T>> newInfo, bool readPackedData, const NFmiGribMe
 }
 
 template <typename T>
-bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData, bool forceCaching,
+bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData, message_selection selection,
                               shared_ptr<info<T>> newInfo, const NFmiGribMessage& message, bool readData) const
 {
 	bool dataIsValid = true;
 	const bool validate = options.configuration->ValidateMetadata();
+	const bool forceCaching = (selection == message_selection::kAllMessages);
+
+	// The location of the message was known beforehand, so if the user has disabled metadata
+	// validation, we can trust that the message contains the data that was requested.
+
+	const bool trustMetadata = (selection == message_selection::kExactMessage && validate == false);
 
 	auto prod = ReadProducer(options, message);
 
@@ -3064,7 +3106,17 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 		}
 	}
 
-	auto p = ReadParam(options, prod, message);
+	auto p = ReadParam(options, prod, message, trustMetadata);
+
+	if (p.Name() == param().Name())
+	{
+		// Parameter of this message could not be identified. The message cannot be used:
+		// it can't be matched against the request, and if it was written to cache, all
+		// unidentified messages of the file would share the same cache key.
+
+		itsLogger.Trace("Parameter of the message could not be determined, skipping message");
+		return false;
+	}
 
 	if (p != options.param)
 	{
@@ -3213,6 +3265,21 @@ bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData
 	return true;
 }
 
+template bool grib::CreateInfoFromGrib<double>(const search_options&, bool, message_selection, shared_ptr<info<double>>,
+                                               const NFmiGribMessage&, bool) const;
+
+template <typename T>
+bool grib::CreateInfoFromGrib(const search_options& options, bool readPackedData, bool forceCaching,
+                              shared_ptr<info<T>> newInfo, const NFmiGribMessage& message, bool readData) const
+{
+	// The location of the message is not known, so all metadata has to be read from the
+	// message itself.
+
+	return CreateInfoFromGrib<T>(options, readPackedData,
+	                             forceCaching ? message_selection::kAllMessages : message_selection::kSearchFile,
+	                             newInfo, message, readData);
+}
+
 template bool grib::CreateInfoFromGrib<double>(const search_options&, bool, bool, shared_ptr<info<double>>,
                                                const NFmiGribMessage&, bool) const;
 
@@ -3241,10 +3308,24 @@ vector<shared_ptr<himan::info<T>>> grib::FromFile(const file_information& theInp
 			return infos;
 		}
 
+		// The metadata of each message has to be read from the message itself: it is the metadata
+		// that separates the requested message from the other messages of the file, and when
+		// reading auxiliary files to cache, each message is stored with its own metadata.
+
+		const message_selection selection =
+		    forceCaching ? message_selection::kAllMessages : message_selection::kSearchFile;
+
 		while (reader.NextMessage())
 		{
 			auto newInfo = make_shared<info<T>>();
-			if (CreateInfoFromGrib(options, readPackedData, forceCaching, newInfo, reader.Message()) || forceCaching)
+
+			const bool match = CreateInfoFromGrib(options, readPackedData, selection, newInfo, reader.Message());
+
+			// When caching is forced, also the messages that do not match the request are
+			// returned -- but only if their metadata was successfully read (an info that was
+			// discarded has no dimensions).
+
+			if (match || (forceCaching && newInfo->DimensionSize() > 0))
 			{
 				infos.push_back(newInfo);
 				newInfo->First();
@@ -3264,7 +3345,7 @@ vector<shared_ptr<himan::info<T>>> grib::FromFile(const file_information& theInp
 
 		auto newInfo = make_shared<info<T>>();
 
-		if (CreateInfoFromGrib(options, readPackedData, false, newInfo, reader.Message()))
+		if (CreateInfoFromGrib(options, readPackedData, message_selection::kExactMessage, newInfo, reader.Message()))
 		{
 			infos.push_back(newInfo);
 			newInfo->First();

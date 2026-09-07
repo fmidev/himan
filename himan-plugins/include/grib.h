@@ -16,6 +16,21 @@ namespace himan
 {
 namespace plugin
 {
+/**
+ * @brief How the grib message that is being read was selected.
+ *
+ * The metadata of a message has to be handled differently depending on how the message was
+ * found: only when the location of the message is known beforehand, we can trust that it
+ * contains the data that was requested.
+ */
+
+enum class message_selection
+{
+	kExactMessage,  // location of the message is known: file, offset and message number
+	kSearchFile,    // all messages of the file are searched for the requested data
+	kAllMessages    // all messages of the file are read, each with their own metadata
+};
+
 class grib : public io_plugin
 {
    public:
@@ -64,8 +79,32 @@ class grib : public io_plugin
 	std::pair<HPWriteStatus, file_information> ToFile(info<T>& anInfo);
 	std::pair<HPWriteStatus, file_information> ToFile(info<double>& anInfo);
 
+	/**
+	 * @brief Create an info from a single grib message.
+	 *
+	 * The metadata of the message is validated against the search options, unless the user
+	 * has disabled validation. In that case the amount of metadata that is read from the
+	 * message depends on how the message was selected.
+	 *
+	 * @param selection How the message that is being read was selected
+	 */
+
 	template <typename T>
-	bool CreateInfoFromGrib(const search_options& options, bool readPackedData, bool validate,
+	bool CreateInfoFromGrib(const search_options& options, bool readPackedData, message_selection selection,
+	                        std::shared_ptr<info<T>> newInfo, const NFmiGribMessage& message,
+	                        bool readData = true) const;
+
+	/**
+	 * @brief Create an info from a single grib message, when the location of the message is
+	 * not known beforehand.
+	 *
+	 * All metadata is read from the message itself.
+	 *
+	 * @param forceCaching Force caching of data even if it does not match searched data
+	 */
+
+	template <typename T>
+	bool CreateInfoFromGrib(const search_options& options, bool readPackedData, bool forceCaching,
 	                        std::shared_ptr<info<T>> newInfo, const NFmiGribMessage& message,
 	                        bool readData = true) const;
 
