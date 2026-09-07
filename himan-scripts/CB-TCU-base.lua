@@ -10,7 +10,7 @@ local HG = level(HPLevelType.kHeight, 0)
 local CBTCU_FL = luatool:Fetch(current_time, HG, param("CBTCU-FL"), current_forecast_type)
 local LCL500 = luatool:Fetch(current_time, HL, param("LCL-M"), current_forecast_type)
 local LCLmu = luatool:Fetch(current_time, MU, param("LCL-M"), current_forecast_type)
-local ProbCb = luatool:Fetch(current_time, HG, param("PROB-CBTCU-1"), current_forecast_type)
+local ProbCb = luatool:Fetch(current_time, HG, param("PROB-CBTCU-1"), forecast_type(HPForecastType.kStatisticalProcessing))
 
 -- skip optional ProbCb
 if not CBTCU_FL or not LCL500 or not LCLmu then
