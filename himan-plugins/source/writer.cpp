@@ -481,6 +481,8 @@ void writer::WritePendingInfos(std::shared_ptr<const plugin_configuration> conf)
 
 	ASSERT(conf);
 
+	ReadConfigurationWriteOptions(itsWriteOptions);
+
 	using std::string, std::vector;
 	auto Filter = [](const vector<std::pair<string, himan::HPWriteStatus>>& ws,
 	                 himan::HPWriteStatus req) -> vector<string>
