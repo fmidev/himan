@@ -11,7 +11,7 @@
 -- 2m temperatures of the current and the preceding hours. Hours that are before
 -- the analysis time are read from an older forecast, hours that are not found
 -- at all are left out of the mean.
-local function MeanTemperature(hours)
+local function MeanTemperature(hours, level2m, t, runInterval)
   local sum = nil
   local count = 0
 
@@ -165,7 +165,7 @@ local BSdata = luatool:Fetch(current_time, level(HPLevelType.kHeightLayer,6000,0
 local Tdata = luatool:Fetch(current_time, level2m, t, current_forecast_type)
 local RHdata = luatool:Fetch(current_time, level2m, RH, current_forecast_type)
 
-local Tavgdata = MeanTemperature(TavgHours)
+local Tavgdata = MeanTemperature(TavgHours, level2m, t, runInterval)
 
 local TGdata = luatool:Fetch(current_time, levelGround, t, current_forecast_type)
 -- for EC fetch param skin temperature
