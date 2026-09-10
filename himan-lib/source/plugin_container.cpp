@@ -45,6 +45,8 @@ void* plugin_container::Library()
 }
 plugin_container::~plugin_container()
 {
+	itsPlugin.reset();
+
 	// Close libraries
 	// This function is called only when himan exits
 
