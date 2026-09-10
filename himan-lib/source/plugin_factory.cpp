@@ -13,16 +13,14 @@
 using namespace himan;
 using namespace himan::plugin;
 
-std::unique_ptr<plugin_factory> plugin_factory::itsInstance;
-
 plugin_factory* plugin_factory::Instance()
 {
-	if (!itsInstance)
-	{
-		itsInstance = std::unique_ptr<plugin_factory>(new plugin_factory());
-	}
+	// Function-local static: initialization is guaranteed thread-safe by the
+	// C++11 standard ("magic statics"), unlike a manually managed unique_ptr
+	// with a check-then-set,
+	static plugin_factory instance;
 
-	return itsInstance.get();
+	return &instance;
 }
 
 plugin_factory::plugin_factory() : itsPluginSearchPath(), itsLogger(logger("plugin_factory"))
@@ -134,8 +132,7 @@ bool plugin_factory::Load(const std::string& thePluginFileName)
 
 	const std::string stem = std::filesystem::path(thePluginFileName).stem().string().substr(3, std::string::npos);
 
-	if (std::find_if(itsPluginFactory.begin(), itsPluginFactory.end(),
-	                 [&stem](std::shared_ptr<plugin_container>& cont)
+	if (std::find_if(itsPluginFactory.begin(), itsPluginFactory.end(), [&stem](std::shared_ptr<plugin_container>& cont)
 	                 { return cont->Plugin()->ClassName() == "himan::plugin::" + stem; }) != itsPluginFactory.end())
 	{
 		itsLogger.Debug("Plugin '" + stem + "' found more than once, skipping one found from '" + thePluginFileName +

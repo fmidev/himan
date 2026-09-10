@@ -95,13 +95,7 @@ class cache : public auxiliary_plugin
 class cache_pool : public auxiliary_plugin
 {
    public:
-	~cache_pool()
-	{
-		if (itsInstance)
-		{
-			delete itsInstance;
-		}
-	}
+	~cache_pool() override = default;
 	cache_pool(const cache_pool& other) = delete;
 	cache_pool& operator=(const cache_pool& other) = delete;
 
@@ -155,7 +149,6 @@ class cache_pool : public auxiliary_plugin
 	cache_pool();
 
 	std::map<std::string, cache_item> itsCache;
-	static cache_pool* itsInstance;
 	std::mutex itsAccessMutex;
 
 	// Cache limit specifies how many grids are held in the cache.

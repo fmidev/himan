@@ -184,8 +184,6 @@ void cache::Remove(const std::string& uniqueName)
 	cache_pool::Instance()->Remove(uniqueName);
 }
 
-cache_pool* cache_pool::itsInstance = NULL;
-
 cache_pool::cache_pool() : itsCacheLimit(0)
 {
 	itsLogger = logger("cache_pool");
@@ -193,12 +191,9 @@ cache_pool::cache_pool() : itsCacheLimit(0)
 
 cache_pool* cache_pool::Instance()
 {
-	if (!itsInstance)
-	{
-		itsInstance = new cache_pool();
-	}
+	static cache_pool instance;
 
-	return itsInstance;
+	return &instance;
 }
 
 void cache_pool::CacheLimit(size_t theCacheLimit)

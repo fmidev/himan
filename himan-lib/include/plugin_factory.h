@@ -36,8 +36,6 @@ class plugin_factory
 
 	plugin_factory(const plugin_factory&) = delete;
 
-	static std::unique_ptr<plugin_factory> itsInstance;
-
 	void ReadPlugins(const std::string& pluginName = "");
 
 	bool Load(const std::string& thePluginFileName);
