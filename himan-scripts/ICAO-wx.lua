@@ -123,8 +123,14 @@ local t = param("T-K")
 -- skin temperature
 local t0m = param("SKT-K")
 
--- relative humidity (%)
-local RH = param("RH-0TO1")
+-- relative humidity
+-- MEPS has it as a fraction [0,1], EC as a percentage [0,100]
+local RH = param("RH-PRCNT")
+local rhScale = 100
+if (producerId == MEPSMTA) then
+  RH = param("RH-0TO1")
+  rhScale = 1
+end
 
 -- wind speed
 local ws = param("FF-MS")
@@ -159,6 +165,20 @@ end
 local BSdata = luatool:Fetch(current_time, level(HPLevelType.kHeightLayer,6000,0), BS, current_forecast_type)
 local Tdata = luatool:Fetch(current_time, level2m, t, current_forecast_type)
 local RHdata = luatool:Fetch(current_time, level2m, RH, current_forecast_type)
+
+-- producers do not always provide the expected representation of relative
+-- humidity, so fall back to the other one
+if not RHdata then
+  logger:Warning(string.format("%s not found for 2m, trying the other representation", RH:GetName()))
+  if (producerId == MEPSMTA) then
+    RH = param("RH-PRCNT")
+    rhScale = 100
+  else
+    RH = param("RH-0TO1")
+    rhScale = 1
+  end
+  RHdata = luatool:Fetch(current_time, level2m, RH, current_forecast_type)
+end
 
 local Tavgdata = MeanTemperature(TavgHours, level2m, t, runInterval)
 
@@ -206,8 +226,9 @@ local areaMaxCB = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
 -- rr limit for MEPS (which has large areas of near zero hourly precipitation)
 local rrLim = 0.04
 
--- Relative humidity threshold [%] for (freezing) misty/foggy conditions in precipitation
-local rhMoist = 0.95
+-- Relative humidity threshold for (freezing) misty/foggy conditions in precipitation,
+-- scaled to the unit of the fetched RH parameter
+local rhMoist = 0.95 * rhScale
 
 -- Threshold for showery precipitation (may need tweaking) [J/kg]
 local shCAPE = 10
