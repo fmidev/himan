@@ -74,6 +74,8 @@ local producerId = configuration:GetTargetProducer():GetId()
 local level2m = level(HPLevelType.kHeight, 2)
 local level10m = level(HPLevelType.kHeight, 10)
 local levelGround = level(HPLevelType.kHeight, 0)
+-- EC uses a different ground level than MEPS
+local levelGroundEC = level(HPLevelType.kGround, 0)
 
 -- freezing point [K]
 local T0 = 273.15
@@ -136,7 +138,12 @@ end
 local ws = param("FF-MS")
 
 -- wind gust
+-- EC stores the gust at ground level, MEPS at 10m
 local wg = param("FFG-MS", aggregation(HPAggregationType.kMaximum, time_duration(HPTimeResolution.kHourResolution, 1)), processing_type())
+local levelGust = level10m
+if (producerId == ECGMTA) then
+  levelGust = levelGroundEC
+end
 
 -- length of the averaging window of the 2m temperature (dry-snow check for DRSN/BLSN) [h]
 local TavgHours = 5
@@ -182,14 +189,21 @@ end
 
 local Tavgdata = MeanTemperature(TavgHours, level2m, t, runInterval)
 
-local TGdata = luatool:Fetch(current_time, levelGround, t, current_forecast_type)
 -- for EC fetch param skin temperature
+local TGdata
 if (producerId == ECGMTA) then
-    TGdata = luatool:Fetch(current_time, level(HPLevelType.kGround,0), t0m, current_forecast_type)
+  TGdata = luatool:Fetch(current_time, levelGroundEC, t0m, current_forecast_type)
+else
+  TGdata = luatool:Fetch(current_time, levelGround, t, current_forecast_type)
 end
 
 local wsdata = luatool:Fetch(current_time, level10m, ws, current_forecast_type)
-local wgdata = luatool:Fetch(current_time, level10m, wg, current_forecast_type)
+-- the 1h maximum gust covers the hour before the valid time, so it does not
+-- exist at the analysis time; BLSN is then left out of the time step
+local wgdata
+if (current_time:GetStep():Hours() > 0) then
+  wgdata = luatool:Fetch(current_time, levelGust, wg, current_forecast_type)
+end
 
 -- fetch snow accumulation
 -- Use older analysis time if not enough time steps are available for 12 accumulation period
@@ -288,6 +302,14 @@ local DRSNlim = 0.5
 -- Min required mean wind and gust (m/s) for Blowing Snow
 local BLSNwind = 10
 local BLSNgust = 15
+
+-- DRSN/BLSN need the snow accumulation, the surface temperature and (for BLSN)
+-- the wind gust; without them those codes are simply not produced
+if (Snaccdata == nil or TGdata == nil) then
+  logger:Warning("Snow accumulation or surface temperature missing, DRSN/BLSN not calculated")
+elseif (wgdata == nil) then
+  logger:Warning("Wind gust missing, BLSN not calculated")
+end
 
 --- start the algorithm
 local wx = {}
@@ -556,14 +578,14 @@ for i=1, #PreIntdata do
   -- Simplified guesses for DRSN/BLSN
   -- Tsfc to discard open water areas (no ice), Tavg to discard wet-snow cases
   -- DRSN
-  if (Snaccdata ~= nil) then
+  if (Snaccdata ~= nil and TGdata ~= nil) then
     if (Snaccdata[i] > DRSNlim and wsdata[i] >= 6 and Tdata[i] < T0 and TGdata[i] < T0 and Tavgdata[i] < T0) then
       DRBL = 15
       wx[i] = DRBL
     end
 
-    -- BLSN
-    if (Snaccdata[i] > DRSNlim and wsdata[i] >= BLSNwind and wgdata[i] >=BLSNgust and Tdata[i] < T0 and TGdata[i] < T0 and Tavgdata[i] < T0) then
+    -- BLSN, only when a wind gust is available
+    if (wgdata ~= nil and Snaccdata[i] > DRSNlim and wsdata[i] >= BLSNwind and wgdata[i] >= BLSNgust and Tdata[i] < T0 and TGdata[i] < T0 and Tavgdata[i] < T0) then
       DRBL = 16
       wx[i] = DRBL
     end
