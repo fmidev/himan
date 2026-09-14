@@ -144,7 +144,8 @@ if (producerId == ECGMTA) then
 end
 
 -- length of the averaging window of the 2m temperature (dry-snow check for DRSN/BLSN) [h]
-local TavgHours = 5
+-- the window covers the current hour and the five before it
+local TavgHours = 6
 
 -- analysis time interval of the producer [h], needed when the averaging window
 -- reaches over the analysis time and an older forecast has to be used
@@ -247,7 +248,7 @@ Nmat:SetValues(cbdata)
 local areaMaxCB = Max2D(Nmat,filter,configuration:GetUseCuda()):GetValues()
 
 -- set constants
--- rr limit for MEPS (which has large areas of near zero hourly precipitation)
+-- rr limit (MEPS has large areas of near zero hourly precipitation)
 local rrLim = 0.04
 
 -- Relative humidity threshold for (freezing) misty/foggy conditions in precipitation,
@@ -557,6 +558,16 @@ for i=1, #PreIntdata do
     if (Snaccdata[i] > DRSNlim and wsdata[i] >= 6 and Tdata[i] < T0 and TGdata[i] < T0 and Tavgdata[i] < T0) then
       DRBL = 15
       wx[i] = DRBL
+
+      -- DRSN BR
+      if (visibdata[i] >= 1000 and visibdata[i] < 5000) then
+        wx[i] = 315
+      end
+
+      -- DRSN FZFG
+      if (visibdata[i] < 1000) then
+        wx[i] = 215
+      end
     end
 
     -- BLSN, only when a wind gust is available
