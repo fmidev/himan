@@ -62,8 +62,6 @@ local function MeanTemperature(hours, level2m, t, runInterval)
   return mean
 end
 
-local MISS = missing
-
 -- producer ids
 local ECGMTA = 240
 local MEPSMTA = 260
@@ -119,7 +117,7 @@ local CAPEm = param("CAPE-JKG")
 -- bulk shear 6km (m/s)
 local BS = param("WSH-MS")
 
--- temperture
+-- temperature
 local t = param("T-K")
 
 -- skin temperature
@@ -380,7 +378,7 @@ for i=1, #PreIntdata do
         wx[i] = 62
       end
 
-      -- Thunderstorm check also for contiuous rain
+      -- Thunderstorm check also for continuous rain
       if ((POTdata[i] > TSlim) and (cbdata[i] > CbTSlim)) then
         -- -TSRA
         wx[i] = 20
@@ -392,16 +390,16 @@ for i=1, #PreIntdata do
         if (PreIntdata[i] > ModRaLim) then
           -- TSRA
           wx[i] = 21
-          -- TSRG
+          -- TSGR
           if ((CAPEmdata[i] > HailCAPE) and (BSdata[i] > HailBS)) then
             wx[i] = 24
           end
         end
-        -- +TSRA/+TSRG
+        -- +TSRA/+TSGR
         if (PreIntdata[i] > HvyRaLim) then
           -- +TSRA
           wx[i] = 22
-          -- +TSRG
+          -- +TSGR
           if ((CAPEmdata[i] > HailCAPE) and (BSdata[i] > HailBS)) then
             wx[i] = 25
           end
@@ -420,7 +418,7 @@ for i=1, #PreIntdata do
       if (PreIntdata[i] > HvyRaLim) then
         wx[i] = 83
       end
-      -- Thunderstorm check also for contiuous rain
+      -- Thunderstorm check also for showery rain
       if ((POTdata[i] > TSlim) and (cbdata[i] > CbTSlim)) then
         -- -TSRA
         wx[i] = 20
@@ -432,16 +430,16 @@ for i=1, #PreIntdata do
         if (PreIntdata[i] > ModRaLim) then
           -- TSRA
           wx[i] = 21
-          -- TSRG
+          -- TSGR
           if ((CAPEmdata[i] > HailCAPE) and (BSdata[i] > HailBS)) then
             wx[i] = 24
           end
         end
-        -- +TSRA/+TSRG
+        -- +TSRA/+TSGR
         if (PreIntdata[i] > HvyRaLim) then
           -- +TSRA
           wx[i] = 22
-          -- +TSRG
+          -- +TSGR
           if ((CAPEmdata[i] > HailCAPE) and (BSdata[i] > HailBS)) then
             wx[i] = 25
           end
