@@ -197,12 +197,20 @@ else
   TGdata = luatool:Fetch(current_time, levelGround, t, current_forecast_type)
 end
 
+if not TGdata then
+  logger:Warning(string.format("Surface temperature missing for step %dh, DRSN/BLSN not possible", current_time:GetStep():Hours()))
+end
+
 local wsdata = luatool:Fetch(current_time, level10m, ws, current_forecast_type)
 -- the 1h maximum gust covers the hour before the valid time, so it does not
 -- exist at the analysis time; BLSN is then left out of the time step
 local wgdata
 if (current_time:GetStep():Hours() > 0) then
   wgdata = luatool:Fetch(current_time, levelGust, wg, current_forecast_type)
+end
+
+if not wgdata then
+  logger:Warning(string.format("Wind gust missing for step %dh, BLSN not possible", current_time:GetStep():Hours()))
 end
 
 -- fetch snow accumulation
@@ -220,6 +228,10 @@ if (current_time:GetStep():Hours() < 12) then
 -- After step 12h use current forecast
 else
   Snaccdata = luatool:Fetch(current_time,current_level,Snacc,current_forecast_type)
+end
+
+if not Snaccdata then
+  logger:Warning(string.format("12h snow accumulation not available for step %dh, DRSN/BLSN not possible", current_time:GetStep():Hours()))
 end
 
 -- calculate area_max fields with ~30km box
@@ -302,14 +314,6 @@ local DRSNlim = 0.5
 -- Min required mean wind and gust (m/s) for Blowing Snow
 local BLSNwind = 10
 local BLSNgust = 15
-
--- DRSN/BLSN need the snow accumulation, the surface temperature and (for BLSN)
--- the wind gust; without them those codes are simply not produced
-if (Snaccdata == nil or TGdata == nil) then
-  logger:Warning("Snow accumulation or surface temperature missing, DRSN/BLSN not calculated")
-elseif (wgdata == nil) then
-  logger:Warning("Wind gust missing, BLSN not calculated")
-end
 
 --- start the algorithm
 local wx = {}
