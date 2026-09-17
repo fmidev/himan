@@ -214,6 +214,12 @@ end
 
 -- fetch snow accumulation
 -- Use older analysis time if not enough time steps are available for 12 accumulation period
+--
+-- How far back that reaches depends on the analysis interval: EC needs one
+-- previous cycle, MEPS needs up to four for steps 0-2. Production keeps three
+-- previous MEPS cycles, so for those first steps the accumulation is not found
+-- and DRSN/BLSN are left out. That is accepted: by the time the forecast has
+-- been produced and post-processed, those steps are already in the past.
 local Snaccdata
 if (current_time:GetStep():Hours() < 12) then
   local new_time = forecast_time(current_time)
