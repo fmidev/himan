@@ -194,7 +194,7 @@ void icing::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short theTh
 				tCor = -1;
 			}
 
-			Icing = round(log(Cl) + 6) + static_cast<float>(vCor) + static_cast<float>(tCor);
+			Icing = log(Cl) + 5 + static_cast<float>(vCor) + static_cast<float>(tCor);
 		}
 
 		// freezing drizzle, values applied to all model levels below two hybrid level above
