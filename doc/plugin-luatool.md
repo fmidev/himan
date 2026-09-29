@@ -69,8 +69,8 @@ HPFileType
     kGeoTIFF = 8
     kNetCDFv4 = 9
 
-HPProjectionType
-    kUnknownProjection = 0
+HPGridType
+    kUnknownGridType = 0
     kLatitudeLongitude
     kStereographic
     kAzimuthalEquidistant 
@@ -119,8 +119,8 @@ HPForecastType
     kEpsPerturbation
     kStatisticalProcessing
 
-HPGridType
-    kUnknownGridType = 0
+HPGridClass
+    kUnknownGridClass = 0
     kRegularGrid
     kIrregularGrid
 
@@ -721,15 +721,41 @@ local utils = require("utils")
 | Function | Arguments | Return value | Description |
 |---|---|---|---|
 | round | number | number | Rounds n to the nearest integer |
-| create_mask | resolution_km, radius_km, shape, normalize | matrixf | Returns a mask as a matrixf to be used with filtering or local maximum or minimum. shape: "square", "circle", or a custom function(i, j, center, grid_radius) returning a weight. normalize: if true, weights are divided by their sum so the kernel sums to 1 |
+| grid_resolution_km | grid | number | Returns the approximate grid resolution in kilometres, converting from the grid's native units. Use this instead of reading GetDi() directly |
+| create_mask | resolution_km, radius_km, shape, normalize | matrixf | Returns a mask as a matrixf to be used with filtering or local maximum or minimum. shape: "square", "circle", or a custom function(i, j, center, grid_radius) returning a weight. normalize: if true, weights are divided by their sum so the kernel sums to 1. Returns nil on invalid arguments, so check the return value |
+
+## Grid resolution
+
+`create_mask` needs the grid resolution in kilometres, but grids do not all store
+their spacing in the same unit:
+
+* projected grids (lambert, stereographic, ...) store `Di`/`Dj` in **metres**
+* geographic grids (`kLatitudeLongitude`, `kRotatedLatitudeLongitude`) store them in **degrees**
+
+So `GetDi()/1000` is correct only for projected grids. On a 0.1 degree latlon grid it
+yields 0.0001 km instead of ~11 km, and a mask built from that is large enough to
+exhaust memory. Use `grid_resolution_km` instead, which branches on `GetGridType()`:
+
+```lua
+local res = utils.grid_resolution_km(result:GetGrid())
+```
+
+For latlon grids the value is derived from `Dj`, because a degree of latitude has a
+constant length while a degree of longitude shrinks by cos(latitude). The returned
+figure is therefore approximate for east-west distances, increasingly so towards the
+poles.
+
+Note that a smoothing radius smaller than one grid cell gives a 1x1 kernel, which is a
+no-op rather than an error. Pick a radius that makes sense for the resolution of the
+data being processed.
 
 ## Masking
 
 Use `normalize = true` with `Filter2D` for smoothing — weights sum to 1 so values stay in range:
 
 ```lua
--- Smooth a field over a 10 km radius; GetDi() returns metres so divide by 1000
-local avg_mask = utils.create_mask(result:GetGrid():GetDi()/1000, 10, "circle", true)
+-- Smooth a field over a 10 km radius
+local avg_mask = utils.create_mask(utils.grid_resolution_km(result:GetGrid()), 10, "circle", true)
 local smoothed = Filter2D(datamat, avg_mask, configuration:GetUseCuda()):GetValues()
 ```
 
@@ -737,7 +763,7 @@ Use `normalize = false` with `Max2D`/`Min2D` for neighbourhood statistics — we
 
 ```lua
 -- Find the maximum value within a 50 km square neighbourhood
-local mask = utils.create_mask(result:GetGrid():GetDi()/1000, 50, "square", false)
+local mask = utils.create_mask(utils.grid_resolution_km(result:GetGrid()), 50, "square", false)
 local neighbourhood_max = Max2D(datamat, mask, configuration:GetUseCuda()):GetValues()
 ```
 
@@ -745,7 +771,7 @@ Custom shape functions enable kernels like Gaussian:
 
 ```lua
 local sigma = 3  -- standard deviation in grid cells
-local gauss = utils.create_mask(result:GetGrid():GetDi()/1000, 10, function(i, j, center, grid_radius)
+local gauss = utils.create_mask(utils.grid_resolution_km(result:GetGrid()), 10, function(i, j, center, grid_radius)
   local dx, dy = i - center, j - center
   return math.exp(-(dx*dx + dy*dy) / (2 * sigma * sigma))
 end, true)
