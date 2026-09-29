@@ -1,27 +1,28 @@
---Round to natural number
-function round(n)
-  return n % 1 >= 0.5 and math.ceil(n) or math.floor(n)
-end
+local utils = require("utils")
 
 local currentProducer = configuration:GetTargetProducer()
 local currentProducerName = currentProducer.GetName(currentProducer)
 
-local filter = matrixf(9, 9, 1, missing)
---filter:Fill(1)
-local kernel = {0,0,0,0,1,0,0,0,0,
-                0,0,1,1,1,1,1,0,0,
-                0,1,1,1,1,1,1,1,0,
-                0,1,1,1,1,1,1,1,0,
-                1,1,1,1,1,1,1,1,1,
-                0,1,1,1,1,1,1,1,0,
-                0,1,1,1,1,1,1,1,0,
-                0,0,1,1,1,1,1,0,0,
-                0,0,0,0,1,0,0,0,0}
-filter:SetValues(kernel)
+-- Smoothing radius in km; create_mask converts it to grid cells using the grid
+-- resolution.
+local res_km = utils.grid_resolution_km(result:GetGrid())
 
-local avgkernel = {}
-for i = 1, #kernel do
-  avgkernel[i] = kernel[i]/49
+local filter
+if currentProducerName == "MEPS" or currentProducerName == "MEPSMTA" then
+  filter = utils.create_mask(res_km, 10, "circle", false)
+elseif currentProducerName == "ECG" or currentProducerName == "ECGMTA" then
+  -- radius must be 11.12 < x < 22.24 for EC at 0.1 degree grid
+  filter = utils.create_mask(res_km, 20, "square", false)
+else
+  -- Other producers (ICON, ...) are not tuned here; the radius is in km so the
+  -- kernel still adapts to whatever resolution the grid has.
+  logger:Warning("Producer " .. tostring(currentProducerName) .. " not tuned, using default kernel")
+  filter = utils.create_mask(res_km, 20, "square", false)
+end
+
+if not filter then
+  logger:Error("Could not create filter kernel")
+  return
 end
 
 --Main program
@@ -78,10 +79,6 @@ local RR = luatool:Fetch(current_time, HG, param("RRR-KGM2"), current_forecast_t
 if not NL or not NM or not RR then
   logger:Error("Some data not found")
   return
-end
-
-if currentProducerName ~= "MEPS" and currentProducerName ~= "MEPSMTA" then
-  filter = matrixf(9, 9, 1, 1.0)
 end
 
 local Nmat = matrixf(result:GetGrid():GetNi(), result:GetGrid():GetNj(), 1, 0)
@@ -195,7 +192,7 @@ for i=1, #EL500 do
     end
   end
 
-  res[i] = round(res[i]/10)*10
+  res[i] = utils.round(res[i]/10)*10
   --Threshold flight level for TCU above FL70 and CB above FL80
   if res[i] < 70 and res[i] > -70 then
     res[i] = missing

@@ -3,6 +3,9 @@
 
 local utils = require("utils")
 
+local currentProducer = configuration:GetTargetProducer()
+local currentProducerName = currentProducer.GetName(currentProducer)
+
 local MU = level(HPLevelType.kMaximumThetaE, 0)
 local HL = level(HPLevelType.kHeightLayer, 500, 0)
 local HG = level(HPLevelType.kHeight, 0)
@@ -21,7 +24,23 @@ if not CBTCU_FL or not LCL500 or not LCLmu then
 end
 
 local Nmat = matrixf(result:GetGrid():GetNi(), result:GetGrid():GetNj(), 1, 0)
-local avg_mask = utils.create_mask(utils.grid_resolution_km(result:GetGrid()), 10, "circle", true)
+
+-- Smoothing radius in km; create_mask converts it to grid cells using the grid
+-- resolution. Kept in step with CB-TCU-cloud.lua so both smooth the same footprint.
+local res_km = utils.grid_resolution_km(result:GetGrid())
+
+local avg_mask
+if currentProducerName == "MEPS" or currentProducerName == "MEPSMTA" then
+  avg_mask = utils.create_mask(res_km, 10, "circle", true)
+elseif currentProducerName == "ECG" or currentProducerName == "ECGMTA" then
+  -- radius must be 11.12 < x < 22.24 for EC at 0.1 degree grid
+  avg_mask = utils.create_mask(res_km, 20, "square", true)
+else
+  -- Other producers (ICON, ...) are not tuned here; the radius is in km so the
+  -- kernel still adapts to whatever resolution the grid has.
+  logger:Warning("Producer " .. tostring(currentProducerName) .. " not tuned, using default kernel")
+  avg_mask = utils.create_mask(res_km, 20, "square", true)
+end
 
 if not avg_mask then
   logger:Error("Could not create averaging mask")
