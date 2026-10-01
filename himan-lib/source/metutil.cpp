@@ -7,10 +7,18 @@
 
 #include "metutil.h"
 
+#include <cmath>
+#include <stdexcept>
+
 using namespace himan;
 
-double metutil::FlightLevel_(double P)
+double metutil::FlightLevel_(double P, double roundingMultiple)
 {
+	if (!std::isfinite(roundingMultiple) || roundingMultiple <= 0 || std::trunc(roundingMultiple) != roundingMultiple)
+	{
+		throw std::runtime_error("roundingMultiple must be a positive integer greater than 0");
+	}
+
 	// Return missing value if missing value is passed as an argument. This is done because missing value was turned
 	// into -nan in some unknown way, probably inside a math function.
 	if (IsMissing(P))
@@ -47,8 +55,8 @@ double metutil::FlightLevel_(double P)
 		h = (-std::log(P / p_tropo) * constants::kRd * T_tropo / constants::kG + h_tropo) * m_hft;
 	}
 
-	// round to multiple of 5
-	return std::round(h / 5.) * 5.;
+	// round to specified multiple, default is 5
+	return std::round(h / roundingMultiple) * roundingMultiple;
 }
 
 raw_time metutil::SolarTime_(const point& latlon, const raw_time& rt)

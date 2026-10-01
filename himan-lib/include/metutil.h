@@ -63,10 +63,11 @@ int LowConvection_(Type T0m, Type T850)
  *  @brief Calculate the flight level corresponding to given pressure
  *
  *  @param P Pressure in Pa
+ *  @param roundingMultiple of flight level
  *  @return flight level in hecto feet
  */
 
-double FlightLevel_(double P);
+double FlightLevel_(double P, double roundingMultiple = 5.0);
 
 /**
  * @brief Calculate (local) solar time
