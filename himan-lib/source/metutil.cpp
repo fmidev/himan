@@ -7,10 +7,18 @@
 
 #include "metutil.h"
 
+#include <cmath>
+#include <stdexcept>
+
 using namespace himan;
 
 double metutil::FlightLevel_(double P, double roundingMultiple)
 {
+	if (!std::isfinite(roundingMultiple) || roundingMultiple <= 0 || std::trunc(roundingMultiple) != roundingMultiple)
+	{
+		throw std::runtime_error("roundingMultiple must be a positive integer greater than 0");
+	}
+
 	// Return missing value if missing value is passed as an argument. This is done because missing value was turned
 	// into -nan in some unknown way, probably inside a math function.
 	if (IsMissing(P))
