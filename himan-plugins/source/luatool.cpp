@@ -1858,8 +1858,11 @@ void BindLib(lua_State* L)
 	          def("MixingRatio_", &metutil::MixingRatio_<double>),
 	          def("MoistLift_", &metutil::MoistLift_<double>), 
 	          def("DryLift_", &metutil::DryLift_<double>),
-			  def("TwStull_", &metutil::TwStull_<double>),
-		  def("FlightLevel_", &metutil::FlightLevel_),
+		  def("TwStull_", &metutil::TwStull_<double>),
+		  def("FlightLevel_", 
+		    static_cast<double (*)(double)>([](double P) {return metutil::FlightLevel_(P);})),
+		  def("FlightLevel_",
+                    static_cast<double (*)(double, double)>(&metutil::FlightLevel_)),
 		  def("ElevationAngle_", &metutil::ElevationAngle_),
 		  // util namespace
 		  def("ParseBoolean", &util::ParseBoolean),

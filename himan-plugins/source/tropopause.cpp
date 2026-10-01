@@ -143,7 +143,8 @@ void tropopause::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned short
 	}
 
 	// convert pressure to flight level
-	transform(result.begin(), result.end(), result.begin(), metutil::FlightLevel_);
+	transform(result.begin(), result.end(), result.begin(),
+	          [](double Pressure) { return metutil::FlightLevel_(Pressure); });
 	myTargetInfo->Data().Set(move(result));
 
 	string deviceType = "CPU";
