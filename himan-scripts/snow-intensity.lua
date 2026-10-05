@@ -8,6 +8,11 @@ local lvl = level(HPLevelType.kHeight, 0)
 local preform = luatool:Fetch(current_time, lvl, preform_par, current_forecast_type)
 local precip = luatool:Fetch(current_time, lvl, precip_par, current_forecast_type)
 
+if not preform or not precip then
+  logger:Error("Required precipitation data not found")
+  return
+end
+
 
 local res = {}
 
