@@ -1,7 +1,8 @@
 local Missing = missing
 
-preform_par = param("POTPREFORM-N") -- precipitation form
+preform_par = param("POTPRECF-N") -- precipitation form
 precip_par = param("RRR-KGM2") -- total precipitation rate
+sn_par = param("SNR-KGM2")
 
 local lvl = level(HPLevelType.kHeight, 0)
 local preform = luatool:Fetch(current_time, lvl, preform_par, current_forecast_type)
@@ -21,7 +22,7 @@ for i=1, #preform do
 
 end
 
-result:SetParam(param("SNR-KGM2"))
+result:SetParam(param("SNR-MM"))
 result:SetValues(res)
 
 logger:Info("Writing results")
