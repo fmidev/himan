@@ -2,7 +2,6 @@ local Missing = missing
 
 preform_par = param("POTPRECF-N") -- precipitation form
 precip_par = param("RRR-KGM2") -- total precipitation rate
-sn_par = param("SNR-KGM2")
 
 local lvl = level(HPLevelType.kHeight, 0)
 local preform = luatool:Fetch(current_time, lvl, preform_par, current_forecast_type)
