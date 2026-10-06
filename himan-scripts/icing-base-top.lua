@@ -7,7 +7,6 @@ Produce it in both flight level and hft coordinates
 ]]
 
 logger:Info("Calculating base and top for icing")
-local MISS = missing
 local IceParam = param("ICING-N")
 
 -- We set the vertical search function to work with pressure based vertical coordinate
@@ -72,21 +71,40 @@ end
 -- The base threshold is nudged just below 4 because the search is done with a strict
 -- comparison (>).
 local baseHPa = BaseHPa(4 - 0.001) -- icing index >= 4
-local topHPa = TopHPa(4,baseHPa) -- icing index < 4
 
--- Base and top are always given as a pair
+-- If no icing is found anywhere the top search and the height lookups would fail
+-- (hitool throws when all heights are missing), so skip them and write missing values
+local hasIcing = false
 for i=1, #baseHPa do
-  if IsMissing(baseHPa[i]) then
-    topHPa[i] = MISS
-  elseif IsMissing(topHPa[i]) then
-    -- Icing continues above the searched range
-    topHPa[i] = maxP
+  if not IsMissing(baseHPa[i]) then
+    hasIcing = true
+    break
   end
 end
 
--- Fetch metric heights of base and top to convert them to hFt
-local baseM = hitool:VerticalValueGrid(param("HL-M"), baseHPa)
-local topM = hitool:VerticalValueGrid(param("HL-M"), topHPa)
+local topHPa = {}
+local baseM = {}
+local topM = {}
+
+if hasIcing then
+  topHPa = TopHPa(4,baseHPa) -- icing index < 4
+
+  -- Base and top are always given as a pair
+  for i=1, #baseHPa do
+    if IsMissing(baseHPa[i]) then
+      topHPa[i] = missing
+    elseif IsMissing(topHPa[i]) then
+      -- Icing continues above the searched range
+      topHPa[i] = maxP
+    end
+  end
+
+  -- Fetch metric heights of base and top to convert them to hFt
+  baseM = hitool:VerticalValueGrid(param("HL-M"), baseHPa)
+  topM = hitool:VerticalValueGrid(param("HL-M"), topHPa)
+else
+  logger:Info("No icing found, writing missing values")
+end
 
 -- Convert base and top to FL and hFt
 local topFL = {}
@@ -94,16 +112,23 @@ local baseFL = {}
 local topHFt = {}
 local baseHFt = {}
 for i=1, #baseHPa do
-  topFL[i] = FlightLevel_(topHPa[i] * 100) -- hPa to Pa
-  topHFt[i] = math.ceil(topM[i] / 30.48) -- 0.3048 / 100
-
-  -- If height < 15 m, icing reaches the ground (0 m)
-  if baseM[i] < 15 then
-    baseFL[i] = FlightLevel_(p[i])
-    baseHFt[i] = 0
+  if IsMissing(baseHPa[i]) then
+    topFL[i] = missing
+    baseFL[i] = missing
+    topHFt[i] = missing
+    baseHFt[i] = missing
   else
-    baseFL[i] = FlightLevel_(baseHPa[i] * 100) -- hPa to Pa
-    baseHFt[i] = math.floor(baseM[i] / 30.48) -- 0.3048 / 100
+    topFL[i] = FlightLevel_(topHPa[i] * 100, 1) -- hPa to Pa
+    topHFt[i] = math.ceil(topM[i] / 30.48) -- 0.3048 / 100
+
+    -- If height < 15 m, icing reaches the ground (0 m)
+    if baseM[i] < 15 then
+      baseFL[i] = FlightLevel_(p[i], 1)
+      baseHFt[i] = 0
+    else
+      baseFL[i] = FlightLevel_(baseHPa[i] * 100, 1) -- hPa to Pa
+      baseHFt[i] = math.floor(baseM[i] / 30.48) -- 0.3048 / 100
+    end
   end
 end
 
