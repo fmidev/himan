@@ -3,6 +3,9 @@
 
 local utils = require("utils")
 
+local currentProducer = configuration:GetTargetProducer()
+local currentProducerName = currentProducer.GetName(currentProducer)
+
 local MU = level(HPLevelType.kMaximumThetaE, 0)
 local HL = level(HPLevelType.kHeightLayer, 500, 0)
 local HG = level(HPLevelType.kHeight, 0)
@@ -10,7 +13,9 @@ local HG = level(HPLevelType.kHeight, 0)
 local CBTCU_FL = luatool:Fetch(current_time, HG, param("CBTCU-FL"), current_forecast_type)
 local LCL500 = luatool:Fetch(current_time, HL, param("LCL-M"), current_forecast_type)
 local LCLmu = luatool:Fetch(current_time, MU, param("LCL-M"), current_forecast_type)
-local ProbCb = luatool:Fetch(current_time, HG, param("PROB-CBTCU-1"), forecast_type(HPForecastType.kStatisticalProcessing))
+-- Processing type must match the data exactly or the fetch finds nothing; aggregation() is a placeholder
+local ProbCbParam = param("PROB-CBTCU-1", aggregation(), processing_type(HPProcessingType.kProbabilityGreaterThan, 0))
+local ProbCb = luatool:Fetch(current_time, HG, ProbCbParam, forecast_type(HPForecastType.kStatisticalProcessing))
 
 -- skip optional ProbCb
 if not CBTCU_FL or not LCL500 or not LCLmu then
@@ -19,7 +24,28 @@ if not CBTCU_FL or not LCL500 or not LCLmu then
 end
 
 local Nmat = matrixf(result:GetGrid():GetNi(), result:GetGrid():GetNj(), 1, 0)
-local avg_mask = utils.create_mask(result:GetGrid():GetDi()/1000, 10, "circle", true)
+
+-- Smoothing radius in km; create_mask converts it to grid cells using the grid
+-- resolution. Kept in step with CB-TCU-cloud.lua so both smooth the same footprint.
+local res_km = utils.grid_resolution_km(result:GetGrid())
+
+local avg_mask
+if currentProducerName == "MEPS" or currentProducerName == "MEPSMTA" then
+  avg_mask = utils.create_mask(res_km, 10, "circle", true)
+elseif currentProducerName == "ECG" or currentProducerName == "ECGMTA" then
+  -- radius must be 11.12 < x < 22.24 for EC at 0.1 degree grid
+  avg_mask = utils.create_mask(res_km, 20, "square", true)
+else
+  -- Other producers (ICON, ...) are not tuned here; the radius is in km so the
+  -- kernel still adapts to whatever resolution the grid has.
+  logger:Warning("Producer " .. tostring(currentProducerName) .. " not tuned, using default kernel")
+  avg_mask = utils.create_mask(res_km, 20, "square", true)
+end
+
+if not avg_mask then
+  logger:Error("Could not create averaging mask")
+  return
+end
 
 Nmat:SetValues(LCL500)
 LCL500 = Filter2D(Nmat, avg_mask, configuration:GetUseCuda()):GetValues()
@@ -48,6 +74,8 @@ local covdef = 20  -- default Cb/TCu cover [%] when N at LCL < 1%
 
 local base_res = {}
 local cov_res  = {}
+local prob_used = 0  -- grid points where Cb probability raised the cover
+local cov_valid = 0  -- grid points with a non-missing cover value
 
 for i = 1, #CBTCU_FL do
   local cover = N_at_base[i] * 100  -- convert 0–1 to %
@@ -56,12 +84,27 @@ for i = 1, #CBTCU_FL do
   end
 
   -- Tweak cover upward by Cb probability if available, silently skip otherwise
-  if ProbCb and cover < ProbCb[i] then
-    cover = ProbCb[i]
+  if ProbCb then
+    local prob = ProbCb[i] * 100  -- convert 0-1 to %
+    if cover < prob then
+      cover = prob
+      prob_used = prob_used + 1
+    end
   end
 
   base_res[i] = utils.round(safe_base_heights[i] / 0.3048 / 100) * 100  -- metres → feet, 100 ft resolution
   cov_res[i]  = utils.round(cover)
+
+  if not IsMissing(cov_res[i]) then
+    cov_valid = cov_valid + 1
+  end
+end
+
+if ProbCb then
+  logger:Info(string.format("Cb probability raised cover at %d of %d grid points with valid cover (%d total)",
+                            prob_used, cov_valid, #CBTCU_FL))
+else
+  logger:Info("Cb probability not available, cover not adjusted")
 end
 
 result:SetParam(param("CBTCU-FT"))
