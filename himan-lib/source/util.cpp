@@ -12,6 +12,7 @@
 #include "lambert_equal_area_grid.h"
 #include "latitude_longitude_grid.h"
 #include "level.h"
+#include "named_ensemble.h"
 #include "numerical_functions.h"
 #include "param.h"
 #include "plugin_factory.h"
@@ -1140,24 +1141,6 @@ vector<forecast_type> util::ForecastTypesFromString(const string& types)
 	return forecastTypes;
 }
 
-HPEnsembleType TypeFromName(const std::string& name)
-{
-	// TODO: figure out a better way to handle this
-	if (name == "ECMWF50" || name == "ECMWF51")
-	{
-		return kPerturbedEnsemble;
-	}
-
-	if (name == "MEPS_SINGLE_ENSEMBLE" || name == "MEPS_LAGGED_ENSEMBLE")
-	{
-		return kLaggedEnsemble;
-	}
-
-	logger logr("util");
-	logr.Fatal(fmt::format("Unknown named ensemble: '{}'", name));
-	himan::Abort();
-}
-
 std::unique_ptr<ensemble> util::CreateEnsembleFromConfiguration(const std::shared_ptr<const plugin_configuration>& conf)
 {
 	std::unique_ptr<ensemble> ens;
@@ -1186,7 +1169,7 @@ std::unique_ptr<ensemble> util::CreateEnsembleFromConfiguration(const std::share
 	else if (conf->GetValue("named_ensemble").empty() == false)
 	{
 		// If user has specified named ensemble, use that
-		ensType = TypeFromName(conf->GetValue("named_ensemble"));
+		ensType = GetNamedEnsemble(conf->GetValue("named_ensemble")).type;
 	}
 	else if (conf->GetValue("lag").empty() == false || conf->GetValue("lagged_members").empty() == false)
 	{
