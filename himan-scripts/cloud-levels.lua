@@ -161,11 +161,9 @@ for i = 1, #base1 do
 end
 
 
-local changed = {}
 --// case 1: 2 layers found, too close, choose based on cover
 
 for i = 1, #base1 do
-  changed[i] = 0
   if IsMissing(base3[i]) and (base2[i] - base1[i]) < dz then
     --// 1st FEW-SCT, 2nd BKN, keep only the higher
     if cov1[i] < bkn  then
@@ -183,10 +181,8 @@ for i = 1, #base1 do
       top2[i] = missing
       cov2[i] = missing
     end
-  end
-
   --// cases 2a-2c, 3 or more layers found
-  if base2[i] - base1[i] < dz and base3[i] - base2[i] >= dz then
+  elseif base2[i] - base1[i] < dz and base3[i] - base2[i] >= dz then
     --// 1st and 2nd FEW-SCT (too close), 3rd BKN+
     if cov1[i] < bkn and cov2[i] < bkn then
       base2[i] = base3[i]
@@ -196,10 +192,8 @@ for i = 1, #base1 do
       base3[i] = base4[i]
       top3[i] = top4[i]
       cov3[i] = cov4[i]
-      changed[i] = 1
-    end
     --// 1st FEW-SCT (too close to 2nd), 2nd and 3rd BKN+
-    if cov1[i] < bkn and cov2[i] >= bkn and changed[i] == 0 then
+    elseif cov1[i] < bkn and cov2[i] >= bkn then
       base1[i] = base2[i]
       top1[i] = top2[i]
       cov1[i] = cov2[i]
@@ -210,33 +204,25 @@ for i = 1, #base1 do
       base3[i] = base4[i]
       top3[i] = top4[i]
       cov3[i] = cov4[i]
-      base4[i] = base5[i]
-      top4[i] = top5[i]
-      cov4[i] = cov5[i]
-      changed[i] = 2
-    end
     --// 1st BKN+ (too close to 2nd), 2nd SCT-BKN+, 3rd BKN+
-    if cov1[i] >= bkn and changed[i] == 0 then
+    elseif cov1[i] >= bkn then
       --// base1 and base3 not too close (because base3-base2>=dz), discard 2nd (becomes bkn)
       base2[i] = base3[i]
       top2[i] = top3[i]
       cov2[i] = cov3[i]
-      if cov4[i] < bkn then
+      if not IsBknLayer(cov4[i]) then
         base3[i] = base5[i]
 	top3[i] = top5[i]
 	cov3[i] = cov5[i]
-      end
-      if cov4[i] >= bkn then
+      else
         base3[i] = base4[i]
         top3[i] = top4[i]
 	cov3[i] = cov4[i]
       end
-      changed[i] = 3
     end
-  end
 
   --// case 2b: 3 or more layers found, 1st not too close to 2nd, 2nd too close to 3rd
-  if base2[i] - base1[i] >= dz and base3[i] - base2[i] < dz and changed[i] == 0 then
+  elseif base2[i] - base1[i] >= dz and base3[i] - base2[i] < dz then
     --// 1st FEW-BKN+, 2nd SCT, 3rd BKN+ (too close to 2nd)
     if cov2[i] < bkn then
       base2[i] = base3[i]
@@ -246,68 +232,73 @@ for i = 1, #base1 do
       --// choose new 3rd based on cover
       --// (cov4 = sct+, i.e. don't accept possibly sct as 3rd layer)
       --// assume that always base4-base3 and base5-base4 >=dz (i.e not checked)
-      if cov4[i] < bkn then
+      if not IsBknLayer(cov4[i]) then
         base3[i] = base5[i]
         top3[i] = top5[i]
         cov3[i] = cov5[i]
-      end
-      if cov4[i] >= bkn then
+      else
         base3[i] = base4[i]
         top3[i] = top4[i]
         cov3[i] = cov4[i]
       end
-      changed[i] = 4
-    end
 
     --// 1st FEW-BKN+, 2nd BKN+ too close to 3rd BKN+
-    if cov2[i] >= bkn and changed[i] == 0 then
+    elseif cov2[i] >= bkn then
       --// discard 3rd
       --// choose new 3rd based on cover
       --// (cov4 = sct+, i.e. don't accept possibly sct as 3rd layer)
       --// assume that always base4-base3 and base5-base4 >=dz (i.e not checked)
-      if cov4[i] < bkn then
+      if not IsBknLayer(cov4[i]) then
         base3[i] = base5[i]
         top3[i] = top5[i]
         cov3[i] = cov5[i]
-      end
-      if cov4[i] >= bkn then
+      else
         base3[i] = base4[i]
         top3[i] = top4[i]
         cov3[i] = cov4[i]
       end
-      changed[i] = 5
     end
-  end
   --// case 2c: 3 or more layers found, 1st too close to 2nd and 2nd too close to 3rd
-  if base2[i] - base1[i] < dz and base3[i] - base2[i] < dz and changed[i] == 0 then
-  --// 1st and 2nd FEW-SCT, 3rd BKN+ (1st-2nd and 2nd-3rd too close)
+  elseif base2[i] - base1[i] < dz and base3[i] - base2[i] < dz then
+    --// 1st and 2nd FEW-SCT, 3rd BKN+ (1st-2nd and 2nd-3rd too close)
     if cov1[i] < bkn and cov2[i] < bkn then
       --// 1st and 3rd not too close, discard 2nd
       if base3[i] - base1[i] >= dz then
         base2[i] = base3[i]
         top2[i] = top3[i]
-	cov2[i] = cov3[i]
+        cov2[i] = cov3[i]
 
         --// choose new 3rd based on cover
         --// (cov4 = sct+, i.e. don't accept possibly sct as 3rd layer)
         --// assume that always base4-base3 and base5-base4 >=dz (i.e not checked)
-	if cov4[i] < bkn then
+        if not IsBknLayer(cov4[i]) then
           base3[i] = base5[i]
-	  top3[i] = top5[i]
-	  cov3[i] = cov5[i]
-	end
-	if cov4[i] >= bkn then
-	  base3[i] = base4[i]
-	  top3[i] = top4[i]
-	  cov3[i] = cov4[i]
-	end
+          top3[i] = top5[i]
+          cov3[i] = cov5[i]
+        else
+          base3[i] = base4[i]
+          top3[i] = top4[i]
+          cov3[i] = cov4[i]
+        end
+      else
+        base1[i] = base3[i]
+        top1[i] = top3[i]
+        cov1[i] = cov3[i]
+        --// 2nd becomes sct+, 3rd becomes bkn+
+        base2[i] = base4[i]
+        top2[i] = top4[i]
+        cov2[i] = cov4[i]
+        base3[i] = base5[i]
+        top3[i] = top5[i]
+        cov3[i] = cov5[i]
       end
-      changed[i] = 6
-    else
-      base1[i] = base3[i]
-      top1[i] = top3[i]
-      cov1[i] = cov3[i]
-      --// assume that always base4-base3 and base5-base4 >=dz (i.e not checked)
+
+    --// 1st FEW-SCT, 2nd and 3rd BKN+ (1st-2nd and 2nd-3rd too close)
+    elseif cov1[i] < bkn and cov2[i] >= bkn then
+      --// keep only 2nd (bkn)
+      base1[i] = base2[i]
+      top1[i] = top2[i]
+      cov1[i] = cov2[i]
       --// 2nd becomes sct+, 3rd becomes bkn+
       base2[i] = base4[i]
       top2[i] = top4[i]
@@ -315,59 +306,37 @@ for i = 1, #base1 do
       base3[i] = base5[i]
       top3[i] = top5[i]
       cov3[i] = cov5[i]
-      changed[i] = 7
-    end
-  end
 
-  --// 1st FEW-SCT, 2nd and 3rd BKN+ (1st-2nd and 2nd-3rd too close)
-  if cov1[i] < bkn and cov2[i] >= bkn and changed[i] == 0 then
-    --// keep only 2nd (bkn)
-    base1[i] = base2[i]
-    top1[i] = top2[i]
-    cov1[i] = cov2[i]
-    --// assume that always base4-base3 and base5-base4 >=dz (i.e not checked)
-    --// 2nd becomes sct+, 3rd becomes bkn+
-    base2[i] = base4[i]
-    top2[i] = top4[i]
-    cov2[i] = cov4[i]
-    base3[i] = base5[i]
-    top3[i] = top5[i]
-    cov3[i] = cov5[i]
-    changed[i] = 8
-  end
-
-  --// 1st BKN+, 2nd SCT-BKN+ and 3rd BKN+ (1st-2nd and 2nd-3rd too close)
-  if cov1[i] >= bkn and changed[i] == 0 then
-    --//  1st also too close to 3rd
-    if base3[i] - base1[i] < dz then
-      base2[i] = base4[i]
-      top2[i] = top4[i]
-      cov2[i] = cov4[i]
-      base3[i] = base5[i]
-      top3[i] = top5[i]
-      cov3[i] = cov5[i]
-      changed[i] = 9
-  
-    --// 1st not too close to 3rd
-    else
-      --// discard 2nd (becomes bkn+)
-      base2[i] = base3[i]
-      top2[i] = top3[i]
-      cov2[i] = cov3[i]
-      --// choose new 3rd based on cover
-      --// (cov4 = sct+, i.e. don't accept possibly sct as 3rd layer)
-      --// assume that always base4-base3 and base5-base4 >=dz (i.e not checked)
-      if cov4[i] < bkn then
+    --// 1st BKN+, 2nd SCT-BKN+ and 3rd BKN+ (1st-2nd and 2nd-3rd too close)
+    elseif cov1[i] >= bkn then
+      --// 1st also too close to 3rd
+      if base3[i] - base1[i] < dz then
+        base2[i] = base4[i]
+        top2[i] = top4[i]
+        cov2[i] = cov4[i]
         base3[i] = base5[i]
         top3[i] = top5[i]
         cov3[i] = cov5[i]
+
+      --// 1st not too close to 3rd
+      else
+        --// discard 2nd (becomes bkn+)
+        base2[i] = base3[i]
+        top2[i] = top3[i]
+        cov2[i] = cov3[i]
+        --// choose new 3rd based on cover
+        --// (cov4 = sct+, i.e. don't accept possibly sct as 3rd layer)
+        --// assume that always base4-base3 and base5-base4 >=dz (i.e not checked)
+        if not IsBknLayer(cov4[i]) then
+          base3[i] = base5[i]
+          top3[i] = top5[i]
+          cov3[i] = cov5[i]
+        else
+          base3[i] = base4[i]
+          top3[i] = top4[i]
+          cov3[i] = cov4[i]
+        end
       end
-      if cov4[i] >= bkn then
-        base3[i] = base4[i]
-        top3[i] = top4[i]
-        cov3[i] = cov4[i]
-      end
-      changed[i] = 10
     end
   end
 end
