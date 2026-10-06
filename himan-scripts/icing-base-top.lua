@@ -94,15 +94,15 @@ local baseFL = {}
 local topHFt = {}
 local baseHFt = {}
 for i=1, #baseHPa do
-  topFL[i] = FlightLevel_(topHPa[i] * 100) -- hPa to Pa
+  topFL[i] = FlightLevel_(topHPa[i] * 100, 1) -- hPa to Pa
   topHFt[i] = math.ceil(topM[i] / 30.48) -- 0.3048 / 100
 
   -- If height < 15 m, icing reaches the ground (0 m)
   if baseM[i] < 15 then
-    baseFL[i] = FlightLevel_(p[i])
+    baseFL[i] = FlightLevel_(p[i], 1)
     baseHFt[i] = 0
   else
-    baseFL[i] = FlightLevel_(baseHPa[i] * 100) -- hPa to Pa
+    baseFL[i] = FlightLevel_(baseHPa[i] * 100, 1) -- hPa to Pa
     baseHFt[i] = math.floor(baseM[i] / 30.48) -- 0.3048 / 100
   end
 end
