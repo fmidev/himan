@@ -11,6 +11,22 @@ local sct = 0.35
 local bkn = 0.55
 local dz = 300 
 
+local function IsBknLayer(cov)
+  return not IsMissing(cov) and cov >= bkn
+end
+
+local function DropLayer(bases, tops, covs, idx)
+  for j = idx, 2 do
+    bases[j] = bases[j + 1]
+    tops[j] = tops[j + 1]
+    covs[j] = covs[j + 1]
+  end
+
+  bases[3] = missing
+  tops[3] = missing
+  covs[3] = missing
+end
+
 local ceiling = luatool:Fetch(current_time, current_level, ceil, current_forecast_type)
 
 maxHdata= {}
@@ -356,6 +372,40 @@ for i = 1, #base1 do
   end
 end
 
+for i = 1, #base1 do
+  local bases = { base1[i], base2[i], base3[i] }
+  local tops = { top1[i], top2[i], top3[i] }
+  local covs = { cov1[i], cov2[i], cov3[i] }
+  local layer_changed = true
+
+  while layer_changed do
+    layer_changed = false
+
+    for j = 1, 2 do
+      if not IsMissing(bases[j]) and not IsMissing(bases[j + 1]) and bases[j + 1] - bases[j] < dz then
+        if IsBknLayer(covs[j]) or not IsBknLayer(covs[j + 1]) then
+          DropLayer(bases, tops, covs, j + 1)
+        else
+          DropLayer(bases, tops, covs, j)
+        end
+
+        layer_changed = true
+        break
+      end
+    end
+  end
+
+  base1[i] = bases[1]
+  base2[i] = bases[2]
+  base3[i] = bases[3]
+  top1[i] = tops[1]
+  top2[i] = tops[2]
+  top3[i] = tops[3]
+  cov1[i] = covs[1]
+  cov2[i] = covs[2]
+  cov3[i] = covs[3]
+end
+
 -- write output
 p = param("CL1-FT")
 result:SetValues(base1)
@@ -386,4 +436,3 @@ p = param("CLCOV3-0TO1")
 result:SetValues(cov3)
 result:SetParam(p)
 luatool:WriteToFile(result)
-
