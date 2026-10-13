@@ -26,7 +26,10 @@ for i=1, #preform do
 
 end
 
-result:SetParam(param("SNR-MM"))
+snrparam = param("SNR-MM")
+snrparam:SetAggregation(aggregation(HPAggregationType.kAccumulation, configuration:GetForecastStep()))
+
+result:SetParam(snrparam)
 result:SetValues(res)
 
 logger:Info("Writing results")
