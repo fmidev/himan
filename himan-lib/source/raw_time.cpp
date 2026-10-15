@@ -186,6 +186,12 @@ void raw_time::Adjust(HPTimeResolution timeResolution, int theValue)
 
 		itsDateTime = itsDateTime + adjustment;
 	}
+	else if (timeResolution == kSecondResolution)
+	{
+		posix_time::seconds adjustment(theValue);
+
+		itsDateTime = itsDateTime + adjustment;
+	}
 	else
 	{
 		throw std::runtime_error(fmt::format("{}: Invalid time adjustment unit: {}", fmt::underlying(timeResolution)));
