@@ -2710,8 +2710,11 @@ himan::forecast_time ReadTime(const NFmiGribMessage& message)
 		case 0:
 		case 13:
 		case 14:
-		case 254:
 			timeResolution = kMinuteResolution;
+			break;
+
+		case 254:
+			timeResolution = kSecondResolution;
 			break;
 
 		default:
