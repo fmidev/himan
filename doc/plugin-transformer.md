@@ -58,7 +58,11 @@ target_param_aggregation: define target parameter (time) aggregation type
 
 target_param_aggregation_period: define target parameter aggregation period
 
-    "target_param_aggregation_period" : "06:00"
+    "target_param_aggregation_period" : "06:00:00"
+
+Note: both can be also defined at once with 'target_param_aggregation':
+
+    "target_param_aggregation" : "average,06:00:00"
 
 target_param_processing_type: define target parameter processing type
 
@@ -72,9 +76,13 @@ source_param_aggregation: define source parameter (time) aggregation type
 
     "source_param_aggregation" : "average"
 
-source_param_aggregation: define source parameter (time) aggregation type and aggregation period
+source_param_aggregation_period: define source parameter aggregation period
 
-    "source_param_aggregation" : "average,01:00:00"
+    "source_param_aggregation_period" : "06:00:00"
+
+Note: both can be also defined at once with 'source_param_aggregation':
+
+    "source_param_aggregation" : "average,06:00:00"
     
 source_param_processing_type: define source parameter processing type
 

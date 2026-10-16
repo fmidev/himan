@@ -220,8 +220,7 @@ void transformer::SetAdditionalParameters()
 		}
 		else
 		{
-			itsTargetParam[0].Aggregation(
-			    {HPStringToAggregationType.at(itsConfiguration->GetValue("target_param_aggregation"))});
+			itsTargetParam[0].Aggregation({aggregation(itsConfiguration->GetValue("target_param_aggregation"))});
 		}
 	}
 
@@ -243,7 +242,16 @@ void transformer::SetAdditionalParameters()
 
 	if (!itsConfiguration->GetValue("source_param_aggregation").empty())
 	{
-		itsSourceParam[0].Aggregation(aggregation(itsConfiguration->GetValue("source_param_aggregation")));
+		if (!itsConfiguration->GetValue("source_param_aggregation_period").empty())
+		{
+			itsSourceParam[0].Aggregation(
+			    {HPStringToAggregationType.at(itsConfiguration->GetValue("source_param_aggregation")),
+			     time_duration(itsConfiguration->GetValue("source_param_aggregation_period"))});
+		}
+		else
+		{
+			itsSourceParam[0].Aggregation(aggregation(itsConfiguration->GetValue("source_param_aggregation")));
+		}
 	}
 
 	if (!itsConfiguration->GetValue("source_param_processing_type").empty())
@@ -720,8 +728,7 @@ void transformer::Calculate(shared_ptr<info<float>> myTargetInfo, unsigned short
 			}
 
 			auto& vec = VEC(myTargetInfo);
-			replace_if(
-			    vec.begin(), vec.end(), [=](float d) { return IsMissing(d); }, newMissing);
+			replace_if(vec.begin(), vec.end(), [=](float d) { return IsMissing(d); }, newMissing);
 		}
 
 		myThreadedLogger.Info(fmt::format("[{}] Missing values: {}/{}", deviceType, myTargetInfo->Data().MissingCount(),
@@ -883,8 +890,7 @@ void transformer::Calculate(shared_ptr<info<double>> myTargetInfo, unsigned shor
 		}
 
 		auto& vec = VEC(myTargetInfo);
-		replace_if(
-		    vec.begin(), vec.end(), [=](double d) { return IsMissing(d); }, newMissing);
+		replace_if(vec.begin(), vec.end(), [=](double d) { return IsMissing(d); }, newMissing);
 	}
 
 	myThreadedLogger.Info(fmt::format("[{}] Missing values: {}/{}", deviceType, myTargetInfo->Data().MissingCount(),
