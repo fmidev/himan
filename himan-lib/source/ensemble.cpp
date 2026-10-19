@@ -1,4 +1,5 @@
 #include "ensemble.h"
+#include "named_ensemble.h"
 #include "plugin_factory.h"
 
 #include "numerical_functions.h"
@@ -49,34 +50,24 @@ ensemble::ensemble(const param& parameter, const std::string& name, int maximumM
       itsLogger(logger("ensemble")),
       itsMaximumMissingForecasts(maximumMissingForecasts)
 {
-	if (name == "ECMWF50")
-	{
-		itsExpectedEnsembleSize = 50;
-		itsDesiredForecasts.reserve(itsExpectedEnsembleSize);
+	const auto& definition = GetNamedEnsemble(name);
 
-		for (size_t i = 1; i <= itsExpectedEnsembleSize; i++)
-		{
-			itsDesiredForecasts.push_back(forecast_type(kEpsPerturbation, static_cast<float>(i)));
-		}
-	}
-	else if (name == "ECMWF51")
+	if (definition.type != kPerturbedEnsemble)
 	{
-		itsExpectedEnsembleSize = 51;
-		itsDesiredForecasts.reserve(itsExpectedEnsembleSize);
-
-		itsDesiredForecasts.push_back(forecast_type(kEpsControl, 0));
-		for (size_t i = 1; i < itsExpectedEnsembleSize; i++)
-		{
-			itsDesiredForecasts.push_back(forecast_type(kEpsPerturbation, static_cast<float>(i)));
-		}
-	}
-	else
-	{
-		itsLogger.Fatal(
-		    fmt::format("Unable to create named ensemble for {}, allowed values are: ECMWF50,ECMWF51", name));
+		itsLogger.Fatal(fmt::format("Named ensemble '{}' is not a perturbed ensemble", name));
 		himan::Abort();
 	}
+
+	itsDesiredForecasts.reserve(definition.members.size());
+
+	for (const auto& m : definition.members)
+	{
+		itsDesiredForecasts.push_back(m.first);
+	}
+
+	itsExpectedEnsembleSize = itsDesiredForecasts.size();
 }
+
 ensemble::ensemble(const ensemble& other)
     : itsParam(other.itsParam),
       itsExpectedEnsembleSize(other.itsExpectedEnsembleSize),

@@ -1,5 +1,6 @@
 #include "lagged_ensemble.h"
 
+#include "named_ensemble.h"
 #include "plugin_factory.h"
 #include "util.h"
 
@@ -12,69 +13,6 @@
 using namespace himan;
 using namespace himan::plugin;
 using namespace himan::util;
-
-namespace
-{
-std::vector<std::pair<forecast_type, time_duration>> CreateNamedEnsembleConfiguration(const std::string& name)
-{
-	// MEPS member distribution as of 2020-02-28:
-	// Operational member distribution
-	// Time (UTC) 	CIRRUS 	STRATUS VOIMA
-	// 00,03,…,21 	0 	1,2,12 	9
-	// 01,04,…,22 	7 	3,4,13 	10
-	// 02,05,…,23 	8,14 	5,6 	11
-	//
-	// Here we define a single MEPS ensemble to consist
-	// of the control member cycle and two cycles *preceding it*.
-	//
-	// So ensemble where control member is produced at 00 cycle
-	// include cycles 23 and 22.
-
-	// TODO: think if this configuration could be stored outside code,
-	// for example in database
-
-	// clang-format off
-
-	const static std::vector<std::pair<forecast_type, time_duration>> MEPS_MEMBER_CONFIGURATION({
-	     {forecast_type(kEpsControl, 0), time_duration("00:00:00")},
-	     {forecast_type(kEpsPerturbation, 1), time_duration("00:00:00")},
-	     {forecast_type(kEpsPerturbation, 2), time_duration("00:00:00")},
-	     {forecast_type(kEpsPerturbation, 3), time_duration("-02:00:00")},
-	     {forecast_type(kEpsPerturbation, 4), time_duration("-02:00:00")},
-	     {forecast_type(kEpsPerturbation, 5), time_duration("-01:00:00")},
-	     {forecast_type(kEpsPerturbation, 6), time_duration("-01:00:00")},
-	     {forecast_type(kEpsPerturbation, 7), time_duration("-02:00:00")},
-	     {forecast_type(kEpsPerturbation, 8), time_duration("-01:00:00")},
-	     {forecast_type(kEpsPerturbation, 9), time_duration("00:00:00")},
-	     {forecast_type(kEpsPerturbation, 10), time_duration("-02:00:00")},
-	     {forecast_type(kEpsPerturbation, 11), time_duration("-01:00:00")},
-	     {forecast_type(kEpsPerturbation, 12), time_duration("00:00:00")},
-	     {forecast_type(kEpsPerturbation, 13), time_duration("-02:00:00")},
-	     {forecast_type(kEpsPerturbation, 14), time_duration("-01:00:00")}
-	});
-
-	// clang-format on
-
-	if (name == "MEPS_SINGLE_ENSEMBLE")
-	{
-		return MEPS_MEMBER_CONFIGURATION;
-	}
-	else if (name == "MEPS_LAGGED_ENSEMBLE")
-	{
-		auto config = MEPS_MEMBER_CONFIGURATION;
-
-		for (const auto& p : MEPS_MEMBER_CONFIGURATION)
-		{
-			config.push_back({p.first, p.second - THREE_HOURS});
-		}
-
-		return config;
-	}
-
-	throw std::runtime_error(fmt::format(
-	    "Unable to create named ensemble for {}, allowed values are: MEPS_SINGLE_ENSEMBLE,MEPS_LAGGED_ENSEMBLE", name));
-}
-}  // namespace
 
 namespace himan
 {
@@ -142,7 +80,15 @@ lagged_ensemble::lagged_ensemble(const param& parameter, const std::string& name
 	itsLogger = logger("lagged_ensemble");
 	itsParam = parameter;
 	itsEnsembleType = kLaggedEnsemble;
-	itsDesiredForecasts = CreateNamedEnsembleConfiguration(namedEnsemble);
+	const auto& definition = GetNamedEnsemble(namedEnsemble);
+
+	if (definition.type != kLaggedEnsemble)
+	{
+		itsLogger.Fatal(fmt::format("Named ensemble '{}' is not a lagged ensemble", namedEnsemble));
+		himan::Abort();
+	}
+
+	itsDesiredForecasts = definition.members;
 	itsForecasts.reserve(itsDesiredForecasts.size());
 	itsMaximumMissingForecasts = maximumMissingForecasts;
 }

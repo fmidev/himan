@@ -37,7 +37,16 @@ aggregation::aggregation(const std::string& aggstr) : aggregation()
 
 	const auto tokens = util::Split(aggstr, ",");
 
-	itsType = HPStringToAggregationType.at(tokens[0]);
+	try
+	{
+		itsType = HPStringToAggregationType.at(tokens[0]);
+	}
+	catch (const std::out_of_range&)
+	{
+		logger logr("aggregation");
+		logr.Fatal(fmt::format("Unknown aggregation type: {}", tokens[0]));
+		himan::Abort();
+	}
 
 	if (tokens.size() > 1)
 	{
