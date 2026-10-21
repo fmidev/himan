@@ -78,6 +78,67 @@ static HPProcessingType ParseComparison(const std::string& op, const std::string
 	himan::Abort();
 }
 
+/// @brief Reading of the additional conditions
+/// @param options contains the flattened 'conditions' options, ie. 'conditions[0].input_param', 'conditions[0].value'
+/// etc. See json_parser.cpp.
+/// @param name is the name of the output parameter, used for error messages
+
+static std::vector<PROB::partial_condition> GetConditions(
+    const std::map<size_t, std::map<std::string, std::string>>& options, const std::string& name,
+    const std::shared_ptr<const plugin_configuration> conf)
+{
+	himan::logger log("probability");
+
+	std::vector<PROB::partial_condition> conditions;
+
+	for (const auto& cond : options)
+	{
+		const auto& opts = cond.second;
+
+		for (const auto& opt : opts)
+		{
+			if (opt.first == "threshold")
+			{
+				log.Fatal(fmt::format("configuration error: '{}': conditions use key 'value' instead of 'threshold'",
+				                      name));
+				himan::Abort();
+			}
+			else if (opt.first != "input_param" && opt.first != "comparison" && opt.first != "value" &&
+			         opt.first != "aggregation")
+			{
+				log.Fatal(fmt::format("configuration error: '{}': unknown condition option '{}'", name, opt.first));
+				himan::Abort();
+			}
+		}
+
+		for (const auto& required : {"input_param", "comparison", "value"})
+		{
+			if (opts.find(required) == opts.end())
+			{
+				log.Fatal(fmt::format("configuration error: '{}': condition {} is missing '{}'", name, cond.first,
+				                      required));
+				himan::Abort();
+			}
+		}
+
+		PROB::partial_condition pc;
+
+		pc.parameter = util::InitializeParameter(conf->TargetProducer(), himan::param(opts.at("input_param")),
+		                                         level(kUnknownLevel, 0));
+		pc.comparison = ParseComparison(opts.at("comparison"), name);
+		pc.value = opts.at("value");
+
+		if (opts.find("aggregation") != opts.end())
+		{
+			pc.parameter.Aggregation(aggregation(opts.at("aggregation")));
+		}
+
+		conditions.push_back(pc);
+	}
+
+	return conditions;
+}
+
 /// @brief Configuration reading
 /// @param outParamConfig is modified to have information about the threshold value and input parameters
 /// @returns param to be pushed in the calculatedParams vector in Process()
@@ -98,6 +159,8 @@ static void GetConfigurationParameter(const std::string& name, const std::shared
 
 	param param,
 	    output = util::InitializeParameter(conf->TargetProducer(), himan::param(name), level(kUnknownLevel, 0));
+
+	std::map<size_t, std::map<std::string, std::string>> conditionOptions;
 
 	// NOTE These are plugin dependent
 	for (auto&& p : paramOpts)
@@ -124,6 +187,20 @@ static void GetConfigurationParameter(const std::string& name, const std::shared
 		{
 			param.Aggregation(aggregation(p.second));
 			output.Aggregation(aggregation(p.second));
+		}
+		else if (p.first.compare(0, 11, "conditions[") == 0)
+		{
+			// flattened conditions array: conditions[<index>].<option>
+			const auto end = p.first.find("].");
+
+			if (end == std::string::npos)
+			{
+				log.Fatal(fmt::format("configuration error: '{}': invalid conditions option '{}'", name, p.first));
+				himan::Abort();
+			}
+
+			const size_t index = std::stoul(p.first.substr(11, end - 11));
+			conditionOptions[index][p.first.substr(end + 2)] = p.second;
 		}
 		else
 		{
@@ -156,6 +233,16 @@ static void GetConfigurationParameter(const std::string& name, const std::shared
 	                     output.ProcessingType().Type() == kProbabilityLessThanOrEqual ||
 	                     output.ProcessingType().Type() == kProbabilityGreaterThan ||
 	                     output.ProcessingType().Type() == kProbabilityGreaterThanOrEqual);
+
+	outParamConfig->conditions = GetConditions(conditionOptions, name, conf);
+
+	if (spread && !outParamConfig->conditions.empty())
+	{
+		log.Fatal(fmt::format(
+		    "configuration error: '{}': conditions cannot be combined with gaussian spread (input parameter {})", name,
+		    iname));
+		himan::Abort();
+	}
 
 	outParamConfig->useGaussianSpread = spread;
 	outParamConfig->parameter = param;
@@ -305,6 +392,47 @@ PROB::partial_param_configuration probability::GetTarget()
 	return pc;
 }
 
+/// @brief Fetch ensemble data
+/// @returns false if data was not found
+
+static bool FetchEnsemble(ensemble& ens, std::shared_ptr<const plugin_configuration>& conf,
+                          std::shared_ptr<info<float>>& myTargetInfo, const logger& logr)
+{
+	try
+	{
+		ens.Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level());
+	}
+	catch (const HPExceptionType& e)
+	{
+		if (e == kFileDataNotFound)
+		{
+			return false;
+		}
+		else
+		{
+			logr.Fatal("Received error code " + std::to_string(e));
+			himan::Abort();
+		}
+	}
+
+	return true;
+}
+
+template <typename T>
+static void CalculateProbability(std::shared_ptr<info<float>>& myTargetInfo, const PROB::partial_param_configuration& pc,
+                      std::unique_ptr<ensemble>& ens, std::vector<std::unique_ptr<ensemble>>& conditionEns,
+                      std::function<bool(float, T)> comp_op)
+{
+	if (pc.conditions.empty())
+	{
+		Probability<T>(myTargetInfo, ToParamConfiguration<T>(pc), ens, comp_op);
+	}
+	else
+	{
+		ProbabilityWithConditions<T>(myTargetInfo, ToParamConfiguration<T>(pc), ens, conditionEns, comp_op);
+	}
+}
+
 void ProcessParameter(std::shared_ptr<const plugin_configuration>& conf, std::shared_ptr<info<float>>& myTargetInfo,
                       const PROB::partial_param_configuration& pc, const ensemble* baseEns, const logger& logr)
 {
@@ -321,21 +449,34 @@ void ProcessParameter(std::shared_ptr<const plugin_configuration>& conf, std::sh
 	logr.Info(fmt::format("Calculating {} time {}", pc.output.Name(),
 	                      static_cast<std::string>(myTargetInfo->Time().ValidDateTime())));
 
-	try
+	if (FetchEnsemble(*ens, conf, myTargetInfo, logr) == false)
 	{
-		ens->Fetch(conf, myTargetInfo->Time(), myTargetInfo->Level());
+		return;
 	}
-	catch (const HPExceptionType& e)
+
+	// Ensembles of the additional conditions. Ensemble members are paired by their position, so all
+	// ensembles must be of equal size. If data is not found for any of the conditions, the probability
+	// cannot be calculated at all.
+
+	std::vector<std::unique_ptr<ensemble>> conditionEns;
+
+	for (const auto& c : pc.conditions)
 	{
-		if (e == kFileDataNotFound)
+		auto cens = Mogrify(baseEns, c.parameter);
+
+		if (FetchEnsemble(*cens, conf, myTargetInfo, logr) == false)
 		{
 			return;
 		}
-		else
+
+		if (cens->Size() != ens->Size())
 		{
-			logr.Fatal("Received error code " + std::to_string(e));
+			logr.Fatal(fmt::format("Size of ensemble {} ({}) differs from the size of ensemble {} ({})",
+			                       c.parameter.Name(), cens->Size(), pc.parameter.Name(), ens->Size()));
 			himan::Abort();
 		}
+
+		conditionEns.push_back(std::move(cens));
 	}
 
 	ASSERT(myTargetInfo->Data().Size() > 0);
@@ -351,30 +492,28 @@ void ProcessParameter(std::shared_ptr<const plugin_configuration>& conf, std::sh
 		switch (pc.output.ProcessingType().Type())
 		{
 			case kProbabilityLessThan:
-				Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::less<float>());
+				CalculateProbability<float>(myTargetInfo, pc, ens, conditionEns, std::less<float>());
 				break;
 			case kProbabilityLessThanOrEqual:
-				Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::less_equal<float>());
+				CalculateProbability<float>(myTargetInfo, pc, ens, conditionEns, std::less_equal<float>());
 				break;
 			case kProbabilityGreaterThan:
-				Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::greater<float>());
+				CalculateProbability<float>(myTargetInfo, pc, ens, conditionEns, std::greater<float>());
 				break;
 			case kProbabilityGreaterThanOrEqual:
-				Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::greater_equal<float>());
+				CalculateProbability<float>(myTargetInfo, pc, ens, conditionEns, std::greater_equal<float>());
 				break;
 			case kProbabilityEquals:
-				Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::equal_to<float>());
+				CalculateProbability<float>(myTargetInfo, pc, ens, conditionEns, std::equal_to<float>());
 				break;
 			case kProbabilityNotEquals:
-				Probability<float>(myTargetInfo, ToParamConfiguration<float>(pc), ens, std::not_equal_to<float>());
+				CalculateProbability<float>(myTargetInfo, pc, ens, conditionEns, std::not_equal_to<float>());
 				break;
 			case kProbabilityEqualsIn:
-				Probability<std::vector<float>>(myTargetInfo, ToParamConfiguration<std::vector<float>>(pc), ens,
-				                                EQINCompare());
+				CalculateProbability<std::vector<float>>(myTargetInfo, pc, ens, conditionEns, EQINCompare());
 				break;
 			case kProbabilityBetween:
-				Probability<std::vector<float>>(myTargetInfo, ToParamConfiguration<std::vector<float>>(pc), ens,
-				                                BTWNCompare());
+				CalculateProbability<std::vector<float>>(myTargetInfo, pc, ens, conditionEns, BTWNCompare());
 				break;
 			default:
 				logr.Error(fmt::format("Unsupported comparison operator: {}",
