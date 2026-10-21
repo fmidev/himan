@@ -46,6 +46,53 @@ vector<level> LevelsFromString(const string& levelType, const string& levelValue
 static logger itsLogger;
 
 /*
+ * FlattenParamOption()
+ *
+ * Parameter options are stored as flat key-value string pairs. Options that contain nested
+ * structures (arrays of objects, such as the 'conditions' array of the probability plugin)
+ * are flattened: array elements are indexed and object members are separated with a dot, so
+ *
+ *   "conditions" : [ { "input_param" : "T-K", "value" : "1" } ]
+ *
+ * becomes
+ *
+ *   "conditions[0].input_param" = "T-K"
+ *   "conditions[0].value" = "1"
+ */
+
+static void FlattenParamOption(const string& name, const boost::property_tree::ptree& pt,
+                               vector<pair<string, string>>& opts)
+{
+	if (name.empty())
+	{
+		throw runtime_error("json_parser: param_list parameter option name is empty");
+	}
+
+	if (pt.empty())
+	{
+		const string value = pt.get<string>("");
+
+		if (value.empty())
+		{
+			throw runtime_error("json_parser: param_list parameter option '" + name + "' value is empty");
+		}
+
+		opts.push_back(make_pair(name, value));
+		return;
+	}
+
+	size_t i = 0;
+
+	for (const auto& child : pt)
+	{
+		// array elements don't have a name
+		const string childName = child.first.empty() ? name + "[" + to_string(i) + "]" : name + "." + child.first;
+		FlattenParamOption(childName, child.second, opts);
+		i++;
+	}
+}
+
+/*
  * Parse()
  *
  * Read command line options and create info instance.
@@ -665,27 +712,27 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 
 						for (boost::property_tree::ptree::value_type& paramOpt : param.second)
 						{
-							string paramOptName = paramOpt.first;
-							string paramOptValue = paramOpt.second.get<string>("");
-
-							if (paramOptName.empty())
-							{
-								throw runtime_error(ClassName() + ": param_list parameter option name is empty");
-							}
-
-							if (paramOptValue.empty())
-							{
-								throw runtime_error(ClassName() + ": param_list parameter option '" + paramOptName +
-								                    "' value is empty");
-							}
+							const string paramOptName = paramOpt.first;
 
 							if (paramOptName == "name" || paramOptName == "producer")
 							{
-								name = paramOptValue;
+								name = paramOpt.second.get<string>("");
+
+								if (name.empty())
+								{
+									throw runtime_error(ClassName() + ": param_list parameter option '" +
+									                    paramOptName + "' value is empty");
+								}
+							}
+							else if (paramOptName == "conditions" && paramOpt.second.empty() &&
+							         paramOpt.second.get<string>("").empty())
+							{
+								// An empty array of conditions is allowed and means no conditions
+								continue;
 							}
 							else
 							{
-								opts.push_back(std::make_pair(paramOptName, paramOptValue));
+								FlattenParamOption(paramOptName, paramOpt.second, opts);
 							}
 						}
 						pc->AddParameter(name, opts);
