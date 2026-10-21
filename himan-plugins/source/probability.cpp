@@ -29,6 +29,55 @@ probability::~probability()
 {
 }
 
+static HPProcessingType ParseComparison(const std::string& op, const std::string& paramName)
+{
+	if (op == "<")
+	{
+		return kProbabilityLessThan;
+	}
+	else if (op == "<=")
+	{
+		return kProbabilityLessThanOrEqual;
+	}
+	else if (op == ">")
+	{
+		return kProbabilityGreaterThan;
+	}
+	else if (op == ">=")
+	{
+		return kProbabilityGreaterThanOrEqual;
+	}
+	else if (op == "=")
+	{
+		return kProbabilityEquals;
+	}
+	else if (op == "=[]")
+	{
+		return kProbabilityEqualsIn;
+	}
+	else if (op == "!=" || op == "<>")
+	{
+		return kProbabilityNotEquals;
+	}
+	else if (op == "[)")
+	{
+		return kProbabilityBetween;
+	}
+	else if (op == "[]")
+	{
+		// The range is bounded by [lower, upper): the upper endpoint is not included. The operator was
+		// previously documented as "[)" but accepted as "[]"; the old name is kept for compatibility.
+		himan::logger log("probability");
+		log.Warning(fmt::format("configuration warning: '{}': comparison operator '[]' is deprecated, use '[)' instead",
+		                        paramName));
+		return kProbabilityBetween;
+	}
+
+	himan::logger log("probability");
+	log.Fatal(fmt::format("configuration error: invalid comparison operator '{}' for '{}'", op, paramName));
+	himan::Abort();
+}
+
 /// @brief Configuration reading
 /// @param outParamConfig is modified to have information about the threshold value and input parameters
 /// @returns param to be pushed in the calculatedParams vector in Process()
@@ -69,43 +118,7 @@ static void GetConfigurationParameter(const std::string& name, const std::shared
 		}
 		else if (p.first == "comparison")
 		{
-			if (p.second == "<")
-			{
-				output.ProcessingType().Type(kProbabilityLessThan);
-			}
-			else if (p.second == "<=")
-			{
-				output.ProcessingType().Type(kProbabilityLessThanOrEqual);
-			}
-			else if (p.second == ">")
-			{
-				output.ProcessingType().Type(kProbabilityGreaterThan);
-			}
-			else if (p.second == ">=")
-			{
-				output.ProcessingType().Type(kProbabilityGreaterThanOrEqual);
-			}
-			else if (p.second == "=")
-			{
-				output.ProcessingType().Type(kProbabilityEquals);
-			}
-			else if (p.second == "=[]")
-			{
-				output.ProcessingType().Type(kProbabilityEqualsIn);
-			}
-			else if (p.second == "!=" || p.second == "<>")
-			{
-				output.ProcessingType().Type(kProbabilityNotEquals);
-			}
-			else if (p.second == "[]")
-			{
-				output.ProcessingType(processing_type(kProbabilityBetween));
-			}
-			else
-			{
-				log.Fatal(fmt::format("configuration error: invalid comparison operator '{}'", p.second));
-				himan::Abort();
-			}
+			output.ProcessingType().Type(ParseComparison(p.second, name));
 		}
 		else if (p.first == "aggregation")
 		{
