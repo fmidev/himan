@@ -172,16 +172,78 @@ std::function<bool(float)> MakePredicate(himan::HPProcessingType type, const std
 }
 
 /*
+ * JointProbability()
+ *
+ * Probability that an ensemble member fulfills all of the rules. The rules are evaluated for the
+ * same member of each ensemble, so the rules must have an equal number of values.
+ *
+ * Missing values are handled separately for each rule, similarly to Probability(): if the rule allows
+ * missing values (see AllowMissingValuesInEnsemble()), a missing value means that the rule is not
+ * fulfilled, otherwise the member is left out of the calculation. If no members are left, the
+ * probability is missing.
+ */
+
+float JointProbability(const std::vector<rule_input>& rules)
+{
+	if (rules.empty())
+	{
+		throw std::invalid_argument("JointProbability: no rules");
+	}
+
+	const size_t memberCount = rules[0].values.size();
+
+	for (const auto& rule : rules)
+	{
+		if (rule.values.size() != memberCount)
+		{
+			throw std::invalid_argument("JointProbability: rules have different number of ensemble members");
+		}
+	}
+
+	long int fulfilled = 0;
+	long int total = 0;
+
+	for (size_t i = 0; i < memberCount; i++)
+	{
+		bool include = true;
+		bool match = true;
+
+		for (const auto& rule : rules)
+		{
+			const float value = rule.values[i];
+
+			if (himan::IsMissing(value))
+			{
+				include = include && rule.allowMissing;
+				match = false;
+			}
+			else
+			{
+				match = match && rule.compare(value);
+			}
+		}
+
+		if (include)
+		{
+			total++;
+			fulfilled += match ? 1 : 0;
+		}
+	}
+
+	if (total == 0)
+	{
+		return himan::MissingFloat();
+	}
+
+	return static_cast<float>(fulfilled) / static_cast<float>(total);
+}
+
+/*
  * ProbabilityWithConditions()
  *
  * Probability that an ensemble member fulfills both the primary comparison (paramConf.parameter
  * compared to the threshold with comp_op) and all of the additional conditions. The conditions
  * are evaluated for the same member of their own ensembles, so the ensembles must be of equal size.
- *
- * Missing values are handled separately for each input parameter, similarly to Probability():
- * if the parameter allows missing values (see AllowMissingValuesInEnsemble()), a missing value
- * means that the comparison is not fulfilled, otherwise the member is left out of the calculation.
- * If no members are left, the probability is missing.
  */
 
 template <typename T>
@@ -203,7 +265,6 @@ void ProbabilityWithConditions(std::shared_ptr<himan::info<float>> targetInfo,
 
 	const bool isGrid = (targetInfo->Grid()->Type() != himan::kPointList);
 
-	// Missing value handling is done separately for each input parameter, see AllowMissingValuesInEnsemble()
 	const bool allowMissing = AllowMissingValuesInEnsemble(ens->Param().Name());
 
 	std::vector<bool> allowMissingCondition;
@@ -227,64 +288,19 @@ void ProbabilityWithConditions(std::shared_ptr<himan::info<float>> targetInfo,
 
 	while (nextLocations())
 	{
-		const auto values = ens->Values();
-
-		std::vector<std::vector<float>> conditionValues;
-
-		for (const auto& e : conditionEns)
-		{
-			conditionValues.push_back(e->Values());
-		}
-
 		const T threshold = GetThreshold<T>(targetInfo, paramConf, isGrid);
 
-		long int cnt = 0;
-		long int total = 0;
+		std::vector<rule_input> rules;
+		rules.reserve(1 + conditionEns.size());
 
-		for (size_t i = 0; i < values.size(); i++)
+		rules.push_back({ens->Values(), [&](float x) { return comp_op(x, threshold); }, allowMissing});
+
+		for (size_t i = 0; i < conditionEns.size(); i++)
 		{
-			bool include = true;
-			bool fulfilled = true;
-
-			if (himan::IsMissing(values[i]))
-			{
-				include = include && allowMissing;
-				fulfilled = false;
-			}
-			else
-			{
-				fulfilled = comp_op(values[i], threshold);
-			}
-
-			for (size_t j = 0; j < conditionValues.size(); j++)
-			{
-				const float v = conditionValues[j][i];
-
-				if (himan::IsMissing(v))
-				{
-					include = include && allowMissingCondition[j];
-					fulfilled = false;
-				}
-				else
-				{
-					fulfilled = fulfilled && paramConf.conditions[j].compare(v);
-				}
-			}
-
-			if (include)
-			{
-				total++;
-				cnt += fulfilled ? 1 : 0;
-			}
+			rules.push_back({conditionEns[i]->Values(), paramConf.conditions[i].compare, allowMissingCondition[i]});
 		}
 
-		if (total == 0)
-		{
-			targetInfo->Value(himan::MissingFloat());
-			continue;
-		}
-
-		targetInfo->Value(static_cast<float>(cnt) / static_cast<float>(total));
+		targetInfo->Value(JointProbability(rules));
 	}
 }
 

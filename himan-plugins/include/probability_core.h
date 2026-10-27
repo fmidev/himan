@@ -73,6 +73,26 @@ struct condition
 };
 
 /*
+ * struct rule_input
+ *
+ * One rule of a joint probability for a single grid point: the values of all ensemble members
+ * for one parameter, and what a value must fulfill for the member to be counted.
+ */
+
+struct rule_input
+{
+	// Value of each ensemble member
+	std::vector<float> values;
+
+	// True if the member fulfills the rule. Not called with missing values.
+	std::function<bool(float)> compare;
+
+	// If true, a missing value means 'rule not fulfilled' but the member is still part of the sample.
+	// Otherwise a member with a missing value is left out of the sample.
+	bool allowMissing;
+};
+
+/*
  * struct param_configuration
  *
  * Describes how output parameters are calculated from input parameters.
