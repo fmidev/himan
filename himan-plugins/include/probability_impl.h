@@ -247,8 +247,8 @@ float JointProbability(const std::vector<rule_input>& rules)
  */
 
 template <typename T>
-void ProbabilityWithConditions(std::shared_ptr<himan::info<float>> targetInfo,
-                               const param_configuration<T>& paramConf, std::unique_ptr<himan::ensemble>& ens,
+void ProbabilityWithConditions(std::shared_ptr<himan::info<float>> targetInfo, const param_configuration<T>& paramConf,
+                               std::unique_ptr<himan::ensemble>& ens,
                                std::vector<std::unique_ptr<himan::ensemble>>& conditionEns,
                                std::function<bool(float, T)> comp_op)
 {
@@ -274,7 +274,8 @@ void ProbabilityWithConditions(std::shared_ptr<himan::info<float>> targetInfo,
 		allowMissingCondition.push_back(AllowMissingValuesInEnsemble(c.parameter.Name()));
 	}
 
-	auto nextLocations = [&]() {
+	auto nextLocations = [&]()
+	{
 		bool ok = targetInfo->NextLocation() && ens->NextLocation();
 
 		// all must be advanced, therefore no short circuit evaluation

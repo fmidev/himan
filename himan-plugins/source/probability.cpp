@@ -78,48 +78,65 @@ static HPProcessingType ParseComparison(const std::string& op, const std::string
 	himan::Abort();
 }
 
-/// @brief Reading of the additional conditions
-/// @param options contains the flattened 'conditions' options, ie. 'conditions[0].input_param', 'conditions[0].value'
-/// etc. See json_parser.cpp.
+/// @brief Validate one rule of the 'joint_probability' array
+/// @param rule is the rule options
 /// @param name is the name of the output parameter, used for error messages
+/// @param index is the position of the rule in the array
 
-static std::vector<PROB::partial_condition> GetConditions(
-    const std::map<size_t, std::map<std::string, std::string>>& options, const std::string& name,
-    const std::shared_ptr<const plugin_configuration> conf)
+static void CheckJointProbabilityRule(const option_block& rule, const std::string& name, size_t index)
 {
 	himan::logger log("probability");
 
+	if (!rule.lists.empty() || !rule.blocks.empty())
+	{
+		log.Fatal(
+		    fmt::format("configuration error: '{}': joint_probability[{}] cannot contain nested options", name, index));
+		himan::Abort();
+	}
+
+	for (const auto& opt : rule.values)
+	{
+		if (opt.first == "threshold")
+		{
+			log.Fatal(
+			    fmt::format("configuration error: '{}': joint_probability[{}] uses key 'value' instead of 'threshold'",
+			                name, index));
+			himan::Abort();
+		}
+		else if (opt.first != "input_param" && opt.first != "comparison" && opt.first != "value" &&
+		         opt.first != "aggregation")
+		{
+			log.Fatal(fmt::format("configuration error: '{}': unknown joint_probability[{}] option '{}'", name, index,
+			                      opt.first));
+			himan::Abort();
+		}
+	}
+
+	for (const auto& required : {"input_param", "comparison", "value"})
+	{
+		if (rule.values.find(required) == rule.values.end())
+		{
+			log.Fatal(
+			    fmt::format("configuration error: '{}': joint_probability[{}] is missing '{}'", name, index, required));
+			himan::Abort();
+		}
+	}
+}
+
+/// @brief Reading of the rules of a joint probability, except the first rule which is handled like the
+/// options of a plain probability
+/// @param rules is the 'joint_probability' array
+/// @param name is the name of the output parameter, used for error messages
+
+static std::vector<PROB::partial_condition> GetConditions(const std::vector<option_block>& rules,
+                                                          const std::string& name,
+                                                          const std::shared_ptr<const plugin_configuration> conf)
+{
 	std::vector<PROB::partial_condition> conditions;
 
-	for (const auto& cond : options)
+	for (size_t i = 1; i < rules.size(); i++)
 	{
-		const auto& opts = cond.second;
-
-		for (const auto& opt : opts)
-		{
-			if (opt.first == "threshold")
-			{
-				log.Fatal(fmt::format("configuration error: '{}': conditions use key 'value' instead of 'threshold'",
-				                      name));
-				himan::Abort();
-			}
-			else if (opt.first != "input_param" && opt.first != "comparison" && opt.first != "value" &&
-			         opt.first != "aggregation")
-			{
-				log.Fatal(fmt::format("configuration error: '{}': unknown condition option '{}'", name, opt.first));
-				himan::Abort();
-			}
-		}
-
-		for (const auto& required : {"input_param", "comparison", "value"})
-		{
-			if (opts.find(required) == opts.end())
-			{
-				log.Fatal(fmt::format("configuration error: '{}': condition {} is missing '{}'", name, cond.first,
-				                      required));
-				himan::Abort();
-			}
-		}
+		const auto& opts = rules[i].values;
 
 		PROB::partial_condition pc;
 
@@ -155,12 +172,64 @@ static void GetConfigurationParameter(const std::string& name, const std::shared
 		himan::Abort();
 	}
 
-	const auto paramOpts = conf->GetParameterOptions(name);
+	auto paramOpts = conf->GetParameterOptions(name);
+	const auto& nested = conf->GetParameterNestedOptions(name);
 
 	param param,
 	    output = util::InitializeParameter(conf->TargetProducer(), himan::param(name), level(kUnknownLevel, 0));
 
-	std::map<size_t, std::map<std::string, std::string>> conditionOptions;
+	std::vector<option_block> rules;
+
+	for (const auto& opt : nested.values)
+	{
+		log.Fatal(fmt::format("configuration error: '{}': unknown option '{}'", name, opt.first));
+		himan::Abort();
+	}
+
+	for (const auto& opt : nested.blocks)
+	{
+		log.Fatal(fmt::format("configuration error: '{}': unknown option '{}'", name, opt.first));
+		himan::Abort();
+	}
+
+	for (const auto& opt : nested.lists)
+	{
+		if (opt.first != "joint_probability")
+		{
+			log.Fatal(fmt::format("configuration error: '{}': unknown option '{}'", name, opt.first));
+			himan::Abort();
+		}
+
+		rules = opt.second;
+	}
+
+	if (!rules.empty())
+	{
+		// The first rule takes the place of the flat options: it defines the base ensemble and the metadata of
+		// the output. The other rules are additional conditions for an ensemble member.
+		if (!paramOpts.empty())
+		{
+			log.Fatal(fmt::format("configuration error: '{}': option '{}' cannot be combined with joint_probability",
+			                      name, paramOpts.front().first));
+			himan::Abort();
+		}
+
+		for (size_t i = 0; i < rules.size(); i++)
+		{
+			CheckJointProbabilityRule(rules[i], name, i);
+		}
+
+		const auto& first = rules[0].values;
+
+		paramOpts = {{"input_param", first.at("input_param")},
+		             {"comparison", first.at("comparison")},
+		             {"threshold", first.at("value")}};
+
+		if (first.find("aggregation") != first.end())
+		{
+			paramOpts.push_back({"aggregation", first.at("aggregation")});
+		}
+	}
 
 	// NOTE These are plugin dependent
 	for (auto&& p : paramOpts)
@@ -187,20 +256,6 @@ static void GetConfigurationParameter(const std::string& name, const std::shared
 		{
 			param.Aggregation(aggregation(p.second));
 			output.Aggregation(aggregation(p.second));
-		}
-		else if (p.first.compare(0, 11, "conditions[") == 0)
-		{
-			// flattened conditions array: conditions[<index>].<option>
-			const auto end = p.first.find("].");
-
-			if (end == std::string::npos)
-			{
-				log.Fatal(fmt::format("configuration error: '{}': invalid conditions option '{}'", name, p.first));
-				himan::Abort();
-			}
-
-			const size_t index = std::stoul(p.first.substr(11, end - 11));
-			conditionOptions[index][p.first.substr(end + 2)] = p.second;
 		}
 		else
 		{
@@ -234,13 +289,13 @@ static void GetConfigurationParameter(const std::string& name, const std::shared
 	                     output.ProcessingType().Type() == kProbabilityGreaterThan ||
 	                     output.ProcessingType().Type() == kProbabilityGreaterThanOrEqual);
 
-	outParamConfig->conditions = GetConditions(conditionOptions, name, conf);
+	outParamConfig->conditions = GetConditions(rules, name, conf);
 
 	if (spread && !outParamConfig->conditions.empty())
 	{
 		log.Fatal(fmt::format(
-		    "configuration error: '{}': conditions cannot be combined with gaussian spread (input parameter {})", name,
-		    iname));
+		    "configuration error: '{}': joint_probability cannot be combined with gaussian spread (input parameter {})",
+		    name, iname));
 		himan::Abort();
 	}
 
@@ -419,9 +474,10 @@ static bool FetchEnsemble(ensemble& ens, std::shared_ptr<const plugin_configurat
 }
 
 template <typename T>
-static void CalculateProbability(std::shared_ptr<info<float>>& myTargetInfo, const PROB::partial_param_configuration& pc,
-                      std::unique_ptr<ensemble>& ens, std::vector<std::unique_ptr<ensemble>>& conditionEns,
-                      std::function<bool(float, T)> comp_op)
+static void CalculateProbability(std::shared_ptr<info<float>>& myTargetInfo,
+                                 const PROB::partial_param_configuration& pc, std::unique_ptr<ensemble>& ens,
+                                 std::vector<std::unique_ptr<ensemble>>& conditionEns,
+                                 std::function<bool(float, T)> comp_op)
 {
 	if (pc.conditions.empty())
 	{

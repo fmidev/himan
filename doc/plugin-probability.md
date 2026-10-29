@@ -12,7 +12,7 @@ User defined output parameters, see per-plugin configuration options. The probab
 
 # Method of calculation
 
-Plugin will check how many ensemble members forecast values fulfill the given conditition (often being larger or smaller than some threshold). Probabilities that depend on several parameters can be calculated with additional conditions, see "conditions" below.
+Plugin will check how many ensemble members forecast values fulfill the given conditition (often being larger or smaller than some threshold). Probabilities that depend on several parameters (joint probabilities) can be calculated with the key "joint_probability", see below.
 If ensemble contains missing values, they are removed before producing the probability value.
 
 For some parameters that follow the normal distribution, the probabilities are calculated using the distribution. This removes some of the ill effects of having too small sample size.
@@ -58,27 +58,23 @@ Possible values for comparison operator are
 
 Note that all comparison are made with floating point values.
 
-conditions: optional list of additional conditions that an ensemble member must fulfill, in addition to the comparison above, to be counted. The probability is the fraction of ensemble members that fulfill the comparison *and* all of the conditions, so the conditions are evaluated for the same ensemble member of each parameter. For example, the probability of rain (precipitation form 1) with precipitation rate greater than 0.04 kg/m2/h:
+joint_probability: list of rules that is used instead of "input_param", "threshold", "comparison" and "aggregation" when the probability depends on several parameters. The probability is the fraction of ensemble members that fulfill *all* of the rules, so the rules are evaluated for the same ensemble member of each parameter. This is the probability of the rules being true at the same time, not a conditional probability. For example, the probability of rain (precipitation form 1) with precipitation rate greater than 0.04 kg/m2/h:
 
     {
       "name" : "PROB-RR1-1",
-      "input_param" : "RRR-KGM2",
-      "threshold" : "0.04",
-      "comparison" : ">",
-      "conditions" : [ { "input_param" : "PRECFORM2-N", "comparison" : "=", "value" : "1" } ]
+      "joint_probability" : [ { "input_param" : "RRR-KGM2", "comparison" : ">", "value" : "0.04" },
+                              { "input_param" : "PRECFORM2-N", "comparison" : "=", "value" : "1" } ]
     }
 
-The comparison defined with "input_param", "threshold" and "comparison" is the primary comparison: it defines the threshold that is stored to the output parameter and the one that is used with station-wise thresholds ("threshold_<station id>" or the database). Station-wise values cannot be defined for conditions.
-
-Each condition has the following keys:
+Each rule has the following keys:
 
     "input_param": name of the input parameter (required)
     "comparison": comparison operator, any of the operators listed above (required)
     "value": value to compare to, in parameter units. With operators "=[]" and the range operator the values are separated by commas (required)
-    "aggregation": aggregation of the input parameter (optional). Unlike with the primary comparison, the aggregation of the primary input parameter is not applied to conditions.
+    "aggregation": aggregation of the input parameter (optional)
 
-Key "threshold" is not allowed in conditions. An empty list of conditions is ignored.
+Key "threshold" is not allowed in a rule, use "value". The rules cannot be nested and a joint probability with a single rule is the same as the plain probability. The order of the rules does not change the result, but the first rule has a special role: it defines the ensemble that the others are paired with, the threshold and comparison that are stored in the metadata of the output parameter and the aggregation of the output parameter. The other rules are not stored in the metadata, so the meaning of a joint probability output is defined by its parameter in radon: each joint probability needs its own output parameter (name and GRIB parameter number) that is documented with its rules. Station-wise thresholds ("threshold_<station id>" or the database) are not supported with "joint_probability", and the options "input_param", "threshold", "comparison" and "aggregation" cannot be given with it.
 
-Missing values are handled separately for each input parameter: for parameters that allow missing values (for example PRECFORM2-N) a missing value means that the comparison is not fulfilled but the member is still counted, otherwise the member is removed from the calculation. If all members are removed, the probability is missing. If data is not found for any of the parameters, the probability is not produced. All parameters must have the same number of ensemble members.
+Missing values are handled separately for each input parameter: for parameters that allow missing values (for example PRECFORM2-N) a missing value means that the rule is not fulfilled but the member is still counted, otherwise the member is removed from the calculation. If all members are removed, the probability is missing. If data is not found for any of the parameters, the probability is not produced. All parameters must have the same number of ensemble members.
 
-Conditions cannot be used with parameters for which the probabilities are calculated from the normal distribution (see above).
+A joint probability of several rules cannot be used when the first rule is for a parameter for which the probabilities are calculated from the normal distribution (see above).
