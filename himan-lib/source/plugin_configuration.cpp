@@ -19,6 +19,7 @@ plugin_configuration::plugin_configuration()
     : itsName(""),
       itsOptions(),
       itsPreconfiguredParams(),
+      itsPreconfiguredNestedParams(),
       itsStatistics(new statistics),
       itsOrdinalNumber(0),
       itsRelativeOrdinalNumber(0)
@@ -30,6 +31,7 @@ plugin_configuration::plugin_configuration(const configuration& theConfiguration
       itsName(""),
       itsOptions(),
       itsPreconfiguredParams(),
+      itsPreconfiguredNestedParams(),
       itsStatistics(new statistics),
       itsOrdinalNumber(0),
       itsRelativeOrdinalNumber(0)
@@ -41,6 +43,7 @@ plugin_configuration::plugin_configuration(const plugin_configuration& other)
       itsName(other.itsName),
       itsOptions(other.itsOptions),
       itsPreconfiguredParams(other.itsPreconfiguredParams),
+      itsPreconfiguredNestedParams(other.itsPreconfiguredNestedParams),
       itsStatistics(new statistics(*other.itsStatistics)),
       itsOrdinalNumber(other.itsOrdinalNumber),
       itsRelativeOrdinalNumber(other.itsRelativeOrdinalNumber)
@@ -51,6 +54,7 @@ plugin_configuration::plugin_configuration(const string& theName, const map<stri
     : itsName(theName),
       itsOptions(theOptions),
       itsPreconfiguredParams(),
+      itsPreconfiguredNestedParams(),
       itsStatistics(new statistics),
       itsOrdinalNumber(0),
       itsRelativeOrdinalNumber(0)
@@ -110,6 +114,13 @@ void plugin_configuration::AddParameter(const string& paramName, const vector<pa
 	}
 }
 
+void plugin_configuration::AddParameter(const string& paramName, const vector<pair<string, string>>& opts,
+                                        const option_block& nested)
+{
+	AddParameter(paramName, opts);
+	itsPreconfiguredNestedParams[paramName] = nested;
+}
+
 bool plugin_configuration::ParameterExists(const std::string& paramName) const
 {
 	auto iter = itsPreconfiguredParams.find(paramName);
@@ -139,6 +150,20 @@ const vector<pair<string, string>>& plugin_configuration::GetParameterOptions(co
 	}
 
 	return iter->second;
+}
+
+const option_block& plugin_configuration::GetParameterNestedOptions(const string& paramName) const
+{
+	if (!ParameterExists(paramName))
+	{
+		throw runtime_error(ClassName() + ": parameter not found in preconfigured parameter list:: '" + paramName +
+		                    "'");
+	}
+
+	static const option_block empty;
+
+	const auto iter = itsPreconfiguredNestedParams.find(paramName);
+	return iter == itsPreconfiguredNestedParams.end() ? empty : iter->second;
 }
 
 shared_ptr<statistics> plugin_configuration::Statistics() const

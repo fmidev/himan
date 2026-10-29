@@ -46,51 +46,117 @@ vector<level> LevelsFromString(const string& levelType, const string& levelValue
 static logger itsLogger;
 
 /*
- * FlattenParamOption()
+ * ParseOptionBlock()
  *
- * Parameter options are stored as flat key-value string pairs. Options that contain nested
- * structures (arrays of objects, such as the 'conditions' array of the probability plugin)
- * are flattened: array elements are indexed and object members are separated with a dot, so
- *
- *   "conditions" : [ { "input_param" : "T-K", "value" : "1" } ]
- *
- * becomes
- *
- *   "conditions[0].input_param" = "T-K"
- *   "conditions[0].value" = "1"
+ * Read an object of a parameter option. Members with a string value are stored as such, arrays
+ * must contain only objects and are read recursively, as are objects.
  */
 
-static void FlattenParamOption(const string& name, const boost::property_tree::ptree& pt,
-                               vector<pair<string, string>>& opts)
-{
-	if (name.empty())
-	{
-		throw runtime_error("json_parser: param_list parameter option name is empty");
-	}
+static option_block ParseOptionBlock(const string& path, const boost::property_tree::ptree& pt);
 
+static void ParseOptionValue(const string& path, const string& name, const boost::property_tree::ptree& pt,
+                             option_block& block)
+{
 	if (pt.empty())
 	{
 		const string value = pt.get<string>("");
 
 		if (value.empty())
 		{
-			throw runtime_error("json_parser: param_list parameter option '" + name + "' value is empty");
+			throw runtime_error("json_parser: param_list parameter option '" + path + "' value is empty");
 		}
 
-		opts.push_back(make_pair(name, value));
+		if (block.values.count(name) > 0)
+		{
+			throw runtime_error("json_parser: param_list parameter option '" + path + "' is defined twice");
+		}
+
+		block.values[name] = value;
 		return;
 	}
 
-	size_t i = 0;
+	// array elements don't have a name
+	if (pt.front().first.empty())
+	{
+		auto& list = block.lists[name];
+		size_t i = 0;
+
+		for (const auto& element : pt)
+		{
+			const string elementPath = path + "[" + to_string(i) + "]";
+
+			if (!element.first.empty() || element.second.empty())
+			{
+				throw runtime_error("json_parser: param_list parameter option '" + elementPath +
+				                    "' is not an object, arrays can only contain objects");
+			}
+
+			list.push_back(ParseOptionBlock(elementPath, element.second));
+			i++;
+		}
+
+		return;
+	}
+
+	block.blocks[name] = ParseOptionBlock(path, pt);
+}
+
+static option_block ParseOptionBlock(const string& path, const boost::property_tree::ptree& pt)
+{
+	option_block block;
 
 	for (const auto& child : pt)
 	{
-		// array elements don't have a name
-		const string childName = child.first.empty() ? name + "[" + to_string(i) + "]" : name + "." + child.first;
-		FlattenParamOption(childName, child.second, opts);
-		i++;
+		if (child.first.empty())
+		{
+			throw runtime_error("json_parser: param_list parameter option '" + path + "' contains an unnamed element");
+		}
+
+		ParseOptionValue(path + "." + child.first, child.first, child.second, block);
+	}
+
+	return block;
+}
+
+namespace himan
+{
+void ParseParameterOptions(const boost::property_tree::ptree& param, string& name, vector<pair<string, string>>& opts,
+                           option_block& nested)
+{
+	for (const auto& paramOpt : param)
+	{
+		const string paramOptName = paramOpt.first;
+
+		if (paramOptName.empty())
+		{
+			throw runtime_error("json_parser: param_list parameter option name is empty");
+		}
+
+		if (!paramOpt.second.empty())
+		{
+			// array or object
+			ParseOptionValue(paramOptName, paramOptName, paramOpt.second, nested);
+			continue;
+		}
+
+		const string paramOptValue = paramOpt.second.get<string>("");
+
+		if (paramOptValue.empty())
+		{
+			throw runtime_error("json_parser: param_list parameter option '" + paramOptName + "' value is empty");
+		}
+
+		if (paramOptName == "name" || paramOptName == "producer")
+		{
+			name = paramOptValue;
+		}
+		else
+		{
+			opts.push_back(make_pair(paramOptName, paramOptValue));
+		}
 	}
 }
+}  // namespace himan
 
 /*
  * Parse()
@@ -709,33 +775,11 @@ vector<shared_ptr<plugin_configuration>> json_parser::ParseConfigurationFile(sha
 					{
 						string name;
 						std::vector<std::pair<std::string, std::string>> opts;
+						option_block nested;
 
-						for (boost::property_tree::ptree::value_type& paramOpt : param.second)
-						{
-							const string paramOptName = paramOpt.first;
+						ParseParameterOptions(param.second, name, opts, nested);
 
-							if (paramOptName == "name" || paramOptName == "producer")
-							{
-								name = paramOpt.second.get<string>("");
-
-								if (name.empty())
-								{
-									throw runtime_error(ClassName() + ": param_list parameter option '" +
-									                    paramOptName + "' value is empty");
-								}
-							}
-							else if (paramOptName == "conditions" && paramOpt.second.empty() &&
-							         paramOpt.second.get<string>("").empty())
-							{
-								// An empty array of conditions is allowed and means no conditions
-								continue;
-							}
-							else
-							{
-								FlattenParamOption(paramOptName, paramOpt.second, opts);
-							}
-						}
-						pc->AddParameter(name, opts);
+						pc->AddParameter(name, opts, nested);
 					}
 				}
 				else if (key == "async")

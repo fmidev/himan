@@ -9,6 +9,21 @@
 namespace himan
 {
 class statistics;
+
+/**
+ * @brief Parameter options that are not plain key-value strings
+ *
+ * Holds the nested part of a parameter definition in the configuration file: scalar values,
+ * arrays of objects and objects. Blocks can be nested to any depth.
+ */
+
+struct option_block
+{
+	std::map<std::string, std::string> values;
+	std::map<std::string, std::vector<option_block>> lists;
+	std::map<std::string, option_block> blocks;
+};
+
 class plugin_configuration : public configuration
 {
    public:
@@ -76,6 +91,16 @@ class plugin_configuration : public configuration
 	void AddParameter(const std::string& paramName, const std::vector<std::pair<std::string, std::string>>& opts);
 
 	/**
+	 * @brief Add a new parameter to the preconfigured parameters map
+	 * @param paramName Parameter name
+	 * @param opts      Parameter specific options
+	 * @param nested    Parameter specific nested options (arrays and objects)
+	 */
+
+	void AddParameter(const std::string& paramName, const std::vector<std::pair<std::string, std::string>>& opts,
+	                  const option_block& nested);
+
+	/**
 	 * @brief Check if the preconfigured parameter exists
 	 * @param paramName Parameter name
 	 */
@@ -97,6 +122,15 @@ class plugin_configuration : public configuration
 
 	const std::vector<std::pair<std::string, std::string>>& GetParameterOptions(const std::string& paramName) const;
 
+	/**
+	 * @brief Get nested parameter options
+	 * @param paramName Parameter name
+	 * @return Nested options, empty if the parameter has none
+	 * @throws runtime_error if the parameter was not found
+	 */
+
+	const option_block& GetParameterNestedOptions(const std::string& paramName) const;
+
 	std::shared_ptr<statistics> Statistics() const;
 
 	bool StatisticsEnabled() const;
@@ -113,6 +147,7 @@ class plugin_configuration : public configuration
 	std::string itsName;
 	std::map<std::string, std::vector<std::string>> itsOptions;
 	std::map<std::string, std::vector<std::pair<std::string, std::string>>> itsPreconfiguredParams;
+	std::map<std::string, option_block> itsPreconfiguredNestedParams;
 	std::shared_ptr<statistics> itsStatistics;
 	unsigned int itsOrdinalNumber;
 	unsigned int itsRelativeOrdinalNumber;
