@@ -13,6 +13,26 @@ bool AllowMissingValuesInEnsemble(const std::string& name)
 	return (name == "CEIL-2-M" || name == "PRECFORM-N" || name == "PRECFORM2-N" || name == "CSI-N" || name == "CBTCU-FL");
 }
 
+/*
+ * Bind a comparison operator to the value(s) it compares to. The value is a single number or,
+ * for operators =[] and [], a comma-separated list of numbers.
+ */
+
+std::function<bool(float)> MakePredicate(himan::HPProcessingType type, const std::string& value);
+
+std::vector<condition> ToConditions(const std::vector<partial_condition>& partial)
+{
+	std::vector<condition> ret;
+	ret.reserve(partial.size());
+
+	for (const auto& pc : partial)
+	{
+		ret.push_back({pc.parameter, MakePredicate(pc.comparison, pc.value)});
+	}
+
+	return ret;
+}
+
 template <typename T>
 param_configuration<T> ToParamConfiguration(const partial_param_configuration& partial);
 
@@ -32,6 +52,7 @@ param_configuration<float> ToParamConfiguration(const partial_param_configuratio
 	}
 
 	pc.useGaussianSpread = partial.useGaussianSpread;
+	pc.conditions = ToConditions(partial.conditions);
 
 	return pc;
 }
@@ -56,6 +77,9 @@ param_configuration<std::vector<float>> ToParamConfiguration(const partial_param
 
 		pc.thresholds.push_back(x);
 	}
+
+	pc.useGaussianSpread = partial.useGaussianSpread;
+	pc.conditions = ToConditions(partial.conditions);
 
 	return pc;
 }
@@ -103,6 +127,183 @@ struct BTWNCompare : public std::binary_function<float, std::vector<float>, bool
 		return (a >= b[0] && a < b[1]);
 	}
 };
+
+std::function<bool(float)> MakePredicate(himan::HPProcessingType type, const std::string& value)
+{
+	std::vector<float> values;
+
+	for (const auto& v : himan::util::Split(value, ","))
+	{
+		values.push_back(std::stof(v));
+	}
+
+	if (values.empty())
+	{
+		throw std::runtime_error("Condition has no value");
+	}
+
+	const float a = values[0];
+
+	switch (type)
+	{
+		case himan::kProbabilityLessThan:
+			return [a](float x) { return x < a; };
+		case himan::kProbabilityLessThanOrEqual:
+			return [a](float x) { return x <= a; };
+		case himan::kProbabilityGreaterThan:
+			return [a](float x) { return x > a; };
+		case himan::kProbabilityGreaterThanOrEqual:
+			return [a](float x) { return x >= a; };
+		case himan::kProbabilityEquals:
+			return [a](float x) { return x == a; };
+		case himan::kProbabilityNotEquals:
+			return [a](float x) { return x != a; };
+		case himan::kProbabilityEqualsIn:
+			return [values](float x) { return EQINCompare()(x, values); };
+		case himan::kProbabilityBetween:
+			if (values.size() != 2)
+			{
+				throw std::runtime_error("Condition operator '[]' requires two values");
+			}
+			return [values](float x) { return BTWNCompare()(x, values); };
+		default:
+			throw std::runtime_error("Unsupported comparison operator in condition");
+	}
+}
+
+/*
+ * JointProbability()
+ *
+ * Probability that an ensemble member fulfills all of the rules. The rules are evaluated for the
+ * same member of each ensemble, so the rules must have an equal number of values.
+ *
+ * Missing values are handled separately for each rule, similarly to Probability(): if the rule allows
+ * missing values (see AllowMissingValuesInEnsemble()), a missing value means that the rule is not
+ * fulfilled, otherwise the member is left out of the calculation. If no members are left, the
+ * probability is missing.
+ */
+
+float JointProbability(const std::vector<rule_input>& rules)
+{
+	if (rules.empty())
+	{
+		throw std::invalid_argument("JointProbability: no rules");
+	}
+
+	const size_t memberCount = rules[0].values.size();
+
+	for (const auto& rule : rules)
+	{
+		if (rule.values.size() != memberCount)
+		{
+			throw std::invalid_argument("JointProbability: rules have different number of ensemble members");
+		}
+	}
+
+	long int fulfilled = 0;
+	long int total = 0;
+
+	for (size_t i = 0; i < memberCount; i++)
+	{
+		bool include = true;
+		bool match = true;
+
+		for (const auto& rule : rules)
+		{
+			const float value = rule.values[i];
+
+			if (himan::IsMissing(value))
+			{
+				include = include && rule.allowMissing;
+				match = false;
+			}
+			else
+			{
+				match = match && rule.compare(value);
+			}
+		}
+
+		if (include)
+		{
+			total++;
+			fulfilled += match ? 1 : 0;
+		}
+	}
+
+	if (total == 0)
+	{
+		return himan::MissingFloat();
+	}
+
+	return static_cast<float>(fulfilled) / static_cast<float>(total);
+}
+
+/*
+ * ProbabilityWithConditions()
+ *
+ * Probability that an ensemble member fulfills both the primary comparison (paramConf.parameter
+ * compared to the threshold with comp_op) and all of the additional conditions. The conditions
+ * are evaluated for the same member of their own ensembles, so the ensembles must be of equal size.
+ */
+
+template <typename T>
+void ProbabilityWithConditions(std::shared_ptr<himan::info<float>> targetInfo, const param_configuration<T>& paramConf,
+                               std::unique_ptr<himan::ensemble>& ens,
+                               std::vector<std::unique_ptr<himan::ensemble>>& conditionEns,
+                               std::function<bool(float, T)> comp_op)
+{
+	ASSERT(paramConf.conditions.size() == conditionEns.size());
+
+	targetInfo->Find<himan::param>(paramConf.output);
+	targetInfo->ResetLocation();
+	ens->ResetLocation();
+
+	for (auto& e : conditionEns)
+	{
+		e->ResetLocation();
+	}
+
+	const bool isGrid = (targetInfo->Grid()->Type() != himan::kPointList);
+
+	const bool allowMissing = AllowMissingValuesInEnsemble(ens->Param().Name());
+
+	std::vector<bool> allowMissingCondition;
+
+	for (const auto& c : paramConf.conditions)
+	{
+		allowMissingCondition.push_back(AllowMissingValuesInEnsemble(c.parameter.Name()));
+	}
+
+	auto nextLocations = [&]()
+	{
+		bool ok = targetInfo->NextLocation() && ens->NextLocation();
+
+		// all must be advanced, therefore no short circuit evaluation
+		for (auto& e : conditionEns)
+		{
+			ok = e->NextLocation() && ok;
+		}
+
+		return ok;
+	};
+
+	while (nextLocations())
+	{
+		const T threshold = GetThreshold<T>(targetInfo, paramConf, isGrid);
+
+		std::vector<rule_input> rules;
+		rules.reserve(1 + conditionEns.size());
+
+		rules.push_back({ens->Values(), [&](float x) { return comp_op(x, threshold); }, allowMissing});
+
+		for (size_t i = 0; i < conditionEns.size(); i++)
+		{
+			rules.push_back({conditionEns[i]->Values(), paramConf.conditions[i].compare, allowMissingCondition[i]});
+		}
+
+		targetInfo->Value(JointProbability(rules));
+	}
+}
 
 template <typename T>
 void Probability(std::shared_ptr<himan::info<float>> targetInfo, const param_configuration<T>& paramConf,

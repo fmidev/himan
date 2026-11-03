@@ -3,6 +3,7 @@
 #include "ensemble.h"
 #include "himan_common.h"
 #include "info.h"
+#include <functional>
 
 namespace PROB
 {
@@ -19,6 +20,26 @@ namespace PROB
  * helper functions from compiled_plugin_base to this plugin which also not very tempting.
  */
 
+/*
+ * struct partial_condition
+ *
+ * An additional condition that an ensemble member has to fulfill, in addition to the primary
+ * comparison, to be counted in the probability. Like the thresholds of the primary comparison,
+ * the value is stored as a string until the calculation is started.
+ */
+
+struct partial_condition
+{
+	// Input parameter that is compared
+	himan::param parameter;
+
+	// Comparison operator
+	himan::HPProcessingType comparison;
+
+	// One value, or comma-separated list of values for operators =[] and []
+	std::string value;
+};
+
 struct partial_param_configuration
 {
 	std::vector<std::string> thresholds;
@@ -33,6 +54,42 @@ struct partial_param_configuration
 	// if parameter has gaussian distribution, the probabilities can be derived
 	// from the distribution
 	bool useGaussianSpread;
+
+	// Additional conditions, all of them (and the primary comparison) must be true
+	// for an ensemble member to be counted
+	std::vector<partial_condition> conditions;
+};
+
+/*
+ * struct condition
+ *
+ * Instantiated partial_condition. The comparison is already bound to the value(s).
+ */
+
+struct condition
+{
+	himan::param parameter;
+	std::function<bool(float)> compare;
+};
+
+/*
+ * struct rule_input
+ *
+ * One rule of a joint probability for a single grid point: the values of all ensemble members
+ * for one parameter, and what a value must fulfill for the member to be counted.
+ */
+
+struct rule_input
+{
+	// Value of each ensemble member
+	std::vector<float> values;
+
+	// True if the member fulfills the rule. Not called with missing values.
+	std::function<bool(float)> compare;
+
+	// If true, a missing value means 'rule not fulfilled' but the member is still part of the sample.
+	// Otherwise a member with a missing value is left out of the sample.
+	bool allowMissing;
 };
 
 /*
@@ -64,6 +121,8 @@ struct param_configuration
 	himan::param parameter;
 
 	bool useGaussianSpread;
+
+	std::vector<condition> conditions;
 };
 
 }  // namespace PROB
