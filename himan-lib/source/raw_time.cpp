@@ -194,7 +194,7 @@ void raw_time::Adjust(HPTimeResolution timeResolution, int theValue)
 	}
 	else
 	{
-		throw std::runtime_error(fmt::format("{}: Invalid time adjustment unit: {}", fmt::underlying(timeResolution)));
+		throw std::runtime_error(fmt::format("raw_time: Invalid time adjustment unit: {}", fmt::underlying(timeResolution)));
 	}
 }
 
