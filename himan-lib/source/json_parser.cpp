@@ -12,6 +12,7 @@
 #include "point_list.h"
 #include "reduced_gaussian_grid.h"
 #include "stereographic_grid.h"
+#include "geostationary_grid.h"
 #include "transverse_mercator_grid.h"
 #include "util.h"
 #include <boost/algorithm/string/trim.hpp>
@@ -1253,6 +1254,35 @@ unique_ptr<grid> ParseAreaAndGridFromManualDefinition(const boost::property_tree
 			    pt.get<double>("orientation"),
 			    earth_shape<double>(6371220.),
 			    false
+			));
+			// clang-format on
+		}
+		else if (projection == "geostationary")
+		{
+			// Values are given in GRIB2 template 3.90 native units so that the
+			// grid matches exactly the grid read from grib
+
+			const auto sweep = pt.get<string>("sweep_axis", "y");
+
+			if (sweep != "x" && sweep != "y")
+			{
+				throw runtime_error("sweep_axis must be 'x' or 'y'");
+			}
+
+			// clang-format off
+			g = unique_ptr<geostationary_grid>(new geostationary_grid(
+			    mode,
+			    pt.get<size_t>("ni"),
+			    pt.get<size_t>("nj"),
+			    pt.get<long>("nr"),
+			    pt.get<long>("dx"),
+			    pt.get<long>("dy"),
+			    pt.get<long>("xp"),
+			    pt.get<long>("yp"),
+			    pt.get<long>("sub_satellite_longitude", 0),
+			    0,
+			    earth_shape<double>(pt.get<double>("earth_semi_major"), pt.get<double>("earth_semi_minor")),
+			    sweep[0]
 			));
 			// clang-format on
 		}

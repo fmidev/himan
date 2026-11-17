@@ -33,7 +33,7 @@ Requires: himan-lib >= 24.12.30
 Requires: lua >= 5.3.0
 Requires: unixODBC
 Requires: libfmigrib >= 26.5.29
-Requires: libfmidb >= 25.8.7
+Requires: libfmidb >= 26.11.17
 Requires: smartmet-library-newbase >= 25.3.20
 Requires: smartmet-library-macgyver >= 25.1.9
 Requires: %{boost}-iostreams
@@ -58,7 +58,7 @@ BuildRequires: cuda-cusp-12-9 >= 0.6.1
 BuildRequires: libs3-devel >= 4.1
 BuildRequires: libfmigrib >= 26.5.29
 BuildRequires: libfmigrib-devel >= 26.5.29
-BuildRequires: libfmidb-devel >= 25.8.7
+BuildRequires: libfmidb-devel >= 26.11.17
 BuildRequires: smartmet-library-newbase-devel = 25.3.20
 BuildRequires: libluabind >= 0.9.3-3
 BuildRequires: %{boost}-devel

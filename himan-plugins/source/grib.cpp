@@ -2,6 +2,7 @@
 #include "NFmiGrib.h"
 #include "file_accessor.h"
 #include "filename.h"
+#include "geostationary_grid.h"
 #include "grid.h"
 #include "grid_cache.h"
 #include "lambert_conformal_grid.h"
@@ -415,6 +416,18 @@ grib::grib()
 	itsLogger = logger("grib");
 }
 
+// Smallest grib scale factor (max 2: scaled value is 32 bits) that represents value exactly, so that fractional
+// earth axes (e.g. MSG b=6356583.8) are not truncated while whole-metre axes are written as before
+long EarthAxisScaleFactor(double value)
+{
+	long scale = 0;
+	while (scale < 2 && fabs(value * pow(10., scale) - round(value * pow(10., scale))) > 1e-6)
+	{
+		scale++;
+	}
+	return scale;
+}
+
 void WriteAreaAndGrid(NFmiGribMessage& message, const shared_ptr<himan::grid>& grid, const producer& prod)
 {
 	const long edition = message.Edition();
@@ -684,6 +697,40 @@ void WriteAreaAndGrid(NFmiGribMessage& message, const shared_ptr<himan::grid>& g
 			break;
 		}
 
+		case kGeostationary:
+		{
+			auto svg = dynamic_pointer_cast<geostationary_grid>(grid);
+
+			if (edition == 1)
+			{
+				// grib1 has space view as data representation type 90, but
+				// it cannot express a sub-pixel sub-satellite point (Xp, Yp are
+				// integer grid lengths) or an arbitrary earth ellipsoid
+				logr.Fatal("Geostationary grid is only supported with grib2");
+				himan::Abort();
+			}
+
+			message.GridType(90);
+
+			message.SizeX(static_cast<long>(svg->Ni()));
+			message.SizeY(static_cast<long>(svg->Nj()));
+
+			message.SetLongKey("latitudeOfSubSatellitePoint", svg->SubSatelliteLatitude());
+			message.SetLongKey("longitudeOfSubSatellitePoint", svg->SubSatelliteLongitude());
+			message.SetLongKey("dx", svg->Dx());
+			message.SetLongKey("dy", svg->Dy());
+			message.SetLongKey("Xp", svg->Xp());
+			message.SetLongKey("Yp", svg->Yp());
+			message.SetLongKey("orientationOfTheGrid", 0);
+			message.SetLongKey("Nr", svg->Nr());
+			message.SetLongKey("Xo", 0);
+			message.SetLongKey("Yo", 0);
+
+			scmode = svg->ScanningMode();
+
+			break;
+		}
+
 		default:
 			logr.Fatal("Invalid projection while writing grib: " + to_string(grid->Type()));
 			himan::Abort();
@@ -738,10 +785,12 @@ void WriteAreaAndGrid(NFmiGribMessage& message, const shared_ptr<himan::grid>& g
 			else
 			{
 				message.SetLongKey("shapeOfTheEarth", 7);
-				message.SetLongKey("scaleFactorOfEarthMajorAxis", 0);
-				message.SetLongKey("scaledValueOfEarthMajorAxis", static_cast<long>(earth.A()));
-				message.SetLongKey("scaleFactorOfEarthMinorAxis", 0);
-				message.SetLongKey("scaledValueOfEarthMinorAxis", static_cast<long>(earth.B()));
+
+				const long sa = EarthAxisScaleFactor(earth.A()), sb = EarthAxisScaleFactor(earth.B());
+				message.SetLongKey("scaleFactorOfEarthMajorAxis", sa);
+				message.SetLongKey("scaledValueOfEarthMajorAxis", lround(earth.A() * pow(10., sa)));
+				message.SetLongKey("scaleFactorOfEarthMinorAxis", sb);
+				message.SetLongKey("scaledValueOfEarthMinorAxis", lround(earth.B() * pow(10., sb)));
 			}
 		}
 		else
@@ -1704,6 +1753,16 @@ pair<himan::file_information, NFmiGribMessage> grib::CreateGribMessage(info<T>& 
 	{
 		message.ResolutionAndComponentFlags(0);
 	}
+	else if (anInfo.Grid()->Type() == kGeostationary)
+	{
+		// Direction increments (bits 3, 4) have no meaning for geostationary grid
+		message.ResolutionAndComponentFlags(0);
+
+		if (anInfo.Grid()->UVRelativeToGrid())
+		{
+			message.UVRelativeToGrid(true);
+		}
+	}
 	else
 	{
 		if (edition == 1)
@@ -2012,7 +2071,7 @@ himan::earth_shape<double> ReadEarthShape(const NFmiGribMessage& msg)
 				// Earth assumed spherical with radius specified (in m) by data producer
 				const double scale = static_cast<double>(msg.GetLongKey("scaleFactorOfRadiusOfSphericalEarth"));
 				const double r = static_cast<double>(msg.GetLongKey("scaledValueOfRadiusOfSphericalEarth"));
-				a = b = pow(10., scale) * r;
+				a = b = r / pow(10., scale);
 				break;
 			}
 			case 2:
@@ -2026,11 +2085,11 @@ himan::earth_shape<double> ReadEarthShape(const NFmiGribMessage& msg)
 				// Earth assumed oblate spheroid with major and minor axes specified (in km) by data producer
 				double scale = static_cast<double>(msg.GetLongKey("scaleFactorOfEarthMajorAxis"));
 				double val = static_cast<double>(msg.GetLongKey("scaledValueOfEarthMajorAxis"));
-				a = 1000. * pow(10., scale) * val;
+				a = 1000. * val / pow(10., scale);
 
 				scale = static_cast<double>(msg.GetLongKey("scaleFactorOfEarthMinorAxis"));
 				val = static_cast<double>(msg.GetLongKey("scaledValueOfEarthMinorAxis"));
-				b = 1000. * pow(10., scale) * val;
+				b = 1000. * val / pow(10., scale);
 
 				if (a == 6378388 && (b == 6356911.946 || b == 6356911 || b == 6356912))
 				{
@@ -2061,11 +2120,11 @@ himan::earth_shape<double> ReadEarthShape(const NFmiGribMessage& msg)
 				// Earth assumed oblate spheroid with major and minor axes specified (in m) by data producer
 				double scale = static_cast<double>(msg.GetLongKey("scaleFactorOfEarthMajorAxis"));
 				double val = static_cast<double>(msg.GetLongKey("scaledValueOfEarthMajorAxis"));
-				a = pow(10., scale) * val;
+				a = val / pow(10., scale);
 
 				scale = static_cast<double>(msg.GetLongKey("scaleFactorOfEarthMinorAxis"));
 				val = static_cast<double>(msg.GetLongKey("scaledValueOfEarthMinorAxis"));
-				b = pow(10., scale) * val;
+				b = val / pow(10., scale);
 
 				if (a == 6378388 && (b == 6356911.946 || b == 6356911 || b == 6356912))
 				{
@@ -2160,9 +2219,11 @@ unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message, const pr
 
 	long grid_type;
 
-	if (message.Edition() == 2 && message.GridType() == 140)
+	if (message.Edition() == 2 && (message.GridType() == 140 || message.GridType() == 90))
 	{
-		grid_type = 140;
+		// No grib1 equivalent (lambert equal area), or the grib2 -> himan mapping
+		// is not available in all fmigrib versions (space view, template 3.90)
+		grid_type = message.GridType();
 	}
 	else
 	{
@@ -2251,6 +2312,57 @@ unique_ptr<himan::grid> ReadAreaAndGrid(const NFmiGribMessage& message, const pr
 			    centralLongitude, standardParallel, earth, false);
 			break;
 		}
+
+		case 90:
+		{
+			if (message.Edition() != 2)
+			{
+				logger logr("grib");
+				// grib1 has space view as data representation type 90, but
+				// it cannot express a sub-pixel sub-satellite point (Xp, Yp are
+				// integer grid lengths) or an arbitrary earth ellipsoid
+				logr.Fatal("Geostationary grid is only supported with grib2");
+				himan::Abort();
+			}
+
+			if (!geostationary_grid::IsSupportedScanningMode(m))
+			{
+				logger logr("grib");
+				logr.Fatal(
+				    fmt::format("Geostationary grid scanning mode {} is not supported", HPScanningModeToString.at(m)));
+				himan::Abort();
+			}
+
+			const long xo = message.GetLongKey("Xo");
+			const long yo = message.GetLongKey("Yo");
+
+			if (xo != 0 || yo != 0)
+			{
+				logger logr("grib");
+				logr.Fatal(fmt::format("Only full disk geostationary grids are supported (Xo={}, Yo={})", xo, yo));
+				himan::Abort();
+			}
+
+			const long orientation = message.GetLongKey("orientationOfTheGrid");
+
+			if (orientation != 0)
+			{
+				logger logr("grib");
+				logr.Fatal(fmt::format("Geostationary grid orientation {} is not supported", orientation));
+				himan::Abort();
+			}
+
+			// The sweep axis of the instrument is not encoded in grib; default to 'y'
+			// which is used by EUMETSAT satellites (MSG, MTG).
+
+			newGrid = grid_cache::Instance().Get<geostationary_grid>(
+			    m, static_cast<size_t>(message.SizeX()), static_cast<size_t>(message.SizeY()), message.GetLongKey("Nr"),
+			    message.GetLongKey("dx"), message.GetLongKey("dy"), message.GetLongKey("Xp"), message.GetLongKey("Yp"),
+			    message.GetLongKey("longitudeOfSubSatellitePoint"), message.GetLongKey("latitudeOfSubSatellitePoint"),
+			    earth, 'y', string());
+			break;
+		}
+
 		default:
 			logger logr("grib");
 			logr.Fatal("Unsupported grid type: " + to_string(message.NormalizedGridType()));
@@ -2743,6 +2855,9 @@ himan::level ReadLevel(const search_options& opts, const producer& prod, const N
 		{
 			case 1:
 				levelType = himan::kGround;
+				break;
+			case 8:
+				levelType = himan::kTopOfAtmosphere;
 				break;
 			case 100:
 				levelType = himan::kPressure;
