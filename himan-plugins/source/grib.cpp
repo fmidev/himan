@@ -710,6 +710,12 @@ void WriteAreaAndGrid(NFmiGribMessage& message, const shared_ptr<himan::grid>& g
 				himan::Abort();
 			}
 
+			if (svg->SweepAxis() != 'y')
+			{
+				logr.Fatal("Writing geostationary grids to grib2 requires sweep axis 'y'");
+				himan::Abort();
+			}
+
 			message.GridType(90);
 
 			message.SizeX(static_cast<long>(svg->Ni()));
