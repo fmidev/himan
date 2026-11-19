@@ -862,8 +862,8 @@ pair<bool, radon_record> radon::SaveGrid(const info<T>& resultInfo, const file_i
 				geom_opts["ni"] = to_string(gs->Ni());
 				geom_opts["nj"] = to_string(gs->Nj());
 				geom_opts["sub_satellite_longitude"] = to_string(gs->SubSatelliteLongitude());
-				geom_opts["dx"] = to_string(gs->Di());
-				geom_opts["dy"] = to_string(gs->Dj());
+				geom_opts["dx"] = to_string(gs->Dx());
+				geom_opts["dy"] = to_string(gs->Dy());
 				geom_opts["nr"] = to_string(gs->Nr());
 			}
 			else
