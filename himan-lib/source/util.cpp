@@ -11,6 +11,7 @@
 #include "lambert_conformal_grid.h"
 #include "lambert_equal_area_grid.h"
 #include "latitude_longitude_grid.h"
+#include "geostationary_grid.h"
 #include "level.h"
 #include "named_ensemble.h"
 #include "numerical_functions.h"
@@ -799,6 +800,25 @@ unique_ptr<grid> util::GridFromDatabase(const string& geom_name)
 		    0, // TODO: false northing, this value might not be correct
 		    earth,
 		    false,
+		    geominfo["name"]
+		));
+			// clang-format on
+
+		case 9:
+			// clang-format off
+		return unique_ptr<geostationary_grid>(new geostationary_grid(
+		    scmode,
+		    stol(geominfo["ni"]),
+		    stol(geominfo["nj"]),
+		    stol(geominfo["nr"]),
+		    stol(geominfo["dx"]),
+		    stol(geominfo["dy"]),
+		    stol(geominfo["xp"]),
+		    stol(geominfo["yp"]),
+		    stol(geominfo["sub_satellite_longitude"]),
+		    0,
+		    earth,
+		    geominfo["sweep_axis"].at(0),
 		    geominfo["name"]
 		));
 			// clang-format on
