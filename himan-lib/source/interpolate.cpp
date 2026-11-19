@@ -926,6 +926,7 @@ area_interpolation<T>::area_interpolation(grid& source, grid& target, HPInterpol
 				case kLambertConformalConic:
 				case kLambertEqualArea:
 				case kTransverseMercator:
+				case kGeostationary:
 					if (method == kBiLinear)
 					{
 						w = InterpolationWeights<T>(dynamic_cast<regular_grid&>(source),
