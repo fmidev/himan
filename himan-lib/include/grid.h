@@ -80,6 +80,7 @@ enum HPGridType
 	kReducedGaussian,
 	kLambertEqualArea,
 	kTransverseMercator,
+	kGeostationary,
 	kPointList = 100
 };
 
@@ -92,6 +93,7 @@ const std::unordered_map<HPGridType, std::string> HPGridTypeToString = {{kUnknow
                                                                         {kReducedGaussian, "rgg"},
                                                                         {kLambertEqualArea, "laea"},
                                                                         {kTransverseMercator, "tm"},
+                                                                        {kGeostationary, "geos"},
                                                                         {kPointList, "pointlist"}};
 
 enum HPScanningMode

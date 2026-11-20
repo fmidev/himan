@@ -424,7 +424,8 @@ void BindEnum(lua_State* L)
 				 value("kPointList", kPointList),
 				 value("kLambertConformalConic", kLambertConformalConic),
 				 value("kLambertEqualArea", kLambertEqualArea),
-				 value("kTransverseMercator", kTransverseMercator)],
+				 value("kTransverseMercator", kTransverseMercator),
+				 value("kGeostationary", kGeostationary)],
 	     class_<HPParameterUnit>("HPParameterUnit").enum_("constants")[
 				 value("kM", kM),
 				 value("kHPa", kHPa)],

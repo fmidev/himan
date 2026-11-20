@@ -88,12 +88,13 @@ Himan supports following grid types or projectios:
 * stereographic
 * reduced gaussian
 * lambert conformal conic
+* geostationary ("space view" in grib)
 
 Target area is defined by giving bottom left and top right coordinates, wanted projection and projection special parameters.
 
 Projection is defined with key `projection`:
 
-    "projection" : "stereographic" | "latlon" | "rotated_latlon | reduced_gg | lcc"
+    "projection" : "stereographic" | "latlon" | "rotated_latlon | reduced_gg | lcc | geostationary"
 
 Area corners area bottom left and top right latitude longitude values.
 
@@ -125,6 +126,43 @@ Example:
     "top_right_longitude" : "36.47",
     "south_pole_longitude" : "0",
     "south_pole_latitude" : "-30",
+
+### Geostationary satellite
+
+Geostationary grid ("space view perspective", grib2 grid definition template 3.90 and grib1 data representation type 90) is used by geostationary satellites, for example MTG FCI. Himan supports it only in grib2. Instead of corner coordinates the grid is defined with the grib2 native values, so that the grid matches exactly the grid read from grib. Only full disk grids (Xo=Yo=0) with scanning mode `+x-y` are supported.
+
+    "projection" : "geostationary",
+    "scanning_mode" : "+x-y",
+    "ni" : "<number of points along x axis, Nx>",
+    "nj" : "<number of points along y axis, Ny>",
+    "nr" : "<altitude of satellite from earth center in units of equatorial radius * 10^6, Nr>",
+    "dx" : "<apparent diameter of earth in grid lengths in x direction>",
+    "dy" : "<apparent diameter of earth in grid lengths in y direction>",
+    "xp" : "<x coordinate of sub-satellite point in units of 10^-3 grid length>",
+    "yp" : "<y coordinate of sub-satellite point in units of 10^-3 grid length>",
+    "sub_satellite_longitude" : "<longitude of sub-satellite point in units of 10^-6 degrees, default 0>",
+    "earth_semi_major" : "<meters>",
+    "earth_semi_minor" : "<meters>",
+    "sweep_axis" : "x | y"
+
+Grib does not specify the sweep angle axis of the instrument. Default is `y`, which is used by EUMETSAT satellites (MSG, MTG). GOES uses `x`. When reading grib, `y` is always used.
+
+Grid points that are not on the earth disk have missing latitude and longitude, and also the corner points of a full disk grid are missing.
+
+Example, MTG FCI 2 km full disk:
+
+    "projection" : "geostationary",
+    "scanning_mode" : "+x-y",
+    "ni" : 5568,
+    "nj" : 5568,
+    "nr" : 6610792,
+    "dx" : 5434,
+    "dy" : 5416,
+    "xp" : 2783500,
+    "yp" : 2783500,
+    "earth_semi_major" : 6378137.0,
+    "earth_semi_minor" : 6356752.314245
+
 
 <a name="Target_area_4"/>
 

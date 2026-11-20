@@ -4,6 +4,7 @@
 #include "lambert_conformal_grid.h"
 #include "lambert_equal_area_grid.h"
 #include "latitude_longitude_grid.h"
+#include "geostationary_grid.h"
 #include "stereographic_grid.h"
 #include "transverse_mercator_grid.h"
 #include <shared_mutex>
@@ -134,6 +135,15 @@ struct grid_create<himan::transverse_mercator_grid, Args...>
 	std::unique_ptr<grid> operator()(Args... args)
 	{
 		return std::make_unique<transverse_mercator_grid>(args...);
+	}
+};
+
+template <typename... Args>
+struct grid_create<himan::geostationary_grid, Args...>
+{
+	std::unique_ptr<grid> operator()(Args... args)
+	{
+		return std::make_unique<geostationary_grid>(args...);
 	}
 };
 

@@ -4,6 +4,7 @@
  */
 
 #include "radon.h"
+#include "geostationary_grid.h"
 #include "logger.h"
 #include "plugin_factory.h"
 #include "point_list.h"
@@ -853,15 +854,36 @@ pair<bool, radon_record> radon::SaveGrid(const info<T>& resultInfo, const file_i
 		{
 			auto gr = dynamic_pointer_cast<regular_grid>(resultInfo.Grid());
 
-			// rotated coordinates as the first point for rotated_latitude_longitude
+			map<string, string> geom_opts{{"projection_id", to_string(static_cast<int>(gr->Type()))}};
 
-			const himan::point fp =
-			    (gr->Type() == himan::kRotatedLatitudeLongitude)
-			        ? dynamic_pointer_cast<himan::rotated_latitude_longitude_grid>(gr)->Rotate(gr->FirstPoint())
-			        : gr->FirstPoint();
+			if (gr->Type() == himan::kGeostationary)
+			{
+				auto gs = dynamic_pointer_cast<himan::geostationary_grid>(gr);
+				geom_opts["ni"] = to_string(gs->Ni());
+				geom_opts["nj"] = to_string(gs->Nj());
+				geom_opts["sub_satellite_longitude"] = to_string(gs->SubSatelliteLongitude());
+				geom_opts["dx"] = to_string(gs->Dx());
+				geom_opts["dy"] = to_string(gs->Dy());
+				geom_opts["nr"] = to_string(gs->Nr());
+			}
+			else
+			{
+				// rotated coordinates as the first point for rotated_latitude_longitude
 
-			geominfo =
-			    itsRadonDB->GetGeometryDefinition(gr->Ni(), gr->Nj(), fp.Y(), fp.X(), gr->Di(), gr->Dj(), gr->Type());
+				const himan::point fp =
+				    (gr->Type() == himan::kRotatedLatitudeLongitude)
+				        ? dynamic_pointer_cast<himan::rotated_latitude_longitude_grid>(gr)->Rotate(gr->FirstPoint())
+				        : gr->FirstPoint();
+
+				geom_opts["first_point_latitude"] = to_string(fp.Y());
+				geom_opts["first_point_longitude"] = to_string(fp.X());
+				geom_opts["ni"] = to_string(gr->Ni());
+				geom_opts["nj"] = to_string(gr->Nj());
+				geom_opts["di"] = to_string(gr->Di());
+				geom_opts["dj"] = to_string(gr->Dj());
+			}
+
+			geominfo = itsRadonDB->GetGeometryDefinition(geom_opts);
 		}
 	}
 
